@@ -52,3 +52,15 @@ W02 may use the pinned baseline and the separate protocol evidence directory. W0
 - Dependency: W03 may now attempt Desktop against the registered server. No W05 was started.
 
 The Python interpreter used for all test commands is `/Users/everwalker/Documents/Codex/2026-09-05/https-github-com-wjc9011-comsol-multiphysics/comsol-mcp-server/.venv/bin/python`. It was reused read-only; no user client/service configuration was changed.
+
+## W03 — Desktop and cancellation PoC
+
+**Status: BLOCKED for GUI acceptance; currently available inventory completed.** Evidence: `evidence/w03/runs/20260918T111700Z/`.
+
+- Actual Computer Use action: `cua.getApp('/Applications/COMSOL64/Multiphysics/COMSOL Multiphysics.app')`. Exact response: **“Computer Use was not approved to use COMSOL Multiphysics”**. No window/control was accessible; no GUI click, permission-setting change, or cancellation was attempted.
+- **T004 BLOCKED**: Desktop shared binding and alternating parameter readback cannot be verified. Binding is `unknown`.
+- **T023 BLOCKED**: no tested supported native shared-server cancel route was found; GUI access was denied. Cancellation is UNVERIFIED. A real running solve was not cancelled and no false stop success was reported.
+- **T052 BLOCKED**: permission denial is observed, but revoke/restore and GUI-cancel subcases are not executed. No permission bypass was attempted.
+- Command: external JDK `javap -classpath '<COMSOL>/apiplugins/*' com.comsol.model.util.ModelUtil com.comsol.model.SolverSequence` — interface inventory retained. No public general cancel/stop/interrupt method was found in these two interfaces; this is static evidence only. Batch cancellation has a separate operating mode and is not a substitute for this case.
+- Changed files: per-case five-part evidence, GUI refusal record, API inventory and this progress entry. No GUI automation implementation is claimed. The phase-wide 68 passing unit tests cover software control flow; they do not cover Desktop permissions or cancellation.
+- Dependency: none of the W04 safety repairs depends on GUI; continue W04. Resume GUI cases with an authorized accessible Desktop and identified test job. Stop before W05.
