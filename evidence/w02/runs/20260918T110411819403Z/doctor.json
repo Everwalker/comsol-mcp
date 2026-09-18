@@ -1,0 +1,29 @@
+{
+  "observations": {
+    "timestamp": "2026-09-18T11:04:12.151902+00:00",
+    "os": "macOS-27.0-arm64-arm-64bit",
+    "architecture": "arm64",
+    "jdk": "openjdk version \"11.0.31\" 2026-04-21 LTS\nOpenJDK Runtime Environment Corretto-11.0.31.11.1 (build 11.0.31+11-LTS)\nOpenJDK 64-Bit Server VM Corretto-11.0.31.11.1 (build 11.0.31+11-LTS, mixed mode)\n",
+    "comsol_root": "/Applications/COMSOL64/Multiphysics",
+    "classpath_sha256": "ef9ccdd4b236aa56465e155860ed88465c89f63f86982898cc7b15f188ad0574",
+    "jar_count": 25,
+    "sources": {
+      "BoundPhase1Poc.java": "093c51f1144b2713f1427194014266ee2cd82f0f5597bcaba71c11a34816c00f",
+      "BoundPhase1ProductProbe.java": "788e85cceb5b2a4b55a93e738eee6e37aa8faf8dc7c38587f2c95ef39a4ff619",
+      "BoundPhase1Reopen.java": "4625f30ca27d492c05442e7b370ea1353389259e83e0b0382868c35e658081a4"
+    },
+    "build": "6.4.0.293",
+    "backend": "external Corretto JDK 11 / real stdio MCP",
+    "test_machine": "local macOS arm64"
+  },
+  "server": {
+    "observed_at": "2026-09-18T11:04:12.113719+00:00",
+    "process": "84749 Fri Sep 18 17:46:07 2026     /Applications/COMSOL64/Multiphysics/bin/comsol mphserver -Dcs.root=/Applications/COMSOL64/Multiphysics -Dcatalina.home=/Applications/COMSOL64/Multiphysics/bin/tomcat -Djava.io.tmpdir=/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/20260918T175300Z/tmp-server --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.rmi/sun.rmi.transport=ALL-UNNAMED -Djava.class.path=/Applications/COMSOL64/Multiphysics/bin/tomcat/bin/bootstrap.jar:/Applications/COMSOL64/Multiphysics/bin/tomcat/bin/tomcat-juli.jar:/Applications/COMSOL64/Multiphysics/plugins/com.comsol.systemutils_1.0.0.jar:/Applications/COMSOL64/Multiphysics/plugins/com.comsol.util_1.0.0.jar:/Applications/COMSOL64/Multiphysics/plugins/org.eclipse.equinox.launcher_1.7.0.v20250519-0528.jar:/Applications/COMSOL64/Multiphysics/plugins/org.eclipse.osgi_3.23.100.v20250514-1759.jar -Dorg.osgi.service.log.admin.loglevel=INFO -Declipse.product=com.comsol.util.product -Dosgi.bundles=org.eclipse.update.configurator@1:start,org.eclipse.equinox.common@2:start,org.apache.felix.scr@1:start,org.eclipse.equinox.event@3:start,org.eclipse.core.runtime@start -Dosgi.bundles.defaultStartLevel=4 -Dosgi.startLevel=6 -Djava.util.logging.manager=org.apache.juli.ClassLoaderLogManager -Dcs.logoutput=file -Dcs.logfileprefix=mphserver -Djava.awt.headless=true -Xss4m -Xms40m -Xmx2g -XX:MaxMetaspaceSize=1g -Dlog4j2.formatMsgNoLookups=true -XX:-SplitIfBlocks com.comsol.util.application.ServerApplication -login \"auto\" -graphics -autosave \"off\" -port \"0\" -multi \"on\" -prefsdir \"/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/20260918T175300Z/prefs-server\" -tmpdir \"/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/20260918T175300Z/tmp-server\" -forcecomsolgcc on",
+    "listeners": "COMMAND   PID       USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME\njava    84749 everwalker   59u  IPv6 0x36e9e072802fa0a1      0t0  TCP *:56388 (LISTEN)\n",
+    "exit_policy": "attach-only; never terminate this server"
+  },
+  "local_runtime_poc": "PASS",
+  "platform_release_certification": "UNVERIFIED",
+  "other_environments": "BLOCKED: no accessible installation/host",
+  "generic_runtime_discover_doctor_api": "NOT_IMPLEMENTED_IN_W02_FIXED_RECIPE"
+}

@@ -51,6 +51,7 @@ EXPECTED_TOOLS = [
     "configure_solver",
     "run_study_async",
     "run_study_status",
+    "runtime_poc_v64",
 ]
 
 

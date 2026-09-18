@@ -16,6 +16,7 @@ from comsol_mcp._tools_geometry import register as _reg_geometry
 from comsol_mcp._tools_snapshot import register as _reg_snapshot
 from comsol_mcp._tools_physics import register as _reg_physics
 from comsol_mcp._tools_solver import register as _reg_solver
+from comsol_mcp._tools_phase1 import register as _reg_phase1
 
 # Register all tools on the shared FastMCP instance at import time.
 _reg_connection(mcp)
@@ -26,6 +27,7 @@ _reg_geometry(mcp)
 _reg_snapshot(mcp)
 _reg_physics(mcp)
 _reg_solver(mcp)
+_reg_phase1(mcp)
 
 
 def main() -> None:

@@ -36,3 +36,19 @@
 ### Next dependencies
 
 W02 may use the pinned baseline and the separate protocol evidence directory. W03 depends on W02 runtime/server evidence. W04 should implement the F01/F02/F03/F06 repairs using the exact static locations recorded here; all changes require new runtime tests and must not be inferred from this audit.
+
+## W02 — runtime/Java PoC
+
+**Status: COMPLETE for currently accessible execution; other targets BLOCKED/UNVERIFIED.** The accepted run is `evidence/w02/runs/20260918T110411819403Z/`, reached through actual stdio MCP `runtime_poc_v64`, not a standalone Java substitute. Only the fixed recipe on macOS arm64 / COMSOL 6.4.0.293 / Corretto 11.0.31 is VERIFIED. Full platform support remains UNVERIFIED.
+
+- Changed files: `_phase1_runtime.py`, `_tools_phase1.py`, `phase1_java/*.java`, registration, package data, `tools/w02_run_mcp.py`, `tests/test_phase1_runtime.py`, registration test and private/evidence ignore rules. New plan/API/operation notes document permissions and replay.
+- Command: historical Python 3.12 venv `python tools/w02_run_mcp.py --pid 84749 --port 56388 --prefs <repository>/.phase1-private/20260918T175300Z/prefs-server` — **PASS**. Real requests/responses, PID/start-time/listener inventory, classpath/source hashes and every child command are retained.
+- External JDK 11 compiles against all 25 official `apiplugins` JARs. Actual server build is read back. Solve/save/fresh-Java-process reopen/PNG export pass. Both analytic maximum errors are `1.2856382625159313e-13 < 1e-8`; PNG is 800×600, CRC/raster validated and visually inspected. This is an analytic unit-square PDE benchmark, not a general multiphysics physical gate.
+- **T001 BLOCKED overall**, local fixed runtime PoC PASS: the other five real environment combinations are unavailable. **T002 BLOCKED**: no COMSOL 6.3 installation/second-version process. No mock substitutes.
+- **T042 BLOCKED overall**: documented `hasProduct("ACDC")` returned true without checkout, but no actually absent documented product was identified for a negative test. ACDC physics operation is not thereby VERIFIED.
+- **T059 PASS** within this phase: API-only observations stay UNVERIFIED; capability upgrade cites the actual MCP test and unavailable cases remain BLOCKED. See authoritative `evidence/phase1_acceptance.json` after W04 delivery.
+- Failures retained: direct-Java historical run `20260918T175300Z` is **not MCP acceptance** and its old capability label is superseded. MCP run `20260918T105911073875Z` timed out after successful reopen because an idle Java non-daemon pool retained the client; thread dump showed `DestroyJavaVM` and an idle queue. Only that completed dedicated client was sent SIGTERM after identity verification. The server was untouched. Run `20260918T110318486018Z` failed on missing Pillow; the implementation now uses standard-library PNG validation.
+- Unit verification: final suite **68 PASS**, including real path-boundary/classpath/PNG control tests; see `evidence/w04/pytest_final.txt`. Unit tests do not certify any engine.
+- Dependency: W03 may now attempt Desktop against the registered server. No W05 was started.
+
+The Python interpreter used for all test commands is `/Users/everwalker/Documents/Codex/2026-09-05/https-github-com-wjc9011-comsol-multiphysics/comsol-mcp-server/.venv/bin/python`. It was reused read-only; no user client/service configuration was changed.
