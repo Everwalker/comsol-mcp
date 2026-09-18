@@ -89,3 +89,19 @@ The Python interpreter used for all test commands is `/Users/everwalker/Document
 W01 is complete; W02's accessible real tests and W03's available checks are complete with explicit blockers; W04's executable cases pass. **W05 and later remain NOT_RUN.** No user design file, service configuration, license file, or OS permission was overwritten.
 
 The attach-only test server (PID 84749, loopback 56388) remains running for reproducible follow-up; no test solve is pending. Its historical identity must be rechecked before reuse or shutdown. The repository includes accepted MPH/PNG artifacts and can continue from the phase-one commits. No full six-combination platform certification is claimed.
+
+
+## Fork delivery — 2026-09-18
+
+Delivery target: `https://github.com/Everwalker/comsol-mcp`, branch `main`.
+The fork initially pointed at the exact W01 upstream baseline
+`ccca65aa8277d1205c5de5fb6221e460aca5997a`. Comparing it with the local import
+commit `ddcdc15` showed only the added design package; all upstream files were
+identical. The independent import history can therefore be joined to this
+unchanged upstream history without replacing any remote user edits.
+
+This delivery includes all W01–W04 stage commits, source, tests, evidence and
+explicit blocked/unverified statuses. `AGENTS.md` records the user's standing
+instruction to synchronize each completed phase to the fork with a non-force
+push and verify the remote commit. It does not authorize W05 or a scheduled
+background job. Private runtime preferences and credentials remain excluded.

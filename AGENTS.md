@@ -97,3 +97,29 @@ These are resolved by importing the target function from the other module.
 - `pytest` runs 40 tests that don't need COMSOL
 - Tests cover: sanitize_label, normalize_properties, coerce_eval, last_scalar, port_is_open, workflow_state IO, friendly_connection_error, numeric_result, resolve_path, normcase_path, tool registration, classification sets
 - Integration tests requiring a live COMSOL Server are marked `@pytest.mark.comsol_server` and skipped by default
+
+
+## Fork synchronization after each completed phase
+
+User instruction (2026-09-18): publish this project's current progress to
+https://github.com/Everwalker/comsol-mcp and synchronize again whenever a phase
+is completed. This is standing authorization for ordinary non-force pushes to
+that fork; it does not authorize starting another phase.
+
+- The delivery remote is `origin` at `https://github.com/Everwalker/comsol-mcp.git`;
+  the delivery branch is `main`. Preserve other remotes.
+- Before publishing a completed phase, update
+  `docs/comsol_mcp_design_v1/PROGRESS.md`, commit its implementation, tests and
+  audit evidence, and retain PASS/FAIL/BLOCKED/NOT_RUN distinctions. Never turn
+  an unavailable environment into VERIFIED merely because code exists.
+- Exclude credentials, `.phase1-private/`, transient preferences and caches.
+  Preserve the intended scientific artifacts and failure evidence.
+- Fetch `origin/main` and inspect unexpected remote changes before pushing.
+  Use `git push origin HEAD:main` from the current development branch; no force
+  push, remote history rewrite, or silent replacement of remote user changes.
+  If branch protection requires a PR, use that route and report pending merge.
+- Verify the remote `refs/heads/main` SHA equals the published local HEAD before
+  reporting synchronization complete. If authentication/network/protection
+  blocks delivery, retain the commits and report the actual blocker.
+- Synchronize at the phase completion boundary, not after every small edit.
+  Do not install a polling automation or advance beyond the authorized scope.
