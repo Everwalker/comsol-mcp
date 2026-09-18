@@ -1,0 +1,5438 @@
+{
+  "baseline_commit": "ccca65aa8277d1205c5de5fb6221e460aca5997a",
+  "tool_count": 50,
+  "source": "FastMCP in-process registry after comsol_mcp.mcp_server import",
+  "compatibility_boundary": "Mapping is a W01 inventory; no new registry/protocol layer is installed.",
+  "tools": [
+    {
+      "legacy_tool": "check_server_port",
+      "callable": "comsol_mcp._tools_connection.check_server_port",
+      "description": "Check whether a manually started COMSOL Server is listening on host:port.",
+      "input_schema": {
+        "properties": {
+          "host": {
+            "default": "localhost",
+            "title": "Host",
+            "type": "string"
+          },
+          "port": {
+            "default": 2036,
+            "title": "Port",
+            "type": "integer"
+          }
+        },
+        "title": "check_server_portArguments",
+        "type": "object"
+      },
+      "python_signature": "(host: 'str' = 'localhost', port: 'int' = 2036) -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "runtime_doctor",
+          "operation_id": "runtime.doctor",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "runtime.doctor input",
+            "type": "object",
+            "properties": {
+              "request_id": {
+                "type": "string"
+              },
+              "runtime_id": {
+                "type": "string"
+              },
+              "checks": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "host",
+            "port"
+          ],
+          "new_required_parameters": [],
+          "context_not_in_legacy_contract": []
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "commit_current_main_model",
+      "callable": "comsol_mcp._tools_snapshot.commit_current_main_model",
+      "description": "Save a named snapshot, then overwrite the persisted current main model with the current server-side state.",
+      "input_schema": {
+        "properties": {
+          "snapshot_label": {
+            "default": "",
+            "title": "Snapshot Label",
+            "type": "string"
+          }
+        },
+        "title": "commit_current_main_modelArguments",
+        "type": "object"
+      },
+      "python_signature": "(snapshot_label: 'str' = '') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "transaction_apply",
+          "operation_id": "transaction.apply",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "transaction.apply input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "actions": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "invariants": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "checkpoint_policy": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "actions",
+              "checkpoint_policy"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "snapshot_label"
+          ],
+          "new_required_parameters": [
+            "actions",
+            "checkpoint_policy",
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key"
+          ]
+        },
+        {
+          "mcp_tool_name": "model_save",
+          "operation_id": "model.save",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "model.save input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "destination": {
+                "type": "string"
+              },
+              "overwrite": {
+                "type": "boolean"
+              },
+              "include_solution": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "destination",
+              "overwrite"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "snapshot_label"
+          ],
+          "new_required_parameters": [
+            "destination",
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "overwrite",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "configure_single_main_workflow",
+      "callable": "comsol_mcp._tools_workflow.configure_single_main_workflow",
+      "description": "Persist the single-current-main-model workflow in MCP state.\n\n    model_dimension: spatial dimension of the model (2 or 3). Set to 0 to\n    skip. This is used by create_physics and evaluate_expressions aggregate\n    to select the correct COMSOL node types. For 2D models set to 2, for 3D\n    set to 3.\n    ",
+      "input_schema": {
+        "properties": {
+          "current_main_model_path": {
+            "title": "Current Main Model Path",
+            "type": "string"
+          },
+          "snapshot_dir": {
+            "default": "",
+            "title": "Snapshot Dir",
+            "type": "string"
+          },
+          "snapshot_prefix": {
+            "default": "",
+            "title": "Snapshot Prefix",
+            "type": "string"
+          },
+          "model_dimension": {
+            "default": 0,
+            "title": "Model Dimension",
+            "type": "integer"
+          },
+          "notes": {
+            "default": "",
+            "title": "Notes",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_main_model_path"
+        ],
+        "title": "configure_single_main_workflowArguments",
+        "type": "object"
+      },
+      "python_signature": "(current_main_model_path: 'str', snapshot_dir: 'str' = '', snapshot_prefix: 'str' = '', model_dimension: 'int' = 0, notes: 'str' = '') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "project_contract_set",
+          "operation_id": "project.contract_set",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "project.contract_set input",
+            "type": "object",
+            "properties": {
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "project_id": {
+                "type": "string"
+              },
+              "contract": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "idempotency_key",
+              "project_id",
+              "contract"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "current_main_model_path",
+            "model_dimension",
+            "notes",
+            "snapshot_dir",
+            "snapshot_prefix"
+          ],
+          "new_required_parameters": [
+            "contract",
+            "idempotency_key",
+            "project_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "idempotency_key"
+          ]
+        },
+        {
+          "mcp_tool_name": "project_policy_set",
+          "operation_id": "project.policy_set",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "project.policy_set input",
+            "type": "object",
+            "properties": {
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "project_id": {
+                "type": "string"
+              },
+              "policy": {
+                "type": "object"
+              },
+              "authorization_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "idempotency_key",
+              "project_id",
+              "policy",
+              "authorization_ref"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "current_main_model_path",
+            "model_dimension",
+            "notes",
+            "snapshot_dir",
+            "snapshot_prefix"
+          ],
+          "new_required_parameters": [
+            "authorization_ref",
+            "idempotency_key",
+            "policy",
+            "project_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "configure_solver",
+      "callable": "comsol_mcp._tools_solver.configure_solver",
+      "description": "Configure a solver feature's properties.\n\n    properties_json format: [{\"name\": \"prop_name\", \"value\": \"value\"}] or\n    {\"prop_name\": \"value\", ...}. For array-valued properties use\n    [{\"name\": \"prop_name\", \"values\": [\"v1\", \"v2\"]}].\n\n    To add segregated solver steps, use properties_json with:\n    [{\"name\": \"add_segregated_step\", \"value\": \"{\"step_tag\": \"step1\", \"variables\": [\"u\", \"v\"]}\"}]\n    Multiple steps can be added in a single call.\n    ",
+      "input_schema": {
+        "properties": {
+          "sol_tag": {
+            "title": "Sol Tag",
+            "type": "string"
+          },
+          "feature_tag": {
+            "title": "Feature Tag",
+            "type": "string"
+          },
+          "properties_json": {
+            "default": "[]",
+            "title": "Properties Json",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sol_tag",
+          "feature_tag"
+        ],
+        "title": "configure_solverArguments",
+        "type": "object"
+      },
+      "python_signature": "(sol_tag: 'str', feature_tag: 'str', properties_json: 'str' = '[]') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "solver_feature_update",
+          "operation_id": "solver.feature_update",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "solver.feature_update input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "properties": {
+                "$ref": "common.schema.json#/$defs/PropertySet"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "path",
+              "properties"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "feature_tag",
+            "properties_json",
+            "sol_tag"
+          ],
+          "new_required_parameters": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "path",
+            "project_id",
+            "properties",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "create_feature",
+      "callable": "comsol_mcp._tools_geometry.create_feature",
+      "description": "Create a geometry feature and optionally apply initial properties.",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "geometry": {
+            "title": "Geometry",
+            "type": "string"
+          },
+          "tag": {
+            "title": "Tag",
+            "type": "string"
+          },
+          "feature_type": {
+            "title": "Feature Type",
+            "type": "string"
+          },
+          "properties_json": {
+            "default": "[]",
+            "title": "Properties Json",
+            "type": "string"
+          },
+          "run_geometry": {
+            "default": false,
+            "title": "Run Geometry",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "component",
+          "geometry",
+          "tag",
+          "feature_type"
+        ],
+        "title": "create_featureArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str', geometry: 'str', tag: 'str', feature_type: 'str', properties_json: 'str' = '[]', run_geometry: 'bool' = False) -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "geometry_feature_create",
+          "operation_id": "geometry.feature_create",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "geometry.feature_create input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "parent": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "tag": {
+                "type": "string"
+              },
+              "type_id": {
+                "type": "string"
+              },
+              "properties": {
+                "$ref": "common.schema.json#/$defs/PropertySet"
+              },
+              "inputs": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "parent",
+              "tag",
+              "type_id",
+              "properties"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [
+            "tag"
+          ],
+          "legacy_only_parameters": [
+            "component",
+            "feature_type",
+            "geometry",
+            "properties_json",
+            "run_geometry"
+          ],
+          "new_required_parameters": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "parent",
+            "project_id",
+            "properties",
+            "session_id",
+            "type_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "create_physics",
+      "callable": "comsol_mcp._tools_physics.create_physics",
+      "description": "Add a physics interface to a component.\n\n    Common physics_type values: \"cfpde\" (Coefficient Form PDE),\n    \"tds\" (Transport of Diluted Species), \"solid\" (Solid Mechanics),\n    \"ht\" (Heat Transfer), \"es\" (Electrostatics), etc.\n\n    dimension: spatial dimension (1, 2, or 3). Default 0 = auto-detect from\n    the component's geometry. Set via configure_single_main_workflow(model_dimension=2).\n\n    dependent_variables: comma-separated dependent variable names. Default \"u\".\n    COMSOL uses these to create the correct physics with matching spatial dimension.\n    For multiple dependent variables use \"u,v\" or \"u,v,w\".\n    ",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "tag": {
+            "title": "Tag",
+            "type": "string"
+          },
+          "physics_type": {
+            "title": "Physics Type",
+            "type": "string"
+          },
+          "dimension": {
+            "default": 0,
+            "title": "Dimension",
+            "type": "integer"
+          },
+          "dependent_variables": {
+            "default": "u",
+            "title": "Dependent Variables",
+            "type": "string"
+          }
+        },
+        "required": [
+          "component",
+          "tag",
+          "physics_type"
+        ],
+        "title": "create_physicsArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str', tag: 'str', physics_type: 'str', dimension: 'int' = 0, dependent_variables: 'str' = 'u') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "physics_create",
+          "operation_id": "physics.create",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "physics.create input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "component": {
+                "type": "string"
+              },
+              "tag": {
+                "type": "string"
+              },
+              "type_id": {
+                "type": "string"
+              },
+              "geometry": {
+                "type": "string"
+              },
+              "dependent_variables": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "component",
+              "tag",
+              "type_id",
+              "geometry"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [
+            "component",
+            "dependent_variables",
+            "tag"
+          ],
+          "legacy_only_parameters": [
+            "dimension",
+            "physics_type"
+          ],
+          "new_required_parameters": [
+            "expected_revision",
+            "geometry",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "session_id",
+            "type_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "create_physics_feature",
+      "callable": "comsol_mcp._tools_physics.create_physics_feature",
+      "description": "Add a child feature (boundary condition, source term, etc.) to a physics interface.\n\n    IMPORTANT: feature_type uses COMSOL internal identifiers, NOT display names.\n    For example, in TDS (Transport of Diluted Species), valid types include:\n    \"Inflow\", \"Outflow\", \"Flux\", \"NoFlux\", \"Concentration\", \"InitialValues\",\n    \"ConservedQuantity\", \"WeakConstraint\".\n    Use list_physics_features first to discover existing feature_type identifiers\n    in the current physics interface, as these vary per physics type and COMSOL version.\n    properties_json format: [{\"name\": \"prop_name\", \"value\": \"value\"}] or\n    {\"prop_name\": \"value\", ...}.\n    ",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "physics_tag": {
+            "title": "Physics Tag",
+            "type": "string"
+          },
+          "feature_tag": {
+            "title": "Feature Tag",
+            "type": "string"
+          },
+          "feature_type": {
+            "title": "Feature Type",
+            "type": "string"
+          },
+          "properties_json": {
+            "default": "[]",
+            "title": "Properties Json",
+            "type": "string"
+          }
+        },
+        "required": [
+          "component",
+          "physics_tag",
+          "feature_tag",
+          "feature_type"
+        ],
+        "title": "create_physics_featureArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str', physics_tag: 'str', feature_tag: 'str', feature_type: 'str', properties_json: 'str' = '[]') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "physics_feature_create",
+          "operation_id": "physics.feature_create",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "physics.feature_create input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "parent": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "tag": {
+                "type": "string"
+              },
+              "type_id": {
+                "type": "string"
+              },
+              "entity_dimension": {
+                "type": "integer"
+              },
+              "properties": {
+                "$ref": "common.schema.json#/$defs/PropertySet"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "parent",
+              "tag",
+              "type_id"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "component",
+            "feature_tag",
+            "feature_type",
+            "physics_tag",
+            "properties_json"
+          ],
+          "new_required_parameters": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "parent",
+            "project_id",
+            "session_id",
+            "tag",
+            "type_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "create_solver_config",
+      "callable": "comsol_mcp._tools_solver.create_solver_config",
+      "description": "Create a solver configuration linked to a study.\n\n    The solver tag identifies the new solver config. The study tag links it\n    to an existing study for solving.\n    ",
+      "input_schema": {
+        "properties": {
+          "sol_tag": {
+            "title": "Sol Tag",
+            "type": "string"
+          },
+          "study_tag": {
+            "title": "Study Tag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sol_tag",
+          "study_tag"
+        ],
+        "title": "create_solver_configArguments",
+        "type": "object"
+      },
+      "python_signature": "(sol_tag: 'str', study_tag: 'str') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "solver_create",
+          "operation_id": "solver.create",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "solver.create input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "tag": {
+                "type": "string"
+              },
+              "study": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "tag",
+              "study"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "sol_tag",
+            "study_tag"
+          ],
+          "new_required_parameters": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "session_id",
+            "study",
+            "tag"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "delete_feature",
+      "callable": "comsol_mcp._tools_geometry.delete_feature",
+      "description": "Delete a geometry feature from the selected server-side model.",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "geometry": {
+            "title": "Geometry",
+            "type": "string"
+          },
+          "tag": {
+            "title": "Tag",
+            "type": "string"
+          },
+          "run_geometry": {
+            "default": false,
+            "title": "Run Geometry",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "component",
+          "geometry",
+          "tag"
+        ],
+        "title": "delete_featureArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str', geometry: 'str', tag: 'str', run_geometry: 'bool' = False) -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "geometry_feature_remove",
+          "operation_id": "geometry.feature_remove",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "geometry.feature_remove input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "path"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "component",
+            "geometry",
+            "run_geometry",
+            "tag"
+          ],
+          "new_required_parameters": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "path",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "ensure_component",
+      "callable": "comsol_mcp._tools_geometry.ensure_component",
+      "description": "Ensure a component exists in the selected server-side model.",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "default": "comp1",
+            "title": "Component",
+            "type": "string"
+          },
+          "dimension": {
+            "default": 2,
+            "title": "Dimension",
+            "type": "integer"
+          }
+        },
+        "title": "ensure_componentArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str' = 'comp1', dimension: 'int' = 2) -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "node_create",
+          "operation_id": "node.create",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "node.create input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "parent": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "collection": {
+                "type": "string"
+              },
+              "tag": {
+                "type": "string"
+              },
+              "type_id": {
+                "type": "string"
+              },
+              "properties": {
+                "$ref": "common.schema.json#/$defs/PropertySet"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "parent",
+              "collection",
+              "tag",
+              "type_id"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "component",
+            "dimension"
+          ],
+          "new_required_parameters": [
+            "collection",
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "parent",
+            "project_id",
+            "session_id",
+            "tag",
+            "type_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "ensure_geometry",
+      "callable": "comsol_mcp._tools_geometry.ensure_geometry",
+      "description": "Ensure a geometry sequence exists in the selected server-side model.",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "default": "comp1",
+            "title": "Component",
+            "type": "string"
+          },
+          "geometry": {
+            "default": "geom1",
+            "title": "Geometry",
+            "type": "string"
+          },
+          "dimension": {
+            "default": 2,
+            "title": "Dimension",
+            "type": "integer"
+          }
+        },
+        "title": "ensure_geometryArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str' = 'comp1', geometry: 'str' = 'geom1', dimension: 'int' = 2) -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "geometry_sequence_create",
+          "operation_id": "geometry.sequence_create",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "geometry.sequence_create input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "component": {
+                "type": "string"
+              },
+              "tag": {
+                "type": "string"
+              },
+              "dimension": {
+                "type": "integer"
+              },
+              "axisymmetric": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "component",
+              "tag",
+              "dimension"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [
+            "component",
+            "dimension"
+          ],
+          "legacy_only_parameters": [
+            "geometry"
+          ],
+          "new_required_parameters": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "session_id",
+            "tag"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "ensure_mesh",
+      "callable": "comsol_mcp._tools_geometry.ensure_mesh",
+      "description": "Ensure a mesh sequence exists in the selected server-side model.",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "default": "comp1",
+            "title": "Component",
+            "type": "string"
+          },
+          "mesh": {
+            "default": "mesh1",
+            "title": "Mesh",
+            "type": "string"
+          }
+        },
+        "title": "ensure_meshArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str' = 'comp1', mesh: 'str' = 'mesh1') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "mesh_create",
+          "operation_id": "mesh.create",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "mesh.create input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "component": {
+                "type": "string"
+              },
+              "tag": {
+                "type": "string"
+              },
+              "geometry": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "component",
+              "tag",
+              "geometry"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [
+            "component"
+          ],
+          "legacy_only_parameters": [
+            "mesh"
+          ],
+          "new_required_parameters": [
+            "expected_revision",
+            "geometry",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "session_id",
+            "tag"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "evaluate_expressions",
+      "callable": "comsol_mcp._tools_params.evaluate_expressions",
+      "description": "Evaluate one or more expressions on the current server-side model.\n\n    Each expression item supports: {\"name\": \"...\", \"expression\": \"...\",\n      \"aggregate\": \"max\"|\"min\"|\"avg\"|\"integral\"|\"none\",\n      \"domains\": [1,2], \"boundaries\": [5,6], \"time_point\": \"last\"|\"all\"|\"N\"}.\n\n    Backward compatible: [{\"name\": \"...\", \"expression\": \"...\"}] still works.\n    max_result_size: when > 0, truncate arrays exceeding this size (chars).\n    ",
+      "input_schema": {
+        "properties": {
+          "expressions_json": {
+            "default": "[]",
+            "title": "Expressions Json",
+            "type": "string"
+          },
+          "max_result_size": {
+            "default": 0,
+            "title": "Max Result Size",
+            "type": "integer"
+          }
+        },
+        "title": "evaluate_expressionsArguments",
+        "type": "object"
+      },
+      "python_signature": "(expressions_json: 'str' = '[]', max_result_size: 'int' = 0) -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "result_evaluate",
+          "operation_id": "result.evaluate",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "result.evaluate input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "spec": {
+                "$ref": "common.schema.json#/$defs/EvaluationSpec"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "idempotency_key",
+              "spec"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "expressions_json",
+            "max_result_size"
+          ],
+          "new_required_parameters": [
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "session_id",
+            "spec"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "get_core_metrics",
+      "callable": "comsol_mcp._tools_params.get_core_metrics",
+      "description": "Return the core metrics used by the current short-window mainline.",
+      "input_schema": {
+        "properties": {},
+        "title": "get_core_metricsArguments",
+        "type": "object"
+      },
+      "python_signature": "() -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "metric_evaluate",
+          "operation_id": "metric.evaluate",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "metric.evaluate input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "metric_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "solution": {
+                "$ref": "common.schema.json#/$defs/SolutionSpec"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "idempotency_key",
+              "metric_ids"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [],
+          "new_required_parameters": [
+            "idempotency_key",
+            "metric_ids",
+            "model_ref",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "get_parameters",
+      "callable": "comsol_mcp._tools_params.get_parameters",
+      "description": "Return current global parameters from the selected server-side model.",
+      "input_schema": {
+        "properties": {},
+        "title": "get_parametersArguments",
+        "type": "object"
+      },
+      "python_signature": "() -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "parameter_list",
+          "operation_id": "parameter.list",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "parameter.list input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "group": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [],
+          "new_required_parameters": [
+            "model_ref",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "list_physics",
+      "callable": "comsol_mcp._tools_physics.list_physics",
+      "description": "List all physics interfaces in a component with their features.\n\n    Returns tags, labels, and feature counts for each physics interface.\n    ",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "default": "comp1",
+            "title": "Component",
+            "type": "string"
+          }
+        },
+        "title": "list_physicsArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str' = 'comp1') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "physics_list",
+          "operation_id": "physics.list",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "physics.list input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "component": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [
+            "component"
+          ],
+          "legacy_only_parameters": [],
+          "new_required_parameters": [
+            "model_ref",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "list_physics_features",
+      "callable": "comsol_mcp._tools_physics.list_physics_features",
+      "description": "List all features (boundary conditions, sources, etc.) under a physics interface.\n\n    Returns tags, labels, feature_type identifiers, property names, and\n    selection editability for each feature. The feature_type field shows the\n    COMSOL internal identifier to use with create_physics_feature.\n    ",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "physics_tag": {
+            "title": "Physics Tag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "component",
+          "physics_tag"
+        ],
+        "title": "list_physics_featuresArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str', physics_tag: 'str') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "physics_inspect",
+          "operation_id": "physics.inspect",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "physics.inspect input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "depth": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "path"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "component",
+            "physics_tag"
+          ],
+          "new_required_parameters": [
+            "model_ref",
+            "path",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "list_solver_config",
+      "callable": "comsol_mcp._tools_solver.list_solver_config",
+      "description": "List all solver configurations with their features.\n\n    Returns solver tags, feature counts, and feature tags for each solver\n    configuration in the current model.\n    ",
+      "input_schema": {
+        "properties": {},
+        "title": "list_solver_configArguments",
+        "type": "object"
+      },
+      "python_signature": "() -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "solver_list",
+          "operation_id": "solver.list",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "solver.list input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "filter": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [],
+          "new_required_parameters": [
+            "model_ref",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "list_solver_features",
+      "callable": "comsol_mcp._tools_solver.list_solver_features",
+      "description": "List features and sub-features under a solver configuration.\n\n    Returns feature tags, labels, properties, and any sub-features (e.g.\n    segregated solver steps).\n    ",
+      "input_schema": {
+        "properties": {
+          "sol_tag": {
+            "title": "Sol Tag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sol_tag"
+        ],
+        "title": "list_solver_featuresArguments",
+        "type": "object"
+      },
+      "python_signature": "(sol_tag: 'str') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "solver_inspect",
+          "operation_id": "solver.inspect",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "solver.inspect input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "depth": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "path"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "sol_tag"
+          ],
+          "new_required_parameters": [
+            "model_ref",
+            "path",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "load_current_main_model",
+      "callable": "comsol_mcp._tools_workflow.load_current_main_model",
+      "description": "Load the persisted current main model into the connected COMSOL server session.",
+      "input_schema": {
+        "properties": {},
+        "title": "load_current_main_modelArguments",
+        "type": "object"
+      },
+      "python_signature": "() -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "model_load",
+          "operation_id": "model.load",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "model.load input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "type": "string"
+              },
+              "artifact_id": {
+                "type": "string"
+              },
+              "path_policy": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "project_id",
+              "idempotency_key",
+              "session_id",
+              "artifact_id"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [],
+          "new_required_parameters": [
+            "artifact_id",
+            "idempotency_key",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "load_visible_main_model",
+      "callable": "comsol_mcp._tools_workflow.load_visible_main_model",
+      "description": "Load or adopt the visible main MPH, then lock MCP to that server-side model.",
+      "input_schema": {
+        "properties": {
+          "path": {
+            "default": "",
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "title": "load_visible_main_modelArguments",
+        "type": "object"
+      },
+      "python_signature": "(path: 'str' = '') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "session_connect",
+          "operation_id": "session.connect",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "session.connect input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "runtime_id": {
+                "type": "string"
+              },
+              "endpoint": {
+                "$ref": "common.schema.json#/$defs/Endpoint"
+              },
+              "credentials_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "idempotency_key",
+              "runtime_id",
+              "endpoint"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "path"
+          ],
+          "new_required_parameters": [
+            "endpoint",
+            "idempotency_key",
+            "project_id",
+            "runtime_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "idempotency_key"
+          ]
+        },
+        {
+          "mcp_tool_name": "model_load",
+          "operation_id": "model.load",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "model.load input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "type": "string"
+              },
+              "artifact_id": {
+                "type": "string"
+              },
+              "path_policy": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "project_id",
+              "idempotency_key",
+              "session_id",
+              "artifact_id"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "path"
+          ],
+          "new_required_parameters": [
+            "artifact_id",
+            "idempotency_key",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "idempotency_key"
+          ]
+        },
+        {
+          "mcp_tool_name": "desktop_bind",
+          "operation_id": "desktop.bind",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "desktop.bind input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "window_ref": {
+                "type": "string"
+              },
+              "model_ref": {
+                "type": "string"
+              },
+              "verification": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "project_id",
+              "idempotency_key",
+              "window_ref",
+              "model_ref"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "path"
+          ],
+          "new_required_parameters": [
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "window_ref"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "model_ref",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "manage_variables",
+      "callable": "comsol_mcp._tools_physics.manage_variables",
+      "description": "Manage variable definitions: list, create, or remove.\n\n    Actions:\n    - \"list\": List all variables. Returns tags, names, and expressions.\n    - \"create\": Create a variable node with given name and expression.\n    - \"remove\": Remove a variable node by tag.\n\n    When component is empty, operates on global variables.\n    When component is specified, operates on component-level variables.\n    ",
+      "input_schema": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "component": {
+            "default": "",
+            "title": "Component",
+            "type": "string"
+          },
+          "tag": {
+            "default": "",
+            "title": "Tag",
+            "type": "string"
+          },
+          "name": {
+            "default": "",
+            "title": "Name",
+            "type": "string"
+          },
+          "expression": {
+            "default": "",
+            "title": "Expression",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "manage_variablesArguments",
+        "type": "object"
+      },
+      "python_signature": "(action: 'str', component: 'str' = '', tag: 'str' = '', name: 'str' = '', expression: 'str' = '') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "variable_list",
+          "operation_id": "variable.list",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "variable.list input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "component": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [
+            "component"
+          ],
+          "legacy_only_parameters": [
+            "action",
+            "expression",
+            "name",
+            "tag"
+          ],
+          "new_required_parameters": [
+            "model_ref",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref"
+          ]
+        },
+        {
+          "mcp_tool_name": "variable_group_create",
+          "operation_id": "variable.group_create",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "variable.group_create input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "tag": {
+                "type": "string"
+              },
+              "component": {
+                "type": "string"
+              },
+              "selection": {
+                "$ref": "common.schema.json#/$defs/SelectionSpec"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "tag"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [
+            "component",
+            "tag"
+          ],
+          "legacy_only_parameters": [
+            "action",
+            "expression",
+            "name"
+          ],
+          "new_required_parameters": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key"
+          ]
+        },
+        {
+          "mcp_tool_name": "variable_set",
+          "operation_id": "variable.set",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "variable.set input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "group": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "variables": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "group",
+              "variables"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "action",
+            "component",
+            "expression",
+            "name",
+            "tag"
+          ],
+          "new_required_parameters": [
+            "expected_revision",
+            "group",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "session_id",
+            "variables"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key"
+          ]
+        },
+        {
+          "mcp_tool_name": "variable_remove",
+          "operation_id": "variable.remove",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "variable.remove input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "group": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "names": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "whole_group": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "group"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "action",
+            "component",
+            "expression",
+            "name",
+            "tag"
+          ],
+          "new_required_parameters": [
+            "expected_revision",
+            "group",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "mcp_tool_audit",
+      "callable": "comsol_mcp._tools_workflow.mcp_tool_audit",
+      "description": "Return the visible-main safety classification for the MCP tool surface.",
+      "input_schema": {
+        "properties": {},
+        "title": "mcp_tool_auditArguments",
+        "type": "object"
+      },
+      "python_signature": "() -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "registry_manifest",
+          "operation_id": "registry.manifest",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "registry.manifest input",
+            "type": "object",
+            "properties": {
+              "request_id": {
+                "type": "string"
+              },
+              "profile": {
+                "type": "string"
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [],
+          "new_required_parameters": [],
+          "context_not_in_legacy_contract": []
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "model_create",
+      "callable": "comsol_mcp._tools_model.model_create",
+      "description": "Create a new in-memory model on the connected COMSOL server and select it as current.",
+      "input_schema": {
+        "properties": {
+          "name": {
+            "default": "Server Model",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "title": "model_createArguments",
+        "type": "object"
+      },
+      "python_signature": "(name: 'str' = 'Server Model') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "model_create",
+          "operation_id": "model.create",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "model.create input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "dimension": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "project_id",
+              "idempotency_key",
+              "session_id",
+              "label"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "name"
+          ],
+          "new_required_parameters": [
+            "idempotency_key",
+            "label",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "model_load",
+      "callable": "comsol_mcp._tools_model.model_load",
+      "description": "Load an MPH file on the connected COMSOL server and select it as current.",
+      "input_schema": {
+        "properties": {
+          "path": {
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "title": "model_loadArguments",
+        "type": "object"
+      },
+      "python_signature": "(path: 'str') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "model_load",
+          "operation_id": "model.load",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "model.load input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "type": "string"
+              },
+              "artifact_id": {
+                "type": "string"
+              },
+              "path_policy": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "project_id",
+              "idempotency_key",
+              "session_id",
+              "artifact_id"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "path"
+          ],
+          "new_required_parameters": [
+            "artifact_id",
+            "idempotency_key",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "model_tree",
+      "callable": "comsol_mcp._tools_workflow.model_tree",
+      "description": "Return tags and structure for the current server-side model.",
+      "input_schema": {
+        "properties": {},
+        "title": "model_treeArguments",
+        "type": "object"
+      },
+      "python_signature": "() -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "model_tree",
+          "operation_id": "model.tree",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "model.tree input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "depth": {
+                "type": "integer"
+              },
+              "cursor": {
+                "type": "string"
+              },
+              "limit": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [],
+          "new_required_parameters": [
+            "model_ref",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "prune_loaded_models",
+      "callable": "comsol_mcp._tools_model.prune_loaded_models",
+      "description": "Remove extra loaded server-side models and keep only the requested working model.",
+      "input_schema": {
+        "properties": {
+          "keep": {
+            "default": "current",
+            "title": "Keep",
+            "type": "string"
+          }
+        },
+        "title": "prune_loaded_modelsArguments",
+        "type": "object"
+      },
+      "python_signature": "(keep: 'str' = 'current') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "model_close",
+          "operation_id": "model.close",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "model.close input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "discard_changes": {
+                "type": "boolean"
+              },
+              "authorization_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "discard_changes"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "keep"
+          ],
+          "new_required_parameters": [
+            "discard_changes",
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "remove_physics",
+      "callable": "comsol_mcp._tools_physics.remove_physics",
+      "description": "Remove a physics interface from a component.",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "tag": {
+            "title": "Tag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "component",
+          "tag"
+        ],
+        "title": "remove_physicsArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str', tag: 'str') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "physics_remove",
+          "operation_id": "physics.remove",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "physics.remove input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "path"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "component",
+            "tag"
+          ],
+          "new_required_parameters": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "path",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "remove_physics_feature",
+      "callable": "comsol_mcp._tools_physics.remove_physics_feature",
+      "description": "Remove a child feature from a physics interface.",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "physics_tag": {
+            "title": "Physics Tag",
+            "type": "string"
+          },
+          "feature_tag": {
+            "title": "Feature Tag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "component",
+          "physics_tag",
+          "feature_tag"
+        ],
+        "title": "remove_physics_featureArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str', physics_tag: 'str', feature_tag: 'str') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "physics_feature_remove",
+          "operation_id": "physics.feature_remove",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "physics.feature_remove input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "path"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "component",
+            "feature_tag",
+            "physics_tag"
+          ],
+          "new_required_parameters": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "path",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "run_feature",
+      "callable": "comsol_mcp._tools_geometry.run_feature",
+      "description": "Run a geometry or mesh sequence on the selected server-side model.",
+      "input_schema": {
+        "properties": {
+          "collection": {
+            "title": "Collection",
+            "type": "string"
+          },
+          "tag": {
+            "title": "Tag",
+            "type": "string"
+          },
+          "component": {
+            "default": "comp1",
+            "title": "Component",
+            "type": "string"
+          }
+        },
+        "required": [
+          "collection",
+          "tag"
+        ],
+        "title": "run_featureArguments",
+        "type": "object"
+      },
+      "python_signature": "(collection: 'str', tag: 'str', component: 'str' = 'comp1') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "geometry_build",
+          "operation_id": "geometry.build",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "geometry.build input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "geometry": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "until_tag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "idempotency_key",
+              "geometry"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "collection",
+            "component",
+            "tag"
+          ],
+          "new_required_parameters": [
+            "geometry",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "run_study",
+      "callable": "comsol_mcp._tools_workflow.run_study",
+      "description": "Run the current model study, optionally restricting execution to a study tag.",
+      "input_schema": {
+        "properties": {
+          "study_tag": {
+            "default": "",
+            "title": "Study Tag",
+            "type": "string"
+          }
+        },
+        "title": "run_studyArguments",
+        "type": "object"
+      },
+      "python_signature": "(study_tag: 'str' = '') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "study_run",
+          "operation_id": "study.run",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "study.run input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "study": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "resources": {
+                "type": "object"
+              },
+              "timeout_s": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "idempotency_key",
+              "study"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "study_tag"
+          ],
+          "new_required_parameters": [
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "session_id",
+            "study"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "run_study_async",
+      "callable": "comsol_mcp._tools_solver.run_study_async",
+      "description": "Run a COMSOL study in a background thread and return a job ID for polling.\n\n    This is the async version of run_study. It starts the solve in a background\n    thread and returns immediately with a job_id. Use run_study_status(job_id)\n    to poll for completion.\n\n    The MCP client will NOT disconnect during long solves because this tool\n    returns immediately.\n    ",
+      "input_schema": {
+        "properties": {
+          "study_tag": {
+            "default": "",
+            "title": "Study Tag",
+            "type": "string"
+          }
+        },
+        "title": "run_study_asyncArguments",
+        "type": "object"
+      },
+      "python_signature": "(study_tag: 'str' = '') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "study_run",
+          "operation_id": "study.run",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "study.run input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "study": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "resources": {
+                "type": "object"
+              },
+              "timeout_s": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "idempotency_key",
+              "study"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "study_tag"
+          ],
+          "new_required_parameters": [
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "session_id",
+            "study"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "idempotency_key"
+          ]
+        },
+        {
+          "mcp_tool_name": "job_status",
+          "operation_id": "job.status",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "job.status input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "job_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "job_id"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "study_tag"
+          ],
+          "new_required_parameters": [
+            "job_id",
+            "project_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "run_study_status",
+      "callable": "comsol_mcp._tools_solver.run_study_status",
+      "description": "Return status for the latest or specified async run_study job.\n\n    Pass the job_id returned by run_study_async, or leave empty to get the\n    latest job status.\n    ",
+      "input_schema": {
+        "properties": {
+          "job_id": {
+            "default": "",
+            "title": "Job Id",
+            "type": "string"
+          }
+        },
+        "title": "run_study_statusArguments",
+        "type": "object"
+      },
+      "python_signature": "(job_id: 'str' = '') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "job_status",
+          "operation_id": "job.status",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "job.status input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "job_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "job_id"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [
+            "job_id"
+          ],
+          "legacy_only_parameters": [],
+          "new_required_parameters": [
+            "project_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "run_visible_main_iteration",
+      "callable": "comsol_mcp._tools_snapshot.run_visible_main_iteration",
+      "description": "Run one locked visible-main iteration: set parameters, solve, extract metrics, save a copy snapshot.",
+      "input_schema": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "parameters_json": {
+            "default": "[]",
+            "title": "Parameters Json",
+            "type": "string"
+          },
+          "study_tag": {
+            "default": "",
+            "title": "Study Tag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label"
+        ],
+        "title": "run_visible_main_iterationArguments",
+        "type": "object"
+      },
+      "python_signature": "(label: 'str', parameters_json: 'str' = '[]', study_tag: 'str' = '') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "transaction_apply",
+          "operation_id": "transaction.apply",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "transaction.apply input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "actions": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "invariants": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "checkpoint_policy": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "actions",
+              "checkpoint_policy"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "label",
+            "parameters_json",
+            "study_tag"
+          ],
+          "new_required_parameters": [
+            "actions",
+            "checkpoint_policy",
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key"
+          ]
+        },
+        {
+          "mcp_tool_name": "study_run",
+          "operation_id": "study.run",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "study.run input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "study": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "resources": {
+                "type": "object"
+              },
+              "timeout_s": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "idempotency_key",
+              "study"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "label",
+            "parameters_json",
+            "study_tag"
+          ],
+          "new_required_parameters": [
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "session_id",
+            "study"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "idempotency_key"
+          ]
+        },
+        {
+          "mcp_tool_name": "metric_evaluate",
+          "operation_id": "metric.evaluate",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "metric.evaluate input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "metric_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "solution": {
+                "$ref": "common.schema.json#/$defs/SolutionSpec"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "idempotency_key",
+              "metric_ids"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "label",
+            "parameters_json",
+            "study_tag"
+          ],
+          "new_required_parameters": [
+            "idempotency_key",
+            "metric_ids",
+            "model_ref",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "save_main_model_snapshot",
+      "callable": "comsol_mcp._tools_snapshot.save_main_model_snapshot",
+      "description": "Save a named snapshot from the current server-side model using the persisted workflow naming policy.",
+      "input_schema": {
+        "properties": {
+          "snapshot_label": {
+            "title": "Snapshot Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "snapshot_label"
+        ],
+        "title": "save_main_model_snapshotArguments",
+        "type": "object"
+      },
+      "python_signature": "(snapshot_label: 'str') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "checkpoint_create",
+          "operation_id": "checkpoint.create",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "checkpoint.create input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "include_solution": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "label"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "snapshot_label"
+          ],
+          "new_required_parameters": [
+            "expected_revision",
+            "idempotency_key",
+            "label",
+            "model_ref",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "save_model",
+      "callable": "comsol_mcp._tools_snapshot.save_model",
+      "description": "Save the current server-side model to disk.",
+      "input_schema": {
+        "properties": {
+          "path": {
+            "default": "",
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "title": "save_modelArguments",
+        "type": "object"
+      },
+      "python_signature": "(path: 'str' = '') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "model_save",
+          "operation_id": "model.save",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "model.save input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "destination": {
+                "type": "string"
+              },
+              "overwrite": {
+                "type": "boolean"
+              },
+              "include_solution": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "destination",
+              "overwrite"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "path"
+          ],
+          "new_required_parameters": [
+            "destination",
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "overwrite",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "server_connect",
+      "callable": "comsol_mcp._tools_connection.server_connect",
+      "description": "Default entrypoint: attach MCP to an already running COMSOL Multiphysics Server.\n\n    This is the recommended tool for the visible Desktop workflow:\n    manually start COMSOL Multiphysics Server, call server_connect(host, port),\n    load_visible_main_model(path), then connect Desktop and import that model.\n    ",
+      "input_schema": {
+        "properties": {
+          "host": {
+            "default": "localhost",
+            "title": "Host",
+            "type": "string"
+          },
+          "port": {
+            "default": 2036,
+            "title": "Port",
+            "type": "integer"
+          },
+          "model_name": {
+            "default": "",
+            "title": "Model Name",
+            "type": "string"
+          },
+          "timeout_seconds": {
+            "default": 30.0,
+            "title": "Timeout Seconds",
+            "type": "number"
+          }
+        },
+        "title": "server_connectArguments",
+        "type": "object"
+      },
+      "python_signature": "(host: 'str' = 'localhost', port: 'int' = 2036, model_name: 'str' = '', timeout_seconds: 'float' = 30.0) -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "session_connect",
+          "operation_id": "session.connect",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "session.connect input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "runtime_id": {
+                "type": "string"
+              },
+              "endpoint": {
+                "$ref": "common.schema.json#/$defs/Endpoint"
+              },
+              "credentials_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "idempotency_key",
+              "runtime_id",
+              "endpoint"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "host",
+            "model_name",
+            "port",
+            "timeout_seconds"
+          ],
+          "new_required_parameters": [
+            "endpoint",
+            "idempotency_key",
+            "project_id",
+            "runtime_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "server_disconnect",
+      "callable": "comsol_mcp._tools_connection.server_disconnect",
+      "description": "Disconnect the MCP client. Optionally shut down the local server if MCP started it.",
+      "input_schema": {
+        "properties": {
+          "shutdown_server": {
+            "default": false,
+            "title": "Shutdown Server",
+            "type": "boolean"
+          }
+        },
+        "title": "server_disconnectArguments",
+        "type": "object"
+      },
+      "python_signature": "(shutdown_server: 'bool' = False) -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "session_disconnect",
+          "operation_id": "session.disconnect",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "session.disconnect input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "idempotency_key",
+              "session_id"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "shutdown_server"
+          ],
+          "new_required_parameters": [
+            "idempotency_key",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "server_info",
+      "callable": "comsol_mcp._tools_connection.server_info",
+      "description": "Return COMSOL MCP status and the recommended attach-first workflow.\n\n    For normal visible Desktop usage, manually start COMSOL Multiphysics Server,\n    connect Desktop to it, and then call server_connect().\n    ",
+      "input_schema": {
+        "properties": {},
+        "title": "server_infoArguments",
+        "type": "object"
+      },
+      "python_signature": "() -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "runtime_inspect",
+          "operation_id": "runtime.inspect",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "runtime.inspect input",
+            "type": "object",
+            "properties": {
+              "request_id": {
+                "type": "string"
+              },
+              "runtime_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "runtime_id"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [],
+          "new_required_parameters": [
+            "runtime_id"
+          ],
+          "context_not_in_legacy_contract": []
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "server_start",
+      "callable": "comsol_mcp._tools_connection.server_start",
+      "description": "Advanced fallback only: start a local COMSOL server and connect MCP to it.\n\n    Do NOT use this as the default visible workflow.\n    Preferred workflow:\n    1. Manually start COMSOL Multiphysics Server.\n    2. Connect COMSOL Desktop to that server.\n    3. Call server_connect(host, port) from MCP.\n\n    Use server_start() only when MCP should own the COMSOL server lifecycle and\n    random or non-default listening ports are acceptable.\n    ",
+      "input_schema": {
+        "properties": {
+          "port": {
+            "default": 0,
+            "title": "Port",
+            "type": "integer"
+          },
+          "cores": {
+            "default": 0,
+            "title": "Cores",
+            "type": "integer"
+          },
+          "multi": {
+            "default": "on",
+            "title": "Multi",
+            "type": "string"
+          },
+          "timeout_seconds": {
+            "default": 120,
+            "title": "Timeout Seconds",
+            "type": "integer"
+          },
+          "version": {
+            "default": "",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "title": "server_startArguments",
+        "type": "object"
+      },
+      "python_signature": "(port: 'int' = 0, cores: 'int' = 0, multi: 'str' = 'on', timeout_seconds: 'int' = 120, version: 'str' = '') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "session_start",
+          "operation_id": "session.start",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "session.start input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "runtime_id": {
+                "type": "string"
+              },
+              "options": {
+                "type": "object"
+              },
+              "resources": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "project_id",
+              "idempotency_key",
+              "runtime_id"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "cores",
+            "multi",
+            "port",
+            "timeout_seconds",
+            "version"
+          ],
+          "new_required_parameters": [
+            "idempotency_key",
+            "project_id",
+            "runtime_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "set_parameters",
+      "callable": "comsol_mcp._tools_params.set_parameters",
+      "description": "Set multiple global parameters on the selected server-side model.",
+      "input_schema": {
+        "properties": {
+          "parameters_json": {
+            "title": "Parameters Json",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parameters_json"
+        ],
+        "title": "set_parametersArguments",
+        "type": "object"
+      },
+      "python_signature": "(parameters_json: 'str') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "parameter_set",
+          "operation_id": "parameter.set",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "parameter.set input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "parameters": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "group": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "parameters"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "parameters_json"
+          ],
+          "new_required_parameters": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "parameters",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "set_physics_selection",
+      "callable": "comsol_mcp._tools_physics.set_physics_selection",
+      "description": "Set domain, boundary, or edge selection for a physics feature.\n\n    entities_json is a JSON array of integer entity IDs, e.g. \"[1, 2, 3]\".\n    Some features have inherited selections that cannot be modified directly.\n    Use list_physics_features to check selection_editable before calling this.\n    If selection is not editable on a feature, try setting it on the parent\n    physics interface instead (pass the physics tag as feature_tag).\n    ",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "physics_tag": {
+            "title": "Physics Tag",
+            "type": "string"
+          },
+          "feature_tag": {
+            "title": "Feature Tag",
+            "type": "string"
+          },
+          "entities_json": {
+            "title": "Entities Json",
+            "type": "string"
+          }
+        },
+        "required": [
+          "component",
+          "physics_tag",
+          "feature_tag",
+          "entities_json"
+        ],
+        "title": "set_physics_selectionArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str', physics_tag: 'str', feature_tag: 'str', entities_json: 'str') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "physics_selection_set",
+          "operation_id": "physics.selection_set",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "physics.selection_set input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "selection": {
+                "$ref": "common.schema.json#/$defs/SelectionSpec"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "path",
+              "selection"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "component",
+            "entities_json",
+            "feature_tag",
+            "physics_tag"
+          ],
+          "new_required_parameters": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "path",
+            "project_id",
+            "selection",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "start_visible_main_workflow",
+      "callable": "comsol_mcp._tools_workflow.start_visible_main_workflow",
+      "description": "Fixed visible workflow entrypoint: check port, connect, load MPH, then instruct Desktop import.",
+      "input_schema": {
+        "properties": {
+          "host": {
+            "default": "localhost",
+            "title": "Host",
+            "type": "string"
+          },
+          "port": {
+            "default": 2036,
+            "title": "Port",
+            "type": "integer"
+          },
+          "path": {
+            "default": "",
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "title": "start_visible_main_workflowArguments",
+        "type": "object"
+      },
+      "python_signature": "(host: 'str' = 'localhost', port: 'int' = 2036, path: 'str' = '') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "session_start",
+          "operation_id": "session.start",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "session.start input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "runtime_id": {
+                "type": "string"
+              },
+              "options": {
+                "type": "object"
+              },
+              "resources": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "project_id",
+              "idempotency_key",
+              "runtime_id"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "host",
+            "path",
+            "port"
+          ],
+          "new_required_parameters": [
+            "idempotency_key",
+            "project_id",
+            "runtime_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "idempotency_key"
+          ]
+        },
+        {
+          "mcp_tool_name": "session_connect",
+          "operation_id": "session.connect",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "session.connect input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "runtime_id": {
+                "type": "string"
+              },
+              "endpoint": {
+                "$ref": "common.schema.json#/$defs/Endpoint"
+              },
+              "credentials_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "idempotency_key",
+              "runtime_id",
+              "endpoint"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "host",
+            "path",
+            "port"
+          ],
+          "new_required_parameters": [
+            "endpoint",
+            "idempotency_key",
+            "project_id",
+            "runtime_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "idempotency_key"
+          ]
+        },
+        {
+          "mcp_tool_name": "model_load",
+          "operation_id": "model.load",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "model.load input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "type": "string"
+              },
+              "artifact_id": {
+                "type": "string"
+              },
+              "path_policy": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "project_id",
+              "idempotency_key",
+              "session_id",
+              "artifact_id"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "host",
+            "path",
+            "port"
+          ],
+          "new_required_parameters": [
+            "artifact_id",
+            "idempotency_key",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "start_visible_main_workflow_async",
+      "callable": "comsol_mcp._tools_workflow.start_visible_main_workflow_async",
+      "description": "Start visible-main loading in a background job so large MPH loads do not hit tool timeouts.",
+      "input_schema": {
+        "properties": {
+          "host": {
+            "default": "localhost",
+            "title": "Host",
+            "type": "string"
+          },
+          "port": {
+            "default": 2036,
+            "title": "Port",
+            "type": "integer"
+          },
+          "path": {
+            "default": "",
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "title": "start_visible_main_workflow_asyncArguments",
+        "type": "object"
+      },
+      "python_signature": "(host: 'str' = 'localhost', port: 'int' = 2036, path: 'str' = '') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "session_start",
+          "operation_id": "session.start",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "session.start input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "runtime_id": {
+                "type": "string"
+              },
+              "options": {
+                "type": "object"
+              },
+              "resources": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "project_id",
+              "idempotency_key",
+              "runtime_id"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "host",
+            "path",
+            "port"
+          ],
+          "new_required_parameters": [
+            "idempotency_key",
+            "project_id",
+            "runtime_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "idempotency_key"
+          ]
+        },
+        {
+          "mcp_tool_name": "session_connect",
+          "operation_id": "session.connect",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "session.connect input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "runtime_id": {
+                "type": "string"
+              },
+              "endpoint": {
+                "$ref": "common.schema.json#/$defs/Endpoint"
+              },
+              "credentials_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "idempotency_key",
+              "runtime_id",
+              "endpoint"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "host",
+            "path",
+            "port"
+          ],
+          "new_required_parameters": [
+            "endpoint",
+            "idempotency_key",
+            "project_id",
+            "runtime_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "idempotency_key"
+          ]
+        },
+        {
+          "mcp_tool_name": "model_load",
+          "operation_id": "model.load",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "model.load input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "type": "string"
+              },
+              "artifact_id": {
+                "type": "string"
+              },
+              "path_policy": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "project_id",
+              "idempotency_key",
+              "session_id",
+              "artifact_id"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "host",
+            "path",
+            "port"
+          ],
+          "new_required_parameters": [
+            "artifact_id",
+            "idempotency_key",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "idempotency_key"
+          ]
+        },
+        {
+          "mcp_tool_name": "job_status",
+          "operation_id": "job.status",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "job.status input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "job_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "job_id"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "host",
+            "path",
+            "port"
+          ],
+          "new_required_parameters": [
+            "job_id",
+            "project_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "unlock_visible_main",
+      "callable": "comsol_mcp._tools_workflow.unlock_visible_main",
+      "description": "Unlock the visible-main guard for explicit maintenance actions.",
+      "input_schema": {
+        "properties": {
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "unlock_visible_mainArguments",
+        "type": "object"
+      },
+      "python_signature": "(reason: 'str') -> 'str'",
+      "mapping_status": "LEGACY_ONLY_NO_DIRECT_EQUIVALENT",
+      "catalog_targets": [],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "update_feature",
+      "callable": "comsol_mcp._tools_geometry.update_feature",
+      "description": "Update geometry feature properties on the selected server-side model.",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "geometry": {
+            "title": "Geometry",
+            "type": "string"
+          },
+          "tag": {
+            "title": "Tag",
+            "type": "string"
+          },
+          "properties_json": {
+            "title": "Properties Json",
+            "type": "string"
+          },
+          "run_geometry": {
+            "default": false,
+            "title": "Run Geometry",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "component",
+          "geometry",
+          "tag",
+          "properties_json"
+        ],
+        "title": "update_featureArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str', geometry: 'str', tag: 'str', properties_json: 'str', run_geometry: 'bool' = False) -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "geometry_feature_update",
+          "operation_id": "geometry.feature_update",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "geometry.feature_update input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "properties": {
+                "$ref": "common.schema.json#/$defs/PropertySet"
+              },
+              "inputs": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "path",
+              "properties"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "component",
+            "geometry",
+            "properties_json",
+            "run_geometry",
+            "tag"
+          ],
+          "new_required_parameters": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "path",
+            "project_id",
+            "properties",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "update_physics_feature",
+      "callable": "comsol_mcp._tools_physics.update_physics_feature",
+      "description": "Set properties on an existing physics feature.\n\n    properties_json format: [{\"name\": \"prop_name\", \"value\": \"value\"}] or\n    {\"prop_name\": \"value\", ...}. For array-valued properties use\n    [{\"name\": \"prop_name\", \"values\": [\"v1\", \"v2\"]}].\n    ",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "physics_tag": {
+            "title": "Physics Tag",
+            "type": "string"
+          },
+          "feature_tag": {
+            "title": "Feature Tag",
+            "type": "string"
+          },
+          "properties_json": {
+            "title": "Properties Json",
+            "type": "string"
+          }
+        },
+        "required": [
+          "component",
+          "physics_tag",
+          "feature_tag",
+          "properties_json"
+        ],
+        "title": "update_physics_featureArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str', physics_tag: 'str', feature_tag: 'str', properties_json: 'str') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "physics_feature_update",
+          "operation_id": "physics.feature_update",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "physics.feature_update input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "properties": {
+                "$ref": "common.schema.json#/$defs/PropertySet"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "path",
+              "properties"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [
+            "component",
+            "feature_tag",
+            "physics_tag",
+            "properties_json"
+          ],
+          "new_required_parameters": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "path",
+            "project_id",
+            "properties",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "verify_visible_main_session",
+      "callable": "comsol_mcp._tools_workflow.verify_visible_main_session",
+      "description": "Verify that MCP is still operating on the locked visible main model.",
+      "input_schema": {
+        "properties": {},
+        "title": "verify_visible_main_sessionArguments",
+        "type": "object"
+      },
+      "python_signature": "() -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "model_inspect",
+          "operation_id": "model.inspect",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "model.inspect input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "detail": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [],
+          "new_required_parameters": [
+            "model_ref",
+            "project_id",
+            "session_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id",
+            "session_id",
+            "model_ref"
+          ]
+        },
+        {
+          "mcp_tool_name": "desktop_status",
+          "operation_id": "desktop.status",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "desktop.status input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "runtime_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [],
+          "legacy_only_parameters": [],
+          "new_required_parameters": [
+            "project_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "visible_main_workflow_status",
+      "callable": "comsol_mcp._tools_workflow.visible_main_workflow_status",
+      "description": "Return status for the latest or specified asynchronous visible-main workflow job.",
+      "input_schema": {
+        "properties": {
+          "job_id": {
+            "default": "",
+            "title": "Job Id",
+            "type": "string"
+          }
+        },
+        "title": "visible_main_workflow_statusArguments",
+        "type": "object"
+      },
+      "python_signature": "(job_id: 'str' = '') -> 'str'",
+      "mapping_status": "CATALOG_TARGETS_PROPOSED_NOT_IMPLEMENTED",
+      "catalog_targets": [
+        {
+          "mcp_tool_name": "job_status",
+          "operation_id": "job.status",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "job.status input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "job_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "job_id"
+            ],
+            "additionalProperties": false
+          },
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "same_name_parameters": [
+            "job_id"
+          ],
+          "legacy_only_parameters": [],
+          "new_required_parameters": [
+            "project_id"
+          ],
+          "context_not_in_legacy_contract": [
+            "project_id"
+          ]
+        }
+      ],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "workflow_info",
+      "callable": "comsol_mcp._tools_workflow.workflow_info",
+      "description": "Return the persisted MCP workflow policy for current-main-model operation.",
+      "input_schema": {
+        "properties": {},
+        "title": "workflow_infoArguments",
+        "type": "object"
+      },
+      "python_signature": "() -> 'str'",
+      "mapping_status": "LEGACY_ONLY_NO_DIRECT_EQUIVALENT",
+      "catalog_targets": [],
+      "legacy_output_schema": {
+        "status": "UNSPECIFIED_LEGACY_JSON_STRING",
+        "evidence": "baseline FastMCP registry exposes only input schema"
+      },
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    }
+  ]
+}

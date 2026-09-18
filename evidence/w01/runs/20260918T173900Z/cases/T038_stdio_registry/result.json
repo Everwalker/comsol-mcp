@@ -1,0 +1,2023 @@
+{
+  "initialize": {
+    "meta": null,
+    "protocolVersion": "2025-11-25",
+    "capabilities": {
+      "experimental": {},
+      "logging": null,
+      "prompts": {
+        "listChanged": false
+      },
+      "resources": {
+        "subscribe": false,
+        "listChanged": false
+      },
+      "tools": {
+        "listChanged": false
+      },
+      "completions": null,
+      "tasks": null
+    },
+    "serverInfo": {
+      "name": "comsol-mcp-server",
+      "title": null,
+      "version": "1.29.1",
+      "websiteUrl": null,
+      "icons": null
+    },
+    "instructions": null
+  },
+  "tools": [
+    {
+      "name": "server_info",
+      "title": null,
+      "description": "Return COMSOL MCP status and the recommended attach-first workflow.\n\n    For normal visible Desktop usage, manually start COMSOL Multiphysics Server,\n    connect Desktop to it, and then call server_connect().\n    ",
+      "inputSchema": {
+        "properties": {},
+        "title": "server_infoArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "server_infoOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "check_server_port",
+      "title": null,
+      "description": "Check whether a manually started COMSOL Server is listening on host:port.",
+      "inputSchema": {
+        "properties": {
+          "host": {
+            "default": "localhost",
+            "title": "Host",
+            "type": "string"
+          },
+          "port": {
+            "default": 2036,
+            "title": "Port",
+            "type": "integer"
+          }
+        },
+        "title": "check_server_portArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "check_server_portOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "server_start",
+      "title": null,
+      "description": "Advanced fallback only: start a local COMSOL server and connect MCP to it.\n\n    Do NOT use this as the default visible workflow.\n    Preferred workflow:\n    1. Manually start COMSOL Multiphysics Server.\n    2. Connect COMSOL Desktop to that server.\n    3. Call server_connect(host, port) from MCP.\n\n    Use server_start() only when MCP should own the COMSOL server lifecycle and\n    random or non-default listening ports are acceptable.\n    ",
+      "inputSchema": {
+        "properties": {
+          "port": {
+            "default": 0,
+            "title": "Port",
+            "type": "integer"
+          },
+          "cores": {
+            "default": 0,
+            "title": "Cores",
+            "type": "integer"
+          },
+          "multi": {
+            "default": "on",
+            "title": "Multi",
+            "type": "string"
+          },
+          "timeout_seconds": {
+            "default": 120,
+            "title": "Timeout Seconds",
+            "type": "integer"
+          },
+          "version": {
+            "default": "",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "title": "server_startArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "server_startOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "server_connect",
+      "title": null,
+      "description": "Default entrypoint: attach MCP to an already running COMSOL Multiphysics Server.\n\n    This is the recommended tool for the visible Desktop workflow:\n    manually start COMSOL Multiphysics Server, call server_connect(host, port),\n    load_visible_main_model(path), then connect Desktop and import that model.\n    ",
+      "inputSchema": {
+        "properties": {
+          "host": {
+            "default": "localhost",
+            "title": "Host",
+            "type": "string"
+          },
+          "port": {
+            "default": 2036,
+            "title": "Port",
+            "type": "integer"
+          },
+          "model_name": {
+            "default": "",
+            "title": "Model Name",
+            "type": "string"
+          },
+          "timeout_seconds": {
+            "default": 30.0,
+            "title": "Timeout Seconds",
+            "type": "number"
+          }
+        },
+        "title": "server_connectArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "server_connectOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "server_disconnect",
+      "title": null,
+      "description": "Disconnect the MCP client. Optionally shut down the local server if MCP started it.",
+      "inputSchema": {
+        "properties": {
+          "shutdown_server": {
+            "default": false,
+            "title": "Shutdown Server",
+            "type": "boolean"
+          }
+        },
+        "title": "server_disconnectArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "server_disconnectOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "workflow_info",
+      "title": null,
+      "description": "Return the persisted MCP workflow policy for current-main-model operation.",
+      "inputSchema": {
+        "properties": {},
+        "title": "workflow_infoArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "workflow_infoOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "configure_single_main_workflow",
+      "title": null,
+      "description": "Persist the single-current-main-model workflow in MCP state.\n\n    model_dimension: spatial dimension of the model (2 or 3). Set to 0 to\n    skip. This is used by create_physics and evaluate_expressions aggregate\n    to select the correct COMSOL node types. For 2D models set to 2, for 3D\n    set to 3.\n    ",
+      "inputSchema": {
+        "properties": {
+          "current_main_model_path": {
+            "title": "Current Main Model Path",
+            "type": "string"
+          },
+          "snapshot_dir": {
+            "default": "",
+            "title": "Snapshot Dir",
+            "type": "string"
+          },
+          "snapshot_prefix": {
+            "default": "",
+            "title": "Snapshot Prefix",
+            "type": "string"
+          },
+          "model_dimension": {
+            "default": 0,
+            "title": "Model Dimension",
+            "type": "integer"
+          },
+          "notes": {
+            "default": "",
+            "title": "Notes",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_main_model_path"
+        ],
+        "title": "configure_single_main_workflowArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "configure_single_main_workflowOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "load_visible_main_model",
+      "title": null,
+      "description": "Load or adopt the visible main MPH, then lock MCP to that server-side model.",
+      "inputSchema": {
+        "properties": {
+          "path": {
+            "default": "",
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "title": "load_visible_main_modelArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "load_visible_main_modelOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "start_visible_main_workflow",
+      "title": null,
+      "description": "Fixed visible workflow entrypoint: check port, connect, load MPH, then instruct Desktop import.",
+      "inputSchema": {
+        "properties": {
+          "host": {
+            "default": "localhost",
+            "title": "Host",
+            "type": "string"
+          },
+          "port": {
+            "default": 2036,
+            "title": "Port",
+            "type": "integer"
+          },
+          "path": {
+            "default": "",
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "title": "start_visible_main_workflowArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "start_visible_main_workflowOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "start_visible_main_workflow_async",
+      "title": null,
+      "description": "Start visible-main loading in a background job so large MPH loads do not hit tool timeouts.",
+      "inputSchema": {
+        "properties": {
+          "host": {
+            "default": "localhost",
+            "title": "Host",
+            "type": "string"
+          },
+          "port": {
+            "default": 2036,
+            "title": "Port",
+            "type": "integer"
+          },
+          "path": {
+            "default": "",
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "title": "start_visible_main_workflow_asyncArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "start_visible_main_workflow_asyncOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "visible_main_workflow_status",
+      "title": null,
+      "description": "Return status for the latest or specified asynchronous visible-main workflow job.",
+      "inputSchema": {
+        "properties": {
+          "job_id": {
+            "default": "",
+            "title": "Job Id",
+            "type": "string"
+          }
+        },
+        "title": "visible_main_workflow_statusArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "visible_main_workflow_statusOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "verify_visible_main_session",
+      "title": null,
+      "description": "Verify that MCP is still operating on the locked visible main model.",
+      "inputSchema": {
+        "properties": {},
+        "title": "verify_visible_main_sessionArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "verify_visible_main_sessionOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "unlock_visible_main",
+      "title": null,
+      "description": "Unlock the visible-main guard for explicit maintenance actions.",
+      "inputSchema": {
+        "properties": {
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "unlock_visible_mainArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "unlock_visible_mainOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "mcp_tool_audit",
+      "title": null,
+      "description": "Return the visible-main safety classification for the MCP tool surface.",
+      "inputSchema": {
+        "properties": {},
+        "title": "mcp_tool_auditArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "mcp_tool_auditOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "model_tree",
+      "title": null,
+      "description": "Return tags and structure for the current server-side model.",
+      "inputSchema": {
+        "properties": {},
+        "title": "model_treeArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "model_treeOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "run_study",
+      "title": null,
+      "description": "Run the current model study, optionally restricting execution to a study tag.",
+      "inputSchema": {
+        "properties": {
+          "study_tag": {
+            "default": "",
+            "title": "Study Tag",
+            "type": "string"
+          }
+        },
+        "title": "run_studyArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "run_studyOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "load_current_main_model",
+      "title": null,
+      "description": "Load the persisted current main model into the connected COMSOL server session.",
+      "inputSchema": {
+        "properties": {},
+        "title": "load_current_main_modelArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "load_current_main_modelOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "model_create",
+      "title": null,
+      "description": "Create a new in-memory model on the connected COMSOL server and select it as current.",
+      "inputSchema": {
+        "properties": {
+          "name": {
+            "default": "Server Model",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "title": "model_createArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "model_createOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "model_load",
+      "title": null,
+      "description": "Load an MPH file on the connected COMSOL server and select it as current.",
+      "inputSchema": {
+        "properties": {
+          "path": {
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "title": "model_loadArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "model_loadOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "prune_loaded_models",
+      "title": null,
+      "description": "Remove extra loaded server-side models and keep only the requested working model.",
+      "inputSchema": {
+        "properties": {
+          "keep": {
+            "default": "current",
+            "title": "Keep",
+            "type": "string"
+          }
+        },
+        "title": "prune_loaded_modelsArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "prune_loaded_modelsOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "get_parameters",
+      "title": null,
+      "description": "Return current global parameters from the selected server-side model.",
+      "inputSchema": {
+        "properties": {},
+        "title": "get_parametersArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "get_parametersOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "evaluate_expressions",
+      "title": null,
+      "description": "Evaluate one or more expressions on the current server-side model.\n\n    Each expression item supports: {\"name\": \"...\", \"expression\": \"...\",\n      \"aggregate\": \"max\"|\"min\"|\"avg\"|\"integral\"|\"none\",\n      \"domains\": [1,2], \"boundaries\": [5,6], \"time_point\": \"last\"|\"all\"|\"N\"}.\n\n    Backward compatible: [{\"name\": \"...\", \"expression\": \"...\"}] still works.\n    max_result_size: when > 0, truncate arrays exceeding this size (chars).\n    ",
+      "inputSchema": {
+        "properties": {
+          "expressions_json": {
+            "default": "[]",
+            "title": "Expressions Json",
+            "type": "string"
+          },
+          "max_result_size": {
+            "default": 0,
+            "title": "Max Result Size",
+            "type": "integer"
+          }
+        },
+        "title": "evaluate_expressionsArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "evaluate_expressionsOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "get_core_metrics",
+      "title": null,
+      "description": "Return the core metrics used by the current short-window mainline.",
+      "inputSchema": {
+        "properties": {},
+        "title": "get_core_metricsArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "get_core_metricsOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "set_parameters",
+      "title": null,
+      "description": "Set multiple global parameters on the selected server-side model.",
+      "inputSchema": {
+        "properties": {
+          "parameters_json": {
+            "title": "Parameters Json",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parameters_json"
+        ],
+        "title": "set_parametersArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "set_parametersOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "ensure_component",
+      "title": null,
+      "description": "Ensure a component exists in the selected server-side model.",
+      "inputSchema": {
+        "properties": {
+          "component": {
+            "default": "comp1",
+            "title": "Component",
+            "type": "string"
+          },
+          "dimension": {
+            "default": 2,
+            "title": "Dimension",
+            "type": "integer"
+          }
+        },
+        "title": "ensure_componentArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "ensure_componentOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "ensure_geometry",
+      "title": null,
+      "description": "Ensure a geometry sequence exists in the selected server-side model.",
+      "inputSchema": {
+        "properties": {
+          "component": {
+            "default": "comp1",
+            "title": "Component",
+            "type": "string"
+          },
+          "geometry": {
+            "default": "geom1",
+            "title": "Geometry",
+            "type": "string"
+          },
+          "dimension": {
+            "default": 2,
+            "title": "Dimension",
+            "type": "integer"
+          }
+        },
+        "title": "ensure_geometryArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "ensure_geometryOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "ensure_mesh",
+      "title": null,
+      "description": "Ensure a mesh sequence exists in the selected server-side model.",
+      "inputSchema": {
+        "properties": {
+          "component": {
+            "default": "comp1",
+            "title": "Component",
+            "type": "string"
+          },
+          "mesh": {
+            "default": "mesh1",
+            "title": "Mesh",
+            "type": "string"
+          }
+        },
+        "title": "ensure_meshArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "ensure_meshOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "create_feature",
+      "title": null,
+      "description": "Create a geometry feature and optionally apply initial properties.",
+      "inputSchema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "geometry": {
+            "title": "Geometry",
+            "type": "string"
+          },
+          "tag": {
+            "title": "Tag",
+            "type": "string"
+          },
+          "feature_type": {
+            "title": "Feature Type",
+            "type": "string"
+          },
+          "properties_json": {
+            "default": "[]",
+            "title": "Properties Json",
+            "type": "string"
+          },
+          "run_geometry": {
+            "default": false,
+            "title": "Run Geometry",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "component",
+          "geometry",
+          "tag",
+          "feature_type"
+        ],
+        "title": "create_featureArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "create_featureOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "update_feature",
+      "title": null,
+      "description": "Update geometry feature properties on the selected server-side model.",
+      "inputSchema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "geometry": {
+            "title": "Geometry",
+            "type": "string"
+          },
+          "tag": {
+            "title": "Tag",
+            "type": "string"
+          },
+          "properties_json": {
+            "title": "Properties Json",
+            "type": "string"
+          },
+          "run_geometry": {
+            "default": false,
+            "title": "Run Geometry",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "component",
+          "geometry",
+          "tag",
+          "properties_json"
+        ],
+        "title": "update_featureArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "update_featureOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "delete_feature",
+      "title": null,
+      "description": "Delete a geometry feature from the selected server-side model.",
+      "inputSchema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "geometry": {
+            "title": "Geometry",
+            "type": "string"
+          },
+          "tag": {
+            "title": "Tag",
+            "type": "string"
+          },
+          "run_geometry": {
+            "default": false,
+            "title": "Run Geometry",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "component",
+          "geometry",
+          "tag"
+        ],
+        "title": "delete_featureArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "delete_featureOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "run_feature",
+      "title": null,
+      "description": "Run a geometry or mesh sequence on the selected server-side model.",
+      "inputSchema": {
+        "properties": {
+          "collection": {
+            "title": "Collection",
+            "type": "string"
+          },
+          "tag": {
+            "title": "Tag",
+            "type": "string"
+          },
+          "component": {
+            "default": "comp1",
+            "title": "Component",
+            "type": "string"
+          }
+        },
+        "required": [
+          "collection",
+          "tag"
+        ],
+        "title": "run_featureArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "run_featureOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "run_visible_main_iteration",
+      "title": null,
+      "description": "Run one locked visible-main iteration: set parameters, solve, extract metrics, save a copy snapshot.",
+      "inputSchema": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "parameters_json": {
+            "default": "[]",
+            "title": "Parameters Json",
+            "type": "string"
+          },
+          "study_tag": {
+            "default": "",
+            "title": "Study Tag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label"
+        ],
+        "title": "run_visible_main_iterationArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "run_visible_main_iterationOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "save_main_model_snapshot",
+      "title": null,
+      "description": "Save a named snapshot from the current server-side model using the persisted workflow naming policy.",
+      "inputSchema": {
+        "properties": {
+          "snapshot_label": {
+            "title": "Snapshot Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "snapshot_label"
+        ],
+        "title": "save_main_model_snapshotArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "save_main_model_snapshotOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "commit_current_main_model",
+      "title": null,
+      "description": "Save a named snapshot, then overwrite the persisted current main model with the current server-side state.",
+      "inputSchema": {
+        "properties": {
+          "snapshot_label": {
+            "default": "",
+            "title": "Snapshot Label",
+            "type": "string"
+          }
+        },
+        "title": "commit_current_main_modelArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "commit_current_main_modelOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "save_model",
+      "title": null,
+      "description": "Save the current server-side model to disk.",
+      "inputSchema": {
+        "properties": {
+          "path": {
+            "default": "",
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "title": "save_modelArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "save_modelOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "list_physics",
+      "title": null,
+      "description": "List all physics interfaces in a component with their features.\n\n    Returns tags, labels, and feature counts for each physics interface.\n    ",
+      "inputSchema": {
+        "properties": {
+          "component": {
+            "default": "comp1",
+            "title": "Component",
+            "type": "string"
+          }
+        },
+        "title": "list_physicsArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "list_physicsOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "create_physics",
+      "title": null,
+      "description": "Add a physics interface to a component.\n\n    Common physics_type values: \"cfpde\" (Coefficient Form PDE),\n    \"tds\" (Transport of Diluted Species), \"solid\" (Solid Mechanics),\n    \"ht\" (Heat Transfer), \"es\" (Electrostatics), etc.\n\n    dimension: spatial dimension (1, 2, or 3). Default 0 = auto-detect from\n    the component's geometry. Set via configure_single_main_workflow(model_dimension=2).\n\n    dependent_variables: comma-separated dependent variable names. Default \"u\".\n    COMSOL uses these to create the correct physics with matching spatial dimension.\n    For multiple dependent variables use \"u,v\" or \"u,v,w\".\n    ",
+      "inputSchema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "tag": {
+            "title": "Tag",
+            "type": "string"
+          },
+          "physics_type": {
+            "title": "Physics Type",
+            "type": "string"
+          },
+          "dimension": {
+            "default": 0,
+            "title": "Dimension",
+            "type": "integer"
+          },
+          "dependent_variables": {
+            "default": "u",
+            "title": "Dependent Variables",
+            "type": "string"
+          }
+        },
+        "required": [
+          "component",
+          "tag",
+          "physics_type"
+        ],
+        "title": "create_physicsArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "create_physicsOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "remove_physics",
+      "title": null,
+      "description": "Remove a physics interface from a component.",
+      "inputSchema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "tag": {
+            "title": "Tag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "component",
+          "tag"
+        ],
+        "title": "remove_physicsArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "remove_physicsOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "list_physics_features",
+      "title": null,
+      "description": "List all features (boundary conditions, sources, etc.) under a physics interface.\n\n    Returns tags, labels, feature_type identifiers, property names, and\n    selection editability for each feature. The feature_type field shows the\n    COMSOL internal identifier to use with create_physics_feature.\n    ",
+      "inputSchema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "physics_tag": {
+            "title": "Physics Tag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "component",
+          "physics_tag"
+        ],
+        "title": "list_physics_featuresArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "list_physics_featuresOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "create_physics_feature",
+      "title": null,
+      "description": "Add a child feature (boundary condition, source term, etc.) to a physics interface.\n\n    IMPORTANT: feature_type uses COMSOL internal identifiers, NOT display names.\n    For example, in TDS (Transport of Diluted Species), valid types include:\n    \"Inflow\", \"Outflow\", \"Flux\", \"NoFlux\", \"Concentration\", \"InitialValues\",\n    \"ConservedQuantity\", \"WeakConstraint\".\n    Use list_physics_features first to discover existing feature_type identifiers\n    in the current physics interface, as these vary per physics type and COMSOL version.\n    properties_json format: [{\"name\": \"prop_name\", \"value\": \"value\"}] or\n    {\"prop_name\": \"value\", ...}.\n    ",
+      "inputSchema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "physics_tag": {
+            "title": "Physics Tag",
+            "type": "string"
+          },
+          "feature_tag": {
+            "title": "Feature Tag",
+            "type": "string"
+          },
+          "feature_type": {
+            "title": "Feature Type",
+            "type": "string"
+          },
+          "properties_json": {
+            "default": "[]",
+            "title": "Properties Json",
+            "type": "string"
+          }
+        },
+        "required": [
+          "component",
+          "physics_tag",
+          "feature_tag",
+          "feature_type"
+        ],
+        "title": "create_physics_featureArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "create_physics_featureOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "update_physics_feature",
+      "title": null,
+      "description": "Set properties on an existing physics feature.\n\n    properties_json format: [{\"name\": \"prop_name\", \"value\": \"value\"}] or\n    {\"prop_name\": \"value\", ...}. For array-valued properties use\n    [{\"name\": \"prop_name\", \"values\": [\"v1\", \"v2\"]}].\n    ",
+      "inputSchema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "physics_tag": {
+            "title": "Physics Tag",
+            "type": "string"
+          },
+          "feature_tag": {
+            "title": "Feature Tag",
+            "type": "string"
+          },
+          "properties_json": {
+            "title": "Properties Json",
+            "type": "string"
+          }
+        },
+        "required": [
+          "component",
+          "physics_tag",
+          "feature_tag",
+          "properties_json"
+        ],
+        "title": "update_physics_featureArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "update_physics_featureOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "remove_physics_feature",
+      "title": null,
+      "description": "Remove a child feature from a physics interface.",
+      "inputSchema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "physics_tag": {
+            "title": "Physics Tag",
+            "type": "string"
+          },
+          "feature_tag": {
+            "title": "Feature Tag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "component",
+          "physics_tag",
+          "feature_tag"
+        ],
+        "title": "remove_physics_featureArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "remove_physics_featureOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "set_physics_selection",
+      "title": null,
+      "description": "Set domain, boundary, or edge selection for a physics feature.\n\n    entities_json is a JSON array of integer entity IDs, e.g. \"[1, 2, 3]\".\n    Some features have inherited selections that cannot be modified directly.\n    Use list_physics_features to check selection_editable before calling this.\n    If selection is not editable on a feature, try setting it on the parent\n    physics interface instead (pass the physics tag as feature_tag).\n    ",
+      "inputSchema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "physics_tag": {
+            "title": "Physics Tag",
+            "type": "string"
+          },
+          "feature_tag": {
+            "title": "Feature Tag",
+            "type": "string"
+          },
+          "entities_json": {
+            "title": "Entities Json",
+            "type": "string"
+          }
+        },
+        "required": [
+          "component",
+          "physics_tag",
+          "feature_tag",
+          "entities_json"
+        ],
+        "title": "set_physics_selectionArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "set_physics_selectionOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "manage_variables",
+      "title": null,
+      "description": "Manage variable definitions: list, create, or remove.\n\n    Actions:\n    - \"list\": List all variables. Returns tags, names, and expressions.\n    - \"create\": Create a variable node with given name and expression.\n    - \"remove\": Remove a variable node by tag.\n\n    When component is empty, operates on global variables.\n    When component is specified, operates on component-level variables.\n    ",
+      "inputSchema": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "component": {
+            "default": "",
+            "title": "Component",
+            "type": "string"
+          },
+          "tag": {
+            "default": "",
+            "title": "Tag",
+            "type": "string"
+          },
+          "name": {
+            "default": "",
+            "title": "Name",
+            "type": "string"
+          },
+          "expression": {
+            "default": "",
+            "title": "Expression",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "manage_variablesArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "manage_variablesOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "list_solver_config",
+      "title": null,
+      "description": "List all solver configurations with their features.\n\n    Returns solver tags, feature counts, and feature tags for each solver\n    configuration in the current model.\n    ",
+      "inputSchema": {
+        "properties": {},
+        "title": "list_solver_configArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "list_solver_configOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "create_solver_config",
+      "title": null,
+      "description": "Create a solver configuration linked to a study.\n\n    The solver tag identifies the new solver config. The study tag links it\n    to an existing study for solving.\n    ",
+      "inputSchema": {
+        "properties": {
+          "sol_tag": {
+            "title": "Sol Tag",
+            "type": "string"
+          },
+          "study_tag": {
+            "title": "Study Tag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sol_tag",
+          "study_tag"
+        ],
+        "title": "create_solver_configArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "create_solver_configOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "list_solver_features",
+      "title": null,
+      "description": "List features and sub-features under a solver configuration.\n\n    Returns feature tags, labels, properties, and any sub-features (e.g.\n    segregated solver steps).\n    ",
+      "inputSchema": {
+        "properties": {
+          "sol_tag": {
+            "title": "Sol Tag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sol_tag"
+        ],
+        "title": "list_solver_featuresArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "list_solver_featuresOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "configure_solver",
+      "title": null,
+      "description": "Configure a solver feature's properties.\n\n    properties_json format: [{\"name\": \"prop_name\", \"value\": \"value\"}] or\n    {\"prop_name\": \"value\", ...}. For array-valued properties use\n    [{\"name\": \"prop_name\", \"values\": [\"v1\", \"v2\"]}].\n\n    To add segregated solver steps, use properties_json with:\n    [{\"name\": \"add_segregated_step\", \"value\": \"{\"step_tag\": \"step1\", \"variables\": [\"u\", \"v\"]}\"}]\n    Multiple steps can be added in a single call.\n    ",
+      "inputSchema": {
+        "properties": {
+          "sol_tag": {
+            "title": "Sol Tag",
+            "type": "string"
+          },
+          "feature_tag": {
+            "title": "Feature Tag",
+            "type": "string"
+          },
+          "properties_json": {
+            "default": "[]",
+            "title": "Properties Json",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sol_tag",
+          "feature_tag"
+        ],
+        "title": "configure_solverArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "configure_solverOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "run_study_async",
+      "title": null,
+      "description": "Run a COMSOL study in a background thread and return a job ID for polling.\n\n    This is the async version of run_study. It starts the solve in a background\n    thread and returns immediately with a job_id. Use run_study_status(job_id)\n    to poll for completion.\n\n    The MCP client will NOT disconnect during long solves because this tool\n    returns immediately.\n    ",
+      "inputSchema": {
+        "properties": {
+          "study_tag": {
+            "default": "",
+            "title": "Study Tag",
+            "type": "string"
+          }
+        },
+        "title": "run_study_asyncArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "run_study_asyncOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    },
+    {
+      "name": "run_study_status",
+      "title": null,
+      "description": "Return status for the latest or specified async run_study job.\n\n    Pass the job_id returned by run_study_async, or leave empty to get the\n    latest job status.\n    ",
+      "inputSchema": {
+        "properties": {
+          "job_id": {
+            "default": "",
+            "title": "Job Id",
+            "type": "string"
+          }
+        },
+        "title": "run_study_statusArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "run_study_statusOutput",
+        "type": "object"
+      },
+      "icons": null,
+      "annotations": null,
+      "meta": null,
+      "execution": null
+    }
+  ],
+  "server_info": {
+    "meta": null,
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"success\": true,\n  \"tool\": \"server_info\",\n  \"timestamp\": 1789724187.902032,\n  \"datetime\": \"2026-09-18 17:36:27\",\n  \"server\": {\n    \"version\": \"0.1.9\",\n    \"timestamp\": 1789724187.902138,\n    \"datetime\": \"2026-09-18 17:36:27\",\n    \"status\": \"disconnected\",\n    \"server_running\": false,\n    \"server_started_by_mcp\": false,\n    \"attached_to_existing_server\": false,\n    \"server_host\": \"localhost\",\n    \"server_port\": null,\n    \"server_endpoint\": \"\",\n    \"desktop_client_role\": \"visual-client\",\n    \"comsol_root\": \"C:\\\\Program Files\\\\COMSOL\\\\COMSOL63\\\\Multiphysics\",\n    \"mcp_home\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home\",\n    \"logs_dir\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home/logs\",\n    \"outputs_dir\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home/outputs\",\n    \"current_model_label\": \"\",\n    \"current_model_path\": \"\",\n    \"current_model_origin\": \"\",\n    \"last_command\": \"server_info\",\n    \"last_error\": \"\",\n    \"recommended_desktop_flow\": \"visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.\",\n    \"desktop_should_connect\": {\n      \"host\": \"localhost\",\n      \"port\": null\n    },\n    \"workflow\": {\n      \"mode\": \"manual\",\n      \"current_main_model_path\": \"\",\n      \"snapshot_dir\": \"\",\n      \"snapshot_prefix\": \"\",\n      \"snapshot_name_template\": \"{prefix}_{label}_{timestamp}.mph\",\n      \"visible_main_locked\": false,\n      \"guard_level\": \"strict\",\n      \"snapshot_save_mode\": \"copy\",\n      \"main_model_tag\": \"\",\n      \"main_model_label\": \"\",\n      \"main_model_path\": \"\",\n      \"model_dimension\": 0,\n      \"workflow_stage\": \"awaiting_manual_server\",\n      \"mcp_client_lifecycle\": \"persistent-required\",\n      \"one_shot_client_allowed\": false,\n      \"notes\": \"\",\n      \"updated_at\": \"2026-09-18 17:36:27\"\n    }\n  },\n  \"data\": {\n    \"version\": \"0.1.9\",\n    \"comsol_root\": \"C:\\\\Program Files\\\\COMSOL\\\\COMSOL63\\\\Multiphysics\",\n    \"mcp_home\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home\",\n    \"workflow_file\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home/workflow_state.json\",\n    \"status_file\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home/status.json\",\n    \"recommended_entrypoint\": \"server_connect(\\\"localhost\\\", <actual_port>)\",\n    \"server_start_role\": \"advanced/manual-lifecycle\",\n    \"server_state\": {\n      \"version\": \"0.1.9\",\n      \"timestamp\": 1789724187.901678,\n      \"datetime\": \"2026-09-18 17:36:27\",\n      \"status\": \"disconnected\",\n      \"server_running\": false,\n      \"server_started_by_mcp\": false,\n      \"attached_to_existing_server\": false,\n      \"server_host\": \"localhost\",\n      \"server_port\": null,\n      \"server_endpoint\": \"\",\n      \"desktop_client_role\": \"visual-client\",\n      \"comsol_root\": \"C:\\\\Program Files\\\\COMSOL\\\\COMSOL63\\\\Multiphysics\",\n      \"mcp_home\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home\",\n      \"logs_dir\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home/logs\",\n      \"outputs_dir\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home/outputs\",\n      \"current_model_label\": \"\",\n      \"current_model_path\": \"\",\n      \"current_model_origin\": \"\",\n      \"last_command\": \"\",\n      \"last_error\": \"\",\n      \"recommended_desktop_flow\": \"visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.\",\n      \"desktop_should_connect\": {\n        \"host\": \"localhost\",\n        \"port\": null\n      },\n      \"workflow\": {\n        \"mode\": \"manual\",\n        \"current_main_model_path\": \"\",\n        \"snapshot_dir\": \"\",\n        \"snapshot_prefix\": \"\",\n        \"snapshot_name_template\": \"{prefix}_{label}_{timestamp}.mph\",\n        \"visible_main_locked\": false,\n        \"guard_level\": \"strict\",\n        \"snapshot_save_mode\": \"copy\",\n        \"main_model_tag\": \"\",\n        \"main_model_label\": \"\",\n        \"main_model_path\": \"\",\n        \"model_dimension\": 0,\n        \"workflow_stage\": \"awaiting_manual_server\",\n        \"mcp_client_lifecycle\": \"persistent-required\",\n        \"one_shot_client_allowed\": false,\n        \"notes\": \"\",\n        \"updated_at\": \"2026-09-18 17:36:27\"\n      }\n    },\n    \"loaded_model_count\": 0,\n    \"mph_version\": \"1.4.0\",\n    \"mphserver_exe\": \"C:\\\\Program Files\\\\COMSOL\\\\COMSOL63\\\\Multiphysics/bin/win64/comsolmphserver.exe\",\n    \"mphclient_exe\": \"C:\\\\Program Files\\\\COMSOL\\\\COMSOL63\\\\Multiphysics/bin/win64/comsolmphclient.exe\"\n  },\n  \"error\": \"\",\n  \"log_path\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home/logs/server.log\",\n  \"operations_path\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home/logs/operations.jsonl\"\n}",
+        "annotations": null,
+        "meta": null
+      }
+    ],
+    "structuredContent": {
+      "result": "{\n  \"success\": true,\n  \"tool\": \"server_info\",\n  \"timestamp\": 1789724187.902032,\n  \"datetime\": \"2026-09-18 17:36:27\",\n  \"server\": {\n    \"version\": \"0.1.9\",\n    \"timestamp\": 1789724187.902138,\n    \"datetime\": \"2026-09-18 17:36:27\",\n    \"status\": \"disconnected\",\n    \"server_running\": false,\n    \"server_started_by_mcp\": false,\n    \"attached_to_existing_server\": false,\n    \"server_host\": \"localhost\",\n    \"server_port\": null,\n    \"server_endpoint\": \"\",\n    \"desktop_client_role\": \"visual-client\",\n    \"comsol_root\": \"C:\\\\Program Files\\\\COMSOL\\\\COMSOL63\\\\Multiphysics\",\n    \"mcp_home\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home\",\n    \"logs_dir\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home/logs\",\n    \"outputs_dir\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home/outputs\",\n    \"current_model_label\": \"\",\n    \"current_model_path\": \"\",\n    \"current_model_origin\": \"\",\n    \"last_command\": \"server_info\",\n    \"last_error\": \"\",\n    \"recommended_desktop_flow\": \"visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.\",\n    \"desktop_should_connect\": {\n      \"host\": \"localhost\",\n      \"port\": null\n    },\n    \"workflow\": {\n      \"mode\": \"manual\",\n      \"current_main_model_path\": \"\",\n      \"snapshot_dir\": \"\",\n      \"snapshot_prefix\": \"\",\n      \"snapshot_name_template\": \"{prefix}_{label}_{timestamp}.mph\",\n      \"visible_main_locked\": false,\n      \"guard_level\": \"strict\",\n      \"snapshot_save_mode\": \"copy\",\n      \"main_model_tag\": \"\",\n      \"main_model_label\": \"\",\n      \"main_model_path\": \"\",\n      \"model_dimension\": 0,\n      \"workflow_stage\": \"awaiting_manual_server\",\n      \"mcp_client_lifecycle\": \"persistent-required\",\n      \"one_shot_client_allowed\": false,\n      \"notes\": \"\",\n      \"updated_at\": \"2026-09-18 17:36:27\"\n    }\n  },\n  \"data\": {\n    \"version\": \"0.1.9\",\n    \"comsol_root\": \"C:\\\\Program Files\\\\COMSOL\\\\COMSOL63\\\\Multiphysics\",\n    \"mcp_home\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home\",\n    \"workflow_file\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home/workflow_state.json\",\n    \"status_file\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home/status.json\",\n    \"recommended_entrypoint\": \"server_connect(\\\"localhost\\\", <actual_port>)\",\n    \"server_start_role\": \"advanced/manual-lifecycle\",\n    \"server_state\": {\n      \"version\": \"0.1.9\",\n      \"timestamp\": 1789724187.901678,\n      \"datetime\": \"2026-09-18 17:36:27\",\n      \"status\": \"disconnected\",\n      \"server_running\": false,\n      \"server_started_by_mcp\": false,\n      \"attached_to_existing_server\": false,\n      \"server_host\": \"localhost\",\n      \"server_port\": null,\n      \"server_endpoint\": \"\",\n      \"desktop_client_role\": \"visual-client\",\n      \"comsol_root\": \"C:\\\\Program Files\\\\COMSOL\\\\COMSOL63\\\\Multiphysics\",\n      \"mcp_home\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home\",\n      \"logs_dir\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home/logs\",\n      \"outputs_dir\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home/outputs\",\n      \"current_model_label\": \"\",\n      \"current_model_path\": \"\",\n      \"current_model_origin\": \"\",\n      \"last_command\": \"\",\n      \"last_error\": \"\",\n      \"recommended_desktop_flow\": \"visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.\",\n      \"desktop_should_connect\": {\n        \"host\": \"localhost\",\n        \"port\": null\n      },\n      \"workflow\": {\n        \"mode\": \"manual\",\n        \"current_main_model_path\": \"\",\n        \"snapshot_dir\": \"\",\n        \"snapshot_prefix\": \"\",\n        \"snapshot_name_template\": \"{prefix}_{label}_{timestamp}.mph\",\n        \"visible_main_locked\": false,\n        \"guard_level\": \"strict\",\n        \"snapshot_save_mode\": \"copy\",\n        \"main_model_tag\": \"\",\n        \"main_model_label\": \"\",\n        \"main_model_path\": \"\",\n        \"model_dimension\": 0,\n        \"workflow_stage\": \"awaiting_manual_server\",\n        \"mcp_client_lifecycle\": \"persistent-required\",\n        \"one_shot_client_allowed\": false,\n        \"notes\": \"\",\n        \"updated_at\": \"2026-09-18 17:36:27\"\n      }\n    },\n    \"loaded_model_count\": 0,\n    \"mph_version\": \"1.4.0\",\n    \"mphserver_exe\": \"C:\\\\Program Files\\\\COMSOL\\\\COMSOL63\\\\Multiphysics/bin/win64/comsolmphserver.exe\",\n    \"mphclient_exe\": \"C:\\\\Program Files\\\\COMSOL\\\\COMSOL63\\\\Multiphysics/bin/win64/comsolmphclient.exe\"\n  },\n  \"error\": \"\",\n  \"log_path\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home/logs/server.log\",\n  \"operations_path\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home/logs/operations.jsonl\"\n}"
+    },
+    "isError": false
+  },
+  "get_parameters_unconnected": {
+    "meta": null,
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"success\": false,\n  \"tool\": \"get_parameters\",\n  \"timestamp\": 1789724187.962055,\n  \"datetime\": \"2026-09-18 17:36:27\",\n  \"server\": {\n    \"version\": \"0.1.9\",\n    \"timestamp\": 1789724187.9622688,\n    \"datetime\": \"2026-09-18 17:36:27\",\n    \"status\": \"disconnected\",\n    \"server_running\": false,\n    \"server_started_by_mcp\": false,\n    \"attached_to_existing_server\": false,\n    \"server_host\": \"localhost\",\n    \"server_port\": null,\n    \"server_endpoint\": \"\",\n    \"desktop_client_role\": \"visual-client\",\n    \"comsol_root\": \"C:\\\\Program Files\\\\COMSOL\\\\COMSOL63\\\\Multiphysics\",\n    \"mcp_home\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home\",\n    \"logs_dir\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home/logs\",\n    \"outputs_dir\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home/outputs\",\n    \"current_model_label\": \"\",\n    \"current_model_path\": \"\",\n    \"current_model_origin\": \"\",\n    \"last_command\": \"get_parameters\",\n    \"last_error\": \"Not connected to a COMSOL Multiphysics Server.\",\n    \"recommended_desktop_flow\": \"visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.\",\n    \"desktop_should_connect\": {\n      \"host\": \"localhost\",\n      \"port\": null\n    },\n    \"workflow\": {\n      \"mode\": \"manual\",\n      \"current_main_model_path\": \"\",\n      \"snapshot_dir\": \"\",\n      \"snapshot_prefix\": \"\",\n      \"snapshot_name_template\": \"{prefix}_{label}_{timestamp}.mph\",\n      \"visible_main_locked\": false,\n      \"guard_level\": \"strict\",\n      \"snapshot_save_mode\": \"copy\",\n      \"main_model_tag\": \"\",\n      \"main_model_label\": \"\",\n      \"main_model_path\": \"\",\n      \"model_dimension\": 0,\n      \"workflow_stage\": \"awaiting_manual_server\",\n      \"mcp_client_lifecycle\": \"persistent-required\",\n      \"one_shot_client_allowed\": false,\n      \"notes\": \"\",\n      \"updated_at\": \"2026-09-18 17:36:27\"\n    }\n  },\n  \"data\": {},\n  \"error\": \"Not connected to a COMSOL Multiphysics Server.\",\n  \"log_path\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home/logs/server.log\",\n  \"operations_path\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home/logs/operations.jsonl\"\n}",
+        "annotations": null,
+        "meta": null
+      }
+    ],
+    "structuredContent": {
+      "result": "{\n  \"success\": false,\n  \"tool\": \"get_parameters\",\n  \"timestamp\": 1789724187.962055,\n  \"datetime\": \"2026-09-18 17:36:27\",\n  \"server\": {\n    \"version\": \"0.1.9\",\n    \"timestamp\": 1789724187.9622688,\n    \"datetime\": \"2026-09-18 17:36:27\",\n    \"status\": \"disconnected\",\n    \"server_running\": false,\n    \"server_started_by_mcp\": false,\n    \"attached_to_existing_server\": false,\n    \"server_host\": \"localhost\",\n    \"server_port\": null,\n    \"server_endpoint\": \"\",\n    \"desktop_client_role\": \"visual-client\",\n    \"comsol_root\": \"C:\\\\Program Files\\\\COMSOL\\\\COMSOL63\\\\Multiphysics\",\n    \"mcp_home\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home\",\n    \"logs_dir\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home/logs\",\n    \"outputs_dir\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home/outputs\",\n    \"current_model_label\": \"\",\n    \"current_model_path\": \"\",\n    \"current_model_origin\": \"\",\n    \"last_command\": \"get_parameters\",\n    \"last_error\": \"Not connected to a COMSOL Multiphysics Server.\",\n    \"recommended_desktop_flow\": \"visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.\",\n    \"desktop_should_connect\": {\n      \"host\": \"localhost\",\n      \"port\": null\n    },\n    \"workflow\": {\n      \"mode\": \"manual\",\n      \"current_main_model_path\": \"\",\n      \"snapshot_dir\": \"\",\n      \"snapshot_prefix\": \"\",\n      \"snapshot_name_template\": \"{prefix}_{label}_{timestamp}.mph\",\n      \"visible_main_locked\": false,\n      \"guard_level\": \"strict\",\n      \"snapshot_save_mode\": \"copy\",\n      \"main_model_tag\": \"\",\n      \"main_model_label\": \"\",\n      \"main_model_path\": \"\",\n      \"model_dimension\": 0,\n      \"workflow_stage\": \"awaiting_manual_server\",\n      \"mcp_client_lifecycle\": \"persistent-required\",\n      \"one_shot_client_allowed\": false,\n      \"notes\": \"\",\n      \"updated_at\": \"2026-09-18 17:36:27\"\n    }\n  },\n  \"data\": {},\n  \"error\": \"Not connected to a COMSOL Multiphysics Server.\",\n  \"log_path\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home/logs/server.log\",\n  \"operations_path\": \"/Users/everwalker/Desktop/comsol-mcp-project/evidence/w01/runs/20260918T173900Z/cases/T038_stdio_registry/mcp_home/logs/operations.jsonl\"\n}"
+    },
+    "isError": false
+  },
+  "unknown_tool": {
+    "meta": null,
+    "content": [
+      {
+        "type": "text",
+        "text": "Unknown tool: does_not_exist",
+        "annotations": null,
+        "meta": null
+      }
+    ],
+    "structuredContent": null,
+    "isError": true
+  }
+}

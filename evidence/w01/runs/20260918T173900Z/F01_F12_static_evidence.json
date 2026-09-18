@@ -1,0 +1,199 @@
+{
+  "baseline_commit": "ccca65aa8277d1205c5de5fb6221e460aca5997a",
+  "findings": [
+    {
+      "finding": "F01",
+      "source": "comsol_mcp/_model_ops.py",
+      "matches": {
+        "def _clear_numerical": [
+          75
+        ],
+        "_clear_numerical(model)": [
+          120,
+          134,
+          152,
+          170,
+          265
+        ]
+      },
+      "status": "STATIC_CONFIRMED_NOT_ENGINE_REPRODUCED",
+      "conclusion": "Aggregate evaluation clears every numerical tag; W04 must replace it.",
+      "engine_test": "NOT_RUN: W01 is an inventory/protocol gate; runtime reproduction belongs to G0/G1 tests."
+    },
+    {
+      "finding": "F02",
+      "source": "comsol_mcp/_physics_ops.py",
+      "matches": {
+        "var_node.set(\"name\", name)": [
+          275
+        ],
+        "var_node.set(\"expr\", expression)": [
+          276
+        ]
+      },
+      "status": "STATIC_CONFIRMED_NOT_ENGINE_REPRODUCED",
+      "conclusion": "Variable creation writes pseudo-properties instead of the documented variable-name setter.",
+      "engine_test": "NOT_RUN: W01 is an inventory/protocol gate; runtime reproduction belongs to G0/G1 tests."
+    },
+    {
+      "finding": "F03",
+      "source": "comsol_mcp/_physics_ops.py",
+      "matches": {
+        "feat = phys.feature(feature_tag)": [
+          202
+        ],
+        "def _set_physics_selection": [
+          197
+        ]
+      },
+      "status": "STATIC_CONFIRMED_NOT_ENGINE_REPRODUCED",
+      "conclusion": "Selection helper always resolves a feature, so a physics-level target is unreachable.",
+      "engine_test": "NOT_RUN: W01 is an inventory/protocol gate; runtime reproduction belongs to G0/G1 tests."
+    },
+    {
+      "finding": "F04",
+      "source": "comsol_mcp/_connection.py",
+      "matches": {
+        "future.result(timeout=timeout)": [
+          25
+        ],
+        "executor.shutdown(wait=False)": [
+          32
+        ]
+      },
+      "status": "STATIC_CONFIRMED_NOT_ENGINE_REPRODUCED",
+      "conclusion": "Timeout stops waiting only; no engine cancellation evidence exists.",
+      "engine_test": "NOT_RUN: W01 is an inventory/protocol gate; runtime reproduction belongs to G0/G1 tests."
+    },
+    {
+      "finding": "F05",
+      "source": "comsol_mcp/_state.py",
+      "matches": {
+        "def _run_tool_readonly": [
+          437
+        ],
+        "_runtime_lock.acquire(timeout=120.0)": [
+          456
+        ]
+      },
+      "status": "STATIC_CONFIRMED_NOT_ENGINE_REPRODUCED",
+      "conclusion": "Read-only calls skip the lock while model-facing tools are classified read-only; write lock has a hardcoded 120 seconds.",
+      "engine_test": "NOT_RUN: W01 is an inventory/protocol gate; runtime reproduction belongs to G0/G1 tests."
+    },
+    {
+      "finding": "F06",
+      "source": "comsol_mcp/_tools_workflow.py",
+      "matches": {
+        "_prune_loaded_models_locked": [
+          26,
+          110,
+          488
+        ]
+      },
+      "status": "STATIC_CONFIRMED_NOT_ENGINE_REPRODUCED",
+      "conclusion": "Visible-main workflow calls pruning; W04 must remove implicit pruning.",
+      "engine_test": "NOT_RUN: W01 is an inventory/protocol gate; runtime reproduction belongs to G0/G1 tests."
+    },
+    {
+      "finding": "F07",
+      "source": "comsol_mcp/_model_ops.py",
+      "matches": {
+        "def _coerce_eval_value": [
+          30
+        ],
+        "def _last_scalar": [
+          43
+        ]
+      },
+      "status": "STATIC_CONFIRMED_NOT_ENGINE_REPRODUCED",
+      "conclusion": "Evaluation coercion can stringify types and collapses values to the last scalar.",
+      "engine_test": "NOT_RUN: W01 is an inventory/protocol gate; runtime reproduction belongs to G0/G1 tests."
+    },
+    {
+      "finding": "F08",
+      "source": "comsol_mcp/_model_ops.py",
+      "matches": {
+        "feature.selection().geom(\"geom1\"": [
+          138,
+          156,
+          174,
+          312,
+          315
+        ],
+        "dim = 2  # Default to 2D": [
+          271
+        ]
+      },
+      "status": "STATIC_CONFIRMED_NOT_ENGINE_REPRODUCED",
+      "conclusion": "Aggregate helpers hardcode geom1 in several paths and default unknown geometry to 2D; they do not establish complete dataset/time semantics.",
+      "engine_test": "NOT_RUN: W01 is an inventory/protocol gate; runtime reproduction belongs to G0/G1 tests."
+    },
+    {
+      "finding": "F09",
+      "source": "comsol_mcp/_tools_params.py",
+      "matches": {
+        "cover_domains = [1, 2]": [
+          110
+        ],
+        "steel_boundaries = [5, 6, 7, 8]": [
+          111
+        ],
+        "\"wAccAvg\"": [
+          115,
+          130,
+          137
+        ]
+      },
+      "status": "STATIC_CONFIRMED_NOT_ENGINE_REPRODUCED",
+      "conclusion": "Legacy metrics use fixed corrosion-model variables, domains, and boundaries rather than an explicit task metric definition.",
+      "engine_test": "NOT_RUN: W01 is an inventory/protocol gate; runtime reproduction belongs to G0/G1 tests."
+    },
+    {
+      "finding": "F10",
+      "source": "comsol_mcp/_tools_workflow.py",
+      "matches": {
+        "timeout=300.0": [
+          105,
+          483
+        ]
+      },
+      "status": "STATIC_CONFIRMED_NOT_ENGINE_REPRODUCED",
+      "conclusion": "Visible-main model loading has a hardcoded 300-second timeout; the separate 120-second lock is recorded by F05.",
+      "engine_test": "NOT_RUN: W01 is an inventory/protocol gate; runtime reproduction belongs to G0/G1 tests."
+    },
+    {
+      "finding": "F11",
+      "source": "comsol_mcp/_tools_workflow.py",
+      "matches": {
+        "def verify_visible_main_session": [
+          155
+        ],
+        "desktop": [
+          149,
+          319
+        ]
+      },
+      "status": "STATIC_CONFIRMED_NOT_ENGINE_REPRODUCED",
+      "conclusion": "Workflow verification is model/session metadata, not Desktop-current-tab proof.",
+      "engine_test": "NOT_RUN: W01 is an inventory/protocol gate; runtime reproduction belongs to G0/G1 tests."
+    },
+    {
+      "finding": "F12",
+      "source": "comsol_mcp/_physics_ops.py",
+      "matches": {
+        "if feature_tag in existing:": [
+          173
+        ],
+        "\"Physics already exists.\"": [
+          140
+        ],
+        "\"Feature already exists.\"": [
+          174
+        ]
+      },
+      "status": "STATIC_CONFIRMED_NOT_ENGINE_REPRODUCED",
+      "conclusion": "Existing-tag creates return success-like payloads without checking the requested type; W09 must also generate compatibility documentation/schema.",
+      "engine_test": "NOT_RUN: W01 is an inventory/protocol gate; runtime reproduction belongs to G0/G1 tests."
+    }
+  ]
+}

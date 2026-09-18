@@ -1,0 +1,1256 @@
+{
+  "baseline_commit": "ccca65aa8277d1205c5de5fb6221e460aca5997a",
+  "tool_count": 50,
+  "source": "FastMCP in-process registry after comsol_mcp.mcp_server import",
+  "compatibility_boundary": "Mapping is a W01 inventory; no new registry/protocol layer is installed.",
+  "tools": [
+    {
+      "legacy_tool": "check_server_port",
+      "callable": "comsol_mcp._tools_connection.check_server_port",
+      "description": "Check whether a manually started COMSOL Server is listening on host:port.",
+      "input_schema": {
+        "properties": {
+          "host": {
+            "default": "localhost",
+            "title": "Host",
+            "type": "string"
+          },
+          "port": {
+            "default": 2036,
+            "title": "Port",
+            "type": "integer"
+          }
+        },
+        "title": "check_server_portArguments",
+        "type": "object"
+      },
+      "python_signature": "(host: 'str' = 'localhost', port: 'int' = 2036) -> 'str'",
+      "proposed_operation": "runtime_probe_port",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "commit_current_main_model",
+      "callable": "comsol_mcp._tools_snapshot.commit_current_main_model",
+      "description": "Save a named snapshot, then overwrite the persisted current main model with the current server-side state.",
+      "input_schema": {
+        "properties": {
+          "snapshot_label": {
+            "default": "",
+            "title": "Snapshot Label",
+            "type": "string"
+          }
+        },
+        "title": "commit_current_main_modelArguments",
+        "type": "object"
+      },
+      "python_signature": "(snapshot_label: 'str' = '') -> 'str'",
+      "proposed_operation": "transaction_commit",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "configure_single_main_workflow",
+      "callable": "comsol_mcp._tools_workflow.configure_single_main_workflow",
+      "description": "Persist the single-current-main-model workflow in MCP state.\n\n    model_dimension: spatial dimension of the model (2 or 3). Set to 0 to\n    skip. This is used by create_physics and evaluate_expressions aggregate\n    to select the correct COMSOL node types. For 2D models set to 2, for 3D\n    set to 3.\n    ",
+      "input_schema": {
+        "properties": {
+          "current_main_model_path": {
+            "title": "Current Main Model Path",
+            "type": "string"
+          },
+          "snapshot_dir": {
+            "default": "",
+            "title": "Snapshot Dir",
+            "type": "string"
+          },
+          "snapshot_prefix": {
+            "default": "",
+            "title": "Snapshot Prefix",
+            "type": "string"
+          },
+          "model_dimension": {
+            "default": 0,
+            "title": "Model Dimension",
+            "type": "integer"
+          },
+          "notes": {
+            "default": "",
+            "title": "Notes",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_main_model_path"
+        ],
+        "title": "configure_single_main_workflowArguments",
+        "type": "object"
+      },
+      "python_signature": "(current_main_model_path: 'str', snapshot_dir: 'str' = '', snapshot_prefix: 'str' = '', model_dimension: 'int' = 0, notes: 'str' = '') -> 'str'",
+      "proposed_operation": "workflow_configure",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "configure_solver",
+      "callable": "comsol_mcp._tools_solver.configure_solver",
+      "description": "Configure a solver feature's properties.\n\n    properties_json format: [{\"name\": \"prop_name\", \"value\": \"value\"}] or\n    {\"prop_name\": \"value\", ...}. For array-valued properties use\n    [{\"name\": \"prop_name\", \"values\": [\"v1\", \"v2\"]}].\n\n    To add segregated solver steps, use properties_json with:\n    [{\"name\": \"add_segregated_step\", \"value\": \"{\"step_tag\": \"step1\", \"variables\": [\"u\", \"v\"]}\"}]\n    Multiple steps can be added in a single call.\n    ",
+      "input_schema": {
+        "properties": {
+          "sol_tag": {
+            "title": "Sol Tag",
+            "type": "string"
+          },
+          "feature_tag": {
+            "title": "Feature Tag",
+            "type": "string"
+          },
+          "properties_json": {
+            "default": "[]",
+            "title": "Properties Json",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sol_tag",
+          "feature_tag"
+        ],
+        "title": "configure_solverArguments",
+        "type": "object"
+      },
+      "python_signature": "(sol_tag: 'str', feature_tag: 'str', properties_json: 'str' = '[]') -> 'str'",
+      "proposed_operation": "solver_feature_configure",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "create_feature",
+      "callable": "comsol_mcp._tools_geometry.create_feature",
+      "description": "Create a geometry feature and optionally apply initial properties.",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "geometry": {
+            "title": "Geometry",
+            "type": "string"
+          },
+          "tag": {
+            "title": "Tag",
+            "type": "string"
+          },
+          "feature_type": {
+            "title": "Feature Type",
+            "type": "string"
+          },
+          "properties_json": {
+            "default": "[]",
+            "title": "Properties Json",
+            "type": "string"
+          },
+          "run_geometry": {
+            "default": false,
+            "title": "Run Geometry",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "component",
+          "geometry",
+          "tag",
+          "feature_type"
+        ],
+        "title": "create_featureArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str', geometry: 'str', tag: 'str', feature_type: 'str', properties_json: 'str' = '[]', run_geometry: 'bool' = False) -> 'str'",
+      "proposed_operation": "geometry_feature_create",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "create_physics",
+      "callable": "comsol_mcp._tools_physics.create_physics",
+      "description": "Add a physics interface to a component.\n\n    Common physics_type values: \"cfpde\" (Coefficient Form PDE),\n    \"tds\" (Transport of Diluted Species), \"solid\" (Solid Mechanics),\n    \"ht\" (Heat Transfer), \"es\" (Electrostatics), etc.\n\n    dimension: spatial dimension (1, 2, or 3). Default 0 = auto-detect from\n    the component's geometry. Set via configure_single_main_workflow(model_dimension=2).\n\n    dependent_variables: comma-separated dependent variable names. Default \"u\".\n    COMSOL uses these to create the correct physics with matching spatial dimension.\n    For multiple dependent variables use \"u,v\" or \"u,v,w\".\n    ",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "tag": {
+            "title": "Tag",
+            "type": "string"
+          },
+          "physics_type": {
+            "title": "Physics Type",
+            "type": "string"
+          },
+          "dimension": {
+            "default": 0,
+            "title": "Dimension",
+            "type": "integer"
+          },
+          "dependent_variables": {
+            "default": "u",
+            "title": "Dependent Variables",
+            "type": "string"
+          }
+        },
+        "required": [
+          "component",
+          "tag",
+          "physics_type"
+        ],
+        "title": "create_physicsArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str', tag: 'str', physics_type: 'str', dimension: 'int' = 0, dependent_variables: 'str' = 'u') -> 'str'",
+      "proposed_operation": "physics_create",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "create_physics_feature",
+      "callable": "comsol_mcp._tools_physics.create_physics_feature",
+      "description": "Add a child feature (boundary condition, source term, etc.) to a physics interface.\n\n    IMPORTANT: feature_type uses COMSOL internal identifiers, NOT display names.\n    For example, in TDS (Transport of Diluted Species), valid types include:\n    \"Inflow\", \"Outflow\", \"Flux\", \"NoFlux\", \"Concentration\", \"InitialValues\",\n    \"ConservedQuantity\", \"WeakConstraint\".\n    Use list_physics_features first to discover existing feature_type identifiers\n    in the current physics interface, as these vary per physics type and COMSOL version.\n    properties_json format: [{\"name\": \"prop_name\", \"value\": \"value\"}] or\n    {\"prop_name\": \"value\", ...}.\n    ",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "physics_tag": {
+            "title": "Physics Tag",
+            "type": "string"
+          },
+          "feature_tag": {
+            "title": "Feature Tag",
+            "type": "string"
+          },
+          "feature_type": {
+            "title": "Feature Type",
+            "type": "string"
+          },
+          "properties_json": {
+            "default": "[]",
+            "title": "Properties Json",
+            "type": "string"
+          }
+        },
+        "required": [
+          "component",
+          "physics_tag",
+          "feature_tag",
+          "feature_type"
+        ],
+        "title": "create_physics_featureArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str', physics_tag: 'str', feature_tag: 'str', feature_type: 'str', properties_json: 'str' = '[]') -> 'str'",
+      "proposed_operation": "physics_feature_create",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "create_solver_config",
+      "callable": "comsol_mcp._tools_solver.create_solver_config",
+      "description": "Create a solver configuration linked to a study.\n\n    The solver tag identifies the new solver config. The study tag links it\n    to an existing study for solving.\n    ",
+      "input_schema": {
+        "properties": {
+          "sol_tag": {
+            "title": "Sol Tag",
+            "type": "string"
+          },
+          "study_tag": {
+            "title": "Study Tag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sol_tag",
+          "study_tag"
+        ],
+        "title": "create_solver_configArguments",
+        "type": "object"
+      },
+      "python_signature": "(sol_tag: 'str', study_tag: 'str') -> 'str'",
+      "proposed_operation": "solver_create",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "delete_feature",
+      "callable": "comsol_mcp._tools_geometry.delete_feature",
+      "description": "Delete a geometry feature from the selected server-side model.",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "geometry": {
+            "title": "Geometry",
+            "type": "string"
+          },
+          "tag": {
+            "title": "Tag",
+            "type": "string"
+          },
+          "run_geometry": {
+            "default": false,
+            "title": "Run Geometry",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "component",
+          "geometry",
+          "tag"
+        ],
+        "title": "delete_featureArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str', geometry: 'str', tag: 'str', run_geometry: 'bool' = False) -> 'str'",
+      "proposed_operation": "node_remove",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "ensure_component",
+      "callable": "comsol_mcp._tools_geometry.ensure_component",
+      "description": "Ensure a component exists in the selected server-side model.",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "default": "comp1",
+            "title": "Component",
+            "type": "string"
+          },
+          "dimension": {
+            "default": 2,
+            "title": "Dimension",
+            "type": "integer"
+          }
+        },
+        "title": "ensure_componentArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str' = 'comp1', dimension: 'int' = 2) -> 'str'",
+      "proposed_operation": "component_ensure",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "ensure_geometry",
+      "callable": "comsol_mcp._tools_geometry.ensure_geometry",
+      "description": "Ensure a geometry sequence exists in the selected server-side model.",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "default": "comp1",
+            "title": "Component",
+            "type": "string"
+          },
+          "geometry": {
+            "default": "geom1",
+            "title": "Geometry",
+            "type": "string"
+          },
+          "dimension": {
+            "default": 2,
+            "title": "Dimension",
+            "type": "integer"
+          }
+        },
+        "title": "ensure_geometryArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str' = 'comp1', geometry: 'str' = 'geom1', dimension: 'int' = 2) -> 'str'",
+      "proposed_operation": "geometry_ensure",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "ensure_mesh",
+      "callable": "comsol_mcp._tools_geometry.ensure_mesh",
+      "description": "Ensure a mesh sequence exists in the selected server-side model.",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "default": "comp1",
+            "title": "Component",
+            "type": "string"
+          },
+          "mesh": {
+            "default": "mesh1",
+            "title": "Mesh",
+            "type": "string"
+          }
+        },
+        "title": "ensure_meshArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str' = 'comp1', mesh: 'str' = 'mesh1') -> 'str'",
+      "proposed_operation": "mesh_ensure",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "evaluate_expressions",
+      "callable": "comsol_mcp._tools_params.evaluate_expressions",
+      "description": "Evaluate one or more expressions on the current server-side model.\n\n    Each expression item supports: {\"name\": \"...\", \"expression\": \"...\",\n      \"aggregate\": \"max\"|\"min\"|\"avg\"|\"integral\"|\"none\",\n      \"domains\": [1,2], \"boundaries\": [5,6], \"time_point\": \"last\"|\"all\"|\"N\"}.\n\n    Backward compatible: [{\"name\": \"...\", \"expression\": \"...\"}] still works.\n    max_result_size: when > 0, truncate arrays exceeding this size (chars).\n    ",
+      "input_schema": {
+        "properties": {
+          "expressions_json": {
+            "default": "[]",
+            "title": "Expressions Json",
+            "type": "string"
+          },
+          "max_result_size": {
+            "default": 0,
+            "title": "Max Result Size",
+            "type": "integer"
+          }
+        },
+        "title": "evaluate_expressionsArguments",
+        "type": "object"
+      },
+      "python_signature": "(expressions_json: 'str' = '[]', max_result_size: 'int' = 0) -> 'str'",
+      "proposed_operation": "result_evaluate",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "get_core_metrics",
+      "callable": "comsol_mcp._tools_params.get_core_metrics",
+      "description": "Return the core metrics used by the current short-window mainline.",
+      "input_schema": {
+        "properties": {},
+        "title": "get_core_metricsArguments",
+        "type": "object"
+      },
+      "python_signature": "() -> 'str'",
+      "proposed_operation": "metric_evaluate_legacy",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "get_parameters",
+      "callable": "comsol_mcp._tools_params.get_parameters",
+      "description": "Return current global parameters from the selected server-side model.",
+      "input_schema": {
+        "properties": {},
+        "title": "get_parametersArguments",
+        "type": "object"
+      },
+      "python_signature": "() -> 'str'",
+      "proposed_operation": "parameter_list",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "list_physics",
+      "callable": "comsol_mcp._tools_physics.list_physics",
+      "description": "List all physics interfaces in a component with their features.\n\n    Returns tags, labels, and feature counts for each physics interface.\n    ",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "default": "comp1",
+            "title": "Component",
+            "type": "string"
+          }
+        },
+        "title": "list_physicsArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str' = 'comp1') -> 'str'",
+      "proposed_operation": "physics_list",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "list_physics_features",
+      "callable": "comsol_mcp._tools_physics.list_physics_features",
+      "description": "List all features (boundary conditions, sources, etc.) under a physics interface.\n\n    Returns tags, labels, feature_type identifiers, property names, and\n    selection editability for each feature. The feature_type field shows the\n    COMSOL internal identifier to use with create_physics_feature.\n    ",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "physics_tag": {
+            "title": "Physics Tag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "component",
+          "physics_tag"
+        ],
+        "title": "list_physics_featuresArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str', physics_tag: 'str') -> 'str'",
+      "proposed_operation": "physics_feature_list",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "list_solver_config",
+      "callable": "comsol_mcp._tools_solver.list_solver_config",
+      "description": "List all solver configurations with their features.\n\n    Returns solver tags, feature counts, and feature tags for each solver\n    configuration in the current model.\n    ",
+      "input_schema": {
+        "properties": {},
+        "title": "list_solver_configArguments",
+        "type": "object"
+      },
+      "python_signature": "() -> 'str'",
+      "proposed_operation": "solver_list",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "list_solver_features",
+      "callable": "comsol_mcp._tools_solver.list_solver_features",
+      "description": "List features and sub-features under a solver configuration.\n\n    Returns feature tags, labels, properties, and any sub-features (e.g.\n    segregated solver steps).\n    ",
+      "input_schema": {
+        "properties": {
+          "sol_tag": {
+            "title": "Sol Tag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sol_tag"
+        ],
+        "title": "list_solver_featuresArguments",
+        "type": "object"
+      },
+      "python_signature": "(sol_tag: 'str') -> 'str'",
+      "proposed_operation": "solver_feature_list",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "load_current_main_model",
+      "callable": "comsol_mcp._tools_workflow.load_current_main_model",
+      "description": "Load the persisted current main model into the connected COMSOL server session.",
+      "input_schema": {
+        "properties": {},
+        "title": "load_current_main_modelArguments",
+        "type": "object"
+      },
+      "python_signature": "() -> 'str'",
+      "proposed_operation": "model_attach",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "load_visible_main_model",
+      "callable": "comsol_mcp._tools_workflow.load_visible_main_model",
+      "description": "Load or adopt the visible main MPH, then lock MCP to that server-side model.",
+      "input_schema": {
+        "properties": {
+          "path": {
+            "default": "",
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "title": "load_visible_main_modelArguments",
+        "type": "object"
+      },
+      "python_signature": "(path: 'str' = '') -> 'str'",
+      "proposed_operation": "model_attach",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "manage_variables",
+      "callable": "comsol_mcp._tools_physics.manage_variables",
+      "description": "Manage variable definitions: list, create, or remove.\n\n    Actions:\n    - \"list\": List all variables. Returns tags, names, and expressions.\n    - \"create\": Create a variable node with given name and expression.\n    - \"remove\": Remove a variable node by tag.\n\n    When component is empty, operates on global variables.\n    When component is specified, operates on component-level variables.\n    ",
+      "input_schema": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "component": {
+            "default": "",
+            "title": "Component",
+            "type": "string"
+          },
+          "tag": {
+            "default": "",
+            "title": "Tag",
+            "type": "string"
+          },
+          "name": {
+            "default": "",
+            "title": "Name",
+            "type": "string"
+          },
+          "expression": {
+            "default": "",
+            "title": "Expression",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "manage_variablesArguments",
+        "type": "object"
+      },
+      "python_signature": "(action: 'str', component: 'str' = '', tag: 'str' = '', name: 'str' = '', expression: 'str' = '') -> 'str'",
+      "proposed_operation": "variable_manage",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "mcp_tool_audit",
+      "callable": "comsol_mcp._tools_workflow.mcp_tool_audit",
+      "description": "Return the visible-main safety classification for the MCP tool surface.",
+      "input_schema": {
+        "properties": {},
+        "title": "mcp_tool_auditArguments",
+        "type": "object"
+      },
+      "python_signature": "() -> 'str'",
+      "proposed_operation": "registry_manifest",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "model_create",
+      "callable": "comsol_mcp._tools_model.model_create",
+      "description": "Create a new in-memory model on the connected COMSOL server and select it as current.",
+      "input_schema": {
+        "properties": {
+          "name": {
+            "default": "Server Model",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "title": "model_createArguments",
+        "type": "object"
+      },
+      "python_signature": "(name: 'str' = 'Server Model') -> 'str'",
+      "proposed_operation": "model_create",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "model_load",
+      "callable": "comsol_mcp._tools_model.model_load",
+      "description": "Load an MPH file on the connected COMSOL server and select it as current.",
+      "input_schema": {
+        "properties": {
+          "path": {
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "title": "model_loadArguments",
+        "type": "object"
+      },
+      "python_signature": "(path: 'str') -> 'str'",
+      "proposed_operation": "model_load",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "model_tree",
+      "callable": "comsol_mcp._tools_workflow.model_tree",
+      "description": "Return tags and structure for the current server-side model.",
+      "input_schema": {
+        "properties": {},
+        "title": "model_treeArguments",
+        "type": "object"
+      },
+      "python_signature": "() -> 'str'",
+      "proposed_operation": "node_list",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "prune_loaded_models",
+      "callable": "comsol_mcp._tools_model.prune_loaded_models",
+      "description": "Remove extra loaded server-side models and keep only the requested working model.",
+      "input_schema": {
+        "properties": {
+          "keep": {
+            "default": "current",
+            "title": "Keep",
+            "type": "string"
+          }
+        },
+        "title": "prune_loaded_modelsArguments",
+        "type": "object"
+      },
+      "python_signature": "(keep: 'str' = 'current') -> 'str'",
+      "proposed_operation": "model_prune_owned",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "remove_physics",
+      "callable": "comsol_mcp._tools_physics.remove_physics",
+      "description": "Remove a physics interface from a component.",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "tag": {
+            "title": "Tag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "component",
+          "tag"
+        ],
+        "title": "remove_physicsArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str', tag: 'str') -> 'str'",
+      "proposed_operation": "physics_remove",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "remove_physics_feature",
+      "callable": "comsol_mcp._tools_physics.remove_physics_feature",
+      "description": "Remove a child feature from a physics interface.",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "physics_tag": {
+            "title": "Physics Tag",
+            "type": "string"
+          },
+          "feature_tag": {
+            "title": "Feature Tag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "component",
+          "physics_tag",
+          "feature_tag"
+        ],
+        "title": "remove_physics_featureArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str', physics_tag: 'str', feature_tag: 'str') -> 'str'",
+      "proposed_operation": "physics_feature_remove",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "run_feature",
+      "callable": "comsol_mcp._tools_geometry.run_feature",
+      "description": "Run a geometry or mesh sequence on the selected server-side model.",
+      "input_schema": {
+        "properties": {
+          "collection": {
+            "title": "Collection",
+            "type": "string"
+          },
+          "tag": {
+            "title": "Tag",
+            "type": "string"
+          },
+          "component": {
+            "default": "comp1",
+            "title": "Component",
+            "type": "string"
+          }
+        },
+        "required": [
+          "collection",
+          "tag"
+        ],
+        "title": "run_featureArguments",
+        "type": "object"
+      },
+      "python_signature": "(collection: 'str', tag: 'str', component: 'str' = 'comp1') -> 'str'",
+      "proposed_operation": "geometry_feature_run",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "run_study",
+      "callable": "comsol_mcp._tools_workflow.run_study",
+      "description": "Run the current model study, optionally restricting execution to a study tag.",
+      "input_schema": {
+        "properties": {
+          "study_tag": {
+            "default": "",
+            "title": "Study Tag",
+            "type": "string"
+          }
+        },
+        "title": "run_studyArguments",
+        "type": "object"
+      },
+      "python_signature": "(study_tag: 'str' = '') -> 'str'",
+      "proposed_operation": "study_run",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "run_study_async",
+      "callable": "comsol_mcp._tools_solver.run_study_async",
+      "description": "Run a COMSOL study in a background thread and return a job ID for polling.\n\n    This is the async version of run_study. It starts the solve in a background\n    thread and returns immediately with a job_id. Use run_study_status(job_id)\n    to poll for completion.\n\n    The MCP client will NOT disconnect during long solves because this tool\n    returns immediately.\n    ",
+      "input_schema": {
+        "properties": {
+          "study_tag": {
+            "default": "",
+            "title": "Study Tag",
+            "type": "string"
+          }
+        },
+        "title": "run_study_asyncArguments",
+        "type": "object"
+      },
+      "python_signature": "(study_tag: 'str' = '') -> 'str'",
+      "proposed_operation": "study_run_async",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "run_study_status",
+      "callable": "comsol_mcp._tools_solver.run_study_status",
+      "description": "Return status for the latest or specified async run_study job.\n\n    Pass the job_id returned by run_study_async, or leave empty to get the\n    latest job status.\n    ",
+      "input_schema": {
+        "properties": {
+          "job_id": {
+            "default": "",
+            "title": "Job Id",
+            "type": "string"
+          }
+        },
+        "title": "run_study_statusArguments",
+        "type": "object"
+      },
+      "python_signature": "(job_id: 'str' = '') -> 'str'",
+      "proposed_operation": "job_status",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "run_visible_main_iteration",
+      "callable": "comsol_mcp._tools_snapshot.run_visible_main_iteration",
+      "description": "Run one locked visible-main iteration: set parameters, solve, extract metrics, save a copy snapshot.",
+      "input_schema": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "parameters_json": {
+            "default": "[]",
+            "title": "Parameters Json",
+            "type": "string"
+          },
+          "study_tag": {
+            "default": "",
+            "title": "Study Tag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label"
+        ],
+        "title": "run_visible_main_iterationArguments",
+        "type": "object"
+      },
+      "python_signature": "(label: 'str', parameters_json: 'str' = '[]', study_tag: 'str' = '') -> 'str'",
+      "proposed_operation": "transaction_apply",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "save_main_model_snapshot",
+      "callable": "comsol_mcp._tools_snapshot.save_main_model_snapshot",
+      "description": "Save a named snapshot from the current server-side model using the persisted workflow naming policy.",
+      "input_schema": {
+        "properties": {
+          "snapshot_label": {
+            "title": "Snapshot Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "snapshot_label"
+        ],
+        "title": "save_main_model_snapshotArguments",
+        "type": "object"
+      },
+      "python_signature": "(snapshot_label: 'str') -> 'str'",
+      "proposed_operation": "checkpoint_create",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "save_model",
+      "callable": "comsol_mcp._tools_snapshot.save_model",
+      "description": "Save the current server-side model to disk.",
+      "input_schema": {
+        "properties": {
+          "path": {
+            "default": "",
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "title": "save_modelArguments",
+        "type": "object"
+      },
+      "python_signature": "(path: 'str' = '') -> 'str'",
+      "proposed_operation": "model_save",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "server_connect",
+      "callable": "comsol_mcp._tools_connection.server_connect",
+      "description": "Default entrypoint: attach MCP to an already running COMSOL Multiphysics Server.\n\n    This is the recommended tool for the visible Desktop workflow:\n    manually start COMSOL Multiphysics Server, call server_connect(host, port),\n    load_visible_main_model(path), then connect Desktop and import that model.\n    ",
+      "input_schema": {
+        "properties": {
+          "host": {
+            "default": "localhost",
+            "title": "Host",
+            "type": "string"
+          },
+          "port": {
+            "default": 2036,
+            "title": "Port",
+            "type": "integer"
+          },
+          "model_name": {
+            "default": "",
+            "title": "Model Name",
+            "type": "string"
+          },
+          "timeout_seconds": {
+            "default": 30.0,
+            "title": "Timeout Seconds",
+            "type": "number"
+          }
+        },
+        "title": "server_connectArguments",
+        "type": "object"
+      },
+      "python_signature": "(host: 'str' = 'localhost', port: 'int' = 2036, model_name: 'str' = '', timeout_seconds: 'float' = 30.0) -> 'str'",
+      "proposed_operation": "session_connect",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "server_disconnect",
+      "callable": "comsol_mcp._tools_connection.server_disconnect",
+      "description": "Disconnect the MCP client. Optionally shut down the local server if MCP started it.",
+      "input_schema": {
+        "properties": {
+          "shutdown_server": {
+            "default": false,
+            "title": "Shutdown Server",
+            "type": "boolean"
+          }
+        },
+        "title": "server_disconnectArguments",
+        "type": "object"
+      },
+      "python_signature": "(shutdown_server: 'bool' = False) -> 'str'",
+      "proposed_operation": "session_disconnect",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "server_info",
+      "callable": "comsol_mcp._tools_connection.server_info",
+      "description": "Return COMSOL MCP status and the recommended attach-first workflow.\n\n    For normal visible Desktop usage, manually start COMSOL Multiphysics Server,\n    connect Desktop to it, and then call server_connect().\n    ",
+      "input_schema": {
+        "properties": {},
+        "title": "server_infoArguments",
+        "type": "object"
+      },
+      "python_signature": "() -> 'str'",
+      "proposed_operation": "runtime_discover",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "server_start",
+      "callable": "comsol_mcp._tools_connection.server_start",
+      "description": "Advanced fallback only: start a local COMSOL server and connect MCP to it.\n\n    Do NOT use this as the default visible workflow.\n    Preferred workflow:\n    1. Manually start COMSOL Multiphysics Server.\n    2. Connect COMSOL Desktop to that server.\n    3. Call server_connect(host, port) from MCP.\n\n    Use server_start() only when MCP should own the COMSOL server lifecycle and\n    random or non-default listening ports are acceptable.\n    ",
+      "input_schema": {
+        "properties": {
+          "port": {
+            "default": 0,
+            "title": "Port",
+            "type": "integer"
+          },
+          "cores": {
+            "default": 0,
+            "title": "Cores",
+            "type": "integer"
+          },
+          "multi": {
+            "default": "on",
+            "title": "Multi",
+            "type": "string"
+          },
+          "timeout_seconds": {
+            "default": 120,
+            "title": "Timeout Seconds",
+            "type": "integer"
+          },
+          "version": {
+            "default": "",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "title": "server_startArguments",
+        "type": "object"
+      },
+      "python_signature": "(port: 'int' = 0, cores: 'int' = 0, multi: 'str' = 'on', timeout_seconds: 'int' = 120, version: 'str' = '') -> 'str'",
+      "proposed_operation": "server_start",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "set_parameters",
+      "callable": "comsol_mcp._tools_params.set_parameters",
+      "description": "Set multiple global parameters on the selected server-side model.",
+      "input_schema": {
+        "properties": {
+          "parameters_json": {
+            "title": "Parameters Json",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parameters_json"
+        ],
+        "title": "set_parametersArguments",
+        "type": "object"
+      },
+      "python_signature": "(parameters_json: 'str') -> 'str'",
+      "proposed_operation": "parameter_set",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "set_physics_selection",
+      "callable": "comsol_mcp._tools_physics.set_physics_selection",
+      "description": "Set domain, boundary, or edge selection for a physics feature.\n\n    entities_json is a JSON array of integer entity IDs, e.g. \"[1, 2, 3]\".\n    Some features have inherited selections that cannot be modified directly.\n    Use list_physics_features to check selection_editable before calling this.\n    If selection is not editable on a feature, try setting it on the parent\n    physics interface instead (pass the physics tag as feature_tag).\n    ",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "physics_tag": {
+            "title": "Physics Tag",
+            "type": "string"
+          },
+          "feature_tag": {
+            "title": "Feature Tag",
+            "type": "string"
+          },
+          "entities_json": {
+            "title": "Entities Json",
+            "type": "string"
+          }
+        },
+        "required": [
+          "component",
+          "physics_tag",
+          "feature_tag",
+          "entities_json"
+        ],
+        "title": "set_physics_selectionArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str', physics_tag: 'str', feature_tag: 'str', entities_json: 'str') -> 'str'",
+      "proposed_operation": "selection_set",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "start_visible_main_workflow",
+      "callable": "comsol_mcp._tools_workflow.start_visible_main_workflow",
+      "description": "Fixed visible workflow entrypoint: check port, connect, load MPH, then instruct Desktop import.",
+      "input_schema": {
+        "properties": {
+          "host": {
+            "default": "localhost",
+            "title": "Host",
+            "type": "string"
+          },
+          "port": {
+            "default": 2036,
+            "title": "Port",
+            "type": "integer"
+          },
+          "path": {
+            "default": "",
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "title": "start_visible_main_workflowArguments",
+        "type": "object"
+      },
+      "python_signature": "(host: 'str' = 'localhost', port: 'int' = 2036, path: 'str' = '') -> 'str'",
+      "proposed_operation": "workflow_start",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "start_visible_main_workflow_async",
+      "callable": "comsol_mcp._tools_workflow.start_visible_main_workflow_async",
+      "description": "Start visible-main loading in a background job so large MPH loads do not hit tool timeouts.",
+      "input_schema": {
+        "properties": {
+          "host": {
+            "default": "localhost",
+            "title": "Host",
+            "type": "string"
+          },
+          "port": {
+            "default": 2036,
+            "title": "Port",
+            "type": "integer"
+          },
+          "path": {
+            "default": "",
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "title": "start_visible_main_workflow_asyncArguments",
+        "type": "object"
+      },
+      "python_signature": "(host: 'str' = 'localhost', port: 'int' = 2036, path: 'str' = '') -> 'str'",
+      "proposed_operation": "workflow_start_async",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "unlock_visible_main",
+      "callable": "comsol_mcp._tools_workflow.unlock_visible_main",
+      "description": "Unlock the visible-main guard for explicit maintenance actions.",
+      "input_schema": {
+        "properties": {
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "unlock_visible_mainArguments",
+        "type": "object"
+      },
+      "python_signature": "(reason: 'str') -> 'str'",
+      "proposed_operation": "workflow_unlock",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "update_feature",
+      "callable": "comsol_mcp._tools_geometry.update_feature",
+      "description": "Update geometry feature properties on the selected server-side model.",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "geometry": {
+            "title": "Geometry",
+            "type": "string"
+          },
+          "tag": {
+            "title": "Tag",
+            "type": "string"
+          },
+          "properties_json": {
+            "title": "Properties Json",
+            "type": "string"
+          },
+          "run_geometry": {
+            "default": false,
+            "title": "Run Geometry",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "component",
+          "geometry",
+          "tag",
+          "properties_json"
+        ],
+        "title": "update_featureArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str', geometry: 'str', tag: 'str', properties_json: 'str', run_geometry: 'bool' = False) -> 'str'",
+      "proposed_operation": "node_property_set",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "update_physics_feature",
+      "callable": "comsol_mcp._tools_physics.update_physics_feature",
+      "description": "Set properties on an existing physics feature.\n\n    properties_json format: [{\"name\": \"prop_name\", \"value\": \"value\"}] or\n    {\"prop_name\": \"value\", ...}. For array-valued properties use\n    [{\"name\": \"prop_name\", \"values\": [\"v1\", \"v2\"]}].\n    ",
+      "input_schema": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "physics_tag": {
+            "title": "Physics Tag",
+            "type": "string"
+          },
+          "feature_tag": {
+            "title": "Feature Tag",
+            "type": "string"
+          },
+          "properties_json": {
+            "title": "Properties Json",
+            "type": "string"
+          }
+        },
+        "required": [
+          "component",
+          "physics_tag",
+          "feature_tag",
+          "properties_json"
+        ],
+        "title": "update_physics_featureArguments",
+        "type": "object"
+      },
+      "python_signature": "(component: 'str', physics_tag: 'str', feature_tag: 'str', properties_json: 'str') -> 'str'",
+      "proposed_operation": "physics_feature_update",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "verify_visible_main_session",
+      "callable": "comsol_mcp._tools_workflow.verify_visible_main_session",
+      "description": "Verify that MCP is still operating on the locked visible main model.",
+      "input_schema": {
+        "properties": {},
+        "title": "verify_visible_main_sessionArguments",
+        "type": "object"
+      },
+      "python_signature": "() -> 'str'",
+      "proposed_operation": "desktop_binding_verify",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "visible_main_workflow_status",
+      "callable": "comsol_mcp._tools_workflow.visible_main_workflow_status",
+      "description": "Return status for the latest or specified asynchronous visible-main workflow job.",
+      "input_schema": {
+        "properties": {
+          "job_id": {
+            "default": "",
+            "title": "Job Id",
+            "type": "string"
+          }
+        },
+        "title": "visible_main_workflow_statusArguments",
+        "type": "object"
+      },
+      "python_signature": "(job_id: 'str' = '') -> 'str'",
+      "proposed_operation": "workflow_status",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    },
+    {
+      "legacy_tool": "workflow_info",
+      "callable": "comsol_mcp._tools_workflow.workflow_info",
+      "description": "Return the persisted MCP workflow policy for current-main-model operation.",
+      "input_schema": {
+        "properties": {},
+        "title": "workflow_infoArguments",
+        "type": "object"
+      },
+      "python_signature": "() -> 'str'",
+      "proposed_operation": "workflow_inspect",
+      "migration_status": "W01_AUDITED_NOT_IMPLEMENTED"
+    }
+  ]
+}
