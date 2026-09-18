@@ -117,6 +117,10 @@ that fork; it does not authorize starting another phase.
 - Fetch `origin/main` and inspect unexpected remote changes before pushing.
   Use `git push origin HEAD:main` from the current development branch; no force
   push, remote history rewrite, or silent replacement of remote user changes.
+  If terminal authentication is unavailable but the GitHub connector is authenticated,
+  its Git object API may publish equivalent phase trees as ordinary child commits.
+  Preserve the original local branch, verify each tree SHA, and use a delivery
+  branch tracking the resulting remote history.
   If branch protection requires a PR, use that route and report pending merge.
 - Verify the remote `refs/heads/main` SHA equals the published local HEAD before
   reporting synchronization complete. If authentication/network/protection
