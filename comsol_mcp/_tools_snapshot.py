@@ -18,16 +18,16 @@ from comsol_mcp._connection import _require_client
 from comsol_mcp._model import (
     _require_visible_main, _block_if_visible_main_locked,
     _visible_main_identity, _visible_main_mismatch, _visible_main_lock_enabled,
-    _set_current_model, _save_model_copy, _remove_loaded_models_by_path_locked,
-    _prune_loaded_models_locked,
+    _set_current_model, _save_model_copy,
 )
 
 
-def run_visible_main_iteration(label: str, parameters_json: str = "[]", study_tag: str = "") -> str:
+def run_visible_main_iteration(label: str, parameters_json: str = "[]", study_tag: str = "", metrics_json: str = "[]") -> str:
     """Run one locked visible-main iteration: set parameters, solve, extract metrics, save a copy snapshot."""
 
     def _impl() -> dict[str, Any]:
-        from comsol_mcp._tools_params import get_core_metrics
+        from comsol_mcp._tools_params import get_core_metrics, _validate_metric_definitions
+        _validate_metric_definitions(metrics_json)  # reject before any writes/solve
 
         model = _require_visible_main("run_visible_main_iteration")
         before = _visible_main_identity(model)
@@ -56,7 +56,8 @@ def run_visible_main_iteration(label: str, parameters_json: str = "[]", study_ta
         else:
             model.solve()
 
-        metrics_payload = json.loads(get_core_metrics())
+        # Metrics are task supplied; do not invoke legacy model-specific probes.
+        metrics_payload = json.loads(get_core_metrics(metrics_json))
         if not metrics_payload.get("success", False):
             raise RuntimeError(metrics_payload.get("error", "get_core_metrics failed"))
         snapshot_payload = json.loads(save_main_model_snapshot(label))
@@ -146,10 +147,12 @@ def commit_current_main_model(snapshot_label: str = "") -> str:
         label = _sanitize_snapshot_label(snapshot_label.strip() or "update")
         snapshot_path = _workflow_snapshot_path(label, workflow)
         _save_model_copy(model, snapshot_path)
-        removed_conflicts = _remove_loaded_models_by_path_locked(str(resolved_main), keep_model=model)
         model.java.label(resolved_main_label)
         model.save()
-        removed_after_commit, kept_after_commit = _prune_loaded_models_locked(model)
+        # Saving the selected main model must not evict unrelated server models.
+        removed_conflicts: list[dict[str, str]] = []
+        removed_after_commit: list[dict[str, str]] = []
+        kept_after_commit = []
         _set_current_model(model, origin="workflow-main-committed", requested_path=str(resolved_main))
         identity = _visible_main_identity(model)
         workflow = _write_workflow_state(
@@ -170,10 +173,8 @@ def commit_current_main_model(snapshot_label: str = "") -> str:
                 "main_model_label": identity["label"],
                 "main_model_path": identity["path"] or str(resolved_main),
                 "workflow_stage": "visible_main_locked",
-                "last_prune_keep_mode": "current",
-                "last_prune_kept_tag": _safe_model_tag(model),
-                "last_prune_removed_count": len(removed_after_commit),
-                "last_prune_at": _now_iso(),
+                "last_prune_keep_mode": "not-requested",
+                "last_prune_removed_count": 0,
             }
         )
         return {

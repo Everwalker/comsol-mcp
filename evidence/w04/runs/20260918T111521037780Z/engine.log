@@ -1,0 +1,259 @@
+[09/18/26 19:15:21] INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+[09/18/26 19:15:22] INFO     Processing request of type            server.py:733
+                             ListToolsRequest                                   
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Running study "研究 1".                model.py:346
+                    INFO     Finished solving study.                model.py:348
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+[09/18/26 19:15:23] INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    ERROR    Tool set_physics_selection failed     _state.py:470
+                             ╭─ Traceback (most recent call last─╮              
+                             │ in java.lang.Thread.run:0         │              
+                             ╰───────────────────────────────────╯              
+                             Exception: Java Exception                          
+                                                                                
+                             The above exception was the direct                 
+                             cause of the following exception:                  
+                                                                                
+                             ╭─ Traceback (most recent call last─╮              
+                             │ /Users/everwalker/Desktop/comsol- │              
+                             │ mcp-project/comsol_mcp/_state.py: │              
+                             │ 467 in _run_tool                  │              
+                             │                                   │              
+                             │   464 │   │   return _tool_result │              
+                             │   465 │   try:                    │              
+                             │   466 │   │   try:                │              
+                             │ ❱ 467 │   │   │   data = callback │              
+                             │   468 │   │   │   return _tool_re │              
+                             │   469 │   │   except Exception as │              
+                             │   470 │   │   │   logging.excepti │              
+                             │                                   │              
+                             │ /Users/everwalker/Desktop/comsol- │              
+                             │ mcp-project/comsol_mcp/_tools_phy │              
+                             │ sics.py:247 in _impl              │              
+                             │                                   │              
+                             │   244 │   │   │   if isinstance(e │              
+                             │   245 │   │   │   │   raise Value │              
+                             │   246 │   │   │   int_entities.ap │              
+                             │ ❱ 247 │   │   result = _set_physi │              
+                             │       named)                      │              
+                             │   248 │   │   return {"component" │              
+                             │   249 │                           │              
+                             │   250 │   return _run_tool("set_p │              
+                             │                                   │              
+                             │ /Users/everwalker/Desktop/comsol- │              
+                             │ mcp-project/comsol_mcp/_physics_o │              
+                             │ ps.py:215 in                      │              
+                             │ _set_physics_selection            │              
+                             │                                   │              
+                             │   212 │   │   │   )               │              
+                             │   213 │   │   kind = str(selectio │              
+                             │   214 │   │   if kind == "explici │              
+                             │ ❱ 215 │   │   │   sel.set(list(en │              
+                             │   216 │   │   elif kind == "all": │              
+                             │   217 │   │   │   sel.all()       │              
+                             │   218 │   │   elif kind == "named │              
+                             ╰───────────────────────────────────╯              
+                             com.comsol.util.exceptions.FlExceptio              
+                             n: Exception:                                      
+                                     com.comsol.util.exceptions.Fl              
+                             Exception: 不可编辑选择。                          
+                             Messages:                                          
+                                     不可编辑选择。                             
+                                                                                
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    ERROR    Tool set_physics_selection failed     _state.py:470
+                             ╭─ Traceback (most recent call last─╮              
+                             │ in java.lang.Thread.run:0         │              
+                             ╰───────────────────────────────────╯              
+                             Exception: Java Exception                          
+                                                                                
+                             The above exception was the direct                 
+                             cause of the following exception:                  
+                                                                                
+                             ╭─ Traceback (most recent call last─╮              
+                             │ /Users/everwalker/Desktop/comsol- │              
+                             │ mcp-project/comsol_mcp/_state.py: │              
+                             │ 467 in _run_tool                  │              
+                             │                                   │              
+                             │   464 │   │   return _tool_result │              
+                             │   465 │   try:                    │              
+                             │   466 │   │   try:                │              
+                             │ ❱ 467 │   │   │   data = callback │              
+                             │   468 │   │   │   return _tool_re │              
+                             │   469 │   │   except Exception as │              
+                             │   470 │   │   │   logging.excepti │              
+                             │                                   │              
+                             │ /Users/everwalker/Desktop/comsol- │              
+                             │ mcp-project/comsol_mcp/_tools_phy │              
+                             │ sics.py:247 in _impl              │              
+                             │                                   │              
+                             │   244 │   │   │   if isinstance(e │              
+                             │   245 │   │   │   │   raise Value │              
+                             │   246 │   │   │   int_entities.ap │              
+                             │ ❱ 247 │   │   result = _set_physi │              
+                             │       named)                      │              
+                             │   248 │   │   return {"component" │              
+                             │   249 │                           │              
+                             │   250 │   return _run_tool("set_p │              
+                             │                                   │              
+                             │ /Users/everwalker/Desktop/comsol- │              
+                             │ mcp-project/comsol_mcp/_physics_o │              
+                             │ ps.py:226 in                      │              
+                             │ _set_physics_selection            │              
+                             │                                   │              
+                             │   223 │   │   elif kind == "inher │              
+                             │   224 │   │   │   if is_parent:   │              
+                             │   225 │   │   │   │   raise Value │              
+                             │       inherit.")                  │              
+                             │ ❱ 226 │   │   │   sel.inherit(Tru │              
+                             │   227 │   │   else:               │              
+                             │   228 │   │   │   raise ValueErro │              
+                             │       inherited.')                │              
+                             │   229 │   except (ValueError, Loo │              
+                             ╰───────────────────────────────────╯              
+                             com.comsol.util.exceptions.FlExceptio              
+                             n: Exception:                                      
+                                     com.comsol.util.exceptions.Fl              
+                             Exception: 不允许继承。                            
+                             Messages:                                          
+                                     不允许继承。                               
+                                                                                
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    ERROR    Tool evaluate_expressions failed      _state.py:470
+                             ╭─ Traceback (most recent call last─╮              
+                             │ /Users/everwalker/Desktop/comsol- │              
+                             │ mcp-project/comsol_mcp/_state.py: │              
+                             │ 467 in _run_tool                  │              
+                             │                                   │              
+                             │   464 │   │   return _tool_result │              
+                             │   465 │   try:                    │              
+                             │   466 │   │   try:                │              
+                             │ ❱ 467 │   │   │   data = callback │              
+                             │   468 │   │   │   return _tool_re │              
+                             │   469 │   │   except Exception as │              
+                             │   470 │   │   │   logging.excepti │              
+                             │                                   │              
+                             │ /Users/everwalker/Desktop/comsol- │              
+                             │ mcp-project/comsol_mcp/_tools_par │              
+                             │ ams.py:52 in _impl                │              
+                             │                                   │              
+                             │    49 │   │   model = _require_vi │              
+                             │    50 │   │   policy = str(evalua │              
+                             │    51 │   │   if policy == "pure_ │              
+                             │ ❱  52 │   │   │   raise ValueErro │              
+                             │       temporary numerical nodes;  │              
+                             │    53 │   │   if policy != "ephem │              
+                             │    54 │   │   │   raise ValueErro │              
+                             │       ephemeral_mutation.")       │              
+                             │    55 │   │   parsed = json.loads │              
+                             ╰───────────────────────────────────╯              
+                             ValueError: pure_read evaluation is                
+                             unavailable: this backend requires                 
+                             temporary numerical nodes; use                     
+                             ephemeral_mutation or an isolated                  
+                             model copy.                                        
+[09/18/26 19:15:24] INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    ERROR    Tool run_visible_main_iteration       _state.py:470
+                             failed                                             
+                             ╭─ Traceback (most recent call last─╮              
+                             │ /Users/everwalker/Desktop/comsol- │              
+                             │ mcp-project/comsol_mcp/_state.py: │              
+                             │ 467 in _run_tool                  │              
+                             │                                   │              
+                             │   464 │   │   return _tool_result │              
+                             │   465 │   try:                    │              
+                             │   466 │   │   try:                │              
+                             │ ❱ 467 │   │   │   data = callback │              
+                             │   468 │   │   │   return _tool_re │              
+                             │   469 │   │   except Exception as │              
+                             │   470 │   │   │   logging.excepti │              
+                             │                                   │              
+                             │ /Users/everwalker/Desktop/comsol- │              
+                             │ mcp-project/comsol_mcp/_tools_sna │              
+                             │ pshot.py:30 in _impl              │              
+                             │                                   │              
+                             │    27 │                           │              
+                             │    28 │   def _impl() -> dict[str │              
+                             │    29 │   │   from comsol_mcp._to │              
+                             │       _validate_metric_definition │              
+                             │ ❱  30 │   │   _validate_metric_de │              
+                             │    31 │   │                       │              
+                             │    32 │   │   model = _require_vi │              
+                             │    33 │   │   before = _visible_m │              
+                             │                                   │              
+                             │ /Users/everwalker/Desktop/comsol- │              
+                             │ mcp-project/comsol_mcp/_tools_par │              
+                             │ ams.py:115 in                     │              
+                             │ _validate_metric_definitions      │              
+                             │                                   │              
+                             │   112 │   │   raise ValueError("E │              
+                             │   113 │   for definition in defin │              
+                             │   114 │   │   if not isinstance(d │              
+                             │       str) and definition[key].st │              
+                             │ ❱ 115 │   │   │   raise ValueErro │              
+                             │       expression.")               │              
+                             │   116 │   │   if definition.get(" │              
+                             │       "integral"):                │              
+                             │   117 │   │   │   raise ValueErro │              
+                             │   118 │   │   for key in ("domain │              
+                             ╰───────────────────────────────────╯              
+                             ValueError: Each metric definition                 
+                             requires string name and expression.               
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Exiting the Java virtual machine.    session.py:165
+Exception ignored in atexit callback: <function cleanup at 0x10928c720>
+Traceback (most recent call last):
+  File "/Users/everwalker/Documents/Codex/2026-09-05/https-github-com-wjc9011-comsol-multiphysics/comsol-mcp-server/.venv/lib/python3.12/site-packages/mph/session.py", line 167, in cleanup
+    sys.stdout.flush()
+ValueError: I/O operation on closed file.

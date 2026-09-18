@@ -64,3 +64,28 @@ The Python interpreter used for all test commands is `/Users/everwalker/Document
 - Command: external JDK `javap -classpath '<COMSOL>/apiplugins/*' com.comsol.model.util.ModelUtil com.comsol.model.SolverSequence` — interface inventory retained. No public general cancel/stop/interrupt method was found in these two interfaces; this is static evidence only. Batch cancellation has a separate operating mode and is not a substitute for this case.
 - Changed files: per-case five-part evidence, GUI refusal record, API inventory and this progress entry. No GUI automation implementation is claimed. The phase-wide 68 passing unit tests cover software control flow; they do not cover Desktop permissions or cancellation.
 - Dependency: none of the W04 safety repairs depends on GUI; continue W04. Resume GUI cases with an authorized accessible Desktop and identified test job. Stop before W05.
+
+## W04 — nondestructive evaluation, variables and selections
+
+**Status: PASS for current executable acceptance.** Final accepted run: `evidence/w04/runs/20260918T112244254506Z/`. All five cases and independent MCP-process MPH reopening passed on real macOS arm64 / COMSOL 6.4.0.293.
+
+| Case | Result | Actual evidence |
+|---|---|---|
+| T003 | PASS | Production `load_visible_main_model` adopts the second preloaded model; the first model's numerical/plot/table structure and other-model sentinel remain unchanged. |
+| T005 | PASS | max/min/avg/integral of `u` are 2 within 1e-8; an invalid symbol fails; user numerical expressions/table links/data and temporary-node cleanup are checked before/after. |
+| T006 | PASS | Global and component groups each append two actual names, update one, re-solve and evaluate the dependent expression as 9. No `name`/`expr` variables are created. |
+| T007 | PASS, bounded | Parent explicit/all/named and editable child selections read back correctly. The default PDE feature rejects edits; the custom flux feature rejects unsupported inheritance with the actual engine error, then remains editable. Successful inheritance on other physics is UNVERIFIED. |
+| T033 | PASS | `pure_read` rejects; serialized ephemeral evaluation returns the real field and preserves user nodes. Invalid metric definitions reject before iteration writes/solve. Unit tests additionally inject cleanup failures and concurrent callbacks. |
+
+- Independent fresh MCP process reopens `after.mph`; user numerical/plot/table definitions, data and variable groups are preserved; fresh evaluation confirms the variable is 9 and the PDE error remains below 1e-8. Full inventories are retained. COMSOL-generated `iexpr*` caches are not persisted user definitions and are compared separately, not mistaken for user data loss.
+- Commands: historical venv `python tools/w04_run_mcp.py --pid 84749 --port 56388 --prefs <repository>/.phase1-private/20260918T175300Z/prefs-server` — **PASS**; `python -m pytest -q` — **68 passed**; `git diff --check` — PASS; final frozen-manifest check — 29/30 match; only `.DS_Store` differs. All supplied document files match. Current metadata is preserved without restoration; see `evidence/phase1_preservation_audit.json`.
+- Changed code: `_model_ops.py` owns UUID result nodes, preserves array/complex structures and propagates cleanup failures; `_physics_ops.py` uses true variable setters/readback and correct selection target/API; `_tools_params.py` adds policy handling and explicit metrics; `_tools_snapshot.py` validates metrics before mutation; `_model.py`, model/connection/workflow tools and `_server.py` limit explicit prune and remove automatic prune. `tests/test_w04_safety.py` and the test-only real MCP fixture/driver provide repeatable regression entry points.
+- Runtime failures were preserved, then fixed: loop-level setters failed for stationary/global results and were absent on field Eval; the implementation retrieves the full result and selects the solution axis. The fixture originally used a nonexistent boundary tag and reused one variable-group tag across scopes; these fixture errors were corrected. Stored-solution variables required re-solving. Earlier fresh-reopen comparison included regenerated internal expression caches; final acceptance explicitly compares user definitions and retains the raw diff.
+- Migration/limits: see `PHASE1_OPERATIONS.md`. Scalar consumers must handle preserved arrays. Complex aggregation remains explicitly unsupported. Full dataset/outer-sweep typing (W17), model generations (W05), managed-worker lifecycle/cancellation (W06/W19), and typed MCP error semantics (W09) are not implemented. T038's legacy outer `isError` defect remains recorded FAIL; per-row numerical failures are inspected instead of mistaking outer transport success for acceptance.
+- Final evidence ledger: `evidence/phase1_acceptance.json`; accepted runs include per-case environment/request/result/assertions/engine logs and SHA256SUMS. Failure attempts are retained. Private credentials remain ignored and are not delivered as evidence.
+
+## Stop and handoff
+
+W01 is complete; W02's accessible real tests and W03's available checks are complete with explicit blockers; W04's executable cases pass. **W05 and later remain NOT_RUN.** No user design file, service configuration, license file, or OS permission was overwritten.
+
+The attach-only test server (PID 84749, loopback 56388) remains running for reproducible follow-up; no test solve is pending. Its historical identity must be rechecked before reuse or shutdown. The repository includes accepted MPH/PNG artifacts and can continue from the phase-one commits. No full six-combination platform certification is claimed.

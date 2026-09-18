@@ -1,0 +1,88 @@
+[09/18/26 19:08:47] INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+[09/18/26 19:08:48] INFO     Processing request of type            server.py:733
+                             ListToolsRequest                                   
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    ERROR    Tool manage_variables failed          _state.py:470
+                             ╭─ Traceback (most recent call last─╮              
+                             │ in java.lang.Thread.run:0         │              
+                             ╰───────────────────────────────────╯              
+                             Exception: Java Exception                          
+                                                                                
+                             The above exception was the direct                 
+                             cause of the following exception:                  
+                                                                                
+                             ╭─ Traceback (most recent call last─╮              
+                             │ /Users/everwalker/Desktop/comsol- │              
+                             │ mcp-project/comsol_mcp/_state.py: │              
+                             │ 467 in _run_tool                  │              
+                             │                                   │              
+                             │   464 │   │   return _tool_result │              
+                             │   465 │   try:                    │              
+                             │   466 │   │   try:                │              
+                             │ ❱ 467 │   │   │   data = callback │              
+                             │   468 │   │   │   return _tool_re │              
+                             │   469 │   │   except Exception as │              
+                             │   470 │   │   │   logging.excepti │              
+                             │                                   │              
+                             │ /Users/everwalker/Desktop/comsol- │              
+                             │ mcp-project/comsol_mcp/_tools_phy │              
+                             │ sics.py:295 in _impl              │              
+                             │                                   │              
+                             │   292 │   │   │   │   raise Value │              
+                             │   293 │   │   │   if not vexpr:   │              
+                             │   294 │   │   │   │   raise Value │              
+                             │       update.")                   │              
+                             │ ❱ 295 │   │   │   result = _creat │              
+                             │   296 │   │   │   return {"scope" │              
+                             │       None, **result}             │              
+                             │   297 │   │   elif act == "remove │              
+                             │   298 │   │   │   vtag = tag.stri │              
+                             │                                   │              
+                             │ /Users/everwalker/Desktop/comsol- │              
+                             │ mcp-project/comsol_mcp/_physics_o │              
+                             │ ps.py:291 in _create_variable     │              
+                             │                                   │              
+                             │   288 │   existing = list(var_con │              
+                             │   289 │   created = tag not in ex │              
+                             │   290 │   if created:             │              
+                             │ ❱ 291 │   │   var_container.creat │              
+                             │   292 │   var_node = model.java.c │              
+                             │       model.java.variable(tag)    │              
+                             │   293 │   var_node.set(name, expr │              
+                             │   294 │   values = [{"name": str( │              
+                             │       in list(var_node.varnames() │              
+                             ╰───────────────────────────────────╯              
+                             com.comsol.util.exceptions.FlExceptio              
+                             n: Exception:                                      
+                                     com.comsol.util.exceptions.Fl              
+                             Exception: 已存在具有给定名称的对象。              
+                             Messages:                                          
+                                     已存在具有给定名称的对象。                 
+                                     - 标记: user_vars                          
+                                                                                
+                    INFO     Processing request of type            server.py:733
+                             CallToolRequest                                    
+                    INFO     Exiting the Java virtual machine.    session.py:165
+Exception ignored in atexit callback: <function cleanup at 0x10d0345e0>
+Traceback (most recent call last):
+  File "/Users/everwalker/Documents/Codex/2026-09-05/https-github-com-wjc9011-comsol-multiphysics/comsol-mcp-server/.venv/lib/python3.12/site-packages/mph/session.py", line 167, in cleanup
+    sys.stdout.flush()
+ValueError: I/O operation on closed file.

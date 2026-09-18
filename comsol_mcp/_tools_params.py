@@ -16,6 +16,7 @@ from comsol_mcp._model_ops import (
     _eval_global_last, _eval_domain_average_last,
     _eval_boundary_average_last, _eval_extremum_last,
     _numeric_result, _evaluate_aggregate, _coerce_eval_value, _last_scalar,
+    _evaluate_expression_safely,
 )
 
 
@@ -30,7 +31,7 @@ def get_parameters() -> str:
     return _run_tool_readonly("get_parameters", _impl)
 
 
-def evaluate_expressions(expressions_json: str = "[]", max_result_size: int = 0) -> str:
+def evaluate_expressions(expressions_json: str = "[]", max_result_size: int = 0, evaluation_policy: str = "ephemeral_mutation") -> str:
     """Evaluate one or more expressions on the current server-side model.
 
     Each expression item supports: {"name": "...", "expression": "...",
@@ -38,11 +39,19 @@ def evaluate_expressions(expressions_json: str = "[]", max_result_size: int = 0)
       "domains": [1,2], "boundaries": [5,6], "time_point": "last"|"all"|"N"}.
 
     Backward compatible: [{"name": "...", "expression": "..."}] still works.
-    max_result_size: when > 0, truncate arrays exceeding this size (chars).
+    evaluation_policy: ``ephemeral_mutation`` is serialized and creates only
+    short-lived MCP-owned nodes. ``pure_read`` rejects evaluation because this
+    backend cannot evaluate without temporary nodes. max_result_size is retained
+    for backwards compatibility; it no longer truncates numerical results.
     """
 
     def _impl() -> dict[str, Any]:
         model = _require_visible_main("evaluate_expressions")
+        policy = str(evaluation_policy or "ephemeral_mutation").strip().lower()
+        if policy == "pure_read":
+            raise ValueError("pure_read evaluation is unavailable: this backend requires temporary numerical nodes; use ephemeral_mutation or an isolated model copy.")
+        if policy != "ephemeral_mutation":
+            raise ValueError("evaluation_policy must be pure_read or ephemeral_mutation.")
         parsed = json.loads(expressions_json)
         if not isinstance(parsed, list):
             raise ValueError("expressions_json must be a JSON array.")
@@ -74,18 +83,10 @@ def evaluate_expressions(expressions_json: str = "[]", max_result_size: int = 0)
                     row["last_value"] = value
                     row["aggregate"] = aggregate
                 else:
-                    raw = model.evaluate(expression)
+                    raw = _evaluate_expression_safely(model, expression, time_point)
                     value = _coerce_eval_value(raw)
                     row["value"] = value
                     row["last_value"] = _coerce_eval_value(_last_scalar(value))
-
-                # Truncation
-                if max_result_size > 0:
-                    serialized = json.dumps(row["value"], default=str)
-                    if len(serialized) > max_result_size:
-                        row["value"] = serialized[:max_result_size] + "...(truncated)"
-                        row["_truncated"] = True
-                        row["original_size"] = len(serialized)
 
                 row["ok"] = True
             except Exception as exc:
@@ -97,52 +98,70 @@ def evaluate_expressions(expressions_json: str = "[]", max_result_size: int = 0)
             "label": _safe_model_label(model),
             "results": results,
             "count": len(results),
+            "evaluation_policy": policy,
+            "ephemeral_mutation": True,
+            "max_result_size_ignored": int(max_result_size) if max_result_size > 0 else None,
         }
 
-    return _run_tool_readonly("evaluate_expressions", _impl)
+    return _run_tool("evaluate_expressions", _impl)
 
 
-def get_core_metrics() -> str:
-    """Return the core metrics used by the current short-window mainline."""
+def _validate_metric_definitions(metrics_json: str) -> list[dict[str, Any]]:
+    definitions = json.loads(metrics_json or "[]")
+    if not isinstance(definitions, list) or not definitions:
+        raise ValueError("Explicit non-empty metric definitions are required.")
+    for definition in definitions:
+        if not isinstance(definition, dict) or not all(isinstance(definition.get(key), str) and definition[key].strip() for key in ("name", "expression")):
+            raise ValueError("Each metric definition requires string name and expression.")
+        if definition.get("aggregate", "none") not in ("none", "max", "min", "avg", "integral"):
+            raise ValueError("Invalid metric aggregate.")
+        time_point = str(definition.get("time_point", "last"))
+        if time_point not in ("first", "last", "all") and not (time_point.isdigit() and int(time_point) > 0):
+            raise ValueError("Invalid metric time_point.")
+        for key in ("domains", "boundaries"):
+            values = definition.get(key)
+            if values is not None and (not isinstance(values, list) or any(type(v) is not int or v < 1 for v in values)):
+                raise ValueError("Metric selections must be arrays of positive integers.")
+        if definition.get("domains") and definition.get("boundaries"):
+            raise ValueError("Specify metric domains or boundaries, not both.")
+    return definitions
+
+
+def get_core_metrics(metrics_json: str = "[]", evaluation_policy: str = "ephemeral_mutation") -> str:
+    """Evaluate explicit task metrics; no model-specific defaults are assumed."""
 
     def _impl() -> dict[str, Any]:
         model = _require_visible_main("get_core_metrics")
-        cover_domains = [1, 2]
-        steel_boundaries = [5, 6, 7, 8]
+        policy = str(evaluation_policy or "ephemeral_mutation").strip().lower()
+        if policy == "pure_read":
+            raise ValueError("pure_read metrics are unavailable because metric evaluation requires temporary numerical nodes.")
+        if policy != "ephemeral_mutation":
+            raise ValueError("evaluation_policy must be pure_read or ephemeral_mutation.")
+        definitions = _validate_metric_definitions(metrics_json)
         sol_tag = _find_initialized_solution_tag(model)
-        last_time_day = _read_last_time_day(model, sol_tag)
-
-        w_acc_avg = _eval_global_last(model, "wAccAvg")
-        if w_acc_avg is None:
-            w_acc_avg = _eval_domain_average_last(model, "w_acc", cover_domains)
-
-        phi_loc_max = _eval_extremum_last(model, "MaxSurface", "phi_loc", cover_domains)
-        ccl_steel_avg = _eval_boundary_average_last(model, "cCl", steel_boundaries)
-
-        eta_avg = _eval_global_last(model, "etaAvg")
-        if eta_avg is None:
-            eta_avg = _eval_domain_average_last(model, "etaClamp", cover_domains)
-
-        steel_mass_loss = _eval_global_last(model, "steelMassLoss")
-
-        results = [
-            _numeric_result("last_time_day", "sol.getPVals()/86400", last_time_day, ok=last_time_day is not None, error="NA"),
-            _numeric_result("wAccAvg", "wAccAvg | avg(w_acc)", w_acc_avg, ok=w_acc_avg is not None, error="NA"),
-            _numeric_result("phiLocMax", "max(phi_loc)", phi_loc_max, ok=phi_loc_max is not None, error="NA"),
-            _numeric_result("cClSteelAvg", "avg_boundary(cCl)", ccl_steel_avg, ok=ccl_steel_avg is not None, error="NA"),
-            _numeric_result("etaAvg", "etaAvg | avg(etaClamp)", eta_avg, ok=eta_avg is not None, error="NA"),
-            _numeric_result("steelMassLoss", "steelMassLoss", steel_mass_loss, ok=steel_mass_loss is not None, error="NA"),
-        ]
-        ok_map = {row["name"]: row.get("ok", False) for row in results}
-        solve_status = "success" if all(ok_map.get(name, False) for name in ("wAccAvg", "phiLocMax", "cClSteelAvg")) else "partial"
+        results = []
+        for definition in definitions:
+            if not isinstance(definition, dict):
+                raise ValueError("Each metric definition must be an object.")
+            name = str(definition.get("name", "")).strip()
+            expression = str(definition.get("expression", "")).strip()
+            if not name or not expression:
+                raise ValueError("Each metric definition requires name and expression.")
+            try:
+                value = _evaluate_aggregate(model, expression, str(definition.get("aggregate", "none")), definition.get("domains"), definition.get("boundaries"), str(definition.get("time_point", "last")))
+                results.append(_numeric_result(name, expression, value))
+            except Exception as exc:
+                results.append(_numeric_result(name, expression, ok=False, error=str(exc)))
+        solve_status = "success" if all(row.get("ok", False) for row in results) else "partial"
         return {
             "label": _safe_model_label(model),
             "solve_status": solve_status,
             "solution_tag": sol_tag,
             "results": results,
+            "evaluation_policy": policy,
         }
 
-    return _run_tool_readonly("get_core_metrics", _impl)
+    return _run_tool("get_core_metrics", _impl)
 
 
 def set_parameters(parameters_json: str) -> str:

@@ -48,6 +48,7 @@ def _disconnect_locked(*, shutdown_server: bool = False) -> None:
     _srv._current_model = None
     _srv._current_model_origin = ""
     _srv._current_model_path = ""
+    _srv._mcp_owned_model_tags.clear()
 
     if shutdown_server and _srv._server is not None and _srv._server_started_by_mcp:
         try:

@@ -77,6 +77,9 @@ _last_error = ""
 _logger_ready = False
 _background_jobs: dict[str, dict[str, Any]] = {}
 _background_jobs_lock = threading.RLock()
+# Tags created or loaded by this MCP process.  Unknown loaded models are
+# presumed user-owned and are never candidates for explicit pruning.
+_mcp_owned_model_tags: set[str] = set()
 
 # ---------------------------------------------------------------------------
 # FastMCP instance (shared across all tool modules)

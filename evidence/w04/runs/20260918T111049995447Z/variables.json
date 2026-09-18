@@ -1,0 +1,124 @@
+{
+  "snapshot": {
+    "models": [
+      "poc_2885e15d06ef4238",
+      "poc_40e91231d0964e4a",
+      "poc_5ea27d4cd7d54bfa",
+      "w02poc",
+      "w02poc2",
+      "w02reopen",
+      "w02reopen1",
+      "w02reopen2",
+      "w02reopen3",
+      "w04_448afcb5e0ef",
+      "w04_53a8311b3362",
+      "w04_e920ca3dabbe",
+      "w04_other_77aebc0774ba",
+      "w04_other_c32e4938d745",
+      "w04_other_d523419a5bb6"
+    ],
+    "numerical": [
+      "max1",
+      "user_max"
+    ],
+    "plots": [
+      "pg1"
+    ],
+    "tables": [
+      "user_table"
+    ],
+    "user_expr": [
+      "u"
+    ],
+    "user_table": "user_table",
+    "table_data": [
+      [
+        1.9999999999999174
+      ]
+    ],
+    "variables": {
+      "global": [
+        {
+          "tag": "user_vars_global",
+          "variables": [
+            {
+              "name": "aa",
+              "expression": "5"
+            },
+            {
+              "name": "bb",
+              "expression": "aa+4"
+            }
+          ]
+        },
+        {
+          "tag": "user_vars_component",
+          "variables": [
+            {
+              "name": "aa",
+              "expression": "5"
+            },
+            {
+              "name": "bb",
+              "expression": "aa+4"
+            }
+          ]
+        }
+      ],
+      "component": [
+        {
+          "tag": "user_vars_component",
+          "variables": [
+            {
+              "name": "aa",
+              "expression": "5"
+            },
+            {
+              "name": "bb",
+              "expression": "aa+4"
+            }
+          ]
+        }
+      ]
+    },
+    "physics_features": {
+      "cfeq1": {
+        "inheriting": false
+      },
+      "zflx1": {
+        "inheriting": false
+      },
+      "init1": {
+        "inheriting": false
+      },
+      "dcont1": {
+        "inheriting": false
+      },
+      "test_flux": {
+        "inheriting": false
+      }
+    },
+    "other_value": "17"
+  },
+  "evaluated": {
+    "label": "before.mph",
+    "results": [
+      {
+        "name": "global",
+        "expression": "bb",
+        "ok": false,
+        "error": "EvalGlobal failed: Exception:\n\tcom.comsol.util.exceptions.FlException: 无法计算表达式。\nMessages:\n\t无法计算表达式。\n\n\t未定义变量。\n\t- 变量: bb\n\t- 全局范围\n\n\t无法计算表达式。\n\t- 表达式: bb\n\t- 特征: 全局计算 1\n; Eval/getData fallback failed: Exception:\n\tcom.comsol.util.exceptions.FlException: 无法计算表达式。\nMessages:\n\t无法计算表达式。\n\n\t未定义变量。\n\t- 变量: bb\n\t- 几何: geom1\n\t- 域: 1\n\n\t无法计算表达式。\n\t- 表达式: bb\n\t- 特征: 计算\n"
+      },
+      {
+        "name": "component",
+        "expression": "comp1.bb",
+        "ok": false,
+        "error": "EvalGlobal failed: Exception:\n\tcom.comsol.util.exceptions.FlException: 无法计算表达式。\nMessages:\n\t无法计算表达式。\n\n\t未定义变量。\n\t- 变量: comp1.bb\n\t- 全局范围\n\n\t无法计算表达式。\n\t- 表达式: comp1.bb\n\t- 特征: 全局计算 65\n; Eval/getData fallback failed: Exception:\n\tcom.comsol.util.exceptions.FlException: 无法计算表达式。\nMessages:\n\t无法计算表达式。\n\n\t未定义变量。\n\t- 变量: comp1.bb\n\t- 几何: geom1\n\t- 域: 1\n\n\t无法计算表达式。\n\t- 表达式: comp1.bb\n\t- 特征: 计算\n"
+      }
+    ],
+    "count": 2,
+    "evaluation_policy": "ephemeral_mutation",
+    "ephemeral_mutation": true,
+    "max_result_size_ignored": null
+  }
+}

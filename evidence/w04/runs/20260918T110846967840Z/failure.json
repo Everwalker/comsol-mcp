@@ -1,0 +1,3 @@
+{
+  "traceback": "Traceback (most recent call last):\n  File \"/Users/everwalker/Desktop/comsol-mcp-project/tools/w04_run_mcp.py\", line 40, in main\n    data(await call('manage_variables',{'action':'set','component':comp,'tag':'user_vars','name':name,'expression':expression}))\n  File \"/Users/everwalker/Desktop/comsol-mcp-project/tools/w04_run_mcp.py\", line 26, in data\n    if not obj['success']:raise RuntimeError(obj.get('error',str(obj)))\n                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nRuntimeError: Exception:\n\tcom.comsol.util.exceptions.FlException: 已存在具有给定名称的对象。\nMessages:\n\t已存在具有给定名称的对象。\n\t- 标记: user_vars\n\n"
+}

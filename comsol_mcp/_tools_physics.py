@@ -137,8 +137,7 @@ def create_physics_feature(
         ftype = feature_type.strip()
         if not phys:
             raise ValueError("physics_tag is required.")
-        if not ftag:
-            raise ValueError("feature_tag is required.")
+        # Empty feature_tag is the explicit parent-interface form.
         if not ftype:
             raise ValueError("feature_type is required.")
         result = _create_physics_feature(model, comp, phys, ftag, ftype)
@@ -170,8 +169,7 @@ def update_physics_feature(
         ftag = feature_tag.strip()
         if not phys:
             raise ValueError("physics_tag is required.")
-        if not ftag:
-            raise ValueError("feature_tag is required.")
+        # Empty feature_tag is the explicit parent-interface form.
         applied = _apply_physics_properties(model, comp, phys, ftag, properties_json)
         return {
             "component": comp,
@@ -211,13 +209,14 @@ def set_physics_selection(
     feature_tag: str,
     entities_json: str,
 ) -> str:
-    """Set domain, boundary, or edge selection for a physics feature.
+    """Set a physics-interface or child-feature selection.
 
     entities_json is a JSON array of integer entity IDs, e.g. "[1, 2, 3]".
     Some features have inherited selections that cannot be modified directly.
     Use list_physics_features to check selection_editable before calling this.
-    If selection is not editable on a feature, try setting it on the parent
-    physics interface instead (pass the physics tag as feature_tag).
+    Pass feature_tag equal to physics_tag (or empty) for the parent interface.
+    entities_json may also be {"kind":"all"}, {"kind":"named","name":"sel1"},
+    or {"kind":"inherited"}. The response contains actual selection readback.
     """
 
     def _impl() -> dict[str, Any]:
@@ -227,13 +226,25 @@ def set_physics_selection(
         ftag = feature_tag.strip()
         if not phys:
             raise ValueError("physics_tag is required.")
-        if not ftag:
-            raise ValueError("feature_tag is required.")
-        entities = json.loads(entities_json)
+        parsed = json.loads(entities_json)
+        kind = "explicit"
+        named = ""
+        if isinstance(parsed, list):
+            entities = parsed
+        elif isinstance(parsed, dict):
+            kind = str(parsed.get("kind", "explicit"))
+            named = str(parsed.get("name", parsed.get("named_selection", "")))
+            entities = parsed.get("entities", [])
+        else:
+            raise ValueError("entities_json must be an integer array or selection object.")
         if not isinstance(entities, list):
-            raise ValueError("entities_json must be a JSON array of integers.")
-        int_entities = [int(e) for e in entities]
-        result = _set_physics_selection(model, comp, phys, ftag, int_entities)
+            raise ValueError("selection entities must be an array of integers.")
+        int_entities = []
+        for entity in entities:
+            if isinstance(entity, bool) or not isinstance(entity, int):
+                raise ValueError("selection entity IDs must be JSON integers.")
+            int_entities.append(entity)
+        result = _set_physics_selection(model, comp, phys, ftag, int_entities, kind, named)
         return {"component": comp, "physics_tag": phys, **result}
 
     return _run_tool("set_physics_selection", _impl)
@@ -271,7 +282,7 @@ def manage_variables(
                 "variables": variables,
                 "count": len(variables),
             }
-        elif act == "create":
+        elif act in ("create", "set", "update"):
             vtag = tag.strip()
             vname = name.strip()
             vexpr = expression.strip()
@@ -279,6 +290,8 @@ def manage_variables(
                 raise ValueError("Variable tag is required for create.")
             if not vname:
                 raise ValueError("Variable name is required for create.")
+            if not vexpr:
+                raise ValueError("Variable expression is required for create or update.")
             result = _create_variable(model, comp, vtag, vname, vexpr)
             return {"scope": "component" if comp else "global", "component": comp or None, **result}
         elif act == "remove":
@@ -288,7 +301,7 @@ def manage_variables(
             result = _remove_variable(model, comp, vtag)
             return {"scope": "component" if comp else "global", "component": comp or None, **result}
         else:
-            raise ValueError(f'Unknown action "{act}". Use "list", "create", or "remove".')
+            raise ValueError(f'Unknown action "{act}". Use "list", "create", "set", "update", or "remove".')
 
     return _run_tool("manage_variables", _impl)
 

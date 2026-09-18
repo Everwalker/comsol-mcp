@@ -13,7 +13,7 @@ from comsol_mcp._state import (
 from comsol_mcp._connection import _require_client
 from comsol_mcp._model import (
     _set_current_model, _adopt_model_by_path, _block_if_visible_main_locked,
-    _prune_loaded_models_locked, _require_model,
+    _prune_loaded_models_locked, _require_model, _mark_mcp_owned_model,
 )
 
 
@@ -24,6 +24,7 @@ def model_create(name: str = "Server Model") -> str:
         _block_if_visible_main_locked("model_create")
         client = _require_client()
         model = client.create(name.strip() or "Server Model")
+        _mark_mcp_owned_model(model)
         _set_current_model(model, origin="created")
         return {
             "label": _safe_model_label(model),
@@ -44,6 +45,7 @@ def model_load(path: str) -> str:
         origin = "adopted-by-path"
         if model is None:
             model = client.load(resolved)
+            _mark_mcp_owned_model(model)
             origin = "loaded"
         _set_current_model(model, origin=origin, requested_path=str(resolved))
         return {

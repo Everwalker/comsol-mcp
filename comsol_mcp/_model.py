@@ -24,6 +24,12 @@ def _set_current_model(model: Any | None, *, origin: str = "", requested_path: s
     _srv._current_model_path = requested_path or _safe_model_path(model)
 
 
+def _mark_mcp_owned_model(model: Any) -> None:
+    tag = _safe_model_tag(model)
+    if tag:
+        _srv._mcp_owned_model_tags.add(tag)
+
+
 def _visible_main_identity(model: Any | None = None) -> dict[str, str]:
     candidate = model if model is not None else _srv._current_model
     return {
@@ -167,6 +173,10 @@ def _prune_loaded_models_locked(keep_model: Any) -> tuple[list[dict[str, str]], 
             }
             if tag == keep_tag:
                 continue
+            if tag not in _srv._mcp_owned_model_tags:
+                # Models we did not create/load may be owned by Desktop or
+                # another MCP client. Preserve them even for explicit prune.
+                continue
             extras.append((model, record))
         if not extras:
             break
@@ -174,17 +184,22 @@ def _prune_loaded_models_locked(keep_model: Any) -> tuple[list[dict[str, str]], 
         progress = False
         for model, record in extras:
             tag = record["tag"]
+            removed_this_model = False
             try:
                 client.remove(model)
+                removed_this_model = True
                 progress = True
             except Exception:
                 try:
                     if tag:
                         client.java.remove(tag)
+                        removed_this_model = True
                         progress = True
                 except Exception:
                     logging.debug("Failed to remove loaded model tag=%s label=%s", tag, record["label"], exc_info=True)
-            if tag not in removed_tags:
+            if removed_this_model:
+                _srv._mcp_owned_model_tags.discard(tag)
+            if removed_this_model and tag not in removed_tags:
                 removed.append(record)
                 removed_tags.add(tag)
         if not progress:

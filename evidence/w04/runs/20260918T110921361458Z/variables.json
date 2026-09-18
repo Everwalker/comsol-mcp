@@ -1,0 +1,105 @@
+{
+  "snapshot": {
+    "models": [
+      "poc_2885e15d06ef4238",
+      "poc_40e91231d0964e4a",
+      "poc_5ea27d4cd7d54bfa",
+      "w02poc",
+      "w02poc2",
+      "w02reopen",
+      "w02reopen1",
+      "w02reopen2",
+      "w02reopen3",
+      "w04_448afcb5e0ef",
+      "w04_e920ca3dabbe",
+      "w04_other_77aebc0774ba",
+      "w04_other_d523419a5bb6"
+    ],
+    "numerical": [
+      "max1",
+      "user_max"
+    ],
+    "plots": [
+      "pg1"
+    ],
+    "tables": [
+      "user_table"
+    ],
+    "user_expr": [
+      "u"
+    ],
+    "user_table": "user_table",
+    "table_data": [
+      [
+        1.9999999999999174
+      ]
+    ],
+    "variables": {
+      "global": [
+        {
+          "tag": "user_vars_global",
+          "variables": [
+            {
+              "name": "aa",
+              "expression": "5"
+            },
+            {
+              "name": "bb",
+              "expression": "aa+4"
+            }
+          ]
+        },
+        {
+          "tag": "user_vars_component",
+          "variables": [
+            {
+              "name": "aa",
+              "expression": "5"
+            },
+            {
+              "name": "bb",
+              "expression": "aa+4"
+            }
+          ]
+        }
+      ],
+      "component": [
+        {
+          "tag": "user_vars_component",
+          "variables": [
+            {
+              "name": "aa",
+              "expression": "5"
+            },
+            {
+              "name": "bb",
+              "expression": "aa+4"
+            }
+          ]
+        }
+      ]
+    },
+    "other_value": "17"
+  },
+  "evaluated": {
+    "label": "before.mph",
+    "results": [
+      {
+        "name": "global",
+        "expression": "bb",
+        "ok": false,
+        "error": "EvalGlobal failed: Exception:\n\tcom.comsol.util.exceptions.FlException: 属性值无效。\nMessages:\n\t属性值无效。\n\t- 属性: looplevelinput (循环级别输入)\n\n\t“循环级别输入”为字符串数组。\n\t- : \"all\", \"first\", \"last\", \"manual\", \"manualindices\", \"interp\"\n; Eval/getData fallback failed: Exception:\n\tcom.comsol.util.exceptions.FlException: 未知属性。\nMessages:\n\t未知属性。\n\t- 属性: looplevelinput\n"
+      },
+      {
+        "name": "component",
+        "expression": "comp1.bb",
+        "ok": false,
+        "error": "EvalGlobal failed: Exception:\n\tcom.comsol.util.exceptions.FlException: 属性值无效。\nMessages:\n\t属性值无效。\n\t- 属性: looplevelinput (循环级别输入)\n\n\t“循环级别输入”为字符串数组。\n\t- : \"all\", \"first\", \"last\", \"manual\", \"manualindices\", \"interp\"\n; Eval/getData fallback failed: Exception:\n\tcom.comsol.util.exceptions.FlException: 未知属性。\nMessages:\n\t未知属性。\n\t- 属性: looplevelinput\n"
+      }
+    ],
+    "count": 2,
+    "evaluation_policy": "ephemeral_mutation",
+    "ephemeral_mutation": true,
+    "max_result_size_ignored": null
+  }
+}

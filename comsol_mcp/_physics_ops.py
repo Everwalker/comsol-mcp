@@ -63,7 +63,7 @@ def _list_physics_features(model: Any, component: str, physics_tag: str) -> list
         # Check selection editability
         try:
             sel = feat.selection()
-            info["selection_editable"] = not getattr(sel, 'isInherited', lambda: False)()
+            info["selection_editable"] = not bool(sel.isInheriting())
         except Exception:
             pass
         result.append(info)
@@ -196,37 +196,66 @@ def _apply_physics_properties(
 
 def _set_physics_selection(
     model: Any, component: str, physics_tag: str, feature_tag: str,
-    entities: list[int],
+    entities: list[int] | None = None,
+    selection_kind: str = "explicit",
+    named_selection: str = "",
 ) -> dict[str, Any]:
     phys = model.java.component(component).physics(physics_tag)
-    feat = phys.feature(feature_tag)
+    is_parent = not feature_tag or feature_tag == physics_tag
+    target = phys if is_parent else phys.feature(feature_tag)
     try:
-        sel = feat.selection()
-        # Check if selection is inherited (not directly editable)
-        try:
-            if sel.isInherited():
-                raise ValueError(
-                    f'Feature "{feature_tag}" has an inherited selection and cannot be modified directly. '
-                    'Inherited selections are determined by the parent physics interface. '
-                    'To change which domains this physics acts on, modify the physics-level selection '
-                    f'via set_physics_selection with the physics interface tag "{physics_tag}" instead of a feature tag.'
-                )
-        except AttributeError:
-            pass  # isInherited() not available in all COMSOL versions
-        sel.set(entities)
+        sel = target.selection()
+        if not is_parent and bool(sel.isInheriting()):
+            raise ValueError(
+                f'Feature "{feature_tag}" has an inherited selection and cannot be modified directly. '
+                f'Set the parent physics interface "{physics_tag}" instead.'
+            )
+        kind = str(selection_kind or "explicit").strip().lower()
+        if kind == "explicit":
+            sel.set(list(entities or []))
+        elif kind == "all":
+            sel.all()
+        elif kind == "named":
+            name = str(named_selection or "").strip()
+            if not name:
+                raise ValueError("named selection requires named_selection.")
+            sel.named(name)
+        elif kind == "inherited":
+            if is_parent:
+                raise ValueError("A physics interface has no parent selection to inherit.")
+            sel.inherit(True)
+        else:
+            raise ValueError('selection kind must be explicit, all, named, or inherited.')
     except (ValueError, LookupError):
         raise
     except Exception as exc:
         err_str = str(exc).lower()
         if "selection" in err_str or "edit" in err_str or "inherited" in err_str:
             raise ValueError(
-                f'Cannot set selection on feature "{feature_tag}". '
-                'This feature likely has an inherited or non-editable selection. '
-                'Use list_physics_features to check selection_editable for each feature. '
-                'To change the physics-level domain assignment, try setting selection on the physics interface itself.'
+                f'Cannot set selection on {"physics interface" if is_parent else "feature"} "{feature_tag or physics_tag}": {exc}'
             ) from exc
         raise
-    return {"tag": feature_tag, "entities": entities, "selection_set": True}
+    readback: dict[str, Any] = {"kind": kind}
+    try:
+        readback["inheriting"] = bool(sel.isInheriting())
+    except Exception:
+        pass
+    if kind == "explicit":
+        try:
+            readback["entities"] = [int(v) for v in list(sel.entities())]
+        except Exception as exc:
+            raise RuntimeError(f"Selection was set but actual entity readback failed: {exc}") from exc
+    elif kind == "named":
+        try:
+            readback["named"] = str(sel.named())
+        except Exception as exc:
+            raise RuntimeError(f"Selection was set but actual named-selection readback failed: {exc}") from exc
+    elif kind == "all":
+        try:
+            readback["entities"] = [int(v) for v in list(sel.entities())]
+        except Exception as exc:
+            raise RuntimeError(f"Selection was set to all but actual readback failed: {exc}") from exc
+    return {"tag": physics_tag if is_parent else feature_tag, "target": "physics" if is_parent else "feature", "selection": readback, "selection_set": True}
 
 
 # ---------------------------------------------------------------------------
@@ -240,17 +269,11 @@ def _list_variables(model: Any, component: str = "") -> list[dict[str, Any]]:
     tags = list(var_container.tags())
     result = []
     for tag in tags:
-        var = var_container if not component else model.java.component(component).variable(tag)
-        var_obj = var_container if not component else model.java.component(component).variable(tag)
-        info: dict[str, Any] = {"tag": tag}
-        try:
-            info["name"] = str(var_obj.getString("name"))
-        except Exception:
-            pass
-        try:
-            info["expression"] = str(var_obj.getString("expr"))
-        except Exception:
-            pass
+        var_obj = model.java.component(component).variable(tag) if component else model.java.variable(tag)
+        info: dict[str, Any] = {"tag": str(tag), "variables": []}
+        for name in list(var_obj.varnames()):
+            key = str(name)
+            info["variables"].append({"name": key, "expression": str(var_obj.get(key))})
         result.append(info)
     return result
 
@@ -263,18 +286,13 @@ def _create_variable(
     else:
         var_container = model.java.variable()
     existing = list(var_container.tags())
-    if tag in existing:
-        return {"tag": tag, "created": False, "message": "Variable already exists."}
-    var_container.create(tag)
-    var_obj = var_container if not component else model.java.component(component).variable(tag)
-    # For both global and component variables, set name and expression
-    if component:
-        var_node = model.java.component(component).variable(tag)
-    else:
-        var_node = model.java.variable(tag)
-    var_node.set("name", name)
-    var_node.set("expr", expression)
-    return {"tag": tag, "name": name, "expression": expression, "created": True}
+    created = tag not in existing
+    if created:
+        var_container.create(tag)
+    var_node = model.java.component(component).variable(tag) if component else model.java.variable(tag)
+    var_node.set(name, expression)
+    values = [{"name": str(item), "expression": str(var_node.get(str(item)))} for item in list(var_node.varnames())]
+    return {"tag": tag, "variables": values, "created": created, "updated": not created}
 
 
 def _remove_variable(model: Any, component: str, tag: str) -> dict[str, Any]:

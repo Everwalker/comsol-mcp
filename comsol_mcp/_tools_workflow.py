@@ -23,7 +23,7 @@ from comsol_mcp._connection import _require_client, _timed_call
 from comsol_mcp._model import (
     _set_current_model, _require_visible_main, _require_model,
     _block_if_visible_main_locked, _adopt_model_by_path,
-    _prune_loaded_models_locked, _visible_main_identity,
+    _visible_main_identity,
     _visible_main_mismatch, _visible_main_lock_enabled,
     _loaded_model_records_locked,
 )
@@ -107,7 +107,10 @@ def load_visible_main_model(path: str = "") -> str:
             )
             origin = "visible-main-loaded"
         _set_current_model(model, origin=origin, requested_path=str(resolved))
-        removed, kept = _prune_loaded_models_locked(model)
+        # Attaching/loading a visible main model must not remove any other
+        # server model.  Those models can belong to Desktop or another client.
+        removed: list[dict[str, str]] = []
+        kept = _loaded_model_records_locked()
         identity = _visible_main_identity(model)
         workflow = _write_workflow_state(
             {
@@ -123,10 +126,8 @@ def load_visible_main_model(path: str = "") -> str:
                 "last_action": "load_visible_main_model",
                 "last_loaded_main_model_path": str(resolved),
                 "last_loaded_at": _now_iso(),
-                "last_prune_keep_mode": "visible-main",
-                "last_prune_kept_tag": identity["tag"],
-                "last_prune_removed_count": len(removed),
-                "last_prune_at": _now_iso(),
+                "last_prune_keep_mode": "not-requested",
+                "last_prune_removed_count": 0,
             }
         )
         _append_operation(
@@ -485,16 +486,15 @@ def load_current_main_model() -> str:
             )
             origin = "workflow-main-loaded"
         _set_current_model(model, origin=origin, requested_path=str(resolved))
-        removed, kept = _prune_loaded_models_locked(model)
+        removed: list[dict[str, str]] = []
+        kept = _loaded_model_records_locked()
         workflow = _write_workflow_state(
             {
                 "last_action": "load_current_main_model",
                 "last_loaded_main_model_path": str(resolved),
                 "last_loaded_at": _now_iso(),
-                "last_prune_keep_mode": "main",
-                "last_prune_kept_tag": _safe_model_tag(model),
-                "last_prune_removed_count": len(removed),
-                "last_prune_at": _now_iso(),
+                "last_prune_keep_mode": "not-requested",
+                "last_prune_removed_count": 0,
             }
         )
         return {

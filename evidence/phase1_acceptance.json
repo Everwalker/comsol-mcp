@@ -1,0 +1,176 @@
+{
+  "generated_at": "2026-09-18T11:23:50.355765+00:00",
+  "scope": "W01-W04 only; W05 NOT_RUN",
+  "authoritative": true,
+  "work_packages": {
+    "W01": "COMPLETE_AUDIT",
+    "W02": "COMPLETE_ACCESSIBLE_POC_WITH_BLOCKED_TARGETS",
+    "W03": "BLOCKED_GUI_ACCESS; API inventory completed",
+    "W04": "PASS_CURRENT_EXECUTABLE_ACCEPTANCE"
+  },
+  "cases": {
+    "T038": {
+      "status": "FAIL",
+      "scope": "full acceptance",
+      "reason": "Legacy business errors do not set outer isError; W01 audit complete, W09 fix not in scope"
+    },
+    "T001": {
+      "status": "BLOCKED",
+      "reason": "Local runtime PoC PASS; six-combination acceptance BLOCKED because only macOS arm64 6.4 is accessible.",
+      "evidence": "evidence/w02/runs/20260918T110411819403Z/cases/T001"
+    },
+    "T002": {
+      "status": "BLOCKED",
+      "reason": "COMSOL 6.3 unavailable; cross-version isolation NOT_RUN.",
+      "evidence": "evidence/w02/runs/20260918T110411819403Z/cases/T002"
+    },
+    "T042": {
+      "status": "BLOCKED",
+      "reason": "Documented ACDC hasProduct=true without checkout; no actually missing documented product available for a negative test. ACDC physics execution is not verified.",
+      "evidence": "evidence/w02/runs/20260918T110411819403Z/cases/T042"
+    },
+    "T059": {
+      "status": "PASS",
+      "reason": "API inventory alone remains UNVERIFIED; only the complete real fixed-recipe MCP run receives scoped VERIFIED; unavailable cases remain blocked.",
+      "evidence": "evidence/w02/runs/20260918T110411819403Z/cases/T059"
+    },
+    "T004": {
+      "status": "BLOCKED",
+      "reason": "Computer Use was not approved to use COMSOL Multiphysics",
+      "evidence": "evidence/w03/runs/20260918T111700Z/T004"
+    },
+    "T023": {
+      "status": "BLOCKED",
+      "reason": "Computer Use was not approved to use COMSOL Multiphysics",
+      "evidence": "evidence/w03/runs/20260918T111700Z/T023"
+    },
+    "T052": {
+      "status": "BLOCKED",
+      "reason": "Computer Use was not approved to use COMSOL Multiphysics",
+      "evidence": "evidence/w03/runs/20260918T111700Z/T052"
+    },
+    "T003": {
+      "status": "PASS",
+      "scope": "current macOS arm64 6.4 PDE fixture only",
+      "evidence": "evidence/w04/runs/20260918T112244254506Z/cases/T003"
+    },
+    "T005": {
+      "status": "PASS",
+      "scope": "current macOS arm64 6.4 PDE fixture only",
+      "evidence": "evidence/w04/runs/20260918T112244254506Z/cases/T005"
+    },
+    "T006": {
+      "status": "PASS",
+      "scope": "current macOS arm64 6.4 PDE fixture only",
+      "evidence": "evidence/w04/runs/20260918T112244254506Z/cases/T006"
+    },
+    "T007": {
+      "status": "PASS",
+      "scope": "current macOS arm64 6.4 PDE fixture only",
+      "evidence": "evidence/w04/runs/20260918T112244254506Z/cases/T007"
+    },
+    "T033": {
+      "status": "PASS",
+      "scope": "current macOS arm64 6.4 PDE fixture only",
+      "evidence": "evidence/w04/runs/20260918T112244254506Z/cases/T033"
+    }
+  },
+  "matrix": {
+    "windows-x64/comsol6.3": {
+      "platform_support": "UNVERIFIED",
+      "accessible": false,
+      "runtime_fixed_recipe": "UNVERIFIED",
+      "W04_fixture": "UNVERIFIED",
+      "GUI": "UNVERIFIED",
+      "status": "BLOCKED",
+      "reason": "No accessible actual host/installation."
+    },
+    "windows-x64/comsol6.4": {
+      "platform_support": "UNVERIFIED",
+      "accessible": false,
+      "runtime_fixed_recipe": "UNVERIFIED",
+      "W04_fixture": "UNVERIFIED",
+      "GUI": "UNVERIFIED",
+      "status": "BLOCKED",
+      "reason": "No accessible actual host/installation."
+    },
+    "macos-x86_64/comsol6.3": {
+      "platform_support": "UNVERIFIED",
+      "accessible": false,
+      "runtime_fixed_recipe": "UNVERIFIED",
+      "W04_fixture": "UNVERIFIED",
+      "GUI": "UNVERIFIED",
+      "status": "BLOCKED",
+      "reason": "No accessible actual host/installation."
+    },
+    "macos-x86_64/comsol6.4": {
+      "platform_support": "UNVERIFIED",
+      "accessible": false,
+      "runtime_fixed_recipe": "UNVERIFIED",
+      "W04_fixture": "UNVERIFIED",
+      "GUI": "UNVERIFIED",
+      "status": "BLOCKED",
+      "reason": "No accessible actual host/installation."
+    },
+    "macos-arm64/comsol6.3": {
+      "platform_support": "UNVERIFIED",
+      "accessible": false,
+      "runtime_fixed_recipe": "UNVERIFIED",
+      "W04_fixture": "UNVERIFIED",
+      "GUI": "UNVERIFIED",
+      "status": "BLOCKED",
+      "reason": "No accessible actual host/installation."
+    },
+    "macos-arm64/comsol6.4": {
+      "platform_support": "UNVERIFIED",
+      "accessible": true,
+      "runtime_fixed_recipe": "VERIFIED",
+      "W04_fixture": "VERIFIED",
+      "GUI": "UNVERIFIED",
+      "status": "PASS_SCOPED_CASES_WITH_BLOCKED_GUI",
+      "reason": "See per-case evidence; full platform acceptance is not claimed."
+    }
+  },
+  "units": {
+    "status": "PASS",
+    "count": 68,
+    "evidence": "evidence/w04/pytest_final.txt"
+  },
+  "numerical": {
+    "analytic_solution": "u=2 on unit square",
+    "threshold_max_abs": 1e-08,
+    "actual_max_abs": 1.2856382625159313e-13,
+    "fresh_reopen_equal": true,
+    "scope": "analytic PDE benchmark only; no multiphysics/industrial physical validation claimed"
+  },
+  "historical_corrections": [
+    {
+      "path": "evidence/w02/runs/20260918T175300Z/capability_matrix.json",
+      "correction": "Historical DIRECT JAVA evidence only, not accepted MCP evidence. Its SUPPORTED_VERIFIED_W02_POC label is superseded by this ledger."
+    },
+    {
+      "path": "evidence/w02/runs/20260918T105911073875Z",
+      "status": "FAIL",
+      "reason": "Reopen numeric output produced but client did not exit; timeout retained. Dedicated completed client later SIGTERM after jstack inspection."
+    },
+    {
+      "path": "evidence/w02/runs/20260918T110318486018Z",
+      "status": "FAIL",
+      "reason": "Undeclared Pillow dependency; replaced with standard-library PNG validation."
+    }
+  ],
+  "non_claims": [
+    "No full Windows/macOS platform certification",
+    "No COMSOL 6.3 verification",
+    "No general shared-server cancellation",
+    "No W05/W06/W09 implementation",
+    "No actual unavailable-license negative",
+    "No GUI binding or permission-restoration test"
+  ],
+  "current_accepted_runs": {
+    "W02": "evidence/w02/runs/20260918T110411819403Z",
+    "W04": "evidence/w04/runs/20260918T112244254506Z"
+  },
+  "preservation_audit": "evidence/phase1_preservation_audit.json",
+  "preservation_status": "All supplied document hashes match; .DS_Store difference retained and recorded."
+}
