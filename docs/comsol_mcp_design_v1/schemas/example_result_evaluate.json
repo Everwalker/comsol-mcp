@@ -1,0 +1,29 @@
+{
+  "project_id": "wafer-demo",
+  "session_id": "session-example",
+  "model_ref": "model-example:g1",
+  "idempotency_key": "example-evaluate-001",
+  "spec": {
+    "expressions": [
+      "T"
+    ],
+    "solution": {
+      "dataset": "dset1",
+      "inner": "all",
+      "outer": "all"
+    },
+    "selection": {
+      "kind": "named",
+      "component": "comp1",
+      "geometry": "geom1",
+      "tag": "sel_wafer_top",
+      "entity_dimension": 2
+    },
+    "aggregate": "maximum",
+    "complex_mode": "preserve",
+    "storage": "artifact",
+    "units": [
+      "K"
+    ]
+  }
+}

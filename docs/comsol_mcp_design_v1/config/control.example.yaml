@@ -1,0 +1,64 @@
+# Proposed NEW control-daemon configuration, not an existing comsol-mcp or Hermes config.
+# Paths below are examples. runtime_discover must verify actual installations before launch.
+schema_version: '1.0'
+transport:
+  mode: stdio
+  network_listen: '127.0.0.1'
+  allow_public_comsol_port: false
+  logs_to: stderr
+runtime:
+  discovery: automatic_then_explicit_override
+  target_versions: ['6.3', '6.4']
+  external_java_worker:
+    jdk_major: 11
+    architecture: native
+    classpath_source: installation/bin/comsolclientpath.txt
+    separate_process_per_engine: true
+  verify_full_build: true
+session:
+  default_mode: attach-existing
+  prune_other_models: false
+  same_server_concurrency: 1
+  ownership_proof: [pid, process_start_time, server_instance_id]
+  external_change_policy: conflict_then_readback
+  desktop_binding_required_for_visible_claim: true
+tools:
+  publication_profile: full
+  fallback_dispatcher: true
+  structured_content: true
+  dynamic_tools_only_when_negotiated: true
+jobs:
+  durable_storage: sqlite
+  daemon_independent_of_host: true
+  rpc_wait_timeout_s: 15
+  queue_timeout_s: null
+  execution_timeout_s: null
+  no_progress_warning_s: 300
+  timeout_means_cancelled: false
+  force_cancel_policy: owned_isolated_server_with_authorization
+  retry_unknown_writes: false
+  native_mcp_tasks: negotiate_with_job_polling_fallback
+safety:
+  default_project_mode: engineering
+  trusted_code: explicit_project_authorization
+  allowed_path_roots: [PROJECT_ROOT]
+  credential_values_visible_to_model: false
+  code_review_is_not_sandbox: true
+  os_isolation_required_for_unrestricted_code: true
+  outbound_network: deny_unless_project_allowlist
+  destructive_changes: checkpoint_and_revision
+  server_wide_exclusive_lock: short_authorized_transactions_only
+  auto_kill_user_server: false
+artifacts:
+  location: PROJECT_ROOT/artifacts
+  sha256: true
+  large_arrays: artifact_with_shape_unit_metadata
+  scientific_images: real_engine_output_only
+  raw_data_retention: project_policy
+knowledge:
+  index_local_help: true
+  version_scoped: true
+  fallback_to_other_version: explicit_label_only
+validation:
+  distinguish_execution_numerical_physical: true
+  unknown_is_not_pass: true

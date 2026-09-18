@@ -1,0 +1,383 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "result.evaluate input",
+  "type": "object",
+  "properties": {
+    "project_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "model_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 1
+    },
+    "request_id": {
+      "type": "string"
+    },
+    "spec": {
+      "$ref": "#/$defs/EvaluationSpec"
+    }
+  },
+  "required": [
+    "project_id",
+    "session_id",
+    "model_ref",
+    "idempotency_key",
+    "spec"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "Endpoint": {
+      "type": "object",
+      "properties": {
+        "host": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "encryption": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "host",
+        "port"
+      ],
+      "additionalProperties": false
+    },
+    "Quantity": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "number"
+        },
+        "unit": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "unit"
+      ],
+      "additionalProperties": false
+    },
+    "NodePath": {
+      "type": "object",
+      "properties": {
+        "segments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "collection": {
+                "type": "string"
+              },
+              "tag": {
+                "type": "string"
+              },
+              "accessor": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "oneOf": [
+              {
+                "required": [
+                  "collection",
+                  "tag"
+                ],
+                "not": {
+                  "required": [
+                    "accessor"
+                  ]
+                }
+              },
+              {
+                "required": [
+                  "accessor"
+                ],
+                "not": {
+                  "anyOf": [
+                    {
+                      "required": [
+                        "collection"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "tag"
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+      "required": [
+        "segments"
+      ],
+      "additionalProperties": false
+    },
+    "TypedValue": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "boolean",
+            "int32",
+            "int64",
+            "float64",
+            "string",
+            "expression",
+            "complex128"
+          ]
+        },
+        "shape": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "data": {},
+        "unit": {
+          "type": "string"
+        },
+        "java_signature": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "shape",
+        "data"
+      ],
+      "additionalProperties": false,
+      "description": "Backend must additionally validate data shape/range and match explicit Java signature. Expression data remain strings."
+    },
+    "PropertySet": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "$ref": "#/$defs/TypedValue"
+          }
+        },
+        "required": [
+          "name",
+          "value"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "TypedValues": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/TypedValue"
+      }
+    },
+    "SelectionSpec": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "named",
+            "explicit",
+            "all",
+            "spatial",
+            "objects",
+            "inherited"
+          ]
+        },
+        "component": {
+          "type": "string"
+        },
+        "geometry": {
+          "type": "string"
+        },
+        "entity_dimension": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "tag": {
+          "type": "string"
+        },
+        "entities": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "object_tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "query": {
+          "type": "object"
+        },
+        "geometry_revision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false,
+      "description": "Per-kind required fields and reference validity must be checked by the typed resolver; never interpret entity IDs as array indices."
+    },
+    "SolutionSpec": {
+      "type": "object",
+      "properties": {
+        "dataset": {
+          "type": "string"
+        },
+        "solution": {
+          "type": "string"
+        },
+        "inner": {
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": [
+                "all",
+                "first",
+                "last"
+              ]
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          ]
+        },
+        "outer": {
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": [
+                "all",
+                "first",
+                "last"
+              ]
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          ]
+        },
+        "time": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Quantity"
+          }
+        },
+        "frequency": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Quantity"
+          }
+        },
+        "parameters": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "dataset"
+      ],
+      "additionalProperties": false
+    },
+    "EvaluationSpec": {
+      "type": "object",
+      "properties": {
+        "expressions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "solution": {
+          "$ref": "#/$defs/SolutionSpec"
+        },
+        "selection": {
+          "$ref": "#/$defs/SelectionSpec"
+        },
+        "aggregate": {
+          "enum": [
+            "none",
+            "global",
+            "integral",
+            "average",
+            "minimum",
+            "maximum",
+            "std"
+          ]
+        },
+        "complex_mode": {
+          "enum": [
+            "preserve",
+            "real",
+            "imag",
+            "abs",
+            "phase"
+          ]
+        },
+        "units": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "weight_expression": {
+          "type": "string"
+        },
+        "coordinate_frame": {
+          "type": "string"
+        },
+        "storage": {
+          "enum": [
+            "inline",
+            "artifact",
+            "auto"
+          ]
+        }
+      },
+      "required": [
+        "expressions",
+        "solution",
+        "aggregate",
+        "complex_mode"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

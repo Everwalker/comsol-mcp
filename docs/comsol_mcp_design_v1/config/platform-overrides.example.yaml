@@ -1,0 +1,26 @@
+# Design examples only. These are not existing Hermes configuration keys.
+windows_x64:
+  os: windows
+  architecture: x64
+  workspace_example: 'C:/COMSOL-Agent/Projects'
+  installation_roots_examples:
+    - 'C:/Program Files/COMSOL/COMSOL63/Multiphysics'
+    - 'C:/Program Files/COMSOL/COMSOL64/Multiphysics'
+  desktop_adapter: windows_uia
+  required_probes: [launcher, external_java_client, shared_model, image_export, cancel_route]
+macos_arm64:
+  os: macos
+  architecture: arm64
+  workspace_example: '~/COMSOL-Agent/Projects'
+  installation_roots_examples: ['/Applications']
+  installation_resolution: 'Discover actual COMSOL install/app layout; never assume a fixed app bundle path'
+  desktop_adapter: macos_accessibility
+  required_probes: [native_jdk, launcher, external_java_client, accessibility, screen_capture, shared_model, image_export, cancel_route]
+macos_x86_64:
+  os: macos
+  architecture: x86_64
+  workspace_example: '~/COMSOL-Agent/Projects'
+  installation_roots_examples: ['/Applications']
+  installation_resolution: 'Discover actual COMSOL install/app layout'
+  desktop_adapter: macos_accessibility
+  required_probes: [native_jdk, launcher, external_java_client, accessibility, screen_capture, shared_model, image_export, cancel_route]

@@ -1,0 +1,15 @@
+# Overlay for an approved LAN. No direct exposure of COMSOL mphserver to the Internet.
+# TLS/auth credentials are provided by an approved gateway or the implementation, not literal secrets here.
+transport:
+  mode: streamable_http
+  network_listen: PRIVATE_INTERFACE_IP
+  tls: required
+  authentication: required
+  authorization: project_scoped
+  origin_validation: required
+  allow_public_comsol_port: false
+network:
+  cloud_inference_owner: connected_mcp_host
+  comsol_machine_internet_access: not_required
+  allowed_inbound: authorized_lan_host_only
+  fully_airgapped_mode: task_and_evidence_file_transfer_only

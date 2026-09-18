@@ -1,0 +1,39 @@
+{
+  "ok": false,
+  "operation_id": "operation-example",
+  "operation_type": "study.run",
+  "project_id": "wafer-demo",
+  "session_id": "session-example",
+  "model_ref": "model-example:g1",
+  "revision_before": 12,
+  "revision_after": null,
+  "status": "UNKNOWN",
+  "job_id": "job-example",
+  "data": {},
+  "changes": [],
+  "warnings": [],
+  "artifacts": [],
+  "verification": {
+    "readback": "unknown",
+    "numerical_acceptance": "not_run",
+    "physical_validation": "not_run"
+  },
+  "timings": {
+    "queue_s": 0,
+    "engine_s": null,
+    "total_s": 15
+  },
+  "error": {
+    "code": "EXECUTION_STATE_UNKNOWN",
+    "phase": "engine_reply",
+    "message": "Illustrative timeout response; no actual solve was run.",
+    "partial_changes": true,
+    "safe_to_retry": false,
+    "engine_state": "UNKNOWN",
+    "log_artifact_id": null,
+    "suggested_next_actions": [
+      "job.status",
+      "job.reconcile"
+    ]
+  }
+}

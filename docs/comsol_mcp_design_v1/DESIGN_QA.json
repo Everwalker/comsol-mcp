@@ -1,0 +1,47 @@
+{
+  "scope": "DESIGN_ARTIFACT_VALIDATION_ONLY",
+  "real_comsol_tests_executed": false,
+  "all_comsol_acceptance_statuses": "NOT_RUN",
+  "checks": [
+    {
+      "check": "action_catalog",
+      "status": "PASS",
+      "detail": "272 unique action names and valid top-level input schemas; no implementation claimed"
+    },
+    {
+      "check": "protocol_examples",
+      "status": "PASS",
+      "detail": "2 request examples and 1 UNKNOWN result validate; examples were not sent to COMSOL"
+    },
+    {
+      "check": "test_definitions",
+      "status": "PASS",
+      "detail": "60 unique acceptance definitions; all real COMSOL test statuses remain NOT_RUN"
+    },
+    {
+      "check": "work_packages",
+      "status": "PASS",
+      "detail": "26 packages; acyclic dependency graph; all referenced test IDs exist"
+    },
+    {
+      "check": "shared_schema_references",
+      "status": "PASS",
+      "detail": "All local definition references resolve; no network resolution required"
+    },
+    {
+      "check": "source_references",
+      "status": "PASS",
+      "detail": "All numbered source references resolve to the included primary-source index"
+    },
+    {
+      "check": "json_documents",
+      "status": "PASS",
+      "detail": "15 JSON files parse successfully"
+    },
+    {
+      "check": "configuration_syntax",
+      "status": "PASS",
+      "detail": "3 proposed YAML config files parse; not runtime compatibility tests"
+    }
+  ]
+}

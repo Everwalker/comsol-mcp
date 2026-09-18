@@ -1,0 +1,39 @@
+{
+  "project_id": "wafer-demo",
+  "session_id": "session-example",
+  "model_ref": "model-example:g1",
+  "expected_revision": 12,
+  "idempotency_key": "example-property-set-001",
+  "request_id": "request-example",
+  "path": {
+    "segments": [
+      {
+        "collection": "component",
+        "tag": "comp1"
+      },
+      {
+        "collection": "geom",
+        "tag": "geom1"
+      },
+      {
+        "collection": "feature",
+        "tag": "r1"
+      }
+    ]
+  },
+  "properties": [
+    {
+      "name": "size",
+      "value": {
+        "kind": "expression",
+        "shape": [
+          2
+        ],
+        "data": [
+          "4[mm]",
+          "2[mm]"
+        ]
+      }
+    }
+  ]
+}
