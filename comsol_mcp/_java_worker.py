@@ -1,0 +1,459 @@
+"""Private persistent-Java Worker client used by the W06 execution backend.
+
+This module deliberately contains no MPh or JPype import.  It starts a Java 11
+child that owns its COMSOL connection and speaks a token-authenticated,
+loopback-only NDJSON protocol.  It is not an MCP tool and must be called only
+through the execution service's per-server queue.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import secrets
+import socket
+import subprocess
+import tempfile
+import threading
+import time
+import uuid
+from contextlib import contextmanager
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Callable, Iterator, Mapping
+
+
+class JavaWorkerError(RuntimeError):
+    """Structured failure returned by the private worker protocol."""
+
+
+class JavaWorkerTimeout(JavaWorkerError):
+    """The controller stopped waiting; the worker request may still run."""
+
+
+@dataclass(frozen=True)
+class JavaWorkerPaths:
+    comsol_root: Path
+    jdk_home: Path
+    private_prefs: Path | None = None
+    project_root: Path | None = None
+    global_lock_root: Path | None = None
+
+    def validate(self) -> None:
+        manifest = self.comsol_root / "bin" / "comsolclientpath.txt"
+        if not manifest.is_file():
+            raise JavaWorkerError(f"COMSOL client classpath manifest is missing: {manifest}")
+        if not (self.jdk_home / "bin" / "java").is_file() or not (self.jdk_home / "bin" / "javac").is_file():
+            raise JavaWorkerError("external JDK with java and javac is required")
+        if self.private_prefs is not None:
+            resolved = self.private_prefs.resolve()
+            if not resolved.is_dir() or resolved.name == "":
+                raise JavaWorkerError("private COMSOL preferences directory is required when configured")
+        if not self.resolved_project_root.is_dir():
+            raise JavaWorkerError("configured project root must be an existing directory")
+
+    @property
+    def resolved_project_root(self) -> Path:
+        return (self.project_root or Path(__file__).resolve().parents[1]).resolve()
+
+    @property
+    def resolved_global_lock_root(self) -> Path:
+        uid = str(os.getuid()) if hasattr(os, "getuid") else "user"
+        return (self.global_lock_root or (Path(tempfile.gettempdir()) / f"comsol-mcp-{uid}" / "worker-endpoints")).resolve()
+
+    def classpath(self) -> tuple[str, str, int]:
+        manifest = self.comsol_root / "bin" / "comsolclientpath.txt"
+        names = [line.strip() for line in manifest.read_text(encoding="utf-8").splitlines() if line.strip()]
+        jars = [self.comsol_root / "apiplugins" / name for name in names]
+        missing = [str(path) for path in jars if not path.is_file()]
+        if missing:
+            raise JavaWorkerError("official COMSOL classpath has missing JARs")
+        return os.pathsep.join(map(str, jars)), hashlib.sha256(manifest.read_bytes()).hexdigest(), len(jars)
+
+
+class PersistentJavaWorker:
+    """One persistent worker process.  A timeout never terminates the child."""
+
+    def __init__(self, paths: JavaWorkerPaths, *, state_dir: Path | None = None,
+                 on_request_event: Callable[[dict[str, Any]], None] | None = None) -> None:
+        self.paths = paths
+        self.state_dir = state_dir or Path(tempfile.mkdtemp(prefix="comsol-mcp-worker-state-"))
+        self._token = secrets.token_urlsafe(32)
+        self._process: subprocess.Popen[str] | None = None
+        self._port: int | None = None
+        self._generation: int | None = None
+        self._classes_dir: Path | None = None
+        self._lock = threading.RLock()
+        self._known_requests: dict[str, dict[str, Any]] = {}
+        self._next_generation = 1
+        self._on_request_event = on_request_event
+        self._operation_context = threading.local()
+
+    @property
+    def generation(self) -> int:
+        if self._generation is None:
+            raise JavaWorkerError("worker is not started")
+        return self._generation
+
+    @property
+    def endpoint(self) -> tuple[str, int]:
+        if self._port is None:
+            raise JavaWorkerError("worker is not started")
+        return "127.0.0.1", self._port
+
+    def start(self, *, startup_timeout_s: float = 20.0) -> dict[str, Any]:
+        with self._lock:
+            if self._process is not None and self._process.poll() is None:
+                return self.health(timeout_s=1.0)
+            self.paths.validate()
+            classpath, classpath_hash, jar_count = self.paths.classpath()
+            self.state_dir.mkdir(parents=True, exist_ok=True)
+            try: os.chmod(self.state_dir, 0o700)
+            except OSError: pass
+            source = Path(__file__).with_name("worker_java") / "PersistentComsolWorker.java"
+            source_hash = hashlib.sha256(source.read_bytes()).hexdigest()[:20]
+            classes = self.state_dir / "classes" / source_hash
+            marker = classes / ".compiled"
+            if not marker.is_file():
+                classes.mkdir(parents=True, exist_ok=True)
+                compile_result = subprocess.run(
+                    [str(self.paths.jdk_home / "bin" / "javac"), "-cp", classpath, "-d", str(classes), str(source)],
+                    text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+                )
+                if compile_result.returncode:
+                    raise JavaWorkerError(f"worker compilation failed: {compile_result.stderr[-2000:]}")
+                marker.write_text(source_hash + "\n", encoding="ascii")
+            self._classes_dir = classes
+            endpoint = self.state_dir / "worker_endpoint.json"
+            existing = self._attach_existing(endpoint)
+            if existing is not None:
+                return existing
+            command = [str(self.paths.jdk_home / "bin" / "java")]
+            if self.paths.private_prefs is not None:
+                command.append(f"-Dcs.prefsdir={self.paths.private_prefs}")
+            command += ["-cp", str(classes) + os.pathsep + classpath,
+                        "comsol_mcp.worker_java.PersistentComsolWorker", "--port", "0", "--endpoint-file", str(endpoint),
+                        "--server-lock-root", str(self.paths.resolved_global_lock_root)]
+            command += ["--generation", str(self._next_generation)]
+            environment = dict(os.environ); environment["COMSOL_MCP_WORKER_TOKEN"] = self._token
+            log = (self.state_dir / "worker.stderr.log").open("a", encoding="utf-8")
+            self._process = subprocess.Popen(command, text=True, stdout=subprocess.DEVNULL, stderr=log,
+                                             env=environment, start_new_session=True)
+            log.close()
+            deadline = time.monotonic() + startup_timeout_s
+            ready: dict[str, Any] | None = None
+            while time.monotonic() < deadline:
+                if endpoint.is_file():
+                    try:
+                        candidate = json.loads(endpoint.read_text(encoding="utf-8"))
+                        if candidate.get("type") == "ready": ready = candidate; break
+                    except (OSError, json.JSONDecodeError): pass
+                if self._process.poll() is not None:
+                    detail = (self.state_dir / "worker.stderr.log").read_text(errors="replace")[-2000:]
+                    raise JavaWorkerError(f"worker exited during startup: {detail}")
+                time.sleep(0.02)
+            if ready is None:
+                raise JavaWorkerTimeout("worker did not publish a ready endpoint; do not assume it stopped")
+            self._port, self._generation, self._token = int(ready["port"]), int(ready["generation"]), str(ready["token"])
+            self._write_endpoint({**ready, "classpath_sha256": classpath_hash, "jar_count": jar_count, "state": "STARTED"})
+            return self.health(timeout_s=1.0)
+
+    def _write_endpoint(self, state: Mapping[str, Any]) -> None:
+        if self.state_dir is None:
+            return
+        self.state_dir.mkdir(parents=True, exist_ok=True)
+        target = self.state_dir / "worker_endpoint.json"
+        temporary = target.with_suffix(".tmp")
+        temporary.write_text(json.dumps(dict(state), sort_keys=True) + "\n", encoding="utf-8")
+        try: os.chmod(temporary, 0o600)
+        except OSError: pass
+        temporary.replace(target)
+
+    def _attach_existing(self, endpoint: Path) -> dict[str, Any] | None:
+        if not endpoint.is_file():
+            return None
+        try:
+            saved = json.loads(endpoint.read_text(encoding="utf-8"))
+            pid, port, token = int(saved["pid"]), int(saved["port"]), str(saved["token"])
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            try: self._next_generation = int(saved.get("generation", 0)) + 1
+            except (TypeError, ValueError): self._next_generation = 1
+            # This endpoint belongs to a confirmed-dead worker. Removing only
+            # this private rendezvous file prevents a new child from reading
+            # its stale ready record before it can atomically publish its own.
+            endpoint.unlink(missing_ok=True)
+            return None
+        except (KeyError, TypeError, ValueError, OSError, json.JSONDecodeError) as exc:
+            raise JavaWorkerError("existing Worker endpoint is invalid; manual reconciliation is required") from exc
+        self._port, self._generation, self._token = port, int(saved["generation"]), token
+        self._next_generation = self._generation + 1
+        try:
+            result = self.health(timeout_s=1.0)
+        except JavaWorkerError as exc:
+            raise JavaWorkerError("existing Worker is alive but unreachable; do not start a replacement or replay requests") from exc
+        self._process = None
+        return result
+
+    def _request(self, data: dict[str, Any], *, timeout_s: float | None) -> dict[str, Any]:
+        if self._port is None:
+            raise JavaWorkerError("worker is not started")
+        request_id = data.get("request_id")
+        try:
+            with socket.create_connection(("127.0.0.1", self._port), timeout=5.0 if timeout_s is None else timeout_s) as conn:
+                conn.settimeout(timeout_s)
+                stream = conn.makefile("rwb")
+                stream.write((json.dumps({"token": self._token}) + "\n").encode()); stream.flush()
+                auth = json.loads(stream.readline())
+                if not auth.get("ok"):
+                    raise JavaWorkerError(str(auth))
+                stream.write((json.dumps(data, separators=(",", ":")) + "\n").encode()); stream.flush()
+                reply = json.loads(stream.readline())
+        except (TimeoutError, socket.timeout) as exc:
+            if request_id:
+                self._known_requests[str(request_id)] = {"request_id": request_id, "status": "UNKNOWN", "reason": "rpc_timeout"}
+            raise JavaWorkerTimeout("RPC timeout; worker request may still be executing; query the original request_id") from exc
+        except OSError as exc:
+            raise JavaWorkerError("ENGINE_UNRESPONSIVE: Worker endpoint could not be reached") from exc
+        self._sync_generation(reply)
+        if request_id:
+            self._known_requests[str(request_id)] = reply
+        return reply
+
+    def _sync_generation(self, reply: Mapping[str, Any]) -> None:
+        value = reply.get("generation")
+        if value is None and isinstance(reply.get("result"), Mapping):
+            value = reply["result"].get("generation")
+        if value is None: return
+        try: generation = int(value)
+        except (TypeError, ValueError): return
+        if generation < 1: raise JavaWorkerError("worker returned invalid generation")
+        self._generation, self._next_generation = generation, generation + 1
+        endpoint = self.state_dir / "worker_endpoint.json"
+        if endpoint.is_file():
+            try:
+                state = json.loads(endpoint.read_text(encoding="utf-8"))
+                if int(state.get("generation", 0)) != generation:
+                    state["generation"] = generation
+                    self._write_endpoint(state)
+            except (OSError, TypeError, ValueError, json.JSONDecodeError):
+                # A damaged rendezvous record is an explicit recovery concern;
+                # it must not alter the live worker's generation in memory.
+                pass
+
+    @contextmanager
+    def operation_context(self, operation_id: str, *, on_request_event: Callable[[dict[str, Any]], None] | None = None) -> Iterator[None]:
+        """Associate every submitted Java request with a durable operation id.
+
+        The callback runs before send and after terminal/observed reply.  It is
+        intentionally synchronous so a daemon can write its job event before
+        the worker sees the request.  Callers must redact before durable logs;
+        this module also redacts credential fields defensively.
+        """
+        previous = getattr(self._operation_context, "value", None)
+        self._operation_context.value = (operation_id, on_request_event)
+        try: yield
+        finally: self._operation_context.value = previous
+
+    def _emit_request_event(self, phase: str, *, request_id: str, kind: str, payload: Mapping[str, Any], **extra: Any) -> None:
+        context = getattr(self._operation_context, "value", None)
+        callback = context[1] if context and context[1] is not None else self._on_request_event
+        if callback is None: return
+        event = {"phase": phase, "request_id": request_id, "kind": kind,
+                 "operation_id": context[0] if context else "", "request_hash": _request_hash(payload),
+                 "metadata": _redact(payload), **extra}
+        callback(event)
+
+    def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "model_snapshot", "call", "lock_selftest"}:
+            raise JavaWorkerError("unknown private worker command")
+        body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        if queue_timeout_s is not None:
+            body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+        identifier = str(body["request_id"])
+        self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        try:
+            reply = self._request(body, timeout_s=rpc_timeout_s)
+        except JavaWorkerTimeout as exc:
+            self._emit_request_event("unknown", request_id=identifier, kind=kind, payload=body, status="UNKNOWN", error=str(exc))
+            raise
+        except JavaWorkerError as exc:
+            self._emit_request_event("unresponsive", request_id=identifier, kind=kind, payload=body, status="UNKNOWN", error=str(exc))
+            raise
+        self._emit_request_event("observed", request_id=identifier, kind=kind, payload=body, status=reply.get("status", ""), reply=_redact(reply))
+        return reply
+
+    def health(self, *, timeout_s: float = 1.0) -> dict[str, Any]:
+        return self._request({"type": "health"}, timeout_s=timeout_s)
+
+    def runtime_metadata(self, *, timeout_s: float = 1.0) -> dict[str, Any]:
+        """Non-secret Worker identity for daemon/session binding."""
+        health = self.health(timeout_s=timeout_s)
+        endpoint = self.state_dir / "worker_endpoint.json"
+        endpoint_data: dict[str, Any] = {}
+        if endpoint.is_file():
+            try: endpoint_data = json.loads(endpoint.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError): pass
+        return {"host": endpoint_data.get("host", "127.0.0.1"), "port": endpoint_data.get("port", self._port),
+                "pid": endpoint_data.get("pid"), "generation": health.get("generation"),
+                "instance_id": health.get("instance_id", endpoint_data.get("instance_id", "")),
+                "connected": health.get("connected", False), "server": health.get("server", "")}
+
+    def status(self, request_id: str, *, timeout_s: float = 1.0) -> dict[str, Any]:
+        reply = self._request({"type": "status", "request_id": request_id}, timeout_s=timeout_s)
+        self._emit_request_event("status_observed", request_id=request_id, kind="status", payload={}, status=reply.get("status", ""), reply=_redact(reply))
+        return reply
+
+    def connect(self, host: str, port: int, *, encrypted: bool = False, user: str = "", password: str = "",
+                request_id: str | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        return self.submit("connect", {"host": host, "port": port, "encrypted": encrypted, "user": user, "password": password},
+                           request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+
+    def model_snapshot(self, model_tag: str, *, request_id: str | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+
+    def backend_snapshot(self, model_tag: str, *, request_id: str | None = None,
+                         rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        """W05 adapter contract: a direct, validated model identity snapshot."""
+        result = _decode_reply(self.model_snapshot(model_tag, request_id=request_id, rpc_timeout_s=rpc_timeout_s), self)
+        if not isinstance(result, dict):
+            raise JavaWorkerError("worker returned an invalid model snapshot")
+        return result
+
+    def client(self) -> "RemoteClient": return RemoteClient(self)
+
+    def close(self) -> None:
+        # Only the child started by this instance is eligible for termination. No COMSOL server is touched.
+        with self._lock:
+            if self._process is not None and self._process.poll() is None:
+                self._process.terminate()
+                try: self._process.wait(timeout=3)
+                except subprocess.TimeoutExpired: self._process.kill(); self._process.wait(timeout=3)
+            self._process = None; self._port = None; self._generation = None
+            self._classes_dir = None
+
+
+class RemoteJava:
+    """Opaque Java object held only by the worker; stale generations fail locally."""
+    def __init__(self, worker: PersistentJavaWorker, handle: str, generation: int, java_type: str = "") -> None:
+        self._worker, self._handle, self._generation, self.java_type = worker, handle, generation, java_type
+
+    def _call(self, method: str, *args: Any, request_id: str | None = None, rpc_timeout_s: float | None = None) -> Any:
+        if self._generation != self._worker.generation:
+            raise JavaWorkerError("STALE_WORKER_HANDLE")
+        reply = self._worker.submit("call", {"handle": self._handle, "generation": self._generation, "method": method, "args": list(args)},
+                                    request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+        return _decode_reply(reply, self._worker)
+
+    def __getattr__(self, method: str):
+        if method.startswith("_"):
+            raise AttributeError(method)
+        return lambda *args, **kwargs: self._call(method, *args, **kwargs)
+
+
+class RemoteModel(RemoteJava):
+    @property
+    def java(self) -> "RemoteModel": return self
+
+    def name(self) -> str:
+        return str(self._call("label"))
+
+    def solve(self, study: str = "", **kwargs: Any) -> Any:
+        studies = self._call("study")
+        if not study:
+            tags = studies._call("tags", **kwargs)
+            if len(tags) != 1:
+                raise JavaWorkerError("study tag is required when the model has zero or multiple studies")
+            return self._call("study", str(tags[0]), **kwargs)._call("run", **kwargs)
+        tags = [str(tag) for tag in studies._call("tags", **kwargs)]
+        if study in tags:
+            return self._call("study", study, **kwargs)._call("run", **kwargs)
+        matched = [tag for tag in tags if str(self._call("study", tag, **kwargs)._call("label", **kwargs)) == study]
+        if len(matched) != 1:
+            raise JavaWorkerError("study label did not resolve to exactly one study tag")
+        return self._call("study", matched[0], **kwargs)._call("run", **kwargs)
+
+    def _raw_save(self, path: str, **kwargs: Any) -> Any:
+        """Engine save used only by the atomic publisher's temporary callback."""
+        if not path:
+            raise JavaWorkerError("raw save requires the atomic publisher's temporary path")
+        return self._call("save", path, True, **kwargs)
+
+    def save(self, path: str = "", copy: bool = True, **kwargs: Any) -> Any:
+        # Both explicit and implicit (current-file) saves publish only after a
+        # complete candidate has been verified. `copy` is accepted for MPh
+        # compatibility but never opens an in-place overwrite bypass.
+        saved_path = str(self._call("getFilePath", **kwargs) or "").strip() if not path else str(path)
+        if not saved_path:
+            raise JavaWorkerError("model has no file path; an explicit project-relative save path is required")
+        target = Path(saved_path)
+        from comsol_mcp._atomic_save import atomic_save
+        return atomic_save(target, lambda temporary: self._raw_save(str(temporary), **kwargs),
+                           project_root=self._worker.paths.resolved_project_root)
+
+
+class RemoteClient:
+    """MPh-shaped compatibility facade; all engine work remains in Java."""
+    def __init__(self, worker: PersistentJavaWorker) -> None: self._worker = worker
+    @property
+    def java(self) -> "RemoteClient": return self
+    def connect(self, port: int, host: str = "localhost", **kwargs: Any) -> Any:
+        """Match MPh's connect(port, host) argument order for legacy wrappers."""
+        return _decode_reply(self._worker.connect(host, int(port), **kwargs), self._worker)
+    def disconnect(self, **kwargs: Any) -> Any: return _decode_reply(self._worker.submit("disconnect", {}, **kwargs), self._worker)
+    def model(self, tag: str, **kwargs: Any) -> RemoteModel:
+        return _as_model(_decode_reply(self._worker.submit("model", {"tag": tag}, **kwargs), self._worker))
+    def models(self, **kwargs: Any) -> list[RemoteModel]:
+        tags = _decode_reply(self._worker.submit("modelutil", {"method": "tags", "args": []}, **kwargs), self._worker)
+        return [self.model(str(tag), **kwargs) for tag in tags]
+    def tags(self, **kwargs: Any) -> Any:
+        return _decode_reply(self._worker.submit("modelutil", {"method": "tags", "args": []}, **kwargs), self._worker)
+    def uniquetag(self, prefix: str, **kwargs: Any) -> Any:
+        return _decode_reply(self._worker.submit("modelutil", {"method": "uniquetag", "args": [prefix]}, **kwargs), self._worker)
+    def getComsolVersion(self, **kwargs: Any) -> Any:
+        return _decode_reply(self._worker.submit("modelutil", {"method": "getComsolVersion", "args": []}, **kwargs), self._worker)
+    def create(self, name: str, **kwargs: Any) -> RemoteModel:
+        """Create with a generated tag; the caller's value is a display label."""
+        tag = str(self.uniquetag("mcp", **kwargs))
+        model = _as_model(_decode_reply(self._worker.submit("modelutil", {"method": "create", "args": [tag]}, **kwargs), self._worker))
+        model.label(name, **kwargs)
+        return model
+    def load(self, path: str, tag: str | None = None, **kwargs: Any) -> RemoteModel:
+        tag = tag or f"mcp_{uuid.uuid4().hex[:12]}"
+        return _as_model(_decode_reply(self._worker.submit("modelutil", {"method": "load", "args": [tag, str(path)]}, **kwargs), self._worker))
+    def remove(self, tag: str | RemoteJava, **kwargs: Any) -> Any:
+        if isinstance(tag, RemoteJava):
+            tag = str(tag.tag(**kwargs))
+        return _decode_reply(self._worker.submit("modelutil", {"method": "remove", "args": [tag]}, **kwargs), self._worker)
+
+
+def _decode_reply(reply: Mapping[str, Any], worker: PersistentJavaWorker) -> Any:
+    if reply.get("status") in {"QUEUED", "RUNNING"}:
+        return dict(reply)
+    if not reply.get("ok", False):
+        raise JavaWorkerError(json.dumps(dict(reply), sort_keys=True))
+    result = reply.get("result")
+    if isinstance(result, Mapping) and "$worker_handle" in result:
+        return RemoteJava(worker, str(result["$worker_handle"]), int(result["generation"]), str(result.get("java_type", "")))
+    return result
+
+
+def _as_model(value: Any) -> RemoteModel:
+    if not isinstance(value, RemoteJava):
+        raise JavaWorkerError("worker did not return a model handle")
+    return RemoteModel(value._worker, value._handle, value._generation, value.java_type)
+
+
+def _redact(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {str(key): "<redacted>" if str(key).lower() in {"token", "password", "secret", "authorization"} else _redact(item)
+                for key, item in value.items()}
+    if isinstance(value, list): return [_redact(item) for item in value]
+    return value
+
+
+def _request_hash(payload: Mapping[str, Any]) -> str:
+    """Hash semantic worker content without persisting sensitive values."""
+    semantic = {str(key): value for key, value in payload.items() if key not in {"request_id", "queue_timeout_ms"}}
+    return hashlib.sha256(json.dumps(semantic, sort_keys=True, separators=(",", ":"), default=str).encode()).hexdigest()

@@ -1,0 +1,9 @@
+{
+  "timestamp": "2026-09-18T13:42:15.066478+00:00",
+  "status": "FAIL",
+  "scope": "unit and Java loopback only; no COMSOL connection",
+  "command": "python -m pytest -q",
+  "result": "1 failed, 153 passed in 5.31s",
+  "failure": "tests/test_phase2_recovery_driver.py::test_driver_uses_stdio_client_sessions_and_never_imports_control_client",
+  "reason": "Stale source-level assertion forbids run_study while revised T027 driver must submit a real solve from the host it disconnects."
+}

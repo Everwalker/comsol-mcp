@@ -1,0 +1,193 @@
+[
+  {
+    "host": "path-security",
+    "operation": "initialize",
+    "response": {
+      "meta": null,
+      "protocolVersion": "2025-11-25",
+      "capabilities": {
+        "experimental": {},
+        "logging": null,
+        "prompts": {
+          "listChanged": false
+        },
+        "resources": {
+          "subscribe": false,
+          "listChanged": false
+        },
+        "tools": {
+          "listChanged": false
+        },
+        "completions": null,
+        "tasks": null
+      },
+      "serverInfo": {
+        "name": "comsol-mcp-server",
+        "title": null,
+        "version": "1.29.1",
+        "websiteUrl": null,
+        "icons": null
+      },
+      "instructions": null
+    }
+  },
+  {
+    "host": "path-security",
+    "operation": "server_connect",
+    "arguments": {
+      "host": "127.0.0.1",
+      "port": 56388,
+      "execution": {
+        "idempotency_key": "t035-connect-dbdf2c64b19d4dd485bce40ea9aebb96",
+        "request_id": "t035-connect-dbdf2c64b19d4dd485bce40ea9aebb96"
+      }
+    },
+    "elapsed_s": 0.017688457970507443,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "connected": true,
+        "server_ownership": "shared",
+        "endpoint": "127.0.0.1:56388",
+        "session_id": "session-2ac9ad344ed365aa21e2c02f",
+        "server_instance_id": "a1c9b7fdabecd553ce83c316b9631bb305d0f856db94c9252e96e0632800d9b0",
+        "worker": {
+          "host": "127.0.0.1",
+          "port": 54711,
+          "pid": 27702,
+          "generation": 6,
+          "instance_id": "73f3ecd7-5325-4899-a08c-5975bdbb350f",
+          "connected": true,
+          "server": "127.0.0.1:56388"
+        }
+      },
+      "execution": {
+        "session_id": "session-2ac9ad344ed365aa21e2c02f",
+        "model_ref": null,
+        "revision": null,
+        "request_id": "t035-connect-dbdf2c64b19d4dd485bce40ea9aebb96",
+        "operation_id": "af996e31-8802-4ae8-8c5f-e6443a7afeea",
+        "request_hash": "d0d1a6e235f75ba28e44c93950f16ad94da94480cc43c7d18e83c67c39872375",
+        "idempotency_key": "t035-connect-dbdf2c64b19d4dd485bce40ea9aebb96",
+        "job_id": "99ce5da2-cc06-42c2-8dae-c4feb8bb6d05"
+      }
+    }
+  },
+  {
+    "host": "path-security",
+    "operation": "model_load",
+    "arguments": {
+      "path": "/private/tmp/phase2-recovery-outside-b0bb8e065a074292b7ab303d762a50f8.mph",
+      "execution": {
+        "idempotency_key": "t035-outside_absolute-376c1af87a994d988b2e6962fc8738d7",
+        "request_id": "t035-outside_absolute-376c1af87a994d988b2e6962fc8738d7"
+      }
+    },
+    "elapsed_s": 0.0029169159824959934,
+    "outer_isError": true,
+    "payload": {
+      "success": false,
+      "data": {},
+      "error": {
+        "code": "PERMISSION_DENIED",
+        "message": "path escapes the approved project root",
+        "safe_retry": false
+      },
+      "execution": {
+        "request_id": "t035-outside_absolute-376c1af87a994d988b2e6962fc8738d7",
+        "operation_id": "d6309c82-3bf4-4bb5-bc5e-8926b20a2cbf",
+        "request_hash": "89bdb57ee5657d0dfbf99a2198a713093efed220b4b60c3f2d58bbbfdd7b9aa6",
+        "idempotency_key": "t035-outside_absolute-376c1af87a994d988b2e6962fc8738d7",
+        "job_id": "7d7420d3-a00d-4efe-8d80-78a3fd96babc"
+      }
+    }
+  },
+  {
+    "host": "path-security",
+    "operation": "model_load",
+    "arguments": {
+      "path": "../outside.mph",
+      "execution": {
+        "idempotency_key": "t035-parent_escape-fb2f86af8c85433f8bcd91a33f4a02dc",
+        "request_id": "t035-parent_escape-fb2f86af8c85433f8bcd91a33f4a02dc"
+      }
+    },
+    "elapsed_s": 0.002462417003698647,
+    "outer_isError": true,
+    "payload": {
+      "success": false,
+      "data": {},
+      "error": {
+        "code": "PERMISSION_DENIED",
+        "message": "path escapes the approved project root",
+        "safe_retry": false
+      },
+      "execution": {
+        "request_id": "t035-parent_escape-fb2f86af8c85433f8bcd91a33f4a02dc",
+        "operation_id": "08e449ea-8b42-4719-bf63-3967f49c662c",
+        "request_hash": "ae4113c18f5c742d69250c69a8b0eb0e1c888ea40772d936ba60fc3112b03e18",
+        "idempotency_key": "t035-parent_escape-fb2f86af8c85433f8bcd91a33f4a02dc",
+        "job_id": "c8430e41-d870-4e2f-a824-fe06a53b98a1"
+      }
+    }
+  },
+  {
+    "host": "path-security",
+    "operation": "model_load",
+    "arguments": {
+      "path": "REDACTED_PATH",
+      "execution": {
+        "idempotency_key": "t035-private_credential_path-34a08b3af977446e90718d0219527a9a",
+        "request_id": "t035-private_credential_path-34a08b3af977446e90718d0219527a9a"
+      }
+    },
+    "elapsed_s": 0.002666875021532178,
+    "outer_isError": true,
+    "payload": {
+      "success": false,
+      "data": {},
+      "error": {
+        "code": "PERMISSION_DENIED",
+        "message": "path enters a private credential or control directory",
+        "safe_retry": false
+      },
+      "execution": {
+        "request_id": "t035-private_credential_path-34a08b3af977446e90718d0219527a9a",
+        "operation_id": "273e24f7-3a91-425e-8c9f-9e5ba685b4a9",
+        "request_hash": "aabc5fea1d6034489ebb4f853050917468480fb297da3b2b90f3621248652ecc",
+        "idempotency_key": "t035-private_credential_path-34a08b3af977446e90718d0219527a9a",
+        "job_id": "aff28ecf-d695-406c-9b83-09e226469b06"
+      }
+    }
+  },
+  {
+    "host": "path-security",
+    "operation": "model_load",
+    "arguments": {
+      "path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase2/runtime-acceptance/t035-path-security/symlink-escape.mph",
+      "execution": {
+        "idempotency_key": "t035-symlink_escape-979b238a77a645fa956dcca8bfd6a609",
+        "request_id": "t035-symlink_escape-979b238a77a645fa956dcca8bfd6a609"
+      }
+    },
+    "elapsed_s": 0.00244058296084404,
+    "outer_isError": true,
+    "payload": {
+      "success": false,
+      "data": {},
+      "error": {
+        "code": "PERMISSION_DENIED",
+        "message": "path escapes the approved project root",
+        "safe_retry": false
+      },
+      "execution": {
+        "request_id": "t035-symlink_escape-979b238a77a645fa956dcca8bfd6a609",
+        "operation_id": "c82fcc33-8646-4aab-900b-64d2d500cc3b",
+        "request_hash": "a57fcc11b0313088198f2051020c337a0d76f4f13d3fdf49fe0caeebdf1803be",
+        "idempotency_key": "t035-symlink_escape-979b238a77a645fa956dcca8bfd6a609",
+        "job_id": "b5a61fe0-0756-4ae0-aaad-f6178010fadd"
+      }
+    }
+  }
+]

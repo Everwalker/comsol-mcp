@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from comsol_mcp._model_ops import _normalize_properties, _apply_feature_properties
+from comsol_mcp._model_ops import _normalize_properties, _apply_feature_properties, _assert_existing_feature_type
 
 
 # ---------------------------------------------------------------------------
@@ -125,18 +125,15 @@ def _auto_detect_dimension(model: Any, component: str) -> int:
 
 
 def _java_int(value: int):
-    """Convert Python int to Java int for COMSOL API overload resolution."""
-    try:
-        import jpype
-        return jpype.JInt(value)
-    except ImportError:
-        return value
+    """Send an integer through the Worker protocol without starting a JVM."""
+    return int(value)
 
 
 def _create_physics(model: Any, component: str, tag: str, physics_type: str, dimension: int = 0, dependent_variables: str = "u") -> dict[str, Any]:
     comp = model.java.component(component)
     existing = list(comp.physics().tags())
     if tag in existing:
+        _assert_existing_feature_type(comp.physics(tag), physics_type, kind="physics interface")
         return {"tag": tag, "physics_type": physics_type, "created": False, "message": "Physics already exists."}
     dim = int(dimension)
     if dim <= 0:
@@ -171,6 +168,7 @@ def _create_physics_feature(
     phys = model.java.component(component).physics(physics_tag)
     existing = list(phys.feature().tags())
     if feature_tag in existing:
+        _assert_existing_feature_type(phys.feature(feature_tag), feature_type, kind="physics feature")
         return {"tag": feature_tag, "feature_type": feature_type, "created": False, "message": "Feature already exists."}
     phys.feature().create(feature_tag, feature_type)
     return {"tag": feature_tag, "feature_type": feature_type, "created": True}

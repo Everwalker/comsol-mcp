@@ -1,0 +1,185 @@
+.................................................................EEE.... [ 62%]
+............................................                             [100%]
+==================================== ERRORS ====================================
+_ ERROR at setup of test_java_worker_is_loopback_authenticated_and_reports_health _
+
+tmp_path_factory = TempPathFactory(_given_basetemp=None, _trace=<pluggy._tracing.TagTracerSub object at 0x106d1ac00>, _basetemp=PosixPath...ders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-40'), _retention_count=3, _retention_policy='all')
+
+    @pytest.fixture(scope="module")
+    def worker(tmp_path_factory):
+        if not (COMSOL_ROOT / "bin/comsolclientpath.txt").is_file() or not (JDK11 / "bin/javac").is_file():
+            pytest.skip("COMSOL 6.4/JDK 11 local Worker build environment unavailable")
+        instance = PersistentJavaWorker(JavaWorkerPaths(COMSOL_ROOT, JDK11), state_dir=tmp_path_factory.mktemp("worker-state"))
+>       instance.start()
+
+tests/test_java_worker.py:23: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x109005160>
+startup_timeout_s = 20.0
+
+    def start(self, *, startup_timeout_s: float = 20.0) -> dict[str, Any]:
+        with self._lock:
+            if self._process is not None and self._process.poll() is None:
+                return self.health(timeout_s=1.0)
+            self.paths.validate()
+            classpath, classpath_hash, jar_count = self.paths.classpath()
+            self._compile_dir = tempfile.TemporaryDirectory(prefix="comsol-mcp-worker-")
+            classes = Path(self._compile_dir.name) / "classes"
+            classes.mkdir()
+            source = Path(__file__).with_name("worker_java") / "PersistentComsolWorker.java"
+            compile_result = subprocess.run(
+                [str(self.paths.jdk_home / "bin" / "javac"), "-cp", classpath, "-d", str(classes), str(source)],
+                text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+            )
+            if compile_result.returncode:
+                self._compile_dir.cleanup(); self._compile_dir = None
+                raise JavaWorkerError(f"worker compilation failed: {compile_result.stderr[-2000:]}")
+            command = [str(self.paths.jdk_home / "bin" / "java")]
+            if self.paths.private_prefs is not None:
+                command.append(f"-Dcs.prefsdir={self.paths.private_prefs}")
+            command += ["-cp", str(classes) + os.pathsep + classpath,
+                        "comsol_mcp.worker_java.PersistentComsolWorker", "--token", self._token, "--port", "0"]
+            self._process = subprocess.Popen(command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            deadline = time.monotonic() + startup_timeout_s
+            ready: dict[str, Any] | None = None
+            while time.monotonic() < deadline:
+                assert self._process.stdout is not None
+                line = self._process.stdout.readline()
+                if line:
+                    try:
+                        candidate = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if candidate.get("type") == "ready":
+                        ready = candidate; break
+                elif self._process.poll() is not None:
+                    assert self._process.stderr is not None
+>                   raise JavaWorkerError(f"worker exited during startup: {self._process.stderr.read()[-2000:]}")
+E                   comsol_mcp._java_worker.JavaWorkerError: worker exited during startup: Exception in thread "main" java.lang.IllegalArgumentException: COMSOL_MCP_WORKER_TOKEN requires at least 32 characters
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.main(PersistentComsolWorker.java:70)
+
+comsol_mcp/_java_worker.py:123: JavaWorkerError
+_ ERROR at setup of test_java_worker_keeps_original_request_queryable_after_nonblocking_submit _
+
+tmp_path_factory = TempPathFactory(_given_basetemp=None, _trace=<pluggy._tracing.TagTracerSub object at 0x106d1ac00>, _basetemp=PosixPath...ders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-40'), _retention_count=3, _retention_policy='all')
+
+    @pytest.fixture(scope="module")
+    def worker(tmp_path_factory):
+        if not (COMSOL_ROOT / "bin/comsolclientpath.txt").is_file() or not (JDK11 / "bin/javac").is_file():
+            pytest.skip("COMSOL 6.4/JDK 11 local Worker build environment unavailable")
+        instance = PersistentJavaWorker(JavaWorkerPaths(COMSOL_ROOT, JDK11), state_dir=tmp_path_factory.mktemp("worker-state"))
+>       instance.start()
+
+tests/test_java_worker.py:23: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x109005160>
+startup_timeout_s = 20.0
+
+    def start(self, *, startup_timeout_s: float = 20.0) -> dict[str, Any]:
+        with self._lock:
+            if self._process is not None and self._process.poll() is None:
+                return self.health(timeout_s=1.0)
+            self.paths.validate()
+            classpath, classpath_hash, jar_count = self.paths.classpath()
+            self._compile_dir = tempfile.TemporaryDirectory(prefix="comsol-mcp-worker-")
+            classes = Path(self._compile_dir.name) / "classes"
+            classes.mkdir()
+            source = Path(__file__).with_name("worker_java") / "PersistentComsolWorker.java"
+            compile_result = subprocess.run(
+                [str(self.paths.jdk_home / "bin" / "javac"), "-cp", classpath, "-d", str(classes), str(source)],
+                text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+            )
+            if compile_result.returncode:
+                self._compile_dir.cleanup(); self._compile_dir = None
+                raise JavaWorkerError(f"worker compilation failed: {compile_result.stderr[-2000:]}")
+            command = [str(self.paths.jdk_home / "bin" / "java")]
+            if self.paths.private_prefs is not None:
+                command.append(f"-Dcs.prefsdir={self.paths.private_prefs}")
+            command += ["-cp", str(classes) + os.pathsep + classpath,
+                        "comsol_mcp.worker_java.PersistentComsolWorker", "--token", self._token, "--port", "0"]
+            self._process = subprocess.Popen(command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            deadline = time.monotonic() + startup_timeout_s
+            ready: dict[str, Any] | None = None
+            while time.monotonic() < deadline:
+                assert self._process.stdout is not None
+                line = self._process.stdout.readline()
+                if line:
+                    try:
+                        candidate = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if candidate.get("type") == "ready":
+                        ready = candidate; break
+                elif self._process.poll() is not None:
+                    assert self._process.stderr is not None
+>                   raise JavaWorkerError(f"worker exited during startup: {self._process.stderr.read()[-2000:]}")
+E                   comsol_mcp._java_worker.JavaWorkerError: worker exited during startup: Exception in thread "main" java.lang.IllegalArgumentException: COMSOL_MCP_WORKER_TOKEN requires at least 32 characters
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.main(PersistentComsolWorker.java:70)
+
+comsol_mcp/_java_worker.py:123: JavaWorkerError
+___ ERROR at setup of test_java_worker_persists_nonsecret_endpoint_metadata ____
+
+tmp_path_factory = TempPathFactory(_given_basetemp=None, _trace=<pluggy._tracing.TagTracerSub object at 0x106d1ac00>, _basetemp=PosixPath...ders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-40'), _retention_count=3, _retention_policy='all')
+
+    @pytest.fixture(scope="module")
+    def worker(tmp_path_factory):
+        if not (COMSOL_ROOT / "bin/comsolclientpath.txt").is_file() or not (JDK11 / "bin/javac").is_file():
+            pytest.skip("COMSOL 6.4/JDK 11 local Worker build environment unavailable")
+        instance = PersistentJavaWorker(JavaWorkerPaths(COMSOL_ROOT, JDK11), state_dir=tmp_path_factory.mktemp("worker-state"))
+>       instance.start()
+
+tests/test_java_worker.py:23: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x109005160>
+startup_timeout_s = 20.0
+
+    def start(self, *, startup_timeout_s: float = 20.0) -> dict[str, Any]:
+        with self._lock:
+            if self._process is not None and self._process.poll() is None:
+                return self.health(timeout_s=1.0)
+            self.paths.validate()
+            classpath, classpath_hash, jar_count = self.paths.classpath()
+            self._compile_dir = tempfile.TemporaryDirectory(prefix="comsol-mcp-worker-")
+            classes = Path(self._compile_dir.name) / "classes"
+            classes.mkdir()
+            source = Path(__file__).with_name("worker_java") / "PersistentComsolWorker.java"
+            compile_result = subprocess.run(
+                [str(self.paths.jdk_home / "bin" / "javac"), "-cp", classpath, "-d", str(classes), str(source)],
+                text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+            )
+            if compile_result.returncode:
+                self._compile_dir.cleanup(); self._compile_dir = None
+                raise JavaWorkerError(f"worker compilation failed: {compile_result.stderr[-2000:]}")
+            command = [str(self.paths.jdk_home / "bin" / "java")]
+            if self.paths.private_prefs is not None:
+                command.append(f"-Dcs.prefsdir={self.paths.private_prefs}")
+            command += ["-cp", str(classes) + os.pathsep + classpath,
+                        "comsol_mcp.worker_java.PersistentComsolWorker", "--token", self._token, "--port", "0"]
+            self._process = subprocess.Popen(command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            deadline = time.monotonic() + startup_timeout_s
+            ready: dict[str, Any] | None = None
+            while time.monotonic() < deadline:
+                assert self._process.stdout is not None
+                line = self._process.stdout.readline()
+                if line:
+                    try:
+                        candidate = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if candidate.get("type") == "ready":
+                        ready = candidate; break
+                elif self._process.poll() is not None:
+                    assert self._process.stderr is not None
+>                   raise JavaWorkerError(f"worker exited during startup: {self._process.stderr.read()[-2000:]}")
+E                   comsol_mcp._java_worker.JavaWorkerError: worker exited during startup: Exception in thread "main" java.lang.IllegalArgumentException: COMSOL_MCP_WORKER_TOKEN requires at least 32 characters
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.main(PersistentComsolWorker.java:70)
+
+comsol_mcp/_java_worker.py:123: JavaWorkerError
+=========================== short test summary info ============================
+ERROR tests/test_java_worker.py::test_java_worker_is_loopback_authenticated_and_reports_health
+ERROR tests/test_java_worker.py::test_java_worker_keeps_original_request_queryable_after_nonblocking_submit
+ERROR tests/test_java_worker.py::test_java_worker_persists_nonsecret_endpoint_metadata
+113 passed, 3 errors in 1.03s

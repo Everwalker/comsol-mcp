@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "work_package": "W06",
+  "scope": "persistent Java Worker control-plane implementation",
+  "environment": {
+    "platform": "macOS Apple Silicon host",
+    "comsol_install": "/Applications/COMSOL64/Multiphysics",
+    "external_jdk": "Amazon Corretto OpenJDK 11.0.31+11-LTS",
+    "classpath_source": "/Applications/COMSOL64/Multiphysics/bin/comsolclientpath.txt",
+    "classpath_entries": 25
+  },
+  "command": "/Users/everwalker/Documents/Codex/2026-09-05/https-github-com-wjc9011-comsol-multiphysics/comsol-mcp-server/.venv/bin/python -m pytest -q tests/test_java_worker.py",
+  "result": {
+    "status": "PASS",
+    "tests": "13 passed in 4.46s",
+    "assertions": [
+      "Java source compiles using only the official COMSOL client classpath and external JDK 11.",
+      "Worker binds a loopback ephemeral port and rejects an incorrect token.",
+      "A nonblocking request receives an original request_id, remains queryable to terminal failure, and health remains responsive.",
+      "Persistent endpoint metadata contains a 0600 reconnect token, while the token is passed to Java through the child environment rather than its command line.",
+      "A new control wrapper reattaches the live Worker endpoint without spawning a replacement or killing the original child.",
+      "A confirmed-dead private Worker endpoint starts the replacement at a higher generation, invalidating old opaque handles.",
+      "Reusing a request_id with a different request body is rejected without replay; unknown internal commands are rejected; concurrent health calls remain responsive.",
+      "Operation-context request events preserve operation/request linkage while redacting password fields, and nested map/array result encoding stays structured rather than becoming a Java handle."
+      ,"Implicit current-file saves and explicit saves use the same atomic publisher; arbitrary paths outside the configured project root are rejected before the raw COMSOL save callback.",
+      "Worker generation changes are synchronized to the private reconnect record, and runtime metadata exposes an instance identifier without exposing its token."
+      ,"Two independent persistent Java Workers competing for the same synthetic endpoint lock produce ENGINE_BUSY for the second Worker without any COMSOL connection."
+    ]
+  },
+  "engine_scope": "No ModelUtil.connect, model load/create/save, solve, or existing COMSOL server action was executed by this control-plane test.",
+  "limitations": [
+    "This is not real COMSOL engine acceptance for T012/T026/T028/T055.",
+    "Live ModelChangedHandler delivery, revision fingerprinting, and Worker-to-MCP integration remain pending dependency-gated W05/W06 tests.",
+    "Windows, macOS Intel, COMSOL 6.3, and GUI Desktop remain UNVERIFIED."
+  ]
+}

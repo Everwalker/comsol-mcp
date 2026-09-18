@@ -118,31 +118,43 @@ def configure_solver(
         if not ftag:
             raise ValueError("feature_tag is required.")
 
+        from comsol_mcp._model_ops import _normalize_properties
+        from comsol_mcp._state import ToolExecutionError
+        parsed = json.loads(properties_json or "[]")
+        if isinstance(parsed, dict):
+            parsed = [{"name": k, "values" if isinstance(v, list) else "value": v} for k, v in parsed.items()]
+        if not isinstance(parsed, list):
+            raise ValueError("properties_json must be an object or array.")
+        plan = []
+        for item in parsed:
+            if not isinstance(item, dict):
+                raise ValueError("Every solver update must be an object.")
+            if item.get("name") == "add_segregated_step":
+                step = json.loads(item.get("value", "{}"))
+                if not isinstance(step, dict) or not isinstance(step.get("step_tag"), str) or not step["step_tag"].strip():
+                    raise ValueError("A segregated step requires a nonempty step_tag.")
+                variables = step.get("variables", [])
+                if not isinstance(variables, list) or any(not isinstance(v, str) or not v.strip() for v in variables):
+                    raise ValueError("Segregated variables must be an array of nonempty strings.")
+                plan.append({"action": "add_segregated_step", "step_tag": step["step_tag"].strip(), "variables": variables})
+            else:
+                _normalize_properties(json.dumps([item]))
+                plan.append({"action": "set_property", "property": item})
         applied = []
-        # Parse properties and separate regular props from segregated step requests
-        raw_props = str(properties_json or "").strip()
-        if raw_props and raw_props != "[]":
-            parsed = json.loads(raw_props)
-            if isinstance(parsed, dict):
-                parsed = [{"name": k, "value": v} if not isinstance(v, list) else {"name": k, "values": v} for k, v in parsed.items()]
-
-            regular_props = []
-            for item in parsed:
-                name = str(item.get("name", "")).strip()
-                if name == "add_segregated_step":
-                    # Special: add a segregated step
-                    step_info = json.loads(str(item.get("value", "{}")))
-                    step_tag = step_info.get("step_tag", "")
-                    variables = step_info.get("variables", [])
-                    step_result = _add_segregated_step(model, stag, ftag, step_tag, variables)
-                    applied.append({"action": "add_segregated_step", **step_result})
+        for index, update in enumerate(plan):
+            try:
+                if update["action"] == "add_segregated_step":
+                    outcome = _add_segregated_step(model, stag, ftag, update["step_tag"], update["variables"])
                 else:
-                    regular_props.append(item)
-
-            if regular_props:
-                regular_json = json.dumps(regular_props)
-                prop_results = _configure_solver_feature(model, stag, ftag, regular_json)
-                applied.extend(prop_results)
+                    outcome = _configure_solver_feature(model, stag, ftag, json.dumps([update["property"]]))
+                applied.append({**update, "result": outcome})
+            except Exception as exc:
+                raise ToolExecutionError("Solver batch stopped after a runtime failure.", data={
+                    "applied": applied, "failed": {**update, "error": str(exc)},
+                    "not_executed": plan[index + 1:], "atomic": False,
+                    "partial_change": bool(applied), "failed_item_may_have_changed": True,
+                    "safe_retry": False,
+                }) from exc
         return {
             "sol_tag": stag,
             "feature_tag": ftag,
@@ -179,14 +191,8 @@ def run_study_async(study_tag: str = "") -> str:
             _update_background_job(job_id, status="running", stage="solving")
             try:
                 with _srv._runtime_lock:
-                    if study:
-                        try:
-                            label = str(model.java.study().get(study).label())
-                            model.solve(label)
-                        except Exception:
-                            model.solve(study)
-                    else:
-                        model.solve()
+                    from comsol_mcp._tools_workflow import _run_study_on_model
+                    _run_study_on_model(model, study)
                 _update_background_job(
                     job_id,
                     status="succeeded",

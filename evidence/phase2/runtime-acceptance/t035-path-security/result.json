@@ -1,0 +1,72 @@
+{
+  "case": "T035",
+  "status": "PASS",
+  "evidence": {
+    "mode": "path-security",
+    "started_at": 1789741248.07877,
+    "path_requests": {
+      "outside_absolute": "REDACTED",
+      "parent_escape": "REDACTED",
+      "private_credential_path": "REDACTED",
+      "symlink_escape": "REDACTED"
+    },
+    "path_replies": {
+      "outside_absolute": {
+        "success": false,
+        "data": {},
+        "error": {
+          "code": "PERMISSION_DENIED",
+          "message": "path escapes the approved project root",
+          "safe_retry": false
+        },
+        "execution": {
+          "request_id": "t035-outside_absolute-376c1af87a994d988b2e6962fc8738d7",
+          "operation_id": "d6309c82-3bf4-4bb5-bc5e-8926b20a2cbf",
+          "request_hash": "89bdb57ee5657d0dfbf99a2198a713093efed220b4b60c3f2d58bbbfdd7b9aa6",
+          "idempotency_key": "t035-outside_absolute-376c1af87a994d988b2e6962fc8738d7",
+          "job_id": "7d7420d3-a00d-4efe-8d80-78a3fd96babc"
+        },
+        "_outer_isError": true,
+        "_elapsed_s": 0.0029169159824959934
+      },
+      "parent_escape": {
+        "success": false,
+        "data": {},
+        "error": {
+          "code": "PERMISSION_DENIED",
+          "message": "path escapes the approved project root",
+          "safe_retry": false
+        },
+        "execution": {
+          "request_id": "t035-parent_escape-fb2f86af8c85433f8bcd91a33f4a02dc",
+          "operation_id": "08e449ea-8b42-4719-bf63-3967f49c662c",
+          "request_hash": "ae4113c18f5c742d69250c69a8b0eb0e1c888ea40772d936ba60fc3112b03e18",
+          "idempotency_key": "t035-parent_escape-fb2f86af8c85433f8bcd91a33f4a02dc",
+          "job_id": "c8430e41-d870-4e2f-a824-fe06a53b98a1"
+        },
+        "_outer_isError": true,
+        "_elapsed_s": 0.002462417003698647
+      },
+      "private_credential_path": "REDACTED",
+      "symlink_escape": {
+        "success": false,
+        "data": {},
+        "error": {
+          "code": "PERMISSION_DENIED",
+          "message": "path escapes the approved project root",
+          "safe_retry": false
+        },
+        "execution": {
+          "request_id": "t035-symlink_escape-979b238a77a645fa956dcca8bfd6a609",
+          "operation_id": "c82fcc33-8646-4aab-900b-64d2d500cc3b",
+          "request_hash": "a57fcc11b0313088198f2051020c337a0d76f4f13d3fdf49fe0caeebdf1803be",
+          "idempotency_key": "t035-symlink_escape-979b238a77a645fa956dcca8bfd6a609",
+          "job_id": "b5a61fe0-0756-4ae0-aaad-f6178010fadd"
+        },
+        "_outer_isError": true,
+        "_elapsed_s": 0.00244058296084404
+      }
+    },
+    "finished_at": 1789741248.388136
+  }
+}

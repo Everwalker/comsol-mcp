@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "status": "SUPPLEMENTAL_AUDIT",
+  "scope": "Derives T035 assertion values from immutable, already-redacted production evidence. It does not alter historical evidence or its SHA256SUMS manifest.",
+  "source_evidence": {
+    "directory": "t035-path-security",
+    "result_json_sha256": "d1ffea8fe7d5360ea8be85408ecf12aa68a6a832755d3c2a2c39eb772132acb9",
+    "assertions_json_sha256": "c2778198305a66fd7292ca75db066384ed8e2f024226aa49141a3543d904cb20",
+    "transcript_json_sha256": "2b61e4fa3ea84317e61bf0e39bb50cf4b295f9dfd70e47e5e3b52600524db386",
+    "source_manifest_sha256": "33e9cc90ded5a2d3019ac07a3c328c999df19da0b100aa4bd6051b119c7af9bf"
+  },
+  "derivations": {
+    "outside_absolute_denied": {
+      "status": "PASS",
+      "evidence": "transcript model_load response: success=false, error.code=PERMISSION_DENIED, message=path escapes the approved project root"
+    },
+    "parent_escape_denied": {
+      "status": "PASS",
+      "evidence": "transcript model_load response: success=false, error.code=PERMISSION_DENIED, message=path escapes the approved project root"
+    },
+    "private_credential_path_denied": {
+      "status": "PASS",
+      "evidence": "transcript model_load response: success=false, error.code=PERMISSION_DENIED, message=path enters a private credential or control directory"
+    },
+    "symlink_escape_denied": {
+      "status": "PASS",
+      "evidence": "transcript model_load response: success=false, error.code=PERMISSION_DENIED, message=path escapes the approved project root"
+    },
+    "credential_content_not_logged": {
+      "status": "NOT_PROVABLE_FROM_REDACTED_HISTORICAL_EVIDENCE",
+      "reason": "The old redactor replaced this boolean assertion and all sensitive string values. A scan can show the redacted files do not expose the fixture filename or a credential value, but cannot prove that no secret was ever present before redaction."
+    }
+  },
+  "redaction_defect": "The former key-name redaction replaced boolean assertions containing credential, token, authorization, password, or prefs. The corrected driver now retains boolean and numeric verdicts while continuing to redact sensitive strings and private paths.",
+  "historical_integrity": "No file under t035-path-security was rewritten. Its original SHA256SUMS.json remains the governing manifest for that run."
+}

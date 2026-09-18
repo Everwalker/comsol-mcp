@@ -9,6 +9,7 @@ from comsol_mcp._state import _run_tool
 from comsol_mcp._model import _require_visible_main
 from comsol_mcp._model_ops import (
     _normalize_properties, _ensure_geometry_java, _apply_feature_properties,
+    _assert_existing_feature_type,
 )
 
 
@@ -68,8 +69,12 @@ def create_feature(
             raise ValueError("feature_type is required.")
         _ensure_geometry_java(model, comp, geom, 2)
         feature_container = model.java.component(comp).geom(geom).feature()
+        created = False
         if feature_tag not in list(feature_container.tags()):
             model.java.component(comp).geom(geom).create(feature_tag, kind)
+            created = True
+        else:
+            _assert_existing_feature_type(model.java.component(comp).geom(geom).feature(feature_tag), kind, kind="geometry feature")
         feature = model.java.component(comp).geom(geom).feature(feature_tag)
         applied = _apply_feature_properties(feature, _normalize_properties(properties_json))
         if run_geometry:
@@ -79,6 +84,7 @@ def create_feature(
             "geometry": geom,
             "tag": feature_tag,
             "feature_type": kind,
+            "created": created,
             "properties": applied,
             "run_geometry": bool(run_geometry),
         }

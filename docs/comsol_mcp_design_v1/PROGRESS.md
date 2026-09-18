@@ -105,3 +105,214 @@ explicit blocked/unverified statuses. `AGENTS.md` records the user's standing
 instruction to synchronize each completed phase to the fork with a non-force
 push and verify the remote commit. It does not authorize W05 or a scheduled
 background job. Private runtime preferences and credentials remain excluded.
+
+## Phase two — active implementation (2026-09-18)
+
+A subsequent explicit Goal authorizes legacy safety closure and W05 → W06 → W07,
+stopping before W08. The phase-one stop statement above remains its historical
+delivery record. Phase two started from clean `main` at
+`bdf557d6e8a19489d6220fcedc01e7bc53fd5c25`; a fresh remote check returned the same
+SHA. No phase-two completion or new platform certification is claimed here.
+
+- **Legacy regressions: software PASS; new-backend engine regression NOT_RUN.**
+  `evidence/phase2/legacy/pre_fix_regressions.txt` retains four failing regressions
+  before the fixes; `post_fix_regressions.txt` records ten passing cases. The
+  recorded full-suite run at that checkpoint has 97 passing tests. Fixes cover
+  one solve per request, full static batch preflight, explicit partial writes,
+  cleanup failure propagation, required metric failures and type conflicts.
+  Successful metric evaluation alone is explicitly `acceptance_status=not_evaluated`.
+- **W05: implementation and software validation in progress; engine NOT_RUN.**
+  `_execution_contract.py` and `_execution_service.py` implement identity,
+  generation, managed revisions, permission checks and canonical project paths.
+  Review corrections reject user-declared dynamic effects and invalidate old
+  revisions after external-change reconciliation. These are managed observations,
+  not a COMSOL cross-client atomic CAS. Production registration now passes every
+  legacy tool through `_mcp_gateway.py`; backend integration remains underway.
+- **W06: implementation in progress; engine NOT_RUN.** The read-only inventory
+  `evidence/phase2/inventory/w06_worker_api_inventory_20260918.json` rechecked the
+  existing server PID/start time/listener and official JDK/client interfaces.
+  It did not connect to or mutate COMSOL. A persistent Java worker and separate
+  control service are being integrated; control transport tests establish that
+  lost responses do not automatically resubmit operations.
+- **W07: implementation in progress; engine NOT_RUN.** Atomic-save file-I/O tests
+  and their limitations are in `evidence/phase2/w07/save/`. These tests do not
+  satisfy a real COMSOL save, reopen, disk-full or process-restart acceptance.
+  Durable operation/job storage and idempotency are being integrated after the
+  execution contract and worker interfaces.
+
+Current software test commands use the interpreter recorded in W02 above:
+`python -m pytest -q tests/test_registration.py tests/test_mcp_gateway.py tests/test_control_client.py`
+returned **10 passed**. All public MCP registrations carry execution metadata;
+business failures propagate `isError=true`. No mock/unit result upgrades the
+historically unavailable Windows, Intel Mac, COMSOL 6.3 or GUI combinations.
+Their real-environment acceptance remains **BLOCKED / UNVERIFIED**.
+
+Next dependency: finish W05 service integration, exercise the persistent-worker
+main path and W06 queue/timeout behavior, then complete W07 durable recovery and
+atomic-save acceptance. Record fresh evidence before phase completion and fork
+synchronization. W08 remains **NOT_RUN**.
+
+### Phase-two software checkpoint — implementation not yet accepted
+
+- **Software regression PASS:** the final command using the W02 interpreter,
+  `python -m pytest -q`, returned **156 passed in 5.10s**. Exact command,
+  timestamp and output are in `evidence/phase2/software_checkpoint/`.
+  The intermediate 153-pass/1-fail run is retained: its stale driver test
+  incorrectly prohibited the real `run_study` submission required by T027.
+- **Production transport PASS, health only:**
+  `evidence/phase2/runs/20260918T220200Z/` records a fresh stdio MCP host reaching
+  the existing control daemon in approximately 16 ms. The returned state was
+  `worker_connected=false`. This does **not** verify COMSOL connection, model
+  operations, long-solve responsiveness or a platform/version combination.
+  Earlier startup failures remain in `20260918T131245049606Z/` and
+  `20260918T131411143652Z/`; they are not silently replaced by this narrower test.
+- **W05/W06/W07 real acceptance BLOCKED / UNVERIFIED:** automatic approval review
+  rejected the live Phase-two workflow because it interpreted the visible user
+  scope as W01–W04. The active Goal records W05–W07, but this discrepancy was
+  not treated as permission to bypass the rejection. Explicit user confirmation
+  was requested; see `evidence/phase2/authorization_checkpoint.json`. No live
+  write/solve/save/reopen or fault-injection retry followed that rejection.
+- Implemented production routing is stdio gateway → persistent control daemon
+  → serialized execution service → persistent Java Worker. Software tests cover
+  identities/revisions, private-path denial, actual queue-start deadlines,
+  independent health/status/log reads, same-key reuse, UNKNOWN reconciliation,
+  schema handling and atomic operation/job observations. A Worker-held global
+  endpoint lock prevents a different control home from establishing a second
+  queue for the same Server while the original Worker survives. The lock tests
+  use isolated Java loopback workers and do not contact COMSOL.
+- The legacy commit fix writes the configured artifact path explicitly while
+  preserving the server model's observed source identity. The artifact path is
+  not substituted for `getFilePath()` in the visible-main guard. Atomic save
+  file-I/O tests preserve the previous complete file and failure candidates;
+  **T030 real disk-full save remains NOT_RUN**. A separate 16 MB disposable image
+  is prepared at `output/phase2-disk-test-volume`; it has not been filled or used
+  for a COMSOL save. The image and runtime credentials remain ignored.
+- Repeatable real test entries are `tools/phase2_run_mcp.py`,
+  `tools/phase2_recovery_mcp.py` and `tools/phase2_disk_full_mcp.py`. T027 requires
+  an actual pending Java `run` request before closing its submitting MCP host;
+  a short fixture that misses that window cannot receive PASS. T028 verifies
+  private PID, owner and command before any task-owned process signal. None of
+  these entries authorizes terminating the COMSOL Server.
+- Changed files and source hashes are recorded in
+  `evidence/phase2/software_checkpoint/changed_files.json`. This remains an
+  uncommitted Phase-two worktree, not a completed-phase delivery. The Phase-one
+  fork commit remains `bdf557d6e8a19489d6220fcedc01e7bc53fd5c25`; Phase two has
+  **not** been published or marked complete. After approval, finish all current
+  executable real acceptance, update evidence, review, and synchronize the fork.
+  Windows, Intel Mac, COMSOL 6.3 and GUI remain BLOCKED/UNVERIFIED. Do not enter W08.
+
+The user subsequently answered **“批准”** to the explicit Phase-two real-engine
+and task-owned process recovery approval request. The authorization blocker is
+resolved in `evidence/phase2/authorization_checkpoint.json`; real acceptance
+resumes without changing the W05–W07 scope or the prohibition on stopping the
+COMSOL Server. The earlier rejection remains preserved as historical evidence.
+
+### Phase-two approved live checkpoint — acceptance still in progress
+
+- The approved production stdio MCP → control service → persistent Java Worker
+  → COMSOL 6.4.0.293 main flow passed in
+  `evidence/phase2/runs/20260918T141019Z/`: load, same-tag/type reuse and
+  conflict rejection, managed revision conflict, request-key/hash conflict,
+  real solve, analytic `max(abs(u-2)) < 1e-8`, atomic MPH save and reopen from
+  a new MCP host. This checkpoint does not yet establish a new Java Worker
+  reopen or T012 long-solve latency. Earlier failed attempts remain retained.
+- Task-owned idle Worker replacement passed in
+  `evidence/phase2/recovery/20260918T140715Z-worker-replace/`; the generation
+  changed and old refs were rejected. Idle control-process replacement passed
+  in `evidence/phase2/recovery/20260918T141150465969Z/`: same Worker, same
+  original solve job, no replay. The COMSOL Server was not terminated.
+- A subsequent full software run returned **166 passed in 5.68s**. This is an
+  intermediate result; final source hashes and tests will follow the remaining
+  driver/error-propagation changes.
+- Long-solve, host-disconnect, private-path rejection, disk-full preservation,
+  and independent Worker reopen evidence are being completed. A refined real
+  fixture has 69,154 elements; its preparation is explicitly separated from
+  MCP acceptance. Insufficient sampling windows remain BLOCKED.
+- W05–W07 are not yet declared delivered; W08 remains NOT_RUN. Unavailable
+  Windows/Intel Mac/6.3/GUI environments remain BLOCKED/UNVERIFIED.
+
+### Phase-two boundary — W05/W06/W07 accessible acceptance
+
+The current outcome is recorded in `evidence/phase2_acceptance.json`. It
+separates successful scoped behavior from the external-event failure and
+unavailable platform/GUI combinations. No W08 work was started.
+
+**W05:** The production gateway now routes legacy calls through session/model
+refs, Worker connection generations, managed revisions, request hashes,
+permission/effect checks and canonical project paths. Same-key reuse and
+different-body rejection, same-tag/type reuse and conflict, stale revisions,
+and absolute/parent/private/symlink denial passed on the real current route.
+The independent Java client parameter edit was observed by fingerprint, read
+back as `2`, and the old revision write was rejected. However, the native
+`ModelChangedHandler` counter did **not** advance: its supplemental assertion
+remains **FAIL**, general property/event coverage **UNVERIFIED**, and full
+Desktop T011 **BLOCKED**. Managed revisions do not provide a cross-client
+atomic CAS. These limits are exposed in capability metadata; no full-model
+external-edit guarantee is made. See
+`evidence/phase2/followup/20260918T142300Z-external-api/`.
+
+**W06:** One persistent Java Worker and one Server-wide engine queue are wired
+into production stdio MCP. Separate cached health/status/log queries remained
+responsive during an actual refined-model solve. T012 recorded 20 pending-run
+samples per endpoint: p95 health/status/log was 4.75/4.11/6.11 ms. A model
+inspection queued behind the solver and submitted no Java requests until the
+solve finished. A 0.2-second execution deadline and 0.1-second no-progress
+warning were observed while the job remained RUNNING; null execution timeout
+also completed. Same-model queue expiry returned NOT_EXECUTED and the original
+solve succeeded. T028 verified owned idle control and Worker replacement,
+unchanged original job and rejected stale refs. No COMSOL Server was killed.
+Evidence: `evidence/phase2/runtime-acceptance/`, `evidence/phase2/recovery/`,
+and `evidence/phase2/followup/20260918T142510Z-same-model-queue/`.
+
+**W07:** SQLite persists operations/jobs, identities/revisions, artifacts and
+checkpoints with schema handling and atomic status updates. During real solve,
+closing the submitting MCP host and reconnecting with the original key reused
+one operation/job and retrieved its successful result (T027/T057). Actual
+COMSOL save on the separate 16 MiB test volume failed for lack of space; the
+last complete MPH retained its SHA-256 and ZIP integrity (T030). The filler
+was removed and the zero-byte COMSOL scratch failure artifact preserved. A
+normal eject returned resource busy; the image remains mounted, with no forced
+eject or Server interruption. A newly started Java Worker independently loaded
+the saved `after.mph` and passed the analytic metric. Evidence:
+`evidence/phase2/disk-full/20260918T142204354278Z/` and
+`evidence/phase2/followup/20260918T142450Z-fresh-worker-reopen/`.
+
+**Legacy safety closure:** regression tests cover complete static batch
+preflight, applied/failed/not-executed results, no second implicit solve, metric
+failure blocking iteration success/snapshot, and cleanup/unknown state
+propagation. Both required-metric and ordinary-expression failures were also
+observed through real MCP with outer `isError=true`. Idempotent feature creation
+now verifies type; legacy empty property values retain their prior semantics.
+
+Run entry points (using the W02 Python interpreter and the approved private
+COMSOL preferences/home):
+
+- `python tools/phase2_run_mcp.py` — full production solve/metric/save chain;
+  exact input and environment are retained per run.
+- `python tools/phase2_recovery_mcp.py --mode host-disconnect` — real fixture
+  loading, pending-solve control sampling, queueing and original-job recovery.
+- `python tools/phase2_recovery_mcp.py --mode control-restart|worker-replace|path-security`
+  — each mode has explicit arguments and private process identity guards.
+- `python tools/phase2_disk_full_mcp.py` — requires the separately mounted
+  bounded test volume and prior complete MPH; never fills an ordinary directory.
+- `python tools/phase2_followup_mcp.py --mode fresh-worker-reopen|external-api|same-model-queue`
+  — scoped supplementary cases; external API is not Desktop acceptance.
+
+Final software output, changed-file hashes and evidence integrity audit are in
+`evidence/phase2/final_software/` and `evidence/phase2/final_audit/`. Historical
+failures remain intact: sandbox-denied `ps`/startup, Worker reflection and
+allowlist defects fixed by later runs, and the first buffered-sampling window
+miss. The successful follow-up did not rewrite these old verdicts.
+
+Only macOS Apple Silicon / COMSOL 6.4.0.293 / external JDK 11 was tested.
+Windows, Intel Mac, COMSOL 6.3 and GUI stay **BLOCKED/UNVERIFIED**. All current
+executable cases have observations; the native callback limitation is an
+explicit remaining issue, not a universal compatibility claim. This boundary
+is prepared for the authorized ordinary fork synchronization. The next work
+package is W08 (depends on W04/W06), **NOT_RUN**, requiring a new phase request.
+
+Final phase-boundary software command `python -m pytest -q` returned
+**172 passed in 5.30s** (`evidence/phase2/final_software/pytest.txt`).
+The final idle control restart loaded the current capability metadata and
+preserved the original job/Worker without replay; T028 PASS is retained in
+`evidence/phase2/recovery/20260918T143106236174Z/`.

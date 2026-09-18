@@ -1,0 +1,104 @@
+[
+  {
+    "operation": "initialize",
+    "response": {
+      "meta": null,
+      "protocolVersion": "2025-11-25",
+      "capabilities": {
+        "experimental": {},
+        "logging": null,
+        "prompts": {
+          "listChanged": false
+        },
+        "resources": {
+          "subscribe": false,
+          "listChanged": false
+        },
+        "tools": {
+          "listChanged": false
+        },
+        "completions": null,
+        "tasks": null
+      },
+      "serverInfo": {
+        "name": "comsol-mcp-server",
+        "title": null,
+        "version": "1.29.1",
+        "websiteUrl": null,
+        "icons": null
+      },
+      "instructions": null
+    }
+  },
+  {
+    "operation": "server_connect",
+    "arguments": {
+      "host": "127.0.0.1",
+      "port": 56388,
+      "execution": {
+        "idempotency_key": "phase2-connect",
+        "request_id": "phase2-connect"
+      }
+    },
+    "elapsed_s": 1.661543584021274,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "connected": true,
+        "server_ownership": "shared",
+        "endpoint": "127.0.0.1:56388",
+        "session_id": "session-2ac9ad344ed365aa21e2c02f",
+        "server_instance_id": "839caccc73a22580dcbc23389be23c036ecc1e4b6d6a74ffc89758994f51506b",
+        "worker": {
+          "host": "127.0.0.1",
+          "port": 49657,
+          "pid": 23139,
+          "generation": 2,
+          "instance_id": "52cb310d-2fa3-4a92-b905-ffb5fb782d6f",
+          "connected": true,
+          "server": "127.0.0.1:56388"
+        }
+      },
+      "execution": {
+        "session_id": "session-2ac9ad344ed365aa21e2c02f",
+        "model_ref": null,
+        "revision": null,
+        "request_id": "phase2-connect",
+        "operation_id": "b249675d-acd0-4489-afc8-d4dcb5c38db1",
+        "request_hash": "d0d1a6e235f75ba28e44c93950f16ad94da94480cc43c7d18e83c67c39872375",
+        "idempotency_key": "phase2-connect",
+        "job_id": "a3a2974c-3559-4deb-b826-71e939fb4d9d"
+      }
+    }
+  },
+  {
+    "operation": "model_load",
+    "arguments": {
+      "path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+      "execution": {
+        "idempotency_key": "phase2-load",
+        "request_id": "phase2-load"
+      }
+    },
+    "elapsed_s": 0.48997770802816376,
+    "outer_isError": true,
+    "payload": {
+      "success": false,
+      "data": {},
+      "error": {
+        "code": "EXECUTION_STATE_UNKNOWN",
+        "message": "backend execution failed; inspect worker evidence",
+        "safe_retry": false,
+        "type": "JavaWorkerError"
+      },
+      "execution": {
+        "request_id": "phase2-load",
+        "operation_id": "233361f5-d184-417e-b349-c02c04ec1d9d",
+        "request_hash": "40a69b1f40129485b56e80d3aa24d33bf4168feb847b123b81bee43f297e8f94",
+        "idempotency_key": "phase2-load",
+        "job_id": "702f575d-abeb-4b13-b7e5-5060c6ddb4a5"
+      }
+    }
+  }
+]

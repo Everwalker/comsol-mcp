@@ -7,7 +7,7 @@ import json
 from typing import Any
 
 from comsol_mcp._state import (
-    _run_tool, _run_tool_readonly, _safe_model_label,
+    _run_tool, _run_tool_readonly, _safe_model_label, ToolExecutionError,
 )
 from comsol_mcp._model import _require_visible_main
 from comsol_mcp._model_ops import (
@@ -16,7 +16,7 @@ from comsol_mcp._model_ops import (
     _eval_global_last, _eval_domain_average_last,
     _eval_boundary_average_last, _eval_extremum_last,
     _numeric_result, _evaluate_aggregate, _coerce_eval_value, _last_scalar,
-    _evaluate_expression_safely,
+    _evaluate_expression_safely, NumericalCleanupError,
 )
 
 
@@ -89,12 +89,17 @@ def evaluate_expressions(expressions_json: str = "[]", max_result_size: int = 0,
                     row["last_value"] = _coerce_eval_value(_last_scalar(value))
 
                 row["ok"] = True
+            except NumericalCleanupError as exc:
+                raise ToolExecutionError(
+                    "Temporary numerical cleanup failed; engine result state is unknown.",
+                    data={"results": results, "cleanup_failed": True, "engine_state_unknown": True, "safe_retry": False},
+                ) from exc
             except Exception as exc:
                 row["ok"] = False
                 row["error"] = str(exc)
             results.append(row)
 
-        return {
+        payload = {
             "label": _safe_model_label(model),
             "results": results,
             "count": len(results),
@@ -102,6 +107,16 @@ def evaluate_expressions(expressions_json: str = "[]", max_result_size: int = 0,
             "ephemeral_mutation": True,
             "max_result_size_ignored": int(max_result_size) if max_result_size > 0 else None,
         }
+        if not all(row.get("ok", False) for row in results):
+            # An invalid expression is a business failure, never a successful
+            # read.  Temporary-node cleanup has already succeeded here; keep
+            # it distinct from NumericalCleanupError above, which is unsafe.
+            raise ToolExecutionError(
+                "One or more expressions could not be evaluated.",
+                data={**payload, "status": "partial", "partial_change": False,
+                      "failed_item_may_have_changed": False, "safe_retry": True},
+            )
+        return payload
 
     return _run_tool("evaluate_expressions", _impl)
 
@@ -150,18 +165,76 @@ def get_core_metrics(metrics_json: str = "[]", evaluation_policy: str = "ephemer
             try:
                 value = _evaluate_aggregate(model, expression, str(definition.get("aggregate", "none")), definition.get("domains"), definition.get("boundaries"), str(definition.get("time_point", "last")))
                 results.append(_numeric_result(name, expression, value))
+            except NumericalCleanupError as exc:
+                raise ToolExecutionError(
+                    "Temporary numerical cleanup failed while evaluating required metrics; engine result state is unknown.",
+                    data={"results": results, "cleanup_failed": True, "engine_state_unknown": True, "safe_retry": False},
+                ) from exc
             except Exception as exc:
                 results.append(_numeric_result(name, expression, ok=False, error=str(exc)))
         solve_status = "success" if all(row.get("ok", False) for row in results) else "partial"
-        return {
+        payload = {
             "label": _safe_model_label(model),
             "solve_status": solve_status,
             "solution_tag": sol_tag,
             "results": results,
             "evaluation_policy": policy,
         }
+        if solve_status != "success":
+            raise ToolExecutionError(
+                "Required metric evaluation was partial; no acceptance result is available.",
+                data={
+                    **payload,
+                    "execution_success": True,
+                    "acceptance_status": "failed",
+                },
+            )
+        return payload
 
     return _run_tool("get_core_metrics", _impl)
+
+
+def _parse_parameter_updates(parameters_json: str) -> list[dict[str, str]]:
+    """Validate the complete parameter batch before mutating a model."""
+    parsed = json.loads(parameters_json)
+    if not isinstance(parsed, list):
+        raise ValueError("parameters_json must be a JSON array.")
+    updates: list[dict[str, str]] = []
+    for item in parsed:
+        if not isinstance(item, dict):
+            raise ValueError("Each parameter entry must be an object.")
+        raw_name = item.get("name")
+        raw_expression = item.get("expression")
+        if not isinstance(raw_name, str) or not raw_name.strip():
+            raise ValueError("Parameter name is required.")
+        if not isinstance(raw_expression, str) or not raw_expression.strip():
+            raise ValueError("Parameter expression is required.")
+        updates.append({"name": raw_name.strip(), "expression": raw_expression.strip()})
+    return updates
+
+
+def _apply_parameter_updates(model, updates: list[dict[str, str]]) -> list[dict[str, str]]:
+    """Apply a prevalidated batch and make partial engine mutation explicit."""
+    applied: list[dict[str, str]] = []
+    for index, update in enumerate(updates):
+        try:
+            model.java.param().set(update["name"], update["expression"])
+        except Exception as exc:
+            failed = {**update, "error": str(exc)}
+            raise ToolExecutionError(
+                "Parameter batch was partially applied; inspect applied, failed, and not_executed before retrying.",
+                data={
+                    "applied": applied,
+                    "failed": failed,
+                    "not_executed": updates[index + 1 :],
+                    "atomic": False,
+                    "partial_change": bool(applied),
+                    "failed_item_may_have_changed": True,
+                    "safe_retry": False,
+                },
+            ) from exc
+        applied.append(dict(update))
+    return applied
 
 
 def set_parameters(parameters_json: str) -> str:
@@ -169,19 +242,8 @@ def set_parameters(parameters_json: str) -> str:
 
     def _impl() -> dict[str, Any]:
         model = _require_visible_main("set_parameters")
-        parsed = json.loads(parameters_json)
-        if not isinstance(parsed, list):
-            raise ValueError("parameters_json must be a JSON array.")
-        updated = []
-        for item in parsed:
-            if not isinstance(item, dict):
-                raise ValueError("Each parameter entry must be an object.")
-            name = str(item.get("name", "")).strip()
-            expression = str(item.get("expression", "")).strip()
-            if not name:
-                raise ValueError("Parameter name is required.")
-            model.java.param().set(name, expression)
-            updated.append({"name": name, "expression": expression})
+        updates = _parse_parameter_updates(parameters_json)
+        updated = _apply_parameter_updates(model, updates)
         return {"updated": updated, "count": len(updated)}
 
     return _run_tool("set_parameters", _impl)

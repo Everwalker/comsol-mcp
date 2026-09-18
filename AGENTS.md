@@ -23,7 +23,18 @@ comsol_mcp/
   mcp_server.py            # Thin entrypoint: imports + register + main()
 ```
 
-**35 MCP tools** registered via `mcp.add_tool()` in each module's `register()` function.
+The registry exposes **58 MCP tools**: 51 legacy names and 7 execution/control
+tools. The gateway retains legacy arguments and adds an optional `execution`
+object for model identity, expected revision, idempotency and timeout settings.
+All production calls route through the control daemon. Registration alone is
+not evidence that a capability passed real COMSOL acceptance.
+
+The stdio host uses `_mcp_gateway.py` and `_control_client.py`; it does not own
+the lifetime of a computation. `_control_daemon.py` serializes engine work,
+`_managed_backend.py` binds legacy callbacks to `_execution_service.py`, and
+`_java_worker.py` communicates with the persistent Java Worker. `_operation_store.py`
+persists jobs and results; `_runtime_state.py` restores identity conservatively.
+Cached health/status/log queries do not enter the engine queue.
 
 ## Build and Run
 
@@ -31,7 +42,7 @@ comsol_mcp/
 pip install -e .          # install in editable mode
 pip install -e ".[dev]"   # with pytest
 python -m comsol_mcp.mcp_server   # start MCP server
-pytest                           # run tests (40 tests, all without COMSOL)
+pytest                           # run the evolving non-COMSOL unit suite
 ```
 
 ## Module Dependency Graph
@@ -56,12 +67,18 @@ No circular imports.
 
 ## Key Constraints
 
-- **Windows-only** (COMSOL is Windows)
+- **Target runtime matrix:** Windows x64, macOS Apple Silicon, and macOS Intel;
+  COMSOL 6.3 and 6.4. Current verification is limited to recorded accessible
+  environments; code alone never establishes platform or version support.
 - **Python 3.10+**
-- **35 tools** with stable surface — don't change names or signatures
+- **51 legacy tool names** retain existing arguments; do not remove them silently.
 - **Entrypoint backward compat**: `python -m comsol_mcp.mcp_server`, `from comsol_mcp.mcp_server import main`
 - **Visible-main lock**: After `load_visible_main_model()`, tools are guarded by identity check (tag/label/path)
-- **Global state**: All mutable state in `_server.py`, guarded by `_runtime_lock` (RLock)
+- **State**: legacy globals in `_server.py` remain guarded by `_runtime_lock`;
+  execution identity and durable job state belong to the control service.
+- **Shared Server**: never terminate it to implement a request timeout. Worker
+  endpoint locks and the single engine queue apply across models. An expired
+  RPC wait or execution deadline does not prove that COMSOL stopped.
 
 ## Tool Classification
 
@@ -70,6 +87,24 @@ No circular imports.
 | SAFE_READ | server_info, check_server_port, workflow_info, model_tree, get_parameters, evaluate_expressions, get_core_metrics | Always allowed |
 | SAFE_WRITE | set_parameters, ensure_*, create/update/delete/run_feature, run_study, run_visible_main_iteration, save_main_model_snapshot, save_model | Allowed if identity matches |
 | RESTRICTED | commit_current_main_model, model_create, model_load, prune_loaded_models | Blocked entirely when locked |
+
+This table describes the legacy visible-main guard only. The production effect
+registry in `_execution_contract.py` also applies: result evaluation is an
+ephemeral mutation and requires `project_write` permission and a current
+`expected_revision`. A legacy `SAFE_READ` label does not bypass these checks.
+
+Managed calls use `execution.model_ref` returned by load/adopt and
+`execution.expected_revision` from the latest response. Reuse the same
+`idempotency_key` for an uncertain retry of the same request; a different body
+with that key is rejected. `server_instance_id` is a conservative Worker
+connection epoch, not an independently observed COMSOL process UUID. A Worker
+replacement invalidates old refs even when the COMSOL Server survives.
+
+`rpc_timeout_s` limits caller waiting, `queue_timeout_s` limits time before
+dispatch, and `execution_timeout_s` records an exceeded running deadline
+without killing the Server. A null execution deadline has no time limit.
+`no_progress_warning_s` emits an observation warning, not a cancellation.
+Inspect the original job after a timeout; do not submit a replacement solve.
 
 ## Cross-Module Tool Calls
 
@@ -85,6 +120,9 @@ These are resolved by importing the target function from the other module.
 1. Add the function to the appropriate `_tools_*.py` module
 2. Add `mcp_instance.add_tool(function_name)` to that module's `register()` function
 3. If the tool modifies model state, add it to the appropriate classification set in `_server.py`
+4. Classify its effect in `_execution_contract.py`; unclassified production
+   operations fail closed. Add execution-contract and actual engine evidence
+   appropriate to the operation.
 
 ## How to Add a New Helper
 
@@ -94,7 +132,8 @@ These are resolved by importing the target function from the other module.
 
 ## Testing
 
-- `pytest` runs 40 tests that don't need COMSOL
+- `pytest` runs the non-COMSOL unit suite; use its actual result/count in
+  evidence rather than copying a stale count.
 - Tests cover: sanitize_label, normalize_properties, coerce_eval, last_scalar, port_is_open, workflow_state IO, friendly_connection_error, numeric_result, resolve_path, normcase_path, tool registration, classification sets
 - Integration tests requiring a live COMSOL Server are marked `@pytest.mark.comsol_server` and skipped by default
 

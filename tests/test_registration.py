@@ -52,6 +52,13 @@ EXPECTED_TOOLS = [
     "run_study_async",
     "run_study_status",
     "runtime_poc_v64",
+    "session_health",
+    "model_inspect",
+    "model_adopt",
+    "job_status",
+    "job_log",
+    "job_result",
+    "job_reconcile",
 ]
 
 
@@ -72,3 +79,11 @@ def test_tool_count():
     from comsol_mcp._server import mcp
 
     assert len(mcp._tool_manager._tools) == len(EXPECTED_TOOLS)
+
+
+def test_every_public_tool_uses_the_execution_gateway():
+    import comsol_mcp.mcp_server as entry
+    import inspect
+    for tool in entry.mcp._tool_manager._tools.values():
+        assert inspect.iscoroutinefunction(tool.fn)
+        assert "execution" in tool.parameters["properties"]

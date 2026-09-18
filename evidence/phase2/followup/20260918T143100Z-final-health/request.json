@@ -1,0 +1,21 @@
+{
+  "model": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+  "server": {
+    "pid": 84749,
+    "host": "127.0.0.1",
+    "port": 56388
+  },
+  "required": [
+    "connect/load",
+    "revision",
+    "idempotency",
+    "metrics",
+    "atomic save",
+    "fresh MCP reopen"
+  ],
+  "not_run_without_real_long_solve": [
+    "T012 p95 during long solve",
+    "T026 timeout queueing",
+    "T027 host disconnect reconciliation"
+  ]
+}

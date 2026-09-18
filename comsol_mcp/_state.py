@@ -334,6 +334,8 @@ def _resolve_output_path(value: str, default_path: Path) -> Path:
 # Error handling
 # ---------------------------------------------------------------------------
 def _require_mph() -> None:
+    if _srv._remote_client_factory is not None:
+        return
     mph = _get_mph()
     if mph is None:
         raise RuntimeError(
@@ -408,6 +410,20 @@ def _workflow_snapshot_path(label: str, workflow: dict[str, Any] | None = None) 
 # ---------------------------------------------------------------------------
 # Tool result / run_tool (used by every MCP tool function)
 # ---------------------------------------------------------------------------
+class ToolExecutionError(RuntimeError):
+    """A business failure with auditable data for the legacy JSON envelope.
+
+    The W05 gateway converts an envelope with ``success: false`` into the
+    outer MCP ``isError`` result.  Retaining structured details here keeps
+    direct legacy tool-to-tool calls compatible while avoiding a fiction that
+    a partially applied engine mutation was successful.
+    """
+
+    def __init__(self, message: str, *, data: dict[str, Any] | None = None):
+        super().__init__(message)
+        self.data = data or {}
+
+
 def _tool_result(tool: str, success: bool, data: dict[str, Any] | None = None, error: str = "") -> str:
     _srv._last_command = tool
     _srv._last_error = error
@@ -446,6 +462,9 @@ def _run_tool_readonly(tool: str, callback) -> str:
     try:
         data = callback()
         return _tool_result(tool, True, data=data)
+    except ToolExecutionError as exc:
+        logging.exception("Tool %s failed", tool)
+        return _tool_result(tool, False, data=exc.data, error=str(exc))
     except Exception as exc:
         logging.exception("Tool %s failed", tool)
         return _tool_result(tool, False, error=str(exc))
@@ -466,6 +485,9 @@ def _run_tool(tool: str, callback) -> str:
         try:
             data = callback()
             return _tool_result(tool, True, data=data)
+        except ToolExecutionError as exc:
+            logging.exception("Tool %s failed", tool)
+            return _tool_result(tool, False, data=exc.data, error=str(exc))
         except Exception as exc:
             logging.exception("Tool %s failed", tool)
             return _tool_result(tool, False, error=str(exc))

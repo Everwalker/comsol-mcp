@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-09-18T13:59:33.725025+00:00",
+  "status": "PASS",
+  "scope": "software only; real backend acceptance ongoing",
+  "corrections": [
+    "permit explicit unbound visible-model bootstrap and local workflow reads",
+    "managed workflow startup does not call legacy disconnect/reconnect",
+    "explicit reconnect invokes safe Worker.start dead-PID replacement",
+    "async public study routes synchronous callback inside server queue",
+    "reconcile retains durable old-Worker completion observations after replacement",
+    "reconcile scans every event page; no 1000-event truncation"
+  ],
+  "tests": "python -m pytest -q tests/test_control_daemon.py tests/test_managed_backend.py",
+  "result": "11 passed in 0.26s",
+  "limitations": "UNKNOWN callback outcome remains UNKNOWN even with complete API quiescence observations; no automatic replay"
+}

@@ -26,40 +26,57 @@ def run_visible_main_iteration(label: str, parameters_json: str = "[]", study_ta
     """Run one locked visible-main iteration: set parameters, solve, extract metrics, save a copy snapshot."""
 
     def _impl() -> dict[str, Any]:
-        from comsol_mcp._tools_params import get_core_metrics, _validate_metric_definitions
+        from comsol_mcp._tools_params import (
+            get_core_metrics, _validate_metric_definitions,
+            _parse_parameter_updates, _apply_parameter_updates,
+        )
+        from comsol_mcp._tools_workflow import _run_study_on_model
+        from comsol_mcp._state import ToolExecutionError
         _validate_metric_definitions(metrics_json)  # reject before any writes/solve
 
         model = _require_visible_main("run_visible_main_iteration")
         before = _visible_main_identity(model)
-        parsed = json.loads(parameters_json or "[]")
-        if not isinstance(parsed, list):
-            raise ValueError("parameters_json must be a JSON array.")
-
-        updated = []
-        for item in parsed:
-            if not isinstance(item, dict):
-                raise ValueError("Each parameter entry must be an object.")
-            name = str(item.get("name", "")).strip()
-            expression = str(item.get("expression", "")).strip()
-            if not name:
-                raise ValueError("Parameter name is required.")
-            model.java.param().set(name, expression)
-            updated.append({"name": name, "expression": expression})
+        updates = _parse_parameter_updates(parameters_json or "[]")
+        updated = _apply_parameter_updates(model, updates)
 
         study = str(study_tag or "").strip()
-        if study:
-            try:
-                study_label = str(model.java.study().get(study).label())
-                model.solve(study_label)
-            except Exception:
-                model.solve(study)
-        else:
-            model.solve()
+        try:
+            _run_study_on_model(model, study)
+        except Exception as exc:
+            raise ToolExecutionError(
+                "Study execution failed after parameter writes; no metric or snapshot acceptance is available.",
+                data={
+                    "parameters_applied": updated,
+                    "solve_success": False,
+                    "metric_evaluation_success": False,
+                    "snapshot_saved": False,
+                    "acceptance_status": "not_evaluated",
+                    "safe_retry": False,
+                },
+            ) from exc
 
         # Metrics are task supplied; do not invoke legacy model-specific probes.
         metrics_payload = json.loads(get_core_metrics(metrics_json))
-        if not metrics_payload.get("success", False):
-            raise RuntimeError(metrics_payload.get("error", "get_core_metrics failed"))
+        metrics_data = metrics_payload.get("data", {})
+        metric_rows = metrics_data.get("results", []) if isinstance(metrics_data, dict) else []
+        if (
+            not metrics_payload.get("success", False)
+            or metrics_data.get("solve_status") != "success"
+            or not metric_rows
+            or not all(isinstance(row, dict) and row.get("ok", False) for row in metric_rows)
+        ):
+            raise ToolExecutionError(
+                metrics_payload.get("error", "Required metrics failed or were partial; snapshot was not saved."),
+                data={
+                    "execution_success": True,
+                    "parameters_applied": updated,
+                    "solve_success": True,
+                    "metric_evaluation_success": False,
+                    "metric_evaluation": metrics_data,
+                    "snapshot_saved": False,
+                    "acceptance_status": "failed",
+                },
+            )
         snapshot_payload = json.loads(save_main_model_snapshot(label))
         if not snapshot_payload.get("success", False):
             raise RuntimeError(snapshot_payload.get("error", "save_main_model_snapshot failed"))
@@ -88,6 +105,9 @@ def run_visible_main_iteration(label: str, parameters_json: str = "[]", study_ta
             "snapshot": snapshot_payload.get("data", {}),
             "identity_before": before,
             "identity_after": after,
+            "execution_success": True,
+            "metric_evaluation_success": True,
+            "acceptance_status": "not_evaluated",
         }
 
     return _run_tool("run_visible_main_iteration", _impl)
@@ -148,12 +168,16 @@ def commit_current_main_model(snapshot_label: str = "") -> str:
         snapshot_path = _workflow_snapshot_path(label, workflow)
         _save_model_copy(model, snapshot_path)
         model.java.label(resolved_main_label)
-        model.save()
+        model.save(str(resolved_main))
         # Saving the selected main model must not evict unrelated server models.
         removed_conflicts: list[dict[str, str]] = []
         removed_after_commit: list[dict[str, str]] = []
         kept_after_commit = []
-        _set_current_model(model, origin="workflow-main-committed", requested_path=str(resolved_main))
+        # The managed RemoteModel publisher writes a complete candidate and
+        # retains the bound server model's source identity.  Keep the artifact
+        # destination separate so the visible-main guard can still observe a
+        # later external change to the server model path.
+        _set_current_model(model, origin="workflow-main-committed")
         identity = _visible_main_identity(model)
         workflow = _write_workflow_state(
             {
@@ -166,6 +190,7 @@ def commit_current_main_model(snapshot_label: str = "") -> str:
                 "last_commit_at": _now_iso(),
                 "last_committed_current_main_model_path": str(resolved_main),
                 "last_committed_current_main_model_label": resolved_main_label,
+                "current_main_model_path": str(resolved_main),
                 "last_commit_removed_conflict_count": len(removed_conflicts),
                 "visible_main_locked": True,
                 "guard_level": "strict",
@@ -183,6 +208,7 @@ def commit_current_main_model(snapshot_label: str = "") -> str:
             "current_main_model_path": str(resolved_main),
             "current_main_model_label": resolved_main_label,
             "current_main_identity": identity,
+            "save_mode": "atomic_copy",
             "removed_conflicts": removed_conflicts,
             "remaining_loaded_models": kept_after_commit,
             "workflow": workflow,

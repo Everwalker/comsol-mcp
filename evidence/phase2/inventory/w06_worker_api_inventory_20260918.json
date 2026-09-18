@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-09-18",
+  "scope": "W06 persistent Java Worker implementation inventory",
+  "method": "read-only installation, process, socket, javap, and local COMSOL 6.4 documentation inspection; no ModelUtil.connect or model operation was issued",
+  "environment": {
+    "os": "macOS Apple Silicon (host architecture was not re-probed in this inventory)",
+    "comsol_install": "/Applications/COMSOL64/Multiphysics",
+    "comsol_version": "6.4 installation; exact build inherited from prior W02 evidence, not re-queried here because the launcher version command was sandbox-blocked",
+    "external_jdk": "Amazon Corretto OpenJDK 11.0.31+11-LTS",
+    "client_classpath_source": "/Applications/COMSOL64/Multiphysics/bin/comsolclientpath.txt",
+    "client_classpath_entries": 25,
+    "server_observation": {
+      "pid": 84749,
+      "started": "Fri Sep 18 17:46:07 2026",
+      "listener": "*.56388",
+      "ownership": "pre-existing dedicated Phase 1 server; this inventory did not connect to, stop, restart, or otherwise control it"
+    }
+  },
+  "verified_java_api": {
+    "ModelUtil": [
+      "connect()",
+      "connect(String,int)",
+      "connect(String,int,boolean)",
+      "connect(String,int,String,String)",
+      "disconnect()",
+      "tags()",
+      "model(String)",
+      "modelsUsedByOtherClients()",
+      "setServerBusyHandler(ServerBusyHandler)",
+      "setModelChangedHandler(ModelChangedHandler)",
+      "blockOtherClients(boolean)",
+      "getComsolVersion()"
+    ],
+    "ModelChangedHandler": {
+      "method": "handleModelChangeOnServer(ModelChangeInfo)",
+      "default_method": "triggeredByChangesFromThisClient()",
+      "change_info": "ModelChangeInfo.getModelTags()",
+      "documented_limit": "By default notification is for another client modifying a model in use by this client; it is not an atomic compare-and-swap primitive."
+    },
+    "model_identity_and_mutation": [
+      "Model.tag(), Model.label(), Model.getFilePath(), Model.location(), Model.locationUri(), Model.timeModified()",
+      "Model.save(), Model.save(String), Model.save(String,boolean)",
+      "Model.param().varnames(), get(String), set(String,String)"
+    ],
+    "study": [
+      "Study.run(), run(boolean), runNoGen(), runNoGen(String), continueRun()",
+      "No cancellation method was present in the inspected Study interface."
+    ]
+  },
+  "serialization_and_external_change_evidence": {
+    "official_documentation": [
+      {
+        "source": "COMSOL 6.4 Programming Reference Manual, PDF page 44, KB chunk 10799, sha256 5b7f23ad2eae77f59d71935f4f6c9b6b9ede380dc34da065181841e512bbc105",
+        "finding": "Several clients may connect, but only one client at a time can ask the server to perform an operation; ServerBusyHandler controls wait behavior."
+      },
+      {
+        "source": "COMSOL 6.4 ModelChangedHandler API, KB chunk 23166, sha256 97bdb9987b6f6c9d7d855385d67f3d9408fdb28a7c51469e61786dfb53e1fe0a",
+        "finding": "The handler is called when another client changes models in use by the registering client; ModelChangeInfo exposes changed tags."
+      },
+      {
+        "source": "COMSOL 6.4 ModelUtil API, KB chunk 23171, sha256 a5e4c080407a673a5dd78e95b9fb089d92c0f518477ffdcc4f62b3348085c4eb",
+        "finding": "blockOtherClients has no timeout and must be released by the requester; a disconnect releases it automatically."
+      }
+    ],
+    "implementation_consequence": "Use one worker queue per server, including reads that enter the engine. Register ModelChangedHandler after connect, maintain generation/revision outside COMSOL, and use blockOtherClients only for short authorized critical sections with finally release and watchdog evidence."
+  },
+  "ipc_dependency_check": {
+    "available_in_apiplugins": "COMSOL API/client jars listed by comsolclientpath.txt",
+    "observed_elsewhere_in_install": "Jackson 2.13.4 jars exist under plugins/, not in comsolclientpath.txt",
+    "decision": "Do not depend on COMSOL-bundled Jackson for the Worker protocol and do not copy commercial installation jars into this repository. Use a small repository-owned line-delimited JSON codec or a separately declared redistributable dependency after license review."
+  },
+  "legacy_surface": {
+    "current_backend": "Python MPh client with direct JPype/Java access stored in global _client/_current_model.",
+    "engine_access_files": [
+      "_connection.py",
+      "_model.py",
+      "_model_ops.py",
+      "_physics_ops.py",
+      "_solver_ops.py",
+      "_tools_geometry.py",
+      "_tools_params.py",
+      "_tools_snapshot.py",
+      "_tools_solver.py",
+      "_tools_workflow.py"
+    ],
+    "risk": "A Worker that offers only parameter/study/save methods cannot transparently preserve all legacy wrappers, because many wrappers directly navigate arbitrary COMSOL model nodes."
+  },
+  "minimum_worker_protocol_recommendation": {
+    "transport": "persistent localhost stdio or Unix-domain-socket child process with per-launch secret; newline-delimited JSON frames and bounded frame size",
+    "commands": [
+      "hello/runtime_info",
+      "connect/attach",
+      "session_snapshot",
+      "model_adopt",
+      "engine_call with a closed, versioned internal operation set",
+      "job_start/job_status/worker_health",
+      "save_to_temp",
+      "disconnect"
+    ],
+    "routing": "Retain legacy MCP names as Python compatibility wrappers, but route every COMSOL touch through the same server-keyed Worker queue. The internal engine_call set must initially cover the existing wrapper families (model tree, parameters, geometry/features, physics/variables/selections, solver/study, numerical evaluation, and save) rather than expose an external generic reflection/code API; external generic operations remain W08/W10 scope.",
+    "timeouts": "Control process enforces RPC and queue deadlines. Worker records execution/no-progress observations; an execution deadline only transitions job to RUNNING/UNKNOWN/RECONCILING and must never interrupt or kill a shared server.",
+    "revisions": "Before writes, compare expected revision and the current Worker model fingerprint/generation. ModelChangedHandler invalidates cached revision on changed tags; a post-write readback produces revision_after. This detects observed external changes but does not claim COMSOL-side atomic CAS."
+  },
+  "unverified": [
+    "A persistent Java Worker has not yet been compiled or connected in this inventory.",
+    "ModelChangedHandler delivery and changed-tag behavior have not yet been exercised against a live second client.",
+    "The actual listener was observed but no model call was made, so model availability and server authentication were not tested.",
+    "Windows, macOS Intel, COMSOL 6.3, and GUI Desktop binding remain UNVERIFIED/BLOCKED outside this macOS Apple Silicon COMSOL 6.4 inventory."
+  ]
+}

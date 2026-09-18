@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-09-18T13:57:56.899873+00:00",
+  "status": "NOT_RUN",
+  "source": "tools/java/Phase2Fixture.java",
+  "source_sha256": "23a93efdba18c98229de826744660d674a403a7a7e288a7953e32aeb95a265e4",
+  "compile": "PASS against installed COMSOL 6.4 client jars / external JDK 11",
+  "engine_calls_performed": false,
+  "scope": "test fixture preparation only; not MCP acceptance",
+  "bounds": {
+    "minimum_hmax": 0.006,
+    "maximum_elements": 160000,
+    "solve_in_builder": false
+  },
+  "next": "Wait until the managed queue is idle before preparing a new isolated MPH; formal solves then run through production MCP."
+}

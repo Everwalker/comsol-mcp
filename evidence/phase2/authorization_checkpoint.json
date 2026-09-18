@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-09-18T13:44:05.415592+00:00",
+  "status": "RESOLVED",
+  "scope": "real Phase2 COMSOL connect/load/write/solve/save/reopen and recovery acceptance",
+  "reason": "Automatic approval review requested explicit user confirmation after interpreting the visible scope as W01-W04 only. Active Goal records W05-W07, but shared-server mutations were not retried after rejection.",
+  "review_message": "This action was rejected due to unacceptable risk. Reason: The workflow performs live COMSOL model writes, solves, saves, and reopens against a shared server, while the user authorized only Phase 1 W01–W04 and explicitly required stopping before later phases. The agent must not attempt to achieve the same outcome via workaround, indirect execution, or policy circumvention. Proceed only with a materially safer alternative, or if the user explicitly approves the action after being informed of the risk. Otherwise, stop and request user input.",
+  "response": "User confirmation requested; pending. Continued only software implementation, unit tests and read-only control health.",
+  "safe_transport_evidence": "evidence/phase2/runs/20260918T220200Z/",
+  "engine_acceptance": "UNVERIFIED; no completed Phase2 COMSOL model action",
+  "resolution": {
+    "timestamp": "2026-09-18T13:48:10.100474+00:00",
+    "user_response": "批准",
+    "approved_scope": "Continue W05-W07 real COMSOL validation and fault recovery of task-owned control/Java Worker only; do not terminate COMSOL Server or enter W08"
+  }
+}

@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import concurrent.futures
 import logging
 from typing import Any
 
@@ -12,24 +11,11 @@ import comsol_mcp._server as _srv
 
 
 def _timed_call(func, *args, timeout: float = 30.0, error_msg=""):
-    """Call a potentially slow function with a hard timeout.
-
-    The key difference from ``with ThreadPoolExecutor``: uses
-    ``shutdown(wait=False)`` so that a hung Java call never blocks
-    the caller.  The worker thread is a daemon and will not prevent
-    process exit.
-    """
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    """Execute in the daemon queue; waiting is not engine cancellation."""
     try:
-        future = executor.submit(func, *args)
-        return future.result(timeout=timeout)
-    except concurrent.futures.TimeoutError:
-        raise RuntimeError(
-            error_msg
-            or f"Operation timed out after {timeout}s"
-        )
-    finally:
-        executor.shutdown(wait=False)
+        return func(*args)
+    except Exception:
+        raise
 
 
 def _disconnect_locked(*, shutdown_server: bool = False) -> None:
@@ -65,6 +51,9 @@ def _disconnect_locked(*, shutdown_server: bool = False) -> None:
 
 def _ensure_client_shell() -> Any:
     if _srv._client is None:
+        if _srv._remote_client_factory is not None:
+            _srv._client = _srv._remote_client_factory()
+            return _srv._client
         mph = _get_mph()
         if mph is None:
             raise RuntimeError("MPh is not available; cannot create client shell.")

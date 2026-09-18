@@ -1,0 +1,120 @@
+FFFF                                                                     [100%]
+=================================== FAILURES ===================================
+___________ test_parameter_static_preflight_happens_before_any_write ___________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a9b3da0>
+
+    def test_parameter_static_preflight_happens_before_any_write(monkeypatch):
+        from comsol_mcp import _tools_params
+    
+        model = _Model()
+        monkeypatch.setattr(_tools_params, "_run_tool", _direct_runner)
+        monkeypatch.setattr(_tools_params, "_require_visible_main", lambda _: model)
+    
+        with pytest.raises(ValueError, match="object"):
+            _tools_params.set_parameters('[{"name":"a","expression":"1"}, 42]')
+>       assert model.params.calls == []
+E       AssertionError: assert [('a', '1')] == []
+E         
+E         Left contains one more item: ('a', '1')
+E         Use -v to get more diff
+
+tests/test_phase2_legacy_control_flow.py:40: AssertionError
+____ test_parameter_runtime_failure_reports_applied_failed_and_not_executed ____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c5f3080>
+
+    def test_parameter_runtime_failure_reports_applied_failed_and_not_executed(monkeypatch):
+        from comsol_mcp import _tools_params
+>       from comsol_mcp._state import ToolExecutionError
+E       ImportError: cannot import name 'ToolExecutionError' from 'comsol_mcp._state' (/Users/everwalker/Desktop/comsol-mcp-project/comsol_mcp/_state.py)
+
+tests/test_phase2_legacy_control_flow.py:45: ImportError
+_________ test_study_solve_failure_is_not_retried_with_a_second_target _________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c5f3c50>
+
+    def test_study_solve_failure_is_not_retried_with_a_second_target(monkeypatch):
+        from comsol_mcp import _tools_workflow
+    
+        class Study:
+            def get(self, tag):
+                assert tag == "std1"
+                return type("StudyNode", (), {"label": lambda _self: "Study 1"})()
+    
+        class SolveModel:
+            java = type("Java", (), {"study": lambda _self: Study(), "label": lambda _self: "fixture"})()
+    
+            def __init__(self):
+                self.solve_targets = []
+    
+            def solve(self, target):
+                self.solve_targets.append(target)
+                raise RuntimeError("solver diverged")
+    
+        model = SolveModel()
+        monkeypatch.setattr(_tools_workflow, "_run_tool", _direct_runner)
+        monkeypatch.setattr(_tools_workflow, "_require_visible_main", lambda _: model)
+        with pytest.raises(RuntimeError, match="solver diverged"):
+            _tools_workflow.run_study("std1")
+>       assert model.solve_targets == ["Study 1"]
+E       AssertionError: assert ['Study 1', 'std1'] == ['Study 1']
+E         
+E         Left contains one more item: 'std1'
+E         Use -v to get more diff
+
+tests/test_phase2_legacy_control_flow.py:86: AssertionError
+___________ test_iteration_rejects_partial_metrics_and_does_not_save ___________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c5f2960>
+
+    def test_iteration_rejects_partial_metrics_and_does_not_save(monkeypatch):
+        from comsol_mcp import _tools_snapshot
+    
+        model = _Model()
+        model.java.tag = lambda: "mod1"
+        model.java.label = lambda: "fixture"
+        model.java.getFilePath = lambda: "/tmp/fixture.mph"
+        model.solve = lambda *_: None
+        monkeypatch.setattr(_tools_snapshot, "_run_tool", _direct_runner)
+        monkeypatch.setattr(_tools_snapshot, "_require_visible_main", lambda _: model)
+        monkeypatch.setattr(_tools_snapshot, "_visible_main_identity", lambda _: {"tag": "mod1", "path": "/tmp/fixture.mph"})
+        monkeypatch.setattr(_tools_snapshot, "_visible_main_mismatch", lambda *_: [])
+        monkeypatch.setattr(
+            "comsol_mcp._tools_params.get_core_metrics",
+            lambda *_args, **_kwargs: json.dumps({"success": True, "data": {"solve_status": "partial", "results": [{"ok": False, "error": "bad metric"}]}}),
+        )
+        monkeypatch.setattr(_tools_snapshot, "save_main_model_snapshot", lambda *_: pytest.fail("partial metrics must not save"))
+    
+        with pytest.raises(RuntimeError, match="metrics"):
+>           _tools_snapshot.run_visible_main_iteration(
+                "case",
+                metrics_json='[{"name":"u","expression":"u"}]',
+            )
+
+tests/test_phase2_legacy_control_flow.py:108: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+comsol_mcp/_tools_snapshot.py:93: in run_visible_main_iteration
+    return _run_tool("run_visible_main_iteration", _impl)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_phase2_legacy_control_flow.py:28: in _direct_runner
+    return callback()
+           ^^^^^^^^^^
+comsol_mcp/_tools_snapshot.py:63: in _impl
+    snapshot_payload = json.loads(save_main_model_snapshot(label))
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+_ = ('case',)
+
+>   monkeypatch.setattr(_tools_snapshot, "save_main_model_snapshot", lambda *_: pytest.fail("partial metrics must not save"))
+                                                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: partial metrics must not save
+
+tests/test_phase2_legacy_control_flow.py:105: Failed
+=========================== short test summary info ============================
+FAILED tests/test_phase2_legacy_control_flow.py::test_parameter_static_preflight_happens_before_any_write
+FAILED tests/test_phase2_legacy_control_flow.py::test_parameter_runtime_failure_reports_applied_failed_and_not_executed
+FAILED tests/test_phase2_legacy_control_flow.py::test_study_solve_failure_is_not_retried_with_a_second_target
+FAILED tests/test_phase2_legacy_control_flow.py::test_iteration_rejects_partial_metrics_and_does_not_save
+4 failed in 0.25s

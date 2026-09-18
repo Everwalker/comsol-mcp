@@ -482,7 +482,7 @@ def _normalize_properties(properties_json: str) -> list[tuple[str, list[str]]]:
             raise ValueError("Each properties_json entry must be an object.")
         name = str(item.get("name", "")).strip()
         if not name:
-            continue
+            raise ValueError("Property name is required.")
         if "values" in item:
             values = item.get("values")
             if not isinstance(values, list):
@@ -523,12 +523,41 @@ def _ensure_mesh_java(model: Any, component: str, mesh: str) -> dict[str, Any]:
 
 
 def _apply_feature_properties(feature: Any, properties: list[tuple[str, list[str]]]) -> list[dict[str, Any]]:
-    applied = []
-    for name, values in properties:
-        if len(values) <= 1:
-            feature.set(name, values[0] if values else "")
-            applied.append({"name": name, "value": values[0] if values else ""})
-        else:
-            feature.set(name, values)
-            applied.append({"name": name, "values": values})
+    """Apply prevalidated properties without claiming setter failures are atomic."""
+    from comsol_mcp._state import ToolExecutionError
+
+    applied: list[dict[str, Any]] = []
+    for index, (name, values) in enumerate(properties):
+        entry = {"name": name, "value": values[0] if values else ""} if len(values) <= 1 else {"name": name, "values": values}
+        try:
+            feature.set(name, (values[0] if values else "") if len(values) <= 1 else values)
+        except Exception as exc:
+            raise ToolExecutionError(
+                "Property batch was partially applied; the failing setter may have changed engine state.",
+                data={
+                    "applied": applied,
+                    "failed": {**entry, "error": str(exc)},
+                    "not_executed": [
+                        {"name": later_name, "value": later_values[0] if len(later_values) <= 1 and later_values else ""}
+                        if len(later_values) <= 1 else {"name": later_name, "values": later_values}
+                        for later_name, later_values in properties[index + 1 :]
+                    ],
+                    "partial_change": bool(applied),
+                    "failed_item_may_have_changed": True,
+                    "safe_retry": False,
+                },
+            ) from exc
+        applied.append(entry)
     return applied
+
+
+def _assert_existing_feature_type(feature: Any, requested_type: str, *, kind: str = "feature") -> None:
+    """Allow idempotent same-type creation, never silently reuse another type."""
+    try:
+        actual_type = str(feature.getType())
+    except Exception as exc:
+        raise RuntimeError(f"Cannot verify existing {kind} type before reuse: {exc}") from exc
+    if actual_type != str(requested_type):
+        raise ValueError(
+            f'Existing {kind} type conflict: requested "{requested_type}", found "{actual_type}".'
+        )

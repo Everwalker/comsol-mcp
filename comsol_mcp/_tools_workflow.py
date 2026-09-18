@@ -242,17 +242,30 @@ def run_study(study_tag: str = "") -> str:
     def _impl() -> dict[str, Any]:
         model = _require_visible_main("run_study")
         study = study_tag.strip()
-        if study:
-            try:
-                label = str(model.java.study().get(study).label())
-                model.solve(label)
-            except Exception:
-                model.solve(study)
-        else:
-            model.solve()
+        _run_study_on_model(model, study)
         return {"study_tag": study, "label": _safe_model_label(model)}
 
     return _run_tool("run_study", _impl)
+
+
+def _run_study_on_model(model, study_tag: str = "") -> None:
+    """Resolve a requested tag before one and only one solve invocation.
+
+    A resolution failure and a solver failure have different recovery paths.
+    In particular, a real solver failure must never cause an implicit retry
+    against a second target name.
+    """
+    study = str(study_tag or "").strip()
+    if not study:
+        model.solve()
+        return
+    try:
+        target = str(model.java.study().get(study).label())
+    except Exception as exc:
+        raise LookupError(f'Unable to resolve study tag "{study}" before solve: {exc}') from exc
+    if not target:
+        raise LookupError(f'Unable to resolve study tag "{study}" before solve: empty study label.')
+    model.solve(target)
 
 
 # ---------------------------------------------------------------------------
@@ -264,6 +277,7 @@ def _start_visible_main_workflow_payload(
     path: str = "",
     *,
     action: str,
+    managed_connection: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     from comsol_mcp._tools_connection import server_connect
 
@@ -283,7 +297,7 @@ def _start_visible_main_workflow_payload(
             "one_shot_client_allowed": False,
         }
     )
-    connect_payload = json.loads(server_connect(requested_host, requested_port, ""))
+    connect_payload = managed_connection if managed_connection is not None else json.loads(server_connect(requested_host, requested_port, ""))
     if not connect_payload.get("success", False):
         raise RuntimeError(connect_payload.get("error", "server_connect failed"))
     workflow = _read_workflow_state()

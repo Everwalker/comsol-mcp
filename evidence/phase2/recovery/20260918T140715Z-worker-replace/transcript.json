@@ -1,0 +1,3114 @@
+[
+  {
+    "host": "worker-before",
+    "operation": "initialize",
+    "response": {
+      "meta": null,
+      "protocolVersion": "2025-11-25",
+      "capabilities": {
+        "experimental": {},
+        "logging": null,
+        "prompts": {
+          "listChanged": false
+        },
+        "resources": {
+          "subscribe": false,
+          "listChanged": false
+        },
+        "tools": {
+          "listChanged": false
+        },
+        "completions": null,
+        "tasks": null
+      },
+      "serverInfo": {
+        "name": "comsol-mcp-server",
+        "title": null,
+        "version": "1.29.1",
+        "websiteUrl": null,
+        "icons": null
+      },
+      "instructions": null
+    }
+  },
+  {
+    "host": "worker-before",
+    "operation": "session_health",
+    "arguments": {},
+    "elapsed_s": 0.014997999998740852,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "status": "READY",
+        "control_pid": 27175,
+        "worker_connected": true,
+        "worker": {
+          "ok": true,
+          "status": "HEALTHY",
+          "generation": 4,
+          "instance_id": "24757bcb-7a10-4cdf-8cda-3443a2f44a68",
+          "connected": true,
+          "server": "127.0.0.1:56388",
+          "changed_count": 0,
+          "queued_or_running": 0,
+          "observed_at": 1789740587.220525
+        },
+        "session": {
+          "connected": true,
+          "server_ownership": "shared",
+          "endpoint": "127.0.0.1:56388",
+          "session_id": "session-2ac9ad344ed365aa21e2c02f",
+          "server_instance_id": "a28ccd1907d0d2234b8d6a31cb6c06f1844e0e207a30bb78ddfb8fdb4f7aa764",
+          "worker": {
+            "host": "127.0.0.1",
+            "port": 50477,
+            "pid": 24878,
+            "generation": 4,
+            "instance_id": "24757bcb-7a10-4cdf-8cda-3443a2f44a68",
+            "connected": true,
+            "server": "127.0.0.1:56388"
+          }
+        },
+        "active_jobs": []
+      },
+      "execution": {
+        "session_id": "session-2ac9ad344ed365aa21e2c02f"
+      }
+    }
+  },
+  {
+    "host": "worker-before",
+    "operation": "job_status",
+    "arguments": {
+      "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf"
+    },
+    "elapsed_s": 0.0024386669974774122,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+        "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+        "status": "SUCCEEDED",
+        "metadata": {
+          "arguments": {
+            "study_tag": "std1"
+          },
+          "engine_started_at": 1789740437.450787,
+          "execution": {
+            "execution_timeout_s": null,
+            "expected_revision": 0,
+            "idempotency_key": "20260918T140715948037Z-phase2-solve",
+            "model_ref": {
+              "generation": 5,
+              "model_tag": "mcp_7965f096e9c8",
+              "schema_version": 1,
+              "server_instance_id": "a28ccd1907d0d2234b8d6a31cb6c06f1844e0e207a30bb78ddfb8fdb4f7aa764",
+              "session_id": "session-2ac9ad344ed365aa21e2c02f"
+            },
+            "queue_timeout_s": null,
+            "request_id": "phase2-solve",
+            "rpc_timeout_s": 0,
+            "session_id": "session-2ac9ad344ed365aa21e2c02f"
+          },
+          "finished_observed_at": 1789740437.6542468,
+          "operation": "run_study",
+          "queue_wait_s": 2.19999928958714e-05
+        },
+        "created_at": "2026-09-18 14:07:17",
+        "started_at": "2026-09-18 14:07:17",
+        "finished_at": "2026-09-18 14:07:17",
+        "effective_timeouts": {
+          "execution_timeout_s": null,
+          "no_progress_warning_s": null,
+          "queue_timeout_s": null,
+          "rpc_timeout_s": 0
+        },
+        "operation": {
+          "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+          "request_id": "phase2-solve",
+          "idempotency_key": "20260918T140715948037Z-phase2-solve",
+          "request_hash": "e817e578e1f86a3ee2145daff79040661fb6cb49ca8186d1c431715756970210",
+          "operation": "run_study",
+          "status": "SUCCEEDED",
+          "result": {
+            "data": {
+              "datetime": "2026-09-18 22:07:17",
+              "label": "model.mph",
+              "log_path": "REDACTED_PATH",
+              "operations_path": "REDACTED_PATH",
+              "server": {
+                "attached_to_existing_server": true,
+                "comsol_root": "/Applications/COMSOL64/Multiphysics",
+                "current_model_label": "model.mph",
+                "current_model_origin": "bound-request",
+                "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+                "datetime": "2026-09-18 22:07:17",
+                "desktop_client_role": "visual-client",
+                "desktop_should_connect": {
+                  "host": "127.0.0.1",
+                  "port": 56388
+                },
+                "last_command": "run_study",
+                "last_error": "",
+                "logs_dir": "REDACTED_PATH",
+                "mcp_home": "REDACTED_PATH",
+                "outputs_dir": "REDACTED_PATH",
+                "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+                "server_endpoint": "127.0.0.1:56388",
+                "server_host": "127.0.0.1",
+                "server_port": 56388,
+                "server_running": false,
+                "server_started_by_mcp": false,
+                "status": "ready",
+                "timestamp": 1789740437.6451359,
+                "version": "0.1.9",
+                "workflow": {
+                  "current_main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase2/runs/20260918T140715Z/current-main.mph",
+                  "guard_level": "strict",
+                  "main_model_label": "",
+                  "main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase2/runs/20260918T140715Z/current-main.mph",
+                  "main_model_tag": "",
+                  "mcp_client_lifecycle": "persistent-required",
+                  "mode": "single-current-main-model",
+                  "model_dimension": 2,
+                  "notes": "Phase 2 live 2D fixture workflow; snapshots are retained with public run evidence.",
+                  "one_shot_client_allowed": false,
+                  "snapshot_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase2/runs/20260918T140715Z/snapshots",
+                  "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+                  "snapshot_prefix": "phase2",
+                  "snapshot_save_mode": "copy",
+                  "updated_at": "2026-09-18 22:07:16",
+                  "visible_main_locked": false,
+                  "workflow_stage": "mcp_connected"
+                }
+              },
+              "study_tag": "std1",
+              "timestamp": 1789740437.645111,
+              "tool": "run_study"
+            },
+            "error": "",
+            "execution": {
+              "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+              "dirty": false,
+              "idempotency_key": "20260918T140715948037Z-phase2-solve",
+              "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+              "model_ownership": "user_owned",
+              "model_ref": {
+                "generation": 5,
+                "model_tag": "mcp_7965f096e9c8",
+                "schema_version": 1,
+                "server_instance_id": "a28ccd1907d0d2234b8d6a31cb6c06f1844e0e207a30bb78ddfb8fdb4f7aa764",
+                "session_id": "session-2ac9ad344ed365aa21e2c02f"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "request_hash": "e817e578e1f86a3ee2145daff79040661fb6cb49ca8186d1c431715756970210",
+              "request_id": "phase2-solve",
+              "revision": 1,
+              "server_ownership": "shared",
+              "session_id": "session-2ac9ad344ed365aa21e2c02f"
+            },
+            "success": true
+          },
+          "metadata": {
+            "arguments": {
+              "study_tag": "std1"
+            },
+            "execution": {
+              "execution_timeout_s": null,
+              "expected_revision": 0,
+              "idempotency_key": "20260918T140715948037Z-phase2-solve",
+              "model_ref": {
+                "generation": 5,
+                "model_tag": "mcp_7965f096e9c8",
+                "schema_version": 1,
+                "server_instance_id": "a28ccd1907d0d2234b8d6a31cb6c06f1844e0e207a30bb78ddfb8fdb4f7aa764",
+                "session_id": "session-2ac9ad344ed365aa21e2c02f"
+              },
+              "queue_timeout_s": null,
+              "request_id": "phase2-solve",
+              "rpc_timeout_s": 0,
+              "session_id": "session-2ac9ad344ed365aa21e2c02f"
+            },
+            "operation": "run_study"
+          },
+          "created_at": "2026-09-18 14:07:17",
+          "started_at": null,
+          "finished_at": "2026-09-18 14:07:17",
+          "effective_timeouts": {
+            "execution_timeout_s": null,
+            "no_progress_warning_s": null,
+            "queue_timeout_s": null,
+            "rpc_timeout_s": 0
+          }
+        },
+        "result": {
+          "data": {
+            "datetime": "2026-09-18 22:07:17",
+            "label": "model.mph",
+            "log_path": "REDACTED_PATH",
+            "operations_path": "REDACTED_PATH",
+            "server": {
+              "attached_to_existing_server": true,
+              "comsol_root": "/Applications/COMSOL64/Multiphysics",
+              "current_model_label": "model.mph",
+              "current_model_origin": "bound-request",
+              "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+              "datetime": "2026-09-18 22:07:17",
+              "desktop_client_role": "visual-client",
+              "desktop_should_connect": {
+                "host": "127.0.0.1",
+                "port": 56388
+              },
+              "last_command": "run_study",
+              "last_error": "",
+              "logs_dir": "REDACTED_PATH",
+              "mcp_home": "REDACTED_PATH",
+              "outputs_dir": "REDACTED_PATH",
+              "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+              "server_endpoint": "127.0.0.1:56388",
+              "server_host": "127.0.0.1",
+              "server_port": 56388,
+              "server_running": false,
+              "server_started_by_mcp": false,
+              "status": "ready",
+              "timestamp": 1789740437.6451359,
+              "version": "0.1.9",
+              "workflow": {
+                "current_main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase2/runs/20260918T140715Z/current-main.mph",
+                "guard_level": "strict",
+                "main_model_label": "",
+                "main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase2/runs/20260918T140715Z/current-main.mph",
+                "main_model_tag": "",
+                "mcp_client_lifecycle": "persistent-required",
+                "mode": "single-current-main-model",
+                "model_dimension": 2,
+                "notes": "Phase 2 live 2D fixture workflow; snapshots are retained with public run evidence.",
+                "one_shot_client_allowed": false,
+                "snapshot_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase2/runs/20260918T140715Z/snapshots",
+                "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+                "snapshot_prefix": "phase2",
+                "snapshot_save_mode": "copy",
+                "updated_at": "2026-09-18 22:07:16",
+                "visible_main_locked": false,
+                "workflow_stage": "mcp_connected"
+              }
+            },
+            "study_tag": "std1",
+            "timestamp": 1789740437.645111,
+            "tool": "run_study"
+          },
+          "error": "",
+          "execution": {
+            "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+            "dirty": false,
+            "idempotency_key": "20260918T140715948037Z-phase2-solve",
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "model_ownership": "user_owned",
+            "model_ref": {
+              "generation": 5,
+              "model_tag": "mcp_7965f096e9c8",
+              "schema_version": 1,
+              "server_instance_id": "a28ccd1907d0d2234b8d6a31cb6c06f1844e0e207a30bb78ddfb8fdb4f7aa764",
+              "session_id": "session-2ac9ad344ed365aa21e2c02f"
+            },
+            "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+            "request_hash": "e817e578e1f86a3ee2145daff79040661fb6cb49ca8186d1c431715756970210",
+            "request_id": "phase2-solve",
+            "revision": 1,
+            "server_ownership": "shared",
+            "session_id": "session-2ac9ad344ed365aa21e2c02f"
+          },
+          "success": true
+        }
+      }
+    }
+  },
+  {
+    "host": "worker-before",
+    "operation": "job_log",
+    "arguments": {
+      "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+      "offset": 0,
+      "limit": 1000
+    },
+    "elapsed_s": 0.003030374995432794,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+        "events": [
+          {
+            "id": 2388,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "RUNNING",
+            "metadata": {
+              "at": 1789740437.450848,
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2389,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "model",
+              "metadata": {
+                "request_id": "wrk-b757fa61-72d9-424a-befd-5c06e36a1762",
+                "tag": "mcp_7965f096e9c8",
+                "type": "model"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "6da26a53a4189265a3ffc7a348b04bf489ada85103a0a976fe987101e8f0fa0c",
+              "request_id": "wrk-b757fa61-72d9-424a-befd-5c06e36a1762"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2390,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "model",
+              "metadata": {
+                "request_id": "wrk-b757fa61-72d9-424a-befd-5c06e36a1762",
+                "tag": "mcp_7965f096e9c8",
+                "type": "model"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437451",
+                "ok": true,
+                "queued_at_ms": "1789740437451",
+                "request_id": "wrk-b757fa61-72d9-424a-befd-5c06e36a1762",
+                "result": {
+                  "$worker_handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                  "generation": 4,
+                  "java_type": "com.comsol.model.Model"
+                },
+                "started_at_ms": "1789740437451",
+                "status": "SUCCEEDED",
+                "type": "model"
+              },
+              "request_hash": "6da26a53a4189265a3ffc7a348b04bf489ada85103a0a976fe987101e8f0fa0c",
+              "request_id": "wrk-b757fa61-72d9-424a-befd-5c06e36a1762",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2391,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "getFilePath",
+                "request_id": "wrk-4a4ba37b-637e-4b11-9058-5c90506ad433",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "91df108780c21dd481194c2a7da23b7d8fdd93df3c98b7725021111702c07eb2",
+              "request_id": "wrk-4a4ba37b-637e-4b11-9058-5c90506ad433"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2392,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "getFilePath",
+                "request_id": "wrk-4a4ba37b-637e-4b11-9058-5c90506ad433",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437452",
+                "ok": true,
+                "queued_at_ms": "1789740437452",
+                "request_id": "wrk-4a4ba37b-637e-4b11-9058-5c90506ad433",
+                "result": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+                "started_at_ms": "1789740437452",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "91df108780c21dd481194c2a7da23b7d8fdd93df3c98b7725021111702c07eb2",
+              "request_id": "wrk-4a4ba37b-637e-4b11-9058-5c90506ad433",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2393,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "model_snapshot",
+              "metadata": {
+                "request_id": "wrk-33b78d41-5d87-47db-82b7-5bc4607fa463",
+                "tag": "mcp_7965f096e9c8",
+                "type": "model_snapshot"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "2036b73cf7fa330e18333960b552f3ade78c4eea658c54883bd67864c13319d6",
+              "request_id": "wrk-33b78d41-5d87-47db-82b7-5bc4607fa463"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2394,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "model_snapshot",
+              "metadata": {
+                "request_id": "wrk-33b78d41-5d87-47db-82b7-5bc4607fa463",
+                "tag": "mcp_7965f096e9c8",
+                "type": "model_snapshot"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437458",
+                "ok": true,
+                "queued_at_ms": "1789740437453",
+                "request_id": "wrk-33b78d41-5d87-47db-82b7-5bc4607fa463",
+                "result": {
+                  "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+                  "changed_tags": [],
+                  "external_event_counter": 0,
+                  "fingerprint": "292f2e7268453b255fd8b92c37f417e18d11c39babbfad42368ab5c7ab8d0369",
+                  "fingerprint_scope": [
+                    "tag",
+                    "label",
+                    "file_path",
+                    "time_modified",
+                    "parameters"
+                  ],
+                  "generation": 4,
+                  "instance_id": "24757bcb-7a10-4cdf-8cda-3443a2f44a68",
+                  "model_tag": "mcp_7965f096e9c8",
+                  "server_instance_id": "127.0.0.1:56388",
+                  "tag": "mcp_7965f096e9c8",
+                  "worker_instance_id": "24757bcb-7a10-4cdf-8cda-3443a2f44a68"
+                },
+                "started_at_ms": "1789740437453",
+                "status": "SUCCEEDED",
+                "type": "model_snapshot"
+              },
+              "request_hash": "2036b73cf7fa330e18333960b552f3ade78c4eea658c54883bd67864c13319d6",
+              "request_id": "wrk-33b78d41-5d87-47db-82b7-5bc4607fa463",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2395,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "study",
+                "request_id": "wrk-71b93317-8a4e-466c-8501-028a8cca3218",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "4e99e35c3f1e50a17bc0eb8645dd6da5a9f07001da8641042d6aa95337e9fa72",
+              "request_id": "wrk-71b93317-8a4e-466c-8501-028a8cca3218"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2396,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "study",
+                "request_id": "wrk-71b93317-8a4e-466c-8501-028a8cca3218",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437459",
+                "ok": true,
+                "queued_at_ms": "1789740437459",
+                "request_id": "wrk-71b93317-8a4e-466c-8501-028a8cca3218",
+                "result": {
+                  "$worker_handle": "h-ee7cf3d9-b7c2-4b3e-9590-7e892f4cf049",
+                  "generation": 4,
+                  "java_type": "com.comsol.model.StudyList"
+                },
+                "started_at_ms": "1789740437459",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "4e99e35c3f1e50a17bc0eb8645dd6da5a9f07001da8641042d6aa95337e9fa72",
+              "request_id": "wrk-71b93317-8a4e-466c-8501-028a8cca3218",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2397,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [
+                  "std1"
+                ],
+                "generation": 4,
+                "handle": "h-ee7cf3d9-b7c2-4b3e-9590-7e892f4cf049",
+                "method": "get",
+                "request_id": "wrk-21efd734-af36-425f-9b8f-9a2ffaa9b30b",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "7c2747d70de756413ff8300f38c3a6d1ae06bdf62728ab6084b76992b349f29c",
+              "request_id": "wrk-21efd734-af36-425f-9b8f-9a2ffaa9b30b"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2398,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [
+                  "std1"
+                ],
+                "generation": 4,
+                "handle": "h-ee7cf3d9-b7c2-4b3e-9590-7e892f4cf049",
+                "method": "get",
+                "request_id": "wrk-21efd734-af36-425f-9b8f-9a2ffaa9b30b",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437460",
+                "ok": true,
+                "queued_at_ms": "1789740437460",
+                "request_id": "wrk-21efd734-af36-425f-9b8f-9a2ffaa9b30b",
+                "result": {
+                  "$worker_handle": "h-02d7d451-4fa7-44ac-9bb1-681333b41f79",
+                  "generation": 4,
+                  "java_type": "com.comsol.model.Study"
+                },
+                "started_at_ms": "1789740437460",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "7c2747d70de756413ff8300f38c3a6d1ae06bdf62728ab6084b76992b349f29c",
+              "request_id": "wrk-21efd734-af36-425f-9b8f-9a2ffaa9b30b",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2399,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-02d7d451-4fa7-44ac-9bb1-681333b41f79",
+                "method": "label",
+                "request_id": "wrk-bb3f29a1-dad2-4213-88da-6385712b8e8f",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "116b37e3c50153558dc5e81b8bff5c644cad237842d11de33de1c9ff8aa902ff",
+              "request_id": "wrk-bb3f29a1-dad2-4213-88da-6385712b8e8f"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2400,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-02d7d451-4fa7-44ac-9bb1-681333b41f79",
+                "method": "label",
+                "request_id": "wrk-bb3f29a1-dad2-4213-88da-6385712b8e8f",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437461",
+                "ok": true,
+                "queued_at_ms": "1789740437461",
+                "request_id": "wrk-bb3f29a1-dad2-4213-88da-6385712b8e8f",
+                "result": "研究 1",
+                "started_at_ms": "1789740437461",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "116b37e3c50153558dc5e81b8bff5c644cad237842d11de33de1c9ff8aa902ff",
+              "request_id": "wrk-bb3f29a1-dad2-4213-88da-6385712b8e8f",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2401,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "study",
+                "request_id": "wrk-6834f201-c82c-456f-bd40-00a1234d786c",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "4e99e35c3f1e50a17bc0eb8645dd6da5a9f07001da8641042d6aa95337e9fa72",
+              "request_id": "wrk-6834f201-c82c-456f-bd40-00a1234d786c"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2402,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "study",
+                "request_id": "wrk-6834f201-c82c-456f-bd40-00a1234d786c",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437462",
+                "ok": true,
+                "queued_at_ms": "1789740437462",
+                "request_id": "wrk-6834f201-c82c-456f-bd40-00a1234d786c",
+                "result": {
+                  "$worker_handle": "h-dd21e0ac-3b17-4c89-aeba-57b95c9a73f5",
+                  "generation": 4,
+                  "java_type": "com.comsol.model.StudyList"
+                },
+                "started_at_ms": "1789740437462",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "4e99e35c3f1e50a17bc0eb8645dd6da5a9f07001da8641042d6aa95337e9fa72",
+              "request_id": "wrk-6834f201-c82c-456f-bd40-00a1234d786c",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2403,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-dd21e0ac-3b17-4c89-aeba-57b95c9a73f5",
+                "method": "tags",
+                "request_id": "wrk-7ca85fd0-41a4-41ea-ab5b-c520969b2e8f",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "8eab1fddd9de5a48b249d628c265faaadfce45bc177d67ab64c36f8128469216",
+              "request_id": "wrk-7ca85fd0-41a4-41ea-ab5b-c520969b2e8f"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2404,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-dd21e0ac-3b17-4c89-aeba-57b95c9a73f5",
+                "method": "tags",
+                "request_id": "wrk-7ca85fd0-41a4-41ea-ab5b-c520969b2e8f",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437463",
+                "ok": true,
+                "queued_at_ms": "1789740437463",
+                "request_id": "wrk-7ca85fd0-41a4-41ea-ab5b-c520969b2e8f",
+                "result": [
+                  "std1"
+                ],
+                "started_at_ms": "1789740437463",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "8eab1fddd9de5a48b249d628c265faaadfce45bc177d67ab64c36f8128469216",
+              "request_id": "wrk-7ca85fd0-41a4-41ea-ab5b-c520969b2e8f",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2405,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [
+                  "std1"
+                ],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "study",
+                "request_id": "wrk-0af85f5f-b9cb-4a09-ac6d-f2c2a5874b43",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "cc7da23c21892fbe3b992320a6f863a99e740d11d504c316fcc51cd7c87b596f",
+              "request_id": "wrk-0af85f5f-b9cb-4a09-ac6d-f2c2a5874b43"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2406,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [
+                  "std1"
+                ],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "study",
+                "request_id": "wrk-0af85f5f-b9cb-4a09-ac6d-f2c2a5874b43",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437465",
+                "ok": true,
+                "queued_at_ms": "1789740437464",
+                "request_id": "wrk-0af85f5f-b9cb-4a09-ac6d-f2c2a5874b43",
+                "result": {
+                  "$worker_handle": "h-9e44a927-34c8-4f6a-a33a-30a6e04dce74",
+                  "generation": 4,
+                  "java_type": "com.comsol.model.Study"
+                },
+                "started_at_ms": "1789740437464",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "cc7da23c21892fbe3b992320a6f863a99e740d11d504c316fcc51cd7c87b596f",
+              "request_id": "wrk-0af85f5f-b9cb-4a09-ac6d-f2c2a5874b43",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2407,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-9e44a927-34c8-4f6a-a33a-30a6e04dce74",
+                "method": "label",
+                "request_id": "wrk-841dd35e-03dd-4e9e-b506-c431b32f9566",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "f59d98cfdcb31148359dcfa9189ea070a7ddd009cb9b40a5c004f74dedb3f75a",
+              "request_id": "wrk-841dd35e-03dd-4e9e-b506-c431b32f9566"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2408,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-9e44a927-34c8-4f6a-a33a-30a6e04dce74",
+                "method": "label",
+                "request_id": "wrk-841dd35e-03dd-4e9e-b506-c431b32f9566",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437466",
+                "ok": true,
+                "queued_at_ms": "1789740437465",
+                "request_id": "wrk-841dd35e-03dd-4e9e-b506-c431b32f9566",
+                "result": "研究 1",
+                "started_at_ms": "1789740437465",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "f59d98cfdcb31148359dcfa9189ea070a7ddd009cb9b40a5c004f74dedb3f75a",
+              "request_id": "wrk-841dd35e-03dd-4e9e-b506-c431b32f9566",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2409,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [
+                  "std1"
+                ],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "study",
+                "request_id": "wrk-8cba2cbc-d277-4f2f-ba49-47df50a72bc9",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "cc7da23c21892fbe3b992320a6f863a99e740d11d504c316fcc51cd7c87b596f",
+              "request_id": "wrk-8cba2cbc-d277-4f2f-ba49-47df50a72bc9"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2410,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [
+                  "std1"
+                ],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "study",
+                "request_id": "wrk-8cba2cbc-d277-4f2f-ba49-47df50a72bc9",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437466",
+                "ok": true,
+                "queued_at_ms": "1789740437466",
+                "request_id": "wrk-8cba2cbc-d277-4f2f-ba49-47df50a72bc9",
+                "result": {
+                  "$worker_handle": "h-9802eaf8-cc16-47f5-a1d2-a74845050fa7",
+                  "generation": 4,
+                  "java_type": "com.comsol.model.Study"
+                },
+                "started_at_ms": "1789740437466",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "cc7da23c21892fbe3b992320a6f863a99e740d11d504c316fcc51cd7c87b596f",
+              "request_id": "wrk-8cba2cbc-d277-4f2f-ba49-47df50a72bc9",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2411,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-9802eaf8-cc16-47f5-a1d2-a74845050fa7",
+                "method": "run",
+                "request_id": "wrk-3a2831ab-d5f8-4591-9bf4-4fc67e19875d",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "274bedb9efd3b5a00860e993fad5f279d09b0ef9fb2ea16ee64568848d42d0b9",
+              "request_id": "wrk-3a2831ab-d5f8-4591-9bf4-4fc67e19875d"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2412,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-9802eaf8-cc16-47f5-a1d2-a74845050fa7",
+                "method": "run",
+                "request_id": "wrk-3a2831ab-d5f8-4591-9bf4-4fc67e19875d",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437642",
+                "ok": true,
+                "queued_at_ms": "1789740437467",
+                "request_id": "wrk-3a2831ab-d5f8-4591-9bf4-4fc67e19875d",
+                "started_at_ms": "1789740437467",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "274bedb9efd3b5a00860e993fad5f279d09b0ef9fb2ea16ee64568848d42d0b9",
+              "request_id": "wrk-3a2831ab-d5f8-4591-9bf4-4fc67e19875d",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2413,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "label",
+                "request_id": "wrk-b0930750-7e7e-4f77-800f-46013221bc66",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "1a31f6b94f6461581d2b671a3cf4bf29725522ba355c00327cae17c01a1f7dbf",
+              "request_id": "wrk-b0930750-7e7e-4f77-800f-46013221bc66"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2414,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "label",
+                "request_id": "wrk-b0930750-7e7e-4f77-800f-46013221bc66",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437644",
+                "ok": true,
+                "queued_at_ms": "1789740437643",
+                "request_id": "wrk-b0930750-7e7e-4f77-800f-46013221bc66",
+                "result": "model.mph",
+                "started_at_ms": "1789740437643",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "1a31f6b94f6461581d2b671a3cf4bf29725522ba355c00327cae17c01a1f7dbf",
+              "request_id": "wrk-b0930750-7e7e-4f77-800f-46013221bc66",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2415,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "label",
+                "request_id": "wrk-80cc0a11-3919-4d27-a5db-6bb3e3e642b5",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "1a31f6b94f6461581d2b671a3cf4bf29725522ba355c00327cae17c01a1f7dbf",
+              "request_id": "wrk-80cc0a11-3919-4d27-a5db-6bb3e3e642b5"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2416,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "label",
+                "request_id": "wrk-80cc0a11-3919-4d27-a5db-6bb3e3e642b5",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437646",
+                "ok": true,
+                "queued_at_ms": "1789740437645",
+                "request_id": "wrk-80cc0a11-3919-4d27-a5db-6bb3e3e642b5",
+                "result": "model.mph",
+                "started_at_ms": "1789740437645",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "1a31f6b94f6461581d2b671a3cf4bf29725522ba355c00327cae17c01a1f7dbf",
+              "request_id": "wrk-80cc0a11-3919-4d27-a5db-6bb3e3e642b5",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2417,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "label",
+                "request_id": "wrk-71b44f29-b606-4ffd-9c8a-ace13a2b4321",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "1a31f6b94f6461581d2b671a3cf4bf29725522ba355c00327cae17c01a1f7dbf",
+              "request_id": "wrk-71b44f29-b606-4ffd-9c8a-ace13a2b4321"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2418,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "label",
+                "request_id": "wrk-71b44f29-b606-4ffd-9c8a-ace13a2b4321",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437648",
+                "ok": true,
+                "queued_at_ms": "1789740437647",
+                "request_id": "wrk-71b44f29-b606-4ffd-9c8a-ace13a2b4321",
+                "result": "model.mph",
+                "started_at_ms": "1789740437647",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "1a31f6b94f6461581d2b671a3cf4bf29725522ba355c00327cae17c01a1f7dbf",
+              "request_id": "wrk-71b44f29-b606-4ffd-9c8a-ace13a2b4321",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2419,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "model_snapshot",
+              "metadata": {
+                "request_id": "wrk-e0fc1eb2-3d27-475f-8647-0f4312bbb12b",
+                "tag": "mcp_7965f096e9c8",
+                "type": "model_snapshot"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "2036b73cf7fa330e18333960b552f3ade78c4eea658c54883bd67864c13319d6",
+              "request_id": "wrk-e0fc1eb2-3d27-475f-8647-0f4312bbb12b"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2420,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "model_snapshot",
+              "metadata": {
+                "request_id": "wrk-e0fc1eb2-3d27-475f-8647-0f4312bbb12b",
+                "tag": "mcp_7965f096e9c8",
+                "type": "model_snapshot"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437653",
+                "ok": true,
+                "queued_at_ms": "1789740437650",
+                "request_id": "wrk-e0fc1eb2-3d27-475f-8647-0f4312bbb12b",
+                "result": {
+                  "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+                  "changed_tags": [],
+                  "external_event_counter": 0,
+                  "fingerprint": "292f2e7268453b255fd8b92c37f417e18d11c39babbfad42368ab5c7ab8d0369",
+                  "fingerprint_scope": [
+                    "tag",
+                    "label",
+                    "file_path",
+                    "time_modified",
+                    "parameters"
+                  ],
+                  "generation": 4,
+                  "instance_id": "24757bcb-7a10-4cdf-8cda-3443a2f44a68",
+                  "model_tag": "mcp_7965f096e9c8",
+                  "server_instance_id": "127.0.0.1:56388",
+                  "tag": "mcp_7965f096e9c8",
+                  "worker_instance_id": "24757bcb-7a10-4cdf-8cda-3443a2f44a68"
+                },
+                "started_at_ms": "1789740437650",
+                "status": "SUCCEEDED",
+                "type": "model_snapshot"
+              },
+              "request_hash": "2036b73cf7fa330e18333960b552f3ade78c4eea658c54883bd67864c13319d6",
+              "request_id": "wrk-e0fc1eb2-3d27-475f-8647-0f4312bbb12b",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2421,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "SUCCEEDED",
+            "metadata": {
+              "at": 1789740437.654331,
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          }
+        ],
+        "next_offset": 34
+      }
+    }
+  },
+  {
+    "host": "worker-before",
+    "operation": "job_result",
+    "arguments": {
+      "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf"
+    },
+    "elapsed_s": 0.0020122910500504076,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+        "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+        "status": "SUCCEEDED",
+        "metadata": {
+          "arguments": {
+            "study_tag": "std1"
+          },
+          "engine_started_at": 1789740437.450787,
+          "execution": {
+            "execution_timeout_s": null,
+            "expected_revision": 0,
+            "idempotency_key": "20260918T140715948037Z-phase2-solve",
+            "model_ref": {
+              "generation": 5,
+              "model_tag": "mcp_7965f096e9c8",
+              "schema_version": 1,
+              "server_instance_id": "a28ccd1907d0d2234b8d6a31cb6c06f1844e0e207a30bb78ddfb8fdb4f7aa764",
+              "session_id": "session-2ac9ad344ed365aa21e2c02f"
+            },
+            "queue_timeout_s": null,
+            "request_id": "phase2-solve",
+            "rpc_timeout_s": 0,
+            "session_id": "session-2ac9ad344ed365aa21e2c02f"
+          },
+          "finished_observed_at": 1789740437.6542468,
+          "operation": "run_study",
+          "queue_wait_s": 2.19999928958714e-05
+        },
+        "created_at": "2026-09-18 14:07:17",
+        "started_at": "2026-09-18 14:07:17",
+        "finished_at": "2026-09-18 14:07:17",
+        "effective_timeouts": {
+          "execution_timeout_s": null,
+          "no_progress_warning_s": null,
+          "queue_timeout_s": null,
+          "rpc_timeout_s": 0
+        },
+        "operation": {
+          "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+          "request_id": "phase2-solve",
+          "idempotency_key": "20260918T140715948037Z-phase2-solve",
+          "request_hash": "e817e578e1f86a3ee2145daff79040661fb6cb49ca8186d1c431715756970210",
+          "operation": "run_study",
+          "status": "SUCCEEDED",
+          "result": {
+            "data": {
+              "datetime": "2026-09-18 22:07:17",
+              "label": "model.mph",
+              "log_path": "REDACTED_PATH",
+              "operations_path": "REDACTED_PATH",
+              "server": {
+                "attached_to_existing_server": true,
+                "comsol_root": "/Applications/COMSOL64/Multiphysics",
+                "current_model_label": "model.mph",
+                "current_model_origin": "bound-request",
+                "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+                "datetime": "2026-09-18 22:07:17",
+                "desktop_client_role": "visual-client",
+                "desktop_should_connect": {
+                  "host": "127.0.0.1",
+                  "port": 56388
+                },
+                "last_command": "run_study",
+                "last_error": "",
+                "logs_dir": "REDACTED_PATH",
+                "mcp_home": "REDACTED_PATH",
+                "outputs_dir": "REDACTED_PATH",
+                "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+                "server_endpoint": "127.0.0.1:56388",
+                "server_host": "127.0.0.1",
+                "server_port": 56388,
+                "server_running": false,
+                "server_started_by_mcp": false,
+                "status": "ready",
+                "timestamp": 1789740437.6451359,
+                "version": "0.1.9",
+                "workflow": {
+                  "current_main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase2/runs/20260918T140715Z/current-main.mph",
+                  "guard_level": "strict",
+                  "main_model_label": "",
+                  "main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase2/runs/20260918T140715Z/current-main.mph",
+                  "main_model_tag": "",
+                  "mcp_client_lifecycle": "persistent-required",
+                  "mode": "single-current-main-model",
+                  "model_dimension": 2,
+                  "notes": "Phase 2 live 2D fixture workflow; snapshots are retained with public run evidence.",
+                  "one_shot_client_allowed": false,
+                  "snapshot_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase2/runs/20260918T140715Z/snapshots",
+                  "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+                  "snapshot_prefix": "phase2",
+                  "snapshot_save_mode": "copy",
+                  "updated_at": "2026-09-18 22:07:16",
+                  "visible_main_locked": false,
+                  "workflow_stage": "mcp_connected"
+                }
+              },
+              "study_tag": "std1",
+              "timestamp": 1789740437.645111,
+              "tool": "run_study"
+            },
+            "error": "",
+            "execution": {
+              "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+              "dirty": false,
+              "idempotency_key": "20260918T140715948037Z-phase2-solve",
+              "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+              "model_ownership": "user_owned",
+              "model_ref": {
+                "generation": 5,
+                "model_tag": "mcp_7965f096e9c8",
+                "schema_version": 1,
+                "server_instance_id": "a28ccd1907d0d2234b8d6a31cb6c06f1844e0e207a30bb78ddfb8fdb4f7aa764",
+                "session_id": "session-2ac9ad344ed365aa21e2c02f"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "request_hash": "e817e578e1f86a3ee2145daff79040661fb6cb49ca8186d1c431715756970210",
+              "request_id": "phase2-solve",
+              "revision": 1,
+              "server_ownership": "shared",
+              "session_id": "session-2ac9ad344ed365aa21e2c02f"
+            },
+            "success": true
+          },
+          "metadata": {
+            "arguments": {
+              "study_tag": "std1"
+            },
+            "execution": {
+              "execution_timeout_s": null,
+              "expected_revision": 0,
+              "idempotency_key": "20260918T140715948037Z-phase2-solve",
+              "model_ref": {
+                "generation": 5,
+                "model_tag": "mcp_7965f096e9c8",
+                "schema_version": 1,
+                "server_instance_id": "a28ccd1907d0d2234b8d6a31cb6c06f1844e0e207a30bb78ddfb8fdb4f7aa764",
+                "session_id": "session-2ac9ad344ed365aa21e2c02f"
+              },
+              "queue_timeout_s": null,
+              "request_id": "phase2-solve",
+              "rpc_timeout_s": 0,
+              "session_id": "session-2ac9ad344ed365aa21e2c02f"
+            },
+            "operation": "run_study"
+          },
+          "created_at": "2026-09-18 14:07:17",
+          "started_at": null,
+          "finished_at": "2026-09-18 14:07:17",
+          "effective_timeouts": {
+            "execution_timeout_s": null,
+            "no_progress_warning_s": null,
+            "queue_timeout_s": null,
+            "rpc_timeout_s": 0
+          }
+        },
+        "result": {
+          "data": {
+            "datetime": "2026-09-18 22:07:17",
+            "label": "model.mph",
+            "log_path": "REDACTED_PATH",
+            "operations_path": "REDACTED_PATH",
+            "server": {
+              "attached_to_existing_server": true,
+              "comsol_root": "/Applications/COMSOL64/Multiphysics",
+              "current_model_label": "model.mph",
+              "current_model_origin": "bound-request",
+              "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+              "datetime": "2026-09-18 22:07:17",
+              "desktop_client_role": "visual-client",
+              "desktop_should_connect": {
+                "host": "127.0.0.1",
+                "port": 56388
+              },
+              "last_command": "run_study",
+              "last_error": "",
+              "logs_dir": "REDACTED_PATH",
+              "mcp_home": "REDACTED_PATH",
+              "outputs_dir": "REDACTED_PATH",
+              "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+              "server_endpoint": "127.0.0.1:56388",
+              "server_host": "127.0.0.1",
+              "server_port": 56388,
+              "server_running": false,
+              "server_started_by_mcp": false,
+              "status": "ready",
+              "timestamp": 1789740437.6451359,
+              "version": "0.1.9",
+              "workflow": {
+                "current_main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase2/runs/20260918T140715Z/current-main.mph",
+                "guard_level": "strict",
+                "main_model_label": "",
+                "main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase2/runs/20260918T140715Z/current-main.mph",
+                "main_model_tag": "",
+                "mcp_client_lifecycle": "persistent-required",
+                "mode": "single-current-main-model",
+                "model_dimension": 2,
+                "notes": "Phase 2 live 2D fixture workflow; snapshots are retained with public run evidence.",
+                "one_shot_client_allowed": false,
+                "snapshot_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase2/runs/20260918T140715Z/snapshots",
+                "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+                "snapshot_prefix": "phase2",
+                "snapshot_save_mode": "copy",
+                "updated_at": "2026-09-18 22:07:16",
+                "visible_main_locked": false,
+                "workflow_stage": "mcp_connected"
+              }
+            },
+            "study_tag": "std1",
+            "timestamp": 1789740437.645111,
+            "tool": "run_study"
+          },
+          "error": "",
+          "execution": {
+            "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+            "dirty": false,
+            "idempotency_key": "20260918T140715948037Z-phase2-solve",
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "model_ownership": "user_owned",
+            "model_ref": {
+              "generation": 5,
+              "model_tag": "mcp_7965f096e9c8",
+              "schema_version": 1,
+              "server_instance_id": "a28ccd1907d0d2234b8d6a31cb6c06f1844e0e207a30bb78ddfb8fdb4f7aa764",
+              "session_id": "session-2ac9ad344ed365aa21e2c02f"
+            },
+            "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+            "request_hash": "e817e578e1f86a3ee2145daff79040661fb6cb49ca8186d1c431715756970210",
+            "request_id": "phase2-solve",
+            "revision": 1,
+            "server_ownership": "shared",
+            "session_id": "session-2ac9ad344ed365aa21e2c02f"
+          },
+          "success": true
+        }
+      }
+    }
+  },
+  {
+    "host": "worker-after",
+    "operation": "initialize",
+    "response": {
+      "meta": null,
+      "protocolVersion": "2025-11-25",
+      "capabilities": {
+        "experimental": {},
+        "logging": null,
+        "prompts": {
+          "listChanged": false
+        },
+        "resources": {
+          "subscribe": false,
+          "listChanged": false
+        },
+        "tools": {
+          "listChanged": false
+        },
+        "completions": null,
+        "tasks": null
+      },
+      "serverInfo": {
+        "name": "comsol-mcp-server",
+        "title": null,
+        "version": "1.29.1",
+        "websiteUrl": null,
+        "icons": null
+      },
+      "instructions": null
+    }
+  },
+  {
+    "host": "worker-after",
+    "operation": "server_connect",
+    "arguments": {
+      "host": "127.0.0.1",
+      "port": 56388,
+      "execution": {
+        "idempotency_key": "recovery-worker-connect-2175088f66534ee8b377d8c19fb617b7",
+        "request_id": "recovery-worker-connect-2175088f66534ee8b377d8c19fb617b7"
+      }
+    },
+    "elapsed_s": 1.332604791969061,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "connected": true,
+        "server_ownership": "shared",
+        "endpoint": "127.0.0.1:56388",
+        "session_id": "session-2ac9ad344ed365aa21e2c02f",
+        "server_instance_id": "a1c9b7fdabecd553ce83c316b9631bb305d0f856db94c9252e96e0632800d9b0",
+        "worker": {
+          "host": "127.0.0.1",
+          "port": 54711,
+          "pid": 27702,
+          "generation": 6,
+          "instance_id": "73f3ecd7-5325-4899-a08c-5975bdbb350f",
+          "connected": true,
+          "server": "127.0.0.1:56388"
+        }
+      },
+      "execution": {
+        "session_id": "session-2ac9ad344ed365aa21e2c02f",
+        "model_ref": null,
+        "revision": null,
+        "request_id": "recovery-worker-connect-2175088f66534ee8b377d8c19fb617b7",
+        "operation_id": "563e31db-9251-403c-872e-bf89e1c0578a",
+        "request_hash": "d0d1a6e235f75ba28e44c93950f16ad94da94480cc43c7d18e83c67c39872375",
+        "idempotency_key": "recovery-worker-connect-2175088f66534ee8b377d8c19fb617b7",
+        "job_id": "5d64d34d-f291-4631-beba-3cf62e66fa9a"
+      }
+    }
+  },
+  {
+    "host": "worker-after",
+    "operation": "session_health",
+    "arguments": {},
+    "elapsed_s": 0.003176541009452194,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "status": "READY",
+        "control_pid": 27699,
+        "worker_connected": true,
+        "worker": {
+          "ok": true,
+          "status": "HEALTHY",
+          "generation": 5,
+          "instance_id": "73f3ecd7-5325-4899-a08c-5975bdbb350f",
+          "connected": false,
+          "server": "",
+          "changed_count": 0,
+          "queued_or_running": 1,
+          "observed_at": 1789740589.443058
+        },
+        "session": {
+          "connected": true,
+          "server_ownership": "shared",
+          "endpoint": "127.0.0.1:56388",
+          "session_id": "session-2ac9ad344ed365aa21e2c02f",
+          "server_instance_id": "a1c9b7fdabecd553ce83c316b9631bb305d0f856db94c9252e96e0632800d9b0",
+          "worker": {
+            "host": "127.0.0.1",
+            "port": 54711,
+            "pid": 27702,
+            "generation": 6,
+            "instance_id": "73f3ecd7-5325-4899-a08c-5975bdbb350f",
+            "connected": true,
+            "server": "127.0.0.1:56388"
+          }
+        },
+        "active_jobs": []
+      },
+      "execution": {
+        "session_id": "session-2ac9ad344ed365aa21e2c02f"
+      }
+    }
+  },
+  {
+    "host": "worker-after",
+    "operation": "model_inspect",
+    "arguments": {
+      "execution": {
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-2ac9ad344ed365aa21e2c02f",
+          "server_instance_id": "a28ccd1907d0d2234b8d6a31cb6c06f1844e0e207a30bb78ddfb8fdb4f7aa764",
+          "model_tag": "mcp_7965f096e9c8",
+          "generation": 5
+        },
+        "idempotency_key": "recovery-stale-ref-9b891f35e9904520a9e49f451be6ce65",
+        "request_id": "recovery-stale-ref-9b891f35e9904520a9e49f451be6ce65"
+      }
+    },
+    "elapsed_s": 0.0028587080305442214,
+    "outer_isError": true,
+    "payload": {
+      "success": false,
+      "data": {},
+      "error": {
+        "code": "MODEL_IDENTITY_MISMATCH",
+        "message": "model_ref belongs to another session or server",
+        "safe_retry": false
+      },
+      "execution": {
+        "request_id": "recovery-stale-ref-9b891f35e9904520a9e49f451be6ce65",
+        "operation_id": "a39e522d-eb92-413b-9a57-2db2e1993e0a",
+        "request_hash": "6c882baf758dbc08504b7014d78715ad4d5f418c4d596ba155b18efe181bc263",
+        "idempotency_key": "recovery-stale-ref-9b891f35e9904520a9e49f451be6ce65",
+        "job_id": "b42a8954-3883-4f27-8260-c493cafcbe9d"
+      }
+    }
+  },
+  {
+    "host": "worker-after",
+    "operation": "job_status",
+    "arguments": {
+      "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf"
+    },
+    "elapsed_s": 0.002525624993722886,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+        "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+        "status": "SUCCEEDED",
+        "metadata": {
+          "arguments": {
+            "study_tag": "std1"
+          },
+          "engine_started_at": 1789740437.450787,
+          "execution": {
+            "execution_timeout_s": null,
+            "expected_revision": 0,
+            "idempotency_key": "20260918T140715948037Z-phase2-solve",
+            "model_ref": {
+              "generation": 5,
+              "model_tag": "mcp_7965f096e9c8",
+              "schema_version": 1,
+              "server_instance_id": "a28ccd1907d0d2234b8d6a31cb6c06f1844e0e207a30bb78ddfb8fdb4f7aa764",
+              "session_id": "session-2ac9ad344ed365aa21e2c02f"
+            },
+            "queue_timeout_s": null,
+            "request_id": "phase2-solve",
+            "rpc_timeout_s": 0,
+            "session_id": "session-2ac9ad344ed365aa21e2c02f"
+          },
+          "finished_observed_at": 1789740437.6542468,
+          "operation": "run_study",
+          "queue_wait_s": 2.19999928958714e-05
+        },
+        "created_at": "2026-09-18 14:07:17",
+        "started_at": "2026-09-18 14:07:17",
+        "finished_at": "2026-09-18 14:07:17",
+        "effective_timeouts": {
+          "execution_timeout_s": null,
+          "no_progress_warning_s": null,
+          "queue_timeout_s": null,
+          "rpc_timeout_s": 0
+        },
+        "operation": {
+          "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+          "request_id": "phase2-solve",
+          "idempotency_key": "20260918T140715948037Z-phase2-solve",
+          "request_hash": "e817e578e1f86a3ee2145daff79040661fb6cb49ca8186d1c431715756970210",
+          "operation": "run_study",
+          "status": "SUCCEEDED",
+          "result": {
+            "data": {
+              "datetime": "2026-09-18 22:07:17",
+              "label": "model.mph",
+              "log_path": "REDACTED_PATH",
+              "operations_path": "REDACTED_PATH",
+              "server": {
+                "attached_to_existing_server": true,
+                "comsol_root": "/Applications/COMSOL64/Multiphysics",
+                "current_model_label": "model.mph",
+                "current_model_origin": "bound-request",
+                "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+                "datetime": "2026-09-18 22:07:17",
+                "desktop_client_role": "visual-client",
+                "desktop_should_connect": {
+                  "host": "127.0.0.1",
+                  "port": 56388
+                },
+                "last_command": "run_study",
+                "last_error": "",
+                "logs_dir": "REDACTED_PATH",
+                "mcp_home": "REDACTED_PATH",
+                "outputs_dir": "REDACTED_PATH",
+                "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+                "server_endpoint": "127.0.0.1:56388",
+                "server_host": "127.0.0.1",
+                "server_port": 56388,
+                "server_running": false,
+                "server_started_by_mcp": false,
+                "status": "ready",
+                "timestamp": 1789740437.6451359,
+                "version": "0.1.9",
+                "workflow": {
+                  "current_main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase2/runs/20260918T140715Z/current-main.mph",
+                  "guard_level": "strict",
+                  "main_model_label": "",
+                  "main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase2/runs/20260918T140715Z/current-main.mph",
+                  "main_model_tag": "",
+                  "mcp_client_lifecycle": "persistent-required",
+                  "mode": "single-current-main-model",
+                  "model_dimension": 2,
+                  "notes": "Phase 2 live 2D fixture workflow; snapshots are retained with public run evidence.",
+                  "one_shot_client_allowed": false,
+                  "snapshot_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase2/runs/20260918T140715Z/snapshots",
+                  "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+                  "snapshot_prefix": "phase2",
+                  "snapshot_save_mode": "copy",
+                  "updated_at": "2026-09-18 22:07:16",
+                  "visible_main_locked": false,
+                  "workflow_stage": "mcp_connected"
+                }
+              },
+              "study_tag": "std1",
+              "timestamp": 1789740437.645111,
+              "tool": "run_study"
+            },
+            "error": "",
+            "execution": {
+              "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+              "dirty": false,
+              "idempotency_key": "20260918T140715948037Z-phase2-solve",
+              "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+              "model_ownership": "user_owned",
+              "model_ref": {
+                "generation": 5,
+                "model_tag": "mcp_7965f096e9c8",
+                "schema_version": 1,
+                "server_instance_id": "a28ccd1907d0d2234b8d6a31cb6c06f1844e0e207a30bb78ddfb8fdb4f7aa764",
+                "session_id": "session-2ac9ad344ed365aa21e2c02f"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "request_hash": "e817e578e1f86a3ee2145daff79040661fb6cb49ca8186d1c431715756970210",
+              "request_id": "phase2-solve",
+              "revision": 1,
+              "server_ownership": "shared",
+              "session_id": "session-2ac9ad344ed365aa21e2c02f"
+            },
+            "success": true
+          },
+          "metadata": {
+            "arguments": {
+              "study_tag": "std1"
+            },
+            "execution": {
+              "execution_timeout_s": null,
+              "expected_revision": 0,
+              "idempotency_key": "20260918T140715948037Z-phase2-solve",
+              "model_ref": {
+                "generation": 5,
+                "model_tag": "mcp_7965f096e9c8",
+                "schema_version": 1,
+                "server_instance_id": "a28ccd1907d0d2234b8d6a31cb6c06f1844e0e207a30bb78ddfb8fdb4f7aa764",
+                "session_id": "session-2ac9ad344ed365aa21e2c02f"
+              },
+              "queue_timeout_s": null,
+              "request_id": "phase2-solve",
+              "rpc_timeout_s": 0,
+              "session_id": "session-2ac9ad344ed365aa21e2c02f"
+            },
+            "operation": "run_study"
+          },
+          "created_at": "2026-09-18 14:07:17",
+          "started_at": null,
+          "finished_at": "2026-09-18 14:07:17",
+          "effective_timeouts": {
+            "execution_timeout_s": null,
+            "no_progress_warning_s": null,
+            "queue_timeout_s": null,
+            "rpc_timeout_s": 0
+          }
+        },
+        "result": {
+          "data": {
+            "datetime": "2026-09-18 22:07:17",
+            "label": "model.mph",
+            "log_path": "REDACTED_PATH",
+            "operations_path": "REDACTED_PATH",
+            "server": {
+              "attached_to_existing_server": true,
+              "comsol_root": "/Applications/COMSOL64/Multiphysics",
+              "current_model_label": "model.mph",
+              "current_model_origin": "bound-request",
+              "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+              "datetime": "2026-09-18 22:07:17",
+              "desktop_client_role": "visual-client",
+              "desktop_should_connect": {
+                "host": "127.0.0.1",
+                "port": 56388
+              },
+              "last_command": "run_study",
+              "last_error": "",
+              "logs_dir": "REDACTED_PATH",
+              "mcp_home": "REDACTED_PATH",
+              "outputs_dir": "REDACTED_PATH",
+              "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+              "server_endpoint": "127.0.0.1:56388",
+              "server_host": "127.0.0.1",
+              "server_port": 56388,
+              "server_running": false,
+              "server_started_by_mcp": false,
+              "status": "ready",
+              "timestamp": 1789740437.6451359,
+              "version": "0.1.9",
+              "workflow": {
+                "current_main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase2/runs/20260918T140715Z/current-main.mph",
+                "guard_level": "strict",
+                "main_model_label": "",
+                "main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase2/runs/20260918T140715Z/current-main.mph",
+                "main_model_tag": "",
+                "mcp_client_lifecycle": "persistent-required",
+                "mode": "single-current-main-model",
+                "model_dimension": 2,
+                "notes": "Phase 2 live 2D fixture workflow; snapshots are retained with public run evidence.",
+                "one_shot_client_allowed": false,
+                "snapshot_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase2/runs/20260918T140715Z/snapshots",
+                "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+                "snapshot_prefix": "phase2",
+                "snapshot_save_mode": "copy",
+                "updated_at": "2026-09-18 22:07:16",
+                "visible_main_locked": false,
+                "workflow_stage": "mcp_connected"
+              }
+            },
+            "study_tag": "std1",
+            "timestamp": 1789740437.645111,
+            "tool": "run_study"
+          },
+          "error": "",
+          "execution": {
+            "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+            "dirty": false,
+            "idempotency_key": "20260918T140715948037Z-phase2-solve",
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "model_ownership": "user_owned",
+            "model_ref": {
+              "generation": 5,
+              "model_tag": "mcp_7965f096e9c8",
+              "schema_version": 1,
+              "server_instance_id": "a28ccd1907d0d2234b8d6a31cb6c06f1844e0e207a30bb78ddfb8fdb4f7aa764",
+              "session_id": "session-2ac9ad344ed365aa21e2c02f"
+            },
+            "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+            "request_hash": "e817e578e1f86a3ee2145daff79040661fb6cb49ca8186d1c431715756970210",
+            "request_id": "phase2-solve",
+            "revision": 1,
+            "server_ownership": "shared",
+            "session_id": "session-2ac9ad344ed365aa21e2c02f"
+          },
+          "success": true
+        }
+      }
+    }
+  },
+  {
+    "host": "worker-after",
+    "operation": "job_log",
+    "arguments": {
+      "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+      "offset": 0,
+      "limit": 1000
+    },
+    "elapsed_s": 0.004142082994803786,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+        "events": [
+          {
+            "id": 2388,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "RUNNING",
+            "metadata": {
+              "at": 1789740437.450848,
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2389,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "model",
+              "metadata": {
+                "request_id": "wrk-b757fa61-72d9-424a-befd-5c06e36a1762",
+                "tag": "mcp_7965f096e9c8",
+                "type": "model"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "6da26a53a4189265a3ffc7a348b04bf489ada85103a0a976fe987101e8f0fa0c",
+              "request_id": "wrk-b757fa61-72d9-424a-befd-5c06e36a1762"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2390,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "model",
+              "metadata": {
+                "request_id": "wrk-b757fa61-72d9-424a-befd-5c06e36a1762",
+                "tag": "mcp_7965f096e9c8",
+                "type": "model"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437451",
+                "ok": true,
+                "queued_at_ms": "1789740437451",
+                "request_id": "wrk-b757fa61-72d9-424a-befd-5c06e36a1762",
+                "result": {
+                  "$worker_handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                  "generation": 4,
+                  "java_type": "com.comsol.model.Model"
+                },
+                "started_at_ms": "1789740437451",
+                "status": "SUCCEEDED",
+                "type": "model"
+              },
+              "request_hash": "6da26a53a4189265a3ffc7a348b04bf489ada85103a0a976fe987101e8f0fa0c",
+              "request_id": "wrk-b757fa61-72d9-424a-befd-5c06e36a1762",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2391,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "getFilePath",
+                "request_id": "wrk-4a4ba37b-637e-4b11-9058-5c90506ad433",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "91df108780c21dd481194c2a7da23b7d8fdd93df3c98b7725021111702c07eb2",
+              "request_id": "wrk-4a4ba37b-637e-4b11-9058-5c90506ad433"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2392,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "getFilePath",
+                "request_id": "wrk-4a4ba37b-637e-4b11-9058-5c90506ad433",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437452",
+                "ok": true,
+                "queued_at_ms": "1789740437452",
+                "request_id": "wrk-4a4ba37b-637e-4b11-9058-5c90506ad433",
+                "result": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+                "started_at_ms": "1789740437452",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "91df108780c21dd481194c2a7da23b7d8fdd93df3c98b7725021111702c07eb2",
+              "request_id": "wrk-4a4ba37b-637e-4b11-9058-5c90506ad433",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2393,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "model_snapshot",
+              "metadata": {
+                "request_id": "wrk-33b78d41-5d87-47db-82b7-5bc4607fa463",
+                "tag": "mcp_7965f096e9c8",
+                "type": "model_snapshot"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "2036b73cf7fa330e18333960b552f3ade78c4eea658c54883bd67864c13319d6",
+              "request_id": "wrk-33b78d41-5d87-47db-82b7-5bc4607fa463"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2394,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "model_snapshot",
+              "metadata": {
+                "request_id": "wrk-33b78d41-5d87-47db-82b7-5bc4607fa463",
+                "tag": "mcp_7965f096e9c8",
+                "type": "model_snapshot"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437458",
+                "ok": true,
+                "queued_at_ms": "1789740437453",
+                "request_id": "wrk-33b78d41-5d87-47db-82b7-5bc4607fa463",
+                "result": {
+                  "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+                  "changed_tags": [],
+                  "external_event_counter": 0,
+                  "fingerprint": "292f2e7268453b255fd8b92c37f417e18d11c39babbfad42368ab5c7ab8d0369",
+                  "fingerprint_scope": [
+                    "tag",
+                    "label",
+                    "file_path",
+                    "time_modified",
+                    "parameters"
+                  ],
+                  "generation": 4,
+                  "instance_id": "24757bcb-7a10-4cdf-8cda-3443a2f44a68",
+                  "model_tag": "mcp_7965f096e9c8",
+                  "server_instance_id": "127.0.0.1:56388",
+                  "tag": "mcp_7965f096e9c8",
+                  "worker_instance_id": "24757bcb-7a10-4cdf-8cda-3443a2f44a68"
+                },
+                "started_at_ms": "1789740437453",
+                "status": "SUCCEEDED",
+                "type": "model_snapshot"
+              },
+              "request_hash": "2036b73cf7fa330e18333960b552f3ade78c4eea658c54883bd67864c13319d6",
+              "request_id": "wrk-33b78d41-5d87-47db-82b7-5bc4607fa463",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2395,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "study",
+                "request_id": "wrk-71b93317-8a4e-466c-8501-028a8cca3218",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "4e99e35c3f1e50a17bc0eb8645dd6da5a9f07001da8641042d6aa95337e9fa72",
+              "request_id": "wrk-71b93317-8a4e-466c-8501-028a8cca3218"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2396,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "study",
+                "request_id": "wrk-71b93317-8a4e-466c-8501-028a8cca3218",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437459",
+                "ok": true,
+                "queued_at_ms": "1789740437459",
+                "request_id": "wrk-71b93317-8a4e-466c-8501-028a8cca3218",
+                "result": {
+                  "$worker_handle": "h-ee7cf3d9-b7c2-4b3e-9590-7e892f4cf049",
+                  "generation": 4,
+                  "java_type": "com.comsol.model.StudyList"
+                },
+                "started_at_ms": "1789740437459",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "4e99e35c3f1e50a17bc0eb8645dd6da5a9f07001da8641042d6aa95337e9fa72",
+              "request_id": "wrk-71b93317-8a4e-466c-8501-028a8cca3218",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2397,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [
+                  "std1"
+                ],
+                "generation": 4,
+                "handle": "h-ee7cf3d9-b7c2-4b3e-9590-7e892f4cf049",
+                "method": "get",
+                "request_id": "wrk-21efd734-af36-425f-9b8f-9a2ffaa9b30b",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "7c2747d70de756413ff8300f38c3a6d1ae06bdf62728ab6084b76992b349f29c",
+              "request_id": "wrk-21efd734-af36-425f-9b8f-9a2ffaa9b30b"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2398,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [
+                  "std1"
+                ],
+                "generation": 4,
+                "handle": "h-ee7cf3d9-b7c2-4b3e-9590-7e892f4cf049",
+                "method": "get",
+                "request_id": "wrk-21efd734-af36-425f-9b8f-9a2ffaa9b30b",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437460",
+                "ok": true,
+                "queued_at_ms": "1789740437460",
+                "request_id": "wrk-21efd734-af36-425f-9b8f-9a2ffaa9b30b",
+                "result": {
+                  "$worker_handle": "h-02d7d451-4fa7-44ac-9bb1-681333b41f79",
+                  "generation": 4,
+                  "java_type": "com.comsol.model.Study"
+                },
+                "started_at_ms": "1789740437460",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "7c2747d70de756413ff8300f38c3a6d1ae06bdf62728ab6084b76992b349f29c",
+              "request_id": "wrk-21efd734-af36-425f-9b8f-9a2ffaa9b30b",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2399,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-02d7d451-4fa7-44ac-9bb1-681333b41f79",
+                "method": "label",
+                "request_id": "wrk-bb3f29a1-dad2-4213-88da-6385712b8e8f",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "116b37e3c50153558dc5e81b8bff5c644cad237842d11de33de1c9ff8aa902ff",
+              "request_id": "wrk-bb3f29a1-dad2-4213-88da-6385712b8e8f"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2400,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-02d7d451-4fa7-44ac-9bb1-681333b41f79",
+                "method": "label",
+                "request_id": "wrk-bb3f29a1-dad2-4213-88da-6385712b8e8f",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437461",
+                "ok": true,
+                "queued_at_ms": "1789740437461",
+                "request_id": "wrk-bb3f29a1-dad2-4213-88da-6385712b8e8f",
+                "result": "研究 1",
+                "started_at_ms": "1789740437461",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "116b37e3c50153558dc5e81b8bff5c644cad237842d11de33de1c9ff8aa902ff",
+              "request_id": "wrk-bb3f29a1-dad2-4213-88da-6385712b8e8f",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2401,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "study",
+                "request_id": "wrk-6834f201-c82c-456f-bd40-00a1234d786c",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "4e99e35c3f1e50a17bc0eb8645dd6da5a9f07001da8641042d6aa95337e9fa72",
+              "request_id": "wrk-6834f201-c82c-456f-bd40-00a1234d786c"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2402,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "study",
+                "request_id": "wrk-6834f201-c82c-456f-bd40-00a1234d786c",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437462",
+                "ok": true,
+                "queued_at_ms": "1789740437462",
+                "request_id": "wrk-6834f201-c82c-456f-bd40-00a1234d786c",
+                "result": {
+                  "$worker_handle": "h-dd21e0ac-3b17-4c89-aeba-57b95c9a73f5",
+                  "generation": 4,
+                  "java_type": "com.comsol.model.StudyList"
+                },
+                "started_at_ms": "1789740437462",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "4e99e35c3f1e50a17bc0eb8645dd6da5a9f07001da8641042d6aa95337e9fa72",
+              "request_id": "wrk-6834f201-c82c-456f-bd40-00a1234d786c",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2403,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-dd21e0ac-3b17-4c89-aeba-57b95c9a73f5",
+                "method": "tags",
+                "request_id": "wrk-7ca85fd0-41a4-41ea-ab5b-c520969b2e8f",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "8eab1fddd9de5a48b249d628c265faaadfce45bc177d67ab64c36f8128469216",
+              "request_id": "wrk-7ca85fd0-41a4-41ea-ab5b-c520969b2e8f"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2404,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-dd21e0ac-3b17-4c89-aeba-57b95c9a73f5",
+                "method": "tags",
+                "request_id": "wrk-7ca85fd0-41a4-41ea-ab5b-c520969b2e8f",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437463",
+                "ok": true,
+                "queued_at_ms": "1789740437463",
+                "request_id": "wrk-7ca85fd0-41a4-41ea-ab5b-c520969b2e8f",
+                "result": [
+                  "std1"
+                ],
+                "started_at_ms": "1789740437463",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "8eab1fddd9de5a48b249d628c265faaadfce45bc177d67ab64c36f8128469216",
+              "request_id": "wrk-7ca85fd0-41a4-41ea-ab5b-c520969b2e8f",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2405,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [
+                  "std1"
+                ],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "study",
+                "request_id": "wrk-0af85f5f-b9cb-4a09-ac6d-f2c2a5874b43",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "cc7da23c21892fbe3b992320a6f863a99e740d11d504c316fcc51cd7c87b596f",
+              "request_id": "wrk-0af85f5f-b9cb-4a09-ac6d-f2c2a5874b43"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2406,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [
+                  "std1"
+                ],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "study",
+                "request_id": "wrk-0af85f5f-b9cb-4a09-ac6d-f2c2a5874b43",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437465",
+                "ok": true,
+                "queued_at_ms": "1789740437464",
+                "request_id": "wrk-0af85f5f-b9cb-4a09-ac6d-f2c2a5874b43",
+                "result": {
+                  "$worker_handle": "h-9e44a927-34c8-4f6a-a33a-30a6e04dce74",
+                  "generation": 4,
+                  "java_type": "com.comsol.model.Study"
+                },
+                "started_at_ms": "1789740437464",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "cc7da23c21892fbe3b992320a6f863a99e740d11d504c316fcc51cd7c87b596f",
+              "request_id": "wrk-0af85f5f-b9cb-4a09-ac6d-f2c2a5874b43",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2407,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-9e44a927-34c8-4f6a-a33a-30a6e04dce74",
+                "method": "label",
+                "request_id": "wrk-841dd35e-03dd-4e9e-b506-c431b32f9566",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "f59d98cfdcb31148359dcfa9189ea070a7ddd009cb9b40a5c004f74dedb3f75a",
+              "request_id": "wrk-841dd35e-03dd-4e9e-b506-c431b32f9566"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2408,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-9e44a927-34c8-4f6a-a33a-30a6e04dce74",
+                "method": "label",
+                "request_id": "wrk-841dd35e-03dd-4e9e-b506-c431b32f9566",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437466",
+                "ok": true,
+                "queued_at_ms": "1789740437465",
+                "request_id": "wrk-841dd35e-03dd-4e9e-b506-c431b32f9566",
+                "result": "研究 1",
+                "started_at_ms": "1789740437465",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "f59d98cfdcb31148359dcfa9189ea070a7ddd009cb9b40a5c004f74dedb3f75a",
+              "request_id": "wrk-841dd35e-03dd-4e9e-b506-c431b32f9566",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2409,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [
+                  "std1"
+                ],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "study",
+                "request_id": "wrk-8cba2cbc-d277-4f2f-ba49-47df50a72bc9",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "cc7da23c21892fbe3b992320a6f863a99e740d11d504c316fcc51cd7c87b596f",
+              "request_id": "wrk-8cba2cbc-d277-4f2f-ba49-47df50a72bc9"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2410,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [
+                  "std1"
+                ],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "study",
+                "request_id": "wrk-8cba2cbc-d277-4f2f-ba49-47df50a72bc9",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437466",
+                "ok": true,
+                "queued_at_ms": "1789740437466",
+                "request_id": "wrk-8cba2cbc-d277-4f2f-ba49-47df50a72bc9",
+                "result": {
+                  "$worker_handle": "h-9802eaf8-cc16-47f5-a1d2-a74845050fa7",
+                  "generation": 4,
+                  "java_type": "com.comsol.model.Study"
+                },
+                "started_at_ms": "1789740437466",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "cc7da23c21892fbe3b992320a6f863a99e740d11d504c316fcc51cd7c87b596f",
+              "request_id": "wrk-8cba2cbc-d277-4f2f-ba49-47df50a72bc9",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2411,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-9802eaf8-cc16-47f5-a1d2-a74845050fa7",
+                "method": "run",
+                "request_id": "wrk-3a2831ab-d5f8-4591-9bf4-4fc67e19875d",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "274bedb9efd3b5a00860e993fad5f279d09b0ef9fb2ea16ee64568848d42d0b9",
+              "request_id": "wrk-3a2831ab-d5f8-4591-9bf4-4fc67e19875d"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2412,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-9802eaf8-cc16-47f5-a1d2-a74845050fa7",
+                "method": "run",
+                "request_id": "wrk-3a2831ab-d5f8-4591-9bf4-4fc67e19875d",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437642",
+                "ok": true,
+                "queued_at_ms": "1789740437467",
+                "request_id": "wrk-3a2831ab-d5f8-4591-9bf4-4fc67e19875d",
+                "started_at_ms": "1789740437467",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "274bedb9efd3b5a00860e993fad5f279d09b0ef9fb2ea16ee64568848d42d0b9",
+              "request_id": "wrk-3a2831ab-d5f8-4591-9bf4-4fc67e19875d",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2413,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "label",
+                "request_id": "wrk-b0930750-7e7e-4f77-800f-46013221bc66",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "1a31f6b94f6461581d2b671a3cf4bf29725522ba355c00327cae17c01a1f7dbf",
+              "request_id": "wrk-b0930750-7e7e-4f77-800f-46013221bc66"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2414,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "label",
+                "request_id": "wrk-b0930750-7e7e-4f77-800f-46013221bc66",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437644",
+                "ok": true,
+                "queued_at_ms": "1789740437643",
+                "request_id": "wrk-b0930750-7e7e-4f77-800f-46013221bc66",
+                "result": "model.mph",
+                "started_at_ms": "1789740437643",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "1a31f6b94f6461581d2b671a3cf4bf29725522ba355c00327cae17c01a1f7dbf",
+              "request_id": "wrk-b0930750-7e7e-4f77-800f-46013221bc66",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2415,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "label",
+                "request_id": "wrk-80cc0a11-3919-4d27-a5db-6bb3e3e642b5",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "1a31f6b94f6461581d2b671a3cf4bf29725522ba355c00327cae17c01a1f7dbf",
+              "request_id": "wrk-80cc0a11-3919-4d27-a5db-6bb3e3e642b5"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2416,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "label",
+                "request_id": "wrk-80cc0a11-3919-4d27-a5db-6bb3e3e642b5",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437646",
+                "ok": true,
+                "queued_at_ms": "1789740437645",
+                "request_id": "wrk-80cc0a11-3919-4d27-a5db-6bb3e3e642b5",
+                "result": "model.mph",
+                "started_at_ms": "1789740437645",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "1a31f6b94f6461581d2b671a3cf4bf29725522ba355c00327cae17c01a1f7dbf",
+              "request_id": "wrk-80cc0a11-3919-4d27-a5db-6bb3e3e642b5",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2417,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "label",
+                "request_id": "wrk-71b44f29-b606-4ffd-9c8a-ace13a2b4321",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "1a31f6b94f6461581d2b671a3cf4bf29725522ba355c00327cae17c01a1f7dbf",
+              "request_id": "wrk-71b44f29-b606-4ffd-9c8a-ace13a2b4321"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2418,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 4,
+                "handle": "h-a0a5925b-3ecc-46b3-bd3a-4a6fc91f4aa7",
+                "method": "label",
+                "request_id": "wrk-71b44f29-b606-4ffd-9c8a-ace13a2b4321",
+                "type": "call"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437648",
+                "ok": true,
+                "queued_at_ms": "1789740437647",
+                "request_id": "wrk-71b44f29-b606-4ffd-9c8a-ace13a2b4321",
+                "result": "model.mph",
+                "started_at_ms": "1789740437647",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "1a31f6b94f6461581d2b671a3cf4bf29725522ba355c00327cae17c01a1f7dbf",
+              "request_id": "wrk-71b44f29-b606-4ffd-9c8a-ace13a2b4321",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2419,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "model_snapshot",
+              "metadata": {
+                "request_id": "wrk-e0fc1eb2-3d27-475f-8647-0f4312bbb12b",
+                "tag": "mcp_7965f096e9c8",
+                "type": "model_snapshot"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "submitted",
+              "request_hash": "2036b73cf7fa330e18333960b552f3ade78c4eea658c54883bd67864c13319d6",
+              "request_id": "wrk-e0fc1eb2-3d27-475f-8647-0f4312bbb12b"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2420,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "model_snapshot",
+              "metadata": {
+                "request_id": "wrk-e0fc1eb2-3d27-475f-8647-0f4312bbb12b",
+                "tag": "mcp_7965f096e9c8",
+                "type": "model_snapshot"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789740437653",
+                "ok": true,
+                "queued_at_ms": "1789740437650",
+                "request_id": "wrk-e0fc1eb2-3d27-475f-8647-0f4312bbb12b",
+                "result": {
+                  "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+                  "changed_tags": [],
+                  "external_event_counter": 0,
+                  "fingerprint": "292f2e7268453b255fd8b92c37f417e18d11c39babbfad42368ab5c7ab8d0369",
+                  "fingerprint_scope": [
+                    "tag",
+                    "label",
+                    "file_path",
+                    "time_modified",
+                    "parameters"
+                  ],
+                  "generation": 4,
+                  "instance_id": "24757bcb-7a10-4cdf-8cda-3443a2f44a68",
+                  "model_tag": "mcp_7965f096e9c8",
+                  "server_instance_id": "127.0.0.1:56388",
+                  "tag": "mcp_7965f096e9c8",
+                  "worker_instance_id": "24757bcb-7a10-4cdf-8cda-3443a2f44a68"
+                },
+                "started_at_ms": "1789740437650",
+                "status": "SUCCEEDED",
+                "type": "model_snapshot"
+              },
+              "request_hash": "2036b73cf7fa330e18333960b552f3ade78c4eea658c54883bd67864c13319d6",
+              "request_id": "wrk-e0fc1eb2-3d27-475f-8647-0f4312bbb12b",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          },
+          {
+            "id": 2421,
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "event": "SUCCEEDED",
+            "metadata": {
+              "at": 1789740437.654331,
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764"
+            },
+            "created_at": "2026-09-18 14:07:17"
+          }
+        ],
+        "next_offset": 34
+      }
+    }
+  },
+  {
+    "host": "worker-after",
+    "operation": "job_result",
+    "arguments": {
+      "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf"
+    },
+    "elapsed_s": 0.0025101250503212214,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+        "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+        "status": "SUCCEEDED",
+        "metadata": {
+          "arguments": {
+            "study_tag": "std1"
+          },
+          "engine_started_at": 1789740437.450787,
+          "execution": {
+            "execution_timeout_s": null,
+            "expected_revision": 0,
+            "idempotency_key": "20260918T140715948037Z-phase2-solve",
+            "model_ref": {
+              "generation": 5,
+              "model_tag": "mcp_7965f096e9c8",
+              "schema_version": 1,
+              "server_instance_id": "a28ccd1907d0d2234b8d6a31cb6c06f1844e0e207a30bb78ddfb8fdb4f7aa764",
+              "session_id": "session-2ac9ad344ed365aa21e2c02f"
+            },
+            "queue_timeout_s": null,
+            "request_id": "phase2-solve",
+            "rpc_timeout_s": 0,
+            "session_id": "session-2ac9ad344ed365aa21e2c02f"
+          },
+          "finished_observed_at": 1789740437.6542468,
+          "operation": "run_study",
+          "queue_wait_s": 2.19999928958714e-05
+        },
+        "created_at": "2026-09-18 14:07:17",
+        "started_at": "2026-09-18 14:07:17",
+        "finished_at": "2026-09-18 14:07:17",
+        "effective_timeouts": {
+          "execution_timeout_s": null,
+          "no_progress_warning_s": null,
+          "queue_timeout_s": null,
+          "rpc_timeout_s": 0
+        },
+        "operation": {
+          "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+          "request_id": "phase2-solve",
+          "idempotency_key": "20260918T140715948037Z-phase2-solve",
+          "request_hash": "e817e578e1f86a3ee2145daff79040661fb6cb49ca8186d1c431715756970210",
+          "operation": "run_study",
+          "status": "SUCCEEDED",
+          "result": {
+            "data": {
+              "datetime": "2026-09-18 22:07:17",
+              "label": "model.mph",
+              "log_path": "REDACTED_PATH",
+              "operations_path": "REDACTED_PATH",
+              "server": {
+                "attached_to_existing_server": true,
+                "comsol_root": "/Applications/COMSOL64/Multiphysics",
+                "current_model_label": "model.mph",
+                "current_model_origin": "bound-request",
+                "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+                "datetime": "2026-09-18 22:07:17",
+                "desktop_client_role": "visual-client",
+                "desktop_should_connect": {
+                  "host": "127.0.0.1",
+                  "port": 56388
+                },
+                "last_command": "run_study",
+                "last_error": "",
+                "logs_dir": "REDACTED_PATH",
+                "mcp_home": "REDACTED_PATH",
+                "outputs_dir": "REDACTED_PATH",
+                "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+                "server_endpoint": "127.0.0.1:56388",
+                "server_host": "127.0.0.1",
+                "server_port": 56388,
+                "server_running": false,
+                "server_started_by_mcp": false,
+                "status": "ready",
+                "timestamp": 1789740437.6451359,
+                "version": "0.1.9",
+                "workflow": {
+                  "current_main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase2/runs/20260918T140715Z/current-main.mph",
+                  "guard_level": "strict",
+                  "main_model_label": "",
+                  "main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase2/runs/20260918T140715Z/current-main.mph",
+                  "main_model_tag": "",
+                  "mcp_client_lifecycle": "persistent-required",
+                  "mode": "single-current-main-model",
+                  "model_dimension": 2,
+                  "notes": "Phase 2 live 2D fixture workflow; snapshots are retained with public run evidence.",
+                  "one_shot_client_allowed": false,
+                  "snapshot_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase2/runs/20260918T140715Z/snapshots",
+                  "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+                  "snapshot_prefix": "phase2",
+                  "snapshot_save_mode": "copy",
+                  "updated_at": "2026-09-18 22:07:16",
+                  "visible_main_locked": false,
+                  "workflow_stage": "mcp_connected"
+                }
+              },
+              "study_tag": "std1",
+              "timestamp": 1789740437.645111,
+              "tool": "run_study"
+            },
+            "error": "",
+            "execution": {
+              "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+              "dirty": false,
+              "idempotency_key": "20260918T140715948037Z-phase2-solve",
+              "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+              "model_ownership": "user_owned",
+              "model_ref": {
+                "generation": 5,
+                "model_tag": "mcp_7965f096e9c8",
+                "schema_version": 1,
+                "server_instance_id": "a28ccd1907d0d2234b8d6a31cb6c06f1844e0e207a30bb78ddfb8fdb4f7aa764",
+                "session_id": "session-2ac9ad344ed365aa21e2c02f"
+              },
+              "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+              "request_hash": "e817e578e1f86a3ee2145daff79040661fb6cb49ca8186d1c431715756970210",
+              "request_id": "phase2-solve",
+              "revision": 1,
+              "server_ownership": "shared",
+              "session_id": "session-2ac9ad344ed365aa21e2c02f"
+            },
+            "success": true
+          },
+          "metadata": {
+            "arguments": {
+              "study_tag": "std1"
+            },
+            "execution": {
+              "execution_timeout_s": null,
+              "expected_revision": 0,
+              "idempotency_key": "20260918T140715948037Z-phase2-solve",
+              "model_ref": {
+                "generation": 5,
+                "model_tag": "mcp_7965f096e9c8",
+                "schema_version": 1,
+                "server_instance_id": "a28ccd1907d0d2234b8d6a31cb6c06f1844e0e207a30bb78ddfb8fdb4f7aa764",
+                "session_id": "session-2ac9ad344ed365aa21e2c02f"
+              },
+              "queue_timeout_s": null,
+              "request_id": "phase2-solve",
+              "rpc_timeout_s": 0,
+              "session_id": "session-2ac9ad344ed365aa21e2c02f"
+            },
+            "operation": "run_study"
+          },
+          "created_at": "2026-09-18 14:07:17",
+          "started_at": null,
+          "finished_at": "2026-09-18 14:07:17",
+          "effective_timeouts": {
+            "execution_timeout_s": null,
+            "no_progress_warning_s": null,
+            "queue_timeout_s": null,
+            "rpc_timeout_s": 0
+          }
+        },
+        "result": {
+          "data": {
+            "datetime": "2026-09-18 22:07:17",
+            "label": "model.mph",
+            "log_path": "REDACTED_PATH",
+            "operations_path": "REDACTED_PATH",
+            "server": {
+              "attached_to_existing_server": true,
+              "comsol_root": "/Applications/COMSOL64/Multiphysics",
+              "current_model_label": "model.mph",
+              "current_model_origin": "bound-request",
+              "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+              "datetime": "2026-09-18 22:07:17",
+              "desktop_client_role": "visual-client",
+              "desktop_should_connect": {
+                "host": "127.0.0.1",
+                "port": 56388
+              },
+              "last_command": "run_study",
+              "last_error": "",
+              "logs_dir": "REDACTED_PATH",
+              "mcp_home": "REDACTED_PATH",
+              "outputs_dir": "REDACTED_PATH",
+              "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+              "server_endpoint": "127.0.0.1:56388",
+              "server_host": "127.0.0.1",
+              "server_port": 56388,
+              "server_running": false,
+              "server_started_by_mcp": false,
+              "status": "ready",
+              "timestamp": 1789740437.6451359,
+              "version": "0.1.9",
+              "workflow": {
+                "current_main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase2/runs/20260918T140715Z/current-main.mph",
+                "guard_level": "strict",
+                "main_model_label": "",
+                "main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase2/runs/20260918T140715Z/current-main.mph",
+                "main_model_tag": "",
+                "mcp_client_lifecycle": "persistent-required",
+                "mode": "single-current-main-model",
+                "model_dimension": 2,
+                "notes": "Phase 2 live 2D fixture workflow; snapshots are retained with public run evidence.",
+                "one_shot_client_allowed": false,
+                "snapshot_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase2/runs/20260918T140715Z/snapshots",
+                "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+                "snapshot_prefix": "phase2",
+                "snapshot_save_mode": "copy",
+                "updated_at": "2026-09-18 22:07:16",
+                "visible_main_locked": false,
+                "workflow_stage": "mcp_connected"
+              }
+            },
+            "study_tag": "std1",
+            "timestamp": 1789740437.645111,
+            "tool": "run_study"
+          },
+          "error": "",
+          "execution": {
+            "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+            "dirty": false,
+            "idempotency_key": "20260918T140715948037Z-phase2-solve",
+            "job_id": "4558820f-4f2d-4be1-97c4-0ff6ccff81cf",
+            "model_ownership": "user_owned",
+            "model_ref": {
+              "generation": 5,
+              "model_tag": "mcp_7965f096e9c8",
+              "schema_version": 1,
+              "server_instance_id": "a28ccd1907d0d2234b8d6a31cb6c06f1844e0e207a30bb78ddfb8fdb4f7aa764",
+              "session_id": "session-2ac9ad344ed365aa21e2c02f"
+            },
+            "operation_id": "af69d488-0591-46bd-af2a-9beaffec5764",
+            "request_hash": "e817e578e1f86a3ee2145daff79040661fb6cb49ca8186d1c431715756970210",
+            "request_id": "phase2-solve",
+            "revision": 1,
+            "server_ownership": "shared",
+            "session_id": "session-2ac9ad344ed365aa21e2c02f"
+          },
+          "success": true
+        }
+      }
+    }
+  }
+]

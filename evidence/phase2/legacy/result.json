@@ -1,0 +1,35 @@
+{
+  "scope": "Pre-W05 legacy control-flow regressions",
+  "environment": {
+    "engine": "not invoked by this regression suite",
+    "classification": "unit-only; no COMSOL platform or version verification claimed"
+  },
+  "pre_fix": {
+    "command": "/Users/everwalker/Documents/Codex/2026-09-05/https-github-com-wjc9011-comsol-multiphysics/comsol-mcp-server/.venv/bin/python -m pytest -q tests/test_phase2_legacy_control_flow.py",
+    "status": "FAIL",
+    "result": "4 failed",
+    "sha256": "562128b3ac9c558468053520ff3fbd13de6f1c3760bcff964fc18bf9311decad",
+    "output": "pre_fix_regressions.txt"
+  },
+  "post_fix": {
+    "regression_command": "/Users/everwalker/Documents/Codex/2026-09-05/https-github-com-wjc9011-comsol-multiphysics/comsol-mcp-server/.venv/bin/python -m pytest -q tests/test_phase2_legacy_control_flow.py",
+    "regression_status": "PASS",
+    "regression_result": "10 passed",
+    "regression_sha256": "463ab729dff946035d45a5caf93b242c8a04f169983b028d6a4cae429efca324",
+    "full_command": "/Users/everwalker/Documents/Codex/2026-09-05/https-github-com-wjc9011-comsol-multiphysics/comsol-mcp-server/.venv/bin/python -m pytest -q",
+    "full_status": "PASS",
+    "full_result": "97 passed",
+    "full_sha256": "6e3ecdaf49fcc3a84067a0d48f7bb80f55c18acbbe6901e2e43c944fdb4cf01b",
+    "output": ["post_fix_regressions.txt", "post_fix_pytest.txt"]
+  },
+  "acceptance": {
+    "required_metric_partial": "PASS: no snapshot is saved and the result is a business failure",
+    "study_retry": "PASS: a solver exception leaves exactly one solve invocation",
+    "parameter_static_preflight": "PASS: invalid later entries produce no writes",
+    "parameter_partial_mutation": "PASS: applied, failed, and not_executed are preserved with atomic=false",
+    "property_partial_mutation": "PASS: property batches are fully parsed before writes; setter failures preserve uncertain failed-item state",
+    "temporary_cleanup_failure": "PASS: expression and metric cleanup failures return cleanup_failed and engine_state_unknown, never a row-level partial success",
+    "type_conflict": "PASS: same-tag different-type reuse fails before a write",
+    "outer_mcp_error": "HANDOFF: legacy envelope success=false carries structured failure data; W05 gateway maps it to CallToolResult.isError"
+  }
+}

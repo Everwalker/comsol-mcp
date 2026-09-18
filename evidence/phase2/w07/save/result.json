@@ -1,0 +1,23 @@
+{
+  "scope": "W07 atomic MPH publication software regression",
+  "engine": "NOT_RUN: no COMSOL API or model was opened by this test",
+  "unit_test": {
+    "command": "/Users/everwalker/Documents/Codex/2026-09-05/https-github-com-wjc9011-comsol-multiphysics/comsol-mcp-server/.venv/bin/python -m pytest -q tests/test_atomic_save.py",
+    "result": "5 passed",
+    "sha256": "48d1816a8c98ecd9e3f98e3b04c3072d9c5ba61a33bdda39d86d36a8edd4812b",
+    "output": "unit.txt"
+  },
+  "full_unit_suite": {
+    "command": "/Users/everwalker/Documents/Codex/2026-09-05/https-github-com-wjc9011-comsol-multiphysics/comsol-mcp-server/.venv/bin/python -m pytest -q",
+    "result": "106 passed",
+    "sha256": "995a9ccf339a27fe60cc24a666d7132f1ec03eeef7d258dff504bd97262b19f7",
+    "output": "full_pytest.txt"
+  },
+  "covered": [
+    "successful ZIP verification, fsync and atomic replacement",
+    "callback failure preserves the old complete artifact and partial candidate",
+    "verification and rename failures preserve the old artifact and candidate evidence",
+    "project-root, symlink escape and overwrite preflight"
+  ],
+  "next_real_engine_entry": "Use a managed limited-volume or permissions-denied test destination with a real worker model.save(temp_path, True), then independently reopen the published MPH. Do not infer this engine acceptance from software-only tests."
+}

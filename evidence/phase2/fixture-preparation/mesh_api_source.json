@@ -1,0 +1,12 @@
+{
+  "doc_id": 3964,
+  "title": "COMSOL 6.4 - Mesh",
+  "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/application_programming_guide.15.24.html",
+  "sha256": "6558506a313e2cb8ac7b9c6ec129bc3acf37281b38e2f96bdb8b90ac91bff97d",
+  "page": null,
+  "chunk_id": 16484,
+  "total_chars": 1580,
+  "offset": 0,
+  "next_offset": null,
+  "text": "Mesh\n\nThe following line adds a Mesh node, with tag mesh1, linked to the geometry with tag geom1:\n\nmodel.mesh().create(\"mesh1\", \"geom1\");\n\nYou can control the mesh element size either by a preconfigured set of sizes or by giving low-level input arguments to the meshing algorithm.\n\nThe following line:\n\nmodel.mesh(\"mesh1\").autoMeshSize(6);\n\ncorresponds to a mesh with Element size set to Coarse. The argument to the method autoMeshSize ranges from 1-9, where 1 is Extremely fine and 9 is Extremely coarse.\n\nTo generate the mesh, you call the run method for the Mesh node:\n\nmodel.mesh(\"mesh1\").run();\n\nUse Record Code to generate code for other mesh operations.\n\nThe code below shows an example where the global mesh parameters have been changed.\n\nmodel.mesh(\"mesh1\").automatic(false); // Turn off Physics-controlled mesh\n\nwith(model.mesh(\"mesh1\").feature(\"size\"));\n\nset(\"custom\", \"on\"); // Use custom element size\n\nset(\"hmax\", \"0.09\"); // Maximum element size\n\nset(\"hmin\", \"3.0E-3\"); // Minimum element size\n\nset(\"hgrad\", \"1.2\"); // Maximum element growth rate\n\nset(\"hcurve\", \"0.35\"); // Curvature factor\n\nset(\"hnarrow\", \"1.5\"); // Resolution of narrow regions\n\nendwith();\n\nmodel.mesh(\"mesh1\").run();\n\nThe above example corresponds to the following Mesh node settings: [IMAGE: images/application_programming_guide.15.24.1.png ]\n\nNote that you can also set local element size properties for individual points, edges, faces, and domains. Use Record Code or any of the other tools for automatic generation of code to learn more about the syntax and methods for other mesh operations."
+}

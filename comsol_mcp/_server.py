@@ -65,6 +65,7 @@ SERVER_LOG = LOGS_DIR / "server.log"
 _runtime_lock = threading.RLock()
 _server: Any | None = None
 _client: Any | None = None
+_remote_client_factory: Any | None = None
 _client_connected = False
 _connected_host = ""
 _connected_port: int | None = None

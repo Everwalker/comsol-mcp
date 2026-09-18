@@ -1,0 +1,28 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+__________ test_solver_batch_preflights_all_steps_before_creating_any __________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x105c06e40>
+
+    def test_solver_batch_preflights_all_steps_before_creating_any(monkeypatch):
+        from comsol_mcp import _tools_solver
+        changes = []
+        monkeypatch.setattr(_tools_solver, "_run_tool", lambda name, callback: callback())
+        monkeypatch.setattr(_tools_solver, "_require_visible_main", lambda name: object())
+        monkeypatch.setattr(_tools_solver, "_add_segregated_step", lambda *args: changes.append(args) or {})
+        body = json.dumps([
+            {"name": "add_segregated_step", "value": json.dumps({"step_tag": "s1", "variables": ["u"]})},
+            {"name": "add_segregated_step", "value": "invalid JSON"},
+        ])
+        with pytest.raises(ValueError):
+            _tools_solver.configure_solver("sol1", "seg1", body)
+>       assert changes == []
+E       AssertionError: assert [(<object obj... 's1', ['u'])] == []
+E         
+E         Left contains one more item: (<object object at 0x1003e61e0>, 'sol1', 'seg1', 's1', ['u'])
+E         Use -v to get more diff
+
+tests/test_phase2_legacy_control_flow.py:22: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_phase2_legacy_control_flow.py::test_solver_batch_preflights_all_steps_before_creating_any
+1 failed in 0.22s
