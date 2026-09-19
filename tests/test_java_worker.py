@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 import json
+import os
 import socket
+import subprocess
+import sys
 import time
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
@@ -11,16 +14,134 @@ from pathlib import Path
 
 import pytest
 
+from comsol_mcp import _java_worker as java_worker
 from comsol_mcp._java_worker import JavaWorkerError, JavaWorkerPaths, PersistentJavaWorker, RemoteClient, RemoteModel
 
 
-COMSOL_ROOT = Path("/Applications/COMSOL64/Multiphysics")
-JDK11 = Path("/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home")
+COMSOL_ROOT = Path(os.environ.get("COMSOL_ROOT", "/Applications/COMSOL64/Multiphysics")).expanduser()
+JDK11 = Path(
+    os.environ.get("COMSOL_JAVA_HOME")
+    or os.environ.get("JAVA_HOME")
+    or "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home"
+).expanduser()
+JAVAC_NAME = "javac.exe" if sys.platform == "win32" else "javac"
+
+
+def _worker_build_environment_available() -> bool:
+    return (COMSOL_ROOT / "bin" / "comsolclientpath.txt").is_file() and (JDK11 / "bin" / JAVAC_NAME).is_file()
+
+
+_WINDOWS_ACL_SCRIPT = r"""
+$ErrorActionPreference = 'Stop'
+$acl = Get-Acl -LiteralPath $env:COMSOL_MCP_ENDPOINT_PATH
+$identity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+$access = @(
+    foreach ($ace in $acl.Access) {
+        try {
+            $sid = $ace.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value
+        } catch {
+            $sid = [string]$ace.IdentityReference.Value
+        }
+        [pscustomobject]@{
+            sid = [string]$sid
+            type = [string]$ace.AccessControlType
+            rights = [int64]$ace.FileSystemRights
+        }
+    }
+)
+[pscustomobject]@{
+    current_user_sid = [string]$identity.User.Value
+    owner_sid = [string]$acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value
+    access = $access
+} | ConvertTo-Json -Compress -Depth 8
+"""
+
+
+def _windows_acl_metadata(endpoint: Path) -> dict:
+    powershell = Path(os.environ.get("WINDIR", r"C:\Windows")) / "System32" / "WindowsPowerShell" / "v1.0" / "powershell.exe"
+    environment = dict(os.environ)
+    environment["COMSOL_MCP_ENDPOINT_PATH"] = str(endpoint)
+    completed = subprocess.run(
+        [
+            str(powershell),
+            "-NoLogo",
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            _WINDOWS_ACL_SCRIPT,
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        env=environment,
+        check=False,
+    )
+    assert completed.returncode == 0, f"Get-Acl failed: {completed.stderr.strip()}"
+    try:
+        metadata = json.loads(completed.stdout)
+    except json.JSONDecodeError as exc:
+        raise AssertionError(f"Get-Acl returned invalid JSON: {completed.stdout!r}") from exc
+    assert isinstance(metadata, dict)
+    return metadata
+
+
+def _set_windows_owner(path: Path, sid: str) -> None:
+    powershell = Path(os.environ.get("WINDIR", r"C:\Windows")) / "System32" / "WindowsPowerShell" / "v1.0" / "powershell.exe"
+    environment = dict(os.environ)
+    environment["COMSOL_MCP_OWNER_PATH"] = str(path)
+    environment["COMSOL_MCP_OWNER_SID"] = sid
+    script = r"""
+$ErrorActionPreference = 'Stop'
+$acl = Get-Acl -LiteralPath $env:COMSOL_MCP_OWNER_PATH
+$acl.SetOwner([System.Security.Principal.SecurityIdentifier]$env:COMSOL_MCP_OWNER_SID)
+Set-Acl -LiteralPath $env:COMSOL_MCP_OWNER_PATH -AclObject $acl
+"""
+    completed = subprocess.run(
+        [str(powershell), "-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        env=environment,
+        check=False,
+    )
+    assert completed.returncode == 0, f"Set-Acl owner failed: {completed.stderr.strip()}"
+
+
+def _validate_windows_endpoint_acl_metadata(endpoint: Path, metadata: dict) -> None:
+    current_sid = metadata.get("current_user_sid")
+    owner_sid = metadata.get("owner_sid")
+    entries = metadata.get("access")
+    assert isinstance(current_sid, str) and current_sid.startswith("S-1-")
+    assert owner_sid in {current_sid, "S-1-5-18", "S-1-5-32-544"}
+    assert isinstance(entries, list)
+    safe_sids = {current_sid, "S-1-5-18", "S-1-5-32-544"}
+    raw_safe_sids = safe_sids | {"S-1-3-4"}
+    allow_entries = [entry for entry in entries if entry.get("type") == "Allow"]
+    allow_sids = {entry.get("sid") for entry in allow_entries}
+    assert allow_sids and allow_sids <= raw_safe_sids, f"unexpected endpoint Allow SIDs: {sorted(allow_sids)}"
+    normalized_allow_sids = {owner_sid if sid == "S-1-3-4" else sid for sid in allow_sids}
+    assert normalized_allow_sids <= safe_sids
+
+    # OWNER RIGHTS and group membership are only metadata here. Opening the
+    # actual endpoint with a writable handle proves the current token has the
+    # required read/write access without modifying the file or simulating ACL
+    # evaluation in Python.
+    with endpoint.open("r+b"):
+        pass
+
+
+def _assert_windows_endpoint_acl(endpoint: Path) -> None:
+    """Require the endpoint DACL to be limited to the worker's safe principals."""
+    _validate_windows_endpoint_acl_metadata(endpoint, _windows_acl_metadata(endpoint))
 
 
 @pytest.fixture(scope="module")
 def worker(tmp_path_factory):
-    if not (COMSOL_ROOT / "bin/comsolclientpath.txt").is_file() or not (JDK11 / "bin/javac").is_file():
+    if not _worker_build_environment_available():
         pytest.skip("COMSOL 6.4/JDK 11 local Worker build environment unavailable")
     instance = PersistentJavaWorker(JavaWorkerPaths(COMSOL_ROOT, JDK11), state_dir=tmp_path_factory.mktemp("worker-state"))
     instance.start()
@@ -64,7 +185,152 @@ def test_java_worker_persists_private_endpoint_metadata(worker, tmp_path_factory
     assert saved["host"] == "127.0.0.1"
     assert saved["port"] == worker.endpoint[1]
     assert len(saved["token"]) >= 32
-    assert endpoint.stat().st_mode & 0o077 == 0
+    assert isinstance(saved["process_start_epoch_ms"], int)
+    assert saved["process_start_epoch_ms"] > 0
+    if sys.platform == "win32":
+        _assert_windows_endpoint_acl(endpoint)
+    else:
+        assert endpoint.stat().st_mode & 0o077 == 0
+
+
+def test_windows_acl_owner_rights_is_resolved_to_verified_owner(tmp_path):
+    endpoint = tmp_path / "worker_endpoint.json"
+    endpoint.write_bytes(b"{}\n")
+    current_sid = "S-1-5-21-100-200-300-400"
+    metadata = {
+        "current_user_sid": current_sid,
+        "owner_sid": "S-1-5-32-544",
+        "access": [
+            {"sid": "S-1-3-4", "type": "Allow"},
+            {"sid": "S-1-5-18", "type": "Allow"},
+            {"sid": "S-1-5-32-544", "type": "Allow"},
+        ],
+    }
+    _validate_windows_endpoint_acl_metadata(endpoint, metadata)
+    assert endpoint.read_bytes() == b"{}\n"
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        {
+            "current_user_sid": "S-1-5-21-100-200-300-400",
+            "owner_sid": "S-1-5-21-foreign",
+            "access": [{"sid": "S-1-5-21-100-200-300-400", "type": "Allow"}],
+        },
+        {
+            "current_user_sid": "S-1-5-21-100-200-300-400",
+            "owner_sid": "S-1-5-21-100-200-300-400",
+            "access": [{"sid": "S-1-1-0", "type": "Allow"}],
+        },
+    ],
+    ids=["foreign-owner", "everyone-allow"],
+)
+def test_windows_acl_metadata_rejects_foreign_owner_and_broad_allow(tmp_path, metadata):
+    endpoint = tmp_path / "worker_endpoint.json"
+    endpoint.write_bytes(b"{}\n")
+    with pytest.raises(AssertionError):
+        _validate_windows_endpoint_acl_metadata(endpoint, metadata)
+
+
+def test_windows_jdk_executables_keep_space_containing_paths(monkeypatch, tmp_path):
+    paths = JavaWorkerPaths(tmp_path / "COMSOL 6.4", tmp_path / "JDK 11", project_root=tmp_path, platform_name="nt")
+    assert paths.executable("java").name == "java.exe"
+    assert paths.executable("javac").name == "javac.exe"
+    assert "JDK 11" in str(paths.executable("java"))
+
+
+def test_windows_compile_uses_exe_semicolon_classpath_and_utf8_decoding(monkeypatch, tmp_path):
+    root, jdk = tmp_path / "COMSOL 6.4", tmp_path / "JDK 11"
+    (root / "bin").mkdir(parents=True); (root / "apiplugins").mkdir()
+    (root / "bin" / "comsolclientpath.txt").write_text("client.jar\nsecond.jar\n")
+    (root / "apiplugins" / "client.jar").write_bytes(b"jar")
+    (root / "apiplugins" / "second.jar").write_bytes(b"jar")
+    (jdk / "bin").mkdir(parents=True)
+    (jdk / "bin" / "java.exe").write_bytes(b"")
+    (jdk / "bin" / "javac.exe").write_bytes(b"")
+    observed = {}
+    def compilation(command, **kwargs):
+        observed.update(command=command, kwargs=kwargs)
+        return SimpleNamespace(returncode=1, stdout="", stderr="编译失败")
+    monkeypatch.setattr(java_worker.subprocess, "run", compilation)
+    worker = PersistentJavaWorker(JavaWorkerPaths(root, jdk, project_root=tmp_path, platform_name="nt"), state_dir=tmp_path / "state with spaces")
+    with pytest.raises(JavaWorkerError, match="编译失败"):
+        worker.start()
+    assert observed["command"][0].endswith("javac.exe")
+    assert ";" in observed["command"][2]
+    assert observed["kwargs"]["encoding"] == "utf-8"
+    assert observed["kwargs"]["errors"] == "replace"
+
+
+def test_windows_classpath_prefers_complete_apiplugins_without_scanning_plugins(tmp_path):
+    root = tmp_path / "COMSOL 6.4"
+    (root / "bin").mkdir(parents=True); (root / "plugins").mkdir(); (root / "apiplugins").mkdir()
+    (root / "bin" / "comsolclientpath.txt").write_text("com.comsol.api_1.0.0.jar\n")
+    expected = root / "apiplugins" / "com.comsol.api_1.0.0.jar"
+    expected.write_bytes(b"api")
+    (root / "plugins" / "unlisted.jar").write_bytes(b"must-not-be-scanned")
+    (root / "plugins" / "com.comsol.api_1.0.0.jar").write_bytes(b"alternate-complete-single-entry")
+    paths = JavaWorkerPaths(root, tmp_path / "JDK", project_root=tmp_path, platform_name="nt")
+    classpath, _, count = paths.classpath()
+    assert classpath == str(expected)
+    assert count == 1
+
+
+def test_windows_classpath_uses_complete_plugins_only_when_apiplugins_is_incomplete(tmp_path):
+    root = tmp_path / "COMSOL 6.4"
+    (root / "bin").mkdir(parents=True); (root / "plugins").mkdir(); (root / "apiplugins").mkdir()
+    (root / "bin" / "comsolclientpath.txt").write_text("first.jar\nsecond.jar\n")
+    (root / "apiplugins" / "first.jar").write_bytes(b"partial")
+    first, second = root / "plugins" / "first.jar", root / "plugins" / "second.jar"
+    first.write_bytes(b"first"); second.write_bytes(b"second")
+    paths = JavaWorkerPaths(root, tmp_path / "JDK", project_root=tmp_path, platform_name="nt")
+    classpath, _, count = paths.classpath()
+    assert classpath == ";".join((str(first), str(second)))
+    assert count == 2
+
+
+def test_windows_classpath_rejects_partial_roots_instead_of_mixing(tmp_path):
+    root = tmp_path / "COMSOL 6.4"
+    (root / "bin").mkdir(parents=True); (root / "plugins").mkdir(); (root / "apiplugins").mkdir()
+    (root / "bin" / "comsolclientpath.txt").write_text("first.jar\nsecond.jar\n")
+    (root / "apiplugins" / "first.jar").write_bytes(b"first")
+    (root / "plugins" / "second.jar").write_bytes(b"second")
+    paths = JavaWorkerPaths(root, tmp_path / "JDK", project_root=tmp_path, platform_name="nt")
+    with pytest.raises(JavaWorkerError, match="no complete official COMSOL classpath root"):
+        paths.classpath()
+
+
+def test_windows_classpath_missing_manifest_entry_fails_precisely(tmp_path):
+    root = tmp_path / "COMSOL 6.4"
+    (root / "bin").mkdir(parents=True); (root / "plugins").mkdir()
+    (root / "bin" / "comsolclientpath.txt").write_text("missing.jar\n")
+    paths = JavaWorkerPaths(root, tmp_path / "JDK", project_root=tmp_path, platform_name="nt")
+    with pytest.raises(JavaWorkerError, match="missing.jar"):
+        paths.classpath()
+
+
+def test_reused_worker_pid_with_different_creation_time_is_stale(monkeypatch, tmp_path):
+    endpoint = tmp_path / "worker_endpoint.json"
+    endpoint.write_text(json.dumps({"pid": 4242, "port": 1, "token": "x" * 32,
+                                    "generation": 5, "process_start_epoch_ms": 100}))
+    probe = PersistentJavaWorker(JavaWorkerPaths(COMSOL_ROOT, JDK11, project_root=tmp_path), state_dir=tmp_path)
+    monkeypatch.setattr(java_worker, "process_identity", lambda pid: {"alive": True, "start_epoch_ms": 101})
+    assert probe._attach_existing(endpoint) is None
+    assert probe._next_generation == 6
+    assert not endpoint.exists()
+
+
+def test_windows_unverifiable_live_worker_never_starts_replacement(monkeypatch, tmp_path):
+    endpoint = tmp_path / "worker_endpoint.json"
+    endpoint.write_text(json.dumps({"pid": 4242, "port": 1, "token": "x" * 32,
+                                    "generation": 5, "process_start_epoch_ms": 100}))
+    probe = PersistentJavaWorker(JavaWorkerPaths(COMSOL_ROOT, JDK11, project_root=tmp_path), state_dir=tmp_path)
+    monkeypatch.setattr(java_worker, "process_identity", lambda pid: {"alive": True, "start_epoch_ms": None})
+    probe.paths = JavaWorkerPaths(COMSOL_ROOT, JDK11, project_root=tmp_path, platform_name="nt")
+    with pytest.raises(JavaWorkerError, match="identity cannot be verified"):
+        probe._attach_existing(endpoint)
+    assert endpoint.exists()
 
 
 def test_java_worker_reconnects_existing_endpoint_without_spawning_or_replaying(worker):
@@ -78,8 +344,26 @@ def test_java_worker_reconnects_existing_endpoint_without_spawning_or_replaying(
     assert worker.health(timeout_s=1)["status"] == "HEALTHY"
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows owner semantics only")
+def test_windows_existing_foreign_lock_root_is_rejected_without_takeover(tmp_path):
+    lock_root = tmp_path / "foreign-lock-root"
+    lock_root.mkdir()
+    _set_windows_owner(lock_root, "S-1-5-32-544")
+    assert _windows_acl_metadata(lock_root)["owner_sid"] == "S-1-5-32-544"
+    paths = JavaWorkerPaths(COMSOL_ROOT, JDK11, project_root=tmp_path, global_lock_root=lock_root)
+    instance = PersistentJavaWorker(paths, state_dir=tmp_path / "worker-state")
+    try:
+        instance.start()
+        rejected = instance.submit("lock_selftest", {"port": 65001}, request_id="foreign-root", rpc_timeout_s=1)
+        assert rejected["status"] == "FAILED"
+        assert rejected["failure"]["code"] == "PERMISSION_DENIED"
+        assert _windows_acl_metadata(lock_root)["owner_sid"] == "S-1-5-32-544"
+    finally:
+        instance.close()
+
+
 def test_dead_owned_worker_increments_generation_before_replacement(tmp_path):
-    if not (COMSOL_ROOT / "bin/comsolclientpath.txt").is_file() or not (JDK11 / "bin/javac").is_file():
+    if not _worker_build_environment_available():
         pytest.skip("COMSOL 6.4/JDK 11 local Worker build environment unavailable")
     first = PersistentJavaWorker(JavaWorkerPaths(COMSOL_ROOT, JDK11), state_dir=tmp_path)
     first.start(); previous_generation = first.generation; first.close()
@@ -188,7 +472,7 @@ def test_remote_client_load_serializes_path_objects_as_strings(tmp_path):
 
 
 def test_two_workers_cannot_own_the_same_global_endpoint_lock(tmp_path):
-    if not (COMSOL_ROOT / "bin/comsolclientpath.txt").is_file() or not (JDK11 / "bin/javac").is_file():
+    if not _worker_build_environment_available():
         pytest.skip("COMSOL 6.4/JDK 11 local Worker build environment unavailable")
     lock_root = tmp_path / "global-endpoint-locks"
     paths = JavaWorkerPaths(COMSOL_ROOT, JDK11, project_root=tmp_path, global_lock_root=lock_root)

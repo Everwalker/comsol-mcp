@@ -1,0 +1,44 @@
+{
+  "schema": "windows-control-lifecycle.recovery-parser-syntax-receipt.v1",
+  "scope": "PowerShell Parser::ParseInput syntax receipt for the reviewed T027/T028 handoff scripts",
+  "status": "SYNTAX_PARSE_ONLY",
+  "source_receipts": {
+    "parser_stdout": "local-handoff/mac-checks-20260919/recovery-parser-r1-network.stdout",
+    "parser_stdout_sha256": "5c8d98f15570ebc23f35805d212673fbc4abc609431b5de6ad08d0cee0f07fad",
+    "parser_stdout_bytes": 668,
+    "manifest": "local-handoff/mac-checks-20260919/recovery-parser-r1-network.manifest.json",
+    "manifest_sha256": "a5dfcd5e848d6543bf0df34d850128ddea8cee0290aa98da85f2d21a646fdfb0",
+    "manifest_bytes": 872,
+    "manifest_recorded_exit": 0,
+    "transport_stderr": "local-handoff/mac-checks-20260919/recovery-parser-r1-network.stderr",
+    "transport_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "parser_observation": {
+    "files_reported": 5,
+    "files_with_empty_errors": 5,
+    "files_with_parser_errors": 0,
+    "files": [
+      {"name": "windows_t027_t028_preflight_v2.ps1", "sha256": "dc24f07327a95974babce98c0aa6283496b680e43bf69be0c0eaa0a63d59bbf0"},
+      {"name": "windows_t027_t028_enable_firewall_v2.ps1", "sha256": "28e18f08b837e3383b72b45f14dc7d65f13fc5522f776a53ba3b717fca0f81f9"},
+      {"name": "windows_t027_t028_disable_firewall_v2.ps1", "sha256": "bbbcfecaac379be83feea60d0a0e9eb0393e836f1491f0ff92b7978664d2ff50"},
+      {"name": "server_launcher_v2.ps1", "sha256": "23ea0275229c9f845262e177bcce53386a49635c7fcb46a3c5e7d981bc483547"},
+      {"name": "run_recovery_window_v2.ps1", "sha256": "efe2a858ad618aac7dc3601522a6692017cc79a25accf737321069abbfa6513b"}
+    ]
+  },
+  "boundary": {
+    "syntax_only": true,
+    "scripts_executed": false,
+    "comsol_started": false,
+    "firewall_changed": false,
+    "engine_acceptance": "NOT_RUN",
+    "transport_limitation": "The successful network receipt is paired with its own exit-0 manifest and empty stderr. A separate earlier local transport attempt is historical only and is not mixed into this result.",
+    "historical_transport_attempt": {
+      "manifest": "local-handoff/mac-checks-20260919/recovery-parser-r1.manifest.json",
+      "manifest_sha256": "6635d2b458bac3256411f8fc2d609d7c5d7dc0953843df59065f3c4c4eed04ec",
+      "recorded_exit": 255,
+      "stderr": "local-handoff/mac-checks-20260919/recovery-parser-r1.stderr",
+      "stderr_sha256": "0ef95b43a0bfbd3b63f4b64c5a8b8c5d637d7c4ef33d0be1021cc0c65239d07f",
+      "status": "HISTORICAL_TRANSPORT_BLOCKED_NOT_CURRENT_PARSER_RESULT"
+    }
+  }
+}

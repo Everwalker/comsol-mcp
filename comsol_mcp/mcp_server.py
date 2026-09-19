@@ -18,6 +18,7 @@ from comsol_mcp._tools_physics import register as _reg_physics
 from comsol_mcp._tools_solver import register as _reg_solver
 from comsol_mcp._tools_phase1 import register as _reg_phase1
 from comsol_mcp._tools_control import register as _reg_control
+from comsol_mcp._g2_tools import register as _reg_g2
 from comsol_mcp._mcp_gateway import GatewayRegistry
 
 # Register all tools on the shared FastMCP instance at import time.
@@ -32,6 +33,7 @@ _reg_physics(_gateway)
 _reg_solver(_gateway)
 _reg_phase1(_gateway)
 _reg_control(_gateway)
+_reg_g2(_gateway)
 
 
 def main() -> None:

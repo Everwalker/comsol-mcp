@@ -1,0 +1,271 @@
+{
+  "scope": "READ_ONLY_NATIVE_INHERITED_SELECTION_RESEARCH",
+  "timestamp_utc": "2026-09-19T12:38:58Z",
+  "status": "RESEARCH_ONLY_T007_UNVERIFIED",
+  "engine_run": "NOT_RUN",
+  "server_connection": "NOT_RUN",
+  "production_modified": false,
+  "source_corpus": {
+    "name": "COMSOL-6.4-KB",
+    "version": "COMSOL 6.4.0.293 documentation corpus",
+    "retrieval": "offline local-kb read; source SHA-256 and document location recorded below"
+  },
+  "conclusion": {
+    "t007_native_inherited_feature": "UNVERIFIED",
+    "native_inherited_feature_test": "NOT_RUN",
+    "positive_evidence_found": false,
+    "existing_w04_evidence_interpretation": {
+      "default_noneditable_feature": "Selection_is_not_editable is evidence of a noneditable default node, not proof that Selection.isInheriting() is true.",
+      "custom_flux_feature": "Inheriting_not_allowed is evidence that this test feature rejects the requested inherit operation, not evidence of a supported native inherited feature."
+    },
+    "decision": "Keep T007 native inherited coverage UNVERIFIED. Do not count cfeq1 or w04_test_flux as positive inherited-feature evidence."
+  },
+  "documented_semantic_difference": {
+    "comsol_selection_api": "Selection.inherit(boolean) and Selection.isInheriting() describe propagation/inheritance to lower geometric dimension levels.",
+    "project_contract_language": "T007 and the current guard wording use inherited-selection and parent-physics-interface language, which describes a parent/child feature relationship but does not define the Java API predicate.",
+    "implication": "The predicate itself is lower-dimension semantics. Treating it as proof that a child must be edited through its parent physics interface is not established by the API documentation.",
+    "assessment": "CONCEPTUAL_MISMATCH_OR_CONTRACT_GAP",
+    "severity_boundary": "This is a semantic/contract risk, not a proven production defect. The direct-edit guard may still be the intended product policy for a documented native feature, but that policy needs real native-feature evidence or an explicit contract clarification."
+  },
+  "code_and_contract_pointers": [
+    {
+      "path": "comsol_mcp/_physics_ops.py",
+      "lines": "63-72",
+      "finding": "Feature discovery records selection_inheriting from sel.isInheriting() and deliberately leaves selection_editable tri-state; this is the correct evidence boundary for discovery."
+    },
+    {
+      "path": "comsol_mcp/_physics_ops.py",
+      "lines": "201-216",
+      "finding": "Before a child edit, the guard rejects any child whose sel.isInheriting() is true and tells the caller to set the parent physics interface. The API docs establish lower-dimension propagation, not that parent-edit instruction."
+    },
+    {
+      "path": "comsol_mcp/_physics_ops.py",
+      "lines": "217-245",
+      "finding": "selection_kind=inherited calls sel.inherit(True), then reads back inheriting. That operation is the lower-dimension Selection API operation documented by COMSOL."
+    },
+    {
+      "path": "comsol_mcp/_tools_physics.py",
+      "lines": "87-96",
+      "finding": "The public feature-list response correctly calls selection_inheriting an observation and selection_editable tri-state, but does not distinguish lower-dimension propagation from parent-interface inheritance."
+    },
+    {
+      "path": "comsol_mcp/_tools_physics.py",
+      "lines": "210-224",
+      "finding": "The public selection docstring says some features have inherited selections and offers kind=inherited without defining the lower-dimension meaning or a native parent-inherited feature contract."
+    },
+    {
+      "path": "docs/comsol_mcp_design_v1/03_ACCEPTANCE.md",
+      "lines": "71-79",
+      "finding": "T007 requires physics-level, feature-level and inherited selection operations, accurate rejection of non-writable inheritance, and selection readback; it does not identify a concrete native feature or the Java meaning of inherit."
+    },
+    {
+      "path": "docs/comsol_mcp_design_v1/03_ACCEPTANCE.json",
+      "lines": "86-95",
+      "finding": "Machine-readable T007 repeats the same unspecified inherited-selection requirement and remains NOT_RUN at the contract level."
+    },
+    {
+      "path": "docs/comsol_mcp_design_v1/PHASE1_TEST_PLAN.md",
+      "lines": "67-69",
+      "finding": "The phase test plan asks for a noneditable inherited selection but does not bind that phrase to a documented native COMSOL feature."
+    },
+    {
+      "path": "docs/comsol_mcp_design_v1/06_CONTRACT_NOTES.md",
+      "lines": "7-13",
+      "finding": "The contract notes warn that schema validation does not establish COMSOL acceptance or physical semantics; this supports keeping the native inherited case evidence-limited."
+    },
+    {
+      "path": "tests/test_w04_safety.py",
+      "lines": "175-197",
+      "finding": "The unit test verifies the local branch with a mock Selection.isInheriting() flag. It does not establish native COMSOL feature semantics."
+    },
+    {
+      "path": "local-handoff/mac-checks-20260919/windows_w04_portable_regression_v5.py",
+      "lines": "760-770, 801-806, 872-885",
+      "finding": "The bounded harness tests parent/child explicit operations, default noneditable rejection and unsupported inherit rejection, while explicitly keeping inherited_guard_on_native_feature UNVERIFIED."
+    },
+    {
+      "path": "evidence/windows_handoff/20260919/windows_c12_w04_v5.json",
+      "json_pointer": "/selection_guards",
+      "finding": "The accepted c12 bounded record is PASS only for default_noneditable_guard, unsupported_inherit_guard and local_input_guard; native inherited feature coverage is UNVERIFIED/NOT_RUN."
+    }
+  ],
+  "source_documents": [
+    {
+      "title": "Selection API",
+      "relative_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/Selection.html",
+      "source_sha256": "451cce8061404cde87fb8fe72d85ae1a1a4c3a7887f4e779a73916f8a24184d6",
+      "location": {
+        "doc_id": 7700,
+        "chunk": 23053
+      },
+      "finding": "inherit(boolean) sets the inherit flag; isInheriting() returns true when selection is inherited to lower dimension levels."
+    },
+    {
+      "title": "COMSOL Programming Reference Manual",
+      "relative_path": "doc/pdf/COMSOL_Multiphysics/COMSOL_ProgrammingReferenceManual.pdf",
+      "source_sha256": "5b7f23ad2eae77f59d71935f4f6c9b6b9ede380dc34da065181841e512bbc105",
+      "location": {
+        "doc_id": 26795,
+        "page": 36
+      },
+      "finding": "The selection inheritance description says include lower-dimensional geometric entities adjacent to already selected entities; isInheriting() is lower-dimension inheritance."
+    },
+    {
+      "title": "Selections (general API)",
+      "relative_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_general.47.11.html",
+      "source_sha256": "e83f428fe1baed130a0a275f814660110cfc1fc5149418500ff3e7641ca78a2b",
+      "location": {
+        "doc_id": 4082,
+        "chunk": 16693
+      },
+      "finding": "Repeats the generic lower-dimension inheritance semantics; no parent physics-interface meaning is defined here."
+    },
+    {
+      "title": "PhysicsFeature API",
+      "relative_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/physics/PhysicsFeature.html",
+      "source_sha256": "9eeb763b12eb4d5f6eaff7561381bb200aab2150165063410a4e9fa3592b5e7c",
+      "location": {
+        "doc_id": 7758,
+        "chunk": 23153
+      },
+      "finding": "Exposes PhysicsFeature.selection() and feature metadata, but does not identify a concrete Layered Shell inherited-selection creation recipe."
+    },
+    {
+      "title": "PhysicsFeatureList API",
+      "relative_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/physics/PhysicsFeatureList.html",
+      "source_sha256": "54d7fd17c368fc504f66502692d4da8a0b83edb6f7ba0f58e8f7d6c83aa3dcff",
+      "location": {
+        "doc_id": 7759,
+        "chunk": 23154
+      },
+      "finding": "Feature lists/tags and create are available; the exact shipped native feature type for this probe was not confirmed."
+    },
+    {
+      "title": "Physics API",
+      "relative_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/physics/Physics.html",
+      "source_sha256": "d0de70997a9ea928edd8f1d207f926ce82c3849e5846c20189d28d67cd9273fc",
+      "location": {
+        "doc_id": 7757,
+        "chunk": 23151
+      },
+      "finding": "Physics feature creation/list APIs are documented generically, without a verified native inherited-selection recipe."
+    },
+    {
+      "title": "ModelEntityList API",
+      "relative_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/ModelEntityList.html",
+      "source_sha256": "463ef0c4e8b2b7315e8950bd576f4b783718c75308307cef0a4d584d86b835ab",
+      "location": {
+        "doc_id": 7644,
+        "chunk": 22963
+      },
+      "finding": "Generic tags/get/remove access exists for model entities; it does not establish a native feature type or inheritance semantics."
+    },
+    {
+      "title": "Physics Interface Default Nodes",
+      "relative_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_ref_modeling.19.014.html",
+      "source_sha256": "b2069f4780ca75b13dd1f35cb9faee9a0e1eef9371f74cdead3ce8d0a4875f9",
+      "location": {
+        "doc_id": 5838,
+        "chunk": 19242
+      },
+      "finding": "Default node selections cannot be changed; this is a noneditable-default rule and is not stated as Selection.inherit."
+    },
+    {
+      "title": "Physics Builder Manual",
+      "relative_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/COMSOL_PhysicsBuilderManual.pdf",
+      "source_sha256": "1336d297eacc25921db0a7123e586264e4c95a53da5ff46f18e31123790e7e10",
+      "location": {
+        "doc_id": 3624,
+        "page": 50
+      },
+      "finding": "Physics Builder documents propagate-to-lower-dimensions selection behavior. This supports the generic API meaning but is not a shipped feature acceptance result."
+    },
+    {
+      "title": "The Layered Shell Interface",
+      "relative_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.sme/sme_ug_layered_shell.10.02.html",
+      "source_sha256": "fcbab43f0cf596db5b4f69d2b63accb8e37fde508ae39fd9da21d86648f93b18",
+      "location": {
+        "doc_id": 25283,
+        "chunk": 109978
+      },
+      "finding": "Layered Shell is a documented physics interface candidate under Structural Mechanics; its default nodes are described in the layered-shell documentation."
+    },
+    {
+      "title": "Shell Properties and Interface Selection Sections",
+      "relative_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.sme/sme_ug_layered_shell.10.03.html",
+      "source_sha256": "55920975cce2faf480f9149e616f7d1cf53abed64f26fc18bc636871dfa78d7c",
+      "location": {
+        "doc_id": 25284,
+        "chunk": 109981
+      },
+      "finding": "Layer physics nodes commonly inherit their default selection from the physics interface or parent node. This is the strongest documented parent-inherited candidate, but it does not prove Selection.isInheriting() or inherit(True) behavior for a live model."
+    },
+    {
+      "title": "Linear Elastic Material (Layered Shell)",
+      "relative_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.sme/sme_ug_layered_shell.10.06.html",
+      "source_sha256": "f0e0838cb16ec9675a7e2d6b5756de23d2d134cc1d77f0b37368de7a50e2aa68",
+      "location": {
+        "doc_id": 25287,
+        "chunk": 109984
+      },
+      "finding": "The default material node selection is always inherited from the interface and cannot be changed; this is documented UI/model semantics, not a native engine run here."
+    },
+    {
+      "title": "Initial Values (Layered Shell)",
+      "relative_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.sme/sme_ug_layered_shell.10.05.html",
+      "source_sha256": "523660b968b694e96337dc66e19f401b9ece6d2f0416a86c08dd3c02d0a1a26e",
+      "location": {
+        "doc_id": 25286,
+        "chunk": 109983
+      },
+      "finding": "The default Initial Values node uses the same parent/interface selection inheritance wording."
+    },
+    {
+      "title": "The Composite Materials Module",
+      "relative_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.compmat/compmat_ug_intro.2.1.html",
+      "source_sha256": "5a435822b55ec48c4aa4584d11c7451c93ea6fb48cb5fcdbaf7fbeb347a4bd4b",
+      "location": {
+        "doc_id": 3560,
+        "chunk": 9560
+      },
+      "finding": "Composite Materials Module is the optional add-on associated with Layered Shell; runtime license support was not tested in this research."
+    },
+    {
+      "title": "Dome Tweeter with Composite Diaphragm",
+      "relative_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.models.compmat.composite_dome_tweeter_eigen/composite_dome_tweeter_eigen.html",
+      "source_sha256": "2e4256e732ee20253a073581feac3ef5f157021bab06488ad7a34909aa8b6e33",
+      "location": {
+        "doc_id": 15609,
+        "chunk": 56186
+      },
+      "finding": "A documented Application Library case uses Layered Shell/Composite Materials. The model binary and a Java creation recipe were not established here."
+    }
+  ],
+  "candidate_native_feature": {
+    "candidate": "Layered Shell default material or Initial Values node",
+    "why_candidate": "The 6.4 layered-shell documentation explicitly describes default node selections inherited from the physics interface or parent node.",
+    "positive_engine_evidence": false,
+    "java_selection_inheriting_state_confirmed": false,
+    "java_inherit_true_acceptance_confirmed": false,
+    "required_next_evidence": "A fresh authorized model/fixture with the documented candidate, actual selection readback, and an attempted edit/guard outcome. No such run was performed."
+  },
+  "license_scope": {
+    "candidate_module": "Composite Materials Module",
+    "documented_prerequisite": "Layered Shell is documented with the Composite Materials Module.",
+    "runtime_license_tested": false,
+    "status": "NOT_TESTED",
+    "unavailability_claim": false
+  },
+  "api_gui_boundary": {
+    "java_creation_recipe_confirmed": false,
+    "api_probe_possible_with_existing_mph": true,
+    "gui_required": "UNDETERMINED",
+    "finding": "The inspected generic Java APIs expose model loading, physics features, selection access and feature lists, but no exact shipped Java creation type/recipe for a Layered Shell parent-inherited node was identified. Do not claim that a GUI is required; do not claim that an API-only creation recipe is established.",
+    "no_engine_run": true
+  },
+  "recommended_root_decision": {
+    "production_change": "NONE_RECOMMENDED_FROM_THIS_RESEARCH_ALONE",
+    "guard_review": "Review whether the product contract intentionally maps lower-dimension Selection.isInheriting() to a parent-interface edit guard. If retained, clarify naming/error text; if changed, require native feature evidence first.",
+    "t007": "Remain UNVERIFIED until a documented native candidate is exercised in a fresh authorized engine run."
+  }
+}

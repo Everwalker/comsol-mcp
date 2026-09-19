@@ -1,0 +1,44 @@
+{
+  "scope": "WINDOWS_C12_FULL_SOFTWARE_TESTS",
+  "status": "PASS",
+  "exit_code": 0,
+  "passed": 244,
+  "failed": 0,
+  "skipped": 0,
+  "summary_lines": [
+    "244 passed in 15.14s"
+  ],
+  "command": "python -m pytest tests -q --disable-warnings --maxfail=0",
+  "engine_connection": "NOT_RUN",
+  "stdout_bytes": 346,
+  "stdout_sha256": "2a3787309a25b528f88411d348197bd2423c9182d87c25805afd6607c76ebbca",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "wrapper_evidence_sha256": "7e9467d73d30dcea707ddbb89c19ec357337d952072dcabe2437a03087376dc3",
+  "snapshot_id": "windows-cp312-28605a689666-dirty-20260919-c12",
+  "environment": {
+    "os": "Windows",
+    "architecture": "x64",
+    "python": "3.12.10",
+    "comsol": "6.4.0.293 build293",
+    "jdk": "11.0.32_10"
+  },
+  "first_attempt": {
+    "status": "FAIL_WRAPPER_EVIDENCE_WRITE",
+    "exit_code": 1,
+    "pytest_result": "UNDETERMINED",
+    "cause": "The runner completed its subprocess step but failed to write the evidence JSON because its evidence directory was not created.",
+    "not_counted_as_pytest_failure": true,
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "5ff671be3f110b7108675fa1213c304dd0a3f2b288ef5c93b127259ea64fab63",
+    "exit_record_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "raw_traceback_retained_private": true
+  },
+  "retry": {
+    "status": "PASS",
+    "unique_private_home": true,
+    "evidence_directory_created": true
+  },
+  "server_lifecycle": "NOT_TOUCHED",
+  "scope_note": "Software regression only; no COMSOL engine connection."
+}

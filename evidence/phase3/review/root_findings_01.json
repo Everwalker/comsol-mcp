@@ -1,0 +1,68 @@
+{
+  "recorded_at": "2026-09-19T15:06:38.913610+00:00",
+  "record_type": "review_findings_before_final_fix_validation",
+  "status": "OPEN_AT_RECORDING",
+  "findings": [
+    {
+      "id": "R01",
+      "scope": "W11",
+      "finding": "search returned zero relevance rows instead of NOT_FOUND",
+      "file": "_g2_docs.py"
+    },
+    {
+      "id": "R02",
+      "scope": "W12/W10",
+      "finding": "nested transaction Java needed trusted_code preflight before checkpoint",
+      "file": "_managed_backend.py"
+    },
+    {
+      "id": "R03",
+      "scope": "W12",
+      "finding": "trial expected_revision and all nested permissions must precede save/load",
+      "file": "_managed_backend.py"
+    },
+    {
+      "id": "R04",
+      "scope": "W12",
+      "finding": "partial trial load and cleanup failures require conservative unknown/freeze",
+      "file": "_managed_backend.py"
+    },
+    {
+      "id": "R05",
+      "scope": "W12",
+      "finding": "checkpoint must preserve existing complete artifact and record save cost",
+      "file": "_g2_engine.py"
+    },
+    {
+      "id": "R06",
+      "scope": "W08",
+      "finding": "setter success then readback failure must not claim no change",
+      "file": "_g2_engine.py"
+    },
+    {
+      "id": "R07",
+      "scope": "W09",
+      "finding": "wheel must include runtime catalog resource",
+      "file": "_g2_registry.py/pyproject.toml"
+    },
+    {
+      "id": "R08",
+      "scope": "W09",
+      "finding": "actual full/domain/expert stdio publication tests required",
+      "file": "tools/phase3_run_mcp.py"
+    },
+    {
+      "id": "R09",
+      "scope": "W10",
+      "finding": "compile diagnostics must expose actual line-numbered list",
+      "file": "_g2_code.py"
+    },
+    {
+      "id": "R10",
+      "scope": "W11",
+      "finding": "docs.index effective schema must accept supported provenance fields",
+      "file": "_g2_registry.py"
+    }
+  ],
+  "note": "Historical review findings. Subsequent validation evidence must explicitly establish resolution; this file is not a final pass/fail ledger."
+}

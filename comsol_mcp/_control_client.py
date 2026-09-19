@@ -14,6 +14,30 @@ import time
 from urllib.request import Request, urlopen
 from uuid import uuid4
 
+from ._platform_process import process_identity
+
+
+class ControlStartupError(RuntimeError):
+    """The private control daemon could not be started safely."""
+
+    def __init__(self, message: str, *, action: str | None = None) -> None:
+        super().__init__(message)
+        self.action = action
+
+
+# Windows MCP stdio hosts are placed in an SDK-created Job Object whose close
+# policy terminates descendants.  A control daemon started from that host must
+# request all three creation flags together or it is still owned by the Job.
+# Keep the numeric fallbacks importable on non-Windows hosts so the policy is
+# unit-testable without pretending that this process is Windows.
+_WINDOWS_CREATE_BREAKAWAY_FROM_JOB = getattr(subprocess, "CREATE_BREAKAWAY_FROM_JOB", 0x01000000)
+_WINDOWS_DETACHED_PROCESS = getattr(subprocess, "DETACHED_PROCESS", 0x00000008)
+_WINDOWS_CREATE_NEW_PROCESS_GROUP = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200)
+
+
+def _is_windows() -> bool:
+    return os.name == "nt"
+
 
 def control_home() -> Path:
     from comsol_mcp._server import COMSOL_SERVER_MCP_HOME
@@ -51,16 +75,56 @@ def _read_endpoint(home: Path) -> dict | None:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _alive(pid: int) -> bool:
-    if type(pid) is not int or pid <= 1:
+def _alive(pid: int, expected_start_epoch_ms: int | None = None) -> bool:
+    """Conservatively test a private daemon without signalling Windows PIDs."""
+    identity = process_identity(pid)
+    observed_start = identity["start_epoch_ms"]
+    if isinstance(expected_start_epoch_ms, int) and isinstance(observed_start, int) and observed_start != expected_start_epoch_ms:
         return False
-    try:
-        os.kill(pid, 0)
-        return True
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True  # Unknown ownership/liveness is never restart permission.
+    return identity["alive"]
+
+
+def _spawn_control_daemon(home: Path, stream):
+    """Start exactly one detached control daemon with platform-safe ownership.
+
+    On Windows this call is deliberately fail-closed.  Retrying without
+    ``CREATE_BREAKAWAY_FROM_JOB`` would recreate the SDK Job Object failure
+    that kills the daemon when the MCP stdio transport closes.
+    """
+    command = [sys.executable, "-m", "comsol_mcp._control_daemon", "--home", str(home)]
+    kwargs = {
+        "stdin": subprocess.DEVNULL,
+        "stdout": stream,
+        "stderr": stream,
+        "cwd": str(Path(__file__).resolve().parents[1]),
+    }
+    if _is_windows():
+        flags = (
+            _WINDOWS_CREATE_BREAKAWAY_FROM_JOB
+            | _WINDOWS_DETACHED_PROCESS
+            | _WINDOWS_CREATE_NEW_PROCESS_GROUP
+        )
+        try:
+            return subprocess.Popen(command, creationflags=flags, **kwargs)
+        except OSError as exc:
+            detail = f"{type(exc).__name__}: {exc}"
+            winerror = getattr(exc, "winerror", None)
+            if winerror is not None:
+                detail += f" (WinError {winerror})"
+            command_line = subprocess.list2cmdline(command)
+            action = (
+                "Start the existing control daemon from a user-controlled process outside the MCP SDK Job, "
+                f"using: {command_line}"
+            )
+            raise ControlStartupError(
+                "Windows could not safely start the control daemon with the required "
+                "CREATE_BREAKAWAY_FROM_JOB, DETACHED_PROCESS, and CREATE_NEW_PROCESS_GROUP flags "
+                f"({detail}); automatic control-daemon startup is disabled inside this MCP transport. "
+                "The OS may have denied breakaway from the current Job. " + action,
+                action=action,
+            ) from exc
+    kwargs["start_new_session"] = True
+    return subprocess.Popen(command, **kwargs)
 
 
 def ensure_control() -> dict:
@@ -72,18 +136,13 @@ def ensure_control() -> dict:
             if result.get("success"):
                 return endpoint
         except Exception:
-            if _alive(endpoint.get("pid")):
+            if _alive(endpoint.get("pid"), endpoint.get("process_start_epoch_ms")):
                 raise RuntimeError("Existing control process is unresponsive; no replacement started")
     # The daemon acquires the singleton lock before publishing its endpoint.
     # Concurrent transport processes may launch contenders; only one may run.
     log = home / "control.log"
     with log.open("ab") as stream:
-        subprocess.Popen(
-            [sys.executable, "-m", "comsol_mcp._control_daemon", "--home", str(home)],
-            stdin=subprocess.DEVNULL, stdout=stream, stderr=stream,
-            start_new_session=True,
-            cwd=str(Path(__file__).resolve().parents[1]),
-        )
+        _spawn_control_daemon(home, stream)
     deadline = time.monotonic() + 15.0  # Control startup only, never an engine deadline.
     while time.monotonic() < deadline:
         endpoint = _read_endpoint(home)
@@ -94,7 +153,21 @@ def ensure_control() -> dict:
             except Exception:
                 pass
         time.sleep(0.05)
-    raise RuntimeError("Control startup did not become ready")
+    if _is_windows():
+        command = [sys.executable, "-m", "comsol_mcp._control_daemon", "--home", str(home)]
+        action = (
+            "Start the existing control daemon from a user-controlled process outside the MCP SDK Job, "
+            f"using: {subprocess.list2cmdline(command)}"
+        )
+        raise ControlStartupError(
+            "Control daemon did not become ready after a required Windows detached startup; "
+            "inspect the private control log before retrying. " + action,
+            action=action,
+        )
+    raise ControlStartupError(
+        "Control daemon did not become ready; inspect the private control log before retrying. "
+        "On Windows, start it from a user-controlled process outside the MCP SDK Job."
+    )
 
 
 def dispatch(operation: str, arguments: dict, execution: dict) -> dict:
@@ -107,6 +180,21 @@ def dispatch(operation: str, arguments: dict, execution: dict) -> dict:
     try:
         endpoint = ensure_control()
         return _request(endpoint, {"operation": operation, "arguments": arguments, "execution": execution}, rpc_timeout + 5.0)
+    except ControlStartupError as exc:
+        error = {
+            "code": "EXECUTION_STATE_UNKNOWN",
+            "type": type(exc).__name__,
+            "message": str(exc),
+            "safe_retry": False,
+        }
+        if exc.action:
+            error["action"] = exc.action
+        return {
+            "success": False,
+            "error": error,
+            "execution": {"request_id": execution["request_id"], "idempotency_key": execution["idempotency_key"]},
+            "data": {"status": "UNKNOWN"},
+        }
     except Exception as exc:
         return {
             "success": False,

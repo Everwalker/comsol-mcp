@@ -1,0 +1,31 @@
+{
+  "recorded_at": "2026-09-19T14:34:03.125091+00:00",
+  "status": "BLOCKED",
+  "scope": "Live G2 Mac engine acceptance only; independent software/docs/compile work continues",
+  "cases_affected": [
+    "T008_engine",
+    "T009_local_edit_engine",
+    "T010_engine_regression",
+    "T031_execute_engine",
+    "T032_partial_engine",
+    "T029_restore_engine",
+    "T033_trial_engine",
+    "T050_small_model_checkpoint_cost"
+  ],
+  "evidence": [
+    "evidence/phase3/mac_owned_runtime/g2-loopback-runtime-20260919T142716Z.json",
+    "evidence/phase3/mac_owned_runtime/wildcard_emergency_stop.json",
+    "evidence/phase3/mac_owned_runtime/wildcard_attempt_restore.json"
+  ],
+  "reason": "Fresh task-owned COMSOL6.4 Server still bound wildcard*:56389 after approved Connector address=127.0.0.1 edit; exact loopback isolation prerequisite failed. OwnedPID26811 stopped, originalXML restored and hash verified. No model acceptance executed on thatServer.",
+  "missing_precondition": "A verified isolation mechanism for the COMSOL API listener within user-approved scope; installation Connector address alone is insufficient on observed build.",
+  "no_further_runtime_mutation_without_plan": true,
+  "not_authorized": [
+    "global firewall/security changes",
+    "Windows integration",
+    "W13"
+  ],
+  "metadata_residual": "First attempted atomic replacement introduced persistent com.apple.provenance xattr; XML content/hash,mode,owner/group,ACL restored; full metadata restoration not claimed.",
+  "historical_callback_failure": "FAIL retained; not repaired or rerun",
+  "scope_of_claim": "Does not prove COMSOL license failure or API implementation failure."
+}

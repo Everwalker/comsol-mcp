@@ -1,0 +1,223 @@
+{
+  "timestamp": "2026-09-18T23:03:35.607531+00:00",
+  "base_commit": "28605a6896668a64775ac6c1192ed50fef94b47f",
+  "integration_host": "Mac",
+  "public_source_preserved": true,
+  "original_handoff_protected_by_local_exclude": true,
+  "tracked_files": 684,
+  "historical_acceptance": {
+    "phase1": {
+      "path": "evidence/phase1_acceptance.json",
+      "sha256": "6f7f58f3b830f54151daabe6d7aa565784877a7c71d4dce2bc86aa4fc41f2532",
+      "work_packages": {
+        "W01": "COMPLETE_AUDIT",
+        "W02": "COMPLETE_ACCESSIBLE_POC_WITH_BLOCKED_TARGETS",
+        "W03": "BLOCKED_GUI_ACCESS; API inventory completed",
+        "W04": "PASS_CURRENT_EXECUTABLE_ACCEPTANCE"
+      },
+      "cases": {
+        "T038": {
+          "status": "FAIL",
+          "scope": "full acceptance",
+          "reason": "Legacy business errors do not set outer isError; W01 audit complete, W09 fix not in scope"
+        },
+        "T001": {
+          "status": "BLOCKED",
+          "reason": "Local runtime PoC PASS; six-combination acceptance BLOCKED because only macOS arm64 6.4 is accessible.",
+          "evidence": "evidence/w02/runs/20260918T110411819403Z/cases/T001"
+        },
+        "T002": {
+          "status": "BLOCKED",
+          "reason": "COMSOL 6.3 unavailable; cross-version isolation NOT_RUN.",
+          "evidence": "evidence/w02/runs/20260918T110411819403Z/cases/T002"
+        },
+        "T042": {
+          "status": "BLOCKED",
+          "reason": "Documented ACDC hasProduct=true without checkout; no actually missing documented product available for a negative test. ACDC physics execution is not verified.",
+          "evidence": "evidence/w02/runs/20260918T110411819403Z/cases/T042"
+        },
+        "T059": {
+          "status": "PASS",
+          "reason": "API inventory alone remains UNVERIFIED; only the complete real fixed-recipe MCP run receives scoped VERIFIED; unavailable cases remain blocked.",
+          "evidence": "evidence/w02/runs/20260918T110411819403Z/cases/T059"
+        },
+        "T004": {
+          "status": "BLOCKED",
+          "reason": "Computer Use was not approved to use COMSOL Multiphysics",
+          "evidence": "evidence/w03/runs/20260918T111700Z/T004"
+        },
+        "T023": {
+          "status": "BLOCKED",
+          "reason": "Computer Use was not approved to use COMSOL Multiphysics",
+          "evidence": "evidence/w03/runs/20260918T111700Z/T023"
+        },
+        "T052": {
+          "status": "BLOCKED",
+          "reason": "Computer Use was not approved to use COMSOL Multiphysics",
+          "evidence": "evidence/w03/runs/20260918T111700Z/T052"
+        },
+        "T003": {
+          "status": "PASS",
+          "scope": "current macOS arm64 6.4 PDE fixture only",
+          "evidence": "evidence/w04/runs/20260918T112244254506Z/cases/T003"
+        },
+        "T005": {
+          "status": "PASS",
+          "scope": "current macOS arm64 6.4 PDE fixture only",
+          "evidence": "evidence/w04/runs/20260918T112244254506Z/cases/T005"
+        },
+        "T006": {
+          "status": "PASS",
+          "scope": "current macOS arm64 6.4 PDE fixture only",
+          "evidence": "evidence/w04/runs/20260918T112244254506Z/cases/T006"
+        },
+        "T007": {
+          "status": "PASS",
+          "scope": "current macOS arm64 6.4 PDE fixture only",
+          "evidence": "evidence/w04/runs/20260918T112244254506Z/cases/T007"
+        },
+        "T033": {
+          "status": "PASS",
+          "scope": "current macOS arm64 6.4 PDE fixture only",
+          "evidence": "evidence/w04/runs/20260918T112244254506Z/cases/T033"
+        }
+      }
+    },
+    "phase2": {
+      "path": "evidence/phase2_acceptance.json",
+      "sha256": "986389d1c23096be36ce1f1ec789d880f250ad0e55299e864f687fc70f3a8e39",
+      "work_packages": {
+        "legacy_safety": {
+          "status": "PASS",
+          "scope": "software regression plus actual required/ordinary expression error propagation"
+        },
+        "W05": {
+          "status": "PASS",
+          "scope": "accessible parameter revision/idempotency/ownership/path guards; limitations below",
+          "full_GUI_external_change_acceptance": "BLOCKED"
+        },
+        "W06": {
+          "status": "PASS",
+          "scope": "current macOS arm64 COMSOL 6.4 production route, queue, timeout, responsive controls, owned process recovery"
+        },
+        "W07": {
+          "status": "PASS",
+          "scope": "durable same-job host recovery, idempotency, SQLite schema tests, real disk-full original-file protection"
+        },
+        "W08": {
+          "status": "NOT_RUN",
+          "reason": "Outside authorized phase"
+        }
+      },
+      "cases": {
+        "T010": {
+          "status": "PASS",
+          "evidence": "evidence/phase2/runs/20260918T141019Z/",
+          "scope": "same key/body reuses operation; key/body conflict and same tag/different type rejected"
+        },
+        "T011": {
+          "status": "BLOCKED",
+          "evidence": "evidence/phase2/followup/20260918T142300Z-external-api/",
+          "scope": "Desktop GUI not accessible; independent API supplement is not GUI acceptance"
+        },
+        "T011_external_API_fingerprint": {
+          "status": "PASS",
+          "evidence": "evidence/phase2/followup/20260918T142300Z-external-api/assertions.json",
+          "scope": "real independent client parameter 1→2 detected; old revision write rejected; parameter readback retained"
+        },
+        "T011_external_API_callback": {
+          "status": "FAIL",
+          "evidence": "evidence/phase2/followup/20260918T142300Z-external-api/",
+          "scope": "ModelChangedHandler event counter did not advance; no event-level certification"
+        },
+        "T012": {
+          "status": "PASS",
+          "evidence": "evidence/phase2/runtime-acceptance/t012-t027-t055-refined-h006-buffered/",
+          "scope": "20 actual pending-solve samples per endpoint; queued engine read cannot bypass solver",
+          "p95_seconds": {
+            "session_health": 0.004748,
+            "job_status": 0.004108,
+            "job_log": 0.006111
+          }
+        },
+        "T026": {
+          "status": "PASS",
+          "evidence": [
+            "evidence/phase2/runs/20260918T141019Z/",
+            "evidence/phase2/followup/20260918T142510Z-same-model-queue/"
+          ],
+          "scope": "rpc=0 returns original running job; same-model write expires without execution; original solve succeeds"
+        },
+        "T027": {
+          "status": "PASS",
+          "evidence": "evidence/phase2/runtime-acceptance/t012-t027-t055-refined-h006-buffered/",
+          "scope": "disconnect submitting MCP host while real run pending; fresh host retrieves same successful job"
+        },
+        "T028": {
+          "status": "PASS",
+          "evidence": [
+            "evidence/phase2/recovery/20260918T141150465969Z/",
+            "evidence/phase2/recovery/20260918T140715Z-worker-replace/",
+            "evidence/phase2/followup/20260918T142450Z-fresh-worker-reopen/worker-recovery/",
+            "evidence/phase2/recovery/20260918T143106236174Z/"
+          ],
+          "scope": "owned idle control and Worker replacement, original result preserved, stale refs rejected; no Server termination"
+        },
+        "T030": {
+          "status": "PASS",
+          "evidence": "evidence/phase2/disk-full/20260918T142204354278Z/",
+          "scope": "actual COMSOL save on separate 16 MiB volume fails ENOSPC; complete MPH SHA256/ZIP preserved"
+        },
+        "T035": {
+          "status": "PASS",
+          "evidence": [
+            "evidence/phase2/runtime-acceptance/t035-path-security/",
+            "evidence/phase2/runtime-acceptance/T035_ASSERTION_AUDIT_20260918T222200Z.json"
+          ],
+          "scope": "absolute/parent/private/symlink denied by production MCP; supplemental immutable transcript audit preserves booleans; full OS sandbox not claimed"
+        },
+        "T055": {
+          "status": "PASS",
+          "evidence": [
+            "evidence/phase2/runs/20260918T141019Z/",
+            "evidence/phase2/runtime-acceptance/t012-t027-t055-refined-h006-buffered/"
+          ],
+          "scope": "null execution deadline completed; finite .2s execution/.1s no-progress warn without terminating; queue timeout expires before dispatch"
+        },
+        "T057": {
+          "status": "PASS",
+          "evidence": [
+            "evidence/phase2/runs/20260918T141019Z/",
+            "evidence/phase2/runtime-acceptance/t012-t027-t055-refined-h006-buffered/"
+          ],
+          "scope": "same request/hash/key across fresh MCP host maps to exactly one durable operation/job"
+        },
+        "fresh_Java_Worker_reopen": {
+          "status": "PASS",
+          "evidence": "evidence/phase2/followup/20260918T142450Z-fresh-worker-reopen/",
+          "scope": "new verified Worker PID/instance/generation loads saved MPH and analytic max(abs(u-2)) < 1e-8"
+        },
+        "T038_error_propagation": {
+          "status": "PASS",
+          "evidence": [
+            "evidence/phase2/runs/20260918T141019Z/",
+            "evidence/phase2/followup/20260918T142300Z-external-api/"
+          ],
+          "scope": "tested required and ordinary expression failures propagate outer isError; does not complete all W09 protocol acceptance"
+        }
+      }
+    }
+  },
+  "new_windows_status": {
+    "host_key_check": "PASS",
+    "ssh_authentication": "BLOCKED",
+    "file_transfer": "NOT_RUN",
+    "native_dependencies": "NOT_RUN",
+    "mcp": "NOT_RUN",
+    "comsol_engine": "NOT_RUN",
+    "platform_support": "UNVERIFIED"
+  },
+  "source_snapshot_id": null,
+  "main_push_authorized": false,
+  "scope": "W01-W07 handoff gaps only; preserve later implementations, no W08-W12 expansion"
+}

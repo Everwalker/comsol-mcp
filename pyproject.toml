@@ -45,6 +45,7 @@ markers = [
   "comsol_server: requires a live COMSOL Multiphysics Server",
 ]
 addopts = "-m 'not comsol_server'"
+testpaths = ["tests"]
 
 [tool.setuptools.package-data]
-comsol_mcp = ["phase1_java/*.java", "worker_java/*.java"]
+comsol_mcp = ["phase1_java/*.java", "worker_java/*.java", "data/g2/*.json"]

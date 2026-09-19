@@ -1,0 +1,77 @@
+{
+  "acl_readback": {
+    "argv": [
+      "/bin/ls",
+      "-lde",
+      "/Applications/COMSOL64/Multiphysics/bin/tomcat/conf/server.xml"
+    ],
+    "returncode": 0,
+    "stderr": "",
+    "stdout": "-rwxr-xr-x@ 1 everwalker  admin  5611 Sep 19 22:30 /Applications/COMSOL64/Multiphysics/bin/tomcat/conf/server.xml"
+  },
+  "comsol_process_scan": {
+    "matching_processes_observed": 0,
+    "matching_rows": []
+  },
+  "content": {
+    "bytes": 5611,
+    "sha256": "8bb393d2d803d1b7f6b124498742fa23b6310db9a28a6334f7462ec12d674bbe"
+  },
+  "model_operations": "NOT_RUN",
+  "observed_at_utc": "2026-09-19T15:04:58.872772Z",
+  "pid_26811": {
+    "present": false,
+    "ps": {
+      "argv": [
+        "/bin/ps",
+        "-p",
+        "26811",
+        "-o",
+        "pid=,ppid=,lstart=,command="
+      ],
+      "returncode": 1,
+      "stderr": "",
+      "stdout": ""
+    }
+  },
+  "ports": {
+    "listeners_observed": "none",
+    "lsof": {
+      "argv": [
+        "/usr/sbin/lsof",
+        "-nP",
+        "-iTCP:56388",
+        "-iTCP:56389"
+      ],
+      "returncode": 1,
+      "stderr": "",
+      "stdout": ""
+    },
+    "requested": [
+      56388,
+      56389
+    ]
+  },
+  "schema_version": 1,
+  "scope": "server.xml content and metadata plus ports 56388/56389 and PID 26811; no mutation/start/stop",
+  "stat": {
+    "gid": 80,
+    "inode": 28607747,
+    "mode_octal": "0o755",
+    "uid": 501
+  },
+  "status": "READ_ONLY_FINAL_READBACK",
+  "target": "/Applications/COMSOL64/Multiphysics/bin/tomcat/conf/server.xml",
+  "xattrs": {
+    "entries": [
+      {
+        "length": 3,
+        "name": "com.apple.provenance",
+        "read_returncode": 0,
+        "sha256": "b3781f5b27a4fe25a5b85c9d02beed6a3cf4b4048ae5cb18e090b12b959a0ccd"
+      }
+    ],
+    "names_command": 0,
+    "raw_values_recorded": false
+  }
+}

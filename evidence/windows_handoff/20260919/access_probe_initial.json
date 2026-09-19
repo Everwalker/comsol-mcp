@@ -1,0 +1,17 @@
+{
+  "status": "NOT_RUN",
+  "acceptance": "Local allow / remote deny not established; no solve authorization gate passed",
+  "observations": [
+    {
+      "route": "Mac remote credential-free HTTP GET /",
+      "result": "404 Not supported",
+      "evidence_sha256": "bf3ce25b139fe6986ae9b3d894d556d99f14de0dfe0be736ba1bfa2c981e6947"
+    },
+    {
+      "route": "Mac COMSOL6.4 client ModelUtil.connect with deliberately invalid probe credentials",
+      "result": "FlException: Wrong_username_or_password",
+      "evidence_sha256": "d180d6ed33c626a15d8892c271ec9049a19a8db02576b51127911cf5a52578a6"
+    }
+  ],
+  "interpretation": "Neither response proves address rejection. Same-host valid-credential loopback versus non-loopback comparison pending. No real credential was read/copied and no models were mutated."
+}

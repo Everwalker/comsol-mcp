@@ -12,6 +12,8 @@ from typing import Any, Callable, get_type_hints
 
 from mcp.types import CallToolResult, TextContent
 
+from ._g2_registry import current_tool_profile, is_tool_published
+
 
 def mcp_result(value: str | dict[str, Any]) -> CallToolResult:
     """Preserve the business envelope and expose failures to MCP clients."""
@@ -47,10 +49,16 @@ class GatewayRegistry:
     def __init__(self, mcp: Any, dispatcher: Callable = dispatch):
         self.mcp = mcp
         self.dispatcher = dispatcher
+        # Validate the deployment choice once at host startup.  Narrow modes
+        # affect only tools/list publication; the daemon keeps the complete
+        # registry and explicit operation fallback available.
+        self.profile = current_tool_profile()
         self.functions: dict[str, Callable] = {}
 
     def add_tool(self, function: Callable, **options: Any) -> None:
         operation = options.get("name") or function.__name__
+        if not is_tool_published(operation, profile=self.profile):
+            return
         self.functions[operation] = function
         original = inspect.signature(function)
         hints = get_type_hints(function)

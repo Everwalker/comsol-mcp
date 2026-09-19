@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "status": "FAIL",
+  "source_snapshot": "win-cp312-28605a689666-dirty-20260919-c5e",
+  "archive_sha256": "e206474ab53458064002f80c55ffa0daf1955733b599216bebe7e801ffb742ef",
+  "manifest_sha256": "b3f23c905826dc1cbb088277e025d9dacb001cb2892808711110e02a3b44ac05",
+  "tree_sha256": "826867736f6e39137b7053c15fc490e7144c134ecf1670ca5efdddba77288d33",
+  "tests_source_sha256": "e56850ff28b796348401d8f8dded49c93e5aa7c90e497edd4a568b3de2aceee4",
+  "command": "python -m pytest -q",
+  "environment": {
+    "comsol_root": "C:\\Program Files\\COMSOL\\COMSOL64\\Multiphysics",
+    "comsol_client_manifest_present": true,
+    "jdk11_present": true,
+    "jdk_java": "11.0.32.1",
+    "jdk_javac": "11.0.32.1"
+  },
+  "counts": {
+    "passed": 209,
+    "skipped": 0,
+    "failed": 1,
+    "exit_code": 1
+  },
+  "failure": {
+    "test": "tests/test_java_worker.py::test_java_worker_persists_private_endpoint_metadata",
+    "cause": "Test helper expected an explicit current-user SID; actual restricted endpoint DACL exposed OWNER RIGHTS, SYSTEM, and Administrators.",
+    "acl_observation": "OWNER RIGHTS (S-1-3-4), SYSTEM (S-1-5-18), and BUILTIN Administrators (S-1-5-32-544); no Everyone allow entry."
+  },
+  "engine_connection": "NOT_RUN",
+  "private_raw_evidence_sha256": "00cb2695566cffb2a19e20a2451e4c9058f0551e5e75db0e74d359d1ef497e6f",
+  "private_evidence": "runtime-protocol-private-20260919/outputs/windows-unit-20260919-c5e-full.json",
+  "historical_record": "Retained as the c5e failure; c6f contains the superseding ACL-helper result."
+}

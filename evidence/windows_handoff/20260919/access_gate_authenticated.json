@@ -1,0 +1,21 @@
+{
+  "status": "FAIL",
+  "gate": "localhost-only access isolation",
+  "authentication": "PASS: Windows native Java clients reused private local COMSOL login without credential disclosure",
+  "loopback": {
+    "exit_code": 0,
+    "stdout": "CONNECTED tags=0\nDISCONNECTED\n",
+    "stderr": ""
+  },
+  "same_host_lan": {
+    "exit_code": 0,
+    "stdout": "CONNECTED tags=0\nDISCONNECTED\n",
+    "stderr": ""
+  },
+  "models_count": 0,
+  "raw_evidence_sha256": "9a41ca3d68dbf49327564039fed49d009ea682907ef1db01853ad0e3df101cc4",
+  "remote_mac": "Credential-free HTTP reached application; invalid-credential API reached authentication. These are not address-rejection proof.",
+  "probe_timeout_correction": "Initial probe completed connect/tags/disconnect but vendor non-daemon threads kept JVM alive. Stack and successful stdout retained. Fixed private probe explicitly exits after disconnect; this is not a product-code change.",
+  "engine_solve": "NOT_RUN",
+  "next_gate": "Prepared dedicated program+port temporary firewall rule; separate user authorization pending. No firewall changes applied."
+}

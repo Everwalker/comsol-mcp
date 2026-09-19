@@ -59,6 +59,13 @@ EXPECTED_TOOLS = [
     "job_log",
     "job_result",
     "job_reconcile",
+    "registry_list",
+    "registry_describe",
+    "registry_search",
+    "registry_manifest",
+    "registry_call",
+    "operation_describe",
+    "operation_call",
 ]
 
 

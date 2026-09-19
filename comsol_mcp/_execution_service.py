@@ -76,6 +76,7 @@ class ExecutionService:
         request_id: str | None = None,
         session_id: str | None = None,
         path_parameters: tuple[str, ...] = (),
+        effect: str | None = None,
     ) -> dict[str, Any]:
         """Call only after authorization, real selected-model check, and preflight.
 
@@ -121,7 +122,7 @@ class ExecutionService:
 
         ticket = self.ledger.begin_write(
             tool_name, args, model_ref, expected_revision,
-            effect=self._effect(tool_name), request_id=request_id, fingerprint=snapshot["fingerprint"],
+            effect=effect or self._effect(tool_name), request_id=request_id, fingerprint=snapshot["fingerprint"],
         )
         try:
             self._emit("active", model_ref, operation_id=ticket.operation_id)

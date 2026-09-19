@@ -1,0 +1,108 @@
+{
+  "schema": "windows-node-local.c12.protected-closeout.v1",
+  "snapshot_id": "windows-cp312-28605a689666-dirty-20260919-c12",
+  "source_head": "28605a6896668a64775ac6c1192ed50fef94b47f",
+  "archive_sha256": "f4c34b77a1c6eee03d29062c8a10461cbebf615b527fdcd0941863ce84543340",
+  "manifest_sha256": "8b1ac4a9477c8958e580d2e9e975314b25246f4cc253f5ea3e4cb2ea6f0bdd86",
+  "scope": "Windows protected-window closeout: owned Server stop, model/evidence inventory, original configuration restoration, and independent readback.",
+  "server_stop": {
+    "status": "PASS",
+    "exit_code": 0,
+    "pid": 26076,
+    "birth_utc": "2026-09-19T04:57:48.6336100Z",
+    "executable_match": true,
+    "worker_closed": true,
+    "preserved_evidence_count": 43,
+    "inventory_unknown_count": 0,
+    "tcp_before": {
+      "listen_count": 1,
+      "established_count": 0,
+      "listener_pid_match": true
+    },
+    "tcp_after": {
+      "listen_count": 0,
+      "established_count": 0
+    },
+    "evidence": {
+      "stdout": "local-handoff/mac-checks-20260919/root-stop-owned-server.stdout",
+      "stdout_sha256": "efbef037c5c09ea5bd8680140510c7dbdebf8735734aebf03160f024e667507b",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "inventory": {
+    "status": "PASS",
+    "status_scope": "MODEL_INVENTORY_ONLY",
+    "gate_scope": "OWNERSHIP_AND_ARTIFACT_INVENTORY_ONLY",
+    "allowlist_entry_count": 19,
+    "expected_count": 19,
+    "observed_count": 13,
+    "matched_count": 13,
+    "missing_count": 6,
+    "unknown_count": 0,
+    "invalid_count": 0,
+    "otherclients_empty": true,
+    "activeclients_status": "NOT_ASSESSED_BY_MODEL_INVENTORY",
+    "unsaved_scientific_evidence": "NOT_PROVEN",
+    "evidence_present_count": 43,
+    "evidence_spec_count": 52,
+    "worker_cleanup_status": "PASS",
+    "server_lifecycle": "NOT_TOUCHED_BY_INVENTORY",
+    "evidence": {
+      "stdout": "local-handoff/mac-checks-20260919/root-final-inventory-v5.stdout",
+      "stdout_sha256": "8e0ea9ac31b530a156a4ba5efc5537cd28940fb0a3b46dd0ec5dfa8851f5ff27",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "configuration_restore": {
+    "status": "PASS",
+    "exit_code": 0,
+    "xml_status": "RESTORED_ORIGINAL",
+    "original_sha256": "8bb393d2d803d1b7f6b124498742fa23b6310db9a28a6334f7462ec12d674bbe",
+    "xml_matches_original": true,
+    "acl_matches_original": true,
+    "temporary_firewall_rule_absent": true,
+    "listener_absent": true,
+    "captured_utc": "2026-09-19T12:07:56.5622754Z",
+    "evidence": {
+      "stdout_sha256": "3be19806346e4df561e7149ddfb94ca0da9651237125df03205c13c98d9dca35",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "local-handoff/mac-checks-20260919/root-restore-approved-settings.stdout",
+      "stderr": "local-handoff/mac-checks-20260919/root-restore-approved-settings.stderr",
+      "record_stream": "stdout"
+    }
+  },
+  "independent_restore_readback": {
+    "status": "PASS",
+    "xml_sha256": "8bb393d2d803d1b7f6b124498742fa23b6310db9a28a6334f7462ec12d674bbe",
+    "xml_matches_original": true,
+    "acl_matches_original": true,
+    "temporary_firewall_rule_absent": true,
+    "listener_absent": true,
+    "dedicated_pid_absent": true,
+    "comsol_process_count": 0,
+    "captured_utc": "2026-09-19T12:09:14.9792601Z",
+    "evidence": {
+      "stdout_sha256": "0e484b1018d85ece76713ad5a71531fdb23f926cd494993a842ef353d09482b8",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "local-handoff/mac-checks-20260919/root-independent-restore-readback.stdout",
+      "stderr": "local-handoff/mac-checks-20260919/root-independent-restore-readback.stderr",
+      "record_stream": "stdout"
+    }
+  },
+  "raw_logs": "retained_private",
+  "whole_goal_status": "IN_PROGRESS_NOT_PASSED",
+  "remaining_blockers": [
+    "Existing Mac Server session is blocked by an unsaved model; a new isolated Server has not yet been tested and no license/concurrency blocker is established.",
+    "Interactive Desktop binding remains unverified.",
+    "Native inherited-feature W04 coverage remains UNVERIFIED/NOT_RUN; v5 is bounded only.",
+    "COMSOL 6.3 and macOS Intel/Windows alternate-version matrix entries remain unverified.",
+    "Historical native model-change callback failure remains preserved.",
+    "W08-W12 remain outside this authorized round."
+  ],
+  "historical_failures_retained": [
+    "windows_c12_w04.json",
+    "windows_c12_w04_v4.json",
+    "windows_w04_c11_attempt1.json"
+  ],
+  "public_output_rule": "Counts, statuses, hashes and scoped reasons only; sensitive account, secret, model and raw metadata values are excluded."
+}

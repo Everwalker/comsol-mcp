@@ -1,0 +1,135 @@
+{
+  "W08_T008_T009_T010": {
+    "acceptance": [
+      "T008",
+      "T009",
+      "T010"
+    ],
+    "assertions": {},
+    "case_id": "W08_T008_T009_T010",
+    "finished_at": "2026-09-19T14:56:35.829871Z",
+    "package": "W08",
+    "reason": "excluded by --only",
+    "started_at": "2026-09-19T14:56:34.113298Z",
+    "status": "NOT_RUN",
+    "subcases": {}
+  },
+  "W09_T038_T039": {
+    "acceptance": [
+      "T038",
+      "T039"
+    ],
+    "assertions": {},
+    "case_id": "W09_T038_T039",
+    "finished_at": "2026-09-19T14:56:35.829903Z",
+    "package": "W09",
+    "reason": "excluded by --only",
+    "started_at": "2026-09-19T14:56:34.113304Z",
+    "status": "NOT_RUN",
+    "subcases": {}
+  },
+  "W10_T031_T032_T037": {
+    "acceptance": [
+      "T031",
+      "T032",
+      "T037"
+    ],
+    "assertions": {
+      "source_sha256": {
+        "tools/java/Phase3NoWrapper.java": "e1016223dbd696cf435189dadb0e6d55ccc111026fd290e472a3591cc7062bb9",
+        "tools/java/Phase3PartialFailure.java": "18191f31b91df048bb8ff1f1df090fe41f98635363fe83d44e8095c69bbfdd96",
+        "tools/java/Phase3SyntaxFailure.java": "97478991f58f96971c03482651c1b6fc6ab66dc290b2e15ca9273343e1e29f19"
+      },
+      "syntax_failure_has_line_diagnostic": {
+        "diagnostics": [],
+        "pass": false
+      }
+    },
+    "case_id": "W10_T031_T032_T037",
+    "finished_at": "2026-09-19T14:56:35.755148Z",
+    "package": "W10",
+    "reason": null,
+    "started_at": "2026-09-19T14:56:34.113306Z",
+    "status": "FAIL",
+    "subcases": {
+      "compile_reviewed_source": {
+        "status": "PASS"
+      },
+      "describe_source_and_effect": {
+        "status": "PASS"
+      },
+      "execute_bound_model_readback": {
+        "reason": "no bound model_ref",
+        "status": "BLOCKED"
+      },
+      "partial_execution_checkpoint": {
+        "reason": "no bound model_ref",
+        "status": "BLOCKED"
+      },
+      "syntax_failure_is_compile_only": {
+        "reason": "syntax error was not reported with a line diagnostic without model mutation",
+        "status": "FAIL"
+      }
+    }
+  },
+  "W11_T043_T036": {
+    "acceptance": [
+      "T043",
+      "T036"
+    ],
+    "assertions": {
+      "docs_source_snapshot": [
+        {
+          "exists": true,
+          "path": "/Applications/COMSOL64/Multiphysics/doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/util/ModelUtil.html",
+          "sha256": "a5e4c080407a673a5dd78e95b9fb089d92c0f518477ffdcc4f62b3348085c4eb",
+          "size": 78602
+        }
+      ],
+      "malicious_fixture_sha256": "a78c900e41f8f89f5ed0f7dcca570f7bc584efcccc0ff42160e18424fe9dd54b"
+    },
+    "case_id": "W11_T043_T036",
+    "finished_at": "2026-09-19T14:56:35.777547Z",
+    "package": "W11",
+    "reason": null,
+    "started_at": "2026-09-19T14:56:34.113307Z",
+    "status": "FAIL",
+    "subcases": {
+      "docs_root_boundary": {
+        "reason": "outside-root documentation source was not rejected before indexing",
+        "status": "FAIL"
+      },
+      "malicious_doc_is_data": {
+        "reason": "malicious documentation text was not returned as inert data",
+        "status": "FAIL"
+      },
+      "real_local_help_source_hash": {
+        "reason": "docs.index returned INVALID_REQUEST",
+        "status": "FAIL"
+      },
+      "search_returns_version_source_hash": {
+        "reason": "documentation search did not return traceable source/content hashes",
+        "status": "FAIL"
+      },
+      "unavailable_63_is_explicit": {
+        "observed_status": "UNAVAILABLE",
+        "status": "PASS"
+      }
+    }
+  },
+  "W12_T029_T033_T050": {
+    "acceptance": [
+      "T029",
+      "T033",
+      "T050"
+    ],
+    "assertions": {},
+    "case_id": "W12_T029_T033_T050",
+    "finished_at": "2026-09-19T14:56:35.829913Z",
+    "package": "W12",
+    "reason": "excluded by --only",
+    "started_at": "2026-09-19T14:56:34.113309Z",
+    "status": "NOT_RUN",
+    "subcases": {}
+  }
+}

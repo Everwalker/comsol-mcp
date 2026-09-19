@@ -1,0 +1,15 @@
+{
+  "snapshot_id": "win-cp312-28605a689666-dirty-20260919-b2c",
+  "status": "FAIL",
+  "scope": "actual Java Worker protocol using installed Windows COMSOL64 manifest/JDK11; no engine connection",
+  "passed": 18,
+  "failed": 3,
+  "skipped": 0,
+  "failures": [
+    "FAILED tests/test_java_worker.py::test_java_worker_persists_private_endpoint_metadata",
+    "FAILED tests/test_java_worker.py::test_remote_model_save_never_uses_empty_path_as_in_place_bypass",
+    "FAILED tests/test_java_worker.py::test_two_workers_cannot_own_the_same_global_endpoint_lock"
+  ],
+  "raw_evidence_sha256": "188188fcf9e89e6195abf201a0b9705c247f5521d382b6454f37b7d8d84fb473",
+  "interpretation": "Earlier COMSOL63-path skip was misconfiguration. Actual COMSOL64 is present. Additional permissions/global-lock failures require root-cause analysis, not disabled guards."
+}

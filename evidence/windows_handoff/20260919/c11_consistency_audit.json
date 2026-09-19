@@ -1,0 +1,190 @@
+{
+  "audit": "c11_evidence_consistency",
+  "audit_scope": "Latest c11/W04 public payloads plus directly referenced Mac software evidence; no test rerun and no historical tree rewrite.",
+  "status": "PASS_WITH_EXPLICIT_GAPS",
+  "json_parse": {
+    "status": "PASS",
+    "files_checked": 11,
+    "inputs": {
+      "evidence/windows_handoff/20260919/acceptance.json": {
+        "exists": true,
+        "json_parse": true,
+        "sha256": "1fa3f666e7185eb37f22f676c32a48d485123e9c3c711fdaec6512a837e78760"
+      },
+      "evidence/windows_handoff/20260919/source_snapshot_c11.json": {
+        "exists": true,
+        "json_parse": true,
+        "sha256": "7f11040d0c1190e7314833b43b5054203d58553e0b829a311285c4489955d226"
+      },
+      "evidence/windows_handoff/20260919/windows_c11_tests.json": {
+        "exists": true,
+        "json_parse": true,
+        "sha256": "bf9efda8bb3362f3069023e15c2e74fbb9c3380f8ec639a29c4e950c1322274a"
+      },
+      "evidence/windows_handoff/20260919/windows_c11_production.json": {
+        "exists": true,
+        "json_parse": true,
+        "sha256": "d69eb97b59561c48f42229c99e23177cced2a08b7a9e5d81d2d5112037ed6fca"
+      },
+      "evidence/windows_handoff/20260919/windows_c11_reopen.json": {
+        "exists": true,
+        "json_parse": true,
+        "sha256": "20951ce8f54690fe86c23468ef4f6bfa81fd11a86a9389ad15c110bd37369bf1"
+      },
+      "evidence/windows_handoff/20260919/windows_c11_fixture.json": {
+        "exists": true,
+        "json_parse": true,
+        "sha256": "07d2bca95e84bb80eab30361abee281ed4bc0ca16f38c7ebb868f872359e828d"
+      },
+      "evidence/windows_handoff/20260919/windows_w04_c11_attempt1.json": {
+        "exists": true,
+        "json_parse": true,
+        "sha256": "2c37a10b7bbd4031fbbe40ca6d1bda36ed7d12c3644da36215bce5957d462151"
+      },
+      "evidence/windows_handoff/20260919/server_gate.json": {
+        "exists": true,
+        "json_parse": true,
+        "sha256": "990c4ae32f22c3543a20a010630d9cd02f7b37b7a54a8fbcd06b125ace8938c6"
+      },
+      "evidence/windows_handoff/20260919/firewall_access_gate.json": {
+        "exists": true,
+        "json_parse": true,
+        "sha256": "4f7f93f36de97b6bcfb353ff7e6c9475ad2e297f42a456a3eef91238fe91cd7e"
+      },
+      "evidence/mac_same_snapshot/20260919/c11_verified_full_suite.json": {
+        "exists": true,
+        "json_parse": true,
+        "sha256": "19fc765a6c6fbad32d5a1d0c6ac241daae4d473c07f6f3c29c3dba2ee6507627"
+      },
+      "local-handoff/mac-checks-20260919/c11-local-extract/SNAPSHOT_MANIFEST.json": {
+        "exists": true,
+        "json_parse": true,
+        "sha256": "11ff492fe5b5560de6fd0df5df98fe164bda8d91db012727bedd6512f3502eb0"
+      }
+    }
+  },
+  "snapshot_consistency": {
+    "snapshot_id": "win-cp312-28605a689666-dirty-20260919-c11",
+    "source_head": "28605a6896668a64775ac6c1192ed50fef94b47f",
+    "all_latest_payloads_same_snapshot": true,
+    "archive": {
+      "exists": true,
+      "bytes_match": true,
+      "sha256_match": true
+    },
+    "manifest": {
+      "snapshot_id_match": true,
+      "source_head_match": true,
+      "entry_count": 123,
+      "recorded_verified_files": 123
+    }
+  },
+  "reference_checks": {
+    "acceptance_relative_evidence": {
+      "mac_blocker": {
+        "reference": "../../mac_same_snapshot/20260919/current_snapshot_blocker.json",
+        "exists": true
+      },
+      "mac_software": {
+        "reference": "../../mac_same_snapshot/20260919/c11_verified_full_suite.json",
+        "exists": true
+      },
+      "windows_software": {
+        "reference": "windows_c11_tests.json",
+        "exists": true
+      },
+      "latest_source": {
+        "reference": "source_snapshot_c11.json",
+        "exists": true
+      }
+    },
+    "acceptance_named_evidence_files": {
+      "windows_c11_tests": true,
+      "windows_c11_reopen": true,
+      "windows_c11_source_snapshot": true
+    }
+  },
+  "scope_consistency": {
+    "acceptance_phase": "IN_PROGRESS_NOT_PASSED",
+    "windows_software": {
+      "status": "PASS",
+      "recorded_passed": 236,
+      "recorded_failed": 0,
+      "recorded_skipped": 0,
+      "tests_payload_status": "PASS",
+      "engine_connection": "NOT_RUN"
+    },
+    "bounded_windows_chain": {
+      "source_snapshot_engine_tests": "BOUNDED_PRODUCTION_AND_REOPEN_PASS",
+      "production_status": "PASS",
+      "production_scope": "Fixed recipe only; not full platform or all W01-W07 acceptance",
+      "reopen_status": "PASS",
+      "reopen_scope": "Fixed recipe only; not full platform or all W01-W07 acceptance",
+      "saved_sha_match": true
+    },
+    "w04_attempt1": {
+      "status": "FAIL",
+      "classification_extraction": "PASS",
+      "classification_matches_all_known_categories": true,
+      "original_release_assertions_remain_failed": true,
+      "server_lifecycle": "NOT_TOUCHED",
+      "script_hashes": {
+        "attempt1_v1_sha256": "b2905c783d87d22278d158dbc6e07cecab61cb7751160dfa9b466b039ccd1faa",
+        "current_v2_sha256": "616b3b46eefba67163a02e8423be29d694ebcecf472c21aa3af7e7083e2d26d1"
+      }
+    },
+    "mac_software": {
+      "status": "PASS",
+      "targeted": "25 passed",
+      "full": "235 passed, 1 skipped",
+      "engine_connection": "NOT_RUN",
+      "same_snapshot": true
+    },
+    "overall_phase_vs_subgate": {
+      "overall_phase": "IN_PROGRESS_NOT_PASSED",
+      "same_snapshot_subgate": "SOFTWARE_AND_BOUNDED_WINDOWS_CHAIN_PASS",
+      "interpretation": "Narrow software/bounded-chain subgate only; W04, Mac engine, and restoration gates remain unresolved."
+    },
+    "delivery_scope": {
+      "windows_snapshot_delivery": "PASS",
+      "top_level_commit": "NOT_RUN",
+      "top_level_push": "NOT_RUN",
+      "interpretation": "Windows snapshot transfer and Git publication are separate ledgers."
+    }
+  },
+  "restore_and_cleanup_state": {
+    "restore_executed": false,
+    "temporary_configuration_state": "ACTIVE_AWAITING_USER_ENROLLMENT",
+    "firewall_rule_state": "TEMPORARY_RULE_ACTIVE; remove only after dedicated listener stops",
+    "no_restore_pass_claim": true
+  },
+  "privacy_scan": {
+    "scanned_roots": [
+      "evidence/windows_handoff/20260919",
+      "evidence/mac_same_snapshot/20260919",
+      "evidence/windows_control_lifecycle"
+    ],
+    "account_absolute_path_matches": 0,
+    "credential_value_shape_matches": 0,
+    "authorization_labels_only": true,
+    "raw_matches_copied": false
+  },
+  "ledger_repairs": [
+    {
+      "file": "evidence/windows_handoff/20260919/acceptance.json",
+      "fields": [
+        "checks[4].scope_note",
+        "checks[5].scope_note"
+      ],
+      "change": "Updated stale c10 wording to c11; historical c6f evidence and its limited scope remain unchanged."
+    }
+  ],
+  "known_gaps": [
+    "W04 c11 attempt1 remains FAIL: cfeq1 was reported selection_editable=true and the public classification did not identify a supported failure category; no pass inference is made.",
+    "The W04 attempt1 record hashes the frozen v1 script; the prepared v2 script has a separate hash and has not been executed on Windows.",
+    "Production/reopen result, assertions, and transcript hashes identify private artifacts that are not present in the public evidence tree; only the recorded opaque hashes can be checked here.",
+    "Current Mac evidence is software-only with engine_connection=NOT_RUN; the acceptance blocker for the existing unsaved Mac session remains in force.",
+    "Server configuration restoration and temporary firewall removal remain NOT_RUN/active pending the separately authorized protected close procedure.",
+    "The acceptance real-solve/save/reopen check directly names the reopen payload; the production payload is present separately and summarized in the note but is not a direct evidence field."
+  ]
+}

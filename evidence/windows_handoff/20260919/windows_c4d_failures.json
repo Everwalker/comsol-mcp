@@ -1,0 +1,14 @@
+{
+  "snapshot_id": "win-cp312-28605a689666-dirty-20260919-c4d",
+  "status": "FAIL",
+  "passed": 208,
+  "failed": 2,
+  "skipped": 0,
+  "failures": [
+    "FAILED tests/test_java_worker.py::test_java_worker_persists_private_endpoint_metadata",
+    "FAILED tests/test_java_worker.py::test_windows_existing_foreign_lock_root_is_rejected_without_takeover"
+  ],
+  "cause": "Windows ACL test helper called Translate on string Owner instead of GetOwner(SecurityIdentifier); runtime lock and atomic save regressions passed",
+  "fix": "Correct test helper on Mac; next snapshot required",
+  "raw_evidence_sha256": "318668690e157763f4651f57f34414cc9cdb01b5fa6835109f805a1d88edba27"
+}

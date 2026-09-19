@@ -6,7 +6,7 @@ import zipfile
 
 import pytest
 
-from comsol_mcp._atomic_save import AtomicSaveError, atomic_save
+from comsol_mcp._atomic_save import AtomicSaveError, _fsync_file, atomic_save
 
 
 def write_mph(path: Path, payload: bytes = b"complete model") -> None:
@@ -72,6 +72,49 @@ def test_verification_and_publish_failures_do_not_replace_existing_checkpoint(tm
     assert publish.value.temporary_path and publish.value.temporary_path.exists()
     with zipfile.ZipFile(destination) as archive:
         assert archive.read("model/model.mphbin") == b"old"
+
+
+def test_file_flush_failure_preserves_original_and_candidate(tmp_path: Path, monkeypatch):
+    destination = tmp_path / "model.mph"
+    write_mph(destination, b"old")
+
+    def flush_failure(_descriptor: int) -> None:
+        raise OSError("candidate flush denied")
+
+    monkeypatch.setattr(os, "fsync", flush_failure)
+    with pytest.raises(AtomicSaveError) as raised:
+        atomic_save(destination, lambda temp: write_mph(temp, b"candidate"), tmp_path)
+
+    error = raised.value
+    assert error.stage == "verification"
+    assert error.original_preserved is True
+    assert error.partial is True
+    assert error.temporary_path is not None and error.temporary_path.is_file()
+    with zipfile.ZipFile(destination) as archive:
+        assert archive.read("model/model.mphbin") == b"old"
+    with zipfile.ZipFile(error.temporary_path) as archive:
+        assert archive.read("model/model.mphbin") == b"candidate"
+
+
+def test_file_flush_uses_writable_mode_without_truncating_candidate(tmp_path: Path, monkeypatch):
+    candidate = tmp_path / "candidate.mph"
+    payload = b"candidate bytes that must survive the flush"
+    candidate.write_bytes(payload)
+    opened_modes: list[str] = []
+    real_open = Path.open
+
+    def record_open(path: Path, mode: str = "r", *args, **kwargs):
+        if path == candidate:
+            opened_modes.append(mode)
+        return real_open(path, mode, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", record_open)
+    monkeypatch.setattr(os, "fsync", lambda _descriptor: None)
+
+    _fsync_file(candidate)
+
+    assert opened_modes == ["r+b"]
+    assert candidate.read_bytes() == payload
 
 
 def test_path_escape_and_overwrite_refusal_do_not_create_candidate(tmp_path: Path):

@@ -1,0 +1,106 @@
+{
+  "scope": "W01-W07 foundational handoff; no W08-W12 expansion; no push",
+  "source_head": "28605a6896668a64775ac6c1192ed50fef94b47f",
+  "snapshot_id": "win-cp312-28605a689666-dirty-20260919-b2c",
+  "phase_status": "IN_PROGRESS_NOT_PASSED",
+  "checks": [
+    {
+      "id": "handoff_baseline",
+      "status": "PASS",
+      "evidence": "baseline.json"
+    },
+    {
+      "id": "ssh_identity_and_transfer",
+      "status": "PASS",
+      "evidence": "ssh_delivery.json"
+    },
+    {
+      "id": "windows_python_native",
+      "status": "PASS",
+      "scope": "isolated Windows x64 CPython 3.12.10 executable; verified installer Authenticode"
+    },
+    {
+      "id": "windows_dependencies",
+      "status": "PASS",
+      "note": "39 native/compatible wheels verified; offline pip and pip check exit 0; external JDK11 java/javac exit0",
+      "evidence": "native_dependencies.json"
+    },
+    {
+      "id": "windows_java_protocol",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "windows_mcp_initialization",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "windows_access_control",
+      "status": "NOT_RUN",
+      "note": "Approved localhost Valve active; XML and original/patched hash checks PASS; local-allow/remote-deny probes await credential enrollment."
+    },
+    {
+      "id": "windows_authentication_and_license",
+      "status": "BLOCKED",
+      "note": "Controlled startup reached username prompt; user secure local first enrollment required; owned trial process stopped, license checkout NOT_RUN."
+    },
+    {
+      "id": "windows_real_solve_save_reopen",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "mac_same_snapshot_real_regression",
+      "status": "BLOCKED",
+      "note": "Authenticated read-only inventory found unsaved in-memory model; historical Worker left untouched.",
+      "evidence": "../../mac_same_snapshot/20260919/current_snapshot_blocker.json"
+    },
+    {
+      "id": "desktop_shared_model",
+      "status": "BLOCKED",
+      "note": "no verified interactive Desktop binding"
+    },
+    {
+      "id": "native_model_change_callback",
+      "status": "FAIL",
+      "note": "historical actual event counter zero retained; parameter fingerprint detection is separate"
+    }
+  ],
+  "environments": [
+    {
+      "os": "macOS",
+      "arch": "arm64",
+      "comsol": "6.4.0.293",
+      "status": "UNVERIFIED_CURRENT_SNAPSHOT",
+      "historical": "scoped W01-W07 real results retained"
+    },
+    {
+      "os": "Windows",
+      "arch": "x64",
+      "comsol": "6.4.0.293",
+      "status": "UNVERIFIED"
+    },
+    {
+      "os": "macOS",
+      "arch": "x64",
+      "comsol": "6.3/6.4",
+      "status": "UNVERIFIED"
+    },
+    {
+      "os": "Windows",
+      "arch": "x64",
+      "comsol": "6.3",
+      "status": "UNVERIFIED"
+    },
+    {
+      "os": "macOS",
+      "arch": "arm64",
+      "comsol": "6.3",
+      "status": "UNVERIFIED"
+    }
+  ],
+  "mac_software_regression": {
+    "status": "PASS",
+    "tests_passed": 207,
+    "evidence": "../../mac_same_snapshot/20260919/current_snapshot_blocker.json",
+    "source_files_match_snapshot": true
+  }
+}

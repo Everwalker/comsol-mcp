@@ -1,0 +1,42 @@
+{
+  "status": "BLOCKED",
+  "scope": "Current working-tree Mac real regression for the bounded portable W02/W05-W07 driver",
+  "environment": "macOS arm64 with the task-owned dedicated COMSOL 6.4 server",
+  "preflight": {
+    "server_process_and_listener": "PASS",
+    "private_preferences_and_temporary_roots": "PASS",
+    "control_health": "PASS",
+    "active_jobs": [],
+    "worker_health": "HEALTHY",
+    "worker_connected": true
+  },
+  "isolation_gate": {
+    "status": "BLOCKED",
+    "reason": "Read-only inventory found an unsaved in-memory model alongside historical fixture models. The current server session cannot be proven to contain only one isolated saved task fixture.",
+    "historical_worker_disconnect": "NOT_RUN",
+    "server_lifecycle": "NOT_RUN"
+  },
+  "real_engine_phases": {
+    "native_fixture_prepare": "NOT_RUN",
+    "production_connect_load_write_solve_save": "NOT_RUN",
+    "fresh_worker_reopen": "NOT_RUN"
+  },
+  "verification": {
+    "full_unit_suite": "212 passed, 1 skipped",
+    "full_unit_suite_exit_code": 0,
+    "full_unit_suite_evidence": "full_suite_acl_owner_rights.json",
+    "prior_full_unit_suite_evidence": "full_suite_worker_b564.json",
+    "portable_driver_contract_suite": "6 passed",
+    "portable_driver_compile_and_diff_check": "PASS",
+    "persistent_worker_source_sha256": "b564ff8963b1b8ec04c7475a94e1ab041d69e70d28a183deedb4c9ce47e17b5a"
+  },
+  "safety": "Existing COMSOL Server, historical control daemon, Worker, and loaded models were left untouched. Raw process, endpoint, model, and preference details remain in private operator evidence.",
+  "latest_readonly_recheck": {
+    "health": "HEALTHY",
+    "loaded_model_count": 39,
+    "historical_unsaved_tag_present": true,
+    "historical_unsaved_model_has_file_path": false,
+    "evidence_sha256": "dea9481920d72ad8e0fa6fa74e8a26db89a56064091d063caaa3922d1c95f8ac",
+    "action": "Existing Worker/Server and all models preserved; no disconnect or model mutation."
+  }
+}

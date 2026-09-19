@@ -1,0 +1,393 @@
+{
+  "scope": "W01-W07 foundational handoff; no W08-W12 expansion; no push",
+  "source_head": "28605a6896668a64775ac6c1192ed50fef94b47f",
+  "snapshot_id": "windows-cp312-28605a689666-dirty-20260919-c12",
+  "phase_status": "IN_PROGRESS_NOT_PASSED",
+  "checks": [
+    {
+      "id": "handoff_baseline",
+      "status": "PASS",
+      "evidence": "baseline.json"
+    },
+    {
+      "id": "ssh_identity_and_transfer",
+      "status": "PASS",
+      "evidence": "ssh_delivery.json"
+    },
+    {
+      "id": "windows_python_native",
+      "status": "PASS",
+      "scope": "isolated Windows x64 CPython 3.12.10 executable; verified installer Authenticode"
+    },
+    {
+      "id": "windows_dependencies",
+      "status": "PASS",
+      "note": "39 native/compatible wheels verified; offline pip and pip check exit 0; external JDK11 java/javac exit0",
+      "evidence": "native_dependencies.json"
+    },
+    {
+      "id": "windows_java_protocol",
+      "status": "PASS",
+      "note": "Actual Windows x64 Java/Javac 11 using installed COMSOL64 client manifest; full suite 213 PASS, zero skipped, exit 0. No engine connection.",
+      "evidence": "windows_c6f_tests.json",
+      "scope_note": "Historical scoped evidence; not current c11 full acceptance."
+    },
+    {
+      "id": "windows_mcp_initialization",
+      "status": "PASS",
+      "note": "Production stdio initialize/tools-list/session_health; 58 tools, READY, Worker NOT_STARTED, no engine.",
+      "evidence": "windows_c6f_mcp.json",
+      "scope_note": "Historical scoped evidence; not current c11 full acceptance."
+    },
+    {
+      "id": "windows_access_control",
+      "status": "PASS",
+      "note": "Approved temporary COMSOL program/TCP22036 non-loopback firewall block; local native connection PASS, Mac remote TCP denied. Earlier Valve-only FAIL retained.",
+      "evidence": "firewall_access_gate.json"
+    },
+    {
+      "id": "windows_authentication_and_license",
+      "status": "PASS",
+      "note": "Native authenticated fixture build/solve/save/PNG export passed on COMSOL 6.4 build293; license proven only for this recipe, no additional module support claim.",
+      "evidence": "windows_c8_native_fixture.json"
+    },
+    {
+      "id": "windows_real_solve_save_reopen",
+      "status": "PASS",
+      "note": "c12 bounded production chain 15 assertions and fresh Worker reopen 11 assertions PASS; same saved SHA verified. No full-platform claim.",
+      "evidence": "windows_c12_reopen.json",
+      "related_evidence": [
+        "windows_c12_production.json",
+        "windows_c12_reopen.json",
+        "source_snapshot_c12.json"
+      ],
+      "as_of": "c12",
+      "historical_prior_evidence": [
+        "windows_c11_production.json",
+        "windows_c11_reopen.json"
+      ]
+    },
+    {
+      "id": "mac_same_snapshot_real_regression",
+      "status": "BLOCKED",
+      "note": "Authenticated read-only inventory found unsaved in-memory model; historical Worker left untouched.",
+      "evidence": "../../mac_same_snapshot/20260919/current_snapshot_blocker.json"
+    },
+    {
+      "id": "desktop_shared_model",
+      "status": "BLOCKED",
+      "note": "no verified interactive Desktop binding"
+    },
+    {
+      "id": "native_model_change_callback",
+      "status": "FAIL",
+      "note": "historical actual event counter zero retained; parameter fingerprint detection is separate"
+    },
+    {
+      "id": "windows_w04_supplement",
+      "status": "FAIL",
+      "evidence": "windows_w04_c11_attempt1.json",
+      "note": "Historical c11 W04 attempt: four selection cases passed; approved diagnostics identified Selection_is_not_editable and the harness classification gap. Later c12 records supersede its pending repair status.",
+      "historical": true,
+      "as_of": "c11",
+      "superseded_by": "windows_c12_w04_v5.json"
+    },
+    {
+      "id": "temporary_configuration_restore",
+      "status": "PASS",
+      "note": "Owned Server stop, original XML/ACL restoration, exact temporary firewall removal, and independent readback all PASS. This is a scoped closeout gate; whole goal remains IN_PROGRESS_NOT_PASSED.",
+      "as_of": "c12-closeout",
+      "evidence": "windows_c12_closeout.json"
+    },
+    {
+      "id": "windows_c12_snapshot_delivery",
+      "status": "PASS",
+      "evidence": "windows_c12_delivery.json",
+      "note": "Frozen c12 archive and 124-file extraction matched archive, manifest and approved supplement hashes."
+    },
+    {
+      "id": "windows_c12_software_regression",
+      "status": "PASS",
+      "evidence": "windows_c12_tests.json",
+      "note": "244 passed, zero failed/skipped, exit 0; engine connection was NOT_RUN."
+    },
+    {
+      "id": "windows_c12_bounded_real_chain",
+      "status": "PASS",
+      "evidence": [
+        "windows_c12_production.json",
+        "windows_c12_reopen.json"
+      ],
+      "note": "Production 15/15 and fresh Worker reopen 11/11 passed; saved SHA matched and owned Worker/control release passed."
+    },
+    {
+      "id": "windows_c12_w04_supplement",
+      "status": "FAIL",
+      "evidence": "windows_c12_w04.json",
+      "note": "Unsupported-inheritance expected-clean contract failed: engine returned Inheriting_not_allowed with execution_state_unknown=true and dirty=true. No later W04 cases are accepted.",
+      "historical": true,
+      "as_of": "c12-v3",
+      "superseded_by_bounded_record": "windows_c12_w04_v5.json"
+    },
+    {
+      "id": "windows_c12_w04_v4",
+      "status": "FAIL",
+      "evidence": "windows_c12_w04_v4.json",
+      "note": "The single v4 r2 run executed 15 assertions that returned true, but full acceptance was not established because a global-variable list advanced the owned revision 12 to 13 and the next component operation used revision 12. A second launch was blocked by the output-exists guard; no duplicate engine run occurred.",
+      "historical": true,
+      "as_of": "c12-v4"
+    },
+    {
+      "id": "windows_c12_w04_v5_bounded",
+      "status": "PASS",
+      "evidence": "windows_c12_w04_v5.json",
+      "note": "The corrected v5 isolated harness passed 34/34 bounded assertions with release and cleanup PASS. Native inherited-feature coverage remains UNVERIFIED/NOT_RUN, so this is a bounded W04 result and not full platform acceptance.",
+      "as_of": "c12-v5",
+      "configuration_restore": "PASS_AFTER_RUN"
+    },
+    {
+      "id": "windows_c12_protected_closeout",
+      "status": "PASS",
+      "as_of": "c12-closeout",
+      "evidence": "windows_c12_closeout.json",
+      "note": "Owned Server identity stop PASS; inventory unknown 0 and otherclients_empty true; original XML/ACL/firewall restoration and independent readback PASS. Scope is protected-window closeout only."
+    },
+    {
+      "id": "windows_t030_disk_full_scope",
+      "status": "NOT_RUN",
+      "scope": "Windows current round",
+      "reason": "USER_REQUESTED_SKIP",
+      "counts_as_pass": false,
+      "current_round_prerequisite": false,
+      "historical_prior_evidence_preserved": true,
+      "note": "The user requested skipping Windows T030 disk-full monitoring/testing. Existing normal-save evidence and historical T030 records remain unchanged."
+    }
+  ],
+  "environments": [
+    {
+      "os": "macOS",
+      "arch": "arm64",
+      "comsol": "6.4.0.293",
+      "status": "UNVERIFIED_CURRENT_SNAPSHOT",
+      "historical": "scoped W01-W07 real results retained"
+    },
+    {
+      "os": "Windows",
+      "arch": "x64",
+      "comsol": "6.4.0.293",
+      "status": "BOUNDED_FIXED_RECIPE_PASS",
+      "scope_note": "c12 fixed-recipe production/reopen and bounded W04 v5 only; full platform acceptance not claimed"
+    },
+    {
+      "os": "macOS",
+      "arch": "x64",
+      "comsol": "6.3/6.4",
+      "status": "UNVERIFIED"
+    },
+    {
+      "os": "Windows",
+      "arch": "x64",
+      "comsol": "6.3",
+      "status": "UNVERIFIED"
+    },
+    {
+      "os": "macOS",
+      "arch": "arm64",
+      "comsol": "6.3",
+      "status": "UNVERIFIED"
+    }
+  ],
+  "mac_software_regression": {
+    "status": "PASS",
+    "snapshot_id": "windows-cp312-28605a689666-dirty-20260919-c12",
+    "tests_passed": 243,
+    "tests_skipped": 1,
+    "failed": 0,
+    "exit_code": 0,
+    "scope": "software only; verified external Python 3.12.13 / mcp 1.29.1 / pytest 9.1.1",
+    "evidence": "../../mac_same_snapshot/20260919/c12_verified_full_suite.json"
+  },
+  "next_actions": [
+    "Existing Mac Server session is blocked by an unsaved model; a new isolated Server has not yet been tested and no license/concurrency blocker is established.",
+    "Complete native inherited-feature W04 coverage in a new authorized isolated round; the v5 result is bounded PASS only.",
+    "Keep COMSOL 6.3 and macOS Intel/Windows alternate-version matrix entries UNVERIFIED.",
+    "Retain the historical native model-change callback FAIL and the c12 W04 v3/v4 failure evidence.",
+    "Keep W08-W12 NOT_AUTHORIZED_THIS_ROUND until the unresolved foundational gates are reviewed.",
+    "Run the current Mac isolated-Server prerequisite validation before any new engine regression.",
+    "Audit Windows T027/T028 lifecycle with equivalent bounded runners; Windows T030 disk-full remains NOT_RUN by USER_REQUESTED_SKIP and is not a current-round prerequisite. Do not rerun the entire test suite for these checks."
+  ],
+  "later_work_packages": {
+    "W08-W12": "NOT_AUTHORIZED_THIS_ROUND",
+    "entry_gate": "NOT_MET",
+    "reason": "Required native engine and same-source regression gates are unresolved; historical callback FAIL remains."
+  },
+  "delivery": {
+    "commit": "NOT_RUN",
+    "push": "NOT_RUN",
+    "reason": "Current handoff Goal explicitly forbids automatic main push and preserves dirty source."
+  },
+  "windows_software_regression": {
+    "status": "PASS",
+    "snapshot_id": "windows-cp312-28605a689666-dirty-20260919-c12",
+    "passed": 244,
+    "skipped": 0,
+    "failed": 0,
+    "exit_code": 0,
+    "evidence": "windows_c12_tests.json"
+  },
+  "same_snapshot": {
+    "status": "SOFTWARE_AND_BOUNDED_WINDOWS_CHAIN_PASS_W04_BOUNDED_PASS_RESTORED",
+    "mac_files_verified": 124,
+    "windows_latest_verified_snapshot": "c12",
+    "latest_source_evidence": "source_snapshot_c12.json",
+    "note": "c12 delivery, software suite, production/reopen and corrected v5 bounded W04 pass; protected Server/configuration closeout and independent restore readback pass. Native inherited-feature coverage remains UNVERIFIED/NOT_RUN; whole-goal acceptance remains IN_PROGRESS_NOT_PASSED."
+  },
+  "blocked_audit_evidence": "w04_blocked_audit_03.json",
+  "diagnostic_authorization": "User-approved scoped W04 diagnostics are recorded with public redaction. c12 v3/v4 failures and the corrected v5 bounded PASS remain distinct; native inherited-feature coverage is UNVERIFIED/NOT_RUN. Protected configuration closeout and independent restore readback are PASS.",
+  "current_source_repair": {
+    "status": "PASS_BOUNDED_W04_NATIVE_INHERITED_UNVERIFIED",
+    "snapshot_id": "windows-cp312-28605a689666-dirty-20260919-c12",
+    "c12": "PASS_BOUNDED_CHAIN_W04_FAIL",
+    "source_evidence": "source_snapshot_c12.json",
+    "mac_software_evidence": "../../mac_same_snapshot/20260919/c12_verified_full_suite.json",
+    "reasons": [
+      "Feature discovery inferred selection editability from not-isInheriting; selection_editable must remain evidence-limited.",
+      "Nested Worker execution_state_unknown=true was lost through wrapped legacy exceptions and must be propagated through the outer envelope."
+    ],
+    "c12_status": {
+      "delivery": "PASS",
+      "software": "PASS",
+      "production": "PASS",
+      "reopen": "PASS",
+      "w04": "FAIL",
+      "restore": "PASS",
+      "evidence": [
+        "windows_c12_delivery.json",
+        "windows_c12_tests.json",
+        "windows_c12_production.json",
+        "windows_c12_reopen.json",
+        "windows_c12_w04.json"
+      ],
+      "restore_evidence": "windows_c12_closeout.json"
+    },
+    "latest_w04_v4": {
+      "status": "FAIL",
+      "evidence": "windows_c12_w04_v4.json",
+      "assertions_executed": 15,
+      "assertions_true": 15,
+      "full_acceptance": "NOT_ESTABLISHED",
+      "failure_category": "REVISION_CONFLICT",
+      "expected_revision": 12,
+      "current_revision": 13,
+      "v5": "SUPERSEDED_BY_PASS_BOUNDED_RESULT",
+      "c12_product_unchanged": true,
+      "historical_as_of": "c12-v4; restoration was not yet run at that checkpoint",
+      "v5_evidence": "windows_c12_w04_v5.json"
+    },
+    "latest_w04_v5": {
+      "status": "PASS_BOUNDED",
+      "evidence": "windows_c12_w04_v5.json",
+      "assertions": "34/34",
+      "release": "PASS",
+      "cleanup": "PASS",
+      "native_inherited_feature": "UNVERIFIED_NOT_RUN",
+      "c12_product_unchanged": true,
+      "restore": "PASS",
+      "restore_scope": "post-run protected configuration closeout"
+    }
+  },
+  "latest_snapshot": {
+    "snapshot_id": "windows-cp312-28605a689666-dirty-20260919-c12",
+    "source_head": "28605a6896668a64775ac6c1192ed50fef94b47f",
+    "archive_sha256": "f4c34b77a1c6eee03d29062c8a10461cbebf615b527fdcd0941863ce84543340",
+    "manifest_sha256": "8b1ac4a9477c8958e580d2e9e975314b25246f4cc253f5ea3e4cb2ea6f0bdd86",
+    "environment": "Windows x64 / CPython 3.12.10 / COMSOL 6.4.0.293 build293 / JDK 11.0.32_10",
+    "manifest_file_count": 124
+  },
+  "windows_c12_software_regression": {
+    "status": "PASS",
+    "passed": 244,
+    "failed": 0,
+    "skipped": 0,
+    "exit_code": 0,
+    "evidence": "windows_c12_tests.json",
+    "engine_connection": "NOT_RUN"
+  },
+  "windows_c12_bounded_chain": {
+    "status": "PASS",
+    "production_assertions": "15/15",
+    "reopen_assertions": "11/11",
+    "saved_sha256": "be2653f3764b41e500255fe6398ba31993ff3ae597a4add3e3424202481c55c4",
+    "saved_sha256_equal": true,
+    "worker_release": "PASS",
+    "control_cleanup": "PASS",
+    "evidence": [
+      "windows_c12_production.json",
+      "windows_c12_reopen.json"
+    ],
+    "configuration_restore": "PASS",
+    "configuration_restore_evidence": "windows_c12_closeout.json"
+  },
+  "windows_c12_w04": {
+    "status": "FAIL",
+    "first_failure": "unsupported_inherit_rejected expected-clean contract; Inheriting_not_allowed; execution_state_unknown=true; dirty=true",
+    "diagnostic_readback": "PASS",
+    "evidence": "windows_c12_w04.json",
+    "restore": "NOT_RUN",
+    "earlier_expected_failure_reconciled": true,
+    "earlier_failure_state_note": "dirty/unknown describe the failure moment; continuation was allowed only after owned-model reconciliation.",
+    "historical_as_of": "c12-v3; restoration was not yet run at that checkpoint"
+  },
+  "windows_c12_w04_v4": {
+    "status": "FAIL",
+    "evidence": "windows_c12_w04_v4.json",
+    "harness_sha256": "92864ce18661298a2fbad85c52acd5b7a3b96e2ac2f153ad8d3af900c2fcb175",
+    "runner_sha256": "f9f5d2e4acfcc5cab9ca735cf367cbcad9c155c971168df673b426fc6988dd50",
+    "assertions_executed": 15,
+    "assertions_true": 15,
+    "full_acceptance": "NOT_ESTABLISHED",
+    "failure_category": "REVISION_CONFLICT",
+    "expected_revision": 12,
+    "current_revision": 13,
+    "diagnostic_readback": "PASS_SCOPED_BOOL_AND_REVISION",
+    "rerun_guard": "BLOCKED_OUTPUT_EXISTS",
+    "restore": "NOT_RUN",
+    "historical_as_of": "c12-v4; restoration was not yet run at that checkpoint"
+  },
+  "current_w04_checkpoint": {
+    "status": "PASS_BOUNDED",
+    "evidence": "windows_c12_w04_v5.json",
+    "assertions": "34/34",
+    "release": "PASS",
+    "cleanup": "PASS",
+    "native_inherited_feature": "UNVERIFIED_NOT_RUN",
+    "full_platform_acceptance": "NOT_CLAIMED",
+    "restore": "PASS",
+    "v4_failure_preserved": "windows_c12_w04_v4.json",
+    "restore_scope": "post-run protected configuration closeout",
+    "restore_evidence": "windows_c12_closeout.json"
+  },
+  "windows_c12_w04_v5": {
+    "status": "PASS_BOUNDED",
+    "evidence": "windows_c12_w04_v5.json",
+    "script_sha256": "caf34aae6326ba25aaa3b9ac042f411a22c6700d0f983837f42716b8e463d43f",
+    "runner_sha256": "dd127f66b90133bc97475af9ea05b2742c1c897bf0d802c2bdd53d62c0e2f1a2",
+    "assertions": "34/34",
+    "result_sha256": "841D90857EA3CF0D41805EAF3CCD3DE2D1F64124D5ED54700F9EB9A93E220090",
+    "release": "PASS",
+    "cleanup": "PASS",
+    "native_inherited_feature": "UNVERIFIED_NOT_RUN",
+    "restore": "PASS",
+    "restore_scope": "post-run protected configuration closeout",
+    "restore_evidence": "windows_c12_closeout.json"
+  },
+  "closeout": {
+    "status": "PASS_SCOPED",
+    "evidence": "windows_c12_closeout.json",
+    "server_stop": "PASS",
+    "inventory": "PASS_SCOPED",
+    "configuration_restore": "PASS",
+    "independent_restore_readback": "PASS",
+    "whole_goal": "IN_PROGRESS_NOT_PASSED"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "schema": "windows-control-lifecycle.recovery-runner-software.v1",
+  "scope": "Mac offline software validation only; Windows/SSH/COMSOL NOT_RUN",
+  "command": [
+    "verified_external_test_venv/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "tests/test_phase2_recovery_driver.py",
+    "tests/test_atomic_save.py"
+  ],
+  "command_actual_private_ref": "local-handoff/mac-checks-20260919/recovery-runner-software.raw.*",
+  "exit_code": 0,
+  "stdout_bytes": 99,
+  "stdout_sha256": "b7c9ab21c03d028b9db789c489cb31ef8520f5a0505b5b81d01d6f94d93dd7a4",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "pytest_summary": "29 passed in 0.38s",
+  "python": "verified_external_test_venv Python 3.12.13",
+  "pytest": "9.1.1",
+  "mcp": "unknown",
+  "production_comsol_connection": "NOT_RUN",
+  "windows_native_execution": "NOT_RUN",
+  "t030": "NOT_RUN_USER_REQUESTED_SKIP",
+  "source_sha256": {
+    "tools/phase2_recovery_mcp.py": "a1ba8fafbd6cc3171bf453c94f969cbdf1b284d23e295e0e5535664e590f588e",
+    "tests/test_phase2_recovery_driver.py": "a69b5bbe1e187410586ddf038a310de585360652e9dca46b7a132b7f6fd271d9"
+  }
+}

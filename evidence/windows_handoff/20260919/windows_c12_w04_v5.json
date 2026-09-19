@@ -1,0 +1,60 @@
+{
+  "scope": "WINDOWS_C12_W04_V5_BOUNDED_SUPPLEMENT",
+  "status": "PASS_BOUNDED",
+  "snapshot_id": "windows-cp312-28605a689666-dirty-20260919-c12",
+  "archive_sha256": "f4c34b77a1c6eee03d29062c8a10461cbebf615b527fdcd0941863ce84543340",
+  "script_sha256": "caf34aae6326ba25aaa3b9ac042f411a22c6700d0f983837f42716b8e463d43f",
+  "runner_sha256": "dd127f66b90133bc97475af9ea05b2742c1c897bf0d802c2bdd53d62c0e2f1a2",
+  "environment": {
+    "os": "Windows",
+    "architecture": "x64",
+    "python": "3.12.10",
+    "comsol": "6.4.0.293 build293",
+    "jdk": "11.0.32_10"
+  },
+  "runner": {
+    "status": "PASS",
+    "exit_code": 0,
+    "stdout_sha256": "da220dc506aed45eaa52af2a586033af7a76a9f555dcf07865aaaac52c15daad",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "summary_name": "windows-c12-w04-v5-runner-r2.json",
+    "summary_probe_note": "An auxiliary read used a wrong summary filename; wrapper stdout is the authoritative PASS record.",
+    "raw_logs_retained_private": true,
+    "server_lifecycle": "ATTACH_ONLY_NOT_TOUCHED"
+  },
+  "bounded_assertions": {
+    "executed": 34,
+    "true": 34,
+    "failed": 0,
+    "release": "PASS",
+    "cleanup": "PASS",
+    "result_sha256": "841D90857EA3CF0D41805EAF3CCD3DE2D1F64124D5ED54700F9EB9A93E220090"
+  },
+  "selection_guards": {
+    "default_noneditable_guard": "PASS",
+    "unsupported_inherit_guard": "PASS",
+    "local_input_guard": "PASS",
+    "inherited_guard_on_native_feature": "UNVERIFIED",
+    "native_inherited_feature_test": "NOT_RUN"
+  },
+  "scope_limits": {
+    "bounded_w04_status": "PASS",
+    "native_inherited_feature": "UNVERIFIED_NOT_RUN",
+    "full_platform_acceptance": "NOT_CLAIMED",
+    "c12_production_source_changed": false,
+    "restore": "NOT_RUN"
+  },
+  "previous_failure_preserved": {
+    "v4_evidence": "windows_c12_w04_v4.json",
+    "v4_status": "FAIL",
+    "superseded_for_bounded_harness_scope": true,
+    "historical_record_retained": true
+  },
+  "related_evidence": [
+    "windows_c12_delivery.json",
+    "windows_c12_production.json",
+    "windows_c12_reopen.json",
+    "windows_c12_w04.json",
+    "windows_c12_w04_v4.json"
+  ]
+}

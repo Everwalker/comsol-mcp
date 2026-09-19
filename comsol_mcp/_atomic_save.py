@@ -52,7 +52,10 @@ class AtomicSaveError(RuntimeError):
 
 
 def _fsync_file(path: Path) -> None:
-    with path.open("rb") as handle:
+    # Windows FlushFileBuffers requires a writable handle.  ``r+b`` keeps the
+    # existing candidate bytes intact while providing the required handle
+    # access; ``w+b`` would truncate a candidate before it can be published.
+    with path.open("r+b") as handle:
         os.fsync(handle.fileno())
 
 

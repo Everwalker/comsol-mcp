@@ -1,0 +1,13 @@
+--- server.xml.original
++++ server.xml.remote_addr_valve.proposed
+@@ -87,10 +87,8 @@
+            http://tomcat.apache.org/tomcat-7.0-doc/config/valve.html#Remote_Address_Filter
+       -->
+         
+-      <!-- Uncomment to restrict access to localhost
+       <Valve className="org.apache.catalina.valves.RemoteAddrValve"
+              allow="127\.\d+\.\d+\.\d+|::1|0:0:0:0:0:0:0:1"/>
+-      -->
+     	
+       <!--For clustering, please take a look at documentation at:
+           /docs/cluster-howto.html  (simple how to)

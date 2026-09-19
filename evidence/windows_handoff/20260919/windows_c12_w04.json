@@ -1,0 +1,68 @@
+{
+  "scope": "WINDOWS_C12_W04_V3_SUPPLEMENT",
+  "status": "FAIL",
+  "snapshot_id": "windows-cp312-28605a689666-dirty-20260919-c12",
+  "script_sha256": "259bd7670ffd8cec8d72bea380ed196c5f23ae9b1fd0257176ec089553d7cf97",
+  "diagnostic_sanitizer_sha256": "4781e34f3b59102c6aae5d23808480dd4548f7ffbd6d1603fedc6dfb59a6cd11",
+  "diagnostic_readback_stdout_sha256": "de4ec9071a1061524b6befa62f531eadb5d77d221d8cc5b04b370df8a6f50a68",
+  "diagnostic_readback_initial_stdout_sha256": "a2fc1ab915fa7145a5446a80ea5ec04e36d407a5ea1a109b3b10401ccb023743",
+  "environment": {
+    "os": "Windows",
+    "architecture": "x64",
+    "python": "3.12.10",
+    "comsol": "6.4.0.293 build293",
+    "jdk": "11.0.32_10"
+  },
+  "exit_code": 1,
+  "first_failure": {
+    "case": "unsupported_inherit_rejected",
+    "expected_state": "clean",
+    "error_code": "ENGINE_CALL_FAILED",
+    "error_message": "FlException: Inheriting_not_allowed",
+    "diagnostic_category_match": true,
+    "revision": 6,
+    "dirty": true,
+    "execution_state_unknown": true,
+    "safe_to_continue": false
+  },
+  "earlier_expected_failure": {
+    "case": "default_noneditable_child_rejected",
+    "error_code": "ENGINE_CALL_FAILED",
+    "error_message": "FlException: Selection_is_not_editable",
+    "diagnostic_category_match": true,
+    "revision_before": 4,
+    "revision_after": 5,
+    "dirty": true,
+    "execution_state_unknown": true,
+    "safe_to_continue_at_failure": false,
+    "reconciled_safe_to_continue": true,
+    "reconciliation_status": "PASS"
+  },
+  "other_selection_cases": {
+    "parent_explicit": true,
+    "parent_named": true,
+    "parent_all": true,
+    "editable_child_explicit": true
+  },
+  "feature_discovery": {
+    "editable_child_selection_editable": null,
+    "default_child_selection_editable": null,
+    "default_noneditable_discovered": null,
+    "inherited_guard_on_native_feature": "UNVERIFIED"
+  },
+  "control_health_before_release": {
+    "authenticated": true,
+    "active_jobs_empty": true,
+    "active_jobs_count": 0,
+    "worker_connected": true,
+    "worker_queued_or_running": 0
+  },
+  "worker_release_status": "PASS",
+  "control_cleanup_status": "PASS",
+  "control_cleanup_returncode": 1,
+  "outer_shutdown_error": "ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)",
+  "diagnostic_readback": "PASS",
+  "restore": "NOT_RUN",
+  "server_lifecycle": "ATTACH_ONLY_NOT_TOUCHED",
+  "scope_note": "The first failure is the expected-clean contract mismatch for unsupported inheritance; no production guard was weakened and no later W04 cases are counted as PASS."
+}

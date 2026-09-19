@@ -1,0 +1,28 @@
+{
+  "schema": "windows-control-lifecycle.recovery-readiness.v1",
+  "scope": "Read-only readiness precheck for a future T027/T028 recovery window",
+  "status": "READ_ONLY_READY_PRECHECK",
+  "source": {
+    "stdout": "local-handoff/mac-checks-20260919/recovery-readiness-root.stdout",
+    "stdout_bytes": 214,
+    "stdout_sha256": "94ba453ad9c8d798fac9e8000c066ca5ec76ab6e1af3139eefb4ca48e54582e5",
+    "stderr": "local-handoff/mac-checks-20260919/recovery-readiness-root.stderr",
+    "stderr_bytes": 2092,
+    "stderr_sha256": "7b06c69092b46ba73e4e75a36b1cbffe771374c6df6f11c4ab254c4e80a18254"
+  },
+  "observed": {
+    "read_only": true,
+    "comsol_process_count": 0,
+    "port_connections": 0,
+    "temporary_rule_count": 0,
+    "firewall_profiles_count": 3,
+    "all_firewall_profiles_enabled": true,
+    "server_xml_original": true,
+    "login_file_exists": true,
+    "recovery_window_exists": false,
+    "firewall_mutation": "NOT_PERFORMED",
+    "server_start": "NOT_PERFORMED",
+    "engine_acceptance": "NOT_RUN"
+  },
+  "boundary": "This is a read-only prerequisite snapshot. It does not establish COMSOL license, Server startup, MCP/Worker acceptance, or T027/T028 results. The PowerShell progress CLIXML remains private and is not used as a public claim."
+}

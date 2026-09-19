@@ -1,0 +1,94 @@
+{
+  "scope": "W01-W07 bounded Windows control lifecycle repair; software-only evidence",
+  "date": "2026-09-19",
+  "status": "MAC_UNIT_PASS_WINDOWS_INTEGRATION_UNVERIFIED",
+  "changes": {
+    "comsol_mcp/_control_client.py": {
+      "sha256": "5cc51a300d5d1eefc88d6476d578afa530a7b508ef048224b4b57afd7086eb16",
+      "claims": [
+        "Healthy existing control endpoint is attached before any spawn attempt.",
+        "Windows automatic spawn uses CREATE_BREAKAWAY_FROM_JOB, DETACHED_PROCESS, and CREATE_NEW_PROCESS_GROUP together.",
+        "Breakaway or other required-flag startup failure has one fail-closed attempt and an actionable external-daemon command.",
+        "Dispatch keeps EXECUTION_STATE_UNKNOWN while returning the specialized type, action, and diagnostic message."
+      ]
+    },
+    "tools/portable_engine_regression.py": {
+      "sha256": "03834c473e6e03af7e63a3d5cb0efec12405e7f031ad8c58fb58d07d15e2c861",
+      "claims": [
+        "The outer regression driver pre-starts one private control daemon with the same args and environment as the MCP stdio host.",
+        "Production model/result directories pass canonical_project_path and reject .phase1-private, .phase2-private, and control-private.",
+        "After stdio teardown, the same control PID and Worker identity are read back before authenticated release.",
+        "Owned control cleanup requires Worker disconnected, queued_or_running=0, active_jobs=[], and verified ownership; it sends no force-kill fallback.",
+        "W02_BUILD preserves the complete build line and UTF-8 Java output is requested for the fixture driver."
+      ]
+    },
+    "tests/test_control_client.py": {
+      "sha256": "cc4bb465cb85f77ce357a79a2c19d6f3a7df832ac54485c79e016034fef80e47",
+      "coverage": [
+        "healthy existing daemon attach without Windows spawn",
+        "required Windows creation flags",
+        "breakaway denial without fallback",
+        "compatible error code with actionable message"
+      ]
+    },
+    "tests/test_portable_engine_regression_driver.py": {
+      "sha256": "2b7e46167fdb9dbcee30659931eb63ed9987822d9e2980dd33a4843bcfbce92d",
+      "coverage": [
+        "private artifact path rejection",
+        "same control/Worker readback after stdio teardown",
+        "owned-control cleanup only after disconnected idle Worker",
+        "complete W02_BUILD line preservation"
+      ]
+    }
+  },
+  "commands": [
+    {
+      "command": "python3 -m py_compile comsol_mcp/_control_client.py tools/portable_engine_regression.py tests/test_control_client.py tests/test_portable_engine_regression_driver.py",
+      "status": "PASS"
+    },
+    {
+      "command": "python3 -m compileall -q comsol_mcp tools tests",
+      "status": "PASS"
+    },
+    {
+      "command": "python3 -m pytest -q tests/test_control_client.py tests/test_portable_engine_regression_driver.py tests/test_platform_process.py tests/test_execution_contract.py",
+      "status": "FAIL_EXPECTED_INTERPRETER_MISMATCH",
+      "reason": "System Python 3.14 has no pytest module; this is not evidence that the dedicated project environment lacks pytest or mcp."
+    },
+    {
+      "command": "env COMSOL_ROOT=/Applications/COMSOL64/Multiphysics COMSOL_JAVA_HOME=/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home JAVA_HOME=/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home <verified-project-python> -m pytest -q",
+      "status": "FAIL_SANDBOX_NETWORK",
+      "result": "213 passed, 1 skipped, 2 failed, 7 errors in 2.89s",
+      "reason": "The dedicated project environment found COMSOL/JDK, but Java Worker loopback bind returned Operation not permitted inside the command sandbox.",
+      "exact_command_evidence": "Private software-evidence-before-path-redaction.json; hash in private_provenance"
+    },
+    {
+      "command": "same dedicated-venv command rerun with sandbox_permissions=require_escalated",
+      "status": "PASS",
+      "result": "222 passed, 1 skipped in 5.61s",
+      "skipped": "tests/test_java_worker.py:347 Windows owner semantics only",
+      "reason": "The prior Java Worker failures were sandbox bind restrictions; no source change was needed."
+    },
+    {
+      "command": "manual Python simulations for Windows flags, refusal without fallback, dispatch envelope, POSIX start_new_session, and canonical private-path rejection",
+      "status": "PASS"
+    }
+  ],
+  "real_runtime": {
+    "windows": "NOT_RUN; reserved for the external c7 harness and real SDK Job behavior",
+    "macos_comsol_server": "NOT_RUN; existing unsaved COMSOL Server/model was not touched",
+    "comsol_acceptance": "NOT_RUN; this change does not claim engine or scientific acceptance"
+  },
+  "deployment_limits": [
+    "When Windows denies breakaway, do not retry inside the MCP stdio transport and do not modify the MCP SDK Job policy.",
+    "Start an existing daemon from a user-controlled process outside the SDK Job with: python -m comsol_mcp._control_daemon --home PATH.",
+    "The external test daemon remains bounded by its owner SSH/harness lifecycle; this evidence does not claim independent service persistence.",
+    "The regression driver does not install a Windows service or scheduled task and never starts, stops, or signals COMSOL Server."
+  ],
+  "secrets": "No token, password, credential, or Authorization value is included in this record.",
+  "private_provenance": {
+    "file": "software-evidence-before-path-redaction.json",
+    "sha256": "5d3e385a85484dde39c1df34174607e937a7f9053537b68e022310f22746a637",
+    "reason": "Keep account-specific executable path private; command semantics and results preserved"
+  }
+}

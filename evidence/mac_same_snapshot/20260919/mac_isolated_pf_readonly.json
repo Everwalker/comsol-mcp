@@ -1,0 +1,71 @@
+{
+  "schema": "mac-isolated-server.pf-readonly.v1",
+  "captured_utc_label": "2026-09-19T12:52:34Z",
+  "scope": "Read-only macOS PF observation for a future task-owned isolated COMSOL Server",
+  "status": "READ_ONLY_CAPTURE_VERIFIED_WITH_RECURSIVE_QUERY_LIMITATION",
+  "source": {
+    "private_capture_dir": "local-handoff/mac-isolated-server-20260919-private/pf-readonly-20260919T125234Z-4937",
+    "private_preflight_original": "local-handoff/mac-isolated-server-20260919-private/mac_isolated_server_preflight_original.json",
+    "private_preflight_original_sha256": "552193700b0cd6177dcb40d809b9624d2866d062b4f8e343614f4686d6b44848"
+  },
+  "observed": {
+    "pf_status_exit_code": 0,
+    "pf_status": "Disabled",
+    "root_rules_exit_code": 0,
+    "root_rules_observation": "scrub-anchor com.apple/* and anchor com.apple/* only",
+    "anchors_exit_code": 0,
+    "anchors_observation": "com.apple",
+    "recursive_rules_exit_code": 0,
+    "recursive_rules_complete": false,
+    "recursive_rules_limitation": "stderr contained DIOCGETRULES: Invalid argument; exit 0 is not treated as a complete recursive proof",
+    "non_altq_stderr": "retained privately and not treated as a PF mutation",
+    "pf_mutation": "NOT_PERFORMED",
+    "new_mac_server": "NOT_STARTED",
+    "existing_server_or_models": "NOT_TOUCHED",
+    "gui_model_write": "NOT_PERFORMED",
+    "credentials_read_or_copied": false
+  },
+  "capture_files": {
+    "status": {
+      "exit": {"bytes": 2, "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"},
+      "stdout": {"bytes": 1388, "sha256": "316482e53be7808576e710494f811d175a2ce599245c9cfe80d20b53c115e403"},
+      "stderr": {"bytes": 58, "sha256": "d17f1ce6713a534cbd7cd9ef895205bd890a3b493efcf6d9b4b62da5a17e45c7"}
+    },
+    "root_rules": {
+      "exit": {"bytes": 2, "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"},
+      "stdout": {"bytes": 76, "sha256": "80a4aba0003d04855da31ea24b6e63ec4aee91da2570b488596a80d8beca202f"},
+      "stderr": {"bytes": 58, "sha256": "d17f1ce6713a534cbd7cd9ef895205bd890a3b493efcf6d9b4b62da5a17e45c7"}
+    },
+    "anchors": {
+      "exit": {"bytes": 2, "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"},
+      "stdout": {"bytes": 12, "sha256": "dae97834a2f97b501a4524860e80754d420c66ae168e147faa9645c8ce4fbf38"},
+      "stderr": {"bytes": 58, "sha256": "d17f1ce6713a534cbd7cd9ef895205bd890a3b493efcf6d9b4b62da5a17e45c7"}
+    },
+    "recursive_rules": {
+      "exit": {"bytes": 2, "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"},
+      "stdout": {"bytes": 70, "sha256": "924b401ae9220d7d95c169d0a02335bf818ec8ca5019fd4dc458619e176bd51a"},
+      "stderr": {"bytes": 96, "sha256": "f11a4db649933d64534d530a3944a329e20eb788abbeb89ec980cc09cff0591a"}
+    }
+  },
+  "offline_recovery_runner": {
+    "evidence": "evidence/windows_control_lifecycle/20260919/recovery_runner_software.json",
+    "status": "PASS_OFFLINE_SOFTWARE_ONLY",
+    "exit_code": 0,
+    "pytest_summary": "29 passed in 0.38s",
+    "stdout_bytes": 99,
+    "stdout_sha256": "b7c9ab21c03d028b9db789c489cb31ef8520f5a0505b5b81d01d6f94d93dd7a4",
+    "stderr_bytes": 0,
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "python": "verified_external_test_venv Python 3.12.13",
+    "pytest": "9.1.1",
+    "mcp": "unknown",
+    "production_comsol_connection": "NOT_RUN",
+    "windows_native_execution": "NOT_RUN",
+    "t030": "NOT_RUN_USER_REQUESTED_SKIP",
+    "source_hashes_verified": {
+      "tools/phase2_recovery_mcp.py": "a1ba8fafbd6cc3171bf453c94f969cbdf1b284d23e295e0e5535664e590f588e",
+      "tests/test_phase2_recovery_driver.py": "a69b5bbe1e187410586ddf038a310de585360652e9dca46b7a132b7f6fd271d9"
+    }
+  },
+  "claims_boundary": "This records read-only PF facts and an offline software PASS. It does not establish PF protection, isolated Server acceptance, license acceptance, GUI acceptance, or platform verification."
+}

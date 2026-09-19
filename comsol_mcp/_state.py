@@ -8,6 +8,7 @@ import logging
 import os
 import socket
 import time
+from collections.abc import Mapping
 from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
@@ -424,6 +425,73 @@ class ToolExecutionError(RuntimeError):
         self.data = data or {}
 
 
+_EXPLICIT_EXECUTION_SIGNALS = (
+    "partial_change",
+    "failed_item_may_have_changed",
+    "cleanup_failed",
+    "engine_state_unknown",
+    "execution_state_unknown",
+    "applied",
+)
+
+
+def _collect_explicit_execution_signals(value: Any, found: dict[str, bool], seen: set[int], budget: list[int]) -> None:
+    """Collect explicit boolean signals from bounded structured mappings.
+
+    This deliberately does not parse exception strings or JSON text.  Worker
+    protocol mappings may contain a nested ``failure`` object; only known
+    mapping fields and explicit ``True`` values are propagated.
+    """
+    if not isinstance(value, Mapping) or budget[0] <= 0:
+        return
+    marker = id(value)
+    if marker in seen:
+        return
+    seen.add(marker)
+    budget[0] -= 1
+    for name in _EXPLICIT_EXECUTION_SIGNALS:
+        if value.get(name) is True:
+            found[name] = True
+    for name in ("failure", "error", "data", "result", "details"):
+        nested = value.get(name)
+        if isinstance(nested, Mapping):
+            _collect_explicit_execution_signals(nested, found, seen, budget)
+
+
+def _exception_execution_signals(exc: BaseException) -> dict[str, bool]:
+    """Read explicit engine-state flags through a bounded cause/context chain."""
+    found: dict[str, bool] = {}
+    pending: list[BaseException] = [exc]
+    seen_exceptions: set[int] = set()
+    seen_mappings: set[int] = set()
+    budget = [64]
+    while pending and len(seen_exceptions) < 32:
+        current = pending.pop(0)
+        marker = id(current)
+        if marker in seen_exceptions:
+            continue
+        seen_exceptions.add(marker)
+        for name in _EXPLICIT_EXECUTION_SIGNALS:
+            if getattr(current, name, None) is True:
+                found[name] = True
+        for attribute in ("reply", "failure", "data"):
+            _collect_explicit_execution_signals(getattr(current, attribute, None), found, seen_mappings, budget)
+        if current.__cause__ is not None:
+            pending.append(current.__cause__)
+        if current.__context__ is not None and current.__context__ is not current.__cause__:
+            pending.append(current.__context__)
+    return found
+
+
+def _merge_exception_data(data: Mapping[str, Any] | None, exc: BaseException) -> dict[str, Any]:
+    """Merge exception signals without allowing an explicit True to regress."""
+    merged = dict(data or {})
+    for name, value in _exception_execution_signals(exc).items():
+        if value is True or merged.get(name) is True:
+            merged[name] = True
+    return merged
+
+
 def _tool_result(tool: str, success: bool, data: dict[str, Any] | None = None, error: str = "") -> str:
     _srv._last_command = tool
     _srv._last_error = error
@@ -464,10 +532,10 @@ def _run_tool_readonly(tool: str, callback) -> str:
         return _tool_result(tool, True, data=data)
     except ToolExecutionError as exc:
         logging.exception("Tool %s failed", tool)
-        return _tool_result(tool, False, data=exc.data, error=str(exc))
+        return _tool_result(tool, False, data=_merge_exception_data(exc.data, exc), error=str(exc))
     except Exception as exc:
         logging.exception("Tool %s failed", tool)
-        return _tool_result(tool, False, error=str(exc))
+        return _tool_result(tool, False, data=_merge_exception_data(None, exc), error=str(exc))
 
 
 def _run_tool(tool: str, callback) -> str:
@@ -487,9 +555,9 @@ def _run_tool(tool: str, callback) -> str:
             return _tool_result(tool, True, data=data)
         except ToolExecutionError as exc:
             logging.exception("Tool %s failed", tool)
-            return _tool_result(tool, False, data=exc.data, error=str(exc))
+            return _tool_result(tool, False, data=_merge_exception_data(exc.data, exc), error=str(exc))
         except Exception as exc:
             logging.exception("Tool %s failed", tool)
-            return _tool_result(tool, False, error=str(exc))
+            return _tool_result(tool, False, data=_merge_exception_data(None, exc), error=str(exc))
     finally:
         _runtime_lock.release()

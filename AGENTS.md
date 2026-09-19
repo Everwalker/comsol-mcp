@@ -23,8 +23,9 @@ comsol_mcp/
   mcp_server.py            # Thin entrypoint: imports + register + main()
 ```
 
-The registry exposes **58 MCP tools**: 51 legacy names and 7 execution/control
-tools. The gateway retains legacy arguments and adds an optional `execution`
+The full profile exposes **65 MCP tools**: 51 legacy names, 7 execution/control
+tools, and 7 G2 registry/fallback tools. Domain/expert profiles narrow publication
+while keeping the managed fallback available. The gateway retains legacy arguments and adds an optional `execution`
 object for model identity, expected revision, idempotency and timeout settings.
 All production calls route through the control daemon. Registration alone is
 not evidence that a capability passed real COMSOL acceptance.

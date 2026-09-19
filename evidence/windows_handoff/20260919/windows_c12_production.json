@@ -1,0 +1,42 @@
+{
+  "scope": "WINDOWS_C12_BOUNDED_PRODUCTION_CHAIN",
+  "status": "PASS",
+  "snapshot_id": "windows-cp312-28605a689666-dirty-20260919-c12",
+  "environment": {
+    "os": "Windows",
+    "architecture": "x64",
+    "python": "3.12.10",
+    "comsol": "6.4.0.293 build293",
+    "jdk": "11.0.32_10"
+  },
+  "assertion_count": 15,
+  "assertion_pass_count": 15,
+  "assertion_fail_count": 0,
+  "failed_assertions": [],
+  "assertions": [
+    {"name": "workflow_configured", "value": true},
+    {"name": "fresh_worker_source_loaded", "value": true},
+    {"name": "connect_load", "value": true},
+    {"name": "parameter_write", "value": true},
+    {"name": "parameter_set_readback", "value": true},
+    {"name": "variable_set_readback", "value": true},
+    {"name": "production_solve", "value": true},
+    {"name": "production_metric", "value": true},
+    {"name": "ephemeral_tree_preserved", "value": true},
+    {"name": "production_save", "value": true},
+    {"name": "control_queue_idle_before_release", "value": true},
+    {"name": "stdio_teardown_control_alive", "value": true},
+    {"name": "stdio_teardown_worker_alive", "value": true},
+    {"name": "driver_worker_released", "value": true},
+    {"name": "driver_control_released", "value": true}
+  ],
+  "saved_sha256": "be2653f3764b41e500255fe6398ba31993ff3ae597a4add3e3424202481c55c4",
+  "worker_release_status": "PASS",
+  "control_cleanup_status": "PASS",
+  "stage_stdout_sha256": "24c53070a2122f5bce0f437046ab6e21203313b97af64561f8794462056eb523",
+  "stage_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "summary_stdout_sha256": "fe1e0cc743e5be8dd5b6de6ce620bc7fdc58436f99eace1a5e9069c72fcec4e6",
+  "engine_scope": "PASS_FIXED_RECIPE_ONLY",
+  "server_lifecycle": "ATTACH_ONLY_NOT_TOUCHED",
+  "scope_note": "Real production MCP/Worker/COMSOL chain for the fixed portable recipe; no full platform or W01-W07 certification claim."
+}

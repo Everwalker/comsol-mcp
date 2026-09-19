@@ -1,0 +1,67 @@
+{
+  "scope": "WINDOWS_C12_W04_V4_R2_ISOLATED_SUPPLEMENT",
+  "status": "FAIL",
+  "snapshot_id": "windows-cp312-28605a689666-dirty-20260919-c12",
+  "archive_sha256": "f4c34b77a1c6eee03d29062c8a10461cbebf615b527fdcd0941863ce84543340",
+  "harness_sha256": "92864ce18661298a2fbad85c52acd5b7a3b96e2ac2f153ad8d3af900c2fcb175",
+  "runner_sha256": "f9f5d2e4acfcc5cab9ca735cf367cbcad9c155c971168df673b426fc6988dd50",
+  "environment": {
+    "os": "Windows",
+    "architecture": "x64",
+    "python": "3.12.10",
+    "comsol": "6.4.0.293 build293",
+    "jdk": "11.0.32_10"
+  },
+  "fresh_gate": {
+    "status": "PASS",
+    "server_lifecycle": "ATTACH_ONLY_NOT_TOUCHED",
+    "established_connections": 0,
+    "other_comsol_processes": 0,
+    "python_java_processes": 0,
+    "patched_server_xml_sha256": "a4b37a105f791275de79f920885db407514fb0ae1ec9d6bf5cb4dce904798a1b",
+    "temporary_firewall_block_verified": true
+  },
+  "runner": {
+    "status": "FAIL",
+    "exit_code": 1,
+    "assertions_executed": 15,
+    "assertions_true": 15,
+    "full_acceptance": "NOT_ESTABLISHED",
+    "runner_stdout_sha256": "4c13db0037fbf7d9ddbb5f9f1a94d34f1050799c72f2b258aa69a89df69927b6",
+    "runner_stderr_sha256": "3b603158c7836f3ad1c8369fd190e98a1cd4a040d40273b963579686a7d70385",
+    "local_summary_sha256": "844a2030b7c3e734e7e65b15a2c02cc112828de3fe0ecf5436847d3a0bd38042",
+    "raw_logs_retained_private": true
+  },
+  "primary_failure": {
+    "category": "REVISION_CONFLICT",
+    "operation_sequence": "global_variables_list_then_next_component_operation",
+    "expected_revision": 12,
+    "current_revision": 13,
+    "public_message": "The next component operation used the pre-list revision after the global variables list advanced the owned revision.",
+    "raw_error_text_public": "OMITTED"
+  },
+  "diagnostic_readback": {
+    "initial_attempt": "PRIVATE_ENCODING_FAILURE",
+    "corrected_attempt": "PASS_SCOPED_BOOL_AND_REVISION",
+    "raw_initial_stderr_public": "OMITTED_PRIVATE_ONLY",
+    "model_metadata_exported": false
+  },
+  "rerun_guard": {
+    "second_start_attempt": "BLOCKED_OUTPUT_EXISTS",
+    "engine_restarted": false,
+    "duplicate_run_prevented": true
+  },
+  "next_repair": {
+    "label": "v5",
+    "status": "HARNESS_FIX_PREPARED_NOT_RUN",
+    "c12_production_source_changed": false,
+    "new_engine_run": "NOT_RUN"
+  },
+  "related_evidence": [
+    "windows_c12_production.json",
+    "windows_c12_reopen.json",
+    "windows_c12_w04.json"
+  ],
+  "restore": "NOT_RUN",
+  "server_stop": "NOT_RUN"
+}

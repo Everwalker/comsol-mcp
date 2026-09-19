@@ -1,0 +1,60 @@
+{
+  "application": {
+    "applied": false,
+    "firewall_changes": false,
+    "restore_required_after_future_approval": true,
+    "server_started": false,
+    "windows_changes": false
+  },
+  "approval_required_before_apply_or_start": true,
+  "changed_scope": {
+    "allow_regex": "127\\.\\d+\\.\\d+\\.\\d+|::1|0:0:0:0:0:0:0:1",
+    "byte_delta": -65,
+    "connector_address_bind": false,
+    "other_bytes_changed": false,
+    "remote_addr_valve": true
+  },
+  "current_runtime_readback": {
+    "model_operations": "NOT_RUN",
+    "port_56388_listener": "ABSENT_AT_PREPARATION",
+    "port_56389_listener": "ABSENT_AT_PREPARATION",
+    "worker_30185": "localhost_only_worker_endpoint_58490; not COMSOL mphserver"
+  },
+  "documentation": "/Applications/COMSOL64/Multiphysics/doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_ref_running.38.32.html:765-767",
+  "future_probe_plan": {
+    "interpretation": "valve address filtering and socket bind are separate gates; a wildcard listener with 403 for nonloopback is address-filter protection, not loopback socket binding",
+    "localhost_authenticated_worker_connect": "PASS required",
+    "nonloopback_client": "connect to same listener via 192.168.100.152 or 192.168.100.139 and require HTTP 403 from RemoteAddrValve",
+    "post_probe": "inspect lsof established clients; no model or solve calls; stop owned server and restore original hash",
+    "server_socket_bind_expectation": "likely wildcard remains; verify lsof separately"
+  },
+  "probe_readiness": {
+    "status": "NOT_RUN_NO_COMSOL_SERVER",
+    "current_engine_listener": "none on ports 56388 and 56389",
+    "worker_process": "PersistentComsolWorker PID 30185 listens only on localhost control port 58490; no established COMSOL engine socket observed",
+    "localhost_check": "after a separately approved start, send one authenticated Worker connect request to 127.0.0.1:56389, then session health and disconnect; do not invoke model or solve methods",
+    "nonloopback_check": "from this Mac, issue one HTTP request to 192.168.100.152:56389 (or 192.168.100.139:56389) and require HTTP 403 before application handling; this is a request-layer check, not a socket-bind check",
+    "client_readback": "capture lsof listener and established-client rows after each probe; expect only the localhost Worker connection before disconnect",
+    "restore": "stop only the approved task-owned server, verify no listener, restore source bytes/hash/inode/metadata, and record both content hashes",
+    "credentials": "never placed in public evidence or command output"
+  },
+  "prepared_at": "2026-09-19T14:38:09Z",
+  "private_original": ".phase1-private/g2-valve-proposal/server.original.xml",
+  "private_proposal": ".phase1-private/g2-valve-proposal/server.remote_addr_valve.xml",
+  "proposed_bytes": 5546,
+  "proposed_sha256": "f27373c5f98eeefbebc1a9e9bfb852640a687c2374907ed564d6aeb8471a58a9",
+  "sanitized_diff": "evidence/phase3/baseline/remote_addr_valve_proposal.diff",
+  "schema_version": 1,
+  "scope": "uncomment exactly the installed documented RemoteAddrValve localhost block",
+  "source_bytes": 5611,
+  "source_sha256": "8bb393d2d803d1b7f6b124498742fa23b6310db9a28a6334f7462ec12d674bbe",
+  "status": "PREPARED_NOT_APPLIED",
+  "target": "/Applications/COMSOL64/Multiphysics/bin/tomcat/conf/server.xml",
+  "validation": {
+    "active_remote_addr_valves": 1,
+    "original_hash_matches_approved_baseline": true,
+    "original_xml_well_formed": true,
+    "proposal_hash_reproducible": true,
+    "proposed_xml_well_formed": true
+  }
+}

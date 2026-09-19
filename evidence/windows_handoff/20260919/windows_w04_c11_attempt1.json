@@ -1,0 +1,103 @@
+{
+  "run": {
+    "scope": "PRIVATE_W04_FAILURE_SUMMARY",
+    "status": "FAIL",
+    "run_exists": true,
+    "result_status": "FAIL",
+    "result_reason": null,
+    "assertion_keys": [
+      "workflow_configured",
+      "fresh_worker_source_loaded",
+      "server_connected",
+      "isolated_model_loaded",
+      "model_identity_readback",
+      "editable_child_discovered",
+      "inherited_child_discovered",
+      "selection_parent_explicit",
+      "selection_parent_named",
+      "selection_parent_all",
+      "selection_editable_child_explicit",
+      "selection_inherited_child_rejected",
+      "driver_worker_released",
+      "driver_control_released"
+    ],
+    "assertions": {
+      "workflow_configured": true,
+      "fresh_worker_source_loaded": true,
+      "server_connected": true,
+      "isolated_model_loaded": true,
+      "model_identity_readback": true,
+      "editable_child_discovered": true,
+      "inherited_child_discovered": false,
+      "selection_parent_explicit": true,
+      "selection_parent_named": true,
+      "selection_parent_all": true,
+      "selection_editable_child_explicit": true,
+      "selection_inherited_child_rejected": false,
+      "driver_worker_released": false,
+      "driver_control_released": false
+    },
+    "stdout_bytes": 0,
+    "stderr_bytes": 0,
+    "stderr_tail": "",
+    "stdout_tail": "",
+    "run_file_count": 52,
+    "server_lifecycle": "NOT_TOUCHED"
+  },
+  "run_evidence_sha256": "227017d05412a38ed543db1dddb045620c5dfb375c5353db810ee0ebcccf51c9",
+  "classification": {
+    "scope": "PRIVATE_W04_CFEQ1_ERROR_CLASSIFICATION",
+    "extraction_status": "PASS",
+    "decoded_type": "System.Object[]",
+    "flattened_entry_count": 10,
+    "feature_list_match_count": 1,
+    "cfeq1_selection_match_count": 1,
+    "selection_editable": true,
+    "error_shape": "string",
+    "error_has_code": false,
+    "error_has_message": false,
+    "matches_non_editable": false,
+    "matches_inherited": false,
+    "matches_revision_conflict": false,
+    "matches_unsupported_inherit": false,
+    "error_present": true,
+    "server_lifecycle": "NOT_TOUCHED"
+  },
+  "classification_evidence_sha256": "d5e2fe0953bf933ec6eee6376413d44755885874df2d40f2b78583053f59986e",
+  "postprocess": {
+    "scope": "PRIVATE_W04_OWNED_PROCESS_STATE",
+    "control": {
+      "record_present": true,
+      "alive": false,
+      "birth_match": false,
+      "listener_present": false
+    },
+    "worker": {
+      "record_present": true,
+      "alive": false,
+      "birth_match": false,
+      "listener_present": false
+    },
+    "control_endpoint_file": true,
+    "worker_endpoint_file": true,
+    "server_lifecycle": "NOT_TOUCHED"
+  },
+  "postprocess_evidence_sha256": "7931946d75933789334c7aa458ef2559f6d6070e107710c6a0c49cacff91ef66",
+  "snapshot_id": "win-cp312-28605a689666-dirty-20260919-c11",
+  "script_sha256": "b2905c783d87d22278d158dbc6e07cecab61cb7751160dfa9b466b039ccd1faa",
+  "status": "FAIL",
+  "root_cause": "Harness failed to normalize underscore-separated Selection_is_not_editable and incorrectly assumed non-editable implies inherited. Product discovery also inferred editability from not-isInheriting. Separately, nested Worker execution_state_unknown=true was not propagated through exception wrapping to the clean control envelope.",
+  "cleanup_scope": "Control and Worker later observed absent with no listeners; original release assertions remain FAIL. Server and models not cleaned.",
+  "approved_diagnostic_evidence_sha256": "4bee7e7bb73c8aa7b5d49573dc7f8d25abf7258e1063fcbcd033664422fa38fd",
+  "approved_diagnostic_summary": {
+    "engine_error": "FlException: Selection_is_not_editable",
+    "worker_error_code": "ENGINE_CALL_FAILED",
+    "discovery_selection_editable": true,
+    "expected_revision": 4,
+    "current_revision": 4,
+    "control_dirty": false,
+    "nested_worker_execution_state_unknown": true,
+    "outer_isError": true
+  },
+  "repair_status": "Mac code and harness repair in progress; c11 failure retained."
+}

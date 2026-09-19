@@ -60,10 +60,16 @@ def _list_physics_features(model: Any, component: str, physics_tag: str) -> list
             info["properties"] = props
         except Exception:
             info["properties"] = []
-        # Check selection editability
+        # COMSOL exposes the inherited-state predicate, not an authoritative
+        # ``isEditable`` API.  Keep the two facts separate: callers can use
+        # ``selection_inheriting`` as an observation, while
+        # ``selection_editable`` remains tri-state because discovery does not
+        # establish whether a selection edit is accepted.
+        info["selection_inheriting"] = None
+        info["selection_editable"] = None
         try:
             sel = feat.selection()
-            info["selection_editable"] = not bool(sel.isInheriting())
+            info["selection_inheriting"] = bool(sel.isInheriting())
         except Exception:
             pass
         result.append(info)

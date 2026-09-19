@@ -1,0 +1,24 @@
+{
+  "recorded_at": "2026-09-19T14:24:19.086381+00:00",
+  "attempt": "g2-loopback-runtime-20260919T141424Z",
+  "server_started": false,
+  "port56389_listener": "ABSENT_ON_READBACK",
+  "original_XML_content_hash": "PASS",
+  "original_permissions_owner_group_ACL": "PASS",
+  "original_extended_attributes": "FAIL",
+  "residual": "Task-created replacement inherited macOS com.apple.provenance; attribute persists after host xattr deletion returned 0. No security setting changed.",
+  "removal_attempts": [
+    {
+      "operation": "xattr -d com.apple.provenance on exact server.xml",
+      "exit_code": 0,
+      "readback": "attribute remains"
+    },
+    {
+      "operation": "sudo -n xattr -d on exact server.xml",
+      "result": "administrator password required; no administrator mutation"
+    }
+  ],
+  "next_action": "Preserve existing inode and known metadata during authorized exact one-attribute XML change and restoration; retain residual explicitly.",
+  "user_authorized_restoration_contract": "Stop owned Server then restore original XML and verify original hash.",
+  "full_metadata_restoration_claim": false
+}

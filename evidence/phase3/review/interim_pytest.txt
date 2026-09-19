@@ -1,0 +1,41 @@
+........................................................................ [ 22%]
+.F...............................................................s...... [ 44%]
+........................................................................ [ 67%]
+........................................................................ [ 89%]
+..................................                                       [100%]
+=================================== FAILURES ===================================
+___ test_recursive_docs_index_skips_private_symlink_and_rejects_outside_root ___
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-295/test_recursive_docs_index_skip0')
+
+    def test_recursive_docs_index_skips_private_symlink_and_rejects_outside_root(tmp_path):
+        approved = tmp_path / "approved-docs"
+        approved.mkdir()
+        public = approved / "COMSOL-6.4-guide.md"
+        public.write_text("# Public API\ngetDoubleArray", encoding="utf-8")
+        private = approved / ".phase1-private"
+        private.mkdir()
+        (private / "COMSOL-6.4-secret.md").write_text("private credential text", encoding="utf-8")
+        outside = tmp_path / "outside-6.4.md"
+        outside.write_text("outside approved root", encoding="utf-8")
+        symlink = approved / "linked-outside-6.4.md"
+        symlink.symlink_to(outside)
+    
+        index = OfflineDocsIndex(tmp_path / "docs.sqlite3", allowed_roots=[approved])
+        try:
+            result = index.index(runtime_id="COMSOL 6.4", sources=[str(approved)])
+            assert result["indexed_count"] == 1
+            assert index.search(query="getDoubleArray", version="6.4")["status"] == "SUCCEEDED"
+            for query, forbidden in (("private credential", "private credential"), ("outside approved", "outside approved")):
+                rows = index.search(query=query, version="6.4")["results"]
+>               assert {row["source"] for row in rows} == {str(public)}
+E               AssertionError: assert set() == {'/private/va...6.4-guide.md'}
+E                 
+E                 Extra items in the right set:
+E                 '/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-295/test_recursive_docs_index_skip0/approved-docs/COMSOL-6.4-guide.md'
+E                 Use -v to get more diff
+
+tests/test_g2_security_guards.py:301: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_g2_security_guards.py::test_recursive_docs_index_skips_private_symlink_and_rejects_outside_root
+1 failed, 320 passed, 1 skipped in 6.46s

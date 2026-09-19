@@ -1,0 +1,48 @@
+{
+  "schema": "mac-private.c8-driver-redirector-full-suite.v1",
+  "status": "PASS",
+  "captured_utc": "2026-09-19T07:00:45Z",
+  "scope": "Driver Windows redirector identity repair plus Mac regression suite",
+  "python": "verified project CPython3.12 venv",
+  "working_directory": "current Mac integration repository",
+  "corrected_command": [
+    "verified-project-python",
+    "-m",
+    "pytest",
+    "-q"
+  ],
+  "corrected_result": {
+    "returncode": 0,
+    "passed": 230,
+    "skipped": 1,
+    "failed": 0,
+    "errors": 0,
+    "elapsed_s": 6.04,
+    "loopback": "host permission enabled"
+  },
+  "initial_sandbox_command": [
+    "verified-project-python",
+    "-m",
+    "pytest",
+    "-q"
+  ],
+  "initial_sandbox_result": {
+    "returncode": 1,
+    "passed": 219,
+    "skipped": 1,
+    "failed": 2,
+    "errors": 7,
+    "error_signature": "java.net.BindException: Operation not permitted (Bind failed)",
+    "elapsed_s": 2.76,
+    "interpretation": "sandbox loopback restriction; corrected with host loopback permission"
+  },
+  "source_sha256": {
+    "tools/portable_engine_regression.py": "99c252e832c9b60714cf1c3c2f23bd0b00110a0d37fa0ac7bf307e27c3526cd2",
+    "tests/test_portable_engine_regression_driver.py": "2ef993f4d9c60a3869b92e229a8930a9f234b2f69463e79634cf892eb0312f95"
+  },
+  "windows_actions": "NOT_EXECUTED",
+  "comsol_server_lifecycle": "NOT_EXECUTED",
+  "snapshot_id": "win-cp312-28605a689666-dirty-20260919-c9",
+  "skip_scope": "Windows-only foreign-owner test",
+  "manifest_sha256": "1ac6a250feae316fb2b1f17962303e2bf77d318dc4d0fa98ed24cb1208d09c19"
+}

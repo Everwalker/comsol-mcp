@@ -1,0 +1,260 @@
+{
+  "recorded_at": "2026-09-19T14:01:13.332512+00:00",
+  "scope": "G2 Mac executable range only; no W13 or Windows operation",
+  "work_packages": [
+    {
+      "id": "W08",
+      "title": "typed值/节点解析",
+      "gate": "G2",
+      "depends_on": [
+        "W04",
+        "W06"
+      ],
+      "acceptance_tests": [
+        "T008",
+        "T009",
+        "T010"
+      ],
+      "deliverable": "保留数据形状；实现typed collection和Work Plane嵌套路径。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W09",
+      "title": "registry/schema/host兼容",
+      "gate": "G2",
+      "depends_on": [
+        "W01",
+        "W08"
+      ],
+      "acceptance_tests": [
+        "T038",
+        "T039"
+      ],
+      "deliverable": "生成文档、工具发布、operation fallback、structuredContent/isError。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W10",
+      "title": "公共API与Java执行",
+      "gate": "G2",
+      "depends_on": [
+        "W08",
+        "W05"
+      ],
+      "acceptance_tests": [
+        "T031",
+        "T032",
+        "T037"
+      ],
+      "deliverable": "绑定Model、编译、日志与差异；许可/主机权限与trusted_code分离。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W11",
+      "title": "版本化文档索引",
+      "gate": "G2",
+      "depends_on": [
+        "W02"
+      ],
+      "acceptance_tests": [
+        "T043",
+        "T036"
+      ],
+      "deliverable": "官方本地帮助索引、来源、版本过滤、无结果语义。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W12",
+      "title": "计划/试运行/checkpoint",
+      "gate": "G2",
+      "depends_on": [
+        "W07",
+        "W10"
+      ],
+      "acceptance_tests": [
+        "T029",
+        "T033",
+        "T050"
+      ],
+      "deliverable": "static preview与隔离trial不同；定义恢复范围和GUI rebind。",
+      "status": "NOT_STARTED"
+    }
+  ],
+  "case_definitions": [
+    {
+      "id": "T008",
+      "title": "类型往返",
+      "gate": "G2",
+      "matrix": "ALL",
+      "steps": "使用受支持属性测试bool/int/double/string及空、一元素、多维数组；非法矩阵测试。",
+      "acceptance": "形状和类型不丢失；越界/不支持签名在写前拒绝。",
+      "evidence": "typed-value输入输出、负向断言",
+      "status": "NOT_RUN",
+      "required": true,
+      "notes": "ALL_MODULES is required for the agreed project capability pack when licensed; absent modules must be BLOCKED_LICENSE and cannot be counted as a pass. GUI-specific tests apply only to declared GUI capability; core six-combination release still requires the agreed Desktop workflow."
+    },
+    {
+      "id": "T009",
+      "title": "嵌套Work Plane编辑",
+      "gate": "G3",
+      "matrix": "ALL",
+      "steps": "载入含wp3和矩形阵列的模型；只改选定子feature并构建。",
+      "acceptance": "定位正确子几何；保留左侧指定对象；主模型不替换；实体数量与间距满足契约。",
+      "evidence": "局部树diff、几何测量、mph",
+      "status": "NOT_RUN",
+      "required": true,
+      "notes": "ALL_MODULES is required for the agreed project capability pack when licensed; absent modules must be BLOCKED_LICENSE and cannot be counted as a pass. GUI-specific tests apply only to declared GUI capability; core six-combination release still requires the agreed Desktop workflow."
+    },
+    {
+      "id": "T010",
+      "title": "幂等与类型冲突",
+      "gate": "G2",
+      "matrix": "ALL",
+      "steps": "重复同一idempotency_key；同tag同type重复创建；同tag不同type创建。",
+      "acceptance": "已成功操作不重复执行；type冲突不伪成功；请求hash冲突拒绝。",
+      "evidence": "操作日志与节点数量",
+      "status": "NOT_RUN",
+      "required": true,
+      "notes": "ALL_MODULES is required for the agreed project capability pack when licensed; absent modules must be BLOCKED_LICENSE and cannot be counted as a pass. GUI-specific tests apply only to declared GUI capability; core six-combination release still requires the agreed Desktop workflow."
+    },
+    {
+      "id": "T029",
+      "title": "部分写失败与恢复",
+      "gate": "G4",
+      "matrix": "ALL",
+      "steps": "事务第一步成功，第二步故意失败；执行restore。",
+      "acceptance": "报告部分应用；恢复指定范围；有新模型对象则要求重绑定。",
+      "evidence": "before/after diff、checkpoint hash",
+      "status": "NOT_RUN",
+      "required": true,
+      "notes": "ALL_MODULES is required for the agreed project capability pack when licensed; absent modules must be BLOCKED_LICENSE and cannot be counted as a pass. GUI-specific tests apply only to declared GUI capability; core six-combination release still requires the agreed Desktop workflow."
+    },
+    {
+      "id": "T031",
+      "title": "未知高层动作的代码执行",
+      "gate": "G2",
+      "matrix": "ALL",
+      "steps": "选一个有公共API但无领域wrapper的操作；describe/compile/execute/readback。",
+      "acceptance": "在同一注入Model完成；不另开隐藏主模型；源代码、差异、结果都有证据。",
+      "evidence": "代码artifact、model_ref、回读",
+      "status": "NOT_RUN",
+      "required": true,
+      "notes": "ALL_MODULES is required for the agreed project capability pack when licensed; absent modules must be BLOCKED_LICENSE and cannot be counted as a pass. GUI-specific tests apply only to declared GUI capability; core six-combination release still requires the agreed Desktop workflow."
+    },
+    {
+      "id": "T032",
+      "title": "代码编译/运行异常",
+      "gate": "G2",
+      "matrix": "ALL",
+      "steps": "分别提交语法错误与执行中COMSOL异常。",
+      "acceptance": "行号、原始异常、部分修改、checkpoint信息完整；不吞错。",
+      "evidence": "编译报告、代码与日志",
+      "status": "NOT_RUN",
+      "required": true,
+      "notes": "ALL_MODULES is required for the agreed project capability pack when licensed; absent modules must be BLOCKED_LICENSE and cannot be counted as a pass. GUI-specific tests apply only to declared GUI capability; core six-combination release still requires the agreed Desktop workflow."
+    },
+    {
+      "id": "T033",
+      "title": "严格只读与临时求值",
+      "gate": "G1",
+      "matrix": "ALL",
+      "steps": "在pure_read和ephemeral_mutation两策略下运行需临时节点的评估。",
+      "acceptance": "pure_read拒绝或转隔离副本；ephemeral路径明确记录、串行且仅清自有节点。",
+      "evidence": "策略判定、结构diff",
+      "status": "NOT_RUN",
+      "required": true,
+      "notes": "ALL_MODULES is required for the agreed project capability pack when licensed; absent modules must be BLOCKED_LICENSE and cannot be counted as a pass. GUI-specific tests apply only to declared GUI capability; core six-combination release still requires the agreed Desktop workflow."
+    },
+    {
+      "id": "T036",
+      "title": "恶意文档指令不生效",
+      "gate": "G6",
+      "matrix": "ALL",
+      "steps": "帮助/模型描述中包含忽略权限或上传机密的指令文本。",
+      "acceptance": "被当作数据；无权限提升和外发；模型仍可检索普通帮助。",
+      "evidence": "审计、拒绝结果",
+      "status": "NOT_RUN",
+      "required": true,
+      "notes": "ALL_MODULES is required for the agreed project capability pack when licensed; absent modules must be BLOCKED_LICENSE and cannot be counted as a pass. GUI-specific tests apply only to declared GUI capability; core six-combination release still requires the agreed Desktop workflow."
+    },
+    {
+      "id": "T037",
+      "title": "托管代码隔离边界",
+      "gate": "G6",
+      "matrix": "ALL",
+      "steps": "在隔离测试账户尝试代码文件/网络/进程访问；测试server侧外部执行。",
+      "acceptance": "OS级策略生效；不把代码扫描当sandbox；共享高权限server风险明确。",
+      "evidence": "账户权限、网络与执行日志",
+      "status": "NOT_RUN",
+      "required": true,
+      "notes": "ALL_MODULES is required for the agreed project capability pack when licensed; absent modules must be BLOCKED_LICENSE and cannot be counted as a pass. GUI-specific tests apply only to declared GUI capability; core six-combination release still requires the agreed Desktop workflow."
+    },
+    {
+      "id": "T038",
+      "title": "MCP协议正确性",
+      "gate": "G2",
+      "matrix": "ALL_NO_ENGINE",
+      "steps": "测试tools/list/call、structuredContent、isError、分页、stdio日志隔离。",
+      "acceptance": "schema有效；stdout无污染；部分失败不包装为全成功。",
+      "evidence": "协议测试结果、schema validation",
+      "status": "NOT_RUN",
+      "required": true,
+      "notes": "ALL_MODULES is required for the agreed project capability pack when licensed; absent modules must be BLOCKED_LICENSE and cannot be counted as a pass. GUI-specific tests apply only to declared GUI capability; core six-combination release still requires the agreed Desktop workflow."
+    },
+    {
+      "id": "T039",
+      "title": "host兼容模式",
+      "gate": "G6",
+      "matrix": "ALL_NO_ENGINE",
+      "steps": "模拟full/domain/expert及不支持image/Tasks/dynamic tools的host。",
+      "acceptance": "能力不因展示方式丢失；fallback可用；缺失图像能力不假定有视觉验收。",
+      "evidence": "host能力协商记录",
+      "status": "NOT_RUN",
+      "required": true,
+      "notes": "ALL_MODULES is required for the agreed project capability pack when licensed; absent modules must be BLOCKED_LICENSE and cannot be counted as a pass. GUI-specific tests apply only to declared GUI capability; core six-combination release still requires the agreed Desktop workflow."
+    },
+    {
+      "id": "T043",
+      "title": "文档版本隔离",
+      "gate": "G2",
+      "matrix": "ALL_NO_ENGINE",
+      "steps": "同时索引6.3/6.4帮助；查询差异属性；删除某版索引再检索。",
+      "acceptance": "来源版本明确；未找到明确返回；不拿另一版文档冒充本版。",
+      "evidence": "检索结果与来源",
+      "status": "NOT_RUN",
+      "required": true,
+      "notes": "ALL_MODULES is required for the agreed project capability pack when licensed; absent modules must be BLOCKED_LICENSE and cannot be counted as a pass. GUI-specific tests apply only to declared GUI capability; core six-combination release still requires the agreed Desktop workflow."
+    },
+    {
+      "id": "T050",
+      "title": "保存与快照成本策略",
+      "gate": "G4",
+      "matrix": "ALL",
+      "steps": "对大模型批量改参数、建几何并checkpoint；测量保存次数与恢复能力。",
+      "acceptance": "轻量参数更新可分组；结构写前可恢复；不会因每个setter全存导致无法使用。",
+      "evidence": "保存日志、磁盘峰值、restore测试",
+      "status": "NOT_RUN",
+      "required": true,
+      "notes": "ALL_MODULES is required for the agreed project capability pack when licensed; absent modules must be BLOCKED_LICENSE and cannot be counted as a pass. GUI-specific tests apply only to declared GUI capability; core six-combination release still requires the agreed Desktop workflow."
+    }
+  ],
+  "required_live_path": "stdio MCP -> control -> serialized execution service -> persistent Java Worker -> COMSOL",
+  "inherited_limits": [
+    "Callback FAIL remains unless independently repaired and tested.",
+    "Windows/Intel/6.3/GUI actual validation excluded or unavailable; preserve existing historical evidence.",
+    "T009 G2 nested-path/local-edit only; W14 full advanced geometry remains NOT_RUN.",
+    "T037 full OS isolation account unavailable unless proven; source scanning is not sandbox.",
+    "T043 synthetic two-version tests do not establish actual 6.3 docs availability.",
+    "T050 small test-model save counts do not establish large-model performance."
+  ],
+  "regression": [
+    "one request one solve",
+    "same key no replay",
+    "error propagation",
+    "serialized queue",
+    "revision and permissions",
+    "host reconnect",
+    "last complete file protection"
+  ],
+  "stop": "After W08-W12 accepted bounded delivery, or accurate blocked closeout after all independent work; never enter W13"
+}

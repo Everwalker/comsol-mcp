@@ -1,0 +1,21 @@
+{
+  "status": "PREPARED_NOT_APPLIED",
+  "target": "/Applications/COMSOL64/Multiphysics/bin/tomcat/conf/server.xml",
+  "original_sha256": "8bb393d2d803d1b7f6b124498742fa23b6310db9a28a6334f7462ec12d674bbe",
+  "proposed_sha256": "d0483efb29b7e5924df88eb62af494f1f19542875fa86176e099fd4bc90b461c",
+  "change": "Add address=\"127.0.0.1\" to only HTTP connector; preserve all other bytes.",
+  "scope": "Temporary installation configuration while task-owned G2 server runs; restore verified original after owned Server stops.",
+  "preconditions": [
+    "Explicit user approval of this narrow installation config change.",
+    "No other COMSOL server running at apply.",
+    "Original hash must still match."
+  ],
+  "verification": [
+    "XML parse succeeds.",
+    "Owned Server listener is exactly 127.0.0.1, never wildcard.",
+    "Authenticated worker connection and isolated model inventory.",
+    "Final Server stopped and original config hash restored."
+  ],
+  "windows": "NOT_RUN; not required for exact loopback socket binding observation",
+  "global_firewall_changes": false
+}

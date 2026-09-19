@@ -1,0 +1,26 @@
+{
+  "time": "2026-09-19T14:01:25.294739+00:00",
+  "scope": "Current pre-G2 software regression, no COMSOL connection",
+  "host": {
+    "status": "PASS",
+    "passed": 259,
+    "skipped": 1,
+    "failed": 0,
+    "exit_code": 0,
+    "duration_seconds": 5.75,
+    "log": "evidence/phase3/baseline/pytest_host.txt"
+  },
+  "sandbox": {
+    "status": "FAIL",
+    "passed": 250,
+    "skipped": 1,
+    "failed": 2,
+    "errors": 7,
+    "reason": "Loopback socket bind prohibited by sandbox; same suite passed on host.",
+    "log": "evidence/phase3/baseline/pytest.txt"
+  },
+  "sha256": {
+    "pytest.txt": "d2f7a75e3de88039a8a009c5fbc414f755f136920e42c1dd3c2bf289b75a1895",
+    "pytest_host.txt": "d40e2ab9f421d2fd5007ec780abc3e34a53ef4d801ff00fa2f27e390c1f0d2f9"
+  }
+}

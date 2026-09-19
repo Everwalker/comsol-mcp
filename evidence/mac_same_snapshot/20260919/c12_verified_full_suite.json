@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "snapshot_id": "windows-cp312-28605a689666-dirty-20260919-c12",
+  "archive_sha256": "f4c34b77a1c6eee03d29062c8a10461cbebf615b527fdcd0941863ce84543340",
+  "status": "PASS",
+  "scope": "Mac software-only verification",
+  "command": "verified_external_test_venv -m pytest -q",
+  "environment": {
+    "python": "3.12.13",
+    "pytest": "9.1.1",
+    "mcp": "1.29.1",
+    "comsol_mcp": "0.1.0"
+  },
+  "tests": {
+    "passed": 243,
+    "failed": 0,
+    "skipped": 1,
+    "exit_code": 0
+  },
+  "raw_capture": {
+    "stdout_sha256": "1a6a2e93ca1854ab7fe2419bc5fc2bc71d23999d61f978c84db981d125775b0f",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "exit_record_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "record_kind": "raw stdout/stderr/exit capture; not a summary"
+  },
+  "focused_c12_v3": {
+    "command": "verified_external_test_venv -m pytest -q local-handoff/mac-checks-20260919/test_windows_w04_portable_regression_v3.py tests/test_execution_state_propagation.py",
+    "passed": 21,
+    "failed": 0,
+    "exit_code": 0
+  },
+  "acceptance_scope": {
+    "windows_execution": "NOT_RUN",
+    "comsol_engine_acceptance": "NOT_RUN",
+    "server_lifecycle": "untouched",
+    "configuration_restore": "NOT_RUN",
+    "windows_only_skip_is_not_a_failure": true
+  }
+}

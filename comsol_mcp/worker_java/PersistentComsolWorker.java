@@ -1,5 +1,6 @@
 package comsol_mcp.worker_java;
 
+import com.sun.security.auth.module.NTSystem;
 import com.comsol.model.Model;
 import com.comsol.model.util.ModelChangeInfo;
 import com.comsol.model.util.ModelChangedHandler;
@@ -12,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.UserPrincipal;
+import java.nio.file.attribute.UserPrincipalLookupService;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
@@ -20,6 +22,12 @@ import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
+import javax.tools.Diagnostic;
+import javax.tools.DiagnosticCollector;
+import javax.tools.JavaCompiler;
+import javax.tools.JavaFileObject;
+import javax.tools.StandardJavaFileManager;
+import javax.tools.ToolProvider;
 
 /**
  * A deliberately small, persistent, local-only COMSOL API worker.
@@ -37,11 +45,13 @@ public final class PersistentComsolWorker {
       "feature", "geom", "get", "getAllowedPropertyValues", "getComsolVersion",
       "getEntityFromModelPath", "getFilePath", "getLastComputationDate",
       "getLastComputationTime", "getLastComputationVersion", "getPVals", "getReal",
-      "getData", "getImag", "getString", "getStringArray", "getType", "getValueType",
+      "getData", "getImag", "getBoolean", "getBooleanArray", "getBooleanMatrix",
+      "getDouble", "getDoubleArray", "getDoubleMatrix", "getInt", "getIntArray", "getIntMatrix",
+      "getString", "getStringArray", "getStringMatrix", "getType", "getValueType",
       "isActive", "isComplex", "isGeometryMeshDependent", "isInheriting", "isInitialized",
       "label", "location", "locationUri", "mesh", "model", "modelNode", "name", "numerical",
       "param", "physics", "properties", "remove", "rename", "result", "run", "runAll",
-      "runNoGen", "save", "selection", "set", "sol", "study", "tag", "tags",
+      "runNoGen", "save", "selection", "set", "setIndex", "setEntry", "sol", "study", "tag", "tags",
       "timeModified", "title", "update", "varnames", "variable", "all", "entities", "inherit", "named", "material"));
   private static final Set<String> MODEL_UTIL = new HashSet<>(Arrays.asList(
       "create", "load", "model", "remove", "tags", "uniquetag", "modelsUsedByOtherClients",
@@ -66,6 +76,8 @@ public final class PersistentComsolWorker {
   private final AtomicLong changedCount = new AtomicLong();
   private final Set<String> changedTags = ConcurrentHashMap.newKeySet();
   private final ConcurrentMap<String, AtomicLong> changedByTag = new ConcurrentHashMap<>();
+  private final Path codeRoot;
+  private final ConcurrentMap<String, CompiledArtifact> compiledArtifacts = new ConcurrentHashMap<>();
   private volatile boolean connected;
   private volatile String serverIdentity = "";
 
@@ -73,6 +85,7 @@ public final class PersistentComsolWorker {
     this.token = token;
     this.generation = new AtomicLong(initialGeneration);
     this.serverLockRoot = serverLockRoot;
+    this.codeRoot = Files.createTempDirectory("comsol-mcp-java-code-");
     this.server = new ServerSocket();
     this.server.bind(new InetSocketAddress(InetAddress.getLoopbackAddress(), port));
   }
@@ -104,12 +117,21 @@ public final class PersistentComsolWorker {
   private void publishEndpoint(Path endpoint) throws IOException {
     Files.createDirectories(endpoint.getParent());
     Path temporary = endpoint.resolveSibling(endpoint.getFileName().toString() + ".tmp");
+    long processStartEpochMs = ProcessHandle.current().info().startInstant()
+        .map(instant -> instant.toEpochMilli()).orElse(-1L);
     String data = Json.write(map("type", "ready", "host", "127.0.0.1", "port", server.getLocalPort(),
-        "pid", ProcessHandle.current().pid(), "generation", generation.get(), "instance_id", instanceId, "token", token));
+        "pid", ProcessHandle.current().pid(), "process_start_epoch_ms", processStartEpochMs,
+        "generation", generation.get(), "instance_id", instanceId, "token", token));
     Files.write(temporary, (data + "\n").getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
     try { Files.setPosixFilePermissions(temporary, EnumSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE)); }
     catch (UnsupportedOperationException ignored) { }
-    Files.move(temporary, endpoint, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+    try {
+      Files.move(temporary, endpoint, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+    } catch (AtomicMoveNotSupportedException ignored) {
+      // A same-directory replacement is still private and complete. Some
+      // Windows filesystems do not implement ATOMIC_MOVE for this path.
+      Files.move(temporary, endpoint, StandardCopyOption.REPLACE_EXISTING);
+    }
   }
 
   private void serve() throws IOException {
@@ -146,7 +168,7 @@ public final class PersistentComsolWorker {
     if ("codec_selftest".equals(type)) return map("ok", true, "result", encode(map("kind", "map", "nested", map("value", 7), "array", Arrays.asList("x", 2))));
     if ("reflection_selftest".equals(type)) return map("ok", true, "result", reflectionSelftest());
     if ("shutdown".equals(type)) return error("PERMISSION_DENIED", "worker shutdown is controlled by its owner process");
-    if (!"connect".equals(type) && !"call".equals(type) && !"model".equals(type) && !"modelutil".equals(type) && !"model_snapshot".equals(type) && !"disconnect".equals(type) && !"lock_selftest".equals(type))
+    if (!"connect".equals(type) && !"call".equals(type) && !"model".equals(type) && !"modelutil".equals(type) && !"model_snapshot".equals(type) && !"disconnect".equals(type) && !"lock_selftest".equals(type) && !"code_compile".equals(type) && !"code_execute".equals(type))
       return error("UNKNOWN_COMMAND", "unsupported internal worker command");
     String id = requiredId(request);
     RequestState old = requests.get(id);
@@ -175,9 +197,15 @@ public final class PersistentComsolWorker {
       else if ("model_snapshot".equals(type)) result = modelSnapshot(request);
       else if ("lock_selftest".equals(type)) result = lockSelftest(request);
       else if ("modelutil".equals(type)) result = modelUtil(request);
+      else if ("code_compile".equals(type)) result = compileJava(request);
+      else if ("code_execute".equals(type)) result = executeJava(request);
       else result = call(request);
       state.succeed(encode(result));
-    } catch (WorkerFailure t) { state.fail(error(t.code, t.getMessage())); }
+    } catch (WorkerFailure t) {
+      Map<String,Object> failure = error(t.code, t.getMessage());
+      if (t.details != null) failure.putAll(t.details);
+      state.fail(failure);
+    }
     catch (Throwable t) { state.fail(failure("ENGINE_CALL_FAILED", t, true)); }
   }
 
@@ -208,18 +236,61 @@ public final class PersistentComsolWorker {
     int port = (int) number(request.get("port"), -1); if (port < 1 || port > 65535) throw new IllegalArgumentException("port required");
     acquireServerLock("127.0.0.1:" + port); return map("locked", true, "endpoint", lockedEndpoint);
   }
+  private static boolean isWindows() {
+    return System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win");
+  }
+  private UserPrincipal currentProcessOwner() throws IOException {
+    if (!isWindows()) return Files.getOwner(Paths.get(System.getProperty("user.home")));
+    try {
+      // NTSystem reads the native process token. Environment variables and
+      // user.home can describe the administrator or service account instead.
+      NTSystem nativeIdentity = new NTSystem();
+      String domain = nativeIdentity.getDomain(), name = nativeIdentity.getName();
+      if (domain == null || domain.isEmpty() || name == null || name.isEmpty())
+        throw new IOException("native Windows token has no domain-qualified user");
+      String qualifiedName = domain + "\\" + name;
+      UserPrincipalLookupService lookup = serverLockRoot.getFileSystem().getUserPrincipalLookupService();
+      return lookup.lookupPrincipalByName(qualifiedName);
+    } catch (IOException failure) {
+      throw failure;
+    } catch (RuntimeException failure) {
+      throw new IOException("could not resolve native Windows token user", failure);
+    }
+  }
+  private void prepareServerLockRoot() throws IOException {
+    UserPrincipal processOwner = currentProcessOwner();
+    Path parent = serverLockRoot.getParent();
+    if (parent != null) Files.createDirectories(parent);
+    boolean created = false;
+    try {
+      // createDirectory, rather than createDirectories, tells us whether this
+      // process created the final root. That distinction prevents changing a
+      // foreign existing root's owner after a race.
+      Files.createDirectory(serverLockRoot);
+      created = true;
+    } catch (FileAlreadyExistsException ignored) {
+      // Reconcile the existing root below; do not take ownership of it.
+    }
+    if (Files.isSymbolicLink(serverLockRoot)) throw new WorkerFailure("PERMISSION_DENIED", "server lock root must not be a symlink");
+    if (!Files.isDirectory(serverLockRoot)) throw new WorkerFailure("PERMISSION_DENIED", "server lock root must be a directory");
+    if (isWindows() && created) {
+      // setOwner changes only the owner field and leaves the inherited DACL
+      // intact. Never apply this to a root we did not create in this call.
+      Files.setOwner(serverLockRoot, processOwner);
+      if (Files.isSymbolicLink(serverLockRoot)) throw new WorkerFailure("PERMISSION_DENIED", "server lock root must not be a symlink");
+    }
+    UserPrincipal lockOwner = Files.getOwner(serverLockRoot);
+    if (!lockOwner.equals(processOwner)) throw new WorkerFailure("PERMISSION_DENIED", "server lock root is not owned by this user");
+    if (!isWindows()) {
+      try { Files.setPosixFilePermissions(serverLockRoot, EnumSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE, PosixFilePermission.OWNER_EXECUTE)); }
+      catch (UnsupportedOperationException ignored) { }
+    }
+  }
   private void acquireServerLock(String endpoint) {
     if (endpoint.equals(lockedEndpoint) && serverLock != null && serverLock.isValid()) return;
     if (serverLock != null) throw new WorkerFailure("ENGINE_BUSY", "worker is already bound to a different server endpoint");
     try {
-      if (Files.isSymbolicLink(serverLockRoot)) throw new WorkerFailure("PERMISSION_DENIED", "server lock root must not be a symlink");
-      Files.createDirectories(serverLockRoot);
-      if (Files.isSymbolicLink(serverLockRoot)) throw new WorkerFailure("PERMISSION_DENIED", "server lock root must not be a symlink");
-      UserPrincipal lockOwner = Files.getOwner(serverLockRoot);
-      UserPrincipal processOwner = Files.getOwner(Paths.get(System.getProperty("user.home")));
-      if (!lockOwner.equals(processOwner)) throw new WorkerFailure("PERMISSION_DENIED", "server lock root is not owned by this user");
-      try { Files.setPosixFilePermissions(serverLockRoot, EnumSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE, PosixFilePermission.OWNER_EXECUTE)); }
-      catch (UnsupportedOperationException ignored) { }
+      prepareServerLockRoot();
       String endpointDigest;
       try { endpointDigest = sha256(endpoint); }
       catch (Exception failure) { throw new WorkerFailure("ENGINE_UNRESPONSIVE", "could not derive endpoint lock identity"); }
@@ -253,6 +324,89 @@ public final class PersistentComsolWorker {
     return map("tag", tag, "model_tag", tag, "fingerprint", sha256(source), "fingerprint_scope", Arrays.asList("tag", "label", "file_path", "time_modified", "parameters"),
         "cas_limit", "control-plane revision plus observed change events; not COMSOL atomic CAS", "external_event_counter", changedByTag.computeIfAbsent(tag, ignored -> new AtomicLong()).get(),
         "changed_tags", new ArrayList<>(changedTags), "server_instance_id", serverIdentity, "worker_instance_id", instanceId, "instance_id", instanceId, "generation", generation.get());
+  }
+  private Object compileJava(Map<String, Object> request) throws Exception {
+    SourceSpec source = sourceSpec(request);
+    String key = source.sha256 + "|" + source.entrypoint;
+    CompiledArtifact existing = compiledArtifacts.get(key);
+    if (existing != null && Files.isDirectory(existing.classes)) {
+      return map("compiled", true, "source_sha256", source.sha256, "entrypoint", source.entrypoint,
+          "artifact", existing.classes.toString(), "diagnostics", Collections.emptyList());
+    }
+    if (source.text.matches("(?s).*\\bstatic\\s*\\{.*"))
+      throw new WorkerFailure("TRUSTED_CODE_REJECTED", "Java source contains a static initializer", map("source_sha256", source.sha256, "entrypoint", source.entrypoint, "diagnostics", Collections.emptyList()));
+    JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+    if (compiler == null) throw new WorkerFailure("COMPILE_UNAVAILABLE", "the Worker JVM does not expose javac", map("source_sha256", source.sha256, "entrypoint", source.entrypoint, "diagnostics", Collections.emptyList()));
+    Path classes = codeRoot.resolve(source.sha256.substring(0, 24));
+    Files.createDirectories(classes);
+    DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
+    boolean success;
+    try (StandardJavaFileManager manager = compiler.getStandardFileManager(diagnostics, Locale.ROOT, StandardCharsets.UTF_8)) {
+      Iterable<? extends JavaFileObject> files = manager.getJavaFileObjectsFromFiles(Collections.singletonList(source.path.toFile()));
+      List<String> options = Arrays.asList("-classpath", System.getProperty("java.class.path", ""), "-d", classes.toString());
+      JavaCompiler.CompilationTask task = compiler.getTask(null, manager, diagnostics, options, null, files);
+      success = Boolean.TRUE.equals(task.call());
+    }
+    List<Object> diagnosticRows = new ArrayList<>();
+    for (Diagnostic<? extends JavaFileObject> item : diagnostics.getDiagnostics()) {
+      diagnosticRows.add(map("kind", item.getKind().name(), "source", item.getSource() == null ? "" : item.getSource().getName(),
+          "line", item.getLineNumber(), "column", item.getColumnNumber(), "start", item.getStartPosition(), "end", item.getEndPosition(),
+          "message", item.getMessage(Locale.ROOT)));
+    }
+    if (!success) throw new WorkerFailure("COMPILE_ERROR", "Java compilation failed", map("source_sha256", source.sha256, "entrypoint", source.entrypoint, "diagnostics", diagnosticRows, "artifact", classes.toString()));
+    compiledArtifacts.put(key, new CompiledArtifact(classes, source.sha256, source.entrypoint));
+    return map("compiled", true, "source_sha256", source.sha256, "entrypoint", source.entrypoint,
+        "artifact", classes.toString(), "diagnostics", diagnosticRows);
+  }
+  @SuppressWarnings("unchecked")
+  private Object executeJava(Map<String, Object> request) throws Exception {
+    ensureConnected();
+    String tag = string(request.get("tag"));
+    if (tag.isEmpty()) throw new IllegalArgumentException("model tag required for Java execution");
+    SourceSpec source = sourceSpec(request);
+    String key = source.sha256 + "|" + source.entrypoint;
+    CompiledArtifact artifact = compiledArtifacts.get(key);
+    if (artifact == null || !Files.isDirectory(artifact.classes)) { compileJava(request); artifact = compiledArtifacts.get(key); }
+    if (artifact == null) throw new WorkerFailure("COMPILE_ERROR", "compiled Java artifact is unavailable");
+    Model model = ModelUtil.model(tag); // identity is resolved inside the same serial Worker queue
+    String className = source.entrypoint;
+    String methodName = "run";
+    int hash = source.entrypoint.indexOf('#');
+    if (hash >= 0) { className = source.entrypoint.substring(0, hash); methodName = source.entrypoint.substring(hash + 1); }
+    if (className.indexOf('.') < 0) {
+      java.util.regex.Matcher pkg = java.util.regex.Pattern.compile("(?m)^\\s*package\\s+([A-Za-z_$][\\w$]*(?:\\.[A-Za-z_$][\\w$]*)*)\\s*;").matcher(source.text);
+      if (pkg.find()) className = pkg.group(1) + "." + className;
+    }
+    Map<String, Object> arguments = request.get("arguments") instanceof Map ? (Map<String, Object>) request.get("arguments") : Collections.emptyMap();
+    try (URLClassLoader loader = new URLClassLoader(new URL[]{artifact.classes.toUri().toURL()}, getClass().getClassLoader())) {
+      Class<?> clazz = Class.forName(className, false, loader);
+      Method selected = null;
+      for (Method method : clazz.getMethods()) {
+        if (!method.getName().equals(methodName) || !Modifier.isPublic(method.getModifiers()) || !Modifier.isStatic(method.getModifiers())) continue;
+        Class<?>[] types = method.getParameterTypes();
+        if (types.length == 2 && Model.class.isAssignableFrom(types[0]) && Map.class.isAssignableFrom(types[1])) { selected = method; break; }
+        if (types.length == 1 && Model.class.isAssignableFrom(types[0])) selected = method;
+      }
+      if (selected == null) throw new WorkerFailure("ENTRYPOINT_REJECTED", "entrypoint must expose public static run(Model[, Map])");
+      Object value = selected.getParameterCount() == 2 ? selected.invoke(null, model, arguments) : selected.invoke(null, model);
+      return map("executed", true, "model_tag", tag, "source_sha256", source.sha256, "entrypoint", source.entrypoint, "readback", encode(value));
+    }
+  }
+  private SourceSpec sourceSpec(Map<String, Object> request) throws Exception {
+    String raw = string(request.get("source_artifact"));
+    if (raw.isEmpty()) throw new WorkerFailure("ARTIFACT_MISSING", "source_artifact is required");
+    Path path = Paths.get(raw).toAbsolutePath().normalize();
+    if (Files.isSymbolicLink(path) || !Files.isRegularFile(path) || !path.getFileName().toString().endsWith(".java"))
+      throw new WorkerFailure("ARTIFACT_MISSING", "source artifact must be a regular Java file");
+    byte[] bytes = Files.readAllBytes(path);
+    String text = new String(bytes, StandardCharsets.UTF_8);
+    String entrypoint = string(request.get("entrypoint"));
+    if (entrypoint.isEmpty()) {
+      java.util.regex.Matcher cls = java.util.regex.Pattern.compile("(?:class|interface|record)\\s+([A-Za-z_$][\\w$]*)").matcher(text);
+      if (!cls.find()) throw new WorkerFailure("INVALID_REQUEST", "source has no Java class entrypoint");
+      entrypoint = cls.group(1);
+    }
+    return new SourceSpec(path, text, sha256Bytes(bytes), entrypoint);
   }
   @SuppressWarnings("unchecked")
   private Object modelUtil(Map<String, Object> request) throws Exception {
@@ -324,7 +478,13 @@ public final class PersistentComsolWorker {
   }
   @SuppressWarnings("unchecked")
   private int conversionScore(Class<?> type, Object value) {
-    if (value == null || type.isInstance(value) || type.equals(String.class) || type.equals(boolean.class) || type.equals(Boolean.class)) return 0;
+    String declared = typedSignature(value);
+    if (declared != null && !signatureMatches(type, declared)) return 100000;
+    value = typedData(value);
+    if (value == null) return type.isPrimitive() ? 100000 : 0;
+    if (type.isInstance(value)) return 0;
+    if (type.equals(String.class)) return value instanceof String ? 0 : 100000;
+    if (type.equals(boolean.class) || type.equals(Boolean.class)) return value instanceof Boolean ? 0 : 100000;
     if (value instanceof Long) {
       long n = (Long)value;
       if ((type.equals(int.class) || type.equals(Integer.class)) && n >= Integer.MIN_VALUE && n <= Integer.MAX_VALUE) return 0;
@@ -336,11 +496,17 @@ public final class PersistentComsolWorker {
       if (type.equals(double.class) || type.equals(Double.class)) return 0;
       if (type.equals(float.class) || type.equals(Float.class)) return 1;
     }
-    if (type.isArray() && value instanceof List) { int score=0; for(Object item:(List<Object>)value) score += conversionScore(type.getComponentType(), item); return score; }
-    return 4;
+    if (type.isArray() && value instanceof List) {
+      int score=0; for(Object item:(List<Object>)value) { int itemScore = conversionScore(type.getComponentType(), item); if (itemScore >= 100000) return 100000; score += itemScore; }
+      return score;
+    }
+    return 100000;
   }
   @SuppressWarnings("unchecked")
   private Object convert(Class<?> type, Object value) {
+    String declared = typedSignature(value);
+    if (declared != null && !signatureMatches(type, declared)) throw new IllegalArgumentException("declared Java signature does not match overload");
+    value = typedData(value);
     if (value == null) { if (type.isPrimitive()) throw new IllegalArgumentException(); return null; }
     if (type.equals(String.class)) { if (value instanceof String) return value; throw new IllegalArgumentException("string required"); }
     if (type.equals(boolean.class) || type.equals(Boolean.class)) { if (value instanceof Boolean) return value; throw new IllegalArgumentException("boolean required"); }
@@ -361,6 +527,45 @@ public final class PersistentComsolWorker {
     }
     if (type.isInstance(value)) return value;
     throw new IllegalArgumentException("argument type mismatch");
+  }
+  @SuppressWarnings("unchecked")
+  private static Object typedData(Object value) {
+    if (!(value instanceof Map)) return value;
+    Map<Object,Object> map = (Map<Object,Object>) value;
+    return map.containsKey("kind") && map.containsKey("shape") && map.containsKey("data") ? map.get("data") : value;
+  }
+  @SuppressWarnings("unchecked")
+  private static String typedSignature(Object value) {
+    if (!(value instanceof Map)) return null;
+    Map<Object,Object> map = (Map<Object,Object>) value;
+    Object kind = map.get("kind"), signature = map.get("java_signature");
+    return kind instanceof String && signature instanceof String ? (String) signature : null;
+  }
+  private static boolean signatureMatches(Class<?> type, String declared) {
+    return canonicalSignature(declared).equals(canonicalSignature(type.getName()));
+  }
+  private static String canonicalSignature(String value) {
+    String actual = value == null ? "" : value.trim();
+    if (actual.equals("String")) return "java.lang.String";
+    if (actual.equals("boolean")) return "boolean";
+    if (actual.equals("int")) return "int";
+    if (actual.equals("long")) return "long";
+    if (actual.equals("double")) return "double";
+    if (actual.equals("[Z")) return "boolean[]";
+    if (actual.equals("[I")) return "int[]";
+    if (actual.equals("[J")) return "long[]";
+    if (actual.equals("[D")) return "double[]";
+    if (actual.equals("[Ljava.lang.String;")) return "java.lang.String[]";
+    if (actual.equals("String[]")) return "java.lang.String[]";
+    if (actual.equals("String[][]")) return "java.lang.String[][]";
+    if (actual.equals("boolean[]") || actual.equals("int[]") || actual.equals("long[]") || actual.equals("double[]")) return actual;
+    if (actual.equals("boolean[][]") || actual.equals("int[][]") || actual.equals("long[][]") || actual.equals("double[][]")) return actual;
+    if (actual.equals("[[Z")) return "boolean[][]";
+    if (actual.equals("[[I")) return "int[][]";
+    if (actual.equals("[[J")) return "long[][]";
+    if (actual.equals("[[D")) return "double[][]";
+    if (actual.equals("[[Ljava.lang.String;")) return "java.lang.String[][]";
+    return actual;
   }
   private Object encode(Object value) {
     if (value == null || value instanceof String || value instanceof Number || value instanceof Boolean) return value;
@@ -395,6 +600,7 @@ public final class PersistentComsolWorker {
   private static Map<String,Object> failure(String code,Throwable t,boolean unknown) { return map("ok",false,"code",code,"message",t.getClass().getSimpleName()+": "+String.valueOf(t.getMessage()),"execution_state_unknown",unknown); }
   private static boolean constantTimeEquals(String a,String b) { return MessageDigest.isEqual(a.getBytes(StandardCharsets.UTF_8), b.getBytes(StandardCharsets.UTF_8)); }
   private static String sha256(String text) throws Exception { byte[] bytes = MessageDigest.getInstance("SHA-256").digest(text.getBytes(StandardCharsets.UTF_8)); StringBuilder out = new StringBuilder(); for(byte b:bytes) out.append(String.format("%02x", b)); return out.toString(); }
+  private static String sha256Bytes(byte[] bytes) throws Exception { byte[] digest = MessageDigest.getInstance("SHA-256").digest(bytes); StringBuilder out = new StringBuilder(); for(byte b:digest) out.append(String.format("%02x", b)); return out.toString(); }
   private static String hashRequest(Map<String,Object> request) throws Exception { Map<String,Object> copy = new TreeMap<>(request); copy.remove("request_id"); copy.remove("queue_timeout_ms"); return sha256(Json.write(copy)); }
 
   private static final class RequestState {
@@ -407,7 +613,19 @@ public final class PersistentComsolWorker {
     boolean active(){return "QUEUED".equals(status)||"RUNNING".equals(status);}
     Map<String,Object> snapshot(){Map<String,Object> out=map("ok",!"FAILED".equals(status),"request_id",id,"type",type,"status",status,"queued_at_ms",queuedAt,"started_at_ms",startedAt,"completed_at_ms",completedAt);if(result!=null)out.put("result",result);if(failure!=null)out.put("failure",failure);return out;}
   }
-  private static final class WorkerFailure extends RuntimeException { final String code; WorkerFailure(String code,String message){super(message);this.code=code;} }
+  private static final class WorkerFailure extends RuntimeException {
+    final String code; final Map<String,Object> details;
+    WorkerFailure(String code,String message){this(code,message,null);}
+    WorkerFailure(String code,String message,Map<String,Object> details){super(message);this.code=code;this.details=details;}
+  }
+  private static final class SourceSpec {
+    final Path path; final String text, sha256, entrypoint;
+    SourceSpec(Path path,String text,String sha256,String entrypoint){this.path=path;this.text=text;this.sha256=sha256;this.entrypoint=entrypoint;}
+  }
+  private static final class CompiledArtifact {
+    final Path classes; final String sha256, entrypoint;
+    CompiledArtifact(Path classes,String sha256,String entrypoint){this.classes=classes;this.sha256=sha256;this.entrypoint=entrypoint;}
+  }
   private static final class Conversion { final Object[] values; final int score; Conversion(Object[] values,int score){this.values=values;this.score=score;} }
 
   /** Tiny JSON subset codec: objects, arrays, strings, booleans, null, and finite numbers. */

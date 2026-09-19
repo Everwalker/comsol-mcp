@@ -1,0 +1,22 @@
+{
+  "status": "PASS",
+  "scope": "Current Windows dedicated COMSOL TCP22036; native loopback auth/read/disconnect succeeds while Mac LAN remote TCP denied",
+  "rule": "COMSOL-MCP-Temporary-22036-20260919",
+  "user_authorization": "Explicit approval for creation, tests and post-test deletion received this turn",
+  "rule_filters": "Inbound block; COMSOL mphserver executable; TCP local22036; non-loopback IPv4/IPv6 ranges; all profiles; existing rules unchanged",
+  "local_connection": {
+    "exit_code": 0,
+    "stdout": "CONNECTED tags=0\nDISCONNECTED\n",
+    "stderr": ""
+  },
+  "remote_connection": {
+    "result": "CONNECTION_BLOCKED",
+    "error_type": "TimeoutError"
+  },
+  "evidence_sha256": {
+    "windows-firewall-result3.json": "53bc0a28cb1601c806bc1d548f3ffa3202f4368edf5795f3ece841e22b39f72f",
+    "remote-firewall-result3.json": "a6aa83841bb2088f1e9e83cab69e86687f7090c7f38614564f26f5f34dd4a675"
+  },
+  "restore_state": "TEMPORARY_RULE_ACTIVE; remove only after dedicated listener stops",
+  "limits": "Does not establish full platform support or model/solver acceptance. HTTP root/installation Valve checks alone were insufficient; earlier FAIL retained."
+}

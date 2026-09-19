@@ -87,9 +87,13 @@ def remove_physics(component: str, tag: str) -> str:
 def list_physics_features(component: str, physics_tag: str) -> str:
     """List all features (boundary conditions, sources, etc.) under a physics interface.
 
-    Returns tags, labels, feature_type identifiers, property names, and
-    selection editability for each feature. The feature_type field shows the
-    COMSOL internal identifier to use with create_physics_feature.
+    Returns tags, labels, feature_type identifiers, property names, and the
+    observed ``selection_inheriting`` state for each feature. COMSOL does not
+    expose an authoritative ``isEditable`` method here, so
+    ``selection_editable`` is tri-state because discovery does not establish
+    whether an edit is accepted; the attempted operation's response or
+    failure is authoritative. The feature_type field shows the COMSOL
+    internal identifier to use with create_physics_feature.
     """
 
     def _impl() -> dict[str, Any]:
@@ -213,7 +217,8 @@ def set_physics_selection(
 
     entities_json is a JSON array of integer entity IDs, e.g. "[1, 2, 3]".
     Some features have inherited selections that cannot be modified directly.
-    Use list_physics_features to check selection_editable before calling this.
+    ``list_physics_features`` reports the observed inherited state, while this
+    operation's response and failure are authoritative for the attempted edit.
     Pass feature_tag equal to physics_tag (or empty) for the parent interface.
     entities_json may also be {"kind":"all"}, {"kind":"named","name":"sel1"},
     or {"kind":"inherited"}. The response contains actual selection readback.

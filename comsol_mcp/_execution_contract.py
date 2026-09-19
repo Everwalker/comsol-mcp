@@ -136,6 +136,28 @@ LEGACY_TOOL_EFFECTS: dict[str, str] = {
     "start_visible_main_workflow": "project_write",
     "start_visible_main_workflow_async": "compute",
     "server_start": "host_control",
+    # G2 registry/model operations.  These names are also used by the
+    # operation fallback, so they must pass the same server-side effect
+    # classification as a directly published tool.
+    **{name: "inspect" for name in (
+        "registry_list", "registry_describe", "registry_search", "registry_manifest",
+        "node_inspect", "node_children", "node_find", "node_property_schema", "node_property_get",
+        "code_describe_java", "code_inspect_run", "checkpoint_list", "checkpoint_inspect", "checkpoint_diff",
+        "transaction_preview", "transaction_verify", "docs_search", "docs_get", "docs_examples", "docs_error_search",
+    )},
+    **{name: "project_write" for name in (
+        "node_property_set", "node_property_index_set", "node_property_entry_set",
+        "checkpoint_create", "checkpoint_restore", "transaction_apply", "transaction_recover", "docs_index",
+    )},
+    "transaction_trial": "compute",
+    "code_compile_java": "compute",
+    "code_execute_java": "trusted_code",
+    # The outer fallback is only a registry dispatch envelope.  Its nested
+    # operation is classified again by the server-side registry before it can
+    # enter the model execution path.
+    "registry_call": "inspect",
+    "operation_describe": "inspect",
+    "operation_call": "inspect",
 }
 
 EFFECT_PERMISSIONS = {

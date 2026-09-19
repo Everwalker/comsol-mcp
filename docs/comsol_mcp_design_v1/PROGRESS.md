@@ -316,3 +316,786 @@ Final phase-boundary software command `python -m pytest -q` returned
 The final idle control restart loaded the current capability metadata and
 preserved the original job/Worker without replay; T028 PASS is retained in
 `evidence/phase2/recovery/20260918T143106236174Z/`.
+
+## Mac integration / Windows native-node handoff — 2026-09-19
+
+New Goal scope: retain existing code and W01–W07 evidence, close foundational
+Windows handoff/runtime gaps, and regress the same traceable source snapshot
+on applicable hosts. No W08–W12 expansion and **no automatic main push** are
+authorized this round; this supersedes the usual phase-sync rule for this Goal.
+
+Baseline: branch `phase2-delivery`, HEAD
+`28605a6896668a64775ac6c1192ed50fef94b47f`. Public source was clean at handoff;
+the only untracked input was the private local handoff directory, now excluded
+through repository-local `.git/info/exclude` without replacing prior rules.
+The design JSON files remain definitions with NOT_STARTED/NOT_RUN defaults;
+actual history is the existing phase acceptance ledgers, not those defaults.
+Baseline/source inventories and historical ledger hashes are in
+`evidence/windows_handoff/20260919/baseline.json`; raw host/account/network
+records stay in the ignored local handoff area.
+
+| Work package | Existing implementation / evidence to preserve | Current gap |
+|---|---|---|
+| W01 | Frozen baseline, legacy mapping and real stdio audit | Reconcile this node/snapshot against current code, not Windows' historical empty source directory |
+| W02 | Mac arm64 6.4 real fixed recipe, render/save/reopen | Windows source, native dependencies, JDK11, secure Server and license verification |
+| W03 | API inventory; GUI/cancel BLOCKED | No new GUI evidence; do not infer Desktop sharing from SSH |
+| W04 | Mac real preservation/variables/selections/ephemeral evaluation PASS within fixture | Same-source Windows regression not yet executed |
+| W05 | Identity/revision/path guards; parameter conflict detection | Existing native event callback FAIL remains; Windows native paths/process identity require audit |
+| W06 | Persistent Worker, serialized queue, real timeout/response evidence | Windows executable/classpath/process liveness and lifecycle portability |
+| W07 | Durable jobs/idempotency, host recovery and atomic-save evidence | Native Windows local-disk regression after prerequisites |
+
+Initial SSH checkpoint: current source address/route match the historical
+restricted rule, and the ED25519 host fingerprint matches the handoff. A
+single bounded strict-host-key public-key login attempt returned authentication
+denied. **SSH authentication BLOCKED; file transfer, Windows dependencies,
+MCP and COMSOL NOT_RUN; Windows platform UNVERIFIED.** The user authorized
+reuse of the existing public key; a guarded administrator enrollment script
+was prepared locally for the user's secure Windows terminal. No password or
+private key is requested or copied. Existing firewall/sshd/COMSOL settings
+have not been changed. Independent Mac portability fixes and package
+preparation continue; this checkpoint is not a phase pass.
+
+### SSH and native-input delivery checkpoint
+
+After the user confirmed key enrollment, strict pinned-host-key public-key
+login returned exit 0 and the expected Windows account/SID. A unique probe
+file was transferred by SCP; Windows SHA256 matched the Mac source:
+`d74b5c03391572402f4f41abb95a6d039cd41f3a670996f96c47b011a711865a`.
+**SSH identity and file transfer PASS**; this supersedes only the initial
+SSH blocker above, not the historical failure or any COMSOL gate.
+Existing Windows design files were inventoried with hashes before delivery;
+a new no-overwrite release directory holds native inputs separately.
+
+Fresh Windows inventory confirms all 25 official client-manifest JARs exist
+in `apiplugins`; the general `plugins` directory lacks some manifest entries.
+The source now selects a complete single root, preferring `apiplugins`, and
+rejects partial mixed roots. Windows java/javac suffixes, classpath separator,
+read-only process liveness/creation identity, and PID-reuse handling were
+fixed. Default pytest discovery now excludes private extracted snapshots.
+Mac software regression: **190 PASS** (`python -m pytest -q`), including
+real test-owned Java loopback protocol tests; this is not COMSOL acceptance.
+Production MCP health-only PASS reused the prior Worker and therefore does
+not validate the modified Java source against COMSOL. Fresh same-snapshot
+engine regression remains pending. Windows dependencies are being prepared;
+MCP/Server/license/GUI acceptance remain **NOT_RUN / UNVERIFIED**.
+
+### Native dependency and cross-platform failure checkpoint
+
+Windows native dependencies now **PASS**: 39 verified wheels (including the
+Windows-only `pywin32` and `colorama` dependencies missing from the initial
+Mac resolution), offline pip installation and `pip check` exit 0, CPython
+3.12.10 x64, and Corretto java/javac 11.0.32.1. Installer Authenticode was
+verified; existing interpreters/JDKs and PATH were preserved. See
+`evidence/windows_handoff/20260919/native_dependencies.json`. Initial manifest
+path, AppleDouble sidecar and missing-conditional-dependency failures remain
+in private evidence; they were not discarded or labelled engine acceptance.
+
+Snapshot `win-cp312-28605a689666-dirty-20260919-b2c` was verified on both hosts.
+Windows full software run returned **192 PASS, 9 skipped, 6 FAIL**. Five
+failures exposed `fsync` of a read-only candidate handle; one was a POSIX-only
+path assertion. Mac source now opens the candidate with nontruncating `r+b`,
+retains failure-before-publication semantics, and tests both candidate/original
+preservation on flush failure. Path assertions are platform-neutral. Mac
+full regression after these fixes: **209 PASS**; a superseding Windows snapshot
+and native retest are required. The b2c failure record is retained in
+`evidence/windows_handoff/20260919/windows_b2c_failures.json`.
+An initial Java test incorrectly selected a nonexistent COMSOL63 path; this
+is a test setup failure, **not evidence that COMSOL64 is absent**. The installed
+COMSOL64 manifest was previously read and verified; native protocol tests must
+use that actual root.
+
+Windows localhost access rule: user separately authorized the exact temporary
+stock RemoteAddrValve change. Original backup/hash and ACL are preserved,
+patched XML/hash verified. Auth-enabled trial startup reached the username
+prompt and its owned trial process was stopped. Secure user-local credential
+enrollment is pending; actual local-allow/remote-deny probes, license checkout
+and real MCP/Worker/Server solve remain **BLOCKED/NOT_RUN**. The temporary
+configuration remains active only for the authorized test window, with guarded
+restoration prepared. No firewall or sshd configuration was changed.
+
+Mac current-source real regression is **BLOCKED**, independently of Windows:
+authenticated read-only inventory found an unsaved in-memory model in the
+existing Server session. The historical Worker and models were left untouched.
+See `evidence/mac_same_snapshot/20260919/current_snapshot_blocker.json`.
+The portable regression driver now separates native Java fixture preparation
+from production MCP/new-Worker execution, checks parameter readback and metric
+preservation, and requires an idle control queue plus owned-process identity
+before authenticated disconnect for independent Worker reopen. Driver code and
+software tests do not replace the currently blocked real-engine run.
+
+This round remains **IN_PROGRESS / NOT_PASSED**. Windows platform support is
+UNVERIFIED; Desktop sharing and the historical native-event callback failure
+remain unresolved. W08–W12 have not been started and no push was performed.
+
+### Final native source and security regression — 2026-09-19
+
+The frozen runtime/test snapshot is
+`win-cp312-28605a689666-dirty-20260919-c6f`, based on HEAD
+`28605a6896668a64775ac6c1192ed50fef94b47f` plus the declared working-tree
+patch/new files. Archive SHA256:
+`66caaa792766ca2138818151a2748f40b22ab1f89e5e0a62b905bebe076b43b5`.
+All 123 manifest entries matched Mac before delivery; final progress/evidence
+updates occur after packaging and do not change runtime/test source.
+`evidence/windows_handoff/20260919/source_snapshot.json` records file hashes.
+
+Further native regression found that Windows profile directory ownership is
+not a reliable process identity. Worker lock ownership now uses the native
+Windows token identity, sets the owner only for a newly created final lock
+root, and refuses to take over an existing foreign root. Inherited DACLs are
+preserved. The c4d run retained **208 PASS / 2 FAIL** in the ACL test helper;
+c5e retained **209 PASS / 1 FAIL** where the helper incorrectly required an
+explicit user SID. Actual private pytest files use OWNER RIGHTS with a verified
+Administrators owner. The helper now verifies the owner, resolves OWNER RIGHTS,
+rejects other Allow principals, and opens the actual endpoint with nontruncating
+read/write access. Foreign-owner and Everyone rejection tests were added.
+These metadata unit tests are not substitutes for Windows ACL execution.
+
+Mac final full suite (`python -m pytest -q`, project Python 3.12, external JDK11,
+installed COMSOL64 classpath): **212 PASS / 1 Windows-only skip**, exit 0.
+Evidence: `evidence/mac_same_snapshot/20260919/full_suite_acl_owner_rights.json`.
+Earlier b564/c4d evidence is retained. The production Worker source hash is
+`b564ff8963b1b8ec04c7475a94e1ab041d69e70d28a183deedb4c9ce47e17b5a`;
+final `tests/test_java_worker.py` hash is
+`6e595ced34731a22732e6ff54177d694a42a783ab2d415995701fc88141c0fd2`.
+
+Changed-file scope: `_platform_process.py`, `_control_client.py`,
+`_control_daemon.py`, `_java_worker.py` and `PersistentComsolWorker.java` cover
+native process identity, launch/classpath and lock handling; `_atomic_save.py`
+fixes nontruncating Windows flush handles. Corresponding tests, pytest discovery,
+`requirements-windows-cp312.txt`, `tools/windows_handoff_snapshot.py` and
+`tools/portable_engine_regression.py` provide repeatable verification/delivery.
+No public tool names were added by this round. No commit or push was performed.
+
+Temporary Windows installation change has now been **RESTORED**. Fresh guards
+found no COMSOL process/listener before restoration; independent readback
+confirmed original SHA256
+`8bb393d2d803d1b7f6b124498742fa23b6310db9a28a6334f7462ec12d674bbe`,
+original ACL, valid XML, no active localhost Valve and no dedicated listener or
+port file. See `evidence/windows_handoff/20260919/server_gate.json` for hashes
+of both raw restore and independent post-restore records. Local-allow versus
+remote-deny, authentication/license checkout and engine solve remain NOT_RUN.
+The prior interactive starter deliberately refuses the restored original hash;
+resume requires fresh guards, reapplying the same approved temporary rule, and
+secure Windows-local credential enrollment. Do not run an unguarded launcher
+or put credentials into chat, command arguments, shared files or logs.
+
+Final Windows c6f verification: **213 PASS, 0 skipped, 0 FAIL**, exit 0,
+`python -m pytest -q` in 15.38 seconds with Windows CPython 3.12.10,
+external Corretto Java/Javac 11.0.32.1 and the actual installed COMSOL64 client
+manifest. Windows safe extraction verified all 123 files and the archive hash.
+Production `python -m comsol_mcp.mcp_server` stdio initialize, tools/list and
+session_health: **PASS**, 58 tools, READY, no active jobs, Worker NOT_STARTED
+and no engine connection. Evidence: `windows_c6f_tests.json` and
+`windows_c6f_mcp.json` under `evidence/windows_handoff/20260919/`.
+
+| Current-source gate | Mac arm64 / COMSOL 6.4.0.293 | Windows x64 / COMSOL 6.4.0.293 |
+|---|---|---|
+| Software/native Java protocol | PASS: 212 tests; 1 Windows-only skip | PASS: 213 tests; no skips |
+| Production MCP stdio | Historical evidence retained; new engine not connected | PASS: initialization/discovery/health only |
+| Current-source engine solve/save/fresh Worker reopen | BLOCKED: preserve existing unsaved model/session | BLOCKED: secure local credential enrollment pending |
+| Runtime localhost allow / remote deny | NOT_RUN for a new isolated Server | NOT_RUN; temporary configuration restored |
+| Platform support | UNVERIFIED_CURRENT_SNAPSHOT; scoped historical passes preserved | UNVERIFIED |
+
+**本轮部分完成/受阻，阶段未通过。** All currently independent software work is
+complete. Remaining work requires a safe current-source Mac engine session and
+Windows secure local credential enrollment, followed by access/authentication,
+license and real MCP/Worker/Server solve-save-reopen validation. The repeatable
+entry is `tools/portable_engine_regression.py` with `prepare-fixture`,
+`production-chain` and `reopen`, using host-native dependencies, local artifacts,
+confirmed Server identity and separate new private Worker homes. Preserve the
+Mac unsaved models; never bypass their existing Worker lock. Desktop binding
+remains BLOCKED; the historical native callback FAIL is retained. Other
+versions/architectures remain UNVERIFIED. W08–W12 entry gates are not met and
+no later work package is started. This round ends without commit or main push.
+
+### Goal blocked audit — 2026-09-19
+
+Three consecutive goal turns retained the same external engine-start blocker.
+The last two turns made no further implementation progress; fresh read-only
+checks confirmed no Windows COMSOL process/listener and the restored original
+configuration/ACL. Final runtime/test hashes remain unchanged. All independent
+software work is complete; secure Windows-local first enrollment and a safe Mac
+engine session remain required. Goal is BLOCKED, not complete; phase acceptance
+remains NOT_PASSED. Evidence: `evidence/windows_handoff/20260919/blocked_audit_03.json`.
+
+### User-ready enrollment window — 2026-09-19
+
+User confirmed Windows is ready for local authentication. Fresh guards found
+no COMSOL process/dedicated listener and verified original config, backup and
+ACL. Reapplied the previously approved exact localhost rule; patched hash/XML
+and unchanged installation ACL passed. A previously nonexistent private
+enrollment directory was created with current-user/SYSTEM/Administrators-only
+permissions; no existing directory ACL was changed. Earlier restoration remains
+in `server_gate_restored_before_enrollment.json`. Current temporary rule is ACTIVE
+while the user performs secure local enrollment. No Server was started by this
+action and engine acceptance remains NOT_RUN.
+
+### Real Windows authentication checkpoint — 2026-09-19
+
+User started the dedicated Server locally. Process birth identity, port 22036,
+private prefs and patched installation hash were verified. Native Java clients
+authenticated, read an empty model list and disconnected on both loopback and
+the host LAN address. Authentication is PASS; localhost-only access gate FAIL.
+Mac remote HTTP/API also reached the application/authentication layer, not a
+proven address rejection. No models were created and no solve was run. Initial
+diagnostic timeouts were probe JVM non-daemon-thread exit delays, corrected by
+explicit exit after disconnect; retain the earlier timeout/stack evidence.
+A narrowly scoped temporary program+TCP22036 firewall rule and guarded rollback
+are prepared, but require separate authorization under handoff section 5.
+Existing firewall rules remain unchanged. See `access_gate_authenticated.json`.
+
+### Approved firewall access gate — 2026-09-19
+
+User separately approved creation, validation and post-test removal of the
+COMSOL-program/TCP22036 non-loopback inbound block. Exact rule readback passed;
+all firewall profiles were already enabled and no existing rule was changed.
+Windows native loopback auth/tags/disconnect PASS (zero models); Mac LAN TCP
+connection now times out. Access gate PASS for this test configuration; earlier
+Valve-only FAIL remains. Rule is ACTIVE until owned Server shutdown and guarded
+rollback. Real bounded fixture/production/fresh-Worker tests are now authorized
+to execute; no engine acceptance is inferred from this gate.
+
+### Windows native fixture PASS; production lifecycle FAIL — 2026-09-19
+
+The fixed native Java fixture solved, saved a nonempty MPH and exported a PNG;
+hashes matched. First production-chain was rejected because test model/output
+paths were mistakenly under reserved `.phase1-private`. This is expected path
+protection, not permission to relax the guard. A corrected private artifact
+root under project `evidence/` now contains a separately prepared fixture.
+The first production attempt also exposed an actual Windows lifecycle defect:
+the transport SDK Job Object killed the auto-spawned control/Worker at stdio
+teardown. Installed SDK source and win32job availability confirm kill-on-close
+with no breakaway allowance. This violates transport/engine independence; it
+must be fixed on Mac and genuinely retested, not hidden by disconnecting before
+transport close. See `windows_c6f_live_failures.json`. Production solve/save/reopen
+has not passed. Server remains running under the approved temporary firewall.
+
+The corrected c6f fixture quantitative evidence is now recorded in
+`windows_c6f_native_fixture.json`: max absolute error `1.192379528447418e-13`
+against `1e-8`, native recipe exit 0, PNG 800x600, and model/image/log SHA256.
+The acceptance ledger now separates this scoped license/fixture PASS from the
+production-chain FAIL. The upcoming lifecycle repair is not covered by c6f
+software or engine results; a fresh source snapshot and regression are required.
+
+### Windows c7/c8 regression checkpoint — 2026-09-19
+
+Mac lifecycle software tests passed 222 with one Windows-only skip. Windows
+c7 found a test fixture lacking process birth metadata (222 PASS, one FAIL).
+The Mac-only test correction preserves the identity guard and adds missing-birth
+refusal coverage. c8 Windows suite then passed all 223 tests, and the native
+fixture solved/saved/exported again (max error 1.1923795284474181e-13).
+Production prestart still failed before any model operation: Windows venv Popen
+represents the redirector, while the daemon publishes its real interpreter PID.
+A separate no-COMSOL native probe confirmed the direct parent/child relationship.
+Dual launcher/daemon identity verification is being implemented and requires a
+new snapshot and real retest. See windows_c7_tests_failure.json,
+windows_c8_tests.json, windows_c8_native_fixture.json,
+windows_c8_production_failure.json and windows_python_redirector_diagnostic.json.
+
+The first c7 test wrapper also omitted cwd and collected an unrelated test
+from the SSH default directory; import failed on app.run and the run is invalid.
+Subsequent runners specify both snapshot cwd and tests. Raw failure evidence is
+retained privately. Additional reading of that external file was denied by
+automatic approval review; no bypass was attempted and import-side effects are
+not fully assessed. COMSOL Server and temporary protection remain active.
+
+Root reran the frozen c8 extraction with the previously verified Mac project
+venv: 222 PASS, one Windows-only skip, exit 0 (6.26s). See
+`evidence/mac_same_snapshot/20260919/c8_verified_full_suite.json`. This supersedes
+the invalid temporary-environment attempt, which remains separately recorded;
+it does not supersede the real Windows production prestart failure.
+
+### c9 dual-process identity repair and resumed validation — 2026-09-19
+
+Driver repair now validates both Windows venv launcher and real daemon PID,
+creation time, direct parent relationship, executable and private-home command.
+Cleanup rechecks both identities and disconnected/idle state, then verifies
+both processes exited. New Mac full suite: 230 PASS, one Windows-only skip.
+Snapshot c9 contains 123 verified files; see source_snapshot_c9.json and
+redirector_repair_full_suite.json. Windows c9 validation remains pending.
+Automatic review initially rejected snapshot export; the user subsequently
+approved the exact c9 source/script payload and pinned test destination.
+Fresh read-only checks confirmed the same dedicated Server and active temporary
+protection, with no Python/Java test processes remaining. No commit or push.
+
+c9 delivery subsequently PASS: all 123 Windows files and archive/manifest hashes
+matched. Its Windows suite returned 230 PASS, one FAIL in the legacy cleanup
+unit fixture, which implicitly selected the host platform without the newly
+required base-interpreter identity. The explicit Windows redirector tests passed.
+The fixture is being separated into explicit platform cases; production guards
+are unchanged. Fixture/production/reopen were not started for c9. Evidence:
+`windows_c9_tests_failure.json`; no engine PASS is inferred.
+
+### c10 software checkpoint — 2026-09-19
+
+Only the cleanup test fixtures changed from c9; production driver is unchanged.
+POSIX and Windows cases are now explicit, including missing-base and missing-
+birth rejection. Mac full suite returned 232 PASS and one Windows-only skip.
+c10 has 123 locally verified files. Automatic review rejected its transfer
+because the preceding approval was interpreted as c9-specific; a concrete c10
+and optional current-round followup-snapshot approval request is pending.
+Windows c10 tests and engine chain remain NOT_RUN. The dedicated Server and
+approved temporary protection have not yet been closed/restored. Stage is
+NOT_PASSED, no commit/push and no W08-W12 expansion.
+
+Pending-approval audit 02: c10 transfer approval remains unanswered; no transfer
+or Windows c10 test was retried. Evidence JSON parsing and diff whitespace checks
+passed. One account-specific executable path was redacted from public evidence;
+its exact command and original record remain privately hashed. The dedicated
+test window has not yet been closed/restored. Goal and phase remain incomplete.
+
+The user subsequently approved the pending c10 transfer on 2026-09-19. Resume
+the exact frozen c10 archive and matching test scripts using the pinned Windows
+host and new non-overwriting destinations. This approval clears the export
+blocker; it does not constitute a Windows test PASS. Preserve the protected
+test window for regression, then verify model ownership and restore the
+approved temporary configuration. The frozen c10 manifest remains unchanged;
+this progress entry is a later audit update.
+
+### c10 native regression — 2026-09-19
+
+Windows verified all 123 c10 files and matching archive/manifest hashes. Its
+software suite passed 233 tests with no skips or failures; Mac passed 232 with
+one Windows-only skip. The native fixture and production MCP chain passed
+(15 production assertions), including solve, metric, parameter/variable
+readback, ephemeral tree preservation, save, and control/Worker survival after
+stdio teardown. Authenticated Worker disconnect and owned control cleanup
+passed; this alone is not proof of Java Worker process exit.
+
+Fresh-Worker reopen remains FAIL: the same saved MPH hash loaded successfully
+and parameters read back, but the metric failed and subsequent variable
+evaluation reported REVISION_CONFLICT. Failure evidence is retained in
+windows_c10_reopen_failure.json; no complete save/reopen acceptance is claimed.
+The full W04 selection and failure-path matrix is also not established by the
+bounded production probe. Diagnosis and additional applicable tests continue;
+temporary configuration remains active pending safe final restoration.
+
+Explicitly approved diagnostic readback identified the first reopen error:
+"Cannot aggregate without an explicit model dimension; configure the workflow
+or model geometry." The production branch configures the fixed 2-D fixture,
+but the fresh-home reopen branch omitted that configuration. Its failure
+advanced revision 0 to 1 and left reconciliation required, explaining the
+subsequent variable conflict. Repair the test driver with explicit fixed-recipe
+configuration and rerun a new snapshot; do not weaken product dimension guards
+or relabel c10 as PASS. Exact diagnostic SHA and approved sanitized fields are
+recorded in windows_c10_reopen_failure.json.
+
+### c11 reopen-driver repair checkpoint — 2026-09-19
+
+Production and fresh-home reopen now share explicit fixed-2D recipe workflow
+configuration. Reopen rejects configuration failure before server_connect;
+behavior tests exercise both ordering and failure, without claiming engine
+acceptance. Targeted tests passed 25; Mac full suite passed 235 with one
+Windows-only skip. This run used a uv test environment; exact command/raw hashes
+are retained privately and dependency versions require separate recording.
+The c11 archive contains 123 independently verified files (373617 bytes), SHA
+c35ef26a70d1ba6ff92e291bcd9a7ea21d4036fabe1c789bd24c5d7e59371afc.
+Windows c11 regression is pending; c10 remains the last executed native result.
+
+c11 test environment was verified as uv Python 3.13.14, mcp 1.30.0 and pytest
+9.1.1; raw stdout/stderr hashes match the saved records. This is software-only
+evidence, not a real Mac engine retest. After automatic review rejected c11
+export, the user explicitly approved c11, the prepared W04 supplemental test
+script and necessary subsequent repair snapshots within this round. Preserve
+the rejection history and continue new-directory/pinned-host delivery; do not
+infer delivery or runtime PASS from authorization alone.
+
+c11 Windows delivery subsequently verified all 123 files and matching hashes.
+Windows software regression passed 236 with no skips. The fixed fixture passed;
+production passed all 15 assertions and fresh-Worker reopen passed all 11,
+including explicit workflow configuration, metric/parameter/variable readback,
+stdio teardown survival and authenticated release/control cleanup. Root verified
+the production and reopen saved SHA are equal:
+452ceaea86a3e84fe0167b9b73169bd7dc370fe2d200a1ff419061a82025300d.
+See windows_c11_tests.json, windows_c11_production.json and
+windows_c11_reopen.json. This is bounded Windows chain acceptance; supplemental
+W04 checks and final configuration restoration remain pending. No full-platform
+VERIFIED claim, commit, push or later work-package entry is made.
+
+### W04 supplemental Windows attempt 1 — 2026-09-19
+
+The separately approved test script (SHA b2905c783d87d22278d158dbc6e07cecab61cb7751160dfa9b466b039ccd1faa)
+ran against c11 in a new isolated directory. Parent explicit/named/all and
+editable-child explicit selection assertions passed. The default cfeq1
+feature readback reported selection_editable=true; its selection operation
+failed with a string error that did not match the harness's inherited/noneditable
+classification. Exact cause is unresolved, not evidence to weaken production
+guards. The attempt remains FAIL and later W04 cases did not execute.
+
+The original Worker/control release assertions failed on the exception path;
+later read-only process checks found both absent with no listeners. This is
+not model cleanup or Server restoration. Automatic review rejected diagnostic
+text disclosure; narrower boolean classification was executed but did not
+identify the cause. User authorization for scoped W04 diagnostic readback has
+been requested. See windows_w04_c11_attempt1.json. Temporary Server protection
+remains active; no user model or Server was stopped.
+
+Pending W04 diagnostic audit: latest c11/W04/Mac evidence consistency checked
+without rerunning tests. Eleven key JSON records parse; snapshot hashes and
+123-file manifest agree. Public evidence scan found no account absolute paths
+or credential-value patterns. Historical c6f scope notes now identify c11 as
+the current snapshot, and the acceptance ledger explicitly links both c11
+production/reopen records, W04 attempt1 FAIL and restoration NOT_RUN. See
+c11_consistency_audit.json. Diagnostic authorization is still pending; no
+failed W04 condition was relabeled PASS and no test was restarted.
+
+### Blocked checkpoint — W04 diagnostic authorization, audit 03
+
+The same diagnostic-disclosure blocker persisted for three consecutive Goal
+turns. All completed c11 software/production/reopen results remain scoped PASS;
+W04 attempt1 remains FAIL and later cases remain NOT_RUN. Prepared W04 v2 is
+not an accepted fix until the actual first error is identified and retested.
+
+Root reviewed the prepared local-only inventory helper without executing it.
+It covers c11 only, so it cannot prove ownership of all earlier fixture/W04
+models on the Server. No complete authenticated inventory or safe-shutdown
+proof exists. Last preflight matched the dedicated Server identity, firewall
+and patched XML hash, with no established clients or Python/Java processes;
+this does not authorize closing unknown models. Server and temporary protection
+are retained, with restoration NOT_RUN. The helper's exception cleanup also
+needs an explicit idle check before use. No model, Server or configuration was
+changed in this audit.
+
+Goal is blocked, not complete; stage is NOT_PASSED. Minimal next user action is
+to answer the pending scoped W04/current-round sanitized-diagnostic request.
+Preserve private raw logs, snapshots and runners for resumption. After diagnosis
+and applicable regression, finish model ownership verification and authorized
+XML/ACL/firewall restoration. No commit, push or W08-W12 entry occurred.
+See w04_blocked_audit_03.json for the evidence and remaining gates.
+
+The user subsequently approved the pending scoped W04/current-round sanitized
+diagnostic disclosure. Resume diagnosis from the retained attempt1 transcript;
+do not rerun or loosen the failed condition before identifying the actual
+error. The blocked checkpoint remains historical evidence. Acceptance and
+configuration restoration remain incomplete until their real checks pass.
+
+Approved W04 diagnostics identify `FlException: Selection_is_not_editable`.
+The harness missed underscore-separated wording and incorrectly equated
+non-editability with inheritance. Actual revision remained 4 and the control
+envelope was clean, but the nested Worker failure explicitly carried
+execution_state_unknown=true. That signal was lost through wrapped legacy
+exceptions, a separate product safety defect requiring structured propagation;
+it must not be dismissed merely to make the test pass. Feature discovery's
+not-isInheriting editability inference also needs an evidence-limited result.
+Mac repairs and behavior regressions are in progress. c11's bounded chain PASS
+and W04 attempt1 FAIL remain unchanged; a new snapshot must verify the repair.
+
+### c12 structured failure propagation checkpoint — 2026-09-19
+
+c12 preserves the structured Worker failure through `JavaWorkerError`, the
+legacy exception cause chain, and the execution service. Explicit unknown state
+cannot be cleared by a false envelope field; ordinary local input failures
+remain clean and retryable. Physics discovery now reports inherited state as an
+observation and leaves editability tri-state because COMSOL exposes no
+authoritative `isEditable` predicate. The separate W04 v3 handoff normalizes
+Java underscore diagnostics, requires the expected unknown/dirty revision
+advance, reconciles only the same owned model identity, and keeps native
+inherited-feature coverage `UNVERIFIED`. v1 and v2 handoff hashes are
+unchanged.
+
+Using the dedicated Mac environment (Python 3.12.13, pytest 9.1.1, mcp 1.29.1),
+the full software suite passed 243 tests with one Windows-only skip; focused
+c12/v3 tests passed 21. Exact raw output, stderr, exit code and version records
+are retained in the private handoff directory. Windows execution, live COMSOL
+acceptance and configuration restoration remain NOT_RUN in this checkpoint.
+No commit or push was made.
+
+### c12 Windows regression result — 2026-09-19
+
+The frozen c12 snapshot was delivered and extracted on the pinned Windows x64
+node with 124 manifest entries verified. The archive SHA is
+`f4c34b77a1c6eee03d29062c8a10461cbebf615b527fdcd0941863ce84543340` and the
+manifest SHA is
+`8b1ac4a9477c8958e580d2e9e975314b25246f4cc253f5ea3e4cb2ea6f0bdd86`.
+The recorded environment is Windows x64, CPython 3.12.10, COMSOL 6.4.0.293
+build 293 and external JDK 11.0.32_10. Delivery and extraction did not alter
+the Server or configuration. See `windows_c12_delivery.json`.
+
+The explicit-source-cwd Windows software suite passed **244 tests**, with zero
+failures or skips and exit code 0. Its first wrapper attempt is retained as a
+separate `FAIL_WRAPPER_EVIDENCE_WRITE`: the runner did not create its evidence
+directory, so that attempt is not counted as a pytest result. The corrected
+retry used a new private home and is the accepted software result;
+`engine_connection=NOT_RUN` for this suite. See `windows_c12_tests.json`.
+
+The real fixed-recipe chain then passed: production completed 15/15
+assertions, and a fresh private Worker reopened the saved artifact with 11/11
+assertions. The production and reopen saved SHA match at
+`be2653f3764b41e500255fe6398ba31993ff3ae597a4add3e3424202481c55c4`.
+Authenticated Worker release, control queue idle checks and owned control
+cleanup passed in both phases. This is bounded Windows engine acceptance for
+the fixed recipe, not full platform or W01-W07 certification. See
+`windows_c12_production.json` and `windows_c12_reopen.json`.
+
+The c12 W04 v3 supplement remains **FAIL**. The first unresolved case is the
+unsupported-inheritance rejection: the engine returned
+`ENGINE_CALL_FAILED` / `FlException: Inheriting_not_allowed` while the harness
+expected a clean non-mutating failure; the observed state was
+`execution_state_unknown=true`, `dirty=true`, revision 6 and
+`safe_to_continue=false`. The earlier default noneditable rejection returned
+`FlException: Selection_is_not_editable` with revision 4 to 5 and the expected
+unknown/dirty state at failure. That owned-model failure was reconciled before
+continuing, so its post-reconciliation continuation flag is separate from the
+observed dirty/unknown values. The control health check was authenticated and
+idle, and owned Worker/control release passed; no later W04 cases are counted
+as PASS.
+The diagnostic readback is now recorded in `windows_c12_w04.json`; no
+production guard was weakened. Temporary configuration restoration remains
+**NOT_RUN**, and the historical W04 failures remain preserved.
+
+This checkpoint records c12 as software PASS plus bounded Windows
+production/reopen PASS, with W04 FAIL and restoration NOT_RUN. No commit, push,
+Server stop, configuration rollback or W08-W12 work was performed.
+
+### c12 W04 v4 r2 isolated rerun — 2026-09-19
+
+The root-reviewed v4 harness and corrected r2 foreground runner were verified on
+the c12 extraction. The harness SHA is
+`92864ce18661298a2fbad85c52acd5b7a3b96e2ac2f153ad8d3af900c2fcb175`; the r2
+runner SHA is
+`f9f5d2e4acfcc5cab9ca735cf367cbcad9c155c971168df673b426fc6988dd50`. A fresh
+read-only gate matched the dedicated Server identity and patched XML/firewall
+protection, with zero established port connections, other COMSOL processes, or
+Python/Java processes. The Server lifecycle was not touched.
+
+The single v4 r2 run is **FAIL**. Fifteen assertions were executed and each
+returned true, but this does not establish complete W04 acceptance because the
+first primary failure was a revision conflict: the global variables list
+advanced the owned revision from 12 to 13, while the next component operation
+used revision 12. The runner exit was 1; private stdout/stderr and the bounded
+failure summary are retained. No raw diagnostic text or model metadata is
+public.
+
+A second start was rejected by the output-exists guard, so no duplicate engine
+run occurred. The first diagnostic extraction had a PowerShell default-encoding
+failure; its raw stderr remains private. The corrected readback returned only
+scoped booleans and revision values. c12 production/reopen evidence is
+unchanged, the c12 product source was not modified, v5 harness repair is
+prepared but **NOT_RUN**, and XML/ACL/firewall restoration remains **NOT_RUN**.
+See `evidence/windows_handoff/20260919/windows_c12_w04_v4.json`.
+
+### c12 W04 v5 bounded result — 2026-09-19
+
+The corrected v5 W04 harness and runner used the frozen c12 source. The harness
+SHA is `caf34aae6326ba25aaa3b9ac042f411a22c6700d0f983837f42716b8e463d43f`;
+the runner SHA is
+`dd127f66b90133bc97475af9ea05b2742c1c897bf0d802c2bdd53d62c0e2f1a2`. The
+runner wrapper passed with exit 0 and the bounded result contained **34/34**
+true assertions. Worker release and control cleanup both passed; the result
+artifact SHA is
+`841D90857EA3CF0D41805EAF3CCD3DE2D1F64124D5ED54700F9EB9A93E220090`.
+
+This is a bounded W04 PASS for the corrected harness. The native inherited-feature
+guard remains **UNVERIFIED/NOT_RUN**, so no full selection matrix or full-platform
+acceptance claim is made. The earlier v4 revision-conflict failure remains
+preserved as historical evidence. An auxiliary reader used the wrong v5 summary
+filename; the correct runner summary name is
+`windows-c12-w04-v5-runner-r2.json`, and the wrapper stdout is the authoritative
+PASS record. No raw stderr or model metadata is public.
+
+The c12 production source and prior production/reopen evidence are unchanged.
+Server lifecycle and configuration restoration remain untouched; XML/ACL/firewall
+restore is **NOT_RUN** pending ownership/inventory gates. See
+`evidence/windows_handoff/20260919/windows_c12_w04_v5.json`.
+
+### c12 protected-window closeout — 2026-09-19
+
+The protected Windows window was closed under the owned Server identity. The
+stop record passed with the expected PID/birth identity, worker closed, 43
+evidence items preserved, and the post-stop TCP listener and established counts
+both at zero. The local-only ownership/artifact inventory passed with 13/13
+observed entries matched, unknown count zero, and `otherclients_empty=true`.
+Its scope remains an ownership gate: active-client model state and unsaved
+scientific evidence were not inferred from the inventory.
+
+The approved original configuration was restored with exit 0. The original
+server XML hash `8bb393d2d803d1b7f6b124498742fa23b6310db9a28a6334f7462ec12d674bbe`
+matched; XML, ACL, exact temporary firewall removal, and listener absence all
+passed. An independent readback then confirmed the same XML/ACL/firewall
+state, no dedicated PID, and zero COMSOL processes. See
+`evidence/windows_handoff/20260919/windows_c12_closeout.json`; raw stdout and
+stderr remain in the private handoff directory.
+
+This is a scoped closeout PASS, not a whole-goal PASS. The c12 v5 W04 result
+remains bounded 34/34 PASS, while native inherited-feature coverage is still
+**UNVERIFIED/NOT_RUN**. The existing Mac Server session is blocked by an
+unsaved model; a new isolated Server has not yet been tested and no
+license/concurrency blocker is established. The interactive Desktop binding
+and alternate COMSOL 6.3/Intel matrix remain unverified, the historical native
+model-change callback FAIL remains retained, and W08-W12 remain outside this
+authorized round. The next bounded audit is the Mac isolated-Server
+prerequisite validation plus a Windows-equivalent runner for T027/T028
+lifecycle; Windows T030 disk-full is **NOT_RUN** by `USER_REQUESTED_SKIP` and
+is not a current-round prerequisite. This does not call for rerunning every
+test. The c12 v3 and v4 W04 failures remain historical evidence. Independent
+restoration readback is PASS; no further Server or engine run was started in
+this closeout. The **NOT_RUN** restoration wording in the preceding v5
+checkpoint is historical as-of that test phase and is superseded by this
+closeout record.
+
+### Scope revision — Windows T030 disk-full — 2026-09-19
+
+Per the user's current scope instruction, the Windows disk-full monitoring/test
+is skipped and remains **NOT_RUN** with reason `USER_REQUESTED_SKIP`. It is not
+counted as a Windows PASS or a current-round prerequisite. Existing normal-save
+evidence and historical T030 records are retained unchanged; no disk-full test
+or disposable volume was started in this scope.
+
+### Read-only Mac PF and offline recovery-runner evidence — 2026-09-19
+
+The private PF capture `pf-readonly-20260919T125234Z-4937` was verified from
+its recorded exit files and stdout/stderr hashes. PF reported **Disabled**;
+the read-only root rules showed only the Apple anchor declarations, and the
+anchor listing showed `com.apple`. The recursive query returned exit code 0
+but stderr contained `DIOCGETRULES: Invalid argument`, so it is retained as a
+limited observation and is not treated as complete recursive PF proof. No PF
+rule, anchor, global firewall state, new Mac Server, existing Server, model,
+or credential was changed or read by this capture. The user-requested CLI
+scope also performed no GUI model write. See
+`evidence/mac_same_snapshot/20260919/mac_isolated_pf_readonly.json`; this does
+not establish PF protection, isolated Server acceptance, license acceptance,
+GUI acceptance, or platform verification.
+
+The separately recorded recovery-runner software check was independently
+matched to its private stdout/stderr bytes and hashes: exit 0, **29 passed in
+0.38s**, with no stderr. The source hashes in
+`evidence/windows_control_lifecycle/20260919/recovery_runner_software.json`
+also match the current files. This remains an offline software PASS only;
+production COMSOL connection, Windows native execution, and T030 remain
+**NOT_RUN** (T030 `USER_REQUESTED_SKIP`).
+
+The root-collected Windows PowerShell `Parser::ParseInput` receipt reported
+five reviewed T027/T028 scripts with `errors=[]` for each. Its matching
+network manifest records exit 0 and its matching stderr is empty. This is a
+syntax parse record only: it does not establish that any script ran or that
+COMSOL or the firewall was changed. An earlier local transport attempt with
+exit 255 and `Operation not permitted` remains separately labeled historical
+and is not mixed into this result. See
+`evidence/windows_control_lifecycle/20260919/recovery_parser_syntax_receipt.json`.
+
+The Windows read-only readiness receipt also found zero COMSOL processes, zero
+connections on the fixed test port, zero temporary rules, three enabled
+firewall profiles, the original server XML, the enrolled login file present,
+and no recovery-window directory. No Server or firewall mutation was
+performed; this is a prerequisite snapshot only. See
+`evidence/windows_control_lifecycle/20260919/recovery_readiness_root.json`.
+
+### G2 Mac W08–W12 start and baseline audit — 2026-09-19
+
+The new goal `NEXT_GOAL_MAC_G2.md` authorizes W08–W12 only. Earlier phase
+statements excluding W08 are historical boundaries; no W13 or Windows operation
+is authorized by this goal. Existing uncommitted Mac/Windows work is retained
+on `codex/mac-g2-w08-w12`; the starting HEAD/tree matches the reference
+`28605a6896668a64775ac6c1192ed50fef94b47f` /
+`0172bc996879ff92aaeea24b7b666e5b2d7c9be0`. Fetched `origin/main` still matches
+that commit. This is a delivery preflight, not a new phase publication.
+
+`evidence/phase3/baseline/` records the initial dirty-file hashes, acceptance
+plan, and Phase 2 audit. All Phase 2 ledger paths exist; 17 selected original
+success/callback-failure artifacts match their recorded hashes. Historical
+W05–W07 scoped PASS and T011 callback FAIL remain unchanged. The current
+software baseline is **259 passed, 1 skipped in 5.75s** on the host. The prior
+sandbox attempt is retained separately: **250 passed, 1 skipped, 2 failed,
+7 errors**, with Java loopback bind denied by the sandbox. Neither run is a
+COMSOL engine acceptance claim.
+
+The user explicitly confirmed no Server model required saving and authorized
+closure of the old Server. After PID/birth/port verification, SIGTERM was sent
+only to PID 84749; port 56388 and its connections were absent on readback.
+`authorized_server_stop.json` records that scope. The user subsequently approved
+one temporary installation configuration change for G2: add
+`address="127.0.0.1"` to the HTTP Connector in the installed `server.xml`, run
+the task-owned Server, then stop it and restore the original file/hash. The
+reviewed proposal and original/proposed hashes are recorded; no firewall or
+Windows changes are included. Live G2 acceptance remains pending.
+
+### G2 owned-runtime isolation attempts — 2026-09-19
+
+The approved temporary Connector address edit was tested on a fresh task-owned
+COMSOL Server. The first attempt stopped before Server launch because replacing
+`server.xml` introduced a macOS `com.apple.provenance` attribute. Original XML
+bytes/hash, mode, ownership and ACL were restored; the added provenance attribute
+remains explicitly recorded. Host `xattr -d` returned zero but readback retained
+it; noninteractive administrator access was unavailable. No OS security setting
+was changed, and full original metadata restoration is **not** claimed.
+
+A subsequent guarded in-place attempt preserved that known metadata but exposed
+`*:56389` (PID 26811), despite the Connector address attribute. The parent verified
+the exact task directory in the process identity, stopped only that Server with
+SIGTERM, confirmed the port absent, and restored the original XML SHA
+`8bb393d2d803d1b7f6b124498742fa23b6310db9a28a6334f7462ec12d674bbe`.
+No model operation or G2 engine acceptance ran on it. The launcher now fails
+immediately on a non-loopback listener and has 11 passing software regression
+checks; those checks do not establish live isolation.
+
+`evidence/phase3/runtime_blockers.json` records the live-engine blocker and the
+per-attempt records remain under `evidence/phase3/mac_owned_runtime/`. Independent
+G2 software, stdio, documentation, and compilation work continues. The installed
+manual's alternative RemoteAddrValve configuration is being assessed as a
+proposal only; it has not been authorized or applied by the Connector-only
+permission. No firewall, Windows integration, or W13 work was performed.
+
+### G2 Mac W08–W12 independent delivery; live acceptance BLOCKED — 2026-09-19
+
+The implementation, generated wire reference and all currently independent
+acceptance work are delivered on `codex/mac-g2-w08-w12`. The authoritative ledger
+is `evidence/phase3_acceptance.json`; this is the goal file's **blocked closure**,
+not G2 Mac engine acceptance. No W13 or Windows integration was performed.
+
+Final software regression: **331 passed, 1 skipped in 6.36s**, recorded in
+`evidence/phase3/review/final_pytest_after_preview.txt`. This includes affected
+Phase 2 software tests and new permission/revision-before-copy, checkpoint
+preservation, scoped trial cleanup and durable UNKNOWN propagation regressions.
+It does not replace historical Phase 2 live-engine evidence. Packaged catalog
+resources were built into an offline wheel and imported outside the repository;
+package/source drift is checked. Original Phase 1/2 evidence is retained; all
+100 pre-existing dirty files remain, 95 byte-identical and 5 evolved in G2.
+
+`evidence/phase3/acceptance-final-03/` records actual production stdio calls:
+
+- **W09 scoped PASS:** initialize/list/call, registry pagination, strict fallback,
+  structured business errors, and real full/domain/expert publications of
+  **65/48/17 tools**. Hidden legacy calls use the managed backend. A simulated
+  host without dynamic tools/images/Tasks exercised text/structured output and
+  job polling; this does not certify every actual third-party host.
+- **W11 scoped PASS:** accessible real COMSOL 6.4 help indexing/search/get with
+  source hashes, version separation, no-match NOT_FOUND, unavailable 6.3,
+  malicious text as data and outside-root rejection. Real 6.3 material remains
+  unavailable; no proprietary corpus or SQLite index is committed.
+- **W10 compilation PASS only:** three reviewed Java sources compiled through
+  the persistent Worker; the intentional syntax error returned its actual
+  line/column diagnostic. Bound-model execution and partial execution remain
+  **BLOCKED**, not inferred from compilation.
+- **W12 static preview PASS only:** a valid plan runs without a bound model and
+  reports `static_only=true`, `engine_called=false`. Live trial, partial apply,
+  restore and small-model checkpoint cost remain **BLOCKED**. Large-model cost
+  remains **NOT_RUN**.
+- **W08 live typed/wp3/idempotency checks remain BLOCKED** by the runtime
+  isolation prerequisite. Software/API-signature checks alone are not engine
+  round-trip or advanced-geometry acceptance.
+
+The approved Connector edit did not isolate the API listener; task-owned Server
+PID 26811 was stopped before any model operation. Original server.xml content
+hash, mode and ownership were restored; the provenance xattr residual remains
+recorded. Ports 56388/56389 are absent on readback. The RemoteAddrValve proposal
+is pending separate authorization and actual API access-proof validation; it is
+not implemented as an isolation bypass. Full original metadata restoration and
+full G2 acceptance are both explicitly **not claimed**.
+
+The first protocol/compile/docs failures and subsequent reviewer findings are
+retained with their scope corrections. `G2_CAPABILITIES.md` documents current
+limits; `G2_API.md` is generated from effective registry contracts. Native
+callback FAIL, shallow fingerprint scope, Worker epoch identity, GUI/Intel
+Mac/Windows/6.3 limitations and timeout-not-cancellation semantics remain intact.
+Ordinary non-force fork synchronization is authorized at this boundary; remote
+HEAD verification is required before reporting synchronization complete.
+
+Publication review retained raw help-bearing transcripts/manifests privately and
+published source/fragment hashes and lengths instead of licensed help text. The
+transformation receipt preserves original/public hashes without changing case
+statuses. After that serializer-only change, the final full suite is
+**332 passed, 1 skipped in 6.36s** (`final_publication_pytest.txt`). Production
+modules remain identical to the final stdio run; the two-file serializer/test
+delta is recorded in `publication_source_snapshot.json`. All 14 control/compile
+Worker processes belonging to the final offline runs were identity-checked and
+closed; old Phase 2 processes were not targeted.

@@ -18,9 +18,12 @@ from uuid import uuid4
 from ._execution_contract import ExecutionContractError, canonical_request_hash
 from ._managed_backend import ManagedBackend, ProcessLock, collect_legacy_registry
 from ._operation_store import IdempotencyConflict, OperationStore
+from ._platform_process import process_identity
 
 TERMINAL = {"SUCCEEDED", "FAILED", "EXPIRED", "LOST", "CANCELLED"}
-CONTROL_READS = {"session_health", "server_info", "job_status", "job_log", "job_result", "job_reconcile", "run_study_status", "visible_main_workflow_status"}
+CONTROL_READS = {"session_health", "server_info", "job_status", "job_log", "job_result", "job_reconcile", "run_study_status", "visible_main_workflow_status",
+                 "registry_list", "registry_describe", "registry_search", "registry_manifest", "operation_describe",
+                 "docs_search", "docs_get", "docs_examples", "docs_error_search", "checkpoint_list", "checkpoint_inspect", "checkpoint_diff"}
 
 
 def configure_remote_backend(worker):
@@ -114,7 +117,16 @@ class ControlDaemon:
             result = self.backend.invoke(operation, arguments, execution, operation_id, worker_event)
             if not isinstance(result, dict) or type(result.get("success")) is not bool:
                 raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "backend returned an invalid execution envelope")
-            status = "SUCCEEDED" if result["success"] else "FAILED"
+            detail = result.get("data") if isinstance(result.get("data"), dict) else {}
+            error = result.get("error") if isinstance(result.get("error"), dict) else {}
+            unknown = bool(
+                result.get("execution_state_unknown")
+                or result.get("cleanup_failed")
+                or detail.get("execution_state_unknown")
+                or detail.get("cleanup_failed")
+                or error.get("code") in {"EXECUTION_STATE_UNKNOWN", "UNKNOWN"}
+            )
+            status = "UNKNOWN" if unknown else ("SUCCEEDED" if result["success"] else "FAILED")
             if result.get("execution", {}).get("dirty"):
                 # A completed callback with a dirty model is a failed operation;
                 # explicit model reconciliation is still required for next writes.
@@ -151,6 +163,52 @@ class ControlDaemon:
                 "execution": {**{k: record[k] for k in ("request_id", "operation_id", "request_hash", "idempotency_key")}, "job_id": job_id}}
 
     def _control_read(self, operation, arguments):
+        if operation in {"registry_list", "registry_describe", "registry_search", "registry_manifest", "operation_describe"}:
+            from . import _g2_registry
+            try:
+                if operation == "registry_list":
+                    data = _g2_registry.registry_list(domain=arguments.get("domain"), cursor=arguments.get("cursor"), limit=arguments.get("limit", 100))
+                elif operation == "registry_describe":
+                    data = _g2_registry.registry_describe(arguments.get("operation_id", ""))
+                elif operation == "operation_describe":
+                    data = _g2_registry.operation_describe(arguments.get("operation_id", ""))
+                elif operation == "registry_search":
+                    data = _g2_registry.registry_search(arguments.get("query", ""), domain=arguments.get("domain"))
+                else:
+                    data = _g2_registry.registry_manifest(arguments.get("profile"))
+                return {"success": True, "data": data}
+            except ExecutionContractError as exc:
+                return self._exception(exc)
+        if operation in {"docs_search", "docs_get", "docs_examples", "docs_error_search"}:
+            try:
+                index = self.backend.docs_index
+                if operation == "docs_search":
+                    data = index.search(query=arguments.get("query", ""), version=arguments.get("version", ""), product=arguments.get("product"), limit=arguments.get("limit", 10))
+                elif operation == "docs_get":
+                    data = index.get(document_ref=arguments.get("document_ref", ""), section=arguments.get("section"), offset=arguments.get("offset", 0), length=arguments.get("length", 6000))
+                else:
+                    query = arguments.get("query", arguments.get("error", ""))
+                    data = index.search(query=query, version=arguments.get("version", ""), product=arguments.get("node_type"), limit=arguments.get("limit", 10))
+                return {"success": True, "data": data}
+            except ExecutionContractError as exc:
+                return self._exception(exc)
+            except Exception as exc:
+                return self._error("UNAVAILABLE", "offline documentation index is unavailable", type=type(exc).__name__)
+        if operation in {"checkpoint_list", "checkpoint_inspect", "checkpoint_diff"}:
+            try:
+                rows = self.store.list_metadata("checkpoints")
+                if operation == "checkpoint_list":
+                    return {"success": True, "data": {"checkpoints": rows}}
+                checkpoint_id = arguments.get("checkpoint_id") or arguments.get("left")
+                if operation == "checkpoint_inspect":
+                    value = next((row for row in rows if row.get("checkpoint_id") == checkpoint_id or row.get("sha256") == checkpoint_id), None)
+                    return {"success": bool(value), "data": value or {}, "error": None if value else {"code": "NODE_NOT_FOUND", "message": "checkpoint not found", "safe_retry": False}}
+                left = arguments.get("left"); right = arguments.get("right")
+                lrow = next((row for row in rows if row.get("checkpoint_id") == left or row.get("sha256") == left), None)
+                rrow = next((row for row in rows if row.get("checkpoint_id") == right or row.get("sha256") == right), None)
+                return {"success": bool(lrow and rrow), "data": {"left": lrow, "right": rrow, "equal": bool(lrow and rrow and lrow.get("sha256") == rrow.get("sha256"))}}
+            except Exception as exc:
+                return self._error("UNAVAILABLE", "checkpoint metadata is unavailable", type=type(exc).__name__)
         if operation in {"session_health", "server_info"}:
             with self.lock:
                 active = list(self.running)
@@ -290,7 +348,11 @@ def serve(home):
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     server.daemon_threads = True
     temporary = home / "control.json.tmp"
-    temporary.write_text(json.dumps({"port": server.server_port, "token": token, "pid": os.getpid()}))
+    endpoint = {"port": server.server_port, "token": token, "pid": os.getpid()}
+    start_epoch_ms = process_identity(os.getpid())["start_epoch_ms"]
+    if isinstance(start_epoch_ms, int):
+        endpoint["process_start_epoch_ms"] = start_epoch_ms
+    temporary.write_text(json.dumps(endpoint))
     os.chmod(temporary, 0o600)
     temporary.replace(home / "control.json")
     server.serve_forever()

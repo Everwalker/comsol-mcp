@@ -1,0 +1,33 @@
+{
+  "scope": "Production prestart failure before model operation; reserved for corrected driver retest",
+  "phase": "production-chain",
+  "status": "FAIL",
+  "reason": "",
+  "error": "DriverError: owned control endpoint PID does not match the pre-started process",
+  "error_code": null,
+  "failed_assertions": [],
+  "assertions": [],
+  "operations": [],
+  "saved_sha256": "",
+  "saved_path_leaf": null,
+  "worker": {
+    "present": false,
+    "pid": null,
+    "port": null,
+    "generation": null,
+    "instance_id": null,
+    "source_sha256": null,
+    "classpath_sha256": null,
+    "jar_count": null,
+    "compiled_marker": false
+  },
+  "worker_release_status": null,
+  "worker_release_reason": null,
+  "control_cleanup_status": null,
+  "control_cleanup_reason": null,
+  "result_json_sha256": "7a70ce6e714073e04a3caa8b9e3bbf20b34be6e2cf1669737382344dc16361e4",
+  "assertions_json_sha256": "e3566b3a06430868d71e9287dfd6c6c520a3da027aabea01951d407ee131dc2f",
+  "transcript_json_sha256": "a5338d955b09046ec0b16f3a9625b7955c763aae07dc722e474e6078745f932f",
+  "snapshot_id": "win-cp312-28605a689666-dirty-20260919-c8",
+  "cause": "Native Windows venv Popen refers to redirector; actual Python daemon is its direct child. Existing strict identity check correctly refuses unexplained PID difference."
+}

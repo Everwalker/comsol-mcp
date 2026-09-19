@@ -1,0 +1,26 @@
+{
+  "recorded_at": "2026-09-19T15:23:22.733355+00:00",
+  "raw_result_retained": true,
+  "review": [
+    {
+      "case": "W09 hidden legacy managed route",
+      "review_status": "FAIL_TEST_FIXTURE",
+      "reason": "configure_single_main_workflow current_main_model_path pointed into private control home; canonical_project_path correctly rejected it. Not an unavailable-environment blocker. Fix fixture and rerun."
+    },
+    {
+      "case": "W12 preview_no_write",
+      "review_status": "MISSING_INDEPENDENT_COVERAGE",
+      "reason": "Static preview can run without model binding. Driver must run a valid static action independently before reporting live trial blocked."
+    },
+    {
+      "case": "W10 compilation",
+      "review_status": "PASS_SCOPED",
+      "reason": "Three real sources compiled in persistent Worker without COMSOL connection; syntax error included actual diagnostic line10,column28. No model execution claim."
+    },
+    {
+      "case": "W11",
+      "review_status": "PASS_SCOPED",
+      "reason": "Accessible real 6.4 docs exercised; 6.3 unavailable semantics only, not real6.3 corpus certification."
+    }
+  ]
+}

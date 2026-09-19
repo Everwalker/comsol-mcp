@@ -1,0 +1,22 @@
+{
+  "status": "FAIL",
+  "snapshot_id": "win-cp312-28605a689666-dirty-20260919-c6f",
+  "stage": "production-chain",
+  "model_path_guard": "Expected PERMISSION_DENIED: operator placed fixture/results under reserved .phase1-private; security guard remains intact. Corrected fixture was prepared under project evidence with private ACL.",
+  "lifecycle_failure": "Windows Worker was no longer alive after MCP stdio teardown; it descended from the transport-owned Job Object through auto-started control daemon.",
+  "sdk_observation": {
+    "kill_on_job_close": true,
+    "terminate_job_object": true,
+    "breakaway_allowed_setting": false,
+    "win32job_import_available": true,
+    "sdk_module_sha256": "3398fd345f50860087a9078762973dcf492c16c372d45e37bd8a909772d7abe6"
+  },
+  "evidence_sha256": {
+    "inspect-live-production-result-c6f.stdout": "68fcedd01ff0a7852a42358f6b88f097431397f304aef2d187a4044a7f804cec",
+    "sdk-job-evidence-02.stdout": "f20c9b09d1e8455d945283fdd1c4085135dba236b956a30eeb927cb1ebd48feb",
+    "release-failure-exact-01.stdout": "a9d64823b4e1090bc8d9aec0b4fad7d568cc32f9847cfd9a80b9bb4241a244b2"
+  },
+  "remediation": "Mac-side fail-closed independent control startup and explicit transport-external control prestart in Windows live harness; no SDK/OS job restriction changes. New source snapshot and real regression required.",
+  "production_solve_save_reopen": "NOT_RUN",
+  "server": "Preserved running; approved firewall guard remains active."
+}

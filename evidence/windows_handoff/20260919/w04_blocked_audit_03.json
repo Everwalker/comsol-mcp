@@ -1,0 +1,59 @@
+{
+  "recorded_utc": "2026-09-19T09:13:50.682239+00:00",
+  "status": "BLOCKED_NOT_PASSED",
+  "blocked_audit_count": 3,
+  "blocking_condition": "W04 isolated-run diagnostic disclosure was rejected by automatic approval review; explicit scoped diagnostic authorization remains unanswered. Boolean-only alternatives did not identify the failure.",
+  "last_verified_snapshot": "win-cp312-28605a689666-dirty-20260919-c11",
+  "mac_software": "235 PASS, 1 Windows-only SKIP; software-only uv environment",
+  "windows_software": "236 PASS, 0 SKIP",
+  "windows_bounded_production": "PASS_15_ASSERTIONS",
+  "windows_fresh_worker_reopen": "PASS_11_ASSERTIONS_SAME_SAVED_HASH",
+  "windows_w04_supplement": "FAIL_FIRST_ATTEMPT_LATER_CASES_NOT_RUN",
+  "temporary_restore": "NOT_RUN_SERVER_AND_PROTECTION_RETAINED",
+  "last_preflight": {
+    "server_observed": true,
+    "server_birth_matches": true,
+    "server_executable_matches": true,
+    "server_command_present": true,
+    "server_command_has_port": true,
+    "server_command_has_private_prefs": true,
+    "server_command_has_credentials_argument": false,
+    "server_identity_sha256": "eb2d4a575847add54253ba2739ebd8cd266558003f80063ad5a4ddf08a68b1d7",
+    "listener_count": 1,
+    "listener_owner_is_expected": true,
+    "established_client_count": 0,
+    "other_comsol_process_count": 0,
+    "python_java_process_count": 0,
+    "python_java_under_interactive_count": 0,
+    "python_java_under_c10_or_w04_count": 0,
+    "credentials_read_or_output": false,
+    "firewall_rule_present": true,
+    "firewall_rule_enabled": true,
+    "firewall_rule_action_block": true,
+    "server_xml_hash_matches_expected": true,
+    "server_xml_acl_inheritance_protected": false,
+    "private_prefs_exists": true,
+    "server_lifecycle": "NOT_TOUCHED"
+  },
+  "last_preflight_sha256": "a6f209cb265e9b6240576f913f1877baf382263b5a29b7362e012650a9a8f290",
+  "inventory_helper_review": {
+    "state": "PREPARED_NOT_EXECUTED",
+    "sha256": "e79f7fe42bdfb9f6297a7bd47a85f711d389537bc777b8656fbc926ede390f20",
+    "limitations": [
+      "Covers c11 only; not all earlier fixture and W04 models.",
+      "No complete authenticated model ownership comparison has been performed.",
+      "Unconditional owned Worker close does not independently prove idle state on exception."
+    ],
+    "stop_authorization_from_helper": false
+  },
+  "remaining_actions": [
+    "Obtain requested authorization for W04/current-round sanitized diagnostics.",
+    "Read exact isolated-test error, determine repair without weakening acceptance, then run corrected W04 cases using new output directories.",
+    "Finish local-only ownership inventory across every loaded model; preserve unknown or unsaved user models.",
+    "After safe owned-server shutdown, restore original server.xml/hash/ACL and remove exact temporary firewall rule; verify results.",
+    "Retain Mac current-source engine and Desktop/other platform blockers and failure evidence."
+  ],
+  "resume_inputs": "Existing source snapshots, test runners, Windows private raw logs and prepared W04 v2 preserved; v2 not accepted/executed as a fix before diagnosis.",
+  "no_commit_or_push": true,
+  "W08_W12": "NOT_ENTERED_NOT_AUTHORIZED"
+}

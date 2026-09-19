@@ -1,0 +1,145 @@
+{
+  "status": "FAIL",
+  "failed_assertions": [
+    "reopen_metric",
+    "reopen_variable"
+  ],
+  "assertions": [
+    {
+      "name": "new_worker_source_loaded",
+      "value": true
+    },
+    {
+      "name": "saved_model_loaded",
+      "value": true
+    },
+    {
+      "name": "reopen_metric",
+      "value": false
+    },
+    {
+      "name": "reopen_parameter",
+      "value": true
+    },
+    {
+      "name": "reopen_variable",
+      "value": false
+    },
+    {
+      "name": "control_queue_idle_before_release",
+      "value": true
+    },
+    {
+      "name": "stdio_teardown_control_alive",
+      "value": true
+    },
+    {
+      "name": "stdio_teardown_worker_alive",
+      "value": true
+    },
+    {
+      "name": "driver_worker_released",
+      "value": true
+    },
+    {
+      "name": "driver_control_released",
+      "value": true
+    }
+  ],
+  "operations": [
+    {
+      "operation": "server_connect",
+      "success": true,
+      "outer_isError": false,
+      "elapsed_s": 2.422000000020489,
+      "error_code": null
+    },
+    {
+      "operation": "model_load",
+      "success": true,
+      "outer_isError": false,
+      "elapsed_s": 0.6099999999860302,
+      "error_code": null
+    },
+    {
+      "operation": "get_core_metrics",
+      "success": false,
+      "outer_isError": true,
+      "elapsed_s": 0.5620000000344589,
+      "error_code": ""
+    },
+    {
+      "operation": "get_parameters",
+      "success": true,
+      "outer_isError": false,
+      "elapsed_s": 0.14100000000325963,
+      "error_code": null
+    },
+    {
+      "operation": "evaluate_expressions",
+      "success": false,
+      "outer_isError": true,
+      "elapsed_s": 0.04699999996228144,
+      "error_code": "REVISION_CONFLICT"
+    },
+    {
+      "operation": "session_health",
+      "success": true,
+      "outer_isError": false,
+      "elapsed_s": 0.01500000001396984,
+      "error_code": null
+    }
+  ],
+  "saved_sha256": "e6a29c8b38d0ff554a7afd067ef06feb2424a6f92cc73bbc726123f00294bad6",
+  "worker_release_status": "PASS",
+  "control_cleanup_status": "PASS",
+  "result_json_sha256": "030f5cc23bba40447a348018c747a9e128cf2b22015f71fa0a42d02af02cb6d1",
+  "assertions_json_sha256": "9f18607a033de8bf904bebfe1e20bbd32b8c8525c5e8a267a8d676625e9173b9",
+  "transcript_json_sha256": "f9b585c3e177c5f91a3cc9168625b6e3ccc17bd9476e6bc903b1027160d9c150",
+  "snapshot_id": "win-cp312-28605a689666-dirty-20260919-c10",
+  "saved_file_hash_matches_production": true,
+  "scope": "Fresh Worker reopen: load and parameter PASS, metric and variable FAIL. Worker release means authenticated disconnect, not proof of Java process exit.",
+  "approved_diagnostics": {
+    "scope": "C10_REOPEN_APPROVED_REDACTED_DIAGNOSTICS",
+    "operations": [
+      {
+        "operation": "get_core_metrics",
+        "outer_isError": true,
+        "error": {
+          "type": "string",
+          "message": "Required metric evaluation was partial; no acceptance result is available."
+        },
+        "result_rows": [
+          {
+            "ok": false,
+            "error": {
+              "type": "string",
+              "message": "Cannot aggregate without an explicit model dimension; configure the workflow or model geometry."
+            }
+          }
+        ],
+        "expected_revision": 0,
+        "current_revision": 1
+      },
+      {
+        "operation": "evaluate_expressions",
+        "outer_isError": true,
+        "error": {
+          "type": "object",
+          "code": "REVISION_CONFLICT",
+          "message": "external model change requires reconciliation"
+        },
+        "result_rows": [
+          {
+            "ok": null,
+            "error": null
+          }
+        ],
+        "expected_revision": 1,
+        "current_revision": null
+      }
+    ]
+  },
+  "diagnostic_sha256": "127ae0676d84428fcbbf7a9b893ebab477728e70c83a496421cfc76a0358e185",
+  "root_cause": "Fresh private reopen control home lacks explicit fixed-2D workflow configuration. Aggregation rejects missing dimension; subsequent revision conflict follows failed evaluation. Driver repair and new snapshot regression required."
+}

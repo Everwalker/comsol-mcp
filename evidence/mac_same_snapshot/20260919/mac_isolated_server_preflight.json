@@ -1,0 +1,249 @@
+{
+  "artifact": "mac_isolated_server_preflight",
+  "generated_on": "2026-09-19",
+  "scope": "Read-only preflight and review-only preparation for a future task-owned isolated COMSOL 6.4 Server",
+  "status": "PREPARED_PENDING_ADMIN_REVIEW",
+  "redaction": {
+    "public_paths": "Private run and machine-user paths are represented by placeholders.",
+    "private_original_relative_path": "local-handoff/mac-isolated-server-20260919-private/mac_isolated_server_preflight_original.json",
+    "private_original_sha256": "552193700b0cd6177dcb40d809b9624d2866d062b4f8e343614f4686d6b44848",
+    "public_path_policy": "Repository-relative references, placeholders, and hashes only for private artifacts."
+  },
+  "claims": {
+    "real_new_server_acceptance": "NOT_RUN",
+    "license_acceptance": "NOT_TRIED_NO_PASS_WRITTEN",
+    "mcp_worker_acceptance": "NOT_RUN",
+    "this_artifact_is_scientific_acceptance": false,
+    "pf_syntax_is_effect_validation": false
+  },
+  "safety_guards": {
+    "read_only_preflight": true,
+    "review_scripts_prepared_but_executed": false,
+    "new_server_started": false,
+    "existing_worker_connected_or_disconnected": false,
+    "existing_server_or_models_mutated": false,
+    "global_configuration_changed": false,
+    "windows_touched": false,
+    "credentials_read_or_copied": false,
+    "old_pid_signal_or_restart": false,
+    "existing_session": {
+      "pid": 84749,
+      "port": 56388,
+      "reported_loaded_model_count": 39,
+      "reported_unsaved_in_memory_model": true,
+      "handling": "Preserved; no connection, disconnect, restart, model load, prune, or save was attempted."
+    }
+  },
+  "host_and_runtime": {
+    "platform": "macOS arm64",
+    "java": {
+      "version": "OpenJDK/Corretto 11.0.31",
+      "java_home": "<java-11-home>",
+      "status": "PASS",
+      "qualification": "Java 11 is available. The COMSOL launcher may use its bundled runtime; no claim is made that this environment variable changes launcher selection."
+    },
+    "comsol": {
+      "install_dir": "<comsol-install-dir>",
+      "build": "6.4.0.293",
+      "launcher": "<comsol-install-dir>/bin/comsol",
+      "arm_launcher": "<comsol-install-dir>/bin/macarm64/comsol",
+      "server_invocation": "comsol mphserver",
+      "status": "PASS_STATIC"
+    }
+  },
+  "official_interface_evidence": {
+    "supported_server_options_observed": [
+      "-login info|force|never|auto",
+      "-mode batch|desktop",
+      "-multi auto|on|off",
+      "-port <port>",
+      "-portfile <path>",
+      "-silent",
+      "-passwd reset|nostore",
+      "-user <user>"
+    ],
+    "launcher_options_observed": [
+      "-prefsdir",
+      "-recoverydir",
+      "-tmpdir",
+      "-np 2"
+    ],
+    "bind_option": "No -bind, -address, or loopback-only CLI option was found in the installed help/docs checked.",
+    "help_command": {
+      "command": "'<comsol-install-dir>/bin/comsol' mphserver -help",
+      "exit_code": 0,
+      "observed": "No usable stdout in the restricted shell; stderr contained sandbox /dev/fd and sysctl permission messages. No new listener appeared. Static installed help and the local official HTML manual are the authoritative option evidence."
+    },
+    "security_documentation": "The installed COMSOL manual documents login storage under the user's COMSOL preferences and recommends restricting the address range with the host firewall and the server configuration. The installed server.xml contains only a commented RemoteAddrValve example; it was not edited."
+  },
+  "fresh_isolation_layout": {
+    "run_dir": "<private-run-dir>",
+    "observed_at_check": "ABSENT_AND_NOT_CREATED",
+    "subdirectories": [
+      "prefs-server",
+      "tmp-server",
+      "recovery-server"
+    ],
+    "planned_server_portfile": "<private-run-dir>/server.port",
+    "planned_command": "mkdir -m 700 '<private-run-dir>' && mkdir -m 700 '<private-run-dir>/prefs-server' '<private-run-dir>/tmp-server' '<private-run-dir>/recovery-server' && exec '<comsol-install-dir>/bin/comsol' -np 2 -prefsdir '<private-run-dir>/prefs-server' -tmpdir '<private-run-dir>/tmp-server' -recoverydir '<private-run-dir>/recovery-server' mphserver -multi on -port 56389 -portfile '<private-run-dir>/server.port' -login force",
+    "planned_command_status": "NOT_RUN",
+    "freshness_guard": "The secure start script refuses any existing run directory; it does not mkdir -p or reuse prior prefs/tmp/recovery content.",
+    "auth_plan": {
+      "mode": "A user must run the command in a secure terminal and enter new credentials interactively when -login force prompts.",
+      "prefs_scope": "The new prefs-server directory is task-owned and separate from existing/default preferences.",
+      "old_credentials": "Not read, copied, or referenced in this preflight.",
+      "stored_secret_handling": "No password or login.properties contents are present in this artifact.",
+      "process_identity": "The COMSOL start script refuses uid 0 and runs the launcher as the invoking user; PF-only operations use noninteractive sudo -n separately."
+    }
+  },
+  "port_preflight": {
+    "probe": "lsof -nP -iTCP:<port> -sTCP:LISTEN",
+    "observations": [
+      {"port": 2036, "state": "FREE_AT_CHECK"},
+      {"port": 2144, "state": "BUSY_AT_CHECK"},
+      {"port": 56388, "state": "BUSY_AT_CHECK_EXISTING_SERVER"},
+      {"port": 56389, "state": "FREE_AT_CHECK_RECOMMENDED_CANDIDATE"},
+      {"port": 56390, "state": "FREE_AT_CHECK"},
+      {"port": 56391, "state": "FREE_AT_CHECK"},
+      {"port": 56392, "state": "FREE_AT_CHECK"},
+      {"port": 56400, "state": "FREE_AT_CHECK"},
+      {"port": 56401, "state": "FREE_AT_CHECK"},
+      {"port": 56402, "state": "FREE_AT_CHECK"},
+      {"port": 56403, "state": "FREE_AT_CHECK"}
+    ],
+    "selection_rule": "Re-run the read-only lsof probe immediately before any future PF apply or start; abort if 56389 is no longer free. Never use 56388 or 2144 for this isolated server."
+  },
+  "pf_preflight": {
+    "status": "NOT_VERIFIED_ADMIN_REQUIRED",
+    "application_firewall": {
+      "command": "<system-firewall-cli> --getglobalstate",
+      "observed": "Firewall is disabled (State = 0); it cannot be claimed as a protection layer."
+    },
+    "live_pf_queries": [
+      {
+        "command": "<system-pfctl> -s info",
+        "observed": "<system-pfctl>: /dev/pf: Permission denied in this non-admin preflight",
+        "effect": "No change"
+      },
+      {
+        "command": "<system-pfctl> -s Anchors",
+        "observed": "<system-pfctl>: /dev/pf: Permission denied in this non-admin preflight",
+        "effect": "No change"
+      },
+      {
+        "command": "<system-pfctl> -sr",
+        "observed": "<system-pfctl>: /dev/pf: Permission denied in this non-admin preflight",
+        "effect": "No change"
+      }
+    ],
+    "static_inventory": {
+      "etc_pf_conf": "Only com.apple/* anchor declarations were observed.",
+      "com_apple_anchor": "Only Apple AirDrop/ApplicationFirewall declarations were observed; no task-specific anchor was observed in the static file.",
+      "live_rule_claim": "NONE from this task's non-admin preflight; the separate root-terminal capture below is limited read-only evidence and is not a complete recursive proof."
+    },
+    "operator_readonly_capture": {
+      "status_stdout": "Status: Disabled; Debug: Urgent",
+      "root_filter_stdout": "scrub-anchor \"com.apple/*\" all fragment reassemble; anchor \"com.apple/*\" all",
+      "anchors_stdout": "com.apple",
+      "recursive_wildcard": "Exit 0 but stderr contains DIOCGETRULES: Invalid argument; rejected as a complete recursive proof.",
+      "relative_capture_dir": "local-handoff/mac-isolated-server-20260919-private/pf-readonly-20260919T125234Z-4937",
+      "capture_files_sha256": {
+        "status.stdout": "316482e53be7808576e710494f811d175a2ce599245c9cfe80d20b53c115e403",
+        "root_rules.stdout": "80a4aba0003d04855da31ea24b6e63ec4aee91da2570b488596a80d8beca202f",
+        "anchors.stdout": "dae97834a2f97b501a4524860e80754d420c66ae168e147faa9645c8ce4fbf38",
+        "recursive_rules.stderr": "f11a4db649933d64534d530a3944a329e20eb788abbeb89ec980cc09cff0591a"
+      }
+    },
+    "dry_run": {
+      "anchor": "com.apple/comsol-mcp-56389",
+      "rules": [
+        "pass in quick on lo0 inet proto tcp to port 56389",
+        "pass in quick on lo0 inet6 proto tcp to port 56389",
+        "block in quick inet proto tcp to port 56389",
+        "block in quick inet6 proto tcp to port 56389"
+      ],
+      "command": "printf '%s\\n' 'pass in quick on lo0 inet proto tcp to port 56389' 'pass in quick on lo0 inet6 proto tcp to port 56389' 'block in quick inet proto tcp to port 56389' 'block in quick inet6 proto tcp to port 56389' | <system-pfctl> -n -a com.apple/comsol-mcp-56389 -f -",
+      "exit_code": 0,
+      "observed": "Syntax-only parse succeeded; pfctl warned that -f may flush an existing ruleset. -n prevented loading. No PF enable, anchor load, flush, or rule change was performed.",
+      "meaning": "This proves syntax only, not that PF is enabled, that the anchor is free, or that the port is protected."
+    },
+    "global_state_gate": "If PF is Disabled, pfctl -E may enable the existing loaded system ruleset, which has scope beyond port 56389. The apply script therefore requires live PF status, live main-rule inspection showing com.apple/*, exact child-anchor enumeration through -a com.apple -s Anchors, exact-anchor emptiness/unoccupation, a proof that root filter/NAT/queue rules are limited to the known Apple anchor, and a free 56389 before any apply. Unknown state, DIOCGETRULES stderr, or unreadable global state fails closed.",
+    "admin_apply_plan_not_executed": [
+      "From a secure admin terminal with sudo credentials already cached, run the script default preflight and inspect its separate stdout/stderr/exit results.",
+      "The explicit --apply path calls pfctl -E, records separate owner-only stdout/stderr receipts, and accepts only one strict Token value across both streams before loading the unique anchor; missing, malformed, or conflicting Token lines retain review state.",
+      "Load only com.apple/comsol-mcp-56389 with the reviewed four-line rule file. No global ruleset reload or flush is used.",
+      "Require a recorded load-attempted/load-confirmed state and live exact-anchor rule hash. If any receipt/hash/cleanup state cannot be confirmed, preserve the owner-only token/state and report admin review.",
+      "Verify PF state and exact rule hash only; loopback allow and Windows remote rejection remain separate actual probe gates."
+    ],
+    "rollback_plan_not_executed": [
+      "Require the dedicated listener to be stopped.",
+      "Require owner-only state, matching source hash, matching live exact-anchor hash, and a known recorded token.",
+      "Flush rules only in com.apple/comsol-mcp-56389 with -F rules; never flush all anchors or the main ruleset.",
+      "Verify the exact anchor has no rules, release only this run's pfctl -E token, retain the raw receipt, and report the pre-existing PF state without using -d."
+    ]
+  },
+  "private_review_artifacts": {
+    "directory": "local-handoff/mac-isolated-server-20260919-private",
+    "scripts_prepared_not_executed": true,
+    "pf_rule_file": {
+      "path": "local-handoff/mac-isolated-server-20260919-private/pf-56389.rules",
+      "sha256": "1a61ea35cb87d9e94896af9ed23d5bbfc28ce1938527ebfe2b77017202e25a92"
+    },
+    "pf_guard_script": {
+      "path": "local-handoff/mac-isolated-server-20260919-private/pf-56389-guard.sh",
+      "sha256": "c0f6e69d1aa783833257b118e8f1328e734eeda6eb1ca809d14d5fd81046ad00",
+      "modes": "default read-only preflight; --apply is the only load path; --verify allows a running listener; --verify-prestart requires no listener; --rollback requires no listener and matching rule hash"
+    },
+    "secure_start_script": {
+      "path": "local-handoff/mac-isolated-server-20260919-private/start-isolated-comsol-secure.sh",
+      "sha256": "19f11b4e9dff7fb703e7fcea5be9de0271e39e383026669fcbe1bfbc1a0a55a6",
+      "guards": "invoking user only, fresh run directory only, PF --verify-prestart, separate loopback PASS, separate Windows remote PASS, then -np 2 and mphserver -multi on -login force"
+    },
+    "probe_gate_template": {
+      "path": "local-handoff/mac-isolated-server-20260919-private/PROBE_GATES.md",
+      "sha256": "5cd10c66e25d0415016c43945d1a31cb23b9736f7e974ec89aedf7c1941b371f",
+      "loopback_gate": "NOT_CREATED",
+      "windows_remote_gate": "NOT_CREATED"
+    },
+    "offline_fixture_test": {
+      "path": "local-handoff/mac-isolated-server-20260919-private/test-pf-56389-guard-fixtures.sh",
+      "sha256": "1a5335d40a712a6930388cff03380d9941d64d0d8d936e3d3a9140e374a2f7c4",
+      "command": "bash local-handoff/mac-isolated-server-20260919-private/test-pf-56389-guard-fixtures.sh",
+      "result": "OFFLINE_FIXTURES_PASS=14",
+      "coverage": "Production guard functions run through a no-system-change sudo/pfctl/lsof stub: captured Disabled/root output, Enabled for... status, ALTQ warning acceptance, DIOCGETRULES stderr with rc=0 rejection for status and exact-anchor reads, known com.apple/* NAT/rdr/dummynet declarations, unknown filter/NAT/queue rejection, explicit lsof no-match handling, lsof diagnostics fail-closed, strict unique Token extraction from stdout or stderr, conflict/missing Token rejection, exact missing-anchor handling, and review-state/token preservation when load confirmation or state durability is missing."
+    },
+    "operator_readonly_collector": {
+      "path": "local-handoff/mac-isolated-server-20260919-private/collect-pf-readonly.sh",
+      "sha256": "6b7febaa6b5594c82cea5b5ffb3e5c4a6d6538a5d4e5e606842c43c657ef939f",
+      "result": "Executed by the parent task in a secure terminal; read-only capture only."
+    },
+    "shell_parse": {
+      "command": "bash -n pf-56389-guard.sh start-isolated-comsol-secure.sh test-pf-56389-guard-fixtures.sh",
+      "result": "PASS"
+    }
+  },
+  "decision_matrix": {
+    "jdk_11": "PASS",
+    "comsol_6_4_0_293_static_install": "PASS",
+    "official_launcher_and_server_options": "PASS_STATIC",
+    "fresh_prefs_tmp_recovery_layout": "READY_NOT_CREATED",
+    "candidate_port_56389": "FREE_AT_CHECK_RECHECK_REQUIRED",
+    "loopback_bind_at_server_layer": "NOT_VERIFIED_NO_CLI_BIND_OPTION_FOUND",
+    "pf_narrow_filter": "ADMIN_REQUIRED_NOT_VERIFIED",
+    "license": "NOT_TRIED_NO_PASS_WRITTEN",
+    "desktop_gui_acceptance": "NOT_RUN",
+    "overall": "A new isolated attempt is technically planned and is not blocked by a license result. It remains pending live PF review, separately authorized temporary PF reference/anchor changes, actual loopback and Windows rejection probes, and a later user-authorized start."
+  },
+  "source_inventory": [
+    {"path": "<comsol-install-dir>/bin/comsol", "sha256": "23320dd9b68d8d4ca41711fe580f454f4e755c747e5c5798fe632a8f35d5d58f", "role": "COMSOL launcher"},
+    {"path": "<comsol-install-dir>/bin/macarm64/macarmhelp.txt", "sha256": "990d5cd113d5480206db8324e9910f376a6ae1b32b087025289e5e3241d11dae", "role": "Installed launcher help"},
+    {"path": "<comsol-install-dir>/bin/tomcat/conf/server.xml", "sha256": "8bb393d2d803d1b7f6b124498742fa23b6310db9a28a6334f7462ec12d674bbe", "role": "Installed server connector and commented address restriction example; not edited"},
+    {"path": "<comsol-install-dir>/doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_ref_running.38.33.html", "sha256": "36a9fa631e932121c1d6332d43dd86b433d80f237b88463d54544c310788500b", "role": "Installed COMSOL running/server manual"},
+    {"path": "<system-pf-config>/pf.conf", "sha256": "6fb5b260918922ca5a4dfb296967d8edb9c12f2c043f26b64590758441d682d", "role": "Static PF anchor declarations"},
+    {"path": "<system-pf-config>/pf.anchors/com.apple", "sha256": "0fd7f2c4f02e68615f137ed090cbba2d1facb40da6bf269e1e326ed6a10aa618", "role": "Static Apple PF anchor file"},
+    {"path": "local-handoff/MAC_COMSOL_MCP_CONTINUE_GOAL.md", "sha256": "34267e63a4e05c98ae16baa13046ff36ec87e3ca7ffaa367eb450cc33e2dde3f", "role": "Active goal and safety scope"},
+    {"path": "AGENTS.md", "sha256": "bfee42375c8dae89493aaba7a24237eb5ae9a4efa11fd71af86acbf070abf6b0", "role": "Project instructions"},
+    {"path": "local-handoff/COMSOL-localhost-access.patch", "sha256": "3fcae399067851da89d2e6e411a8afc7eb6ed87bbad92e00ed4c457dfc1da932", "role": "Unapplied historical server.xml proposal; not treated as sufficient protection"}
+  ],
+  "next_safe_gate": "The only requested system authorization is temporary PF state/anchor work: inspect live PF/main rules, optionally take one pfctl -E reference, load the exact com.apple/comsol-mcp-56389 rules, run separate loopback-allow and Windows-reject probes, and retain a reviewable receipt. Do not start COMSOL or write a license PASS until those gates are actually verified."
+}

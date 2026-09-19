@@ -1,0 +1,25 @@
+{
+  "snapshot_id": "win-cp312-28605a689666-dirty-20260919-b2c",
+  "status": "FAIL",
+  "passed": 192,
+  "skipped": 9,
+  "failed": 6,
+  "findings": [
+    {
+      "issue": "candidate_file_flush",
+      "failures": 5,
+      "error": "OSError errno9 Bad file descriptor",
+      "cause": "candidate opened rb before Windows fsync",
+      "remediation": "use nontruncating writable candidate handle; preserve failure-before-publish behavior",
+      "reference": "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-flushfilebuffers"
+    },
+    {
+      "issue": "test_path_separator",
+      "failures": 1,
+      "cause": "POSIX slash literal in cross-platform classpath assertion"
+    }
+  ],
+  "raw_output_sha256": "c0a7625640314cfffa3672c80baf453ff05a88aa8fed9a5d4cb7afb5753bbf74",
+  "java_native_protocol": "NOT_RUN_MISCONFIGURED_COMSOL63_PATH; actual COMSOL64 installation previously verified; rerun required",
+  "raw_output_policy": "private only; previous failure retained"
+}

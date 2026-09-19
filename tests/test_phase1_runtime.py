@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 import struct,zlib
 import pytest
@@ -15,7 +16,8 @@ def test_classpath_uses_official_apiplugins_and_rejects_missing(tmp_path):
     with pytest.raises(ValueError):client_classpath(tmp_path)
     (tmp_path/'apiplugins/two.jar').touch()
     cp,sha,count=client_classpath(tmp_path)
-    assert count==2 and 'apiplugins/one.jar' in cp and len(sha)==64
+    entries = [Path(entry) for entry in cp.split(os.pathsep)]
+    assert count==2 and entries == [tmp_path/'apiplugins/one.jar', tmp_path/'apiplugins/two.jar'] and len(sha)==64
 
 def test_png_validator_checks_raster_and_crc(tmp_path):
     def chunk(kind,payload):return struct.pack('>I',len(payload))+kind+payload+struct.pack('>I',zlib.crc32(kind+payload))

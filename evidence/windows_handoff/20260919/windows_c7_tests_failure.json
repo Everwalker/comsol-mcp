@@ -1,0 +1,18 @@
+{
+  "scope": "windows-c7-full-pytest",
+  "status": "FAIL",
+  "exit_code": 1,
+  "source_dir": "source-extract-dirty-20260919-c7",
+  "source_head": "28605a6896668a64775ac6c1192ed50fef94b47f",
+  "command": "python -m pytest tests -q --disable-warnings --maxfail=0",
+  "engine_connection": "NOT_RUN",
+  "summary": "222 passed, 1 failed in 17.62s",
+  "failed_nodeid": "tests/test_portable_engine_regression_driver.py::test_owned_control_cleanup_requires_worker_disconnect_and_idle",
+  "remote_stdout_bytes": 2641,
+  "remote_stdout_sha256": "a2dddab05e3ddab741409b8c7b812271472315045c8855e18a3b061ce2cb1835",
+  "remote_stderr_bytes": 0,
+  "remote_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "reason": "Windows creation-identity fail-closed path is exercised with a fake endpoint lacking process_start_epoch_ms; Mac-only test fixture correction required.",
+  "snapshot_id": "win-cp312-28605a689666-dirty-20260919-c7",
+  "correction": "Pending Mac-only test fixture correction; runtime identity guard must remain intact."
+}

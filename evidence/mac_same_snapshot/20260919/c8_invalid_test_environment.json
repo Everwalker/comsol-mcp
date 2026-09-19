@@ -1,0 +1,19 @@
+{
+  "scope": "Historical c8 invalid Mac environment attempt; does not establish full suite acceptance",
+  "engine_connection": "NOT_RUN",
+  "focused": {
+    "command": "temporary non-project pytest tests/test_portable_engine_regression_driver.py -q --disable-warnings --maxfail=0",
+    "exit_code": 0,
+    "summary": "9 passed, 3 skipped in 0.04s"
+  },
+  "full": {
+    "command": "temporary non-project pytest -q --disable-warnings --maxfail=0",
+    "exit_code": 2,
+    "summary": "collection interrupted: 4 errors; ModuleNotFoundError: No module named 'mcp'",
+    "duration": "0.13s",
+    "interpretation": "NOT_RUN as a valid full suite because this local venv lacks the project mcp dependency; no dependency installation was attempted"
+  },
+  "existing_root_baseline": "Root-provided Mac full-suite evidence remains 222 PASS + 1 Windows-only skip; this file records only commands actually run by this child.",
+  "status": "FAIL_WRONG_TEST_ENVIRONMENT",
+  "correct_environment": "Existing verified project venv remains available; future full regression must use it"
+}

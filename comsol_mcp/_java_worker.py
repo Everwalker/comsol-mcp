@@ -20,11 +20,31 @@ import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+from pathlib import PurePosixPath
 from typing import Any, Callable, Iterator, Mapping
+
+from ._platform_process import process_identity
+
+
+def _structured_true(value: Mapping[str, Any], name: str) -> bool:
+    """Read one explicit boolean from a decoded worker mapping."""
+    return isinstance(value, Mapping) and value.get(name) is True
 
 
 class JavaWorkerError(RuntimeError):
     """Structured failure returned by the private worker protocol."""
+
+    def __init__(self, message: str, *, reply: Mapping[str, Any] | None = None) -> None:
+        super().__init__(message)
+        # Keep the decoded protocol object on the exception so a legacy
+        # callback can preserve explicit execution-state signals while its
+        # human-readable ``str(exc)`` remains backward compatible.
+        self.reply: dict[str, Any] = dict(reply) if isinstance(reply, Mapping) else {}
+        failure = self.reply.get("failure")
+        self.failure: dict[str, Any] = dict(failure) if isinstance(failure, Mapping) else {}
+        self.execution_state_unknown = _structured_true(
+            self.reply, "execution_state_unknown"
+        ) or _structured_true(self.failure, "execution_state_unknown")
 
 
 class JavaWorkerTimeout(JavaWorkerError):
@@ -38,12 +58,26 @@ class JavaWorkerPaths:
     private_prefs: Path | None = None
     project_root: Path | None = None
     global_lock_root: Path | None = None
+    platform_name: str | None = None
+
+    @property
+    def is_windows(self) -> bool:
+        return (self.platform_name or os.name) == "nt"
+
+    def executable(self, name: str) -> Path:
+        """Resolve an external JDK executable for the current host platform."""
+        suffix = ".exe" if self.is_windows else ""
+        return self.jdk_home / "bin" / f"{name}{suffix}"
+
+    @property
+    def classpath_separator(self) -> str:
+        return ";" if self.is_windows else os.pathsep
 
     def validate(self) -> None:
         manifest = self.comsol_root / "bin" / "comsolclientpath.txt"
         if not manifest.is_file():
             raise JavaWorkerError(f"COMSOL client classpath manifest is missing: {manifest}")
-        if not (self.jdk_home / "bin" / "java").is_file() or not (self.jdk_home / "bin" / "javac").is_file():
+        if not self.executable("java").is_file() or not self.executable("javac").is_file():
             raise JavaWorkerError("external JDK with java and javac is required")
         if self.private_prefs is not None:
             resolved = self.private_prefs.resolve()
@@ -64,11 +98,46 @@ class JavaWorkerPaths:
     def classpath(self) -> tuple[str, str, int]:
         manifest = self.comsol_root / "bin" / "comsolclientpath.txt"
         names = [line.strip() for line in manifest.read_text(encoding="utf-8").splitlines() if line.strip()]
-        jars = [self.comsol_root / "apiplugins" / name for name in names]
-        missing = [str(path) for path in jars if not path.is_file()]
-        if missing:
-            raise JavaWorkerError("official COMSOL classpath has missing JARs")
-        return os.pathsep.join(map(str, jars)), hashlib.sha256(manifest.read_bytes()).hexdigest(), len(jars)
+        entries = [self._manifest_entry(name) for name in names]
+        explicit = [entry for entry in entries if entry[0] is not None]
+        if explicit:
+            if len(explicit) != len(entries):
+                raise JavaWorkerError("official COMSOL classpath manifest mixes explicit and implicit roots")
+            jars = [self.comsol_root / root / relative for root, relative in entries]
+            missing = [name for name, jar in zip(names, jars) if not jar.is_file()]
+            if missing:
+                raise JavaWorkerError(f"official COMSOL explicit classpath entries are unavailable; missing: {', '.join(missing[:3])}")
+        else:
+            jars = []
+            # A classpath is a coherent manifest set, never an opportunistic
+            # per-JAR merge. Windows evidence confirms apiplugins contains all
+            # 25 manifest entries while plugins is partial; keep this ordering
+            # on every platform and use plugins only when it is complete.
+            for root in self._classpath_roots():
+                candidate = [root / relative for _, relative in entries]
+                if all(jar.is_file() for jar in candidate):
+                    jars = candidate
+                    break
+            if not jars:
+                roots = ", ".join(str(root) for root in self._classpath_roots())
+                missing = [name for name, (_, relative) in zip(names, entries)
+                           if not any((root / relative).is_file() for root in self._classpath_roots())]
+                detail = f"; missing from every candidate root: {', '.join(missing[:3])}" if missing else ""
+                raise JavaWorkerError(f"no complete official COMSOL classpath root contains every manifest entry: {roots}{detail}")
+        return self.classpath_separator.join(map(str, jars)), hashlib.sha256(manifest.read_bytes()).hexdigest(), len(jars)
+
+    def _classpath_roots(self) -> tuple[Path, ...]:
+        return (self.comsol_root / "apiplugins", self.comsol_root / "plugins")
+
+    def _manifest_entry(self, entry: str) -> tuple[str | None, PurePosixPath]:
+        normalized = entry.replace("\\", "/")
+        relative = PurePosixPath(normalized)
+        if relative.is_absolute() or ".." in relative.parts or any(":" in part for part in relative.parts):
+            raise JavaWorkerError("official COMSOL classpath manifest contains an unsupported path entry")
+        parts = relative.parts
+        if parts and parts[0] in {"plugins", "apiplugins"}:
+            return parts[0], PurePosixPath(*parts[1:])
+        return None, relative
 
 
 class PersistentJavaWorker:
@@ -117,8 +186,8 @@ class PersistentJavaWorker:
             if not marker.is_file():
                 classes.mkdir(parents=True, exist_ok=True)
                 compile_result = subprocess.run(
-                    [str(self.paths.jdk_home / "bin" / "javac"), "-cp", classpath, "-d", str(classes), str(source)],
-                    text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+                    [str(self.paths.executable("javac")), "-cp", classpath, "-d", str(classes), str(source)],
+                    text=True, encoding="utf-8", errors="replace", stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
                 )
                 if compile_result.returncode:
                     raise JavaWorkerError(f"worker compilation failed: {compile_result.stderr[-2000:]}")
@@ -128,10 +197,10 @@ class PersistentJavaWorker:
             existing = self._attach_existing(endpoint)
             if existing is not None:
                 return existing
-            command = [str(self.paths.jdk_home / "bin" / "java")]
+            command = [str(self.paths.executable("java"))]
             if self.paths.private_prefs is not None:
                 command.append(f"-Dcs.prefsdir={self.paths.private_prefs}")
-            command += ["-cp", str(classes) + os.pathsep + classpath,
+            command += ["-cp", str(classes) + self.paths.classpath_separator + classpath,
                         "comsol_mcp.worker_java.PersistentComsolWorker", "--port", "0", "--endpoint-file", str(endpoint),
                         "--server-lock-root", str(self.paths.resolved_global_lock_root)]
             command += ["--generation", str(self._next_generation)]
@@ -175,17 +244,23 @@ class PersistentJavaWorker:
         try:
             saved = json.loads(endpoint.read_text(encoding="utf-8"))
             pid, port, token = int(saved["pid"]), int(saved["port"]), str(saved["token"])
-            os.kill(pid, 0)
-        except ProcessLookupError:
-            try: self._next_generation = int(saved.get("generation", 0)) + 1
-            except (TypeError, ValueError): self._next_generation = 1
-            # This endpoint belongs to a confirmed-dead worker. Removing only
-            # this private rendezvous file prevents a new child from reading
-            # its stale ready record before it can atomically publish its own.
-            endpoint.unlink(missing_ok=True)
-            return None
+            identity = process_identity(pid)
         except (KeyError, TypeError, ValueError, OSError, json.JSONDecodeError) as exc:
             raise JavaWorkerError("existing Worker endpoint is invalid; manual reconciliation is required") from exc
+        saved_start = saved.get("process_start_epoch_ms")
+        has_saved_start = isinstance(saved_start, int) and saved_start >= 0
+        starts_differ = (has_saved_start and isinstance(identity["start_epoch_ms"], int)
+                         and saved_start != identity["start_epoch_ms"])
+        if not identity["alive"] or starts_differ:
+            try: self._next_generation = int(saved.get("generation", 0)) + 1
+            except (TypeError, ValueError): self._next_generation = 1
+            # A dead child, or a confirmed PID reuse, cannot own this endpoint.
+            # Removing only this private rendezvous file prevents a new child
+            # from reading its stale ready record before publication.
+            endpoint.unlink(missing_ok=True)
+            return None
+        if self.paths.is_windows and has_saved_start and identity["start_epoch_ms"] is None:
+            raise JavaWorkerError("existing Worker identity cannot be verified; do not start a replacement")
         self._port, self._generation, self._token = port, int(saved["generation"]), token
         self._next_generation = self._generation + 1
         try:
@@ -266,7 +341,7 @@ class PersistentJavaWorker:
 
     def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
                queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
-        if kind not in {"connect", "disconnect", "model", "modelutil", "model_snapshot", "call", "lock_selftest"}:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "model_snapshot", "call", "lock_selftest", "code_compile", "code_execute"}:
             raise JavaWorkerError("unknown private worker command")
         body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
         if queue_timeout_s is not None:
@@ -312,6 +387,25 @@ class PersistentJavaWorker:
 
     def model_snapshot(self, model_tag: str, *, request_id: str | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
         return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+
+    def compile_java(self, source_artifact: str, entrypoint: str, *, request_id: str | None = None,
+                     rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        """Compile a source file inside the same Worker classpath.
+
+        Compilation does not receive a Model and therefore cannot change the
+        COMSOL state.  The Worker still owns the compiler invocation so the
+        production classpath and diagnostics are the ones actually used by the
+        bound runtime.
+        """
+        return self.submit("code_compile", {"source_artifact": source_artifact, "entrypoint": entrypoint},
+                           request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+
+    def execute_java(self, model_tag: str, source_artifact: str, entrypoint: str, arguments: Mapping[str, Any], *,
+                     request_id: str | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        """Execute a previously described source against the named Worker model."""
+        return self.submit("code_execute", {"tag": model_tag, "source_artifact": source_artifact,
+                           "entrypoint": entrypoint, "arguments": dict(arguments or {})},
+                           request_id=request_id, rpc_timeout_s=rpc_timeout_s)
 
     def backend_snapshot(self, model_tag: str, *, request_id: str | None = None,
                          rpc_timeout_s: float | None = None) -> dict[str, Any]:
@@ -432,7 +526,10 @@ def _decode_reply(reply: Mapping[str, Any], worker: PersistentJavaWorker) -> Any
     if reply.get("status") in {"QUEUED", "RUNNING"}:
         return dict(reply)
     if not reply.get("ok", False):
-        raise JavaWorkerError(json.dumps(dict(reply), sort_keys=True))
+        # Preserve the structured failure for the execution-state guard.  The
+        # serialized message is intentionally unchanged for callers that only
+        # consume ``str(exc)``.
+        raise JavaWorkerError(json.dumps(dict(reply), sort_keys=True), reply=reply)
     result = reply.get("result")
     if isinstance(result, Mapping) and "$worker_handle" in result:
         return RemoteJava(worker, str(result["$worker_handle"]), int(result["generation"]), str(result.get("java_type", "")))
