@@ -1,0 +1,187 @@
+{
+  "W08_T008_T009_T010": {
+    "acceptance": [
+      "T008",
+      "T009",
+      "T010"
+    ],
+    "assertions": {
+      "typed_shape_categories_observed": {
+        "categories": [
+          "scalar",
+          "empty",
+          "singleton",
+          "matrix"
+        ],
+        "pass": true
+      }
+    },
+    "case_id": "W08_T008_T009_T010",
+    "finished_at": "2026-09-20T00:53:26.104943Z",
+    "package": "W08",
+    "reason": "bound-model calls stopped after EXECUTION_STATE_UNKNOWN at node.property_set (EXECUTION_STATE_UNKNOWN); reconcile before retry",
+    "started_at": "2026-09-20T00:53:21.943224Z",
+    "status": "BLOCKED",
+    "subcases": {
+      "empty": {
+        "property": "geomattr",
+        "shape": [
+          0
+        ],
+        "status": "PASS"
+      },
+      "matrix": {
+        "property": "genpoints",
+        "shape": [
+          3,
+          3
+        ],
+        "status": "PASS"
+      },
+      "scalar": {
+        "property": "planetype",
+        "shape": [],
+        "status": "PASS"
+      },
+      "singleton": {
+        "property": "degree",
+        "shape": [
+          1
+        ],
+        "status": "PASS"
+      },
+      "typed_round_trip": {
+        "status": "PASS"
+      }
+    }
+  },
+  "W09_T038_T039": {
+    "acceptance": [
+      "T038",
+      "T039"
+    ],
+    "assertions": {},
+    "case_id": "W09_T038_T039",
+    "finished_at": "2026-09-20T00:53:26.167490Z",
+    "package": "W09",
+    "reason": "excluded by --only",
+    "started_at": "2026-09-20T00:53:21.943228Z",
+    "status": "NOT_RUN",
+    "subcases": {}
+  },
+  "W10_T031_T032_T037": {
+    "acceptance": [
+      "T031",
+      "T032",
+      "T037"
+    ],
+    "assertions": {
+      "source_sha256": {
+        "tools/java/Phase3Fixture.java": "2fa1a3e21de95d7d806968d99fd45da14e6e12a45f19c76b442c66b87a653306",
+        "tools/java/Phase3NoWrapper.java": "e1016223dbd696cf435189dadb0e6d55ccc111026fd290e472a3591cc7062bb9",
+        "tools/java/Phase3PartialFailure.java": "18191f31b91df048bb8ff1f1df090fe41f98635363fe83d44e8095c69bbfdd96",
+        "tools/java/Phase3SyntaxFailure.java": "97478991f58f96971c03482651c1b6fc6ab66dc290b2e15ca9273343e1e29f19"
+      },
+      "syntax_failure_has_line_diagnostic": {
+        "diagnostics": [],
+        "pass": false
+      },
+      "three_reviewed_sources_compile_offline": {
+        "pass": false,
+        "sources": {
+          "tools/java/Phase3Fixture.java": {
+            "compiled": null,
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "pass": false,
+            "source_sha256": null
+          },
+          "tools/java/Phase3NoWrapper.java": {
+            "compiled": null,
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "pass": false,
+            "source_sha256": null
+          },
+          "tools/java/Phase3PartialFailure.java": {
+            "compiled": null,
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "pass": false,
+            "source_sha256": null
+          }
+        }
+      }
+    },
+    "case_id": "W10_T031_T032_T037",
+    "finished_at": "2026-09-20T00:53:26.126750Z",
+    "package": "W10",
+    "reason": "bound-model calls stopped after EXECUTION_STATE_UNKNOWN at node.property_set (EXECUTION_STATE_UNKNOWN); reconcile before retry",
+    "started_at": "2026-09-20T00:53:21.943230Z",
+    "status": "BLOCKED",
+    "subcases": {
+      "compile_reviewed_source": {
+        "reason": "compile returned EXECUTION_STATE_UNKNOWN",
+        "status": "FAIL"
+      },
+      "compile_reviewed_sources": {
+        "reason": "one or more reviewed legal Java sources failed managed offline compilation",
+        "sources": {
+          "tools/java/Phase3Fixture.java": {
+            "compiled": null,
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "pass": false,
+            "source_sha256": null
+          },
+          "tools/java/Phase3NoWrapper.java": {
+            "compiled": null,
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "pass": false,
+            "source_sha256": null
+          },
+          "tools/java/Phase3PartialFailure.java": {
+            "compiled": null,
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "pass": false,
+            "source_sha256": null
+          }
+        },
+        "status": "BLOCKED"
+      },
+      "describe_source_and_effect": {
+        "reason": "describe returned EXECUTION_STATE_UNKNOWN",
+        "status": "BLOCKED"
+      },
+      "syntax_failure_is_compile_only": {
+        "reason": "syntax error was not reported with a line diagnostic without model mutation",
+        "status": "BLOCKED"
+      }
+    }
+  },
+  "W11_T043_T036": {
+    "acceptance": [
+      "T043",
+      "T036"
+    ],
+    "assertions": {},
+    "case_id": "W11_T043_T036",
+    "finished_at": "2026-09-20T00:53:26.167500Z",
+    "package": "W11",
+    "reason": "excluded by --only",
+    "started_at": "2026-09-20T00:53:21.943231Z",
+    "status": "NOT_RUN",
+    "subcases": {}
+  },
+  "W12_T029_T033_T050": {
+    "acceptance": [
+      "T029",
+      "T033",
+      "T050"
+    ],
+    "assertions": {},
+    "case_id": "W12_T029_T033_T050",
+    "finished_at": "2026-09-20T00:53:26.129776Z",
+    "package": "W12",
+    "reason": "bound-model calls stopped after EXECUTION_STATE_UNKNOWN at node.property_set (EXECUTION_STATE_UNKNOWN); reconcile before retry",
+    "started_at": "2026-09-20T00:53:21.943232Z",
+    "status": "BLOCKED",
+    "subcases": {}
+  }
+}

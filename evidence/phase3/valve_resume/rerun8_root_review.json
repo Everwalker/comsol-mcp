@@ -1,0 +1,17 @@
+{
+  "recorded_at": "2026-09-20T02:49:20.473570+00:00",
+  "status": "PASS",
+  "scope": "Mac arm64 COMSOL 6.4.0.293 production stdio W08/W10/W12 on owned isolated runtime",
+  "run": "evidence/phase3/live-g2-rerun8-20260920T024658Z",
+  "result_sha256": "cda1e6211a1c59ad8c577968b2c07e17e13f55a5ecf6afb41339e4d788f5d153",
+  "artifact_hash_check": "PASS_7_FILES",
+  "observations": {
+    "W08": "All typed shape/kind/wp3/idempotency and same-tag different-type no-write assertions passed.",
+    "W10": "Actual public API mutation/readback and partial Java failure reconciliation without replay plus checkpoint value restore passed.",
+    "W12_trial": "Explicit bound checkpoint, unchanged full recorded fingerprint/event counter, target scope unchanged, model+file cleanup passed.",
+    "W12_partial": "Applied 1, failed 1, not_executed 1; actual planetype quick to faceparallel then checkpoint restore to quick.",
+    "W12_identity": "New model tag/ref returned, old ref rejected MODEL_IDENTITY_MISMATCH.",
+    "restore_limits": "Model setting scope verified; solution/external dependencies/GUI not certified."
+  },
+  "remaining": "Affected Phase2 regression, final software/schema review, owned runtime/XML cleanup, final docs and publication."
+}

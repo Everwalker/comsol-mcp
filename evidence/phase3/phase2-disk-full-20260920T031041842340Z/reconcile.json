@@ -1,0 +1,1316 @@
+{
+  "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+  "observations": [
+    {
+      "isError": false,
+      "operation": "job_status",
+      "payload": {
+        "data": {
+          "created_at": "2026-09-20 03:10:43",
+          "effective_timeouts": {
+            "execution_timeout_s": null,
+            "no_progress_warning_s": null,
+            "queue_timeout_s": null,
+            "rpc_timeout_s": 30.0
+          },
+          "finished_at": null,
+          "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+          "metadata": {
+            "arguments": {
+              "path": "/Users/everwalker/Desktop/comsol-mcp-project/output/phase2-disk-test-volume/last_complete.mph"
+            },
+            "engine_started_at": 1789873843.502282,
+            "execution": {
+              "expected_revision": 0,
+              "idempotency_key": "disk-full-20260920T031041842340Z",
+              "model_ref": {
+                "generation": 1,
+                "model_tag": "mcp_d3d3fc4c7691",
+                "schema_version": 1,
+                "server_instance_id": "e6240130635d9e7db9df8e1dd0ef84473903fe3a7b038cebcaf7a95c9d21bda3",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "request_id": "disk-full-20260920T031041842340Z",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "finished_observed_at": 1789873843.748076,
+            "operation": "save_model",
+            "queue_wait_s": 2.416601637378335e-05
+          },
+          "operation": {
+            "created_at": "2026-09-20 03:10:43",
+            "effective_timeouts": {
+              "execution_timeout_s": null,
+              "no_progress_warning_s": null,
+              "queue_timeout_s": null,
+              "rpc_timeout_s": 30.0
+            },
+            "finished_at": null,
+            "idempotency_key": "disk-full-20260920T031041842340Z",
+            "metadata": {
+              "arguments": {
+                "path": "/Users/everwalker/Desktop/comsol-mcp-project/output/phase2-disk-test-volume/last_complete.mph"
+              },
+              "execution": {
+                "expected_revision": 0,
+                "idempotency_key": "disk-full-20260920T031041842340Z",
+                "model_ref": {
+                  "generation": 1,
+                  "model_tag": "mcp_d3d3fc4c7691",
+                  "schema_version": 1,
+                  "server_instance_id": "e6240130635d9e7db9df8e1dd0ef84473903fe3a7b038cebcaf7a95c9d21bda3",
+                  "session_id": "session-9f95c2e814acd5f99589961a"
+                },
+                "request_id": "disk-full-20260920T031041842340Z",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "operation": "save_model"
+            },
+            "operation": "save_model",
+            "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+            "request_hash": "bd3be85a5471dc04cf144b948df8a4590f7feff0f4c42c866f0be74d65515268",
+            "request_id": "disk-full-20260920T031041842340Z",
+            "result": {
+              "data": {
+                "datetime": "2026-09-20 11:10:43",
+                "execution_state_unknown": true,
+                "log_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home/logs/server.log",
+                "operations_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home/logs/operations.jsonl",
+                "partial_change": false,
+                "requires_model_reconciliation": true,
+                "server": {
+                  "attached_to_existing_server": true,
+                  "comsol_root": "/Applications/COMSOL64/Multiphysics",
+                  "current_model_label": "last_complete.mph",
+                  "current_model_origin": "bound-request",
+                  "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/output/phase2-disk-test-volume/last_complete.mph",
+                  "datetime": "2026-09-20 11:10:43",
+                  "desktop_client_role": "visual-client",
+                  "desktop_should_connect": {
+                    "host": "127.0.0.1",
+                    "port": 56389
+                  },
+                  "last_command": "save_model",
+                  "last_error": "Candidate save callback failed: {\"completed_at_ms\": \"1789873843562\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: java.lang.IllegalStateException: java.io.IOException: No space left on device\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1789873843517\", \"request_id\": \"wrk-1da20305-c5b5-4e3c-beef-085ce833e605\", \"started_at_ms\": \"1789873843517\", \"status\": \"FAILED\", \"type\": \"call\"}",
+                  "logs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home/logs",
+                  "mcp_home": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home",
+                  "outputs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home/outputs",
+                  "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+                  "server_endpoint": "127.0.0.1:56389",
+                  "server_host": "127.0.0.1",
+                  "server_port": 56389,
+                  "server_running": false,
+                  "server_started_by_mcp": false,
+                  "status": "ready",
+                  "timestamp": 1789873843.73793,
+                  "version": "0.1.9",
+                  "workflow": {
+                    "current_main_model_path": "",
+                    "guard_level": "strict",
+                    "main_model_label": "",
+                    "main_model_path": "",
+                    "main_model_tag": "",
+                    "mcp_client_lifecycle": "persistent-required",
+                    "mode": "manual",
+                    "model_dimension": 0,
+                    "notes": "",
+                    "one_shot_client_allowed": false,
+                    "snapshot_dir": "",
+                    "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+                    "snapshot_prefix": "",
+                    "snapshot_save_mode": "copy",
+                    "updated_at": "2026-09-20 11:10:42",
+                    "visible_main_locked": false,
+                    "workflow_stage": "awaiting_manual_server"
+                  }
+                },
+                "timestamp": 1789873843.737916,
+                "tool": "save_model"
+              },
+              "error": "Candidate save callback failed: {\"completed_at_ms\": \"1789873843562\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: java.lang.IllegalStateException: java.io.IOException: No space left on device\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1789873843517\", \"request_id\": \"wrk-1da20305-c5b5-4e3c-beef-085ce833e605\", \"started_at_ms\": \"1789873843517\", \"status\": \"FAILED\", \"type\": \"call\"}",
+              "execution": {
+                "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+                "dirty": true,
+                "idempotency_key": "disk-full-20260920T031041842340Z",
+                "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+                "model_ownership": "mcp_owned",
+                "model_ref": {
+                  "generation": 1,
+                  "model_tag": "mcp_d3d3fc4c7691",
+                  "schema_version": 1,
+                  "server_instance_id": "e6240130635d9e7db9df8e1dd0ef84473903fe3a7b038cebcaf7a95c9d21bda3",
+                  "session_id": "session-9f95c2e814acd5f99589961a"
+                },
+                "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+                "request_hash": "bd3be85a5471dc04cf144b948df8a4590f7feff0f4c42c866f0be74d65515268",
+                "request_id": "disk-full-20260920T031041842340Z",
+                "revision": 1,
+                "server_ownership": "shared",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "success": false
+            },
+            "started_at": "2026-09-20 03:10:43",
+            "status": "UNKNOWN"
+          },
+          "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+          "result": {
+            "data": {
+              "datetime": "2026-09-20 11:10:43",
+              "execution_state_unknown": true,
+              "log_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home/logs/server.log",
+              "operations_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home/logs/operations.jsonl",
+              "partial_change": false,
+              "requires_model_reconciliation": true,
+              "server": {
+                "attached_to_existing_server": true,
+                "comsol_root": "/Applications/COMSOL64/Multiphysics",
+                "current_model_label": "last_complete.mph",
+                "current_model_origin": "bound-request",
+                "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/output/phase2-disk-test-volume/last_complete.mph",
+                "datetime": "2026-09-20 11:10:43",
+                "desktop_client_role": "visual-client",
+                "desktop_should_connect": {
+                  "host": "127.0.0.1",
+                  "port": 56389
+                },
+                "last_command": "save_model",
+                "last_error": "Candidate save callback failed: {\"completed_at_ms\": \"1789873843562\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: java.lang.IllegalStateException: java.io.IOException: No space left on device\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1789873843517\", \"request_id\": \"wrk-1da20305-c5b5-4e3c-beef-085ce833e605\", \"started_at_ms\": \"1789873843517\", \"status\": \"FAILED\", \"type\": \"call\"}",
+                "logs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home/logs",
+                "mcp_home": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home",
+                "outputs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home/outputs",
+                "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+                "server_endpoint": "127.0.0.1:56389",
+                "server_host": "127.0.0.1",
+                "server_port": 56389,
+                "server_running": false,
+                "server_started_by_mcp": false,
+                "status": "ready",
+                "timestamp": 1789873843.73793,
+                "version": "0.1.9",
+                "workflow": {
+                  "current_main_model_path": "",
+                  "guard_level": "strict",
+                  "main_model_label": "",
+                  "main_model_path": "",
+                  "main_model_tag": "",
+                  "mcp_client_lifecycle": "persistent-required",
+                  "mode": "manual",
+                  "model_dimension": 0,
+                  "notes": "",
+                  "one_shot_client_allowed": false,
+                  "snapshot_dir": "",
+                  "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+                  "snapshot_prefix": "",
+                  "snapshot_save_mode": "copy",
+                  "updated_at": "2026-09-20 11:10:42",
+                  "visible_main_locked": false,
+                  "workflow_stage": "awaiting_manual_server"
+                }
+              },
+              "timestamp": 1789873843.737916,
+              "tool": "save_model"
+            },
+            "error": "Candidate save callback failed: {\"completed_at_ms\": \"1789873843562\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: java.lang.IllegalStateException: java.io.IOException: No space left on device\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1789873843517\", \"request_id\": \"wrk-1da20305-c5b5-4e3c-beef-085ce833e605\", \"started_at_ms\": \"1789873843517\", \"status\": \"FAILED\", \"type\": \"call\"}",
+            "execution": {
+              "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+              "dirty": true,
+              "idempotency_key": "disk-full-20260920T031041842340Z",
+              "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+              "model_ownership": "mcp_owned",
+              "model_ref": {
+                "generation": 1,
+                "model_tag": "mcp_d3d3fc4c7691",
+                "schema_version": 1,
+                "server_instance_id": "e6240130635d9e7db9df8e1dd0ef84473903fe3a7b038cebcaf7a95c9d21bda3",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+              "request_hash": "bd3be85a5471dc04cf144b948df8a4590f7feff0f4c42c866f0be74d65515268",
+              "request_id": "disk-full-20260920T031041842340Z",
+              "revision": 1,
+              "server_ownership": "shared",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "success": false
+          },
+          "started_at": "2026-09-20 03:10:43",
+          "status": "UNKNOWN"
+        },
+        "success": true
+      }
+    },
+    {
+      "isError": false,
+      "operation": "job_log",
+      "payload": {
+        "data": {
+          "events": [
+            {
+              "created_at": "2026-09-20 03:10:43",
+              "event": "RUNNING",
+              "id": 123,
+              "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+              "metadata": {
+                "at": 1789873843.502369,
+                "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a"
+              }
+            },
+            {
+              "created_at": "2026-09-20 03:10:43",
+              "event": "worker_request",
+              "id": 124,
+              "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+              "metadata": {
+                "kind": "model",
+                "metadata": {
+                  "request_id": "wrk-0d66218d-0f05-41b5-980a-03978f96483a",
+                  "tag": "mcp_d3d3fc4c7691",
+                  "type": "model"
+                },
+                "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+                "phase": "submitted",
+                "request_hash": "f9ee6a7493c7b2928fe130371211945fab61485989fe728212d9b9a8f8fc18bb",
+                "request_id": "wrk-0d66218d-0f05-41b5-980a-03978f96483a"
+              }
+            },
+            {
+              "created_at": "2026-09-20 03:10:43",
+              "event": "worker_request",
+              "id": 125,
+              "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+              "metadata": {
+                "kind": "model",
+                "metadata": {
+                  "request_id": "wrk-0d66218d-0f05-41b5-980a-03978f96483a",
+                  "tag": "mcp_d3d3fc4c7691",
+                  "type": "model"
+                },
+                "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+                "phase": "observed",
+                "reply": {
+                  "completed_at_ms": "1789873843503",
+                  "ok": true,
+                  "queued_at_ms": "1789873843503",
+                  "request_id": "wrk-0d66218d-0f05-41b5-980a-03978f96483a",
+                  "result": {
+                    "$worker_handle": "h-51ff1699-3def-493f-826e-6c4a680fbcf6",
+                    "generation": 2,
+                    "java_type": "com.comsol.model.Model"
+                  },
+                  "started_at_ms": "1789873843503",
+                  "status": "SUCCEEDED",
+                  "type": "model"
+                },
+                "request_hash": "f9ee6a7493c7b2928fe130371211945fab61485989fe728212d9b9a8f8fc18bb",
+                "request_id": "wrk-0d66218d-0f05-41b5-980a-03978f96483a",
+                "status": "SUCCEEDED"
+              }
+            },
+            {
+              "created_at": "2026-09-20 03:10:43",
+              "event": "worker_request",
+              "id": 126,
+              "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+              "metadata": {
+                "kind": "call",
+                "metadata": {
+                  "args": [],
+                  "generation": 2,
+                  "handle": "h-51ff1699-3def-493f-826e-6c4a680fbcf6",
+                  "method": "getFilePath",
+                  "request_id": "wrk-80fbb5e4-5759-4d7f-a367-ac97a1dcf514",
+                  "type": "call"
+                },
+                "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+                "phase": "submitted",
+                "request_hash": "ed1112cb1b6e0233fea2329ed7ad8d9c3f495b39538a8c1dcc48572016f5fd96",
+                "request_id": "wrk-80fbb5e4-5759-4d7f-a367-ac97a1dcf514"
+              }
+            },
+            {
+              "created_at": "2026-09-20 03:10:43",
+              "event": "worker_request",
+              "id": 127,
+              "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+              "metadata": {
+                "kind": "call",
+                "metadata": {
+                  "args": [],
+                  "generation": 2,
+                  "handle": "h-51ff1699-3def-493f-826e-6c4a680fbcf6",
+                  "method": "getFilePath",
+                  "request_id": "wrk-80fbb5e4-5759-4d7f-a367-ac97a1dcf514",
+                  "type": "call"
+                },
+                "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+                "phase": "observed",
+                "reply": {
+                  "completed_at_ms": "1789873843505",
+                  "ok": true,
+                  "queued_at_ms": "1789873843504",
+                  "request_id": "wrk-80fbb5e4-5759-4d7f-a367-ac97a1dcf514",
+                  "result": "/Users/everwalker/Desktop/comsol-mcp-project/output/phase2-disk-test-volume/last_complete.mph",
+                  "started_at_ms": "1789873843504",
+                  "status": "SUCCEEDED",
+                  "type": "call"
+                },
+                "request_hash": "ed1112cb1b6e0233fea2329ed7ad8d9c3f495b39538a8c1dcc48572016f5fd96",
+                "request_id": "wrk-80fbb5e4-5759-4d7f-a367-ac97a1dcf514",
+                "status": "SUCCEEDED"
+              }
+            },
+            {
+              "created_at": "2026-09-20 03:10:43",
+              "event": "worker_request",
+              "id": 128,
+              "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+              "metadata": {
+                "kind": "model_snapshot",
+                "metadata": {
+                  "request_id": "wrk-f187e076-91a2-40b5-b716-6aaab06b57fa",
+                  "tag": "mcp_d3d3fc4c7691",
+                  "type": "model_snapshot"
+                },
+                "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+                "phase": "submitted",
+                "request_hash": "63c2c7e74d94a3e8f9db276bfde96549ff067bbd5478eed44e83b6e20f6a7511",
+                "request_id": "wrk-f187e076-91a2-40b5-b716-6aaab06b57fa"
+              }
+            },
+            {
+              "created_at": "2026-09-20 03:10:43",
+              "event": "worker_request",
+              "id": 129,
+              "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+              "metadata": {
+                "kind": "model_snapshot",
+                "metadata": {
+                  "request_id": "wrk-f187e076-91a2-40b5-b716-6aaab06b57fa",
+                  "tag": "mcp_d3d3fc4c7691",
+                  "type": "model_snapshot"
+                },
+                "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+                "phase": "observed",
+                "reply": {
+                  "completed_at_ms": "1789873843511",
+                  "ok": true,
+                  "queued_at_ms": "1789873843506",
+                  "request_id": "wrk-f187e076-91a2-40b5-b716-6aaab06b57fa",
+                  "result": {
+                    "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+                    "changed_tags": [],
+                    "external_event_counter": 0,
+                    "fingerprint": "f6804df93a000ff9f94f1870bc5474f84029651a537903790681c44d1a4e1c83",
+                    "fingerprint_scope": [
+                      "tag",
+                      "label",
+                      "file_path",
+                      "time_modified",
+                      "parameters"
+                    ],
+                    "generation": 2,
+                    "instance_id": "0e865524-57b5-40fd-a119-60442d1e8ec5",
+                    "model_tag": "mcp_d3d3fc4c7691",
+                    "server_instance_id": "127.0.0.1:56389",
+                    "tag": "mcp_d3d3fc4c7691",
+                    "worker_instance_id": "0e865524-57b5-40fd-a119-60442d1e8ec5"
+                  },
+                  "started_at_ms": "1789873843506",
+                  "status": "SUCCEEDED",
+                  "type": "model_snapshot"
+                },
+                "request_hash": "63c2c7e74d94a3e8f9db276bfde96549ff067bbd5478eed44e83b6e20f6a7511",
+                "request_id": "wrk-f187e076-91a2-40b5-b716-6aaab06b57fa",
+                "status": "SUCCEEDED"
+              }
+            },
+            {
+              "created_at": "2026-09-20 03:10:43",
+              "event": "worker_request",
+              "id": 130,
+              "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+              "metadata": {
+                "kind": "call",
+                "metadata": {
+                  "args": [],
+                  "generation": 2,
+                  "handle": "h-51ff1699-3def-493f-826e-6c4a680fbcf6",
+                  "method": "getFilePath",
+                  "request_id": "wrk-ee644a37-0393-4c08-a03b-2660a8f92c68",
+                  "type": "call"
+                },
+                "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+                "phase": "submitted",
+                "request_hash": "ed1112cb1b6e0233fea2329ed7ad8d9c3f495b39538a8c1dcc48572016f5fd96",
+                "request_id": "wrk-ee644a37-0393-4c08-a03b-2660a8f92c68"
+              }
+            },
+            {
+              "created_at": "2026-09-20 03:10:43",
+              "event": "worker_request",
+              "id": 131,
+              "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+              "metadata": {
+                "kind": "call",
+                "metadata": {
+                  "args": [],
+                  "generation": 2,
+                  "handle": "h-51ff1699-3def-493f-826e-6c4a680fbcf6",
+                  "method": "getFilePath",
+                  "request_id": "wrk-ee644a37-0393-4c08-a03b-2660a8f92c68",
+                  "type": "call"
+                },
+                "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+                "phase": "observed",
+                "reply": {
+                  "completed_at_ms": "1789873843515",
+                  "ok": true,
+                  "queued_at_ms": "1789873843514",
+                  "request_id": "wrk-ee644a37-0393-4c08-a03b-2660a8f92c68",
+                  "result": "/Users/everwalker/Desktop/comsol-mcp-project/output/phase2-disk-test-volume/last_complete.mph",
+                  "started_at_ms": "1789873843514",
+                  "status": "SUCCEEDED",
+                  "type": "call"
+                },
+                "request_hash": "ed1112cb1b6e0233fea2329ed7ad8d9c3f495b39538a8c1dcc48572016f5fd96",
+                "request_id": "wrk-ee644a37-0393-4c08-a03b-2660a8f92c68",
+                "status": "SUCCEEDED"
+              }
+            },
+            {
+              "created_at": "2026-09-20 03:10:43",
+              "event": "worker_request",
+              "id": 132,
+              "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+              "metadata": {
+                "kind": "call",
+                "metadata": {
+                  "args": [],
+                  "generation": 2,
+                  "handle": "h-51ff1699-3def-493f-826e-6c4a680fbcf6",
+                  "method": "label",
+                  "request_id": "wrk-ef37d9be-6275-45e1-b0d9-fd65786f0a15",
+                  "type": "call"
+                },
+                "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+                "phase": "submitted",
+                "request_hash": "de35a14ba7ba694de7428ab79504c5ea142c197f0248cc32319b1cf51bb7c086",
+                "request_id": "wrk-ef37d9be-6275-45e1-b0d9-fd65786f0a15"
+              }
+            },
+            {
+              "created_at": "2026-09-20 03:10:43",
+              "event": "worker_request",
+              "id": 133,
+              "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+              "metadata": {
+                "kind": "call",
+                "metadata": {
+                  "args": [],
+                  "generation": 2,
+                  "handle": "h-51ff1699-3def-493f-826e-6c4a680fbcf6",
+                  "method": "label",
+                  "request_id": "wrk-ef37d9be-6275-45e1-b0d9-fd65786f0a15",
+                  "type": "call"
+                },
+                "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+                "phase": "observed",
+                "reply": {
+                  "completed_at_ms": "1789873843516",
+                  "ok": true,
+                  "queued_at_ms": "1789873843515",
+                  "request_id": "wrk-ef37d9be-6275-45e1-b0d9-fd65786f0a15",
+                  "result": "last_complete.mph",
+                  "started_at_ms": "1789873843515",
+                  "status": "SUCCEEDED",
+                  "type": "call"
+                },
+                "request_hash": "de35a14ba7ba694de7428ab79504c5ea142c197f0248cc32319b1cf51bb7c086",
+                "request_id": "wrk-ef37d9be-6275-45e1-b0d9-fd65786f0a15",
+                "status": "SUCCEEDED"
+              }
+            },
+            {
+              "created_at": "2026-09-20 03:10:43",
+              "event": "worker_request",
+              "id": 134,
+              "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+              "metadata": {
+                "kind": "call",
+                "metadata": {
+                  "args": [
+                    "/Users/everwalker/Desktop/comsol-mcp-project/output/phase2-disk-test-volume/.last_complete.mph.f9ed250a7d334f0aba49a4da0728bb87.tmp.mph",
+                    true
+                  ],
+                  "generation": 2,
+                  "handle": "h-51ff1699-3def-493f-826e-6c4a680fbcf6",
+                  "method": "save",
+                  "request_id": "wrk-1da20305-c5b5-4e3c-beef-085ce833e605",
+                  "type": "call"
+                },
+                "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+                "phase": "submitted",
+                "request_hash": "56965af1e98881898fafc42dbd9bbeddeeffb6be08c15ccc2e9b02f9361e8db6",
+                "request_id": "wrk-1da20305-c5b5-4e3c-beef-085ce833e605"
+              }
+            },
+            {
+              "created_at": "2026-09-20 03:10:43",
+              "event": "worker_request",
+              "id": 135,
+              "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+              "metadata": {
+                "kind": "call",
+                "metadata": {
+                  "args": [
+                    "/Users/everwalker/Desktop/comsol-mcp-project/output/phase2-disk-test-volume/.last_complete.mph.f9ed250a7d334f0aba49a4da0728bb87.tmp.mph",
+                    true
+                  ],
+                  "generation": 2,
+                  "handle": "h-51ff1699-3def-493f-826e-6c4a680fbcf6",
+                  "method": "save",
+                  "request_id": "wrk-1da20305-c5b5-4e3c-beef-085ce833e605",
+                  "type": "call"
+                },
+                "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+                "phase": "observed",
+                "reply": {
+                  "completed_at_ms": "1789873843562",
+                  "failure": {
+                    "code": "ENGINE_CALL_FAILED",
+                    "execution_state_unknown": true,
+                    "message": "FlException: java.lang.IllegalStateException: java.io.IOException: No space left on device",
+                    "ok": false
+                  },
+                  "ok": false,
+                  "queued_at_ms": "1789873843517",
+                  "request_id": "wrk-1da20305-c5b5-4e3c-beef-085ce833e605",
+                  "started_at_ms": "1789873843517",
+                  "status": "FAILED",
+                  "type": "call"
+                },
+                "request_hash": "56965af1e98881898fafc42dbd9bbeddeeffb6be08c15ccc2e9b02f9361e8db6",
+                "request_id": "wrk-1da20305-c5b5-4e3c-beef-085ce833e605",
+                "status": "FAILED"
+              }
+            },
+            {
+              "created_at": "2026-09-20 03:10:43",
+              "event": "worker_request",
+              "id": 136,
+              "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+              "metadata": {
+                "kind": "call",
+                "metadata": {
+                  "args": [],
+                  "generation": 2,
+                  "handle": "h-51ff1699-3def-493f-826e-6c4a680fbcf6",
+                  "method": "label",
+                  "request_id": "wrk-65cc7570-1519-4890-87ae-ae35460386f2",
+                  "type": "call"
+                },
+                "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+                "phase": "submitted",
+                "request_hash": "de35a14ba7ba694de7428ab79504c5ea142c197f0248cc32319b1cf51bb7c086",
+                "request_id": "wrk-65cc7570-1519-4890-87ae-ae35460386f2"
+              }
+            },
+            {
+              "created_at": "2026-09-20 03:10:43",
+              "event": "worker_request",
+              "id": 137,
+              "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+              "metadata": {
+                "kind": "call",
+                "metadata": {
+                  "args": [],
+                  "generation": 2,
+                  "handle": "h-51ff1699-3def-493f-826e-6c4a680fbcf6",
+                  "method": "label",
+                  "request_id": "wrk-65cc7570-1519-4890-87ae-ae35460386f2",
+                  "type": "call"
+                },
+                "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+                "phase": "observed",
+                "reply": {
+                  "completed_at_ms": "1789873843739",
+                  "ok": true,
+                  "queued_at_ms": "1789873843738",
+                  "request_id": "wrk-65cc7570-1519-4890-87ae-ae35460386f2",
+                  "result": "last_complete.mph",
+                  "started_at_ms": "1789873843738",
+                  "status": "SUCCEEDED",
+                  "type": "call"
+                },
+                "request_hash": "de35a14ba7ba694de7428ab79504c5ea142c197f0248cc32319b1cf51bb7c086",
+                "request_id": "wrk-65cc7570-1519-4890-87ae-ae35460386f2",
+                "status": "SUCCEEDED"
+              }
+            },
+            {
+              "created_at": "2026-09-20 03:10:43",
+              "event": "worker_request",
+              "id": 138,
+              "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+              "metadata": {
+                "kind": "call",
+                "metadata": {
+                  "args": [],
+                  "generation": 2,
+                  "handle": "h-51ff1699-3def-493f-826e-6c4a680fbcf6",
+                  "method": "label",
+                  "request_id": "wrk-6dec6721-79aa-442a-8b92-2d9666890902",
+                  "type": "call"
+                },
+                "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+                "phase": "submitted",
+                "request_hash": "de35a14ba7ba694de7428ab79504c5ea142c197f0248cc32319b1cf51bb7c086",
+                "request_id": "wrk-6dec6721-79aa-442a-8b92-2d9666890902"
+              }
+            },
+            {
+              "created_at": "2026-09-20 03:10:43",
+              "event": "worker_request",
+              "id": 139,
+              "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+              "metadata": {
+                "kind": "call",
+                "metadata": {
+                  "args": [],
+                  "generation": 2,
+                  "handle": "h-51ff1699-3def-493f-826e-6c4a680fbcf6",
+                  "method": "label",
+                  "request_id": "wrk-6dec6721-79aa-442a-8b92-2d9666890902",
+                  "type": "call"
+                },
+                "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+                "phase": "observed",
+                "reply": {
+                  "completed_at_ms": "1789873843740",
+                  "ok": true,
+                  "queued_at_ms": "1789873843740",
+                  "request_id": "wrk-6dec6721-79aa-442a-8b92-2d9666890902",
+                  "result": "last_complete.mph",
+                  "started_at_ms": "1789873843740",
+                  "status": "SUCCEEDED",
+                  "type": "call"
+                },
+                "request_hash": "de35a14ba7ba694de7428ab79504c5ea142c197f0248cc32319b1cf51bb7c086",
+                "request_id": "wrk-6dec6721-79aa-442a-8b92-2d9666890902",
+                "status": "SUCCEEDED"
+              }
+            },
+            {
+              "created_at": "2026-09-20 03:10:43",
+              "event": "worker_request",
+              "id": 140,
+              "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+              "metadata": {
+                "kind": "model_snapshot",
+                "metadata": {
+                  "request_id": "wrk-c25b6992-32f0-4731-a862-9fcf8c558f3f",
+                  "tag": "mcp_d3d3fc4c7691",
+                  "type": "model_snapshot"
+                },
+                "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+                "phase": "submitted",
+                "request_hash": "63c2c7e74d94a3e8f9db276bfde96549ff067bbd5478eed44e83b6e20f6a7511",
+                "request_id": "wrk-c25b6992-32f0-4731-a862-9fcf8c558f3f"
+              }
+            },
+            {
+              "created_at": "2026-09-20 03:10:43",
+              "event": "worker_request",
+              "id": 141,
+              "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+              "metadata": {
+                "kind": "model_snapshot",
+                "metadata": {
+                  "request_id": "wrk-c25b6992-32f0-4731-a862-9fcf8c558f3f",
+                  "tag": "mcp_d3d3fc4c7691",
+                  "type": "model_snapshot"
+                },
+                "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+                "phase": "observed",
+                "reply": {
+                  "completed_at_ms": "1789873843747",
+                  "ok": true,
+                  "queued_at_ms": "1789873843742",
+                  "request_id": "wrk-c25b6992-32f0-4731-a862-9fcf8c558f3f",
+                  "result": {
+                    "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+                    "changed_tags": [],
+                    "external_event_counter": 0,
+                    "fingerprint": "744f822665eaaaa4ff7d6445c4e3ffa6f7c520022e6eb7b549688690671ebb50",
+                    "fingerprint_scope": [
+                      "tag",
+                      "label",
+                      "file_path",
+                      "time_modified",
+                      "parameters"
+                    ],
+                    "generation": 2,
+                    "instance_id": "0e865524-57b5-40fd-a119-60442d1e8ec5",
+                    "model_tag": "mcp_d3d3fc4c7691",
+                    "server_instance_id": "127.0.0.1:56389",
+                    "tag": "mcp_d3d3fc4c7691",
+                    "worker_instance_id": "0e865524-57b5-40fd-a119-60442d1e8ec5"
+                  },
+                  "started_at_ms": "1789873843742",
+                  "status": "SUCCEEDED",
+                  "type": "model_snapshot"
+                },
+                "request_hash": "63c2c7e74d94a3e8f9db276bfde96549ff067bbd5478eed44e83b6e20f6a7511",
+                "request_id": "wrk-c25b6992-32f0-4731-a862-9fcf8c558f3f",
+                "status": "SUCCEEDED"
+              }
+            },
+            {
+              "created_at": "2026-09-20 03:10:43",
+              "event": "UNKNOWN",
+              "id": 142,
+              "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+              "metadata": {
+                "at": 1789873843.748136,
+                "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a"
+              }
+            }
+          ],
+          "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+          "next_offset": 20
+        },
+        "success": true
+      }
+    },
+    {
+      "isError": true,
+      "operation": "job_result",
+      "payload": {
+        "data": {
+          "created_at": "2026-09-20 03:10:43",
+          "effective_timeouts": {
+            "execution_timeout_s": null,
+            "no_progress_warning_s": null,
+            "queue_timeout_s": null,
+            "rpc_timeout_s": 30.0
+          },
+          "finished_at": null,
+          "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+          "metadata": {
+            "arguments": {
+              "path": "/Users/everwalker/Desktop/comsol-mcp-project/output/phase2-disk-test-volume/last_complete.mph"
+            },
+            "engine_started_at": 1789873843.502282,
+            "execution": {
+              "expected_revision": 0,
+              "idempotency_key": "disk-full-20260920T031041842340Z",
+              "model_ref": {
+                "generation": 1,
+                "model_tag": "mcp_d3d3fc4c7691",
+                "schema_version": 1,
+                "server_instance_id": "e6240130635d9e7db9df8e1dd0ef84473903fe3a7b038cebcaf7a95c9d21bda3",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "request_id": "disk-full-20260920T031041842340Z",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "finished_observed_at": 1789873843.748076,
+            "operation": "save_model",
+            "queue_wait_s": 2.416601637378335e-05
+          },
+          "operation": {
+            "created_at": "2026-09-20 03:10:43",
+            "effective_timeouts": {
+              "execution_timeout_s": null,
+              "no_progress_warning_s": null,
+              "queue_timeout_s": null,
+              "rpc_timeout_s": 30.0
+            },
+            "finished_at": null,
+            "idempotency_key": "disk-full-20260920T031041842340Z",
+            "metadata": {
+              "arguments": {
+                "path": "/Users/everwalker/Desktop/comsol-mcp-project/output/phase2-disk-test-volume/last_complete.mph"
+              },
+              "execution": {
+                "expected_revision": 0,
+                "idempotency_key": "disk-full-20260920T031041842340Z",
+                "model_ref": {
+                  "generation": 1,
+                  "model_tag": "mcp_d3d3fc4c7691",
+                  "schema_version": 1,
+                  "server_instance_id": "e6240130635d9e7db9df8e1dd0ef84473903fe3a7b038cebcaf7a95c9d21bda3",
+                  "session_id": "session-9f95c2e814acd5f99589961a"
+                },
+                "request_id": "disk-full-20260920T031041842340Z",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "operation": "save_model"
+            },
+            "operation": "save_model",
+            "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+            "request_hash": "bd3be85a5471dc04cf144b948df8a4590f7feff0f4c42c866f0be74d65515268",
+            "request_id": "disk-full-20260920T031041842340Z",
+            "result": {
+              "data": {
+                "datetime": "2026-09-20 11:10:43",
+                "execution_state_unknown": true,
+                "log_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home/logs/server.log",
+                "operations_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home/logs/operations.jsonl",
+                "partial_change": false,
+                "requires_model_reconciliation": true,
+                "server": {
+                  "attached_to_existing_server": true,
+                  "comsol_root": "/Applications/COMSOL64/Multiphysics",
+                  "current_model_label": "last_complete.mph",
+                  "current_model_origin": "bound-request",
+                  "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/output/phase2-disk-test-volume/last_complete.mph",
+                  "datetime": "2026-09-20 11:10:43",
+                  "desktop_client_role": "visual-client",
+                  "desktop_should_connect": {
+                    "host": "127.0.0.1",
+                    "port": 56389
+                  },
+                  "last_command": "save_model",
+                  "last_error": "Candidate save callback failed: {\"completed_at_ms\": \"1789873843562\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: java.lang.IllegalStateException: java.io.IOException: No space left on device\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1789873843517\", \"request_id\": \"wrk-1da20305-c5b5-4e3c-beef-085ce833e605\", \"started_at_ms\": \"1789873843517\", \"status\": \"FAILED\", \"type\": \"call\"}",
+                  "logs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home/logs",
+                  "mcp_home": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home",
+                  "outputs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home/outputs",
+                  "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+                  "server_endpoint": "127.0.0.1:56389",
+                  "server_host": "127.0.0.1",
+                  "server_port": 56389,
+                  "server_running": false,
+                  "server_started_by_mcp": false,
+                  "status": "ready",
+                  "timestamp": 1789873843.73793,
+                  "version": "0.1.9",
+                  "workflow": {
+                    "current_main_model_path": "",
+                    "guard_level": "strict",
+                    "main_model_label": "",
+                    "main_model_path": "",
+                    "main_model_tag": "",
+                    "mcp_client_lifecycle": "persistent-required",
+                    "mode": "manual",
+                    "model_dimension": 0,
+                    "notes": "",
+                    "one_shot_client_allowed": false,
+                    "snapshot_dir": "",
+                    "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+                    "snapshot_prefix": "",
+                    "snapshot_save_mode": "copy",
+                    "updated_at": "2026-09-20 11:10:42",
+                    "visible_main_locked": false,
+                    "workflow_stage": "awaiting_manual_server"
+                  }
+                },
+                "timestamp": 1789873843.737916,
+                "tool": "save_model"
+              },
+              "error": "Candidate save callback failed: {\"completed_at_ms\": \"1789873843562\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: java.lang.IllegalStateException: java.io.IOException: No space left on device\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1789873843517\", \"request_id\": \"wrk-1da20305-c5b5-4e3c-beef-085ce833e605\", \"started_at_ms\": \"1789873843517\", \"status\": \"FAILED\", \"type\": \"call\"}",
+              "execution": {
+                "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+                "dirty": true,
+                "idempotency_key": "disk-full-20260920T031041842340Z",
+                "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+                "model_ownership": "mcp_owned",
+                "model_ref": {
+                  "generation": 1,
+                  "model_tag": "mcp_d3d3fc4c7691",
+                  "schema_version": 1,
+                  "server_instance_id": "e6240130635d9e7db9df8e1dd0ef84473903fe3a7b038cebcaf7a95c9d21bda3",
+                  "session_id": "session-9f95c2e814acd5f99589961a"
+                },
+                "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+                "request_hash": "bd3be85a5471dc04cf144b948df8a4590f7feff0f4c42c866f0be74d65515268",
+                "request_id": "disk-full-20260920T031041842340Z",
+                "revision": 1,
+                "server_ownership": "shared",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "success": false
+            },
+            "started_at": "2026-09-20 03:10:43",
+            "status": "UNKNOWN"
+          },
+          "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+          "result": {
+            "data": {
+              "datetime": "2026-09-20 11:10:43",
+              "execution_state_unknown": true,
+              "log_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home/logs/server.log",
+              "operations_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home/logs/operations.jsonl",
+              "partial_change": false,
+              "requires_model_reconciliation": true,
+              "server": {
+                "attached_to_existing_server": true,
+                "comsol_root": "/Applications/COMSOL64/Multiphysics",
+                "current_model_label": "last_complete.mph",
+                "current_model_origin": "bound-request",
+                "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/output/phase2-disk-test-volume/last_complete.mph",
+                "datetime": "2026-09-20 11:10:43",
+                "desktop_client_role": "visual-client",
+                "desktop_should_connect": {
+                  "host": "127.0.0.1",
+                  "port": 56389
+                },
+                "last_command": "save_model",
+                "last_error": "Candidate save callback failed: {\"completed_at_ms\": \"1789873843562\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: java.lang.IllegalStateException: java.io.IOException: No space left on device\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1789873843517\", \"request_id\": \"wrk-1da20305-c5b5-4e3c-beef-085ce833e605\", \"started_at_ms\": \"1789873843517\", \"status\": \"FAILED\", \"type\": \"call\"}",
+                "logs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home/logs",
+                "mcp_home": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home",
+                "outputs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home/outputs",
+                "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+                "server_endpoint": "127.0.0.1:56389",
+                "server_host": "127.0.0.1",
+                "server_port": 56389,
+                "server_running": false,
+                "server_started_by_mcp": false,
+                "status": "ready",
+                "timestamp": 1789873843.73793,
+                "version": "0.1.9",
+                "workflow": {
+                  "current_main_model_path": "",
+                  "guard_level": "strict",
+                  "main_model_label": "",
+                  "main_model_path": "",
+                  "main_model_tag": "",
+                  "mcp_client_lifecycle": "persistent-required",
+                  "mode": "manual",
+                  "model_dimension": 0,
+                  "notes": "",
+                  "one_shot_client_allowed": false,
+                  "snapshot_dir": "",
+                  "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+                  "snapshot_prefix": "",
+                  "snapshot_save_mode": "copy",
+                  "updated_at": "2026-09-20 11:10:42",
+                  "visible_main_locked": false,
+                  "workflow_stage": "awaiting_manual_server"
+                }
+              },
+              "timestamp": 1789873843.737916,
+              "tool": "save_model"
+            },
+            "error": "Candidate save callback failed: {\"completed_at_ms\": \"1789873843562\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: java.lang.IllegalStateException: java.io.IOException: No space left on device\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1789873843517\", \"request_id\": \"wrk-1da20305-c5b5-4e3c-beef-085ce833e605\", \"started_at_ms\": \"1789873843517\", \"status\": \"FAILED\", \"type\": \"call\"}",
+            "execution": {
+              "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+              "dirty": true,
+              "idempotency_key": "disk-full-20260920T031041842340Z",
+              "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+              "model_ownership": "mcp_owned",
+              "model_ref": {
+                "generation": 1,
+                "model_tag": "mcp_d3d3fc4c7691",
+                "schema_version": 1,
+                "server_instance_id": "e6240130635d9e7db9df8e1dd0ef84473903fe3a7b038cebcaf7a95c9d21bda3",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+              "request_hash": "bd3be85a5471dc04cf144b948df8a4590f7feff0f4c42c866f0be74d65515268",
+              "request_id": "disk-full-20260920T031041842340Z",
+              "revision": 1,
+              "server_ownership": "shared",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "success": false
+          },
+          "started_at": "2026-09-20 03:10:43",
+          "status": "UNKNOWN"
+        },
+        "success": false
+      }
+    },
+    {
+      "isError": false,
+      "operation": "job_reconcile",
+      "payload": {
+        "data": {
+          "created_at": "2026-09-20 03:10:43",
+          "effective_timeouts": {
+            "execution_timeout_s": null,
+            "no_progress_warning_s": null,
+            "queue_timeout_s": null,
+            "rpc_timeout_s": 30.0
+          },
+          "finished_at": null,
+          "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+          "metadata": {
+            "arguments": {
+              "path": "/Users/everwalker/Desktop/comsol-mcp-project/output/phase2-disk-test-volume/last_complete.mph"
+            },
+            "callback_completion_unknown": true,
+            "engine_started_at": 1789873843.502282,
+            "execution": {
+              "expected_revision": 0,
+              "idempotency_key": "disk-full-20260920T031041842340Z",
+              "model_ref": {
+                "generation": 1,
+                "model_tag": "mcp_d3d3fc4c7691",
+                "schema_version": 1,
+                "server_instance_id": "e6240130635d9e7db9df8e1dd0ef84473903fe3a7b038cebcaf7a95c9d21bda3",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "request_id": "disk-full-20260920T031041842340Z",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "finished_observed_at": 1789873843.748076,
+            "operation": "save_model",
+            "queue_wait_s": 2.416601637378335e-05,
+            "reconciled_quiescent": true,
+            "reconciliation": [
+              {
+                "request_id": "wrk-0d66218d-0f05-41b5-980a-03978f96483a",
+                "source": "durable_worker_observation",
+                "status": "SUCCEEDED"
+              },
+              {
+                "request_id": "wrk-80fbb5e4-5759-4d7f-a367-ac97a1dcf514",
+                "source": "durable_worker_observation",
+                "status": "SUCCEEDED"
+              },
+              {
+                "request_id": "wrk-f187e076-91a2-40b5-b716-6aaab06b57fa",
+                "source": "durable_worker_observation",
+                "status": "SUCCEEDED"
+              },
+              {
+                "request_id": "wrk-ee644a37-0393-4c08-a03b-2660a8f92c68",
+                "source": "durable_worker_observation",
+                "status": "SUCCEEDED"
+              },
+              {
+                "request_id": "wrk-ef37d9be-6275-45e1-b0d9-fd65786f0a15",
+                "source": "durable_worker_observation",
+                "status": "SUCCEEDED"
+              },
+              {
+                "request_id": "wrk-1da20305-c5b5-4e3c-beef-085ce833e605",
+                "source": "durable_worker_observation",
+                "status": "FAILED"
+              },
+              {
+                "request_id": "wrk-65cc7570-1519-4890-87ae-ae35460386f2",
+                "source": "durable_worker_observation",
+                "status": "SUCCEEDED"
+              },
+              {
+                "request_id": "wrk-6dec6721-79aa-442a-8b92-2d9666890902",
+                "source": "durable_worker_observation",
+                "status": "SUCCEEDED"
+              },
+              {
+                "request_id": "wrk-c25b6992-32f0-4731-a862-9fcf8c558f3f",
+                "source": "durable_worker_observation",
+                "status": "SUCCEEDED"
+              }
+            ],
+            "replay_performed": false
+          },
+          "operation": {
+            "created_at": "2026-09-20 03:10:43",
+            "effective_timeouts": {
+              "execution_timeout_s": null,
+              "no_progress_warning_s": null,
+              "queue_timeout_s": null,
+              "rpc_timeout_s": 30.0
+            },
+            "finished_at": null,
+            "idempotency_key": "disk-full-20260920T031041842340Z",
+            "metadata": {
+              "arguments": {
+                "path": "/Users/everwalker/Desktop/comsol-mcp-project/output/phase2-disk-test-volume/last_complete.mph"
+              },
+              "execution": {
+                "expected_revision": 0,
+                "idempotency_key": "disk-full-20260920T031041842340Z",
+                "model_ref": {
+                  "generation": 1,
+                  "model_tag": "mcp_d3d3fc4c7691",
+                  "schema_version": 1,
+                  "server_instance_id": "e6240130635d9e7db9df8e1dd0ef84473903fe3a7b038cebcaf7a95c9d21bda3",
+                  "session_id": "session-9f95c2e814acd5f99589961a"
+                },
+                "request_id": "disk-full-20260920T031041842340Z",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "operation": "save_model"
+            },
+            "operation": "save_model",
+            "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+            "request_hash": "bd3be85a5471dc04cf144b948df8a4590f7feff0f4c42c866f0be74d65515268",
+            "request_id": "disk-full-20260920T031041842340Z",
+            "result": {
+              "data": {
+                "datetime": "2026-09-20 11:10:43",
+                "execution_state_unknown": true,
+                "log_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home/logs/server.log",
+                "operations_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home/logs/operations.jsonl",
+                "partial_change": false,
+                "requires_model_reconciliation": true,
+                "server": {
+                  "attached_to_existing_server": true,
+                  "comsol_root": "/Applications/COMSOL64/Multiphysics",
+                  "current_model_label": "last_complete.mph",
+                  "current_model_origin": "bound-request",
+                  "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/output/phase2-disk-test-volume/last_complete.mph",
+                  "datetime": "2026-09-20 11:10:43",
+                  "desktop_client_role": "visual-client",
+                  "desktop_should_connect": {
+                    "host": "127.0.0.1",
+                    "port": 56389
+                  },
+                  "last_command": "save_model",
+                  "last_error": "Candidate save callback failed: {\"completed_at_ms\": \"1789873843562\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: java.lang.IllegalStateException: java.io.IOException: No space left on device\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1789873843517\", \"request_id\": \"wrk-1da20305-c5b5-4e3c-beef-085ce833e605\", \"started_at_ms\": \"1789873843517\", \"status\": \"FAILED\", \"type\": \"call\"}",
+                  "logs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home/logs",
+                  "mcp_home": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home",
+                  "outputs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home/outputs",
+                  "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+                  "server_endpoint": "127.0.0.1:56389",
+                  "server_host": "127.0.0.1",
+                  "server_port": 56389,
+                  "server_running": false,
+                  "server_started_by_mcp": false,
+                  "status": "ready",
+                  "timestamp": 1789873843.73793,
+                  "version": "0.1.9",
+                  "workflow": {
+                    "current_main_model_path": "",
+                    "guard_level": "strict",
+                    "main_model_label": "",
+                    "main_model_path": "",
+                    "main_model_tag": "",
+                    "mcp_client_lifecycle": "persistent-required",
+                    "mode": "manual",
+                    "model_dimension": 0,
+                    "notes": "",
+                    "one_shot_client_allowed": false,
+                    "snapshot_dir": "",
+                    "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+                    "snapshot_prefix": "",
+                    "snapshot_save_mode": "copy",
+                    "updated_at": "2026-09-20 11:10:42",
+                    "visible_main_locked": false,
+                    "workflow_stage": "awaiting_manual_server"
+                  }
+                },
+                "timestamp": 1789873843.737916,
+                "tool": "save_model"
+              },
+              "error": "Candidate save callback failed: {\"completed_at_ms\": \"1789873843562\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: java.lang.IllegalStateException: java.io.IOException: No space left on device\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1789873843517\", \"request_id\": \"wrk-1da20305-c5b5-4e3c-beef-085ce833e605\", \"started_at_ms\": \"1789873843517\", \"status\": \"FAILED\", \"type\": \"call\"}",
+              "execution": {
+                "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+                "dirty": true,
+                "idempotency_key": "disk-full-20260920T031041842340Z",
+                "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+                "model_ownership": "mcp_owned",
+                "model_ref": {
+                  "generation": 1,
+                  "model_tag": "mcp_d3d3fc4c7691",
+                  "schema_version": 1,
+                  "server_instance_id": "e6240130635d9e7db9df8e1dd0ef84473903fe3a7b038cebcaf7a95c9d21bda3",
+                  "session_id": "session-9f95c2e814acd5f99589961a"
+                },
+                "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+                "request_hash": "bd3be85a5471dc04cf144b948df8a4590f7feff0f4c42c866f0be74d65515268",
+                "request_id": "disk-full-20260920T031041842340Z",
+                "revision": 1,
+                "server_ownership": "shared",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "success": false
+            },
+            "started_at": "2026-09-20 03:10:43",
+            "status": "UNKNOWN"
+          },
+          "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+          "result": {
+            "data": {
+              "datetime": "2026-09-20 11:10:43",
+              "execution_state_unknown": true,
+              "log_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home/logs/server.log",
+              "operations_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home/logs/operations.jsonl",
+              "partial_change": false,
+              "requires_model_reconciliation": true,
+              "server": {
+                "attached_to_existing_server": true,
+                "comsol_root": "/Applications/COMSOL64/Multiphysics",
+                "current_model_label": "last_complete.mph",
+                "current_model_origin": "bound-request",
+                "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/output/phase2-disk-test-volume/last_complete.mph",
+                "datetime": "2026-09-20 11:10:43",
+                "desktop_client_role": "visual-client",
+                "desktop_should_connect": {
+                  "host": "127.0.0.1",
+                  "port": 56389
+                },
+                "last_command": "save_model",
+                "last_error": "Candidate save callback failed: {\"completed_at_ms\": \"1789873843562\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: java.lang.IllegalStateException: java.io.IOException: No space left on device\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1789873843517\", \"request_id\": \"wrk-1da20305-c5b5-4e3c-beef-085ce833e605\", \"started_at_ms\": \"1789873843517\", \"status\": \"FAILED\", \"type\": \"call\"}",
+                "logs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home/logs",
+                "mcp_home": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home",
+                "outputs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T031021Z/phase2-disk-full/mcp-home/outputs",
+                "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+                "server_endpoint": "127.0.0.1:56389",
+                "server_host": "127.0.0.1",
+                "server_port": 56389,
+                "server_running": false,
+                "server_started_by_mcp": false,
+                "status": "ready",
+                "timestamp": 1789873843.73793,
+                "version": "0.1.9",
+                "workflow": {
+                  "current_main_model_path": "",
+                  "guard_level": "strict",
+                  "main_model_label": "",
+                  "main_model_path": "",
+                  "main_model_tag": "",
+                  "mcp_client_lifecycle": "persistent-required",
+                  "mode": "manual",
+                  "model_dimension": 0,
+                  "notes": "",
+                  "one_shot_client_allowed": false,
+                  "snapshot_dir": "",
+                  "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+                  "snapshot_prefix": "",
+                  "snapshot_save_mode": "copy",
+                  "updated_at": "2026-09-20 11:10:42",
+                  "visible_main_locked": false,
+                  "workflow_stage": "awaiting_manual_server"
+                }
+              },
+              "timestamp": 1789873843.737916,
+              "tool": "save_model"
+            },
+            "error": "Candidate save callback failed: {\"completed_at_ms\": \"1789873843562\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: java.lang.IllegalStateException: java.io.IOException: No space left on device\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1789873843517\", \"request_id\": \"wrk-1da20305-c5b5-4e3c-beef-085ce833e605\", \"started_at_ms\": \"1789873843517\", \"status\": \"FAILED\", \"type\": \"call\"}",
+            "execution": {
+              "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+              "dirty": true,
+              "idempotency_key": "disk-full-20260920T031041842340Z",
+              "job_id": "653a60f1-cc3d-4836-8a8c-c49357980eb0",
+              "model_ownership": "mcp_owned",
+              "model_ref": {
+                "generation": 1,
+                "model_tag": "mcp_d3d3fc4c7691",
+                "schema_version": 1,
+                "server_instance_id": "e6240130635d9e7db9df8e1dd0ef84473903fe3a7b038cebcaf7a95c9d21bda3",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "operation_id": "46e104d8-da27-4bb1-815d-2ab1911d3a4a",
+              "request_hash": "bd3be85a5471dc04cf144b948df8a4590f7feff0f4c42c866f0be74d65515268",
+              "request_id": "disk-full-20260920T031041842340Z",
+              "revision": 1,
+              "server_ownership": "shared",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "success": false
+          },
+          "started_at": "2026-09-20 03:10:43",
+          "status": "UNKNOWN"
+        },
+        "success": true
+      }
+    }
+  ],
+  "recorded_via": "fresh production stdio MCP host"
+}

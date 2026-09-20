@@ -1,0 +1,17 @@
+{
+  "recorded_at": "2026-09-20T01:54:45.062814+00:00",
+  "status": "IMPLEMENTATION_IN_PROGRESS",
+  "diagnostic": "evidence/phase3/w12-trial-diagnostic-20260920T015123Z/result.json",
+  "diagnostic_sha256": "126d29b0c1d503f21cbd3e4ddb58116825dda95888ed9cde4857f9e2bc48ad1b",
+  "finding": "COMSOL 6.4 save(path,true) changed timeModified on a saved/restored model; an in-memory unsaved model did not show this effect.",
+  "decision": "Require an explicit checkpoint bound by the service to the current full model_ref, post-save revision and fingerprint. Trial verifies the immutable artifact and creates its disposable copy from that file, never by saving the main model during trial.",
+  "invariants": [
+    "Existing full main-model fingerprint and event-counter gate remains unchanged.",
+    "Reject stale or tampered snapshot before trial engine/file side effects.",
+    "Preserve source checkpoint; remove only trial-owned file/model.",
+    "Trial before/after revision and model identity remain equal; checkpoint creation is a separate explicit write.",
+    "Report save/copy cost separately; no large-model cost claim."
+  ],
+  "historical_checkpoints": "Remain restorable under existing restore contract; new snapshot binding required for trial use.",
+  "rejected_alternative": "Do not ignore timeModified changes or declare a changed full fingerprint unchanged."
+}

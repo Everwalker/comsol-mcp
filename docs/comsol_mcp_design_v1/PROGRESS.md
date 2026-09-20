@@ -1099,3 +1099,111 @@ modules remain identical to the final stdio run; the two-file serializer/test
 delta is recorded in `publication_source_snapshot.json`. All 14 control/compile
 Worker processes belonging to the final offline runs were identity-checked and
 closed; old Phase 2 processes were not targeted.
+
+### G2 Mac Valve validation resumed — 2026-09-20
+
+The user explicitly approved the prepared RemoteAddrValve isolation proposal
+and requested continuation. Authorization is recorded in
+`evidence/phase3/valve_resume/authorization.json`. The preceding BLOCKED result
+remains historical evidence; authorization itself does not establish isolation
+or change any engine acceptance result.
+
+The resumed gate requires authenticated COMSOL API access on localhost and an
+explicit address-filter denial through a current local non-loopback address,
+bound to the same task-owned process and reviewed configuration. HTTP root-page
+behavior alone is insufficient. Model operations remain gated on this proof.
+The dedicated Server must be stopped and the original XML content hash restored
+after testing. This authorizes no firewall changes, Windows integration or W13.
+
+The first resumed attempt (`g2-valve-runtime-20260919T231415293264Z`) is
+**FAIL_RESTORED**: localhost Java API authentication succeeded, but the local
+non-loopback target also connected. No model operation was performed. Owned
+Server PID 64021 was stopped and the old target's original content hash and
+recorded inode/metadata were restored. The route-through-lo0 observation does
+not by itself establish the TCP peer address and is not an isolation explanation.
+
+Root review identified the configuration selection error: installed
+`ServerApplication` sets `catalina.base` to `bin/servers/webbridge`, while
+`bin/tomcat` is `catalina.home`. The previous proposal changed the wrong template.
+Read-only diagnosis and installation hashes are recorded in
+`evidence/phase3/valve_resume/config_target_diagnosis.json`. The corrected
+proposal only removes the existing localhost Valve's comment wrapper in
+`bin/servers/webbridge/conf/server.xml`; its backup, exact diff and hash are
+recorded in
+`evidence/phase3/baseline/webbridge_remote_addr_valve_proposal-20260919T232153Z.json`.
+The active file remains unchanged pending explicit authorization for this
+different installed-file path. Current software checks do not establish runtime
+isolation, and W08/W10/W12 model cases retain their previous blocked statuses.
+
+Corrected-path preparation and receipt compatibility checks are complete.
+Final resumed software regression: **367 passed, 1 skipped in 6.38s**, recorded
+in `evidence/phase3/valve_resume/software_regression_host_final.txt`, with current
+source hashes in `final_software_source.json` in the same directory. An earlier
+restricted run failed on Java Worker socket-bind EPERM; its log is retained,
+and the host-context rerun passed. The complete fake lifecycle-to-consumer test
+proves only receipt compatibility. Independent readback confirms both installed
+XML files retain their original hashes and ports 56388/56389 have no listeners.
+No second runtime attempt was made; corrected-file authorization is pending.
+
+The user subsequently approved the corrected webbridge target. The explicit
+approval and exact original/applied hashes are recorded in
+`evidence/phase3/valve_resume/webbridge_authorization.json`. Validation is now
+authorized; the earlier pending-approval checkpoint is historical, and no
+runtime/model acceptance status changes merely from receiving this approval.
+
+### Active webbridge isolation proof — 2026-09-20
+
+The run `g2-valve-runtime-20260920T003546033861Z` passed actual API isolation
+validation. Authenticated localhost Java API access and its exact bidirectional
+socket pair passed. A separate fresh Java Worker was rejected on the current
+non-loopback address; the bounded Server access-log interval captured before
+the independent raw probe contains that API request's HTTP 403. A source-bound
+transport probe subsequently also received 403. The Java exception itself has
+no HTTP status and remains recorded as such. Historical failed attempts are
+unchanged.
+
+The production isolation adapter independently accepted the live PID/config,
+log inode/byte interval/hash, request facts, and absence of extra clients; see
+`evidence/phase3/valve_resume/active_adapter_readback_20260920T003546.json`.
+The listener is still wildcard with request-layer filtering, not loopback-bound.
+Related software checks passed 76 tests. Mac W08/W10/W12 production-stdio model
+acceptance is now running on that same owned Server epoch. Final stop/restore is
+still required before delivery; this checkpoint does not claim model acceptance.
+
+### G2 live acceptance debugging and root review — 2026-09-20
+
+The owned RemoteAddrValve runtime has passed the recorded authenticated localhost / denied LAN API proof. This does not establish W08/W10/W12 model acceptance. The live runs remain preserved individually under `evidence/phase3/live-g2-*`.
+
+- Full-node metadata enumeration for every property read caused excessive Worker RPC traffic; the first run reported local socket `EADDRNOTAVAIL`. Requested-property metadata lookup now bounds that work without weakening metadata validation.
+- Non-finite COMSOL numeric readback could escape into strict JSON serialization. The typed readback boundary now rejects non-finite numeric values explicitly; post-write readback failure retains conservative UNKNOWN handling.
+- `live-g2-rerun2-20260920T005500Z` passed scalar, empty-array, singleton-array and matrix set/readback before the boolean case failed. The engine metadata describes `reverse` as Boolean while its allowed tokens are `on/off`; local validation incorrectly compared those strings directly against JSON `false`. Root independently reproduced `INVALID_PROPERTY_VALUE` using the recorded schema/request without any engine call. The generic write-callback UNKNOWN envelope alone does not prove a COMSOL mutation. See `evidence/phase3/valve_resume/boolean_validation_root_reproduction.json`.
+- Root found a further acceptance gap before W12 completion: generation replacement and stale-handle rejection alone do not prove restoration of property values. The live driver must demonstrate a changed value and compare actual post-restore values against the checkpoint scope. W10 partial-code recovery must likewise verify its parameter scope. See `evidence/phase3/valve_resume/restore_acceptance_review.json`.
+
+Current status remains incomplete. Do not upgrade package acceptance from these partial results. Dedicated Server cleanup/config restoration, affected Phase2 regressions, final software regression and phase delivery remain required. Windows integration and W13 remain outside this goal.
+
+### Live G2 progress and recovery event gap — 2026-09-20
+
+- `live-g2-rerun3-20260920T010300Z`: W08 passed all applicable shape/kind round trips, wp3 target/sibling checks, no-write negatives and idempotency. W10 public API mutation is independently confirmed in `valve_resume/w10_public_api_root_readback_review.json`; its original driver assertion used the wrong response nesting and remains recorded as a historical failure.
+- `offline-review-20260920T010134Z`: W09/W11 production stdio refresh passed. Missing real 6.3 material remains unavailable. Root verified the run hashes; the offline cleanup audit is separate.
+- Software regression before the recovery event-context fix: `398 passed, 1 skipped in 6.56s`, with a source-hash record under `valve_resume/`. This is not evidence for a later source revision.
+- Actual recovery of the deliberate Java exception was refused because the original G2 job contained no Worker request events. Root traced G2 model dispatch returning before the existing operation-event context used by legacy calls. `job_reconcile` therefore correctly returned no quiescence proof. The approved fix adds the existing context to G2 dispatch; it must not bypass UNKNOWN gates, replay the failed code, or fabricate historical events. See `valve_resume/g2_worker_event_context_root_review.json` and the original run's `recovery_append.json`.
+
+W10 recovery, W12, affected Phase2 regression, final cleanup and delivery remain incomplete. No W13 work is authorized.
+
+### 2026-09-20 G2 checkpoint trial source/software review (live pending)
+
+Confirmed on the saved/restored test model that `save(path,true)` changes `timeModified`. Trial now requires a service-bound explicit checkpoint and copies its verified artifact without saving main during trial. Full fingerprint/event-counter and scoped-property gates remain intact. Internal transaction recovery checkpoints are not trial sources. Nested Java steps use distinct Worker request IDs under the original durable job context.
+
+Full host software regression: **414 passed, 1 skipped in 6.63s** (`evidence/phase3/valve_resume/software_regression_host_checkpoint_review.txt`, source manifest adjacent). The preceding new-test expectation failure is retained separately; the test now correctly expects UNKNOWN for arbitrary trusted Java scope. Source review is `w12_checkpoint_source_review.json`. These results do not establish real W12 acceptance. Fresh live cases, affected Phase2 regression, temporary runtime/config cleanup and phase publication remain required. No W13 or Windows work started.
+
+### 2026-09-20 Final G2 Mac executable-scope acceptance
+
+W08–W12 applicable Mac cases passed. Live W08/W10/W12: `evidence/phase3/live-g2-rerun8-20260920T024658Z`; final W09 schema: `offline-w09-boundary-20260920T030059Z`; final W11 platform-help readback: `offline-w11-platform-20260920T031325Z`. Same-tag type conflict, typed shapes/kinds and wp3 sibling preservation were observed. Public Java mutation and partial failure/reconcile/no-replay/recovery were observed. W12 trial copies an explicit bound checkpoint without saving main; partial transaction recorded 1 applied/1 failed/1 not executed and restored actual properties, while rejecting the old model reference.
+
+Affected Phase2 regression passed: core solve/metrics/save/fresh Host reopen and idempotency/revision/errors; same-model queue refusal during RUNNING; refined-fixture Host disconnect with 20 actual pending-solver samples and same durable job/no replay; dedicated small-volume ENOSPC retained the previous complete MPH. The small W02 disconnect attempt remains BLOCKED because the solve ended too quickly. Failed disk-save job remains UNKNOWN, reconciled quiescent without replay. See `phase2-serial-cleanup-manifest-20260920T031021Z.json`.
+
+Final software regression: **419 passed, 1 skipped in 6.20s**, with 89-file source hashes in `valve_resume/software_regression_delivery_source.json`. Local wheel build/resources verified without dependency downloads. Platform help roots moved out of core backend; adversarial-document tests verify permissions, network/Worker calls and sentinel protection within backend scope.
+
+All current-run control/Worker processes and dedicated Server PID 73823 stopped. Port 56389 is absent; active webbridge XML SHA256 restored to `95478d7624e778c694c714d9215797c0c0076fd707a4eedf2bedbaa6bafe6625`, with inode/mode/owner restored. Recorded provenance xattr retained. Historical Phase2 processes were not touched. The mounted dedicated disk-test volume, complete MPH, checkpoints and failure artifacts are retained.
+
+All 211 tracked Phase1/2 evidence files remain byte-identical to the prior delivery baseline. A new generated disk-test path contains only a relocation pointer into phase3. Native callback FAIL, Windows/Intel Mac/6.3/GUI and large-model cost limits remain unchanged; this is not full G2 or six-combination certification. No W13 work performed. Local acceptance complete; final non-force publication and remote SHA/tree verification are the remaining delivery step.

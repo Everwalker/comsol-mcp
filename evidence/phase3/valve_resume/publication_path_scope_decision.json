@@ -1,0 +1,13 @@
+{
+  "recorded_at": "2026-09-20T02:07:58.829601+00:00",
+  "review_basis": "evidence/phase3/valve_resume/publication_review_current.json",
+  "decision": "Non-secret run-directory path references are audit metadata, not publication of private preferences files. Preserve historical evidence and the operative isolation receipts; do not upload any private directory or its contents. Newly emitted raw_private_path locators are redacted by the diagnostic producer.",
+  "authority": "Standing project authorization publishes implementation, tests and audit evidence, while excluding credentials, private preferences/caches and the private directory itself.",
+  "scope": [
+    "Generated task run IDs, project-local runtime directory names and artifact locations only.",
+    "No passwords, tokens, authorization headers, license data, private preference contents or vendor help bodies.",
+    "Keep source/test path constants and historical path metadata needed to explain runtime ownership and restoration."
+  ],
+  "not_a_completion_claim": true,
+  "remaining": "Incremental review of files added after the snapshot and staged-file inventory at final delivery."
+}

@@ -1,0 +1,39 @@
+{
+  "recorded_at": "2026-09-20T00:27:37.864852+00:00",
+  "run_id": "g2-valve-runtime-20260920T002102445575Z",
+  "source_log_sha256": "318dcda9745aa9f06e8836aabc1b51de6a5518cf189d485d8c6c172411609e5c",
+  "api_entries": [
+    {
+      "peer": "127.0.0.1",
+      "timestamp": "20/Sep/2026:08:21:07 +0800",
+      "method": "GET",
+      "route": "/webbridge/websocket",
+      "status": 101
+    },
+    {
+      "peer": "127.0.0.1",
+      "timestamp": "20/Sep/2026:08:21:07 +0800",
+      "method": "GET",
+      "route": "/webbridge/websocket",
+      "status": 101
+    },
+    {
+      "peer": "192.168.100.152",
+      "timestamp": "20/Sep/2026:08:21:08 +0800",
+      "method": "GET",
+      "route": "/webbridge/websocket",
+      "status": 403
+    },
+    {
+      "peer": "192.168.100.152",
+      "timestamp": "20/Sep/2026:08:21:09 +0800",
+      "method": "GET",
+      "route": "/webbridge/websocket",
+      "status": 403
+    }
+  ],
+  "root_finding": "Server observed HTTP403 for non-loopback API requests; generic Java exception does not carry the HTTP status. Preserve the historical FAIL.",
+  "next_proof_design": "Capture Server access-log byte interval around only the fresh Java API request, before the independent raw probe; bind log inode/segment hash, exact peer/route/status and Server epoch/config. Retain fresh Java rejection plus raw explicit-source403.",
+  "model_acceptance": "NOT_RUN",
+  "historical_status_changed": false
+}

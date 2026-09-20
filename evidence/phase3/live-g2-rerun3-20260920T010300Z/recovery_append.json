@@ -1,0 +1,1069 @@
+{
+  "current_inspect_ok": true,
+  "guard_before_restore_ok": false,
+  "new_ref": null,
+  "new_revision": null,
+  "old_ref_check": {},
+  "old_ref_invalid": false,
+  "original_unknown_job_id": "53ef4e0d-34c2-4b41-bf6f-6e8545be4567",
+  "post_readback": {},
+  "post_readback_ok": false,
+  "reconcile": {
+    "data": {
+      "created_at": "2026-09-20 01:12:18",
+      "effective_timeouts": {
+        "execution_timeout_s": null,
+        "no_progress_warning_s": null,
+        "queue_timeout_s": null,
+        "rpc_timeout_s": 30.0
+      },
+      "finished_at": null,
+      "job_id": "53ef4e0d-34c2-4b41-bf6f-6e8545be4567",
+      "metadata": {
+        "arguments": {
+          "arguments": {
+            "arguments": {
+              "parameter": "phase3_code_guard"
+            },
+            "entrypoint": "Phase3PartialFailure#run",
+            "expected_revision": 12,
+            "invariants": [],
+            "mode": "trusted",
+            "model_ref": {
+              "generation": 1,
+              "model_tag": "mcp4",
+              "schema_version": 1,
+              "server_instance_id": "307d438bc808e23e4de0bd740b7b26018131387b7b5a1799505f3082f78c5705",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "project_id": "comsol-mcp-phase3",
+            "session_id": "session-9f95c2e814acd5f99589961a",
+            "source_artifact": "tools/java/Phase3PartialFailure.java"
+          },
+          "operation_id": "code.execute_java"
+        },
+        "callback_completion_unknown": true,
+        "engine_started_at": 1789866738.7330298,
+        "execution": {
+          "expected_revision": 12,
+          "idempotency_key": "20260920T011212Z-w10-execute-partial",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp4",
+            "schema_version": 1,
+            "server_instance_id": "307d438bc808e23e4de0bd740b7b26018131387b7b5a1799505f3082f78c5705",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "20260920T011212Z-w10-execute-partial",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "finished_observed_at": 1789866738.776852,
+        "operation": "operation_call",
+        "queue_wait_s": 1.8874998204410076e-05,
+        "reconciled_quiescent": false,
+        "reconciliation": [],
+        "replay_performed": false
+      },
+      "operation": {
+        "created_at": "2026-09-20 01:12:18",
+        "effective_timeouts": {
+          "execution_timeout_s": null,
+          "no_progress_warning_s": null,
+          "queue_timeout_s": null,
+          "rpc_timeout_s": 30.0
+        },
+        "finished_at": null,
+        "idempotency_key": "20260920T011212Z-w10-execute-partial",
+        "metadata": {
+          "arguments": {
+            "arguments": {
+              "arguments": {
+                "parameter": "phase3_code_guard"
+              },
+              "entrypoint": "Phase3PartialFailure#run",
+              "expected_revision": 12,
+              "invariants": [],
+              "mode": "trusted",
+              "model_ref": {
+                "generation": 1,
+                "model_tag": "mcp4",
+                "schema_version": 1,
+                "server_instance_id": "307d438bc808e23e4de0bd740b7b26018131387b7b5a1799505f3082f78c5705",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "project_id": "comsol-mcp-phase3",
+              "session_id": "session-9f95c2e814acd5f99589961a",
+              "source_artifact": "tools/java/Phase3PartialFailure.java"
+            },
+            "operation_id": "code.execute_java"
+          },
+          "execution": {
+            "expected_revision": 12,
+            "idempotency_key": "20260920T011212Z-w10-execute-partial",
+            "model_ref": {
+              "generation": 1,
+              "model_tag": "mcp4",
+              "schema_version": 1,
+              "server_instance_id": "307d438bc808e23e4de0bd740b7b26018131387b7b5a1799505f3082f78c5705",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "request_id": "20260920T011212Z-w10-execute-partial",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation": "operation_call"
+        },
+        "operation": "operation_call",
+        "operation_id": "48eb32cf-a6c6-4956-a847-d30e350a699d",
+        "request_hash": "7a18837d4daf96cfacd0932fc819253374a89bc9c7e486ab384ddbae79241bbe",
+        "request_id": "20260920T011212Z-w10-execute-partial",
+        "result": {
+          "data": {
+            "after": {
+              "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+              "changed_tags": [],
+              "external_event_counter": 0,
+              "fingerprint": "b6fe57f0f161bd199a6a22617dc333ccbac4d82a13d35ce9486f6869ee0e9f8f",
+              "fingerprint_scope": [
+                "tag",
+                "label",
+                "file_path",
+                "time_modified",
+                "parameters"
+              ],
+              "generation": 2,
+              "instance_id": "8344cde3-680c-46e8-8996-eb205c25e0b8",
+              "model_tag": "mcp4",
+              "server_instance_id": "127.0.0.1:56389",
+              "tag": "mcp4",
+              "worker_instance_id": "8344cde3-680c-46e8-8996-eb205c25e0b8"
+            },
+            "before": {
+              "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+              "changed_tags": [],
+              "external_event_counter": 0,
+              "fingerprint": "c0d39009526a1277645fef63ca5ba615e7d87c1218dfbc9b6d7d9c25978fe690",
+              "fingerprint_scope": [
+                "tag",
+                "label",
+                "file_path",
+                "time_modified",
+                "parameters"
+              ],
+              "generation": 2,
+              "instance_id": "8344cde3-680c-46e8-8996-eb205c25e0b8",
+              "model_tag": "mcp4",
+              "server_instance_id": "127.0.0.1:56389",
+              "tag": "mcp4",
+              "worker_instance_id": "8344cde3-680c-46e8-8996-eb205c25e0b8"
+            },
+            "entrypoint": "Phase3PartialFailure#run",
+            "execution_state_unknown": true,
+            "isolation_proof": {
+              "api_probe": {
+                "authenticated_api_success": true,
+                "denial_evidence_source": "server_access_log",
+                "loopback_address": "127.0.0.1",
+                "loopback_port": 56389,
+                "nonloopback_address": "192.168.100.152",
+                "nonloopback_api_exception_http_status": null,
+                "nonloopback_port": 56389,
+                "observed_at": "2026-09-20T00:36:09Z",
+                "probe_kind": "comsol_java_api",
+                "server_access_log": {
+                  "entries": [
+                    {
+                      "http_status": 101,
+                      "method": "GET",
+                      "peer": "127.0.0.1",
+                      "route": "/webbridge/websocket"
+                    },
+                    {
+                      "http_status": 101,
+                      "method": "GET",
+                      "peer": "127.0.0.1",
+                      "route": "/webbridge/websocket"
+                    },
+                    {
+                      "http_status": 403,
+                      "method": "GET",
+                      "peer": "192.168.100.152",
+                      "route": "/webbridge/websocket"
+                    }
+                  ],
+                  "finished_at": "2026-09-20T00:36:09Z",
+                  "inode": 28718181,
+                  "java_request_id": "g2-valve-nonloopback-connect",
+                  "offset_after": 261,
+                  "offset_before": 0,
+                  "parsed_nonloopback_entry": {
+                    "http_status": 403,
+                    "method": "GET",
+                    "peer": "192.168.100.152",
+                    "route": "/webbridge/websocket"
+                  },
+                  "path": "REDACTED_PATH",
+                  "phase": "java_connect_only",
+                  "raw_probe_started_after_capture": true,
+                  "segment_sha256": "ce6f0bd719dcfb2dc72e439b72c3ef0cb85fce1ab82447d87dc77eaef30adc6f",
+                  "started_at": "2026-09-20T00:36:05Z",
+                  "status": "PASS"
+                }
+              },
+              "birth": "Sun Sep 20 08:35:46 2026",
+              "config_inode": 14720294,
+              "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+              "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+              "endpoint": "127.0.0.1:56389",
+              "established_client_pids": [
+                73823,
+                78526
+              ],
+              "listener": {
+                "endpoint": "*:56389",
+                "local_endpoint": "*:56389",
+                "pid": 73823,
+                "raw": "java    73823 everwalker   59u  IPv6 0xccaf550927758944      0t0  TCP *:56389 (LISTEN)",
+                "remote_endpoint": null,
+                "state": "LISTEN"
+              },
+              "listener_binding": "wildcard",
+              "loopback_listener": false,
+              "pid": 73823,
+              "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+              "receipt": "REDACTED_PATH",
+              "verified": true,
+              "worker_pid": 78526
+            },
+            "partial_change": false,
+            "readback": {},
+            "requires_model_reconciliation": true,
+            "source_sha256": "18191f31b91df048bb8ff1f1df090fe41f98635363fe83d44e8095c69bbfdd96",
+            "worker": {
+              "completed_at_ms": "1789866738769",
+              "failure": {
+                "code": "ENGINE_CALL_FAILED",
+                "execution_state_unknown": true,
+                "message": "InvocationTargetException: null",
+                "ok": false
+              },
+              "ok": false,
+              "queued_at_ms": "1789866738767",
+              "request_id": "48eb32cf-a6c6-4956-a847-d30e350a699d",
+              "started_at_ms": "1789866738767",
+              "status": "FAILED",
+              "type": "code_execute"
+            }
+          },
+          "error": {
+            "code": "EXECUTION_STATE_UNKNOWN",
+            "engine_state": "UNKNOWN",
+            "message": "{'ok': False, 'code': 'ENGINE_CALL_FAILED', 'message': 'InvocationTargetException: null', 'execution_state_unknown': True}",
+            "partial_changes": true,
+            "phase": "execute",
+            "safe_retry": false
+          },
+          "execution": {
+            "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+            "dirty": true,
+            "idempotency_key": "20260920T011212Z-w10-execute-partial",
+            "job_id": "53ef4e0d-34c2-4b41-bf6f-6e8545be4567",
+            "model_ownership": "mcp_owned",
+            "model_ref": {
+              "generation": 1,
+              "model_tag": "mcp4",
+              "schema_version": 1,
+              "server_instance_id": "307d438bc808e23e4de0bd740b7b26018131387b7b5a1799505f3082f78c5705",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "operation_id": "48eb32cf-a6c6-4956-a847-d30e350a699d",
+            "request_hash": "7a18837d4daf96cfacd0932fc819253374a89bc9c7e486ab384ddbae79241bbe",
+            "request_id": "20260920T011212Z-w10-execute-partial",
+            "revision": 13,
+            "server_ownership": "shared",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "success": false
+        },
+        "started_at": "2026-09-20 01:12:18",
+        "status": "UNKNOWN"
+      },
+      "operation_id": "48eb32cf-a6c6-4956-a847-d30e350a699d",
+      "result": {
+        "data": {
+          "after": {
+            "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+            "changed_tags": [],
+            "external_event_counter": 0,
+            "fingerprint": "b6fe57f0f161bd199a6a22617dc333ccbac4d82a13d35ce9486f6869ee0e9f8f",
+            "fingerprint_scope": [
+              "tag",
+              "label",
+              "file_path",
+              "time_modified",
+              "parameters"
+            ],
+            "generation": 2,
+            "instance_id": "8344cde3-680c-46e8-8996-eb205c25e0b8",
+            "model_tag": "mcp4",
+            "server_instance_id": "127.0.0.1:56389",
+            "tag": "mcp4",
+            "worker_instance_id": "8344cde3-680c-46e8-8996-eb205c25e0b8"
+          },
+          "before": {
+            "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+            "changed_tags": [],
+            "external_event_counter": 0,
+            "fingerprint": "c0d39009526a1277645fef63ca5ba615e7d87c1218dfbc9b6d7d9c25978fe690",
+            "fingerprint_scope": [
+              "tag",
+              "label",
+              "file_path",
+              "time_modified",
+              "parameters"
+            ],
+            "generation": 2,
+            "instance_id": "8344cde3-680c-46e8-8996-eb205c25e0b8",
+            "model_tag": "mcp4",
+            "server_instance_id": "127.0.0.1:56389",
+            "tag": "mcp4",
+            "worker_instance_id": "8344cde3-680c-46e8-8996-eb205c25e0b8"
+          },
+          "entrypoint": "Phase3PartialFailure#run",
+          "execution_state_unknown": true,
+          "isolation_proof": {
+            "api_probe": {
+              "authenticated_api_success": true,
+              "denial_evidence_source": "server_access_log",
+              "loopback_address": "127.0.0.1",
+              "loopback_port": 56389,
+              "nonloopback_address": "192.168.100.152",
+              "nonloopback_api_exception_http_status": null,
+              "nonloopback_port": 56389,
+              "observed_at": "2026-09-20T00:36:09Z",
+              "probe_kind": "comsol_java_api",
+              "server_access_log": {
+                "entries": [
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 403,
+                    "method": "GET",
+                    "peer": "192.168.100.152",
+                    "route": "/webbridge/websocket"
+                  }
+                ],
+                "finished_at": "2026-09-20T00:36:09Z",
+                "inode": 28718181,
+                "java_request_id": "g2-valve-nonloopback-connect",
+                "offset_after": 261,
+                "offset_before": 0,
+                "parsed_nonloopback_entry": {
+                  "http_status": 403,
+                  "method": "GET",
+                  "peer": "192.168.100.152",
+                  "route": "/webbridge/websocket"
+                },
+                "path": "REDACTED_PATH",
+                "phase": "java_connect_only",
+                "raw_probe_started_after_capture": true,
+                "segment_sha256": "ce6f0bd719dcfb2dc72e439b72c3ef0cb85fce1ab82447d87dc77eaef30adc6f",
+                "started_at": "2026-09-20T00:36:05Z",
+                "status": "PASS"
+              }
+            },
+            "birth": "Sun Sep 20 08:35:46 2026",
+            "config_inode": 14720294,
+            "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+            "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+            "endpoint": "127.0.0.1:56389",
+            "established_client_pids": [
+              73823,
+              78526
+            ],
+            "listener": {
+              "endpoint": "*:56389",
+              "local_endpoint": "*:56389",
+              "pid": 73823,
+              "raw": "java    73823 everwalker   59u  IPv6 0xccaf550927758944      0t0  TCP *:56389 (LISTEN)",
+              "remote_endpoint": null,
+              "state": "LISTEN"
+            },
+            "listener_binding": "wildcard",
+            "loopback_listener": false,
+            "pid": 73823,
+            "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+            "receipt": "REDACTED_PATH",
+            "verified": true,
+            "worker_pid": 78526
+          },
+          "partial_change": false,
+          "readback": {},
+          "requires_model_reconciliation": true,
+          "source_sha256": "18191f31b91df048bb8ff1f1df090fe41f98635363fe83d44e8095c69bbfdd96",
+          "worker": {
+            "completed_at_ms": "1789866738769",
+            "failure": {
+              "code": "ENGINE_CALL_FAILED",
+              "execution_state_unknown": true,
+              "message": "InvocationTargetException: null",
+              "ok": false
+            },
+            "ok": false,
+            "queued_at_ms": "1789866738767",
+            "request_id": "48eb32cf-a6c6-4956-a847-d30e350a699d",
+            "started_at_ms": "1789866738767",
+            "status": "FAILED",
+            "type": "code_execute"
+          }
+        },
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "engine_state": "UNKNOWN",
+          "message": "{'ok': False, 'code': 'ENGINE_CALL_FAILED', 'message': 'InvocationTargetException: null', 'execution_state_unknown': True}",
+          "partial_changes": true,
+          "phase": "execute",
+          "safe_retry": false
+        },
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": true,
+          "idempotency_key": "20260920T011212Z-w10-execute-partial",
+          "job_id": "53ef4e0d-34c2-4b41-bf6f-6e8545be4567",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp4",
+            "schema_version": 1,
+            "server_instance_id": "307d438bc808e23e4de0bd740b7b26018131387b7b5a1799505f3082f78c5705",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "48eb32cf-a6c6-4956-a847-d30e350a699d",
+          "request_hash": "7a18837d4daf96cfacd0932fc819253374a89bc9c7e486ab384ddbae79241bbe",
+          "request_id": "20260920T011212Z-w10-execute-partial",
+          "revision": 13,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": false
+      },
+      "started_at": "2026-09-20 01:12:18",
+      "status": "UNKNOWN"
+    },
+    "success": true
+  },
+  "reconcile_ok": false,
+  "restore_ok": false,
+  "run": "live-g2-rerun3-20260920T010300Z",
+  "same_control_home": "REDACTED_PATH",
+  "transcript": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "append-job-reconcile-2",
+          "request_id": "append-job-reconcile-2"
+        },
+        "job_id": "53ef4e0d-34c2-4b41-bf6f-6e8545be4567"
+      },
+      "elapsed_s": 0.0165472500375472,
+      "operation": "job_reconcile",
+      "outer_isError": false,
+      "payload": {
+        "data": {
+          "created_at": "2026-09-20 01:12:18",
+          "effective_timeouts": {
+            "execution_timeout_s": null,
+            "no_progress_warning_s": null,
+            "queue_timeout_s": null,
+            "rpc_timeout_s": 30.0
+          },
+          "finished_at": null,
+          "job_id": "53ef4e0d-34c2-4b41-bf6f-6e8545be4567",
+          "metadata": {
+            "arguments": {
+              "arguments": {
+                "arguments": {
+                  "parameter": "phase3_code_guard"
+                },
+                "entrypoint": "Phase3PartialFailure#run",
+                "expected_revision": 12,
+                "invariants": [],
+                "mode": "trusted",
+                "model_ref": {
+                  "generation": 1,
+                  "model_tag": "mcp4",
+                  "schema_version": 1,
+                  "server_instance_id": "307d438bc808e23e4de0bd740b7b26018131387b7b5a1799505f3082f78c5705",
+                  "session_id": "session-9f95c2e814acd5f99589961a"
+                },
+                "project_id": "comsol-mcp-phase3",
+                "session_id": "session-9f95c2e814acd5f99589961a",
+                "source_artifact": "tools/java/Phase3PartialFailure.java"
+              },
+              "operation_id": "code.execute_java"
+            },
+            "callback_completion_unknown": true,
+            "engine_started_at": 1789866738.7330298,
+            "execution": {
+              "expected_revision": 12,
+              "idempotency_key": "20260920T011212Z-w10-execute-partial",
+              "model_ref": {
+                "generation": 1,
+                "model_tag": "mcp4",
+                "schema_version": 1,
+                "server_instance_id": "307d438bc808e23e4de0bd740b7b26018131387b7b5a1799505f3082f78c5705",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "request_id": "20260920T011212Z-w10-execute-partial",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "finished_observed_at": 1789866738.776852,
+            "operation": "operation_call",
+            "queue_wait_s": 1.8874998204410076e-05,
+            "reconciled_quiescent": false,
+            "reconciliation": [],
+            "replay_performed": false
+          },
+          "operation": {
+            "created_at": "2026-09-20 01:12:18",
+            "effective_timeouts": {
+              "execution_timeout_s": null,
+              "no_progress_warning_s": null,
+              "queue_timeout_s": null,
+              "rpc_timeout_s": 30.0
+            },
+            "finished_at": null,
+            "idempotency_key": "20260920T011212Z-w10-execute-partial",
+            "metadata": {
+              "arguments": {
+                "arguments": {
+                  "arguments": {
+                    "parameter": "phase3_code_guard"
+                  },
+                  "entrypoint": "Phase3PartialFailure#run",
+                  "expected_revision": 12,
+                  "invariants": [],
+                  "mode": "trusted",
+                  "model_ref": {
+                    "generation": 1,
+                    "model_tag": "mcp4",
+                    "schema_version": 1,
+                    "server_instance_id": "307d438bc808e23e4de0bd740b7b26018131387b7b5a1799505f3082f78c5705",
+                    "session_id": "session-9f95c2e814acd5f99589961a"
+                  },
+                  "project_id": "comsol-mcp-phase3",
+                  "session_id": "session-9f95c2e814acd5f99589961a",
+                  "source_artifact": "tools/java/Phase3PartialFailure.java"
+                },
+                "operation_id": "code.execute_java"
+              },
+              "execution": {
+                "expected_revision": 12,
+                "idempotency_key": "20260920T011212Z-w10-execute-partial",
+                "model_ref": {
+                  "generation": 1,
+                  "model_tag": "mcp4",
+                  "schema_version": 1,
+                  "server_instance_id": "307d438bc808e23e4de0bd740b7b26018131387b7b5a1799505f3082f78c5705",
+                  "session_id": "session-9f95c2e814acd5f99589961a"
+                },
+                "request_id": "20260920T011212Z-w10-execute-partial",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "operation": "operation_call"
+            },
+            "operation": "operation_call",
+            "operation_id": "48eb32cf-a6c6-4956-a847-d30e350a699d",
+            "request_hash": "7a18837d4daf96cfacd0932fc819253374a89bc9c7e486ab384ddbae79241bbe",
+            "request_id": "20260920T011212Z-w10-execute-partial",
+            "result": {
+              "data": {
+                "after": {
+                  "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+                  "changed_tags": [],
+                  "external_event_counter": 0,
+                  "fingerprint": "b6fe57f0f161bd199a6a22617dc333ccbac4d82a13d35ce9486f6869ee0e9f8f",
+                  "fingerprint_scope": [
+                    "tag",
+                    "label",
+                    "file_path",
+                    "time_modified",
+                    "parameters"
+                  ],
+                  "generation": 2,
+                  "instance_id": "8344cde3-680c-46e8-8996-eb205c25e0b8",
+                  "model_tag": "mcp4",
+                  "server_instance_id": "127.0.0.1:56389",
+                  "tag": "mcp4",
+                  "worker_instance_id": "8344cde3-680c-46e8-8996-eb205c25e0b8"
+                },
+                "before": {
+                  "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+                  "changed_tags": [],
+                  "external_event_counter": 0,
+                  "fingerprint": "c0d39009526a1277645fef63ca5ba615e7d87c1218dfbc9b6d7d9c25978fe690",
+                  "fingerprint_scope": [
+                    "tag",
+                    "label",
+                    "file_path",
+                    "time_modified",
+                    "parameters"
+                  ],
+                  "generation": 2,
+                  "instance_id": "8344cde3-680c-46e8-8996-eb205c25e0b8",
+                  "model_tag": "mcp4",
+                  "server_instance_id": "127.0.0.1:56389",
+                  "tag": "mcp4",
+                  "worker_instance_id": "8344cde3-680c-46e8-8996-eb205c25e0b8"
+                },
+                "entrypoint": "Phase3PartialFailure#run",
+                "execution_state_unknown": true,
+                "isolation_proof": {
+                  "api_probe": {
+                    "authenticated_api_success": true,
+                    "denial_evidence_source": "server_access_log",
+                    "loopback_address": "127.0.0.1",
+                    "loopback_port": 56389,
+                    "nonloopback_address": "192.168.100.152",
+                    "nonloopback_api_exception_http_status": null,
+                    "nonloopback_port": 56389,
+                    "observed_at": "2026-09-20T00:36:09Z",
+                    "probe_kind": "comsol_java_api",
+                    "server_access_log": {
+                      "entries": [
+                        {
+                          "http_status": 101,
+                          "method": "GET",
+                          "peer": "127.0.0.1",
+                          "route": "/webbridge/websocket"
+                        },
+                        {
+                          "http_status": 101,
+                          "method": "GET",
+                          "peer": "127.0.0.1",
+                          "route": "/webbridge/websocket"
+                        },
+                        {
+                          "http_status": 403,
+                          "method": "GET",
+                          "peer": "192.168.100.152",
+                          "route": "/webbridge/websocket"
+                        }
+                      ],
+                      "finished_at": "2026-09-20T00:36:09Z",
+                      "inode": 28718181,
+                      "java_request_id": "g2-valve-nonloopback-connect",
+                      "offset_after": 261,
+                      "offset_before": 0,
+                      "parsed_nonloopback_entry": {
+                        "http_status": 403,
+                        "method": "GET",
+                        "peer": "192.168.100.152",
+                        "route": "/webbridge/websocket"
+                      },
+                      "path": "REDACTED_PATH",
+                      "phase": "java_connect_only",
+                      "raw_probe_started_after_capture": true,
+                      "segment_sha256": "ce6f0bd719dcfb2dc72e439b72c3ef0cb85fce1ab82447d87dc77eaef30adc6f",
+                      "started_at": "2026-09-20T00:36:05Z",
+                      "status": "PASS"
+                    }
+                  },
+                  "birth": "Sun Sep 20 08:35:46 2026",
+                  "config_inode": 14720294,
+                  "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+                  "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+                  "endpoint": "127.0.0.1:56389",
+                  "established_client_pids": [
+                    73823,
+                    78526
+                  ],
+                  "listener": {
+                    "endpoint": "*:56389",
+                    "local_endpoint": "*:56389",
+                    "pid": 73823,
+                    "raw": "java    73823 everwalker   59u  IPv6 0xccaf550927758944      0t0  TCP *:56389 (LISTEN)",
+                    "remote_endpoint": null,
+                    "state": "LISTEN"
+                  },
+                  "listener_binding": "wildcard",
+                  "loopback_listener": false,
+                  "pid": 73823,
+                  "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+                  "receipt": "REDACTED_PATH",
+                  "verified": true,
+                  "worker_pid": 78526
+                },
+                "partial_change": false,
+                "readback": {},
+                "requires_model_reconciliation": true,
+                "source_sha256": "18191f31b91df048bb8ff1f1df090fe41f98635363fe83d44e8095c69bbfdd96",
+                "worker": {
+                  "completed_at_ms": "1789866738769",
+                  "failure": {
+                    "code": "ENGINE_CALL_FAILED",
+                    "execution_state_unknown": true,
+                    "message": "InvocationTargetException: null",
+                    "ok": false
+                  },
+                  "ok": false,
+                  "queued_at_ms": "1789866738767",
+                  "request_id": "48eb32cf-a6c6-4956-a847-d30e350a699d",
+                  "started_at_ms": "1789866738767",
+                  "status": "FAILED",
+                  "type": "code_execute"
+                }
+              },
+              "error": {
+                "code": "EXECUTION_STATE_UNKNOWN",
+                "engine_state": "UNKNOWN",
+                "message": "{'ok': False, 'code': 'ENGINE_CALL_FAILED', 'message': 'InvocationTargetException: null', 'execution_state_unknown': True}",
+                "partial_changes": true,
+                "phase": "execute",
+                "safe_retry": false
+              },
+              "execution": {
+                "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+                "dirty": true,
+                "idempotency_key": "20260920T011212Z-w10-execute-partial",
+                "job_id": "53ef4e0d-34c2-4b41-bf6f-6e8545be4567",
+                "model_ownership": "mcp_owned",
+                "model_ref": {
+                  "generation": 1,
+                  "model_tag": "mcp4",
+                  "schema_version": 1,
+                  "server_instance_id": "307d438bc808e23e4de0bd740b7b26018131387b7b5a1799505f3082f78c5705",
+                  "session_id": "session-9f95c2e814acd5f99589961a"
+                },
+                "operation_id": "48eb32cf-a6c6-4956-a847-d30e350a699d",
+                "request_hash": "7a18837d4daf96cfacd0932fc819253374a89bc9c7e486ab384ddbae79241bbe",
+                "request_id": "20260920T011212Z-w10-execute-partial",
+                "revision": 13,
+                "server_ownership": "shared",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "success": false
+            },
+            "started_at": "2026-09-20 01:12:18",
+            "status": "UNKNOWN"
+          },
+          "operation_id": "48eb32cf-a6c6-4956-a847-d30e350a699d",
+          "result": {
+            "data": {
+              "after": {
+                "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+                "changed_tags": [],
+                "external_event_counter": 0,
+                "fingerprint": "b6fe57f0f161bd199a6a22617dc333ccbac4d82a13d35ce9486f6869ee0e9f8f",
+                "fingerprint_scope": [
+                  "tag",
+                  "label",
+                  "file_path",
+                  "time_modified",
+                  "parameters"
+                ],
+                "generation": 2,
+                "instance_id": "8344cde3-680c-46e8-8996-eb205c25e0b8",
+                "model_tag": "mcp4",
+                "server_instance_id": "127.0.0.1:56389",
+                "tag": "mcp4",
+                "worker_instance_id": "8344cde3-680c-46e8-8996-eb205c25e0b8"
+              },
+              "before": {
+                "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+                "changed_tags": [],
+                "external_event_counter": 0,
+                "fingerprint": "c0d39009526a1277645fef63ca5ba615e7d87c1218dfbc9b6d7d9c25978fe690",
+                "fingerprint_scope": [
+                  "tag",
+                  "label",
+                  "file_path",
+                  "time_modified",
+                  "parameters"
+                ],
+                "generation": 2,
+                "instance_id": "8344cde3-680c-46e8-8996-eb205c25e0b8",
+                "model_tag": "mcp4",
+                "server_instance_id": "127.0.0.1:56389",
+                "tag": "mcp4",
+                "worker_instance_id": "8344cde3-680c-46e8-8996-eb205c25e0b8"
+              },
+              "entrypoint": "Phase3PartialFailure#run",
+              "execution_state_unknown": true,
+              "isolation_proof": {
+                "api_probe": {
+                  "authenticated_api_success": true,
+                  "denial_evidence_source": "server_access_log",
+                  "loopback_address": "127.0.0.1",
+                  "loopback_port": 56389,
+                  "nonloopback_address": "192.168.100.152",
+                  "nonloopback_api_exception_http_status": null,
+                  "nonloopback_port": 56389,
+                  "observed_at": "2026-09-20T00:36:09Z",
+                  "probe_kind": "comsol_java_api",
+                  "server_access_log": {
+                    "entries": [
+                      {
+                        "http_status": 101,
+                        "method": "GET",
+                        "peer": "127.0.0.1",
+                        "route": "/webbridge/websocket"
+                      },
+                      {
+                        "http_status": 101,
+                        "method": "GET",
+                        "peer": "127.0.0.1",
+                        "route": "/webbridge/websocket"
+                      },
+                      {
+                        "http_status": 403,
+                        "method": "GET",
+                        "peer": "192.168.100.152",
+                        "route": "/webbridge/websocket"
+                      }
+                    ],
+                    "finished_at": "2026-09-20T00:36:09Z",
+                    "inode": 28718181,
+                    "java_request_id": "g2-valve-nonloopback-connect",
+                    "offset_after": 261,
+                    "offset_before": 0,
+                    "parsed_nonloopback_entry": {
+                      "http_status": 403,
+                      "method": "GET",
+                      "peer": "192.168.100.152",
+                      "route": "/webbridge/websocket"
+                    },
+                    "path": "REDACTED_PATH",
+                    "phase": "java_connect_only",
+                    "raw_probe_started_after_capture": true,
+                    "segment_sha256": "ce6f0bd719dcfb2dc72e439b72c3ef0cb85fce1ab82447d87dc77eaef30adc6f",
+                    "started_at": "2026-09-20T00:36:05Z",
+                    "status": "PASS"
+                  }
+                },
+                "birth": "Sun Sep 20 08:35:46 2026",
+                "config_inode": 14720294,
+                "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+                "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+                "endpoint": "127.0.0.1:56389",
+                "established_client_pids": [
+                  73823,
+                  78526
+                ],
+                "listener": {
+                  "endpoint": "*:56389",
+                  "local_endpoint": "*:56389",
+                  "pid": 73823,
+                  "raw": "java    73823 everwalker   59u  IPv6 0xccaf550927758944      0t0  TCP *:56389 (LISTEN)",
+                  "remote_endpoint": null,
+                  "state": "LISTEN"
+                },
+                "listener_binding": "wildcard",
+                "loopback_listener": false,
+                "pid": 73823,
+                "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+                "receipt": "REDACTED_PATH",
+                "verified": true,
+                "worker_pid": 78526
+              },
+              "partial_change": false,
+              "readback": {},
+              "requires_model_reconciliation": true,
+              "source_sha256": "18191f31b91df048bb8ff1f1df090fe41f98635363fe83d44e8095c69bbfdd96",
+              "worker": {
+                "completed_at_ms": "1789866738769",
+                "failure": {
+                  "code": "ENGINE_CALL_FAILED",
+                  "execution_state_unknown": true,
+                  "message": "InvocationTargetException: null",
+                  "ok": false
+                },
+                "ok": false,
+                "queued_at_ms": "1789866738767",
+                "request_id": "48eb32cf-a6c6-4956-a847-d30e350a699d",
+                "started_at_ms": "1789866738767",
+                "status": "FAILED",
+                "type": "code_execute"
+              }
+            },
+            "error": {
+              "code": "EXECUTION_STATE_UNKNOWN",
+              "engine_state": "UNKNOWN",
+              "message": "{'ok': False, 'code': 'ENGINE_CALL_FAILED', 'message': 'InvocationTargetException: null', 'execution_state_unknown': True}",
+              "partial_changes": true,
+              "phase": "execute",
+              "safe_retry": false
+            },
+            "execution": {
+              "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+              "dirty": true,
+              "idempotency_key": "20260920T011212Z-w10-execute-partial",
+              "job_id": "53ef4e0d-34c2-4b41-bf6f-6e8545be4567",
+              "model_ownership": "mcp_owned",
+              "model_ref": {
+                "generation": 1,
+                "model_tag": "mcp4",
+                "schema_version": 1,
+                "server_instance_id": "307d438bc808e23e4de0bd740b7b26018131387b7b5a1799505f3082f78c5705",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "operation_id": "48eb32cf-a6c6-4956-a847-d30e350a699d",
+              "request_hash": "7a18837d4daf96cfacd0932fc819253374a89bc9c7e486ab384ddbae79241bbe",
+              "request_id": "20260920T011212Z-w10-execute-partial",
+              "revision": 13,
+              "server_ownership": "shared",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "success": false
+          },
+          "started_at": "2026-09-20 01:12:18",
+          "status": "UNKNOWN"
+        },
+        "success": true
+      }
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 13,
+          "idempotency_key": "append-current-inspect-2",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp4",
+            "schema_version": 1,
+            "server_instance_id": "307d438bc808e23e4de0bd740b7b26018131387b7b5a1799505f3082f78c5705",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "append-current-inspect-2",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": false
+      },
+      "elapsed_s": 0.007894875016063452,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "payload": {
+        "data": {
+          "requires_model_reconciliation": true
+        },
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": true,
+          "idempotency_key": "append-current-inspect-2",
+          "job_id": "4756c2d7-7ea6-49ce-8677-c8afc365d53c",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp4",
+            "schema_version": 1,
+            "server_instance_id": "307d438bc808e23e4de0bd740b7b26018131387b7b5a1799505f3082f78c5705",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "8f78af0e-4ce5-432a-9945-fb72dc1bd374",
+          "request_hash": "a449294640ecc6a3929f38fcfe4dad9e0da3345c75e113c2b1ccd3e5d55be9d9",
+          "request_id": "append-current-inspect-2",
+          "revision": 13,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      }
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 13,
+          "idempotency_key": "append-current-parameters-2",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp4",
+            "schema_version": 1,
+            "server_instance_id": "307d438bc808e23e4de0bd740b7b26018131387b7b5a1799505f3082f78c5705",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "append-current-parameters-2",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        }
+      },
+      "elapsed_s": 0.002827958029229194,
+      "operation": "get_parameters",
+      "outer_isError": true,
+      "payload": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "reconcile unfinished engine work before new operations",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "append-current-parameters-2",
+          "job_id": "10f5662b-0297-475a-87c5-6daad8c642fe",
+          "operation_id": "02992b4d-8a55-41e9-9407-7cc3267f2e44",
+          "request_hash": "1c89a24dbdf4a77e105747d486540bb319f2c14372ce3f481d13e0fc029e6673",
+          "request_id": "append-current-parameters-2"
+        },
+        "success": false
+      }
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "authorization_ref": "REDACTED",
+          "checkpoint_id": "checkpoint-6bf548848390e4623ad4",
+          "expected_revision": 13,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp4",
+            "schema_version": 1,
+            "server_instance_id": "307d438bc808e23e4de0bd740b7b26018131387b7b5a1799505f3082f78c5705",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase3",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 13,
+          "idempotency_key": "append-checkpoint-restore-2",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp4",
+            "schema_version": 1,
+            "server_instance_id": "307d438bc808e23e4de0bd740b7b26018131387b7b5a1799505f3082f78c5705",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "append-checkpoint-restore-2",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "checkpoint.restore"
+      },
+      "elapsed_s": 0.00238641700707376,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "payload": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "reconcile unfinished engine work before new operations",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "append-checkpoint-restore-2",
+          "job_id": "56c043c0-a31c-4370-ac04-b46a93f1f613",
+          "operation_id": "3f1a1c8d-d787-45da-b018-2fae6758ffc6",
+          "request_hash": "e60217244130c5c4b028bb091b3af94265cae718808d41f9042c04bbb4c2b6ee",
+          "request_id": "append-checkpoint-restore-2"
+        },
+        "success": false
+      }
+    }
+  ]
+}

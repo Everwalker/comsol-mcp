@@ -1,0 +1,164 @@
+{
+  "workflow_configured_2d": true,
+  "connect_load": true,
+  "feature_same_tag_type_idempotent": true,
+  "feature_same_tag_type_conflict": true,
+  "idempotency_same_body": true,
+  "idempotency_different_body": true,
+  "stale_revision": true,
+  "required_metric_outer_error": true,
+  "second_model_bound": true,
+  "live_job_observations": [
+    {
+      "health_s": 0.002574457961600274,
+      "status": "RUNNING",
+      "log_s": 0.0033953330130316317
+    },
+    {
+      "health_s": 0.0032244580215774477,
+      "status": "SUCCEEDED",
+      "log_s": 0.0035858749761246145
+    }
+  ],
+  "queue_timeout_zero": {
+    "initial": {
+      "success": false,
+      "data": {
+        "status": "NOT_EXECUTED"
+      },
+      "error": {
+        "code": "QUEUE_TIMEOUT",
+        "message": "request expired before engine dispatch",
+        "safe_retry": true
+      },
+      "execution": {
+        "request_id": "phase2-second-expired",
+        "operation_id": "6ce076d5-339f-42db-9577-dc11143fe3ca",
+        "request_hash": "88a77e406564a5ed0d21c6fece6c43b933e4d9b8c6c84a761899b00bdbff35a9",
+        "idempotency_key": "20260920T025903703056Z-phase2-second-expired",
+        "job_id": "df0ff739-5500-472c-8b1c-f3f6a61e890c"
+      },
+      "_outer_isError": true,
+      "_elapsed_s": 0.5335845000226982
+    },
+    "after_solve_status": {
+      "success": true,
+      "data": {
+        "job_id": "df0ff739-5500-472c-8b1c-f3f6a61e890c",
+        "operation_id": "6ce076d5-339f-42db-9577-dc11143fe3ca",
+        "status": "EXPIRED",
+        "metadata": {
+          "arguments": {
+            "parameters_json": "[{\"name\":\"phase2_second_expired\",\"expression\":\"1\"}]"
+          },
+          "execution": {
+            "expected_revision": 0,
+            "idempotency_key": "20260920T025903703056Z-phase2-second-expired",
+            "model_ref": {
+              "generation": 1,
+              "model_tag": "mcp_4d5981225505",
+              "schema_version": 1,
+              "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "queue_timeout_s": 0,
+            "request_id": "phase2-second-expired",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "finished_observed_at": 1789873147.007363,
+          "operation": "set_parameters"
+        },
+        "created_at": "2026-09-20 02:59:06",
+        "started_at": null,
+        "finished_at": "2026-09-20 02:59:07",
+        "effective_timeouts": {
+          "execution_timeout_s": null,
+          "no_progress_warning_s": null,
+          "queue_timeout_s": 0,
+          "rpc_timeout_s": 30.0
+        },
+        "operation": {
+          "operation_id": "6ce076d5-339f-42db-9577-dc11143fe3ca",
+          "request_id": "phase2-second-expired",
+          "idempotency_key": "20260920T025903703056Z-phase2-second-expired",
+          "request_hash": "88a77e406564a5ed0d21c6fece6c43b933e4d9b8c6c84a761899b00bdbff35a9",
+          "operation": "set_parameters",
+          "status": "EXPIRED",
+          "result": {
+            "data": {
+              "status": "NOT_EXECUTED"
+            },
+            "error": {
+              "code": "QUEUE_TIMEOUT",
+              "message": "request expired before engine dispatch",
+              "safe_retry": true
+            },
+            "execution": {
+              "idempotency_key": "20260920T025903703056Z-phase2-second-expired",
+              "job_id": "df0ff739-5500-472c-8b1c-f3f6a61e890c",
+              "operation_id": "6ce076d5-339f-42db-9577-dc11143fe3ca",
+              "request_hash": "88a77e406564a5ed0d21c6fece6c43b933e4d9b8c6c84a761899b00bdbff35a9",
+              "request_id": "phase2-second-expired"
+            },
+            "success": false
+          },
+          "metadata": {
+            "arguments": {
+              "parameters_json": "[{\"name\":\"phase2_second_expired\",\"expression\":\"1\"}]"
+            },
+            "execution": {
+              "expected_revision": 0,
+              "idempotency_key": "20260920T025903703056Z-phase2-second-expired",
+              "model_ref": {
+                "generation": 1,
+                "model_tag": "mcp_4d5981225505",
+                "schema_version": 1,
+                "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "queue_timeout_s": 0,
+              "request_id": "phase2-second-expired",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "operation": "set_parameters"
+          },
+          "created_at": "2026-09-20 02:59:06",
+          "started_at": null,
+          "finished_at": "2026-09-20 02:59:07",
+          "effective_timeouts": {
+            "execution_timeout_s": null,
+            "no_progress_warning_s": null,
+            "queue_timeout_s": 0,
+            "rpc_timeout_s": 30.0
+          }
+        },
+        "result": {
+          "data": {
+            "status": "NOT_EXECUTED"
+          },
+          "error": {
+            "code": "QUEUE_TIMEOUT",
+            "message": "request expired before engine dispatch",
+            "safe_retry": true
+          },
+          "execution": {
+            "idempotency_key": "20260920T025903703056Z-phase2-second-expired",
+            "job_id": "df0ff739-5500-472c-8b1c-f3f6a61e890c",
+            "operation_id": "6ce076d5-339f-42db-9577-dc11143fe3ca",
+            "request_hash": "88a77e406564a5ed0d21c6fece6c43b933e4d9b8c6c84a761899b00bdbff35a9",
+            "request_id": "phase2-second-expired"
+          },
+          "success": false
+        }
+      },
+      "_outer_isError": false,
+      "_elapsed_s": 0.0024811660405248404
+    },
+    "pass": true
+  },
+  "queue_after_solve": true,
+  "real_metric": true,
+  "saved": true,
+  "health_p95_s": 0.0037769580725580455,
+  "fresh_mcp_host_reopen": true
+}

@@ -1,0 +1,163 @@
+{
+  "cleanup_action": {
+    "all_exit_codes": 0,
+    "method": "TERM sent individually to exact verified PIDs 87403, 87407, 87410, 87413",
+    "post_stop": {
+      "active_jobs": 0,
+      "control_ports_listening": false,
+      "exact_target_pids_present": false,
+      "private_home_file_handles_present": false
+    }
+  },
+  "generated_at": "2026-09-20T02:45:19.136972Z",
+  "interpretation_and_limits": {
+    "bounded_inference": "The offline run did not attach to COMSOL because --live was omitted, _bind_model reported NOT_RUN, engine logs had no COMSOL connection markers, and all private runtime states had server_running=false.",
+    "not_claimed": "PASS is limited to offline stdio/registry/docs acceptance. It is not live COMSOL, model, numerical, or scientific acceptance."
+  },
+  "observed_result": {
+    "binding": {
+      "reason": "--live was not supplied; live COMSOL cases were not attempted",
+      "status": "NOT_RUN"
+    },
+    "case_status": {
+      "W08_T008_T009_T010": "NOT_RUN",
+      "W09_T038_T039": "PASS",
+      "W10_T031_T032_T037": "NOT_RUN",
+      "W11_T043_T036": "PASS",
+      "W12_T029_T033_T050": "NOT_RUN"
+    },
+    "engine_log_marker_counts": {
+      "56388": 0,
+      "56389": 0,
+      "model_adopt": 0,
+      "model_load": 0,
+      "mphserver": 0,
+      "server_connect": 0
+    },
+    "public_evidence_audit": {
+      "private_path_hits": 0,
+      "sensitive_fields_checked": 28,
+      "sensitive_value_violations": 0,
+      "sha256_mismatches": [],
+      "source_snapshot_driver_sha256": "85359a09e0a46fb8434694a2f1caf58ddb87fcb4ec647f39933d3670cfbc37ab",
+      "transcript_rows": 36
+    },
+    "result_status": "PASS",
+    "subcase_status": {
+      "W09_T038_T039": {
+        "error_propagation": "PASS",
+        "fallback_route": "PASS",
+        "hidden_legacy_managed_route": "PASS",
+        "host_profile_publication": "PASS",
+        "initialize_list_schema": "PASS",
+        "limited_host_capability_degradation": "PASS",
+        "profile_tool_list_shortening": "PASS",
+        "registry_paging": "PASS",
+        "registry_profile_manifests": "PASS",
+        "registry_schema": "PASS",
+        "structured_content_action_results": "PASS"
+      },
+      "W11_T043_T036": {
+        "docs_root_boundary": "PASS",
+        "malicious_doc_is_data": "PASS",
+        "real_local_help_source_hash": "PASS",
+        "search_returns_version_source_hash": "PASS",
+        "source_fragment_readback": "PASS",
+        "unavailable_63_is_explicit": "PASS",
+        "zero_match_is_not_found": "PASS"
+      }
+    }
+  },
+  "owned_processes_before_cleanup": [
+    {
+      "active_jobs": 0,
+      "attached_to_existing_server": false,
+      "birth": "Sun Sep 20 10:42:04 2026",
+      "children": [],
+      "command_class": "python -m comsol_mcp._control_daemon",
+      "command_scope": "<repo>/.phase1-private/g2-offline-final-20260920T024149Z/control-private",
+      "control_port": 56810,
+      "job_counts": {
+        "FAILED": 2,
+        "SUCCEEDED": 7
+      },
+      "label": "primary",
+      "network_observation": "127.0.0.1 listener only",
+      "pid": 87403,
+      "ppid": 1,
+      "server_running": false,
+      "status": "ready"
+    },
+    {
+      "active_jobs": 0,
+      "attached_to_existing_server": false,
+      "birth": "Sun Sep 20 10:42:05 2026",
+      "children": [],
+      "command_class": "python -m comsol_mcp._control_daemon",
+      "command_scope": "<repo>/.phase1-private/g2-acceptance/20260920T024204Z/profile-full/mcp-home/control-private",
+      "control_port": 56828,
+      "job_counts": {
+        "SUCCEEDED": 1
+      },
+      "label": "profile-full",
+      "network_observation": "127.0.0.1 listener only",
+      "pid": 87407,
+      "ppid": 1,
+      "server_running": false,
+      "status": "disconnected"
+    },
+    {
+      "active_jobs": 0,
+      "attached_to_existing_server": false,
+      "birth": "Sun Sep 20 10:42:06 2026",
+      "children": [],
+      "command_class": "python -m comsol_mcp._control_daemon",
+      "command_scope": "<repo>/.phase1-private/g2-acceptance/20260920T024204Z/profile-domain/mcp-home/control-private",
+      "control_port": 56839,
+      "job_counts": {
+        "SUCCEEDED": 1
+      },
+      "label": "profile-domain",
+      "network_observation": "127.0.0.1 listener only",
+      "pid": 87410,
+      "ppid": 1,
+      "server_running": false,
+      "status": "disconnected"
+    },
+    {
+      "active_jobs": 0,
+      "attached_to_existing_server": false,
+      "birth": "Sun Sep 20 10:42:06 2026",
+      "children": [],
+      "command_class": "python -m comsol_mcp._control_daemon",
+      "command_scope": "<repo>/.phase1-private/g2-acceptance/20260920T024204Z/profile-expert/mcp-home/control-private",
+      "control_port": 56850,
+      "job_counts": {
+        "SUCCEEDED": 1
+      },
+      "label": "profile-expert",
+      "network_observation": "127.0.0.1 listener only",
+      "pid": 87413,
+      "ppid": 1,
+      "server_running": false,
+      "status": "disconnected"
+    }
+  ],
+  "protected_shared_runtime": {
+    "interpretation": "Shared listener was read only; no shared process, endpoint, home, firewall, Windows, or XML action was performed.",
+    "listener": "*:56389",
+    "observed_after_cleanup": true,
+    "pid": 73823,
+    "touched": false
+  },
+  "schema_version": "g2.offline_final_cleanup.v1",
+  "scope": {
+    "comsol_server_start_stop": "NOT_ATTEMPTED",
+    "live": false,
+    "model_operations": "NOT_RUN",
+    "run_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/offline-final-20260920T024149Z",
+    "server_xml_or_os_settings_changed": false,
+    "sha256_manifest": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/offline-final-20260920T024149Z/SHA256SUMS.json",
+    "source_snapshot": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/offline-final-20260920T024149Z/source_snapshot.json"
+  }
+}

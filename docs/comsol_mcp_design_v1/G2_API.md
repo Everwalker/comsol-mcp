@@ -4064,6 +4064,10 @@ The following JSON object is generated from the catalog and includes every execu
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
+        "authorization_ref": {
+          "minLength": 1,
+          "type": "string"
+        },
         "expected_revision": {
           "minimum": 0,
           "type": "integer"
@@ -4113,6 +4117,10 @@ The following JSON object is generated from the catalog and includes every execu
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "properties": {
+        "authorization_ref": {
+          "minLength": 1,
+          "type": "string"
+        },
         "expected_revision": {
           "minimum": 0,
           "type": "integer"
@@ -4254,6 +4262,11 @@ The following JSON object is generated from the catalog and includes every execu
           },
           "type": "array"
         },
+        "checkpoint_id": {
+          "description": "Explicit immutable checkpoint bound to the current model ref, revision, and fingerprint",
+          "minLength": 1,
+          "type": "string"
+        },
         "idempotency_key": {
           "minLength": 1,
           "type": "string"
@@ -4302,6 +4315,11 @@ The following JSON object is generated from the catalog and includes every execu
             "type": "object"
           },
           "type": "array"
+        },
+        "checkpoint_id": {
+          "description": "Explicit immutable checkpoint bound to the current model ref, revision, and fingerprint",
+          "minLength": 1,
+          "type": "string"
         },
         "idempotency_key": {
           "minLength": 1,

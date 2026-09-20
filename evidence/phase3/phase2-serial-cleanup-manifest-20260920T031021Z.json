@@ -1,0 +1,104 @@
+{
+  "created_at": 1789874139.9264798,
+  "disk_volume": {
+    "bytes": 16736256,
+    "filler_exists": false,
+    "mounted": true,
+    "path": "output/phase2-disk-test-volume",
+    "target_bytes": 872984,
+    "target_sha256": "2e8c518695c70fd22560b90595aa76586bd7b0a3c052f9f36522158c4be155d4",
+    "zip_test": null
+  },
+  "historical_phase2_processes_preserved": [
+    30185,
+    31074
+  ],
+  "owned_control_worker_pids_verified_absent": [
+    88094,
+    88098,
+    89410,
+    89414,
+    89928,
+    89937,
+    90620,
+    90623,
+    91277,
+    91283,
+    91744,
+    91746
+  ],
+  "runs": [
+    {
+      "cleanup": "evidence/phase3/live-g2-rerun8-20260920T024658Z/cleanup.json",
+      "owned_pids": [
+        88094,
+        88098
+      ],
+      "run": "evidence/phase3/live-g2-rerun8-20260920T024658Z",
+      "status": "PASS"
+    },
+    {
+      "cases": {
+        "T012": "NOT_RUN",
+        "T026": "PASS",
+        "T027": "NOT_RUN"
+      },
+      "cleanup": "evidence/phase3/phase2-run-20260920T025841Z/cleanup.json",
+      "owned_pids": [
+        89410,
+        89414
+      ],
+      "run": "evidence/phase3/phase2-run-20260920T025841Z",
+      "status": "PASS"
+    },
+    {
+      "cleanup": "evidence/phase3/phase2-host-disconnect-20260920T030024Z/cleanup.json",
+      "owned_pids": [
+        89928,
+        89937
+      ],
+      "reason": "W02 fixture ended before required submitted-solver sampling window; terminal query later SUCCEEDED; no acceptance promoted",
+      "run": "evidence/phase3/phase2-host-disconnect-20260920T030024Z",
+      "status": "BLOCKED"
+    },
+    {
+      "cleanup": "evidence/phase3/phase2-same-model-queue-20260920T030324Z/cleanup.json",
+      "owned_pids": [
+        90620,
+        90623
+      ],
+      "run": "evidence/phase3/phase2-same-model-queue-20260920T030324Z",
+      "status": "PASS"
+    },
+    {
+      "cleanup": "evidence/phase3/phase2-host-disconnect-refined-live-20260920T030543Z/cleanup.json",
+      "fixture_sha256": "a57add5af5b339ec224f02f36072a244f6cd054ba59a58ddb550b3f856a925e3",
+      "owned_pids": [
+        91277,
+        91283
+      ],
+      "run": "evidence/phase3/phase2-host-disconnect-refined-live-20260920T030543Z",
+      "status": "PASS"
+    },
+    {
+      "case": "T030",
+      "cleanup": "evidence/phase3/phase2-disk-full-20260920T031041842340Z/cleanup.json",
+      "fixture_sha256": "2e8c518695c70fd22560b90595aa76586bd7b0a3c052f9f36522158c4be155d4",
+      "owned_pids": [
+        91744,
+        91746
+      ],
+      "reconciled_quiescent": true,
+      "replay_performed": false,
+      "run": "evidence/phase3/phase2-disk-full-20260920T031041842340Z",
+      "save_job_status": "UNKNOWN",
+      "status": "PASS"
+    }
+  ],
+  "server": {
+    "birth": "Sun Sep 20 08:35:46 2026",
+    "pid": 73823,
+    "port": 56389,
+    "preserved": true
+  }
+}

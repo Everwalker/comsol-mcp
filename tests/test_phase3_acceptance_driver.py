@@ -157,6 +157,80 @@ def test_worker_compile_diagnostics_are_flattened_but_must_keep_line_data():
     assert driver._diagnostic_rows({"diagnostics": []}) == []
 
 
+def test_execution_readback_extracts_the_reviewed_nested_worker_result_only():
+    payload = {
+        "success": True,
+        "data": {
+            "source_sha256": "a" * 64,
+            "entrypoint": "Phase3NoWrapper#run",
+            "readback": {
+                "executed": True,
+                "model_tag": "mcp4",
+                "readback": {
+                    "before_comments": "",
+                    "after_comments": "phase3-marker",
+                    "marker": "phase3-marker",
+                    "parameter_count": 3,
+                },
+            },
+        },
+    }
+    assert driver._execution_readback(payload) == {
+        "before_comments": "",
+        "after_comments": "phase3-marker",
+        "marker": "phase3-marker",
+        "parameter_count": 3,
+    }
+    assert driver._execution_readback({"success": True, "data": {"readback": {"executed": True}}}) == {"executed": True}
+
+
+def test_trial_scope_property_map_selects_matching_nested_path():
+    path = {"segments": [{"collection": "geom", "tag": "g1"}, {"collection": "feature", "tag": "wp3"}]}
+    sibling = {"segments": [{"collection": "geom", "tag": "g1"}, {"collection": "feature", "tag": "other"}]}
+    rows = [
+        {"operation": "node.property_set", "path": sibling, "properties": [
+            {"name": "size", "value": {"kind": "float64", "shape": [2], "data": [9.0, 9.0]}}
+        ]},
+        {"operation": "node.property_set", "path": path, "properties": [
+            {"name": "size", "value": {"kind": "float64", "shape": [2], "data": [1.0, 1.0]}},
+            {"name": "planetype", "value": {"kind": "string", "shape": [], "data": "quick"}},
+        ]},
+    ]
+    assert driver._property_value_map(rows, requested_path=path) == {
+        "size": {"kind": "float64", "shape": [2], "data": [1.0, 1.0]},
+        "planetype": {"kind": "string", "shape": [], "data": "quick"},
+    }
+
+
+def test_reconciliation_requires_unknown_quiescent_terminal_rows_and_no_replay():
+    base = {
+        "success": True,
+        "data": {
+            "job_id": "job-1",
+            "status": "UNKNOWN",
+            "metadata": {
+                "reconciled_quiescent": True,
+                "replay_performed": False,
+                "reconciliation": [{"request_id": "req-1", "status": "FAILED"}],
+            },
+        },
+    }
+    assert driver._reconciliation_quiescent(base)
+    details = driver._reconciliation_details(base)
+    assert details["status"] == "UNKNOWN"
+    assert details["replay_performed"] is False
+    assert details["rows"][0]["status"] == "FAILED"
+    not_quiescent = json.loads(json.dumps(base))
+    not_quiescent["data"]["metadata"]["reconciled_quiescent"] = False
+    assert not driver._reconciliation_quiescent(not_quiescent)
+    running = json.loads(json.dumps(base))
+    running["data"]["metadata"]["reconciliation"][0]["status"] = "RUNNING"
+    assert not driver._reconciliation_quiescent(running)
+    replayed = json.loads(json.dumps(base))
+    replayed["data"]["metadata"]["replay_performed"] = True
+    assert not driver._reconciliation_quiescent(replayed)
+
+
 def test_action_client_uses_operation_call_fallback_with_bound_execution_identity():
     args = _args()
     args.project_id = "phase3-test"
@@ -183,6 +257,116 @@ def test_action_client_prefers_published_alias_over_registry_fallback():
     client = driver.ActionClient(host, args, {"ref": _ref(), "revision": 1})
     asyncio.run(client.action("node.property_get", {"path": {"segments": []}, "names": []}))
     assert host.calls[0][0] == "node_property_get"
+
+
+def test_action_client_stops_bound_cascade_after_unknown_but_keeps_offline_calls():
+    class UnknownHost(_FakeHost):
+        async def call(self, name, arguments=None):
+            self.calls.append((name, dict(arguments or {})))
+            if len(self.calls) == 1:
+                return {
+                    "success": False,
+                    "data": {},
+                    "error": {"code": "EXECUTION_STATE_UNKNOWN", "message": "reconcile"},
+                    "_outer_isError": True,
+                }
+            return {"success": True, "data": {"compiled": True}, "_outer_isError": False}
+
+    args = _args()
+    host = UnknownHost({"operation_call": {}})
+    client = driver.ActionClient(host, args, {"ref": _ref(), "revision": 1})
+    first = asyncio.run(client.action("node.inspect", {"path": {"segments": []}}))
+    assert driver._error_code(first) == "EXECUTION_STATE_UNKNOWN"
+    with pytest.raises(driver.CapabilityUnavailable):
+        asyncio.run(client.action("node.property_get", {"path": {"segments": []}, "names": ["x"]}))
+    offline = asyncio.run(client.action("code.compile_java", {}, require_model=False))
+    assert offline["success"] is True and len(host.calls) == 2
+
+
+def test_action_client_allows_explicit_checkpoint_recovery_after_unknown():
+    class RecoveryHost(_FakeHost):
+        async def call(self, name, arguments=None):
+            self.calls.append((name, dict(arguments or {})))
+            if len(self.calls) == 1:
+                return {
+                    "success": False,
+                    "data": {},
+                    "error": {"code": "EXECUTION_STATE_UNKNOWN", "message": "reconcile"},
+                    "_outer_isError": True,
+                }
+            if len(self.calls) == 2:
+                return {
+                    "success": True,
+                    "data": {
+                        "job_id": "job-1",
+                        "status": "UNKNOWN",
+                        "metadata": {
+                            "reconciled_quiescent": True,
+                            "replay_performed": False,
+                            "reconciliation": [{"request_id": "req-1", "status": "FAILED"}],
+                        },
+                    },
+                    "_outer_isError": False,
+                }
+            return {
+                "success": True,
+                "data": {"restored": True},
+                "execution": {"model_ref": {**_ref(), "model_tag": "restored-1"}, "revision": 5},
+                "_outer_isError": False,
+            }
+
+    args = _args()
+    host = RecoveryHost({"operation_call": {}})
+    client = driver.ActionClient(host, args, {"ref": _ref(), "revision": 4})
+    asyncio.run(client.action("node.property_set", {"path": {"segments": []}, "properties": []}))
+    with pytest.raises(driver.CapabilityUnavailable):
+        asyncio.run(client.action("checkpoint.restore", {"checkpoint_id": "checkpoint-1", "authorization_ref": "test"}))
+    reconciled = asyncio.run(client.action("job_reconcile", {"job_id": "job-1"}, require_model=False))
+    assert driver._reconciliation_quiescent(reconciled)
+    # The driver records this only after checking the durable result; the
+    # original UNKNOWN marker remains until the replacement ref is verified.
+    client.state["_job_reconciled"] = True
+    assert "_execution_state_unknown" in client.state
+    restored = asyncio.run(client.action("checkpoint.restore", {"checkpoint_id": "checkpoint-1", "authorization_ref": "test"}))
+    assert restored["success"] is True
+    assert "_execution_state_unknown" not in client.state
+    assert [row[1]["operation_id"] for row in host.calls] == ["node.property_set", "job_reconcile", "checkpoint.restore"]
+
+
+def test_action_client_does_not_restore_after_nonquiescent_reconcile():
+    class NonQuiescentHost(_FakeHost):
+        async def call(self, name, arguments=None):
+            self.calls.append((name, dict(arguments or {})))
+            if len(self.calls) == 1:
+                return {
+                    "success": False,
+                    "data": {},
+                    "error": {"code": "EXECUTION_STATE_UNKNOWN", "message": "reconcile"},
+                    "_outer_isError": True,
+                }
+            return {
+                "success": True,
+                "data": {
+                    "job_id": "job-1",
+                    "status": "UNKNOWN",
+                    "metadata": {
+                        "reconciled_quiescent": False,
+                        "replay_performed": False,
+                        "reconciliation": [{"request_id": "req-1", "status": "RUNNING"}],
+                    },
+                },
+                "_outer_isError": False,
+            }
+
+    args = _args()
+    host = NonQuiescentHost({"operation_call": {}})
+    client = driver.ActionClient(host, args, {"ref": _ref(), "revision": 1})
+    asyncio.run(client.action("node.property_set", {"path": {"segments": []}, "properties": []}))
+    reconciled = asyncio.run(client.action("job_reconcile", {"job_id": "job-1"}, require_model=False))
+    assert not driver._reconciliation_quiescent(reconciled)
+    with pytest.raises(driver.CapabilityUnavailable):
+        asyncio.run(client.action("checkpoint.restore", {"checkpoint_id": "checkpoint-1", "authorization_ref": "test"}))
+    assert len(host.calls) == 2
 
 
 def test_environment_sets_endpoint_and_trusted_code_without_touching_process_lifecycle(tmp_path):
@@ -226,6 +410,7 @@ def test_profile_hosts_get_distinct_run_owned_private_homes(tmp_path):
 def test_reviewed_java_sources_use_injected_model_and_real_public_api():
     fixture = (ROOT / "tools/java/Phase3Fixture.java").read_text(encoding="utf-8")
     no_wrapper = (ROOT / "tools/java/Phase3NoWrapper.java").read_text(encoding="utf-8")
+    readback = (ROOT / "tools/java/Phase3Readback.java").read_text(encoding="utf-8")
     partial = (ROOT / "tools/java/Phase3PartialFailure.java").read_text(encoding="utf-8")
     syntax = (ROOT / "tools/java/Phase3SyntaxFailure.java").read_text(encoding="utf-8")
     assert 'geometry.create(workPlaneTag, "WorkPlane")' in fixture
@@ -235,9 +420,10 @@ def test_reviewed_java_sources_use_injected_model_and_real_public_api():
     assert "model.comments()" in no_wrapper and "model.comments(marker)" in no_wrapper
     assert "model.param().set(name" in no_wrapper
     assert "parameter_count" in no_wrapper
+    assert "phase3_code_guard_present" in readback and "model.param().varnames()" in readback
     assert "phase3 deliberate partial failure" in partial
     assert "model.label(;" in syntax
-    for source in (fixture, no_wrapper, partial, syntax):
+    for source in (fixture, no_wrapper, readback, partial, syntax):
         assert "ModelUtil.connect" not in source
         assert "ModelUtil.create" not in source
 

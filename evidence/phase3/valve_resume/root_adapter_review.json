@@ -1,0 +1,16 @@
+{
+  "recorded_at": "2026-09-19T23:13:32.984397+00:00",
+  "scope": "software only; no runtime isolation claim",
+  "status": "PASS",
+  "command": "python -m pytest -q tests/test_g2_remote_isolation.py tests/test_g2_security_guards.py tests/test_g2_review_regressions.py",
+  "observed_output": "46 passed in 0.13s",
+  "reviewed_guards": [
+    "fixed reviewed server.xml path/hash and current inode",
+    "same process birth/command identity",
+    "COMSOL Java API proof kind",
+    "authenticated 127.0.0.1 endpoint and nonloopback API exception HTTP403 on same port",
+    "owned wildcard listener accurately labeled",
+    "exact bidirectional IPv4 Worker peer and no extra clients"
+  ],
+  "pending": "Actual API proof and guarded lifecycle cleanup before model operations"
+}

@@ -1,0 +1,30 @@
+{
+  "api_route": "/webbridge/websocket",
+  "config_restored_sha256": "8bb393d2d803d1b7f6b124498742fa23b6310db9a28a6334f7462ec12d674bbe",
+  "failure": "non-loopback Java API connection unexpectedly succeeded",
+  "global_firewall_changes": false,
+  "http_403_probe": "NOT_RUN because fail-closed immediately on unexpected Java API success",
+  "interpretation": "The target is this Mac’s own address and the current route table sends it through lo0; this run does not establish a non-loopback peer, so RemoteAddrValve HTTP403 isolation remains UNVERIFIED.",
+  "java_api_authentication": "localhost Worker connect PASS; same Worker connect to target unexpectedly succeeded",
+  "kind": "remote_addr_valve_failure_diagnosis",
+  "model_operations": "NOT_RUN",
+  "recorded_at": "2026-09-19T23:14:22Z",
+  "route_flags": [
+    "UP",
+    "HOST",
+    "DONE",
+    "LLINFO",
+    "WASCLONED",
+    "LOCAL",
+    "IFSCOPE",
+    "IFREF"
+  ],
+  "route_interface": "lo0",
+  "run_evidence": "evidence/phase3/mac_owned_runtime/g2-valve-runtime-20260919T231415293264Z.json",
+  "run_id": "g2-valve-runtime-20260919T231415293264Z",
+  "schema_version": 1,
+  "solve_operations": "NOT_RUN",
+  "target_address": "192.168.100.152",
+  "target_address_class": "assigned non-loopback IPv4 selected dynamically at run time",
+  "windows_probe": "NOT_RUN"
+}

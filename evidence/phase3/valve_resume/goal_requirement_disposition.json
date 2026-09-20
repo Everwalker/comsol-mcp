@@ -1,0 +1,18 @@
+{
+  "recorded_at": "2026-09-20T03:08:37.055899+00:00",
+  "reviewed_report": "evidence/phase3/valve_resume/goal_requirement_review.json",
+  "disposition": {
+    "trial_checkpoint_required": "Optional wire field is deliberate backward-compatible error reporting: absent ID raises CHECKPOINT_REQUIRED before copy/load. Signature now includes checkpoint_id:str?; docs and runtime semantics explicit. No requirement to force JSON-schema required instead of domain error.",
+    "recover_schema_receipt": "Resolved by offline-w09-boundary-20260920T030059Z with actual stdio describe of both new fields and full W09 PASS.",
+    "source_snapshot_drift": "Superseded by software_regression_boundary_source.json (87 hashes) and boundary W09 transcript. Subsequent docs-only adapter change will receive new suite/snapshot. Historical snapshots are not rewritten.",
+    "docs_injection_scope": "Accepted evidence gap: add backend-route test with unchanged permission/sentinel and network/Worker call traps; retain narrow product-behavior scope.",
+    "platform_docs_roots": "Accepted small architecture gap: move installation-default paths out of ManagedBackend core into platform helper; retain current Mac defaults/configured-root behavior without claiming other platform acceptance."
+  },
+  "status": "RESOLVED_WITH_SCOPED_EVIDENCE",
+  "resolved_by": {
+    "platform_roots": "comsol_mcp/_platform_paths.py; actual final W11 run evidence/phase3/offline-w11-platform-20260920T031325Z",
+    "malicious_docs": "tests/test_managed_backend_docs_security.py; 419-pass full software delivery suite",
+    "final_software": "evidence/phase3/valve_resume/software_regression_delivery_source.json",
+    "limitations": "No arbitrary LLM/host prompt-injection immunity claim; measured backend permissions/network/Worker/sentinel behavior only."
+  }
+}

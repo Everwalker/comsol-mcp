@@ -1,0 +1,216 @@
+{
+  "cleanup_observation": {
+    "action": "TERM sent to exact verified PID 77286 only",
+    "additional_profile_processes": [
+      {
+        "active_jobs_before_stop": 0,
+        "attached_to_existing_server_before_stop": false,
+        "birth": "Sun Sep 20 09:02:27 2026",
+        "command_class": "python -m comsol_mcp._control_daemon",
+        "command_scope": "<repo>/.phase1-private/g2-acceptance/20260920T010226Z/profile-full/mcp-home/control-private",
+        "control_port": 62567,
+        "label": "profile-full",
+        "network_connections_before_stop": 0,
+        "ownership_correlation": {
+          "engine_log": "profile-full.engine.log",
+          "engine_log_first_observed_time": "2026-09-20 09:02:27",
+          "public_transcript_host": "profile-full",
+          "request_id_count_observed": 4,
+          "request_id_prefix": "20260920T010226Z-w09-profile-full-"
+        },
+        "pid": 77292,
+        "post_stop_control_port_listening": false,
+        "post_stop_pid_present": false,
+        "post_stop_private_home_handles_present": false,
+        "ppid": 1,
+        "server_running_before_stop": false,
+        "status_before_stop": "disconnected",
+        "term_sent": true
+      },
+      {
+        "active_jobs_before_stop": 0,
+        "attached_to_existing_server_before_stop": false,
+        "birth": "Sun Sep 20 09:02:27 2026",
+        "command_class": "python -m comsol_mcp._control_daemon",
+        "command_scope": "<repo>/.phase1-private/g2-acceptance/20260920T010226Z/profile-domain/mcp-home/control-private",
+        "control_port": 62586,
+        "label": "profile-domain",
+        "network_connections_before_stop": 0,
+        "ownership_correlation": {
+          "engine_log": "profile-domain.engine.log",
+          "engine_log_first_observed_time": "2026-09-20 09:02:27",
+          "public_transcript_host": "profile-domain",
+          "request_id_count_observed": 4,
+          "request_id_prefix": "20260920T010226Z-w09-profile-domain-"
+        },
+        "pid": 77302,
+        "post_stop_control_port_listening": false,
+        "post_stop_pid_present": false,
+        "post_stop_private_home_handles_present": false,
+        "ppid": 1,
+        "server_running_before_stop": false,
+        "status_before_stop": "disconnected",
+        "term_sent": true
+      },
+      {
+        "active_jobs_before_stop": 0,
+        "attached_to_existing_server_before_stop": false,
+        "birth": "Sun Sep 20 09:02:28 2026",
+        "command_class": "python -m comsol_mcp._control_daemon",
+        "command_scope": "<repo>/.phase1-private/g2-acceptance/20260920T010226Z/profile-expert/mcp-home/control-private",
+        "control_port": 62597,
+        "label": "profile-expert",
+        "network_connections_before_stop": 0,
+        "ownership_correlation": {
+          "engine_log": "profile-expert.engine.log",
+          "engine_log_first_observed_time": "2026-09-20 09:02:28",
+          "public_transcript_host": "profile-expert",
+          "request_id_count_observed": 4,
+          "request_id_prefix": "20260920T010226Z-w09-profile-expert-"
+        },
+        "pid": 77314,
+        "post_stop_control_port_listening": false,
+        "post_stop_pid_present": false,
+        "post_stop_private_home_handles_present": false,
+        "ppid": 1,
+        "server_running_before_stop": false,
+        "status_before_stop": "disconnected",
+        "term_sent": true
+      }
+    ],
+    "all_target_pids": [
+      77286,
+      77292,
+      77302,
+      77314
+    ],
+    "complete_post_stop_checks": {
+      "active_jobs_after_stop": 0,
+      "exact_target_pids_present": false,
+      "profile_control_ports_listening": false,
+      "profile_home_file_handles_present": false
+    },
+    "identity_before_stop": {
+      "birth": "Sun Sep 20 09:02:26 2026",
+      "command_class": "python -m comsol_mcp._control_daemon",
+      "command_scope": "<repo>/.phase1-private/g2-offline-review-20260920T010134Z/control-private",
+      "credentials_printed": false,
+      "identity_match": true,
+      "pid": 77286,
+      "ppid": 1
+    },
+    "post_stop_checks": {
+      "active_jobs": 0,
+      "exact_pid_present": false,
+      "private_control_port_62550_listening": false,
+      "private_home_file_handles_present": false
+    },
+    "protected_shared_runtime_observation": {
+      "current_readonly_client_pid": 78526,
+      "interpretation": "Only the listener and current endpoint were observed; no shared process action was taken.",
+      "listener": "*:56389",
+      "listener_observed_after_cleanup": true,
+      "pid": 73823,
+      "touched": false
+    },
+    "scope_complete": true,
+    "target_pid": 77286
+  },
+  "generated_at": "2026-09-20T01:08:38.518775Z",
+  "initial_attempt_observation": {
+    "cause": "The first invocation found the requested run directory already present and raised FileExistsError before stdio startup.",
+    "comsol_connection_attempted": false,
+    "comsol_subprocess_started": false,
+    "remediation": "Only the empty precreated run directory was removed; the corrected invocation then created it and passed.",
+    "status": "PRECONDITION_FAIL"
+  },
+  "interpretation_and_limits": {
+    "bounded_inference": "Within this offline run, --live=false, _bind_model returned bound=false, no COMSOL markers appeared in public engine logs, and no model operations were run; this supports no COMSOL contact for this run.",
+    "cleanup_inference": "All four stopped daemons were task-owned: the primary PID and each profile PID matched this offline run by exact command scope, birth time, profile request IDs/log timestamps, and dedicated control port; all had zero active jobs. No other home or PID was acted on.",
+    "not_claimed": "This artifact does not claim COMSOL server or scientific acceptance, and it does not claim or alter the shared server lifecycle."
+  },
+  "observed_run": {
+    "bind_model": {
+      "bound": false,
+      "reason": "--live was not supplied; live COMSOL cases were not attempted",
+      "unexpected_dummy_host_calls": 0
+    },
+    "case_status": {
+      "W09_T038_T039": "PASS",
+      "W11_T043_T036": "PASS"
+    },
+    "hash_audit": {
+      "private_path_hits": 0,
+      "public_transcript_rows": 36,
+      "sensitive_field_values_checked": 28,
+      "sensitive_value_violations": 0,
+      "sha256_mismatches": []
+    },
+    "live": false,
+    "private_home_state": {
+      "active_jobs": 0,
+      "attached_to_existing_server": false,
+      "failed_jobs_scope": "Expected negative probes; no active jobs remained",
+      "job_counts": {
+        "FAILED": 2,
+        "SUCCEEDED": 7
+      },
+      "server_running": false,
+      "server_started_by_mcp": false,
+      "status": "ready"
+    },
+    "public_engine_log_markers": {
+      "56388": 0,
+      "56389": 0,
+      "model_adopt": 0,
+      "model_load": 0,
+      "mphserver": 0,
+      "server_connect": 0
+    },
+    "result_status": "PASS"
+  },
+  "ownership_correlation": {
+    "correlation_basis": "The public transcript contains the profile-specific request IDs and host labels; their timestamps match the daemon birth times and profile engine log times. Each daemon home/status/control record also matches its PID and port.",
+    "evidence_run": "evidence/phase3/offline-review-20260920T010134Z",
+    "profile_engine_logs": [
+      "profile-full.engine.log",
+      "profile-domain.engine.log",
+      "profile-expert.engine.log"
+    ],
+    "same_offline_run": true,
+    "transcript_request_id_prefixes": [
+      "20260920T010226Z-w09-profile-full-",
+      "20260920T010226Z-w09-profile-domain-",
+      "20260920T010226Z-w09-profile-expert-"
+    ]
+  },
+  "schema_version": "g2.offline_refresh_cleanup_review.v1",
+  "scope": {
+    "cleanup_scope": "Primary offline daemon plus the three W09 profile daemons produced by the same offline run; no other home or PID was acted on.",
+    "live_comsol_allowed": false,
+    "model_operations": "NOT_RUN",
+    "purpose": "Bounded read-only review of the W09/W11 offline refresh and cleanup",
+    "run_files_or_run_hash_manifest_modified": false,
+    "server_xml_or_os_settings_changed": false
+  },
+  "source_run": {
+    "assertions_json": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/offline-review-20260920T010134Z/assertions.json",
+    "command": [
+      "<working-python>",
+      "tools/phase3_run_mcp.py",
+      "--only",
+      "W09_T038_T039,W11_T043_T036",
+      "--run-dir",
+      "<repo>/evidence/phase3/offline-review-20260920T010134Z",
+      "--private-home",
+      "<repo>/.phase1-private/g2-offline-review-20260920T010134Z",
+      "--python",
+      "<working-python>"
+    ],
+    "driver_sha256": "6a25ea380e54f57daa9dd8eda9770eeadd91bd4a356d5f4b9b1c6aa15da7c97b",
+    "result_json": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/offline-review-20260920T010134Z/result.json",
+    "run_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/offline-review-20260920T010134Z",
+    "sha256_manifest": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/offline-review-20260920T010134Z/SHA256SUMS.json",
+    "source_snapshot_json": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/offline-review-20260920T010134Z/source_snapshot.json"
+  }
+}

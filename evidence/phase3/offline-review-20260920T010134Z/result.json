@@ -1,0 +1,328 @@
+{
+  "binding": {
+    "reason": "--live was not supplied; live COMSOL cases were not attempted",
+    "status": "NOT_RUN"
+  },
+  "cases": {
+    "W08_T008_T009_T010": {
+      "acceptance": [
+        "T008",
+        "T009",
+        "T010"
+      ],
+      "assertions": {},
+      "case_id": "W08_T008_T009_T010",
+      "finished_at": "2026-09-20T01:02:28.683422Z",
+      "package": "W08",
+      "reason": "excluded by --only",
+      "started_at": "2026-09-20T01:02:26.151724Z",
+      "status": "NOT_RUN",
+      "subcases": {}
+    },
+    "W09_T038_T039": {
+      "acceptance": [
+        "T038",
+        "T039"
+      ],
+      "assertions": {
+        "actual_full_domain_expert_tools_list": {
+          "counts": {
+            "domain": 48,
+            "expert": 17,
+            "full": 65
+          },
+          "pass": true,
+          "strict_subsets": {
+            "domain_differs_expert": true,
+            "domain_of_full": true,
+            "expert_of_full": true
+          }
+        },
+        "fallback_strict_error_is_structured": {
+          "error_code": "INVALID_REQUEST",
+          "pass": true
+        },
+        "full_domain_expert_manifests": {
+          "pass": true,
+          "profiles": [
+            "full",
+            "domain",
+            "expert"
+          ]
+        },
+        "published_object_schemas": {
+          "pass": true
+        },
+        "registry_page_results_have_identity": {
+          "first_count": 5,
+          "next_cursor": "5",
+          "pass": true,
+          "second_count": 5
+        },
+        "registry_schema_describe": {
+          "pass": true
+        },
+        "stdio_initialize_and_tools_list": {
+          "pass": true,
+          "tool_count": 65
+        },
+        "structured_content_action_results": {
+          "call_count": 20,
+          "pass": true
+        },
+        "unknown_operation_is_error": {
+          "error_code": "UNSUPPORTED_OPERATION",
+          "pass": true
+        }
+      },
+      "case_id": "W09_T038_T039",
+      "finished_at": "2026-09-20T01:02:28.616528Z",
+      "package": "W09",
+      "reason": null,
+      "started_at": "2026-09-20T01:02:26.151728Z",
+      "status": "PASS",
+      "subcases": {
+        "error_propagation": {
+          "status": "PASS"
+        },
+        "fallback_route": {
+          "status": "PASS"
+        },
+        "hidden_legacy_managed_route": {
+          "profiles": {
+            "domain": {
+              "call": {
+                "error_code": "",
+                "outer_isError": false,
+                "pass": true,
+                "success": true
+              },
+              "describe": {
+                "error_code": null,
+                "operation_id": "configure_single_main_workflow",
+                "pass": true,
+                "route": "legacy managed backend"
+              },
+              "hidden": true,
+              "operation": "configure_single_main_workflow"
+            },
+            "expert": {
+              "call": {
+                "error_code": "",
+                "outer_isError": false,
+                "pass": true,
+                "success": true
+              },
+              "describe": {
+                "error_code": null,
+                "operation_id": "configure_single_main_workflow",
+                "pass": true,
+                "route": "legacy managed backend"
+              },
+              "hidden": true,
+              "operation": "configure_single_main_workflow"
+            },
+            "full": {
+              "call": {
+                "error_code": "",
+                "outer_isError": false,
+                "pass": true,
+                "success": true
+              },
+              "describe": {
+                "error_code": null,
+                "operation_id": "workflow_info",
+                "pass": true,
+                "route": "legacy managed backend"
+              },
+              "hidden": false,
+              "operation": "workflow_info"
+            }
+          },
+          "status": "PASS"
+        },
+        "host_profile_publication": {
+          "counts": {
+            "domain": 48,
+            "expert": 17,
+            "full": 65
+          },
+          "profiles": {
+            "domain": "PASS",
+            "expert": "PASS",
+            "full": "PASS"
+          },
+          "status": "PASS"
+        },
+        "initialize_list_schema": {
+          "status": "PASS",
+          "tool_count": 65
+        },
+        "limited_host_capability_degradation": {
+          "profiles": {
+            "domain": {
+              "capabilities": {
+                "dynamic_tools": false,
+                "image": false,
+                "tasks": false
+              },
+              "dynamic_fallback": "operation_describe/operation_call",
+              "image_fallback": "structuredContent/text",
+              "job_status_missing_task_is_error": true,
+              "pass": true,
+              "tasks_fallback": "job_status polling",
+              "text_only_operation_call": true
+            },
+            "expert": {
+              "capabilities": {
+                "dynamic_tools": false,
+                "image": false,
+                "tasks": false
+              },
+              "dynamic_fallback": "operation_describe/operation_call",
+              "image_fallback": "structuredContent/text",
+              "job_status_missing_task_is_error": true,
+              "pass": true,
+              "tasks_fallback": "job_status polling",
+              "text_only_operation_call": true
+            },
+            "full": {
+              "capabilities": {
+                "dynamic_tools": false,
+                "image": false,
+                "tasks": false
+              },
+              "dynamic_fallback": "operation_describe/operation_call",
+              "image_fallback": "structuredContent/text",
+              "job_status_missing_task_is_error": true,
+              "pass": true,
+              "tasks_fallback": "job_status polling",
+              "text_only_operation_call": true
+            }
+          },
+          "status": "PASS"
+        },
+        "profile_tool_list_shortening": {
+          "counts": {
+            "domain": 48,
+            "expert": 17,
+            "full": 65
+          },
+          "status": "PASS",
+          "strict_subsets": {
+            "domain_differs_expert": true,
+            "domain_of_full": true,
+            "expert_of_full": true
+          }
+        },
+        "registry_paging": {
+          "next_cursor": "5",
+          "status": "PASS"
+        },
+        "registry_profile_manifests": {
+          "status": "PASS"
+        },
+        "registry_schema": {
+          "status": "PASS"
+        },
+        "structured_content_action_results": {
+          "status": "PASS"
+        }
+      }
+    },
+    "W10_T031_T032_T037": {
+      "acceptance": [
+        "T031",
+        "T032",
+        "T037"
+      ],
+      "assertions": {},
+      "case_id": "W10_T031_T032_T037",
+      "finished_at": "2026-09-20T01:02:28.683433Z",
+      "package": "W10",
+      "reason": "excluded by --only",
+      "started_at": "2026-09-20T01:02:26.151730Z",
+      "status": "NOT_RUN",
+      "subcases": {}
+    },
+    "W11_T043_T036": {
+      "acceptance": [
+        "T043",
+        "T036"
+      ],
+      "assertions": {
+        "docs_source_snapshot": [
+          {
+            "exists": true,
+            "path": "/Applications/COMSOL64/Multiphysics/doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/PropFeature.html",
+            "sha256": "befb8cc1c0e3df1ce74d2fa2cd1377e73d378e5c26170558e9f40dc255cc3bc3",
+            "size": 87066
+          },
+          {
+            "exists": true,
+            "path": "/Applications/COMSOL64/Multiphysics/doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/util/ModelUtil.html",
+            "sha256": "a5e4c080407a673a5dd78e95b9fb089d92c0f518477ffdcc4f62b3348085c4eb",
+            "size": 78602
+          },
+          {
+            "exists": true,
+            "path": "/Applications/COMSOL64/Multiphysics/doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_ref_running.38.33.html",
+            "sha256": "36a9fa631e932121c1d6332d43dd86b433d80f237b88463d54544c310788500b",
+            "size": 245128
+          }
+        ],
+        "malicious_fixture_sha256": "a78c900e41f8f89f5ed0f7dcca570f7bc584efcccc0ff42160e18424fe9dd54b"
+      },
+      "case_id": "W11_T043_T036",
+      "finished_at": "2026-09-20T01:02:28.645666Z",
+      "package": "W11",
+      "reason": null,
+      "started_at": "2026-09-20T01:02:26.151731Z",
+      "status": "PASS",
+      "subcases": {
+        "docs_root_boundary": {
+          "status": "PASS"
+        },
+        "malicious_doc_is_data": {
+          "status": "PASS"
+        },
+        "real_local_help_source_hash": {
+          "status": "PASS"
+        },
+        "search_returns_version_source_hash": {
+          "status": "PASS"
+        },
+        "source_fragment_readback": {
+          "status": "PASS"
+        },
+        "unavailable_63_is_explicit": {
+          "observed_status": "UNAVAILABLE",
+          "status": "PASS"
+        },
+        "zero_match_is_not_found": {
+          "observed_status": "NOT_FOUND",
+          "result_count": 0,
+          "status": "PASS"
+        }
+      }
+    },
+    "W12_T029_T033_T050": {
+      "acceptance": [
+        "T029",
+        "T033",
+        "T050"
+      ],
+      "assertions": {},
+      "case_id": "W12_T029_T033_T050",
+      "finished_at": "2026-09-20T01:02:28.683436Z",
+      "package": "W12",
+      "reason": "excluded by --only",
+      "started_at": "2026-09-20T01:02:26.151732Z",
+      "status": "NOT_RUN",
+      "subcases": {}
+    }
+  },
+  "live": false,
+  "scope": "Mac production MCP stdio acceptance driver",
+  "status": "PASS"
+}

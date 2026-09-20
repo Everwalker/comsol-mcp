@@ -1,0 +1,3519 @@
+[
+  {
+    "operation": "initialize",
+    "response": {
+      "meta": null,
+      "protocolVersion": "2025-11-25",
+      "capabilities": {
+        "experimental": {},
+        "logging": null,
+        "prompts": {
+          "listChanged": false
+        },
+        "resources": {
+          "subscribe": false,
+          "listChanged": false
+        },
+        "tools": {
+          "listChanged": false
+        },
+        "completions": null,
+        "tasks": null
+      },
+      "serverInfo": {
+        "name": "comsol-mcp-server",
+        "title": null,
+        "version": "1.29.1",
+        "websiteUrl": null,
+        "icons": null
+      },
+      "instructions": null
+    }
+  },
+  {
+    "operation": "configure_single_main_workflow",
+    "arguments": {
+      "current_main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+      "snapshot_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/snapshots",
+      "snapshot_prefix": "phase2",
+      "model_dimension": 2,
+      "notes": "Phase 2 live 2D fixture workflow; snapshots are retained with public run evidence."
+    },
+    "elapsed_s": 0.2898400410194881,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "tool": "configure_single_main_workflow",
+      "timestamp": 1789873144.257486,
+      "datetime": "2026-09-20 10:59:04",
+      "server": {
+        "version": "0.1.9",
+        "timestamp": 1789873144.257492,
+        "datetime": "2026-09-20 10:59:04",
+        "status": "disconnected",
+        "server_running": false,
+        "server_started_by_mcp": false,
+        "attached_to_existing_server": false,
+        "server_host": "localhost",
+        "server_port": null,
+        "server_endpoint": "",
+        "desktop_client_role": "visual-client",
+        "comsol_root": "/Applications/COMSOL64/Multiphysics",
+        "mcp_home": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home",
+        "logs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs",
+        "outputs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/outputs",
+        "current_model_label": "",
+        "current_model_path": "",
+        "current_model_origin": "",
+        "last_command": "configure_single_main_workflow",
+        "last_error": "",
+        "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+        "desktop_should_connect": {
+          "host": "localhost",
+          "port": null
+        },
+        "workflow": {
+          "mode": "single-current-main-model",
+          "current_main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+          "snapshot_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/snapshots",
+          "snapshot_prefix": "phase2",
+          "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+          "visible_main_locked": false,
+          "guard_level": "strict",
+          "snapshot_save_mode": "copy",
+          "main_model_tag": "",
+          "main_model_label": "",
+          "main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+          "model_dimension": 2,
+          "workflow_stage": "mcp_connected",
+          "mcp_client_lifecycle": "persistent-required",
+          "one_shot_client_allowed": false,
+          "notes": "Phase 2 live 2D fixture workflow; snapshots are retained with public run evidence.",
+          "updated_at": "2026-09-20 10:59:04"
+        }
+      },
+      "data": {
+        "workflow": {
+          "mode": "single-current-main-model",
+          "current_main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+          "snapshot_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/snapshots",
+          "snapshot_prefix": "phase2",
+          "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+          "visible_main_locked": false,
+          "guard_level": "strict",
+          "snapshot_save_mode": "copy",
+          "main_model_tag": "",
+          "main_model_label": "",
+          "main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+          "model_dimension": 2,
+          "workflow_stage": "mcp_connected",
+          "mcp_client_lifecycle": "persistent-required",
+          "one_shot_client_allowed": false,
+          "notes": "Phase 2 live 2D fixture workflow; snapshots are retained with public run evidence.",
+          "updated_at": "2026-09-20 10:59:04"
+        }
+      },
+      "error": "",
+      "log_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/server.log",
+      "operations_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/operations.jsonl",
+      "execution": {
+        "request_id": "d85d1db6-c44d-449d-9b4c-8f17ba0257ed",
+        "operation_id": "2b1d1705-ec0f-42c2-9c32-0ecb73654b74",
+        "request_hash": "552a9983bf661a986c59f201849a46015b7e3e616e402e9f42c9ad8aefc3e585",
+        "idempotency_key": "fb7ee9dd-6c3a-4bd3-bcf3-ff31b9795366",
+        "job_id": "d4765f1b-26a3-4ec3-912d-90b69e08c885"
+      }
+    }
+  },
+  {
+    "operation": "server_connect",
+    "arguments": {
+      "host": "127.0.0.1",
+      "port": 56389,
+      "execution": {
+        "idempotency_key": "20260920T025903703056Z-phase2-connect",
+        "request_id": "phase2-connect"
+      }
+    },
+    "elapsed_s": 1.0305653749965131,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "connected": true,
+        "server_ownership": "shared",
+        "endpoint": "127.0.0.1:56389",
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+        "external_change_detection": {
+          "coverage": "parameters+shallow_tree_identity",
+          "status": "SCOPED_EVIDENCE_ONLY",
+          "event_notifications": "UNVERIFIED",
+          "full_model_property_coverage": "UNVERIFIED",
+          "cas_guarantee": "NONE",
+          "evidence_source": "evidence/phase2/followup/20260918T142300Z-external-api",
+          "evidence_environment": "macOS arm64; COMSOL 6.4.0.293",
+          "other_platforms_or_versions": "UNVERIFIED"
+        },
+        "trusted_code": {
+          "enabled": false,
+          "os_sandbox": false,
+          "config": "COMSOL_MCP_TRUSTED_CODE"
+        },
+        "worker": {
+          "host": "127.0.0.1",
+          "port": 56780,
+          "pid": 89414,
+          "generation": 2,
+          "instance_id": "c1a61dd5-076f-4f25-aaf3-268c2d8b0fdf",
+          "connected": true,
+          "server": "127.0.0.1:56389"
+        }
+      },
+      "execution": {
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "model_ref": null,
+        "revision": null,
+        "request_id": "phase2-connect",
+        "operation_id": "42105a2b-bc8b-4dcd-817b-3b315901f6f4",
+        "request_hash": "20434ae4dd627770beb405fd0d041b124684c76ca1ecae27139b6567ddf81d2c",
+        "idempotency_key": "20260920T025903703056Z-phase2-connect",
+        "job_id": "55254386-90db-4540-9758-af1d4434ce75"
+      }
+    }
+  },
+  {
+    "operation": "model_load",
+    "arguments": {
+      "path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+      "execution": {
+        "idempotency_key": "20260920T025903703056Z-phase2-load",
+        "request_id": "phase2-load"
+      }
+    },
+    "elapsed_s": 0.5662965420051478,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "label": "model.mph",
+        "file_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+        "requested_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+        "load_mode": "loaded",
+        "model_tag": "mcp_7c8e46365144"
+      },
+      "error": "",
+      "execution": {
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_7c8e46365144",
+          "generation": 1
+        },
+        "revision": 0,
+        "dirty": false,
+        "server_ownership": "shared",
+        "model_ownership": "mcp_owned",
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "request_id": "phase2-load",
+        "operation_id": "395e9821-44f3-4824-a6bf-8d00c37a6f19",
+        "request_hash": "40a69b1f40129485b56e80d3aa24d33bf4168feb847b123b81bee43f297e8f94",
+        "idempotency_key": "20260920T025903703056Z-phase2-load",
+        "job_id": "4516a57b-e4fe-41cf-af6e-ce8bc2c26eb7"
+      }
+    }
+  },
+  {
+    "operation": "model_tree",
+    "arguments": {
+      "execution": {
+        "idempotency_key": "20260920T025903703056Z-phase2-feature-tree-before",
+        "request_id": "phase2-feature-tree-before",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_7c8e46365144",
+          "generation": 1
+        },
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "expected_revision": 0
+      }
+    },
+    "elapsed_s": 0.08113966602832079,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "label": "model.mph",
+        "file_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+        "components": [
+          "comp1"
+        ],
+        "component_details": [
+          {
+            "tag": "comp1",
+            "geometries": [
+              "geom1"
+            ],
+            "meshes": [
+              "mesh1"
+            ],
+            "physics": [
+              "c"
+            ],
+            "materials": []
+          }
+        ],
+        "parameters": [],
+        "studies": [
+          "std1"
+        ],
+        "solutions": [
+          "sol1"
+        ],
+        "datasets": [
+          "dset1"
+        ],
+        "results": [
+          "pg1"
+        ]
+      },
+      "error": "",
+      "execution": {
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_7c8e46365144",
+          "generation": 1
+        },
+        "revision": 0,
+        "dirty": false,
+        "server_ownership": "shared",
+        "model_ownership": "mcp_owned",
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "request_id": "phase2-feature-tree-before",
+        "operation_id": "a8193a5d-2ed3-4580-8a59-b5e77ce671ef",
+        "request_hash": "f36e2b3ca0410e67e221e79da448bd9ef3b3fcdec38605d424e7b72a01f99e90",
+        "idempotency_key": "20260920T025903703056Z-phase2-feature-tree-before",
+        "job_id": "cde4c343-8b58-4ae4-b7d3-8904d8255fe2"
+      }
+    }
+  },
+  {
+    "operation": "create_feature",
+    "arguments": {
+      "component": "comp1",
+      "geometry": "geom1",
+      "tag": "r1",
+      "feature_type": "Rectangle",
+      "properties_json": "[]",
+      "run_geometry": false,
+      "execution": {
+        "idempotency_key": "20260920T025903703056Z-phase2-feature-same",
+        "request_id": "phase2-feature-same",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_7c8e46365144",
+          "generation": 1
+        },
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "expected_revision": 0
+      }
+    },
+    "elapsed_s": 0.05394795804750174,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "component": "comp1",
+        "geometry": "geom1",
+        "tag": "r1",
+        "feature_type": "Rectangle",
+        "created": false,
+        "properties": [],
+        "run_geometry": false,
+        "tool": "create_feature",
+        "timestamp": 1789873145.989418,
+        "datetime": "2026-09-20 10:59:05",
+        "server": {
+          "version": "0.1.9",
+          "timestamp": 1789873145.989434,
+          "datetime": "2026-09-20 10:59:05",
+          "status": "ready",
+          "server_running": false,
+          "server_started_by_mcp": false,
+          "attached_to_existing_server": true,
+          "server_host": "127.0.0.1",
+          "server_port": 56389,
+          "server_endpoint": "127.0.0.1:56389",
+          "desktop_client_role": "visual-client",
+          "comsol_root": "/Applications/COMSOL64/Multiphysics",
+          "mcp_home": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home",
+          "logs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs",
+          "outputs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/outputs",
+          "current_model_label": "model.mph",
+          "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+          "current_model_origin": "bound-request",
+          "last_command": "create_feature",
+          "last_error": "",
+          "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+          "desktop_should_connect": {
+            "host": "127.0.0.1",
+            "port": 56389
+          },
+          "workflow": {
+            "mode": "single-current-main-model",
+            "current_main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+            "snapshot_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/snapshots",
+            "snapshot_prefix": "phase2",
+            "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+            "visible_main_locked": false,
+            "guard_level": "strict",
+            "snapshot_save_mode": "copy",
+            "main_model_tag": "",
+            "main_model_label": "",
+            "main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+            "model_dimension": 2,
+            "workflow_stage": "mcp_connected",
+            "mcp_client_lifecycle": "persistent-required",
+            "one_shot_client_allowed": false,
+            "notes": "Phase 2 live 2D fixture workflow; snapshots are retained with public run evidence.",
+            "updated_at": "2026-09-20 10:59:04"
+          }
+        },
+        "log_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/server.log",
+        "operations_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/operations.jsonl"
+      },
+      "error": "",
+      "execution": {
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_7c8e46365144",
+          "generation": 1
+        },
+        "revision": 1,
+        "dirty": false,
+        "server_ownership": "shared",
+        "model_ownership": "mcp_owned",
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "request_id": "phase2-feature-same",
+        "operation_id": "e374e299-d002-49d8-bd3c-032ca88ad037",
+        "request_hash": "836a7eb9350c73d52f7ac954ce951c06925408079d7177ffbece76dcec9ae918",
+        "idempotency_key": "20260920T025903703056Z-phase2-feature-same",
+        "job_id": "498f5797-cc34-486b-8f41-f639e6595ee6"
+      }
+    }
+  },
+  {
+    "operation": "model_tree",
+    "arguments": {
+      "execution": {
+        "idempotency_key": "20260920T025903703056Z-phase2-feature-tree-after-same",
+        "request_id": "phase2-feature-tree-after-same",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_7c8e46365144",
+          "generation": 1
+        },
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "expected_revision": 1
+      }
+    },
+    "elapsed_s": 0.03502050001407042,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "label": "model.mph",
+        "file_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+        "components": [
+          "comp1"
+        ],
+        "component_details": [
+          {
+            "tag": "comp1",
+            "geometries": [
+              "geom1"
+            ],
+            "meshes": [
+              "mesh1"
+            ],
+            "physics": [
+              "c"
+            ],
+            "materials": []
+          }
+        ],
+        "parameters": [],
+        "studies": [
+          "std1"
+        ],
+        "solutions": [
+          "sol1"
+        ],
+        "datasets": [
+          "dset1"
+        ],
+        "results": [
+          "pg1"
+        ]
+      },
+      "error": "",
+      "execution": {
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_7c8e46365144",
+          "generation": 1
+        },
+        "revision": 1,
+        "dirty": false,
+        "server_ownership": "shared",
+        "model_ownership": "mcp_owned",
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "request_id": "phase2-feature-tree-after-same",
+        "operation_id": "ec80ec31-26fb-4084-afef-1d7f3e815ce8",
+        "request_hash": "86ddc4c27c056da1603e674d5044731c585564f23e49d04239e404e4f7f40012",
+        "idempotency_key": "20260920T025903703056Z-phase2-feature-tree-after-same",
+        "job_id": "36f2f63b-82e6-4056-b415-04bbc2fd2338"
+      }
+    }
+  },
+  {
+    "operation": "create_feature",
+    "arguments": {
+      "component": "comp1",
+      "geometry": "geom1",
+      "tag": "r1",
+      "feature_type": "Circle",
+      "properties_json": "[]",
+      "run_geometry": false,
+      "execution": {
+        "idempotency_key": "20260920T025903703056Z-phase2-feature-conflict",
+        "request_id": "phase2-feature-conflict",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_7c8e46365144",
+          "generation": 1
+        },
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "expected_revision": 1
+      }
+    },
+    "elapsed_s": 0.08746533398516476,
+    "outer_isError": true,
+    "payload": {
+      "success": false,
+      "data": {
+        "tool": "create_feature",
+        "timestamp": 1789873146.1129699,
+        "datetime": "2026-09-20 10:59:06",
+        "server": {
+          "version": "0.1.9",
+          "timestamp": 1789873146.112982,
+          "datetime": "2026-09-20 10:59:06",
+          "status": "ready",
+          "server_running": false,
+          "server_started_by_mcp": false,
+          "attached_to_existing_server": true,
+          "server_host": "127.0.0.1",
+          "server_port": 56389,
+          "server_endpoint": "127.0.0.1:56389",
+          "desktop_client_role": "visual-client",
+          "comsol_root": "/Applications/COMSOL64/Multiphysics",
+          "mcp_home": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home",
+          "logs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs",
+          "outputs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/outputs",
+          "current_model_label": "model.mph",
+          "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+          "current_model_origin": "bound-request",
+          "last_command": "create_feature",
+          "last_error": "Existing geometry feature type conflict: requested \"Circle\", found \"Rectangle\".",
+          "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+          "desktop_should_connect": {
+            "host": "127.0.0.1",
+            "port": 56389
+          },
+          "workflow": {
+            "mode": "single-current-main-model",
+            "current_main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+            "snapshot_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/snapshots",
+            "snapshot_prefix": "phase2",
+            "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+            "visible_main_locked": false,
+            "guard_level": "strict",
+            "snapshot_save_mode": "copy",
+            "main_model_tag": "",
+            "main_model_label": "",
+            "main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+            "model_dimension": 2,
+            "workflow_stage": "mcp_connected",
+            "mcp_client_lifecycle": "persistent-required",
+            "one_shot_client_allowed": false,
+            "notes": "Phase 2 live 2D fixture workflow; snapshots are retained with public run evidence.",
+            "updated_at": "2026-09-20 10:59:04"
+          }
+        },
+        "log_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/server.log",
+        "operations_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/operations.jsonl",
+        "partial_change": false,
+        "execution_state_unknown": false
+      },
+      "error": "Existing geometry feature type conflict: requested \"Circle\", found \"Rectangle\".",
+      "execution": {
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_7c8e46365144",
+          "generation": 1
+        },
+        "revision": 1,
+        "dirty": false,
+        "server_ownership": "shared",
+        "model_ownership": "mcp_owned",
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "request_id": "phase2-feature-conflict",
+        "operation_id": "033fcb14-7624-472e-9f1a-d272f7e1e000",
+        "request_hash": "492fa6ec1fea88f635f59e6db49d00790d3f323db9e6827c3d310d132c9b7b38",
+        "idempotency_key": "20260920T025903703056Z-phase2-feature-conflict",
+        "job_id": "f4764efb-f507-4356-b533-c4247fe8c57f"
+      }
+    }
+  },
+  {
+    "operation": "set_parameters",
+    "arguments": {
+      "parameters_json": "[{\"name\":\"phase2_guard\",\"expression\":\"1\"}]",
+      "execution": {
+        "idempotency_key": "20260920T025903703056Z-phase2-idem",
+        "request_id": "phase2-idem",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_7c8e46365144",
+          "generation": 1
+        },
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "expected_revision": 1
+      }
+    },
+    "elapsed_s": 0.02051929204026237,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "updated": [
+          {
+            "name": "phase2_guard",
+            "expression": "1"
+          }
+        ],
+        "count": 1,
+        "tool": "set_parameters",
+        "timestamp": 1789873146.134568,
+        "datetime": "2026-09-20 10:59:06",
+        "server": {
+          "version": "0.1.9",
+          "timestamp": 1789873146.134583,
+          "datetime": "2026-09-20 10:59:06",
+          "status": "ready",
+          "server_running": false,
+          "server_started_by_mcp": false,
+          "attached_to_existing_server": true,
+          "server_host": "127.0.0.1",
+          "server_port": 56389,
+          "server_endpoint": "127.0.0.1:56389",
+          "desktop_client_role": "visual-client",
+          "comsol_root": "/Applications/COMSOL64/Multiphysics",
+          "mcp_home": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home",
+          "logs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs",
+          "outputs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/outputs",
+          "current_model_label": "model.mph",
+          "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+          "current_model_origin": "bound-request",
+          "last_command": "set_parameters",
+          "last_error": "",
+          "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+          "desktop_should_connect": {
+            "host": "127.0.0.1",
+            "port": 56389
+          },
+          "workflow": {
+            "mode": "single-current-main-model",
+            "current_main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+            "snapshot_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/snapshots",
+            "snapshot_prefix": "phase2",
+            "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+            "visible_main_locked": false,
+            "guard_level": "strict",
+            "snapshot_save_mode": "copy",
+            "main_model_tag": "",
+            "main_model_label": "",
+            "main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+            "model_dimension": 2,
+            "workflow_stage": "mcp_connected",
+            "mcp_client_lifecycle": "persistent-required",
+            "one_shot_client_allowed": false,
+            "notes": "Phase 2 live 2D fixture workflow; snapshots are retained with public run evidence.",
+            "updated_at": "2026-09-20 10:59:04"
+          }
+        },
+        "log_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/server.log",
+        "operations_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/operations.jsonl"
+      },
+      "error": "",
+      "execution": {
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_7c8e46365144",
+          "generation": 1
+        },
+        "revision": 2,
+        "dirty": false,
+        "server_ownership": "shared",
+        "model_ownership": "mcp_owned",
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "request_id": "phase2-idem",
+        "operation_id": "4f3051a5-d502-44c7-b04b-8c28edf160d6",
+        "request_hash": "458e2f92d910463cd8d88edc901f0c1d9e6e6617d0c5c6914229f6a158323809",
+        "idempotency_key": "20260920T025903703056Z-phase2-idem",
+        "job_id": "1c2a4eb3-0ea1-4bd3-89be-9df48dfdfb86"
+      }
+    }
+  },
+  {
+    "operation": "set_parameters",
+    "arguments": {
+      "parameters_json": "[{\"name\":\"phase2_guard\",\"expression\":\"1\"}]",
+      "execution": {
+        "idempotency_key": "20260920T025903703056Z-phase2-idem",
+        "request_id": "phase2-idem-retry",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_7c8e46365144",
+          "generation": 1
+        },
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "expected_revision": 1
+      }
+    },
+    "elapsed_s": 0.0024943750468082726,
+    "outer_isError": false,
+    "payload": {
+      "data": {
+        "count": 1,
+        "datetime": "2026-09-20 10:59:06",
+        "log_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/server.log",
+        "operations_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/operations.jsonl",
+        "server": {
+          "attached_to_existing_server": true,
+          "comsol_root": "/Applications/COMSOL64/Multiphysics",
+          "current_model_label": "model.mph",
+          "current_model_origin": "bound-request",
+          "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+          "datetime": "2026-09-20 10:59:06",
+          "desktop_client_role": "visual-client",
+          "desktop_should_connect": {
+            "host": "127.0.0.1",
+            "port": 56389
+          },
+          "last_command": "set_parameters",
+          "last_error": "",
+          "logs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs",
+          "mcp_home": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home",
+          "outputs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/outputs",
+          "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+          "server_endpoint": "127.0.0.1:56389",
+          "server_host": "127.0.0.1",
+          "server_port": 56389,
+          "server_running": false,
+          "server_started_by_mcp": false,
+          "status": "ready",
+          "timestamp": 1789873146.134583,
+          "version": "0.1.9",
+          "workflow": {
+            "current_main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+            "guard_level": "strict",
+            "main_model_label": "",
+            "main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+            "main_model_tag": "",
+            "mcp_client_lifecycle": "persistent-required",
+            "mode": "single-current-main-model",
+            "model_dimension": 2,
+            "notes": "Phase 2 live 2D fixture workflow; snapshots are retained with public run evidence.",
+            "one_shot_client_allowed": false,
+            "snapshot_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/snapshots",
+            "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+            "snapshot_prefix": "phase2",
+            "snapshot_save_mode": "copy",
+            "updated_at": "2026-09-20 10:59:04",
+            "visible_main_locked": false,
+            "workflow_stage": "mcp_connected"
+          }
+        },
+        "timestamp": 1789873146.134568,
+        "tool": "set_parameters",
+        "updated": [
+          {
+            "expression": "1",
+            "name": "phase2_guard"
+          }
+        ]
+      },
+      "error": "",
+      "execution": {
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "dirty": false,
+        "idempotency_key": "20260920T025903703056Z-phase2-idem",
+        "job_id": "1c2a4eb3-0ea1-4bd3-89be-9df48dfdfb86",
+        "model_ownership": "mcp_owned",
+        "model_ref": {
+          "generation": 1,
+          "model_tag": "mcp_7c8e46365144",
+          "schema_version": 1,
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "4f3051a5-d502-44c7-b04b-8c28edf160d6",
+        "request_hash": "458e2f92d910463cd8d88edc901f0c1d9e6e6617d0c5c6914229f6a158323809",
+        "request_id": "phase2-idem",
+        "revision": 2,
+        "server_ownership": "shared",
+        "session_id": "session-9f95c2e814acd5f99589961a"
+      },
+      "success": true
+    }
+  },
+  {
+    "operation": "set_parameters",
+    "arguments": {
+      "parameters_json": "[{\"name\":\"phase2_guard\",\"expression\":\"2\"}]",
+      "execution": {
+        "idempotency_key": "20260920T025903703056Z-phase2-idem",
+        "request_id": "phase2-idem-conflict",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_7c8e46365144",
+          "generation": 1
+        },
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "expected_revision": 1
+      }
+    },
+    "elapsed_s": 0.0020300420001149178,
+    "outer_isError": true,
+    "payload": {
+      "success": false,
+      "data": {},
+      "error": {
+        "code": "IDEMPOTENCY_CONFLICT",
+        "message": "idempotency key was reused with a different request body",
+        "safe_retry": false
+      }
+    }
+  },
+  {
+    "operation": "set_parameters",
+    "arguments": {
+      "parameters_json": "[{\"name\":\"phase2_guard\",\"expression\":\"1\"}]",
+      "execution": {
+        "idempotency_key": "20260920T025903703056Z-phase2-stale",
+        "request_id": "phase2-stale",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_7c8e46365144",
+          "generation": 1
+        },
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "expected_revision": 1
+      }
+    },
+    "elapsed_s": 0.008421625010669231,
+    "outer_isError": true,
+    "payload": {
+      "success": false,
+      "data": {},
+      "error": {
+        "code": "REVISION_CONFLICT",
+        "message": "expected_revision does not match managed revision",
+        "safe_retry": false
+      },
+      "execution": {
+        "request_id": "phase2-stale",
+        "operation_id": "9d4de60e-9c92-4cc3-8913-6c0c8ab37979",
+        "request_hash": "458e2f92d910463cd8d88edc901f0c1d9e6e6617d0c5c6914229f6a158323809",
+        "idempotency_key": "20260920T025903703056Z-phase2-stale",
+        "job_id": "8d9f31e4-f418-4972-90c2-3d9169733dcc"
+      }
+    }
+  },
+  {
+    "operation": "get_core_metrics",
+    "arguments": {
+      "metrics_json": "[{\"name\":\"bad\",\"expression\":\"phase2_missing_symbol\",\"aggregate\":\"max\",\"domains\":[1]}]",
+      "execution": {
+        "idempotency_key": "20260920T025903703056Z-phase2-bad-metric",
+        "request_id": "phase2-bad-metric",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_7c8e46365144",
+          "generation": 1
+        },
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "expected_revision": 2
+      }
+    },
+    "elapsed_s": 0.12545020901598036,
+    "outer_isError": true,
+    "payload": {
+      "success": false,
+      "data": {
+        "label": "model.mph",
+        "solve_status": "partial",
+        "solution_tag": "sol1",
+        "results": [
+          {
+            "name": "bad",
+            "expression": "phase2_missing_symbol",
+            "ok": false,
+            "error": "{\"completed_at_ms\": \"1789873146246\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: Failed_to_evaluate_expression\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1789873146211\", \"request_id\": \"wrk-8a7d7c5a-b793-4229-b975-15ce3bd4eedc\", \"started_at_ms\": \"1789873146211\", \"status\": \"FAILED\", \"type\": \"call\"}"
+          }
+        ],
+        "evaluation_policy": "ephemeral_mutation",
+        "execution_success": true,
+        "acceptance_status": "failed",
+        "tool": "get_core_metrics",
+        "timestamp": 1789873146.275039,
+        "datetime": "2026-09-20 10:59:06",
+        "server": {
+          "version": "0.1.9",
+          "timestamp": 1789873146.275051,
+          "datetime": "2026-09-20 10:59:06",
+          "status": "ready",
+          "server_running": false,
+          "server_started_by_mcp": false,
+          "attached_to_existing_server": true,
+          "server_host": "127.0.0.1",
+          "server_port": 56389,
+          "server_endpoint": "127.0.0.1:56389",
+          "desktop_client_role": "visual-client",
+          "comsol_root": "/Applications/COMSOL64/Multiphysics",
+          "mcp_home": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home",
+          "logs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs",
+          "outputs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/outputs",
+          "current_model_label": "model.mph",
+          "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+          "current_model_origin": "bound-request",
+          "last_command": "get_core_metrics",
+          "last_error": "Required metric evaluation was partial; no acceptance result is available.",
+          "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+          "desktop_should_connect": {
+            "host": "127.0.0.1",
+            "port": 56389
+          },
+          "workflow": {
+            "mode": "single-current-main-model",
+            "current_main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+            "snapshot_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/snapshots",
+            "snapshot_prefix": "phase2",
+            "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+            "visible_main_locked": false,
+            "guard_level": "strict",
+            "snapshot_save_mode": "copy",
+            "main_model_tag": "",
+            "main_model_label": "",
+            "main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+            "model_dimension": 2,
+            "workflow_stage": "mcp_connected",
+            "mcp_client_lifecycle": "persistent-required",
+            "one_shot_client_allowed": false,
+            "notes": "Phase 2 live 2D fixture workflow; snapshots are retained with public run evidence.",
+            "updated_at": "2026-09-20 10:59:04"
+          }
+        },
+        "log_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/server.log",
+        "operations_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/operations.jsonl",
+        "partial_change": true,
+        "execution_state_unknown": false,
+        "requires_model_reconciliation": true
+      },
+      "error": "Required metric evaluation was partial; no acceptance result is available.",
+      "execution": {
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_7c8e46365144",
+          "generation": 1
+        },
+        "revision": 3,
+        "dirty": true,
+        "server_ownership": "shared",
+        "model_ownership": "mcp_owned",
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "request_id": "phase2-bad-metric",
+        "operation_id": "a861af9d-8cbb-4bf8-925c-b2afa1ee105f",
+        "request_hash": "e2702d45b9c9b54464a71c5ab8805848f09415f8965fdc12d82def718bd7cd6e",
+        "idempotency_key": "20260920T025903703056Z-phase2-bad-metric",
+        "job_id": "d667aee9-4862-4e3b-99ab-170af1ca7ff3"
+      }
+    }
+  },
+  {
+    "operation": "model_load",
+    "arguments": {
+      "path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/second.mph",
+      "execution": {
+        "idempotency_key": "20260920T025903703056Z-phase2-second-load",
+        "request_id": "phase2-second-load"
+      }
+    },
+    "elapsed_s": 0.15875879197847098,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "label": "second.mph",
+        "file_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/second.mph",
+        "requested_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/second.mph",
+        "load_mode": "loaded",
+        "model_tag": "mcp_4d5981225505"
+      },
+      "error": "",
+      "execution": {
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_4d5981225505",
+          "generation": 1
+        },
+        "revision": 0,
+        "dirty": false,
+        "server_ownership": "shared",
+        "model_ownership": "mcp_owned",
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "request_id": "phase2-second-load",
+        "operation_id": "8fb787b1-e53d-4db4-ac76-895ed460a080",
+        "request_hash": "39c919ae73a15f0deae8220b01099c6523b1488839b8246f07acd446e4f505f5",
+        "idempotency_key": "20260920T025903703056Z-phase2-second-load",
+        "job_id": "e76c878b-94e0-4c9c-8dd6-b7a2ce7996ef"
+      }
+    }
+  },
+  {
+    "operation": "model_adopt",
+    "arguments": {
+      "model_tag": "mcp_7c8e46365144",
+      "execution": {
+        "idempotency_key": "20260920T025903703056Z-phase2-reselect-first",
+        "request_id": "phase2-reselect-first"
+      }
+    },
+    "elapsed_s": 0.01130812504561618,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "model_tag": "mcp_7c8e46365144"
+      },
+      "execution": {
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_7c8e46365144",
+          "generation": 2
+        },
+        "revision": 0,
+        "dirty": false,
+        "server_ownership": "shared",
+        "model_ownership": "mcp_owned",
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "request_id": "phase2-reselect-first",
+        "operation_id": "99f2caa9-9e73-4a5e-8891-15c7be8ba05a",
+        "request_hash": "dbfd2a567a328e8f307888a18b042d9e75e0cf0c3f5e239925cebee86a71abc5",
+        "idempotency_key": "20260920T025903703056Z-phase2-reselect-first",
+        "job_id": "ae28a5f2-d680-4539-b2e1-e115ef24fdee"
+      }
+    }
+  },
+  {
+    "operation": "run_study",
+    "arguments": {
+      "study_tag": "std1",
+      "execution": {
+        "idempotency_key": "20260920T025903703056Z-phase2-solve",
+        "request_id": "phase2-solve",
+        "rpc_timeout_s": 0,
+        "queue_timeout_s": null,
+        "execution_timeout_s": null,
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_7c8e46365144",
+          "generation": 2
+        },
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "expected_revision": 0
+      }
+    },
+    "elapsed_s": 0.0027133749681524932,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+        "status": "QUEUED",
+        "rpc_wait_expired": true
+      },
+      "execution": {
+        "request_id": "phase2-solve",
+        "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+        "request_hash": "9c5851992838c5267d5344dac0d2f48b43f1272ea8d98fdaf0413252438d8231",
+        "idempotency_key": "20260920T025903703056Z-phase2-solve",
+        "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302"
+      }
+    }
+  },
+  {
+    "operation": "session_health",
+    "arguments": {},
+    "elapsed_s": 0.002574457961600274,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "status": "READY",
+        "control_pid": 89410,
+        "worker_connected": true,
+        "worker": {
+          "ok": true,
+          "status": "HEALTHY",
+          "generation": 2,
+          "instance_id": "c1a61dd5-076f-4f25-aaf3-268c2d8b0fdf",
+          "connected": true,
+          "server": "127.0.0.1:56389",
+          "changed_count": 0,
+          "queued_or_running": 0,
+          "observed_at": 1789873145.934159
+        },
+        "session": {
+          "connected": true,
+          "server_ownership": "shared",
+          "endpoint": "127.0.0.1:56389",
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "external_change_detection": {
+            "coverage": "parameters+shallow_tree_identity",
+            "status": "SCOPED_EVIDENCE_ONLY",
+            "event_notifications": "UNVERIFIED",
+            "full_model_property_coverage": "UNVERIFIED",
+            "cas_guarantee": "NONE",
+            "evidence_source": "evidence/phase2/followup/20260918T142300Z-external-api",
+            "evidence_environment": "macOS arm64; COMSOL 6.4.0.293",
+            "other_platforms_or_versions": "UNVERIFIED"
+          },
+          "trusted_code": {
+            "enabled": false,
+            "os_sandbox": false,
+            "config": "COMSOL_MCP_TRUSTED_CODE"
+          },
+          "worker": {
+            "host": "127.0.0.1",
+            "port": 56780,
+            "pid": 89414,
+            "generation": 2,
+            "instance_id": "c1a61dd5-076f-4f25-aaf3-268c2d8b0fdf",
+            "connected": true,
+            "server": "127.0.0.1:56389"
+          }
+        },
+        "active_jobs": [
+          "0306a5a3-c95f-4adf-841a-a2b323d40302"
+        ]
+      },
+      "execution": {
+        "session_id": "session-9f95c2e814acd5f99589961a"
+      }
+    }
+  },
+  {
+    "operation": "job_status",
+    "arguments": {
+      "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302"
+    },
+    "elapsed_s": 0.002797040971927345,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+        "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+        "status": "RUNNING",
+        "metadata": {
+          "arguments": {
+            "study_tag": "std1"
+          },
+          "engine_started_at": 1789873146.459262,
+          "execution": {
+            "execution_timeout_s": null,
+            "expected_revision": 0,
+            "idempotency_key": "20260920T025903703056Z-phase2-solve",
+            "model_ref": {
+              "generation": 2,
+              "model_tag": "mcp_7c8e46365144",
+              "schema_version": 1,
+              "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "queue_timeout_s": null,
+            "request_id": "phase2-solve",
+            "rpc_timeout_s": 0,
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation": "run_study",
+          "queue_wait_s": 2.26249685510993e-05
+        },
+        "created_at": "2026-09-20 02:59:06",
+        "started_at": "2026-09-20 02:59:06",
+        "finished_at": null,
+        "effective_timeouts": {
+          "execution_timeout_s": null,
+          "no_progress_warning_s": null,
+          "queue_timeout_s": null,
+          "rpc_timeout_s": 0
+        },
+        "operation": {
+          "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+          "request_id": "phase2-solve",
+          "idempotency_key": "20260920T025903703056Z-phase2-solve",
+          "request_hash": "9c5851992838c5267d5344dac0d2f48b43f1272ea8d98fdaf0413252438d8231",
+          "operation": "run_study",
+          "status": "RUNNING",
+          "result": null,
+          "metadata": {
+            "arguments": {
+              "study_tag": "std1"
+            },
+            "execution": {
+              "execution_timeout_s": null,
+              "expected_revision": 0,
+              "idempotency_key": "20260920T025903703056Z-phase2-solve",
+              "model_ref": {
+                "generation": 2,
+                "model_tag": "mcp_7c8e46365144",
+                "schema_version": 1,
+                "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "queue_timeout_s": null,
+              "request_id": "phase2-solve",
+              "rpc_timeout_s": 0,
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "operation": "run_study"
+          },
+          "created_at": "2026-09-20 02:59:06",
+          "started_at": "2026-09-20 02:59:06",
+          "finished_at": null,
+          "effective_timeouts": {
+            "execution_timeout_s": null,
+            "no_progress_warning_s": null,
+            "queue_timeout_s": null,
+            "rpc_timeout_s": 0
+          }
+        },
+        "result": null
+      }
+    }
+  },
+  {
+    "operation": "job_log",
+    "arguments": {
+      "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+      "offset": 0,
+      "limit": 20
+    },
+    "elapsed_s": 0.0033953330130316317,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+        "events": [
+          {
+            "id": 509,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "RUNNING",
+            "metadata": {
+              "at": 1789873146.4593332,
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 510,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "model",
+              "metadata": {
+                "request_id": "wrk-bb4fa817-a874-4fae-b508-c507bfd7d969",
+                "tag": "mcp_7c8e46365144",
+                "type": "model"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "submitted",
+              "request_hash": "a6411b8ef2bcb459ffea699ddef3db68bc1a596f72b2be36d85dff8180d24f45",
+              "request_id": "wrk-bb4fa817-a874-4fae-b508-c507bfd7d969"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 511,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "model",
+              "metadata": {
+                "request_id": "wrk-bb4fa817-a874-4fae-b508-c507bfd7d969",
+                "tag": "mcp_7c8e46365144",
+                "type": "model"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789873146460",
+                "ok": true,
+                "queued_at_ms": "1789873146459",
+                "request_id": "wrk-bb4fa817-a874-4fae-b508-c507bfd7d969",
+                "result": {
+                  "$worker_handle": "h-62def06b-67ff-475a-b1bc-b9336e878847",
+                  "generation": 2,
+                  "java_type": "com.comsol.model.Model"
+                },
+                "started_at_ms": "1789873146459",
+                "status": "SUCCEEDED",
+                "type": "model"
+              },
+              "request_hash": "a6411b8ef2bcb459ffea699ddef3db68bc1a596f72b2be36d85dff8180d24f45",
+              "request_id": "wrk-bb4fa817-a874-4fae-b508-c507bfd7d969",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 512,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 2,
+                "handle": "h-62def06b-67ff-475a-b1bc-b9336e878847",
+                "method": "getFilePath",
+                "request_id": "wrk-2264606b-6b8c-4737-adc3-423fc8674a3b",
+                "type": "call"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "submitted",
+              "request_hash": "604f0bc12e5410bb8514830de3a9047067248057fa51da51a98bc5273207e114",
+              "request_id": "wrk-2264606b-6b8c-4737-adc3-423fc8674a3b"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 513,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 2,
+                "handle": "h-62def06b-67ff-475a-b1bc-b9336e878847",
+                "method": "getFilePath",
+                "request_id": "wrk-2264606b-6b8c-4737-adc3-423fc8674a3b",
+                "type": "call"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789873146461",
+                "ok": true,
+                "queued_at_ms": "1789873146460",
+                "request_id": "wrk-2264606b-6b8c-4737-adc3-423fc8674a3b",
+                "result": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+                "started_at_ms": "1789873146460",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "604f0bc12e5410bb8514830de3a9047067248057fa51da51a98bc5273207e114",
+              "request_id": "wrk-2264606b-6b8c-4737-adc3-423fc8674a3b",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 514,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "model_snapshot",
+              "metadata": {
+                "request_id": "wrk-226bdd53-8e8d-4033-8a24-0d3b50da36e3",
+                "tag": "mcp_7c8e46365144",
+                "type": "model_snapshot"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "submitted",
+              "request_hash": "ddf6a0ed9bb75c957506a7cbcfa0413a44333ffa75c6ab1f772ecfbd257ca702",
+              "request_id": "wrk-226bdd53-8e8d-4033-8a24-0d3b50da36e3"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 515,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "model_snapshot",
+              "metadata": {
+                "request_id": "wrk-226bdd53-8e8d-4033-8a24-0d3b50da36e3",
+                "tag": "mcp_7c8e46365144",
+                "type": "model_snapshot"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789873146464",
+                "ok": true,
+                "queued_at_ms": "1789873146462",
+                "request_id": "wrk-226bdd53-8e8d-4033-8a24-0d3b50da36e3",
+                "result": {
+                  "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+                  "changed_tags": [],
+                  "external_event_counter": 0,
+                  "fingerprint": "58cd2d4e6e66e34a68224ff07344cb851492af241dacb874dfb432942f243287",
+                  "fingerprint_scope": [
+                    "tag",
+                    "label",
+                    "file_path",
+                    "time_modified",
+                    "parameters"
+                  ],
+                  "generation": 2,
+                  "instance_id": "c1a61dd5-076f-4f25-aaf3-268c2d8b0fdf",
+                  "model_tag": "mcp_7c8e46365144",
+                  "server_instance_id": "127.0.0.1:56389",
+                  "tag": "mcp_7c8e46365144",
+                  "worker_instance_id": "c1a61dd5-076f-4f25-aaf3-268c2d8b0fdf"
+                },
+                "started_at_ms": "1789873146462",
+                "status": "SUCCEEDED",
+                "type": "model_snapshot"
+              },
+              "request_hash": "ddf6a0ed9bb75c957506a7cbcfa0413a44333ffa75c6ab1f772ecfbd257ca702",
+              "request_id": "wrk-226bdd53-8e8d-4033-8a24-0d3b50da36e3",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 516,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 2,
+                "handle": "h-62def06b-67ff-475a-b1bc-b9336e878847",
+                "method": "study",
+                "request_id": "wrk-807d8f60-1ea0-40d4-8a5d-e667ce39a82d",
+                "type": "call"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "submitted",
+              "request_hash": "d6b64ec6a2cfba66d1c9a1cddab0d4ee3fc322c754c15a16fdf7b69f0820f178",
+              "request_id": "wrk-807d8f60-1ea0-40d4-8a5d-e667ce39a82d"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 517,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 2,
+                "handle": "h-62def06b-67ff-475a-b1bc-b9336e878847",
+                "method": "study",
+                "request_id": "wrk-807d8f60-1ea0-40d4-8a5d-e667ce39a82d",
+                "type": "call"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789873146466",
+                "ok": true,
+                "queued_at_ms": "1789873146465",
+                "request_id": "wrk-807d8f60-1ea0-40d4-8a5d-e667ce39a82d",
+                "result": {
+                  "$worker_handle": "h-79a054d8-f539-4dca-91c5-89f1adf106de",
+                  "generation": 2,
+                  "java_type": "com.comsol.model.StudyList"
+                },
+                "started_at_ms": "1789873146465",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "d6b64ec6a2cfba66d1c9a1cddab0d4ee3fc322c754c15a16fdf7b69f0820f178",
+              "request_id": "wrk-807d8f60-1ea0-40d4-8a5d-e667ce39a82d",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 518,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [
+                  "std1"
+                ],
+                "generation": 2,
+                "handle": "h-79a054d8-f539-4dca-91c5-89f1adf106de",
+                "method": "get",
+                "request_id": "wrk-94160a1b-8fec-4314-a5e7-359058a25c8f",
+                "type": "call"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "submitted",
+              "request_hash": "fa0609caba53999739a349c7e8f083c542c67d7d91e1cdeb271617167b4b8669",
+              "request_id": "wrk-94160a1b-8fec-4314-a5e7-359058a25c8f"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 519,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [
+                  "std1"
+                ],
+                "generation": 2,
+                "handle": "h-79a054d8-f539-4dca-91c5-89f1adf106de",
+                "method": "get",
+                "request_id": "wrk-94160a1b-8fec-4314-a5e7-359058a25c8f",
+                "type": "call"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789873146467",
+                "ok": true,
+                "queued_at_ms": "1789873146466",
+                "request_id": "wrk-94160a1b-8fec-4314-a5e7-359058a25c8f",
+                "result": {
+                  "$worker_handle": "h-5cf5cc2c-6b29-488c-a0ee-a03acd2ce785",
+                  "generation": 2,
+                  "java_type": "com.comsol.model.Study"
+                },
+                "started_at_ms": "1789873146466",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "fa0609caba53999739a349c7e8f083c542c67d7d91e1cdeb271617167b4b8669",
+              "request_id": "wrk-94160a1b-8fec-4314-a5e7-359058a25c8f",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 520,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 2,
+                "handle": "h-5cf5cc2c-6b29-488c-a0ee-a03acd2ce785",
+                "method": "label",
+                "request_id": "wrk-5a35925e-32d0-495b-b7cc-bb339d4f977f",
+                "type": "call"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "submitted",
+              "request_hash": "ba1902148db04048e0a69de9ae0300a1c511085725c49c7ce72a3ac441a192e9",
+              "request_id": "wrk-5a35925e-32d0-495b-b7cc-bb339d4f977f"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 521,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 2,
+                "handle": "h-5cf5cc2c-6b29-488c-a0ee-a03acd2ce785",
+                "method": "label",
+                "request_id": "wrk-5a35925e-32d0-495b-b7cc-bb339d4f977f",
+                "type": "call"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789873146469",
+                "ok": true,
+                "queued_at_ms": "1789873146467",
+                "request_id": "wrk-5a35925e-32d0-495b-b7cc-bb339d4f977f",
+                "result": "研究 1",
+                "started_at_ms": "1789873146468",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "ba1902148db04048e0a69de9ae0300a1c511085725c49c7ce72a3ac441a192e9",
+              "request_id": "wrk-5a35925e-32d0-495b-b7cc-bb339d4f977f",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 522,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 2,
+                "handle": "h-62def06b-67ff-475a-b1bc-b9336e878847",
+                "method": "study",
+                "request_id": "wrk-d8138148-ce77-48e2-ad24-00e6a72c4610",
+                "type": "call"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "submitted",
+              "request_hash": "d6b64ec6a2cfba66d1c9a1cddab0d4ee3fc322c754c15a16fdf7b69f0820f178",
+              "request_id": "wrk-d8138148-ce77-48e2-ad24-00e6a72c4610"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 523,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 2,
+                "handle": "h-62def06b-67ff-475a-b1bc-b9336e878847",
+                "method": "study",
+                "request_id": "wrk-d8138148-ce77-48e2-ad24-00e6a72c4610",
+                "type": "call"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789873146470",
+                "ok": true,
+                "queued_at_ms": "1789873146469",
+                "request_id": "wrk-d8138148-ce77-48e2-ad24-00e6a72c4610",
+                "result": {
+                  "$worker_handle": "h-ddd15d5d-1128-4530-b176-bafe6abd1e9e",
+                  "generation": 2,
+                  "java_type": "com.comsol.model.StudyList"
+                },
+                "started_at_ms": "1789873146469",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "d6b64ec6a2cfba66d1c9a1cddab0d4ee3fc322c754c15a16fdf7b69f0820f178",
+              "request_id": "wrk-d8138148-ce77-48e2-ad24-00e6a72c4610",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 524,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 2,
+                "handle": "h-ddd15d5d-1128-4530-b176-bafe6abd1e9e",
+                "method": "tags",
+                "request_id": "wrk-90cef62e-85c2-4bb7-bae3-5e0f159b24ee",
+                "type": "call"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "submitted",
+              "request_hash": "b2d9bbc308168c5102a9de68f7643e9b0a8f2dd78a9958eb09c45a638b995608",
+              "request_id": "wrk-90cef62e-85c2-4bb7-bae3-5e0f159b24ee"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          }
+        ],
+        "next_offset": 16
+      }
+    }
+  },
+  {
+    "operation": "set_parameters",
+    "arguments": {
+      "parameters_json": "[{\"name\":\"phase2_second_expired\",\"expression\":\"1\"}]",
+      "execution": {
+        "idempotency_key": "20260920T025903703056Z-phase2-second-expired",
+        "request_id": "phase2-second-expired",
+        "queue_timeout_s": 0,
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_4d5981225505",
+          "generation": 1
+        },
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "expected_revision": 0
+      }
+    },
+    "elapsed_s": 0.5335845000226982,
+    "outer_isError": true,
+    "payload": {
+      "success": false,
+      "data": {
+        "status": "NOT_EXECUTED"
+      },
+      "error": {
+        "code": "QUEUE_TIMEOUT",
+        "message": "request expired before engine dispatch",
+        "safe_retry": true
+      },
+      "execution": {
+        "request_id": "phase2-second-expired",
+        "operation_id": "6ce076d5-339f-42db-9577-dc11143fe3ca",
+        "request_hash": "88a77e406564a5ed0d21c6fece6c43b933e4d9b8c6c84a761899b00bdbff35a9",
+        "idempotency_key": "20260920T025903703056Z-phase2-second-expired",
+        "job_id": "df0ff739-5500-472c-8b1c-f3f6a61e890c"
+      }
+    }
+  },
+  {
+    "operation": "session_health",
+    "arguments": {},
+    "elapsed_s": 0.0032244580215774477,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "status": "READY",
+        "control_pid": 89410,
+        "worker_connected": true,
+        "worker": {
+          "ok": true,
+          "status": "HEALTHY",
+          "generation": 2,
+          "instance_id": "c1a61dd5-076f-4f25-aaf3-268c2d8b0fdf",
+          "connected": true,
+          "server": "127.0.0.1:56389",
+          "changed_count": 0,
+          "queued_or_running": 0,
+          "observed_at": 1789873147.016424
+        },
+        "session": {
+          "connected": true,
+          "server_ownership": "shared",
+          "endpoint": "127.0.0.1:56389",
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "external_change_detection": {
+            "coverage": "parameters+shallow_tree_identity",
+            "status": "SCOPED_EVIDENCE_ONLY",
+            "event_notifications": "UNVERIFIED",
+            "full_model_property_coverage": "UNVERIFIED",
+            "cas_guarantee": "NONE",
+            "evidence_source": "evidence/phase2/followup/20260918T142300Z-external-api",
+            "evidence_environment": "macOS arm64; COMSOL 6.4.0.293",
+            "other_platforms_or_versions": "UNVERIFIED"
+          },
+          "trusted_code": {
+            "enabled": false,
+            "os_sandbox": false,
+            "config": "COMSOL_MCP_TRUSTED_CODE"
+          },
+          "worker": {
+            "host": "127.0.0.1",
+            "port": 56780,
+            "pid": 89414,
+            "generation": 2,
+            "instance_id": "c1a61dd5-076f-4f25-aaf3-268c2d8b0fdf",
+            "connected": true,
+            "server": "127.0.0.1:56389"
+          }
+        },
+        "active_jobs": []
+      },
+      "execution": {
+        "session_id": "session-9f95c2e814acd5f99589961a"
+      }
+    }
+  },
+  {
+    "operation": "job_status",
+    "arguments": {
+      "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302"
+    },
+    "elapsed_s": 0.0025567919947206974,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+        "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+        "status": "SUCCEEDED",
+        "metadata": {
+          "arguments": {
+            "study_tag": "std1"
+          },
+          "engine_started_at": 1789873146.459262,
+          "execution": {
+            "execution_timeout_s": null,
+            "expected_revision": 0,
+            "idempotency_key": "20260920T025903703056Z-phase2-solve",
+            "model_ref": {
+              "generation": 2,
+              "model_tag": "mcp_7c8e46365144",
+              "schema_version": 1,
+              "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "queue_timeout_s": null,
+            "request_id": "phase2-solve",
+            "rpc_timeout_s": 0,
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "finished_observed_at": 1789873147.007158,
+          "operation": "run_study",
+          "queue_wait_s": 2.26249685510993e-05
+        },
+        "created_at": "2026-09-20 02:59:06",
+        "started_at": "2026-09-20 02:59:06",
+        "finished_at": "2026-09-20 02:59:07",
+        "effective_timeouts": {
+          "execution_timeout_s": null,
+          "no_progress_warning_s": null,
+          "queue_timeout_s": null,
+          "rpc_timeout_s": 0
+        },
+        "operation": {
+          "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+          "request_id": "phase2-solve",
+          "idempotency_key": "20260920T025903703056Z-phase2-solve",
+          "request_hash": "9c5851992838c5267d5344dac0d2f48b43f1272ea8d98fdaf0413252438d8231",
+          "operation": "run_study",
+          "status": "SUCCEEDED",
+          "result": {
+            "data": {
+              "datetime": "2026-09-20 10:59:06",
+              "label": "model.mph",
+              "log_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/server.log",
+              "operations_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/operations.jsonl",
+              "server": {
+                "attached_to_existing_server": true,
+                "comsol_root": "/Applications/COMSOL64/Multiphysics",
+                "current_model_label": "model.mph",
+                "current_model_origin": "bound-request",
+                "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+                "datetime": "2026-09-20 10:59:06",
+                "desktop_client_role": "visual-client",
+                "desktop_should_connect": {
+                  "host": "127.0.0.1",
+                  "port": 56389
+                },
+                "last_command": "run_study",
+                "last_error": "",
+                "logs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs",
+                "mcp_home": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home",
+                "outputs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/outputs",
+                "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+                "server_endpoint": "127.0.0.1:56389",
+                "server_host": "127.0.0.1",
+                "server_port": 56389,
+                "server_running": false,
+                "server_started_by_mcp": false,
+                "status": "ready",
+                "timestamp": 1789873146.9994361,
+                "version": "0.1.9",
+                "workflow": {
+                  "current_main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+                  "guard_level": "strict",
+                  "main_model_label": "",
+                  "main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+                  "main_model_tag": "",
+                  "mcp_client_lifecycle": "persistent-required",
+                  "mode": "single-current-main-model",
+                  "model_dimension": 2,
+                  "notes": "Phase 2 live 2D fixture workflow; snapshots are retained with public run evidence.",
+                  "one_shot_client_allowed": false,
+                  "snapshot_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/snapshots",
+                  "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+                  "snapshot_prefix": "phase2",
+                  "snapshot_save_mode": "copy",
+                  "updated_at": "2026-09-20 10:59:04",
+                  "visible_main_locked": false,
+                  "workflow_stage": "mcp_connected"
+                }
+              },
+              "study_tag": "std1",
+              "timestamp": 1789873146.999417,
+              "tool": "run_study"
+            },
+            "error": "",
+            "execution": {
+              "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+              "dirty": false,
+              "idempotency_key": "20260920T025903703056Z-phase2-solve",
+              "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+              "model_ownership": "mcp_owned",
+              "model_ref": {
+                "generation": 2,
+                "model_tag": "mcp_7c8e46365144",
+                "schema_version": 1,
+                "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "request_hash": "9c5851992838c5267d5344dac0d2f48b43f1272ea8d98fdaf0413252438d8231",
+              "request_id": "phase2-solve",
+              "revision": 1,
+              "server_ownership": "shared",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "success": true
+          },
+          "metadata": {
+            "arguments": {
+              "study_tag": "std1"
+            },
+            "execution": {
+              "execution_timeout_s": null,
+              "expected_revision": 0,
+              "idempotency_key": "20260920T025903703056Z-phase2-solve",
+              "model_ref": {
+                "generation": 2,
+                "model_tag": "mcp_7c8e46365144",
+                "schema_version": 1,
+                "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "queue_timeout_s": null,
+              "request_id": "phase2-solve",
+              "rpc_timeout_s": 0,
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "operation": "run_study"
+          },
+          "created_at": "2026-09-20 02:59:06",
+          "started_at": "2026-09-20 02:59:06",
+          "finished_at": "2026-09-20 02:59:07",
+          "effective_timeouts": {
+            "execution_timeout_s": null,
+            "no_progress_warning_s": null,
+            "queue_timeout_s": null,
+            "rpc_timeout_s": 0
+          }
+        },
+        "result": {
+          "data": {
+            "datetime": "2026-09-20 10:59:06",
+            "label": "model.mph",
+            "log_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/server.log",
+            "operations_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/operations.jsonl",
+            "server": {
+              "attached_to_existing_server": true,
+              "comsol_root": "/Applications/COMSOL64/Multiphysics",
+              "current_model_label": "model.mph",
+              "current_model_origin": "bound-request",
+              "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+              "datetime": "2026-09-20 10:59:06",
+              "desktop_client_role": "visual-client",
+              "desktop_should_connect": {
+                "host": "127.0.0.1",
+                "port": 56389
+              },
+              "last_command": "run_study",
+              "last_error": "",
+              "logs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs",
+              "mcp_home": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home",
+              "outputs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/outputs",
+              "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+              "server_endpoint": "127.0.0.1:56389",
+              "server_host": "127.0.0.1",
+              "server_port": 56389,
+              "server_running": false,
+              "server_started_by_mcp": false,
+              "status": "ready",
+              "timestamp": 1789873146.9994361,
+              "version": "0.1.9",
+              "workflow": {
+                "current_main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+                "guard_level": "strict",
+                "main_model_label": "",
+                "main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+                "main_model_tag": "",
+                "mcp_client_lifecycle": "persistent-required",
+                "mode": "single-current-main-model",
+                "model_dimension": 2,
+                "notes": "Phase 2 live 2D fixture workflow; snapshots are retained with public run evidence.",
+                "one_shot_client_allowed": false,
+                "snapshot_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/snapshots",
+                "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+                "snapshot_prefix": "phase2",
+                "snapshot_save_mode": "copy",
+                "updated_at": "2026-09-20 10:59:04",
+                "visible_main_locked": false,
+                "workflow_stage": "mcp_connected"
+              }
+            },
+            "study_tag": "std1",
+            "timestamp": 1789873146.999417,
+            "tool": "run_study"
+          },
+          "error": "",
+          "execution": {
+            "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+            "dirty": false,
+            "idempotency_key": "20260920T025903703056Z-phase2-solve",
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "model_ownership": "mcp_owned",
+            "model_ref": {
+              "generation": 2,
+              "model_tag": "mcp_7c8e46365144",
+              "schema_version": 1,
+              "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+            "request_hash": "9c5851992838c5267d5344dac0d2f48b43f1272ea8d98fdaf0413252438d8231",
+            "request_id": "phase2-solve",
+            "revision": 1,
+            "server_ownership": "shared",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "success": true
+        }
+      }
+    }
+  },
+  {
+    "operation": "job_log",
+    "arguments": {
+      "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+      "offset": 0,
+      "limit": 20
+    },
+    "elapsed_s": 0.0035858749761246145,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+        "events": [
+          {
+            "id": 509,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "RUNNING",
+            "metadata": {
+              "at": 1789873146.4593332,
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 510,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "model",
+              "metadata": {
+                "request_id": "wrk-bb4fa817-a874-4fae-b508-c507bfd7d969",
+                "tag": "mcp_7c8e46365144",
+                "type": "model"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "submitted",
+              "request_hash": "a6411b8ef2bcb459ffea699ddef3db68bc1a596f72b2be36d85dff8180d24f45",
+              "request_id": "wrk-bb4fa817-a874-4fae-b508-c507bfd7d969"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 511,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "model",
+              "metadata": {
+                "request_id": "wrk-bb4fa817-a874-4fae-b508-c507bfd7d969",
+                "tag": "mcp_7c8e46365144",
+                "type": "model"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789873146460",
+                "ok": true,
+                "queued_at_ms": "1789873146459",
+                "request_id": "wrk-bb4fa817-a874-4fae-b508-c507bfd7d969",
+                "result": {
+                  "$worker_handle": "h-62def06b-67ff-475a-b1bc-b9336e878847",
+                  "generation": 2,
+                  "java_type": "com.comsol.model.Model"
+                },
+                "started_at_ms": "1789873146459",
+                "status": "SUCCEEDED",
+                "type": "model"
+              },
+              "request_hash": "a6411b8ef2bcb459ffea699ddef3db68bc1a596f72b2be36d85dff8180d24f45",
+              "request_id": "wrk-bb4fa817-a874-4fae-b508-c507bfd7d969",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 512,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 2,
+                "handle": "h-62def06b-67ff-475a-b1bc-b9336e878847",
+                "method": "getFilePath",
+                "request_id": "wrk-2264606b-6b8c-4737-adc3-423fc8674a3b",
+                "type": "call"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "submitted",
+              "request_hash": "604f0bc12e5410bb8514830de3a9047067248057fa51da51a98bc5273207e114",
+              "request_id": "wrk-2264606b-6b8c-4737-adc3-423fc8674a3b"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 513,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 2,
+                "handle": "h-62def06b-67ff-475a-b1bc-b9336e878847",
+                "method": "getFilePath",
+                "request_id": "wrk-2264606b-6b8c-4737-adc3-423fc8674a3b",
+                "type": "call"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789873146461",
+                "ok": true,
+                "queued_at_ms": "1789873146460",
+                "request_id": "wrk-2264606b-6b8c-4737-adc3-423fc8674a3b",
+                "result": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+                "started_at_ms": "1789873146460",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "604f0bc12e5410bb8514830de3a9047067248057fa51da51a98bc5273207e114",
+              "request_id": "wrk-2264606b-6b8c-4737-adc3-423fc8674a3b",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 514,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "model_snapshot",
+              "metadata": {
+                "request_id": "wrk-226bdd53-8e8d-4033-8a24-0d3b50da36e3",
+                "tag": "mcp_7c8e46365144",
+                "type": "model_snapshot"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "submitted",
+              "request_hash": "ddf6a0ed9bb75c957506a7cbcfa0413a44333ffa75c6ab1f772ecfbd257ca702",
+              "request_id": "wrk-226bdd53-8e8d-4033-8a24-0d3b50da36e3"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 515,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "model_snapshot",
+              "metadata": {
+                "request_id": "wrk-226bdd53-8e8d-4033-8a24-0d3b50da36e3",
+                "tag": "mcp_7c8e46365144",
+                "type": "model_snapshot"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789873146464",
+                "ok": true,
+                "queued_at_ms": "1789873146462",
+                "request_id": "wrk-226bdd53-8e8d-4033-8a24-0d3b50da36e3",
+                "result": {
+                  "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+                  "changed_tags": [],
+                  "external_event_counter": 0,
+                  "fingerprint": "58cd2d4e6e66e34a68224ff07344cb851492af241dacb874dfb432942f243287",
+                  "fingerprint_scope": [
+                    "tag",
+                    "label",
+                    "file_path",
+                    "time_modified",
+                    "parameters"
+                  ],
+                  "generation": 2,
+                  "instance_id": "c1a61dd5-076f-4f25-aaf3-268c2d8b0fdf",
+                  "model_tag": "mcp_7c8e46365144",
+                  "server_instance_id": "127.0.0.1:56389",
+                  "tag": "mcp_7c8e46365144",
+                  "worker_instance_id": "c1a61dd5-076f-4f25-aaf3-268c2d8b0fdf"
+                },
+                "started_at_ms": "1789873146462",
+                "status": "SUCCEEDED",
+                "type": "model_snapshot"
+              },
+              "request_hash": "ddf6a0ed9bb75c957506a7cbcfa0413a44333ffa75c6ab1f772ecfbd257ca702",
+              "request_id": "wrk-226bdd53-8e8d-4033-8a24-0d3b50da36e3",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 516,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 2,
+                "handle": "h-62def06b-67ff-475a-b1bc-b9336e878847",
+                "method": "study",
+                "request_id": "wrk-807d8f60-1ea0-40d4-8a5d-e667ce39a82d",
+                "type": "call"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "submitted",
+              "request_hash": "d6b64ec6a2cfba66d1c9a1cddab0d4ee3fc322c754c15a16fdf7b69f0820f178",
+              "request_id": "wrk-807d8f60-1ea0-40d4-8a5d-e667ce39a82d"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 517,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 2,
+                "handle": "h-62def06b-67ff-475a-b1bc-b9336e878847",
+                "method": "study",
+                "request_id": "wrk-807d8f60-1ea0-40d4-8a5d-e667ce39a82d",
+                "type": "call"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789873146466",
+                "ok": true,
+                "queued_at_ms": "1789873146465",
+                "request_id": "wrk-807d8f60-1ea0-40d4-8a5d-e667ce39a82d",
+                "result": {
+                  "$worker_handle": "h-79a054d8-f539-4dca-91c5-89f1adf106de",
+                  "generation": 2,
+                  "java_type": "com.comsol.model.StudyList"
+                },
+                "started_at_ms": "1789873146465",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "d6b64ec6a2cfba66d1c9a1cddab0d4ee3fc322c754c15a16fdf7b69f0820f178",
+              "request_id": "wrk-807d8f60-1ea0-40d4-8a5d-e667ce39a82d",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 518,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [
+                  "std1"
+                ],
+                "generation": 2,
+                "handle": "h-79a054d8-f539-4dca-91c5-89f1adf106de",
+                "method": "get",
+                "request_id": "wrk-94160a1b-8fec-4314-a5e7-359058a25c8f",
+                "type": "call"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "submitted",
+              "request_hash": "fa0609caba53999739a349c7e8f083c542c67d7d91e1cdeb271617167b4b8669",
+              "request_id": "wrk-94160a1b-8fec-4314-a5e7-359058a25c8f"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 519,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [
+                  "std1"
+                ],
+                "generation": 2,
+                "handle": "h-79a054d8-f539-4dca-91c5-89f1adf106de",
+                "method": "get",
+                "request_id": "wrk-94160a1b-8fec-4314-a5e7-359058a25c8f",
+                "type": "call"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789873146467",
+                "ok": true,
+                "queued_at_ms": "1789873146466",
+                "request_id": "wrk-94160a1b-8fec-4314-a5e7-359058a25c8f",
+                "result": {
+                  "$worker_handle": "h-5cf5cc2c-6b29-488c-a0ee-a03acd2ce785",
+                  "generation": 2,
+                  "java_type": "com.comsol.model.Study"
+                },
+                "started_at_ms": "1789873146466",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "fa0609caba53999739a349c7e8f083c542c67d7d91e1cdeb271617167b4b8669",
+              "request_id": "wrk-94160a1b-8fec-4314-a5e7-359058a25c8f",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 520,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 2,
+                "handle": "h-5cf5cc2c-6b29-488c-a0ee-a03acd2ce785",
+                "method": "label",
+                "request_id": "wrk-5a35925e-32d0-495b-b7cc-bb339d4f977f",
+                "type": "call"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "submitted",
+              "request_hash": "ba1902148db04048e0a69de9ae0300a1c511085725c49c7ce72a3ac441a192e9",
+              "request_id": "wrk-5a35925e-32d0-495b-b7cc-bb339d4f977f"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 521,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 2,
+                "handle": "h-5cf5cc2c-6b29-488c-a0ee-a03acd2ce785",
+                "method": "label",
+                "request_id": "wrk-5a35925e-32d0-495b-b7cc-bb339d4f977f",
+                "type": "call"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789873146469",
+                "ok": true,
+                "queued_at_ms": "1789873146467",
+                "request_id": "wrk-5a35925e-32d0-495b-b7cc-bb339d4f977f",
+                "result": "研究 1",
+                "started_at_ms": "1789873146468",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "ba1902148db04048e0a69de9ae0300a1c511085725c49c7ce72a3ac441a192e9",
+              "request_id": "wrk-5a35925e-32d0-495b-b7cc-bb339d4f977f",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 522,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 2,
+                "handle": "h-62def06b-67ff-475a-b1bc-b9336e878847",
+                "method": "study",
+                "request_id": "wrk-d8138148-ce77-48e2-ad24-00e6a72c4610",
+                "type": "call"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "submitted",
+              "request_hash": "d6b64ec6a2cfba66d1c9a1cddab0d4ee3fc322c754c15a16fdf7b69f0820f178",
+              "request_id": "wrk-d8138148-ce77-48e2-ad24-00e6a72c4610"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 523,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 2,
+                "handle": "h-62def06b-67ff-475a-b1bc-b9336e878847",
+                "method": "study",
+                "request_id": "wrk-d8138148-ce77-48e2-ad24-00e6a72c4610",
+                "type": "call"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789873146470",
+                "ok": true,
+                "queued_at_ms": "1789873146469",
+                "request_id": "wrk-d8138148-ce77-48e2-ad24-00e6a72c4610",
+                "result": {
+                  "$worker_handle": "h-ddd15d5d-1128-4530-b176-bafe6abd1e9e",
+                  "generation": 2,
+                  "java_type": "com.comsol.model.StudyList"
+                },
+                "started_at_ms": "1789873146469",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "d6b64ec6a2cfba66d1c9a1cddab0d4ee3fc322c754c15a16fdf7b69f0820f178",
+              "request_id": "wrk-d8138148-ce77-48e2-ad24-00e6a72c4610",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 524,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 2,
+                "handle": "h-ddd15d5d-1128-4530-b176-bafe6abd1e9e",
+                "method": "tags",
+                "request_id": "wrk-90cef62e-85c2-4bb7-bae3-5e0f159b24ee",
+                "type": "call"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "submitted",
+              "request_hash": "b2d9bbc308168c5102a9de68f7643e9b0a8f2dd78a9958eb09c45a638b995608",
+              "request_id": "wrk-90cef62e-85c2-4bb7-bae3-5e0f159b24ee"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 525,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 2,
+                "handle": "h-ddd15d5d-1128-4530-b176-bafe6abd1e9e",
+                "method": "tags",
+                "request_id": "wrk-90cef62e-85c2-4bb7-bae3-5e0f159b24ee",
+                "type": "call"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789873146471",
+                "ok": true,
+                "queued_at_ms": "1789873146470",
+                "request_id": "wrk-90cef62e-85c2-4bb7-bae3-5e0f159b24ee",
+                "result": [
+                  "std1"
+                ],
+                "started_at_ms": "1789873146470",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "b2d9bbc308168c5102a9de68f7643e9b0a8f2dd78a9958eb09c45a638b995608",
+              "request_id": "wrk-90cef62e-85c2-4bb7-bae3-5e0f159b24ee",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 526,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [
+                  "std1"
+                ],
+                "generation": 2,
+                "handle": "h-62def06b-67ff-475a-b1bc-b9336e878847",
+                "method": "study",
+                "request_id": "wrk-cf7b1eaa-207d-4010-9141-a837d8192e2d",
+                "type": "call"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "submitted",
+              "request_hash": "58959dda8c6372829592bcbcb48f940cec7a5128297750c695916ca874284b8a",
+              "request_id": "wrk-cf7b1eaa-207d-4010-9141-a837d8192e2d"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 527,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [
+                  "std1"
+                ],
+                "generation": 2,
+                "handle": "h-62def06b-67ff-475a-b1bc-b9336e878847",
+                "method": "study",
+                "request_id": "wrk-cf7b1eaa-207d-4010-9141-a837d8192e2d",
+                "type": "call"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "observed",
+              "reply": {
+                "completed_at_ms": "1789873146472",
+                "ok": true,
+                "queued_at_ms": "1789873146472",
+                "request_id": "wrk-cf7b1eaa-207d-4010-9141-a837d8192e2d",
+                "result": {
+                  "$worker_handle": "h-7806aede-557f-4e36-8134-136d46a5105d",
+                  "generation": 2,
+                  "java_type": "com.comsol.model.Study"
+                },
+                "started_at_ms": "1789873146472",
+                "status": "SUCCEEDED",
+                "type": "call"
+              },
+              "request_hash": "58959dda8c6372829592bcbcb48f940cec7a5128297750c695916ca874284b8a",
+              "request_id": "wrk-cf7b1eaa-207d-4010-9141-a837d8192e2d",
+              "status": "SUCCEEDED"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          },
+          {
+            "id": 528,
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "event": "worker_request",
+            "metadata": {
+              "kind": "call",
+              "metadata": {
+                "args": [],
+                "generation": 2,
+                "handle": "h-7806aede-557f-4e36-8134-136d46a5105d",
+                "method": "label",
+                "request_id": "wrk-fae527ec-2c99-4fd3-bae1-0ea5d8970c57",
+                "type": "call"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "phase": "submitted",
+              "request_hash": "71c5f53e62ae09155865e31f48544cf56fa5886928160251e110c57f15b87868",
+              "request_id": "wrk-fae527ec-2c99-4fd3-bae1-0ea5d8970c57"
+            },
+            "created_at": "2026-09-20 02:59:06"
+          }
+        ],
+        "next_offset": 20
+      }
+    }
+  },
+  {
+    "operation": "job_status",
+    "arguments": {
+      "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302"
+    },
+    "elapsed_s": 0.00271687499480322,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+        "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+        "status": "SUCCEEDED",
+        "metadata": {
+          "arguments": {
+            "study_tag": "std1"
+          },
+          "engine_started_at": 1789873146.459262,
+          "execution": {
+            "execution_timeout_s": null,
+            "expected_revision": 0,
+            "idempotency_key": "20260920T025903703056Z-phase2-solve",
+            "model_ref": {
+              "generation": 2,
+              "model_tag": "mcp_7c8e46365144",
+              "schema_version": 1,
+              "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "queue_timeout_s": null,
+            "request_id": "phase2-solve",
+            "rpc_timeout_s": 0,
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "finished_observed_at": 1789873147.007158,
+          "operation": "run_study",
+          "queue_wait_s": 2.26249685510993e-05
+        },
+        "created_at": "2026-09-20 02:59:06",
+        "started_at": "2026-09-20 02:59:06",
+        "finished_at": "2026-09-20 02:59:07",
+        "effective_timeouts": {
+          "execution_timeout_s": null,
+          "no_progress_warning_s": null,
+          "queue_timeout_s": null,
+          "rpc_timeout_s": 0
+        },
+        "operation": {
+          "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+          "request_id": "phase2-solve",
+          "idempotency_key": "20260920T025903703056Z-phase2-solve",
+          "request_hash": "9c5851992838c5267d5344dac0d2f48b43f1272ea8d98fdaf0413252438d8231",
+          "operation": "run_study",
+          "status": "SUCCEEDED",
+          "result": {
+            "data": {
+              "datetime": "2026-09-20 10:59:06",
+              "label": "model.mph",
+              "log_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/server.log",
+              "operations_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/operations.jsonl",
+              "server": {
+                "attached_to_existing_server": true,
+                "comsol_root": "/Applications/COMSOL64/Multiphysics",
+                "current_model_label": "model.mph",
+                "current_model_origin": "bound-request",
+                "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+                "datetime": "2026-09-20 10:59:06",
+                "desktop_client_role": "visual-client",
+                "desktop_should_connect": {
+                  "host": "127.0.0.1",
+                  "port": 56389
+                },
+                "last_command": "run_study",
+                "last_error": "",
+                "logs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs",
+                "mcp_home": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home",
+                "outputs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/outputs",
+                "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+                "server_endpoint": "127.0.0.1:56389",
+                "server_host": "127.0.0.1",
+                "server_port": 56389,
+                "server_running": false,
+                "server_started_by_mcp": false,
+                "status": "ready",
+                "timestamp": 1789873146.9994361,
+                "version": "0.1.9",
+                "workflow": {
+                  "current_main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+                  "guard_level": "strict",
+                  "main_model_label": "",
+                  "main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+                  "main_model_tag": "",
+                  "mcp_client_lifecycle": "persistent-required",
+                  "mode": "single-current-main-model",
+                  "model_dimension": 2,
+                  "notes": "Phase 2 live 2D fixture workflow; snapshots are retained with public run evidence.",
+                  "one_shot_client_allowed": false,
+                  "snapshot_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/snapshots",
+                  "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+                  "snapshot_prefix": "phase2",
+                  "snapshot_save_mode": "copy",
+                  "updated_at": "2026-09-20 10:59:04",
+                  "visible_main_locked": false,
+                  "workflow_stage": "mcp_connected"
+                }
+              },
+              "study_tag": "std1",
+              "timestamp": 1789873146.999417,
+              "tool": "run_study"
+            },
+            "error": "",
+            "execution": {
+              "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+              "dirty": false,
+              "idempotency_key": "20260920T025903703056Z-phase2-solve",
+              "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+              "model_ownership": "mcp_owned",
+              "model_ref": {
+                "generation": 2,
+                "model_tag": "mcp_7c8e46365144",
+                "schema_version": 1,
+                "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+              "request_hash": "9c5851992838c5267d5344dac0d2f48b43f1272ea8d98fdaf0413252438d8231",
+              "request_id": "phase2-solve",
+              "revision": 1,
+              "server_ownership": "shared",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "success": true
+          },
+          "metadata": {
+            "arguments": {
+              "study_tag": "std1"
+            },
+            "execution": {
+              "execution_timeout_s": null,
+              "expected_revision": 0,
+              "idempotency_key": "20260920T025903703056Z-phase2-solve",
+              "model_ref": {
+                "generation": 2,
+                "model_tag": "mcp_7c8e46365144",
+                "schema_version": 1,
+                "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "queue_timeout_s": null,
+              "request_id": "phase2-solve",
+              "rpc_timeout_s": 0,
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "operation": "run_study"
+          },
+          "created_at": "2026-09-20 02:59:06",
+          "started_at": "2026-09-20 02:59:06",
+          "finished_at": "2026-09-20 02:59:07",
+          "effective_timeouts": {
+            "execution_timeout_s": null,
+            "no_progress_warning_s": null,
+            "queue_timeout_s": null,
+            "rpc_timeout_s": 0
+          }
+        },
+        "result": {
+          "data": {
+            "datetime": "2026-09-20 10:59:06",
+            "label": "model.mph",
+            "log_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/server.log",
+            "operations_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/operations.jsonl",
+            "server": {
+              "attached_to_existing_server": true,
+              "comsol_root": "/Applications/COMSOL64/Multiphysics",
+              "current_model_label": "model.mph",
+              "current_model_origin": "bound-request",
+              "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+              "datetime": "2026-09-20 10:59:06",
+              "desktop_client_role": "visual-client",
+              "desktop_should_connect": {
+                "host": "127.0.0.1",
+                "port": 56389
+              },
+              "last_command": "run_study",
+              "last_error": "",
+              "logs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs",
+              "mcp_home": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home",
+              "outputs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/outputs",
+              "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+              "server_endpoint": "127.0.0.1:56389",
+              "server_host": "127.0.0.1",
+              "server_port": 56389,
+              "server_running": false,
+              "server_started_by_mcp": false,
+              "status": "ready",
+              "timestamp": 1789873146.9994361,
+              "version": "0.1.9",
+              "workflow": {
+                "current_main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+                "guard_level": "strict",
+                "main_model_label": "",
+                "main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+                "main_model_tag": "",
+                "mcp_client_lifecycle": "persistent-required",
+                "mode": "single-current-main-model",
+                "model_dimension": 2,
+                "notes": "Phase 2 live 2D fixture workflow; snapshots are retained with public run evidence.",
+                "one_shot_client_allowed": false,
+                "snapshot_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/snapshots",
+                "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+                "snapshot_prefix": "phase2",
+                "snapshot_save_mode": "copy",
+                "updated_at": "2026-09-20 10:59:04",
+                "visible_main_locked": false,
+                "workflow_stage": "mcp_connected"
+              }
+            },
+            "study_tag": "std1",
+            "timestamp": 1789873146.999417,
+            "tool": "run_study"
+          },
+          "error": "",
+          "execution": {
+            "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+            "dirty": false,
+            "idempotency_key": "20260920T025903703056Z-phase2-solve",
+            "job_id": "0306a5a3-c95f-4adf-841a-a2b323d40302",
+            "model_ownership": "mcp_owned",
+            "model_ref": {
+              "generation": 2,
+              "model_tag": "mcp_7c8e46365144",
+              "schema_version": 1,
+              "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "operation_id": "0626a626-aaf4-450d-ace5-02bf7c9b91d6",
+            "request_hash": "9c5851992838c5267d5344dac0d2f48b43f1272ea8d98fdaf0413252438d8231",
+            "request_id": "phase2-solve",
+            "revision": 1,
+            "server_ownership": "shared",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "success": true
+        }
+      }
+    }
+  },
+  {
+    "operation": "job_status",
+    "arguments": {
+      "job_id": "df0ff739-5500-472c-8b1c-f3f6a61e890c"
+    },
+    "elapsed_s": 0.0024811660405248404,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "job_id": "df0ff739-5500-472c-8b1c-f3f6a61e890c",
+        "operation_id": "6ce076d5-339f-42db-9577-dc11143fe3ca",
+        "status": "EXPIRED",
+        "metadata": {
+          "arguments": {
+            "parameters_json": "[{\"name\":\"phase2_second_expired\",\"expression\":\"1\"}]"
+          },
+          "execution": {
+            "expected_revision": 0,
+            "idempotency_key": "20260920T025903703056Z-phase2-second-expired",
+            "model_ref": {
+              "generation": 1,
+              "model_tag": "mcp_4d5981225505",
+              "schema_version": 1,
+              "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "queue_timeout_s": 0,
+            "request_id": "phase2-second-expired",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "finished_observed_at": 1789873147.007363,
+          "operation": "set_parameters"
+        },
+        "created_at": "2026-09-20 02:59:06",
+        "started_at": null,
+        "finished_at": "2026-09-20 02:59:07",
+        "effective_timeouts": {
+          "execution_timeout_s": null,
+          "no_progress_warning_s": null,
+          "queue_timeout_s": 0,
+          "rpc_timeout_s": 30.0
+        },
+        "operation": {
+          "operation_id": "6ce076d5-339f-42db-9577-dc11143fe3ca",
+          "request_id": "phase2-second-expired",
+          "idempotency_key": "20260920T025903703056Z-phase2-second-expired",
+          "request_hash": "88a77e406564a5ed0d21c6fece6c43b933e4d9b8c6c84a761899b00bdbff35a9",
+          "operation": "set_parameters",
+          "status": "EXPIRED",
+          "result": {
+            "data": {
+              "status": "NOT_EXECUTED"
+            },
+            "error": {
+              "code": "QUEUE_TIMEOUT",
+              "message": "request expired before engine dispatch",
+              "safe_retry": true
+            },
+            "execution": {
+              "idempotency_key": "20260920T025903703056Z-phase2-second-expired",
+              "job_id": "df0ff739-5500-472c-8b1c-f3f6a61e890c",
+              "operation_id": "6ce076d5-339f-42db-9577-dc11143fe3ca",
+              "request_hash": "88a77e406564a5ed0d21c6fece6c43b933e4d9b8c6c84a761899b00bdbff35a9",
+              "request_id": "phase2-second-expired"
+            },
+            "success": false
+          },
+          "metadata": {
+            "arguments": {
+              "parameters_json": "[{\"name\":\"phase2_second_expired\",\"expression\":\"1\"}]"
+            },
+            "execution": {
+              "expected_revision": 0,
+              "idempotency_key": "20260920T025903703056Z-phase2-second-expired",
+              "model_ref": {
+                "generation": 1,
+                "model_tag": "mcp_4d5981225505",
+                "schema_version": 1,
+                "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "queue_timeout_s": 0,
+              "request_id": "phase2-second-expired",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "operation": "set_parameters"
+          },
+          "created_at": "2026-09-20 02:59:06",
+          "started_at": null,
+          "finished_at": "2026-09-20 02:59:07",
+          "effective_timeouts": {
+            "execution_timeout_s": null,
+            "no_progress_warning_s": null,
+            "queue_timeout_s": 0,
+            "rpc_timeout_s": 30.0
+          }
+        },
+        "result": {
+          "data": {
+            "status": "NOT_EXECUTED"
+          },
+          "error": {
+            "code": "QUEUE_TIMEOUT",
+            "message": "request expired before engine dispatch",
+            "safe_retry": true
+          },
+          "execution": {
+            "idempotency_key": "20260920T025903703056Z-phase2-second-expired",
+            "job_id": "df0ff739-5500-472c-8b1c-f3f6a61e890c",
+            "operation_id": "6ce076d5-339f-42db-9577-dc11143fe3ca",
+            "request_hash": "88a77e406564a5ed0d21c6fece6c43b933e4d9b8c6c84a761899b00bdbff35a9",
+            "request_id": "phase2-second-expired"
+          },
+          "success": false
+        }
+      }
+    }
+  },
+  {
+    "operation": "set_parameters",
+    "arguments": {
+      "parameters_json": "[{\"name\":\"phase2_second_after\",\"expression\":\"1\"}]",
+      "execution": {
+        "idempotency_key": "20260920T025903703056Z-phase2-second-after",
+        "request_id": "phase2-second-after",
+        "queue_timeout_s": null,
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_4d5981225505",
+          "generation": 1
+        },
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "expected_revision": 0
+      }
+    },
+    "elapsed_s": 0.02132125000935048,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "updated": [
+          {
+            "name": "phase2_second_after",
+            "expression": "1"
+          }
+        ],
+        "count": 1,
+        "tool": "set_parameters",
+        "timestamp": 1789873147.103957,
+        "datetime": "2026-09-20 10:59:07",
+        "server": {
+          "version": "0.1.9",
+          "timestamp": 1789873147.1039732,
+          "datetime": "2026-09-20 10:59:07",
+          "status": "ready",
+          "server_running": false,
+          "server_started_by_mcp": false,
+          "attached_to_existing_server": true,
+          "server_host": "127.0.0.1",
+          "server_port": 56389,
+          "server_endpoint": "127.0.0.1:56389",
+          "desktop_client_role": "visual-client",
+          "comsol_root": "/Applications/COMSOL64/Multiphysics",
+          "mcp_home": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home",
+          "logs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs",
+          "outputs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/outputs",
+          "current_model_label": "second.mph",
+          "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/second.mph",
+          "current_model_origin": "bound-request",
+          "last_command": "set_parameters",
+          "last_error": "",
+          "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+          "desktop_should_connect": {
+            "host": "127.0.0.1",
+            "port": 56389
+          },
+          "workflow": {
+            "mode": "single-current-main-model",
+            "current_main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+            "snapshot_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/snapshots",
+            "snapshot_prefix": "phase2",
+            "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+            "visible_main_locked": false,
+            "guard_level": "strict",
+            "snapshot_save_mode": "copy",
+            "main_model_tag": "",
+            "main_model_label": "",
+            "main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+            "model_dimension": 2,
+            "workflow_stage": "mcp_connected",
+            "mcp_client_lifecycle": "persistent-required",
+            "one_shot_client_allowed": false,
+            "notes": "Phase 2 live 2D fixture workflow; snapshots are retained with public run evidence.",
+            "updated_at": "2026-09-20 10:59:04"
+          }
+        },
+        "log_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/server.log",
+        "operations_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/operations.jsonl"
+      },
+      "error": "",
+      "execution": {
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_4d5981225505",
+          "generation": 1
+        },
+        "revision": 1,
+        "dirty": false,
+        "server_ownership": "shared",
+        "model_ownership": "mcp_owned",
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "request_id": "phase2-second-after",
+        "operation_id": "6fc125f3-8c5c-4576-aca6-d88f812f7d9e",
+        "request_hash": "f86b27ca755d4ed17e8b0cd458a9393425f4252bd2f8af8941234966b0508a6a",
+        "idempotency_key": "20260920T025903703056Z-phase2-second-after",
+        "job_id": "33f95189-2c0b-46dc-89fe-f4acf129ad51"
+      }
+    }
+  },
+  {
+    "operation": "get_core_metrics",
+    "arguments": {
+      "metrics_json": "[{\"name\":\"max_abs_error\",\"expression\":\"abs(u-2)\",\"aggregate\":\"max\",\"domains\":[1]}]",
+      "execution": {
+        "idempotency_key": "20260920T025903703056Z-phase2-metric",
+        "request_id": "phase2-metric",
+        "model_ref": {
+          "generation": 2,
+          "model_tag": "mcp_7c8e46365144",
+          "schema_version": 1,
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "expected_revision": 1
+      }
+    },
+    "elapsed_s": 0.04614220798248425,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "label": "model.mph",
+        "solve_status": "success",
+        "solution_tag": "sol1",
+        "results": [
+          {
+            "name": "max_abs_error",
+            "expression": "abs(u-2)",
+            "ok": true,
+            "value": 1.2856382625159313e-13,
+            "last_value": 1.2856382625159313e-13
+          }
+        ],
+        "evaluation_policy": "ephemeral_mutation",
+        "tool": "get_core_metrics",
+        "timestamp": 1789873147.153688,
+        "datetime": "2026-09-20 10:59:07",
+        "server": {
+          "version": "0.1.9",
+          "timestamp": 1789873147.153707,
+          "datetime": "2026-09-20 10:59:07",
+          "status": "ready",
+          "server_running": false,
+          "server_started_by_mcp": false,
+          "attached_to_existing_server": true,
+          "server_host": "127.0.0.1",
+          "server_port": 56389,
+          "server_endpoint": "127.0.0.1:56389",
+          "desktop_client_role": "visual-client",
+          "comsol_root": "/Applications/COMSOL64/Multiphysics",
+          "mcp_home": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home",
+          "logs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs",
+          "outputs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/outputs",
+          "current_model_label": "model.mph",
+          "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/w02/runs/20260918T110411819403Z/model.mph",
+          "current_model_origin": "bound-request",
+          "last_command": "get_core_metrics",
+          "last_error": "",
+          "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+          "desktop_should_connect": {
+            "host": "127.0.0.1",
+            "port": 56389
+          },
+          "workflow": {
+            "mode": "single-current-main-model",
+            "current_main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+            "snapshot_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/snapshots",
+            "snapshot_prefix": "phase2",
+            "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+            "visible_main_locked": false,
+            "guard_level": "strict",
+            "snapshot_save_mode": "copy",
+            "main_model_tag": "",
+            "main_model_label": "",
+            "main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+            "model_dimension": 2,
+            "workflow_stage": "mcp_connected",
+            "mcp_client_lifecycle": "persistent-required",
+            "one_shot_client_allowed": false,
+            "notes": "Phase 2 live 2D fixture workflow; snapshots are retained with public run evidence.",
+            "updated_at": "2026-09-20 10:59:04"
+          }
+        },
+        "log_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/server.log",
+        "operations_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/operations.jsonl"
+      },
+      "error": "",
+      "execution": {
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_7c8e46365144",
+          "generation": 2
+        },
+        "revision": 2,
+        "dirty": false,
+        "server_ownership": "shared",
+        "model_ownership": "mcp_owned",
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "request_id": "phase2-metric",
+        "operation_id": "332c064a-2694-46c9-a1d2-53b8ca045e7b",
+        "request_hash": "70f2d287e3681097ec03ca51bef51598a699b9f2849c2dd1e4893561fbd5987d",
+        "idempotency_key": "20260920T025903703056Z-phase2-metric",
+        "job_id": "4ffda7bb-87e5-4901-a402-077dc80e2d54"
+      }
+    }
+  },
+  {
+    "operation": "save_model",
+    "arguments": {
+      "path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/after.mph",
+      "execution": {
+        "idempotency_key": "20260920T025903703056Z-phase2-save",
+        "request_id": "phase2-save",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_7c8e46365144",
+          "generation": 2
+        },
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "expected_revision": 2
+      }
+    },
+    "elapsed_s": 0.08745962497778237,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "label": "model.mph",
+        "saved_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/after.mph",
+        "tool": "save_model",
+        "timestamp": 1789873147.2452211,
+        "datetime": "2026-09-20 10:59:07",
+        "server": {
+          "version": "0.1.9",
+          "timestamp": 1789873147.2452369,
+          "datetime": "2026-09-20 10:59:07",
+          "status": "ready",
+          "server_running": false,
+          "server_started_by_mcp": false,
+          "attached_to_existing_server": true,
+          "server_host": "127.0.0.1",
+          "server_port": 56389,
+          "server_endpoint": "127.0.0.1:56389",
+          "desktop_client_role": "visual-client",
+          "comsol_root": "/Applications/COMSOL64/Multiphysics",
+          "mcp_home": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home",
+          "logs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs",
+          "outputs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/outputs",
+          "current_model_label": "model.mph",
+          "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/after.mph",
+          "current_model_origin": "bound-request",
+          "last_command": "save_model",
+          "last_error": "",
+          "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+          "desktop_should_connect": {
+            "host": "127.0.0.1",
+            "port": 56389
+          },
+          "workflow": {
+            "mode": "single-current-main-model",
+            "current_main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+            "snapshot_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/snapshots",
+            "snapshot_prefix": "phase2",
+            "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+            "visible_main_locked": false,
+            "guard_level": "strict",
+            "snapshot_save_mode": "copy",
+            "main_model_tag": "",
+            "main_model_label": "",
+            "main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+            "model_dimension": 2,
+            "workflow_stage": "mcp_connected",
+            "mcp_client_lifecycle": "persistent-required",
+            "one_shot_client_allowed": false,
+            "notes": "Phase 2 live 2D fixture workflow; snapshots are retained with public run evidence.",
+            "updated_at": "2026-09-20 10:59:04"
+          }
+        },
+        "log_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/server.log",
+        "operations_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/operations.jsonl"
+      },
+      "error": "",
+      "execution": {
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_7c8e46365144",
+          "generation": 2
+        },
+        "revision": 3,
+        "dirty": false,
+        "server_ownership": "shared",
+        "model_ownership": "mcp_owned",
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "request_id": "phase2-save",
+        "operation_id": "5439db1e-836f-4d2d-bd76-3f0998868203",
+        "request_hash": "5f8faa2d83fd4b3e95556e9d209329efc3d92e4fc1bd7231e2793f73810882a7",
+        "idempotency_key": "20260920T025903703056Z-phase2-save",
+        "job_id": "2c2e9531-6e84-4dd5-bc68-490277978785"
+      }
+    }
+  },
+  {
+    "host": "fresh",
+    "operation": "server_connect",
+    "arguments": {
+      "host": "127.0.0.1",
+      "port": 56389,
+      "execution": {
+        "idempotency_key": "20260920T025903703056Z-phase2-reopen-connect",
+        "request_id": "phase2-reopen-connect"
+      }
+    },
+    "elapsed_s": 0.016457582998555154,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "connected": true,
+        "server_ownership": "shared",
+        "endpoint": "127.0.0.1:56389",
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+        "external_change_detection": {
+          "coverage": "parameters+shallow_tree_identity",
+          "status": "SCOPED_EVIDENCE_ONLY",
+          "event_notifications": "UNVERIFIED",
+          "full_model_property_coverage": "UNVERIFIED",
+          "cas_guarantee": "NONE",
+          "evidence_source": "evidence/phase2/followup/20260918T142300Z-external-api",
+          "evidence_environment": "macOS arm64; COMSOL 6.4.0.293",
+          "other_platforms_or_versions": "UNVERIFIED"
+        },
+        "trusted_code": {
+          "enabled": false,
+          "os_sandbox": false,
+          "config": "COMSOL_MCP_TRUSTED_CODE"
+        },
+        "worker": {
+          "host": "127.0.0.1",
+          "port": 56780,
+          "pid": 89414,
+          "generation": 2,
+          "instance_id": "c1a61dd5-076f-4f25-aaf3-268c2d8b0fdf",
+          "connected": true,
+          "server": "127.0.0.1:56389"
+        }
+      },
+      "execution": {
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "model_ref": null,
+        "revision": null,
+        "request_id": "phase2-reopen-connect",
+        "operation_id": "c0a02d1b-7bee-47a3-a4f9-40325266dcad",
+        "request_hash": "20434ae4dd627770beb405fd0d041b124684c76ca1ecae27139b6567ddf81d2c",
+        "idempotency_key": "20260920T025903703056Z-phase2-reopen-connect",
+        "job_id": "f409b634-88f3-478a-87f2-b47a1ce03dbe"
+      }
+    }
+  },
+  {
+    "host": "fresh",
+    "operation": "model_load",
+    "arguments": {
+      "path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/after.mph",
+      "execution": {
+        "idempotency_key": "20260920T025903703056Z-phase2-reopen-load",
+        "request_id": "phase2-reopen-load"
+      }
+    },
+    "elapsed_s": 0.13565004197880626,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "label": "after.mph",
+        "file_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/after.mph",
+        "requested_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/after.mph",
+        "load_mode": "loaded",
+        "model_tag": "mcp_d1f828fed5fb"
+      },
+      "error": "",
+      "execution": {
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_d1f828fed5fb",
+          "generation": 1
+        },
+        "revision": 0,
+        "dirty": false,
+        "server_ownership": "shared",
+        "model_ownership": "mcp_owned",
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "request_id": "phase2-reopen-load",
+        "operation_id": "e8f52c98-94e4-46de-8f6b-8efc810bc1a4",
+        "request_hash": "e7fba846f70700efd6c1e8e24cb06c5156acf49109cac4cbe61ae434a20d15bd",
+        "idempotency_key": "20260920T025903703056Z-phase2-reopen-load",
+        "job_id": "297f8a4c-f2a6-45f6-8f0c-21dc41416f5d"
+      }
+    }
+  },
+  {
+    "host": "fresh",
+    "operation": "get_core_metrics",
+    "arguments": {
+      "metrics_json": "[{\"name\":\"reopen_max_abs_error\",\"expression\":\"abs(u-2)\",\"aggregate\":\"max\",\"domains\":[1]}]",
+      "execution": {
+        "idempotency_key": "20260920T025903703056Z-phase2-reopen-metric",
+        "request_id": "phase2-reopen-metric",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_d1f828fed5fb",
+          "generation": 1
+        },
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "expected_revision": 0
+      }
+    },
+    "elapsed_s": 0.04472954198718071,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "label": "after.mph",
+        "solve_status": "success",
+        "solution_tag": "sol1",
+        "results": [
+          {
+            "name": "reopen_max_abs_error",
+            "expression": "abs(u-2)",
+            "ok": true,
+            "value": 1.2856382625159313e-13,
+            "last_value": 1.2856382625159313e-13
+          }
+        ],
+        "evaluation_policy": "ephemeral_mutation",
+        "tool": "get_core_metrics",
+        "timestamp": 1789873147.74302,
+        "datetime": "2026-09-20 10:59:07",
+        "server": {
+          "version": "0.1.9",
+          "timestamp": 1789873147.743038,
+          "datetime": "2026-09-20 10:59:07",
+          "status": "ready",
+          "server_running": false,
+          "server_started_by_mcp": false,
+          "attached_to_existing_server": true,
+          "server_host": "127.0.0.1",
+          "server_port": 56389,
+          "server_endpoint": "127.0.0.1:56389",
+          "desktop_client_role": "visual-client",
+          "comsol_root": "/Applications/COMSOL64/Multiphysics",
+          "mcp_home": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home",
+          "logs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs",
+          "outputs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/outputs",
+          "current_model_label": "after.mph",
+          "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/after.mph",
+          "current_model_origin": "bound-request",
+          "last_command": "get_core_metrics",
+          "last_error": "",
+          "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+          "desktop_should_connect": {
+            "host": "127.0.0.1",
+            "port": 56389
+          },
+          "workflow": {
+            "mode": "single-current-main-model",
+            "current_main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+            "snapshot_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/snapshots",
+            "snapshot_prefix": "phase2",
+            "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+            "visible_main_locked": false,
+            "guard_level": "strict",
+            "snapshot_save_mode": "copy",
+            "main_model_tag": "",
+            "main_model_label": "",
+            "main_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/current-main.mph",
+            "model_dimension": 2,
+            "workflow_stage": "mcp_connected",
+            "mcp_client_lifecycle": "persistent-required",
+            "one_shot_client_allowed": false,
+            "notes": "Phase 2 live 2D fixture workflow; snapshots are retained with public run evidence.",
+            "updated_at": "2026-09-20 10:59:04"
+          }
+        },
+        "log_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/server.log",
+        "operations_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T025841Z/phase2-run/mcp-home/logs/operations.jsonl"
+      },
+      "error": "",
+      "execution": {
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "8be511b9a8bc746a4d179cf9c1b79141320439c9ca172660a872b52003b8e831",
+          "model_tag": "mcp_d1f828fed5fb",
+          "generation": 1
+        },
+        "revision": 1,
+        "dirty": false,
+        "server_ownership": "shared",
+        "model_ownership": "mcp_owned",
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "request_id": "phase2-reopen-metric",
+        "operation_id": "336f20ee-1a0f-4e49-9704-b83e0bc0b783",
+        "request_hash": "e729b4c68297c12de3f1bee7eed775933c0ac1e6ff76c4113686d1fca85f1179",
+        "idempotency_key": "20260920T025903703056Z-phase2-reopen-metric",
+        "job_id": "bcedd6a1-e916-43f1-98aa-cdbbe37fb2ad"
+      }
+    }
+  }
+]

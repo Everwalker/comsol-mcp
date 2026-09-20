@@ -1,0 +1,207 @@
+{
+  "schema_version": 1,
+  "review_kind": "NEXT_GOAL_MAC_G2_sections_5_to_11_completion_review",
+  "reviewed_at_utc": "2026-09-20T02:58:32.174171Z",
+  "review_status": "CONDITIONAL_WITH_FINDINGS",
+  "read_only": true,
+  "goal_document": {
+    "path": "docs/comsol_mcp_design_v1/NEXT_GOAL_MAC_G2.md",
+    "sha256": "f7a9e1c9c841fbda1189ccc64c0c357facaafb1afa0f28e2b90e37c26593bbf9",
+    "sections_reviewed": ["5", "6", "7", "8", "9", "10", "11"]
+  },
+  "git_snapshot": {
+    "head": "f3a1a0b04417d0df01003748fbd252b3097d3cb2",
+    "status_line_count": 46,
+    "status_sha256": "1659d51a843704c239dbe716cb3c23f82f9454fad8ddf4bd56899a4653fa2f13",
+    "warning": "Other agents were changing the tree; hashes and statuses are this snapshot only and require recheck after schema freeze."
+  },
+  "focused_checks": {
+    "offline_tests": {
+      "status": "PASS",
+      "result": "97 passed",
+      "command": "pytest -q tests/test_g2_registry_packaging.py tests/test_g2_review_regressions.py tests/test_g2_security_guards.py tests/test_g2_w08_w12.py tests/test_phase3_acceptance_driver.py",
+      "live_comsol": false
+    },
+    "generated_api": {
+      "status": "PASS",
+      "generated_equals_docs": true,
+      "sha256": "f748acd6dfe37c3807387c779bbac5c04ec40799718360d06f018896b36bcbfb"
+    },
+    "schema_probe": {
+      "status": "FINDING",
+      "transaction_trial_without_checkpoint": "validate_call accepts; checkpoint_id is a property but absent from required",
+      "transaction_trial_with_checkpoint": "validate_call accepts",
+      "transaction_recover_without_authorization_ref": "validate_call accepts; authorization_ref is an optional property",
+      "transaction_recover_with_authorization_ref": "validate_call accepts"
+    }
+  },
+  "source_snapshot": {
+    "captured_at_utc": "2026-09-20T02:58:32.174171Z",
+    "files": [
+      {"path": "comsol_mcp/_g2_registry.py", "sha256": "4e22919e3ab88700bbc0132cfa3891f813d9bc14d338092f22659d2d22364227"},
+      {"path": "comsol_mcp/_g2_docs.py", "sha256": "b30f0fa62788760ed9fe76e44ea3cdc3812f01792514abc2ab78256807c76b4c"},
+      {"path": "comsol_mcp/_managed_backend.py", "sha256": "e4a132aa3c038a4c3cf9253742e2863a587cc24366919e87e8581ec5def5b565"},
+      {"path": "comsol_mcp/_g2_contract.py", "sha256": "97e697599fe8f5d3e44f97fdfefa39c1a80453848f85c0af1ed2dd9719bc49c0"},
+      {"path": "comsol_mcp/_g2_engine.py", "sha256": "518d416d59ca7fcfaaa216a5be2d055ce03a4254dda6eb3a06212462f0b7ae8a"},
+      {"path": "comsol_mcp/_g2_transactions.py", "sha256": "5cc5afd0e2d4a8e60e7cdec533b024c3ebd98794fab8cc1d157277043294fd83"},
+      {"path": "comsol_mcp/_g2_code.py", "sha256": "107a256c53e915bb3a546bef67ec8917a55fd5254c703ba612b9a38db151873d"},
+      {"path": "comsol_mcp/_control_daemon.py", "sha256": "a2ed44d43c2299b16b820cfa10de248502d99829f4a1b57f15cd7c1325fb77c0"},
+      {"path": "comsol_mcp/_mcp_gateway.py", "sha256": "23939949e7e04548dad0993d875339b3b7ef20dd1086e676608630c67f8fd2"},
+      {"path": "comsol_mcp/_g2_isolation.py", "sha256": "363c4d890a2862671595f88e40a7dbdba1efae1a14a78005f10333e40ec3e5dd"},
+      {"path": "comsol_mcp/data/g2/02_ACTION_CATALOG.json", "sha256": "9ab2eda02ae628a25951c79f8a727c1dd71ad38037536344c526e7e04bfc32a2"},
+      {"path": "docs/comsol_mcp_design_v1/02_ACTION_CATALOG.json", "sha256": "9ab2eda02ae628a25951c79f8a727c1dd71ad38037536344c526e7e04bfc32a2"},
+      {"path": "docs/comsol_mcp_design_v1/02_ACTION_CATALOG.md", "sha256": "c780efd605d5473f29feccb4b93ea7870475dd96664a8415d7a8e441e1d5ed0a"},
+      {"path": "docs/comsol_mcp_design_v1/G2_API.md", "sha256": "f748acd6dfe37c3807387c779bbac5c04ec40799718360d06f018896b36bcbfb"},
+      {"path": "tools/generate_g2_api.py", "sha256": "dcc7d273f107eccc8d9efe437bc2f6cf25f49d58c62a3fc12156a26cab010040"},
+      {"path": "tools/phase3_run_mcp.py", "sha256": "2456205231f35fa05043f7fff80c20766a6159f855a4c6bea076011554474719"},
+      {"path": "tests/test_g2_registry_packaging.py", "sha256": "496e3245d1466c4d402d7572fd7d804c0b46f6a3775bd4b1d8ee8528b0b15f21"},
+      {"path": "tests/test_g2_review_regressions.py", "sha256": "1aa188e57aac4eb32cc486e0c25fea14ed388d1023ce7d288129198e7f89f285"},
+      {"path": "tests/test_g2_security_guards.py", "sha256": "75c156315dc68d1eec64c95cd266784d7b162fca359a84261fc9b6f9a4120692"},
+      {"path": "tests/test_g2_w08_w12.py", "sha256": "53c3c2474c91b28e11d935a7c6bc6f0c6a816cfc23912d89151524c2e6e3411c"},
+      {"path": "tests/test_phase3_acceptance_driver.py", "sha256": "164df382a8f292fe4fc56317809858edb2f76507bb126bdc2168c3cbd48972f3"}
+    ]
+  },
+  "requirement_status": [
+    {
+      "id": "W08_sections_5",
+      "status": "PASS",
+      "evidence": "evidence/phase3/live-g2-rerun8-20260920T024658Z/assertions.json",
+      "note": "Latest parent-scoped rerun reports typed paths/shapes, idempotency, malformed-input no-write, and same-tag type rejection PASS."
+    },
+    {
+      "id": "W09_section_6",
+      "status": "UNVERIFIED",
+      "evidence": "evidence/phase3/offline-final-20260920T024149Z/assertions.json",
+      "note": "Historical stdio registry/profile/fallback/structuredContent checks PASS, but current trial schema is inconsistent and latest rerun8 excluded W09."
+    },
+    {
+      "id": "W10_section_7",
+      "status": "PASS_WITH_BINDING_LIMIT",
+      "evidence": "evidence/phase3/live-g2-rerun8-20260920T024658Z/assertions.json; tests/test_g2_security_guards.py",
+      "note": "Bound-model readback, Java source hashes, partial reconciliation, trusted_code routing, and permission-before-engine tests are present; the broad source snapshot is stale."
+    },
+    {
+      "id": "W11_section_8",
+      "status": "PARTIAL",
+      "evidence": "evidence/phase3/offline-final-20260920T024149Z/assertions.json",
+      "note": "6.4 source/version/hash/search/fragment, explicit 6.3 UNAVAILABLE, malicious-document data handling, and root boundary PASS. Real 6.3 material is unavailable and injection scope is incomplete."
+    },
+    {
+      "id": "platform_section_10",
+      "status": "UNVERIFIED",
+      "evidence": "comsol_mcp/_managed_backend.py:93-105",
+      "note": "Fixed macOS help roots remain in ManagedBackend with an environment override; broader Windows/Intel/6.3/GUI/unlicensed support is not claimed."
+    },
+    {
+      "id": "evidence_delivery_section_11",
+      "status": "DEFERRED_KNOWN",
+      "evidence": "evidence/phase3_acceptance.json",
+      "note": "Current receipt is IN_PROGRESS; real 6.3, checkpoint cost limits, Phase2 live regression, and publication are explicitly bounded."
+    }
+  ],
+  "findings": [
+    {
+      "id": "W09_TRIAL_CHECKPOINT_SCHEMA_RUNTIME_DRIFT",
+      "status": "FINDING",
+      "severity": "REQUIRED_FIX_BEFORE_SCHEMA_FREEZE",
+      "locations": [
+        "comsol_mcp/_managed_backend.py:770-774,932",
+        "tests/test_g2_review_regressions.py:515-528",
+        "comsol_mcp/data/g2/02_ACTION_CATALOG.json:15182-15186",
+        "docs/comsol_mcp_design_v1/02_ACTION_CATALOG.json:15182-15186",
+        "docs/comsol_mcp_design_v1/02_ACTION_CATALOG.md:410",
+        "docs/comsol_mcp_design_v1/G2_API.md:4254-4302,4312-4386",
+        "comsol_mcp/_g2_registry.py:562-599"
+      ],
+      "observation": "ManagedBackend._trial_checkpoint raises CHECKPOINT_REQUIRED when checkpoint_id is absent and the regression test asserts that behavior. Both catalogs contain checkpoint_id as a property but omit it from input_schema.required; both arguments_signature values remain actions:objects,invariants:objects?. Generated G2_API repeats the omission. validate_call accepts a trial request without checkpoint_id.",
+      "impact": "A client can pass published schema validation and then receive a runtime denial. W09 schema/stdio evidence is conditional until catalog, generated API, and runtime validation are synchronized."
+    },
+    {
+      "id": "W09_RECOVER_AUTHORIZATION_REF_STDIO_RECHECK",
+      "status": "EVIDENCE_GAP",
+      "severity": "REQUIRED_RECHECK_BEFORE_FREEZE",
+      "locations": [
+        "comsol_mcp/data/g2/02_ACTION_CATALOG.json:15393-15426",
+        "docs/comsol_mcp_design_v1/G2_API.md:4062-4193",
+        "docs/comsol_mcp_design_v1/02_ACTION_CATALOG.md:413",
+        "comsol_mcp/_managed_backend.py:1062-1064",
+        "evidence/phase3/offline-final-20260920T024149Z/transcript.json",
+        "evidence/phase3/live-g2-rerun8-20260920T024658Z/assertions.json"
+      ],
+      "observation": "Current catalogs and generated API include transaction.recover.authorization_ref as an optional string, matching the conditional dirty-restore check. Historical offline-final stdio evidence predates the field: transcript catalog hash da2b424a5d35b437e9bec9e05f47b2ddbf7cf73610214764d5c8bc268bbc3ba5 and recover schema has no authorization_ref. Latest rerun8 explicitly excluded W09.",
+      "required_next_check": "After the trial schema/signature fix, run one fresh stdio registry schema/describe query for transaction.trial and transaction.recover against current catalog hash 9ab2eda02ae628a25951c79f8a727c1dd71ad38037536344c526e7e04bfc32a2."
+    },
+    {
+      "id": "W09_W10_W11_SOURCE_BINDING_DRIFT",
+      "status": "EVIDENCE_GAP",
+      "severity": "REQUIRED_REBIND_BEFORE_FINAL_ACCEPTANCE",
+      "observation": "final_source_snapshot recorded at 2026-09-19T15:27:23.351914+00:00 now mismatches 11 tracked source files, including _g2_contract.py, _g2_engine.py, _g2_isolation.py, _managed_backend.py, both catalogs, three test files, and phase3_run_mcp.py. Offline-final recorded phase3_run_mcp.py as 85359a09e0a46fb8434694a2f1caf58ddb87fcb4ec647f39933d3670cfbc37ab; current hash is 2456205231f35fa05043f7fff80c20766a6159f855a4c6bea076011554474719.",
+      "evidence": {
+        "old_snapshot": "evidence/phase3/final_source_snapshot.json",
+        "old_snapshot_sha256": "623cb4fa3217e65dfac4cf433460d952ed6bd84fb4623556eab015f8c55b8bb1",
+        "offline_final_source_snapshot": "evidence/phase3/offline-final-20260920T024149Z/source_snapshot.json",
+        "offline_final_source_snapshot_sha256": "9c0e7c8fb8fa47201f89d1b6d885fe6ff6ed965d52efa4bcef9032907eb19c59"
+      },
+      "impact": "Historical W09/W11 PASS remains evidence of the earlier tree; current final acceptance needs a fresh source snapshot and W09/W11 receipt after schema freeze."
+    },
+    {
+      "id": "W11_INJECTION_CHECK_SCOPE",
+      "status": "PARTIAL_EVIDENCE",
+      "severity": "EVIDENCE_LIMIT",
+      "locations": [
+        "tools/phase3_run_mcp.py:2130-2175",
+        "comsol_mcp/_g2_docs.py",
+        "evidence/phase3/offline-final-20260920T024149Z/assertions.json"
+      ],
+      "observation": "The W11 driver asserts malicious text is returned as documentation data and an outside-root fixture receives PERMISSION_DENIED. It does not instrument permission state, file/network egress, or attempted action dispatch caused by the fixture. The PASS is therefore bounded to inert return and root enforcement."
+    },
+    {
+      "id": "SECTION_10_PLATFORM_DISCOVERY_IN_CORE_BACKEND",
+      "status": "DESIGN_GAP",
+      "severity": "LOW_FOR_CURRENT_MAC_SCOPE",
+      "location": "comsol_mcp/_managed_backend.py:93-105",
+      "observation": "ManagedBackend appends /Applications/COMSOL64/Multiphysics/doc and /Applications/COMSOL63/Multiphysics/doc directly, with COMSOL_DOCS_ROOT as an override. This is a platform-specific discovery fallback in core backend code."
+    }
+  ],
+  "historical_evidence": {
+    "offline_final": {
+      "path": "evidence/phase3/offline-final-20260920T024149Z/assertions.json",
+      "sha256": "931d51c5ab009eaf9743dd1ce545cac6481e1fc582bc841462282d9ddcb98cba",
+      "w09_subcases_passed": 11,
+      "w11_subcases_passed": 7
+    },
+    "latest_rerun8": {
+      "path": "evidence/phase3/live-g2-rerun8-20260920T024658Z/assertions.json",
+      "sha256": "674077714b965480954c6103b5750538b7c9da7ef785921361531cb30bd8f7da",
+      "w08": "PASS",
+      "w09": "NOT_RUN",
+      "w10": "PASS",
+      "w11": "NOT_RUN",
+      "w12": "PASS"
+    }
+  },
+  "known_limits": {
+    "acceptance_receipt": "evidence/phase3_acceptance.json",
+    "status": "IN_PROGRESS",
+    "mac_stage_passed": false,
+    "full_g2_certified": false,
+    "real_63_source": "BLOCKED; explicit UNAVAILABLE tested",
+    "large_model_checkpoint_cost": "NOT_RUN",
+    "small_model_checkpoint_cost": "BLOCKED without verified isolated runtime cost claim",
+    "phase2_live_regression": "BLOCKED; historical evidence retained",
+    "publication": "parent-scoped cleanup and delivery boundary"
+  },
+  "operations_and_privacy": {
+    "connected_to_comsol": false,
+    "started_or_stopped_processes": false,
+    "scanned_private_machine_files": false,
+    "copied_private_preferences_or_help_content": false,
+    "included_credentials_or_license_values": false
+  },
+  "next_freeze_gate": [
+    "Synchronize transaction.trial checkpoint_id required metadata and arguments signature across both catalogs and generated docs.",
+    "Regenerate/verify G2_API and run fresh stdio schema evidence for transaction.trial and transaction.recover.",
+    "Capture a fresh source snapshot after schema edits, then rerun W09 and W11 only.",
+    "Retain real-6.3, checkpoint-cost, Phase2-live-regression, and publication limits as explicit BLOCKED/NOT_RUN boundaries."
+  ]
+}

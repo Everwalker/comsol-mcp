@@ -1,0 +1,31 @@
+{
+  "recorded_at": "2026-09-20T02:40:00.366453+00:00",
+  "run": "evidence/phase3/live-g2-rerun6-20260920T023806Z",
+  "result_sha256": "186a7167dbc628f50ca4e709f881c6271f03c0578cf10d25ba787e9fd9be4645",
+  "status": "PARTIAL_PROGRESS_NOT_STAGE_PASS",
+  "observed": {
+    "W08": "PASS",
+    "W10": "PASS",
+    "W12": "BLOCKED",
+    "W12_subcases": {
+      "isolated_trial": {
+        "status": "PASS"
+      },
+      "permission_before_copy": {
+        "reason": "untrusted code was not refused before model/checkpoint state changed",
+        "status": "BLOCKED"
+      },
+      "preview_no_write": {
+        "status": "PASS"
+      },
+      "trial_checkpoint_binding": {
+        "status": "PASS"
+      }
+    }
+  },
+  "failure_root_cause": "code.execute_java invalid mode rejection occurs inside ticketed write callback and is conservatively mapped to UNKNOWN; reject mode in direct and nested static preflight before ticket/checkpoint/copy. Preserve UNKNOWN history and reconcile without replay.",
+  "artifact_hash_check": {
+    "status": "PASS",
+    "files": 7
+  }
+}

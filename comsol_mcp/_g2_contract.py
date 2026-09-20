@@ -210,8 +210,28 @@ def validate_typed_value(value: Mapping[str, Any], *, expected: Mapping[str, Any
             if expected_sig is None or actual_sig is None or expected_sig != actual_sig:
                 raise _error("PROPERTY_TYPE_MISMATCH", "typed value java_signature does not match property metadata")
         allowed_values = expected.get("allowed_values")
-        if allowed_values is not None and any(item not in allowed_values for item in _flatten(data)):
-            raise _error("INVALID_PROPERTY_VALUE", "property value is outside the allowed values")
+        if allowed_values is not None:
+            for item in _flatten(data):
+                if any(
+                    (type(item) is type(allowed) and item == allowed)
+                    if isinstance(item, bool) or isinstance(allowed, bool)
+                    else item == allowed
+                    for allowed in allowed_values
+                ):
+                    continue
+                # COMSOL's PropFeature metadata reports Boolean enumerations
+                # as the strings ``on``/``off`` even though its authoritative
+                # getter and setter contract is JSON boolean/Java boolean.
+                # Normalize only that exact known vocabulary; strings such as
+                # "on", numbers 0/1, and unknown enumerations remain invalid.
+                known_boolean_enums = (
+                    bool(allowed_values)
+                    and all(type(allowed) is str and allowed in {"on", "off"} for allowed in allowed_values)
+                )
+                if (kind == "boolean" and known_boolean_enums and isinstance(item, bool)
+                        and ("on" if item else "off") in allowed_values):
+                    continue
+                raise _error("INVALID_PROPERTY_VALUE", "property value is outside the allowed values")
     return result
 
 
@@ -308,6 +328,8 @@ def typed_value_from_engine(value: Any, *, kind: str | None = None, unit: str | 
             kind = "string"
         else:
             kind = "string" if value is None else "expression"
+    if kind in {"float64", "complex128"}:
+        _reject_nonfinite_engine_value(value)
     shape = list(_shape_of(value))
     if kind == "complex128" and isinstance(value, Mapping):
         shape = []
@@ -315,6 +337,26 @@ def typed_value_from_engine(value: Any, *, kind: str | None = None, unit: str | 
     if unit:
         result["unit"] = unit
     return result
+
+
+def _reject_nonfinite_engine_value(value: Any) -> None:
+    """Keep non-finite COMSOL readbacks out of the JSON ActionResult wire.
+
+    COMSOL can expose an unevaluated or invalid numeric property as NaN or an
+    infinity.  Those values are meaningful evidence of an invalid readback,
+    but JSON ``allow_nan=False`` cannot serialize them.  Fail before building
+    a typed result so a read-only getter remains a structured API_UNSUPPORTED
+    response and a setter's post-write readback keeps its existing conservative
+    EXECUTION_STATE_UNKNOWN handling.
+    """
+    if isinstance(value, float) and not math.isfinite(value):
+        raise _error("API_UNSUPPORTED", "COMSOL readback contains a non-finite numeric value")
+    if isinstance(value, Mapping):
+        for child in value.values():
+            _reject_nonfinite_engine_value(child)
+    elif _is_sequence(value):
+        for child in value:
+            _reject_nonfinite_engine_value(child)
 
 
 def property_schema_from_engine(node: Any, name: str | None = None) -> dict[str, Any]:

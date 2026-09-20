@@ -1,0 +1,19 @@
+{
+  "recorded_at": "2026-09-20T00:57:37.906072+00:00",
+  "status": "OPEN",
+  "requirement": "NEXT_GOAL_MAC_G2.md section 9.4: compare specified scope after restore",
+  "findings": [
+    {
+      "case": "W12 partial_apply_restore",
+      "gap": "Existing assertion proves replacement generation and stale handle rejection, but does not compare restored property values. safe_action was initialized with original echo value.",
+      "required": "Read before, apply a legal changed fixture value, prove changed readback, recover, compare actual restored readback with before; keep generation/ref assertions."
+    },
+    {
+      "case": "W10 partial_execution_checkpoint",
+      "gap": "Existing assertion checks restored identity without restored parameter scope.",
+      "required": "Verify phase3_code_guard value or absence returns to checkpoint scope and previously written public API values remain."
+    }
+  ],
+  "delegated_to": "g2_acceptance_driver",
+  "does_not_change_historical_evidence": true
+}

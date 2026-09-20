@@ -277,6 +277,52 @@ def _data(payload: Mapping[str, Any] | None) -> dict[str, Any]:
     return dict(value) if isinstance(value, Mapping) else {}
 
 
+def _execution_readback(payload: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Extract the public result from the managed Java execution envelope.
+
+    ``code.execute_java`` returns the worker result under ``data.readback``;
+    the worker itself keeps the entrypoint's value under its own ``readback``
+    key.  Keep the driver tied to that production envelope instead of
+    accepting a worker success flag as evidence of the public API result.
+    """
+    data = _data(payload)
+    value = data.get("readback")
+    if not isinstance(value, Mapping):
+        return {}
+    nested = value.get("readback")
+    if isinstance(nested, Mapping):
+        return dict(nested)
+    return dict(value)
+
+
+def _reconciliation_details(payload: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Return the durable job-reconcile facts used before recovery."""
+    data = _data(payload)
+    metadata = data.get("metadata") if isinstance(data.get("metadata"), Mapping) else {}
+    raw_rows = metadata.get("reconciliation")
+    rows = [dict(row) for row in raw_rows if isinstance(row, Mapping)] if isinstance(raw_rows, list) else []
+    return {
+        "status": data.get("status"),
+        "reconciled_quiescent": metadata.get("reconciled_quiescent"),
+        "replay_performed": metadata.get("replay_performed"),
+        "rows": rows,
+        "job_id": data.get("job_id"),
+    }
+
+
+def _reconciliation_quiescent(payload: Mapping[str, Any] | None) -> bool:
+    details = _reconciliation_details(payload)
+    rows = details["rows"]
+    return (
+        _success(payload)
+        and details["status"] == "UNKNOWN"
+        and details["reconciled_quiescent"] is True
+        and details["replay_performed"] is False
+        and bool(rows)
+        and all(row.get("status") in {"SUCCEEDED", "FAILED"} for row in rows)
+    )
+
+
 def _diagnostic_rows(value: Any) -> list[dict[str, Any]]:
     """Flatten the worker's nested failure details without losing line data."""
     current = value
@@ -558,6 +604,25 @@ class ActionClient:
         request: str | None = None,
         revision_override: int | None = None,
     ) -> dict[str, Any]:
+        # Once the managed route reports an unknown engine state, further
+        # model-bound calls would only manufacture a cascade of identical
+        # failures and can obscure which negative/no-write checks were never
+        # reached.  Keep local, no-model probes available for independent
+        # evidence (docs, registry and offline compilation), while requiring
+        # reconciliation before another bound-model action.
+        unknown_state = self.state.get("_execution_state_unknown")
+        reconciliation_read = operation in {"model_inspect", "get_parameters"} and self.state.get("_job_reconciled") is True
+        recovery_operation = operation in {"checkpoint.restore", "transaction.recover"} and self.state.get("_job_reconciled") is True
+        # ``job_reconcile`` is a control-plane read.  It is the only call
+        # allowed to establish the quiescent boundary after an unknown
+        # engine callback, and it must be made unbound so the old model ref is
+        # not treated as a write authorization.
+        if require_model and unknown_state and not (reconciliation_read or recovery_operation):
+            first = self.state["_execution_state_unknown"]
+            raise CapabilityUnavailable(
+                "bound-model calls stopped after EXECUTION_STATE_UNKNOWN at "
+                f"{first.get('operation', 'unknown')} ({first.get('error', 'unknown')}); reconcile before retry"
+            )
         ref = self.state.get("ref") if require_model else None
         revision = revision_override if revision_override is not None else self.state.get("revision")
         if require_model and not isinstance(ref, Mapping):
@@ -579,8 +644,34 @@ class ActionClient:
             revision_override=revision_override,
         )
         call_args["execution"] = execution
+        prior_ref = self.state.get("ref")
         payload = await self.host.call(tool, call_args)
         self._record_identity(payload)
+        recovered_ref, _ = _payload_execution(payload)
+        recovery_verified = (
+            recovery_operation
+            and _success(payload)
+            and isinstance(prior_ref, Mapping)
+            and isinstance(recovered_ref, Mapping)
+            and isinstance(prior_ref.get("generation"), int)
+            and isinstance(recovered_ref.get("generation"), int)
+            and prior_ref.get("generation", 0) >= 1
+            and recovered_ref.get("generation", 0) >= 1
+            and recovered_ref.get("session_id") == prior_ref.get("session_id")
+            and recovered_ref.get("server_instance_id") == prior_ref.get("server_instance_id")
+            and recovered_ref.get("model_tag") != prior_ref.get("model_tag")
+        )
+        if recovery_verified:
+            # A successful checkpoint/transaction recovery establishes a new
+            # model identity and is the explicit reconciliation boundary for
+            # the earlier unknown state.  Dependent bound calls may resume
+            # only after this response, with the new ref/revision recorded.
+            self.state.pop("_execution_state_unknown", None)
+        if _error_code(payload) == "EXECUTION_STATE_UNKNOWN":
+            self.state.setdefault(
+                "_execution_state_unknown",
+                {"operation": operation, "error": _error_code(payload), "request": request or key or operation},
+            )
         return payload
 
 
@@ -1111,6 +1202,42 @@ def _property_value_rows(payload: Mapping[str, Any]) -> list[dict[str, Any]]:
     return [dict(row) for row in values if isinstance(row, Mapping) and isinstance(row.get("name"), str) and isinstance(row.get("value"), Mapping)]
 
 
+def _property_value_map(
+    rows: Iterable[Mapping[str, Any]],
+    *,
+    requested_path: Mapping[str, Any] | None = None,
+) -> dict[str, Mapping[str, Any]]:
+    """Map typed property values from either public row shape.
+
+    Ordinary ``node.property_get`` responses expose ``name``/``value`` rows.
+    Trial scope readback wraps those rows in ``path``/``properties`` records.
+    When a path is supplied, select only its matching scope record so a
+    repeated property name on a sibling node cannot satisfy this assertion.
+    """
+    result: dict[str, Mapping[str, Any]] = {}
+    for row in rows:
+        if not isinstance(row, Mapping):
+            continue
+        if isinstance(row.get("properties"), list):
+            if requested_path is not None and _json_safe(row.get("path")) != _json_safe(requested_path):
+                continue
+            candidates = row.get("properties")
+        else:
+            if requested_path is not None and "path" in row and _json_safe(row.get("path")) != _json_safe(requested_path):
+                continue
+            candidates = [row]
+        if not isinstance(candidates, list):
+            continue
+        for candidate in candidates:
+            if (
+                isinstance(candidate, Mapping)
+                and isinstance(candidate.get("name"), str)
+                and isinstance(candidate.get("value"), Mapping)
+            ):
+                result[str(candidate["name"])] = candidate["value"]
+    return result
+
+
 def _different_typed_value(value: Mapping[str, Any], *, allowed_values: list[Any] | None = None) -> dict[str, Any] | None:
     """Produce a same-kind/same-shape value using the observed API value."""
     result = deepcopy(dict(value))
@@ -1152,12 +1279,36 @@ def _different_typed_value(value: Mapping[str, Any], *, allowed_values: list[Any
     return {**result, "data": changed} if ok else None
 
 
-async def _property_candidates(client: ActionClient, path: Mapping[str, Any]) -> list[dict[str, Any]]:
-    schema = await client.action("node.property_schema", {"path": path})
-    if not _success(schema):
-        return []
-    props = _data(schema).get("properties", [])
-    names = [str(row.get("name")) for row in props if isinstance(row, Mapping) and isinstance(row.get("name"), str) and row.get("name")]
+async def _property_candidates(
+    client: ActionClient,
+    path: Mapping[str, Any],
+    schema_rows: list[Mapping[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    if schema_rows is None:
+        schema = await client.action("node.property_schema", {"path": path})
+        if not _success(schema):
+            return []
+        props = _data(schema).get("properties", [])
+    else:
+        props = schema_rows
+    # Metadata marked UNKNOWN is already a truthful NOT_RUN candidate.  Probe
+    # only fields with an authoritative typed getter; this bounds the number
+    # of Worker round trips and avoids re-discovering known API_UNSUPPORTED
+    # properties one by one.
+    names = [
+        str(row.get("name"))
+        for row in props
+        if isinstance(row, Mapping)
+        and isinstance(row.get("name"), str)
+        and row.get("name")
+        and row.get("metadata_status") == "KNOWN"
+        and isinstance(row.get("getter"), str)
+    ]
+    schema_by_name = {
+        str(row.get("name")): dict(row)
+        for row in props
+        if isinstance(row, Mapping) and isinstance(row.get("name"), str)
+    }
     values: list[dict[str, Any]] = []
     for name in names[:100]:
         try:
@@ -1165,7 +1316,13 @@ async def _property_candidates(client: ActionClient, path: Mapping[str, Any]) ->
         except CapabilityUnavailable:
             raise
         if _success(reply):
-            values.extend(_property_value_rows(reply))
+            for value_row in _property_value_rows(reply):
+                # Keep the authoritative metadata beside each observed value
+                # for later controlled edits.  In particular, an enum-backed
+                # string must be changed to another advertised value rather
+                # than an invented expression.
+                value_row["_schema"] = schema_by_name.get(name, {})
+                values.append(value_row)
     return values
 
 
@@ -1186,17 +1343,18 @@ async def _case_w08(host: ProductionHost, client: ActionClient, case: Case, args
         case.subcase("wp3_local_edit_sibling_identity", "BLOCKED", reason="no bound model_ref")
         case.subcase("negative_no_write", "BLOCKED", reason="no bound model_ref")
         case.subcase("idempotency", "BLOCKED", reason="no bound model_ref")
+        case.subcase("same_tag_type_rejection", "BLOCKED", reason="no bound model_ref")
         case.finish()
         return
     try:
         wp = await _find_work_plane(client, args)
     except CapabilityUnavailable as exc:
-        for name in ("typed_round_trip", "wp3_local_edit_sibling_identity", "negative_no_write", "idempotency"):
+        for name in ("typed_round_trip", "wp3_local_edit_sibling_identity", "negative_no_write", "idempotency", "same_tag_type_rejection"):
             case.subcase(name, "BLOCKED", reason=str(exc))
         case.finish()
         return
     if not wp:
-        for name in ("typed_round_trip", "wp3_local_edit_sibling_identity", "negative_no_write", "idempotency"):
+        for name in ("typed_round_trip", "wp3_local_edit_sibling_identity", "negative_no_write", "idempotency", "same_tag_type_rejection"):
             case.subcase(name, "NOT_RUN", reason=f"no Work Plane tag {args.wp_tag!r} was found in the bound model")
         case.finish()
         return
@@ -1205,25 +1363,32 @@ async def _case_w08(host: ProductionHost, client: ActionClient, case: Case, args
     # The reviewed fixture gives us stable local paths. Values and schemas
     # still come from the live model, so unsupported properties are never
     # guessed or represented as a synthetic pass.
-    probe_paths: list[tuple[str, dict[str, Any]]] = [("work_plane", wp_path)]
+    probe_paths: list[tuple[str, dict[str, Any], list[Mapping[str, Any]]]] = []
+    try:
+        work_plane_probe = await client.action("node.inspect", {"path": wp_path, "include_values": False})
+    except CapabilityUnavailable:
+        raise
+    if _success(work_plane_probe):
+        probe_paths.append(("work_plane", wp_path, [row for row in _data(work_plane_probe).get("properties", []) if isinstance(row, Mapping)]))
     for tag in ("rectA", "rectB", "ptMatrix", "bezierInt"):
         candidate = {"segments": [*wp_path.get("segments", []), {"accessor": "geom"}, {"collection": "feature", "tag": tag}]}
         try:
-            probe = await client.action("node.inspect", {"path": candidate, "include_values": True})
+            # Establish that the path exists without asking inspect to read
+            # every property value.  A single COMSOL property with no
+            # authoritative metadata must not hide an otherwise valid
+            # fixture node (and its supported int/empty/singleton fields).
+            probe = await client.action("node.inspect", {"path": candidate, "include_values": False})
         except CapabilityUnavailable:
             raise
         if _success(probe):
-            probe_paths.append((tag, candidate))
+            probe_paths.append((tag, candidate, [row for row in _data(probe).get("properties", []) if isinstance(row, Mapping)]))
     values: list[dict[str, Any]] = []
-    for node_label, path in probe_paths:
-        inspect = await client.action("node.inspect", {"path": path, "include_values": True})
-        rows = _property_value_rows(inspect) if _success(inspect) else []
-        if not rows:
-            try:
-                rows = await _property_candidates(client, path)
-            except CapabilityUnavailable as exc:
-                case.subcase("typed_round_trip", "BLOCKED", reason=str(exc))
-                rows = []
+    for node_label, path, schema_rows in probe_paths:
+        try:
+            rows = await _property_candidates(client, path, schema_rows)
+        except CapabilityUnavailable as exc:
+            case.subcase("typed_round_trip", "BLOCKED", reason=str(exc))
+            rows = []
         for row in rows:
             row["_path"] = path
             row["_node_label"] = node_label
@@ -1265,7 +1430,26 @@ async def _case_w08(host: ProductionHost, client: ActionClient, case: Case, args
         if ok:
             case.subcase(category, "PASS", property=row["name"], shape=original.get("shape"))
             if category == "scalar":
-                state["safe_action"] = {"operation_id": "node.property_set", "arguments": {"path": row_path, "properties": [{"name": row["name"], "value": original}]}}
+                changed = _different_typed_value(
+                    original,
+                    allowed_values=(row.get("_schema") or {}).get("allowed_values"),
+                )
+                if changed is not None and _json_safe(changed) != _json_safe(original):
+                    state["safe_action"] = {
+                        "operation_id": "node.property_set",
+                        "arguments": {
+                            "path": row_path,
+                            "properties": [{"name": row["name"], "value": changed}],
+                        },
+                    }
+                    state["safe_action_before"] = {
+                        "path": row_path,
+                        "name": row["name"],
+                        "value": original,
+                    }
+                else:
+                    state.pop("safe_action", None)
+                    state.pop("safe_action_before", None)
         else:
             code = _error_code(reply)
             case.subcase(category, "NOT_RUN" if code in {"API_UNSUPPORTED", "ENGINE_CALL_FAILED", "INVALID_PROPERTY_VALUE"} else "FAIL", reason=f"property set/readback failed: {code or _error_code(readback_reply) or 'UNKNOWN'}")
@@ -1339,17 +1523,29 @@ async def _case_w08(host: ProductionHost, client: ActionClient, case: Case, args
         target_path = {"segments": base_segments + [first]}
         sibling_path = {"segments": base_segments + [sibling]}
         try:
-            target_values = await _property_candidates(client, target_path)
+            target_probe = await client.action("node.inspect", {"path": target_path, "include_values": False})
+            target_schema_rows = [
+                row for row in _data(target_probe).get("properties", []) if isinstance(row, Mapping)
+            ] if _success(target_probe) else []
+            target_values = await _property_candidates(client, target_path, target_schema_rows or None)
             target = next((row for row in target_values if row.get("name") in {"pos", "size"}), None)
             if target is None:
                 target = next((row for row in target_values if _different_typed_value(row.get("value", {})) is not None), None)
-            sibling_before = await client.action("node.inspect", {"path": sibling_path, "include_values": True})
-            if not target or not _success(sibling_before):
+            sibling_before_probe = await client.action("node.inspect", {"path": sibling_path, "include_values": False})
+            sibling_before_rows = []
+            if _success(sibling_before_probe):
+                sibling_before_rows = await _property_candidates(
+                    client,
+                    sibling_path,
+                    [row for row in _data(sibling_before_probe).get("properties", []) if isinstance(row, Mapping)],
+                )
+            if not target or not _success(sibling_before_probe):
                 case.subcase("wp3_local_edit_sibling_identity", "FAIL" if state.get("fixture_status") == "CREATED_BY_INJECTED_MODEL" else "NOT_RUN", reason="siblings exist but no controlled target property/readback was available")
             else:
-                target_schema = await client.action("node.property_schema", {"path": target_path, "name": target["name"]})
-                schema_rows = _data(target_schema).get("properties", []) if _success(target_schema) else []
-                schema_row = schema_rows[0] if schema_rows and isinstance(schema_rows[0], Mapping) else {}
+                schema_row = next(
+                    (row for row in target_schema_rows if row.get("name") == target["name"]),
+                    {},
+                )
                 changed_value = _different_typed_value(target["value"], allowed_values=schema_row.get("allowed_values"))
                 if changed_value is None or _json_safe(changed_value) == _json_safe(target["value"]):
                     case.subcase("wp3_local_edit_sibling_identity", "FAIL" if state.get("fixture_status") == "CREATED_BY_INJECTED_MODEL" else "NOT_RUN", reason="controlled target value could not be changed while preserving its observed type/shape")
@@ -1358,14 +1554,21 @@ async def _case_w08(host: ProductionHost, client: ActionClient, case: Case, args
                     raise CapabilityUnavailable("no valid changed value for controlled fixture target")
                 reply = await client.action("node.property_set", {"path": target_path, "properties": [{"name": target["name"], "value": changed_value}]}, key="w08-wp3-local-edit", request="w08-wp3-local-edit")
                 target_after = await client.action("node.property_get", {"path": target_path, "names": [target["name"]]})
-                sibling_after = await client.action("node.inspect", {"path": sibling_path, "include_values": True})
+                sibling_after_probe = await client.action("node.inspect", {"path": sibling_path, "include_values": False})
+                sibling_after_rows = []
+                if _success(sibling_after_probe):
+                    sibling_after_rows = await _property_candidates(
+                        client,
+                        sibling_path,
+                        [row for row in _data(sibling_after_probe).get("properties", []) if isinstance(row, Mapping)],
+                    )
                 after_model = await _inspect_model(host, state, "w08-model-after-wp-edit")
                 target_rows_after = _property_value_rows(target_after)
                 target_readback = next((row.get("value") for row in target_rows_after if row.get("name") == target["name"]), None)
-                local_ok = (_success(reply) and _success(target_after) and _success(sibling_after) and _success(after_model)
+                local_ok = (_success(reply) and _success(target_after) and _success(sibling_after_probe) and _success(after_model)
                             and _json_safe(target_readback) == _json_safe(changed_value)
                             and _json_safe(target_readback) != _json_safe(target["value"]))
-                local_ok = local_ok and _json_safe(_data(sibling_before)) == _json_safe(_data(sibling_after))
+                local_ok = local_ok and _json_safe(sibling_before_rows) == _json_safe(sibling_after_rows)
                 ref_after, _ = _payload_execution(after_model)
                 local_ok = local_ok and _same_ref(state.get("ref"), before_model_ref) and _same_ref(before_model_ref, ref_after)
                 case.assertion("wp3_edit_preserves_sibling", local_ok)
@@ -1436,18 +1639,83 @@ async def _case_w08(host: ProductionHost, client: ActionClient, case: Case, args
         case.subcase("idempotency", "PASS" if idem_ok else "FAIL", reason=None if idem_ok else "same-key retry or different-body conflict was not preserved")
     else:
         case.subcase("idempotency", "NOT_RUN", reason="no scalar candidate was available")
+
+    # The legacy geometry route must reject reusing an existing tag with a
+    # different type before it changes the model.  This uses the fixture's
+    # existing WorkPlane tag and asks for a legal but incompatible Block; the
+    # target type/properties, model ref, and managed revision are read back
+    # independently through MCP after the rejection.
+    try:
+        target_before = await client.action("node.inspect", {"path": wp_path, "include_values": False}, key="w08-same-tag-before", request="w08-same-tag-before")
+        before_model = await _inspect_model(host, state, "w08-same-tag-model-before")
+        before_ref, before_revision = _payload_execution(before_model)
+        wrong_type = await client.action(
+            "create_feature",
+            {
+                "component": args.fixture_component,
+                "geometry": args.fixture_geometry,
+                "tag": args.wp_tag,
+                "feature_type": "Block",
+                "properties_json": "[]",
+                "run_geometry": False,
+            },
+            key="w08-same-tag-type-conflict",
+            request="w08-same-tag-type-conflict",
+        )
+        target_after = await client.action("node.inspect", {"path": wp_path, "include_values": False}, key="w08-same-tag-after", request="w08-same-tag-after")
+        after_model = await _inspect_model(host, state, "w08-same-tag-model-after")
+        after_ref, after_revision = _payload_execution(after_model)
+        before_target_data = _data(target_before)
+        after_target_data = _data(target_after)
+        conflict_text = json.dumps(wrong_type, ensure_ascii=False, sort_keys=True).lower()
+        same_tag_ok = (
+            not _success(wrong_type)
+            and wrong_type.get("_outer_isError") is True
+            and "block" in conflict_text
+            and "workplane" in conflict_text
+            and _success(target_before)
+            and _success(target_after)
+            and before_target_data.get("type_id") == "WorkPlane"
+            and after_target_data.get("type_id") == before_target_data.get("type_id")
+            and _json_safe(before_target_data.get("properties")) == _json_safe(after_target_data.get("properties"))
+            and _success(before_model)
+            and _success(after_model)
+            and before_revision == after_revision == state.get("revision")
+            and _same_ref(before_ref, after_ref)
+        )
+        case.assertion(
+            "same_tag_type_rejection_no_write",
+            same_tag_ok,
+            error_code=_error_code(wrong_type),
+            conflict_text=conflict_text,
+            before_type=before_target_data.get("type_id"),
+            after_type=after_target_data.get("type_id"),
+            before_properties=before_target_data.get("properties"),
+            after_properties=after_target_data.get("properties"),
+            before_revision=before_revision,
+            after_revision=after_revision,
+        )
+        case.subcase(
+            "same_tag_type_rejection",
+            "PASS" if same_tag_ok else "BLOCKED" if _blocked_payload(wrong_type) else "FAIL",
+            reason=None if same_tag_ok else "existing WorkPlane tag was not rejected as Block or its target identity/revision changed",
+            error_code=_error_code(wrong_type),
+        )
+    except CapabilityUnavailable as exc:
+        case.subcase("same_tag_type_rejection", "BLOCKED", reason=str(exc))
     case.finish()
 
 
 async def _case_w10(host: ProductionHost, client: ActionClient, case: Case, args: argparse.Namespace, state: dict[str, Any]) -> None:
     fixture = ROOT / "tools/java/Phase3Fixture.java"
     no_wrapper = ROOT / "tools/java/Phase3NoWrapper.java"
+    readback = ROOT / "tools/java/Phase3Readback.java"
     syntax = ROOT / "tools/java/Phase3SyntaxFailure.java"
     partial = ROOT / "tools/java/Phase3PartialFailure.java"
-    if not all(path.is_file() for path in (fixture, no_wrapper, syntax, partial)):
+    if not all(path.is_file() for path in (fixture, no_wrapper, readback, syntax, partial)):
         case.finish("BLOCKED", reason="fixed W10 Java source artifacts are missing")
         return
-    source_sha = {str(path.relative_to(ROOT)): _sha256(path) for path in (fixture, no_wrapper, syntax, partial)}
+    source_sha = {str(path.relative_to(ROOT)): _sha256(path) for path in (fixture, no_wrapper, readback, syntax, partial)}
     case.assertions["source_sha256"] = source_sha
     describe = await client.action("code.describe_java", {"source_artifact": str(no_wrapper.relative_to(ROOT)), "entrypoint": "Phase3NoWrapper#run"}, require_model=False)
     described_data = _data(describe)
@@ -1494,6 +1762,25 @@ async def _case_w10(host: ProductionHost, client: ActionClient, case: Case, args
         "PASS" if no_wrapper_compile.get("pass") else "FAIL",
         reason=None if no_wrapper_compile.get("pass") else f"compile returned {no_wrapper_compile.get('error_code') or 'invalid result'}",
     )
+    readback_relative = str(readback.relative_to(ROOT))
+    readback_compile = await client.action(
+        "code.compile_java",
+        {"runtime_id": args.runtime_id, "source_artifact": readback_relative, "entrypoint": "Phase3Readback#run"},
+        require_model=False,
+        key="w10-compile-readback",
+        request="w10-compile-readback",
+    )
+    readback_compile_data = _data(readback_compile)
+    readback_compile_ok = (
+        _success(readback_compile)
+        and readback_compile_data.get("compiled") is True
+        and readback_compile_data.get("source_sha256") == source_sha[readback_relative]
+    )
+    case.subcase(
+        "compile_readback_source",
+        "PASS" if readback_compile_ok else "BLOCKED" if _blocked_payload(readback_compile) else "FAIL",
+        reason=None if readback_compile_ok else f"readback source compile returned {_error_code(readback_compile) or 'invalid result'}",
+    )
 
     before_compile_failure = await _inspect_model(host, state, "w10-syntax-before") if isinstance(state.get("ref"), Mapping) else None
     bad_compile = await client.action("code.compile_java", {"runtime_id": args.runtime_id, "source_artifact": str(syntax.relative_to(ROOT)), "entrypoint": "Phase3SyntaxFailure#run"}, require_model=False, key="w10-compile-syntax", request="w10-compile-syntax")
@@ -1533,12 +1820,12 @@ async def _case_w10(host: ProductionHost, client: ActionClient, case: Case, args
     execute_reply = await client.action("code.execute_java", {"source_artifact": str(no_wrapper.relative_to(ROOT)), "entrypoint": "Phase3NoWrapper#run", "arguments": {"marker": marker}, "mode": "trusted", "invariants": []}, key="w10-execute-read", request="w10-execute-read")
     read_after = await _inspect_model(host, state, "w10-read-after")
     read_data = _data(execute_reply)
-    readback = read_data.get("readback")
+    readback = _execution_readback(execute_reply)
     # The acceptance claim is a real public-API mutation/readback.  A worker
     # success flag or a label-only result is insufficient evidence: require
     # the injected Model comments() round trip and all three parameter values
     # returned by Phase3NoWrapper.
-    readback_map = dict(readback) if isinstance(readback, Mapping) else {}
+    readback_map = dict(readback)
     parameter_values = readback_map.get("parameter_values")
     comments_changed = (
         isinstance(readback_map.get("before_comments"), str)
@@ -1587,17 +1874,185 @@ async def _case_w10(host: ProductionHost, client: ActionClient, case: Case, args
     partial_expected = (not _success(partial_reply) and partial_reply.get("_outer_isError") is True
                         and (partial_data.get("partial_change") is True or partial_data.get("execution_state_unknown") is True
                              or partial_error.get("partial_changes") is True))
-    if partial_expected:
-        restore = await client.action("checkpoint.restore", {"checkpoint_id": checkpoint_data["checkpoint_id"], "authorization_ref": "phase3-driver"}, key="w10-partial-restore", request="w10-partial-restore")
+    partial_observed = partial_expected
+    guard_before_restore_ok = False
+    partial_readback: dict[str, Any] = {}
+    if partial_observed and _error_code(partial_reply) != "EXECUTION_STATE_UNKNOWN":
+        partial_readback_reply = await client.action(
+            "code.execute_java",
+            {"source_artifact": readback_relative, "entrypoint": "Phase3Readback#run", "arguments": {}, "mode": "trusted", "invariants": []},
+            key="w10-partial-before-restore-readback",
+            request="w10-partial-before-restore-readback",
+        )
+        partial_readback = _execution_readback(partial_readback_reply)
+        partial_parameters = partial_readback.get("parameters") if isinstance(partial_readback.get("parameters"), Mapping) else {}
+        guard_before_restore_ok = (
+            _success(partial_readback_reply)
+            and partial_readback.get("phase3_code_guard_present") is True
+            and partial_readback.get("phase3_code_guard") == "1"
+            and partial_readback.get("comments") == marker
+            and partial_parameters == {
+                "phase3_api_probe_0": "1",
+                "phase3_api_probe_1": "2",
+                "phase3_api_probe_2": "3",
+            }
+        )
+        partial_expected = partial_observed and guard_before_restore_ok
+    elif partial_observed:
+        # A callback that leaves the managed state UNKNOWN cannot be read back
+        # before recovery.  Preserve the UNKNOWN observation and require the
+        # durable reconcile -> inspect -> guarded restore chain below instead
+        # of treating the missing readback as an ordinary engine failure.
+        partial_expected = True
+    recovery_allowed = partial_observed or _error_code(partial_reply) == "EXECUTION_STATE_UNKNOWN"
+    reconcile = None
+    if recovery_allowed:
+        partial_execution = partial_reply.get("execution") if isinstance(partial_reply.get("execution"), Mapping) else {}
+        partial_job_id = partial_execution.get("job_id") if isinstance(partial_execution, Mapping) else None
+        reconciliation_data: dict[str, Any] = {}
+        reconciliation_metadata: dict[str, Any] = {}
+        reconciliation_rows: list[dict[str, Any]] = []
+        reconciliation_ok = False
+        if isinstance(partial_job_id, str) and partial_job_id:
+            # The original UNKNOWN job remains durable.  Reconciliation only
+            # queries its already-issued Worker request and never resubmits the
+            # Java mutation.
+            reconcile = await host.call(
+                "job_reconcile",
+                {
+                    "job_id": partial_job_id,
+                    "execution": _execution(key="w10-partial-job-reconcile", request="w10-partial-job-reconcile"),
+                },
+            )
+            reconciliation_data = _data(reconcile)
+            reconciliation_details = _reconciliation_details(reconcile)
+            reconciliation_metadata = reconciliation_data.get("metadata") if isinstance(reconciliation_data.get("metadata"), Mapping) else {}
+            reconciliation_rows = reconciliation_details["rows"]
+            reconciliation_ok = _reconciliation_quiescent(reconcile)
+            case.assertion(
+                "partial_job_reconciled_without_replay",
+                reconciliation_ok,
+                job_id=partial_job_id,
+                status=reconciliation_data.get("status"),
+                reconciled_quiescent=reconciliation_metadata.get("reconciled_quiescent"),
+                replay_performed=reconciliation_metadata.get("replay_performed"),
+                reconciliation=reconciliation_rows,
+            )
+            case.subcase(
+                "partial_job_reconciliation",
+                "PASS" if reconciliation_ok else "BLOCKED" if _blocked_payload(reconcile) else "FAIL",
+                reason=None if reconciliation_ok else "original UNKNOWN job was not proven quiescent without replay",
+                job_id=partial_job_id,
+                observed_status=reconciliation_data.get("status"),
+                reconciliation=reconciliation_rows,
+            )
+            if reconciliation_ok:
+                # Keep the original UNKNOWN marker.  This flag authorizes only
+                # the bounded inspect/read/restore sequence; recovery clears
+                # the marker only after the new model identity is verified.
+                state["_job_reconciled"] = True
+        else:
+            case.subcase("partial_job_reconciliation", "BLOCKED", reason="UNKNOWN execution did not return a durable job_id")
+
+        restore = None
+        current_inspect = None
+        current_parameters = None
+        guard_current = None
+        if reconciliation_ok:
+            current_inspect = await _inspect_model(host, state, "w10-partial-current-inspect")
+            current_ref, current_revision = _payload_execution(current_inspect)
+            current_parameters = await host.call(
+                "get_parameters",
+                {"execution": _execution(
+                    key="w10-partial-current-parameters",
+                    request="w10-partial-current-parameters",
+                    ref=state.get("ref"),
+                    revision=current_revision,
+                )},
+            )
+            parameter_data = _data(current_parameters)
+            parameter_rows = parameter_data.get("parameters") if isinstance(parameter_data.get("parameters"), list) else []
+            guard_row = next((row for row in parameter_rows if isinstance(row, Mapping) and row.get("name") == "phase3_code_guard"), None)
+            guard_current = guard_row.get("expression") if isinstance(guard_row, Mapping) else None
+            current_observation_ok = (
+                _success(current_inspect)
+                and isinstance(current_ref, Mapping)
+                and current_ref.get("model_tag") == checkpoint_ref_before_partial.get("model_tag")
+                and current_revision is not None
+                and _success(current_parameters)
+                and guard_current == "1"
+            )
+            case.assertion(
+                "partial_current_state_observed_before_restore",
+                current_observation_ok,
+                current_revision=current_revision,
+                current_dirty=(current_inspect.get("execution", {}).get("dirty") if isinstance(current_inspect.get("execution"), Mapping) else None),
+                guard_expression=guard_current,
+                parameter_names=[row.get("name") for row in parameter_rows if isinstance(row, Mapping)],
+            )
+            if current_observation_ok:
+                state["revision"] = current_revision
+            else:
+                reconciliation_ok = False
+                state.pop("_job_reconciled", None)
+
+        if reconciliation_ok:
+            restore = await client.action(
+                "checkpoint.restore",
+                {"checkpoint_id": checkpoint_data["checkpoint_id"], "authorization_ref": "phase3-driver"},
+                key="w10-partial-restore",
+                request="w10-partial-restore",
+            )
         new_ref, new_revision = _payload_execution(restore)
-        if _success(restore) and isinstance(new_ref, Mapping) and new_revision is not None:
+        if restore is not None and _success(restore) and isinstance(new_ref, Mapping) and new_revision is not None:
             state["ref"], state["revision"] = dict(new_ref), new_revision
             actual = await _inspect_model(host, state, "w10-partial-restored-inspect")
             actual_ref, actual_revision = _payload_execution(actual)
-            partial_expected = partial_expected and _success(actual) and _same_ref(new_ref, actual_ref) and new_ref.get("generation", 0) > checkpoint_ref_before_partial.get("generation", 0) and actual_revision == new_revision
+            readback_reply = await client.action(
+                "code.execute_java",
+                {"source_artifact": readback_relative, "entrypoint": "Phase3Readback#run", "arguments": {}, "mode": "trusted", "invariants": []},
+                key="w10-partial-restored-readback",
+                request="w10-partial-restored-readback",
+            )
+            restored_readback = _execution_readback(readback_reply)
+            restored_parameters = restored_readback.get("parameters") if isinstance(restored_readback.get("parameters"), Mapping) else {}
+            public_values_restored = (
+                restored_readback.get("comments") == marker
+                and restored_parameters == {
+                    "phase3_api_probe_0": "1",
+                    "phase3_api_probe_1": "2",
+                    "phase3_api_probe_2": "3",
+                }
+            )
+            partial_expected = (
+                partial_expected
+                and _success(actual)
+                and _same_ref(new_ref, actual_ref)
+                and new_ref.get("generation", 0) >= 1
+                and new_ref.get("model_tag") != checkpoint_ref_before_partial.get("model_tag")
+                and actual_revision == new_revision
+                and _success(readback_reply)
+                and restored_readback.get("phase3_code_guard_present") is False
+                and public_values_restored
+            )
+            case.assertion(
+                "phase3_code_guard_and_public_api_restore",
+                partial_expected,
+                partial_error_code=_error_code(partial_reply),
+                guard_before_restore_ok=guard_before_restore_ok,
+                reconciliation_ok=reconciliation_ok,
+                reconciliation=reconciliation_rows,
+                partial_readback=partial_readback,
+                restored_readback=restored_readback,
+                public_values_restored=public_values_restored,
+            )
         else:
             partial_expected = False
-    case.subcase("partial_execution_checkpoint", "PASS" if partial_expected else "BLOCKED" if _blocked_payload(partial_reply) else "FAIL", reason=None if partial_expected else "partial execution/checkpoint restore did not produce verified state")
+    case.subcase(
+        "partial_execution_checkpoint",
+        "PASS" if partial_expected else "BLOCKED" if (_blocked_payload(partial_reply) or (reconcile is not None and _blocked_payload(reconcile))) else "FAIL",
+        reason=None if partial_expected else "partial execution/checkpoint restore did not produce verified state",
+    )
     case.finish()
 
 
@@ -1752,6 +2207,36 @@ async def _case_w12(host: ProductionHost, client: ActionClient, case: Case, args
         case.finish()
         return
     action = deepcopy(dict(action))
+    action_arguments = action.get("arguments", {}) if isinstance(action, Mapping) else {}
+    requested_path = action_arguments.get("path") if isinstance(action_arguments, Mapping) else None
+    requested_names = [
+        item.get("name")
+        for item in action_arguments.get("properties", [])
+        if isinstance(item, Mapping) and isinstance(item.get("name"), str)
+    ] if isinstance(action_arguments, Mapping) and isinstance(action_arguments.get("properties"), list) else []
+    requested_values = {
+        item.get("name"): item.get("value")
+        for item in action_arguments.get("properties", [])
+        if isinstance(item, Mapping) and isinstance(item.get("name"), str) and isinstance(item.get("value"), Mapping)
+    } if isinstance(action_arguments, Mapping) and isinstance(action_arguments.get("properties"), list) else {}
+    action_scope_shape_ok = (
+        action.get("operation_id") == "node.property_set"
+        and isinstance(requested_path, Mapping)
+        and isinstance(requested_names, list)
+        and bool(requested_names)
+        and len(requested_values) == len(requested_names)
+    )
+
+    async def read_action_scope(key: str) -> dict[str, Any]:
+        if not action_scope_shape_ok:
+            return {"success": False, "data": {}, "error": {"code": "INVALID_REQUEST"}, "_outer_isError": True}
+        return await client.action(
+            "node.property_get",
+            {"path": requested_path, "names": requested_names},
+            key=key,
+            request=key,
+        )
+
     before = await _inspect_model(host, state, "w12-preview-before")
     preview = await client.action("transaction.preview", {"actions": [action], "invariants": []}, key="w12-preview", request="w12-preview")
     after = await _inspect_model(host, state, "w12-preview-after")
@@ -1761,9 +2246,55 @@ async def _case_w12(host: ProductionHost, client: ActionClient, case: Case, args
     preview_ok = (_success(preview) and preview_data.get("status") == "PREVIEW" and preview_data.get("static_only") is True and preview_data.get("engine_called") is False and before_revision == after_revision and _success(after) and _same_ref(before_ref, after_ref))
     case.subcase("preview_no_write", "PASS" if preview_ok else "BLOCKED" if _error_code(preview) in {"UNSUPPORTED_OPERATION", "ENGINE_UNRESPONSIVE"} else "FAIL", reason=None if preview_ok else "preview did not prove static/no-write behavior")
 
-    before_trial = await _inspect_model(host, state, "w12-trial-before")
-    trial = await client.action("transaction.trial", {"actions": [action], "invariants": []}, key="w12-trial", request="w12-trial")
-    after_trial = await _inspect_model(host, state, "w12-trial-after")
+    # A trial must start from an immutable, server-bound checkpoint.  Creating
+    # it after preview makes the source revision/fingerprint explicit and
+    # records the one save cost separately from the copy-only trial.
+    trial_checkpoint = await client.action(
+        "checkpoint.create",
+        {"label": "phase3-w12-trial-source", "include_solution": False},
+        key="w12-trial-checkpoint",
+        request="w12-trial-checkpoint",
+    )
+    checkpoint_data = _data(trial_checkpoint)
+    checkpoint_id = checkpoint_data.get("checkpoint_id")
+    checkpoint_binding = checkpoint_data.get("source_binding") if isinstance(checkpoint_data.get("source_binding"), Mapping) else {}
+    checkpoint_revision = _payload_execution(trial_checkpoint)[1]
+    checkpoint_ok = (
+        _success(trial_checkpoint)
+        and isinstance(checkpoint_id, str) and bool(checkpoint_id)
+        and isinstance(checkpoint_data.get("sha256"), str) and len(checkpoint_data.get("sha256", "")) == 64
+        and checkpoint_data.get("source_sha256") == checkpoint_data.get("sha256")
+        and isinstance(checkpoint_binding.get("model_ref"), Mapping)
+        and _same_ref(checkpoint_binding.get("model_ref"), state.get("ref"))
+        and checkpoint_binding.get("revision") == checkpoint_revision
+        and isinstance(checkpoint_binding.get("fingerprint"), str)
+        and isinstance(checkpoint_data.get("save_count"), int) and checkpoint_data.get("save_count", 0) == 1
+        and isinstance(checkpoint_data.get("save_elapsed_ms"), (int, float)) and checkpoint_data.get("save_elapsed_ms", -1) >= 0
+    )
+    case.assertion(
+        "trial_checkpoint_is_explicitly_bound",
+        checkpoint_ok,
+        checkpoint_id=checkpoint_id,
+        checkpoint_revision=checkpoint_revision,
+        checkpoint=checkpoint_data,
+    )
+    case.subcase(
+        "trial_checkpoint_binding",
+        "PASS" if checkpoint_ok else "BLOCKED" if _blocked_payload(trial_checkpoint) else "FAIL",
+        reason=None if checkpoint_ok else "trial source checkpoint was not durably bound to the current model ref/revision/fingerprint",
+    )
+
+    if checkpoint_ok:
+        before_trial = await _inspect_model(host, state, "w12-trial-before")
+        trial = await client.action(
+            "transaction.trial",
+            {"actions": [action], "invariants": [], "checkpoint_id": checkpoint_id},
+            key="w12-trial", request="w12-trial",
+        )
+        after_trial = await _inspect_model(host, state, "w12-trial-after")
+    else:
+        before_trial = after_trial = trial_checkpoint
+        trial = trial_checkpoint
     before_trial_ref, before_trial_revision = _payload_execution(before_trial)
     after_trial_ref, after_trial_revision = _payload_execution(after_trial)
     trial_data = _data(trial)
@@ -1771,13 +2302,6 @@ async def _case_w12(host: ProductionHost, client: ActionClient, case: Case, args
     # unknown.  Acceptance is limited to the exact property request carried
     # by this action and requires actual typed before/after readback for that
     # scope.
-    action_arguments = action.get("arguments", {}) if isinstance(action, Mapping) else {}
-    requested_path = action_arguments.get("path") if isinstance(action_arguments, Mapping) else None
-    requested_names = [
-        item.get("name")
-        for item in action_arguments.get("properties", [])
-        if isinstance(item, Mapping) and isinstance(item.get("name"), str)
-    ] if isinstance(action_arguments, Mapping) and isinstance(action_arguments.get("properties"), list) else []
     main_scope = trial_data.get("main_model_scope") if isinstance(trial_data.get("main_model_scope"), Mapping) else {}
     scope_requests = main_scope.get("requests") if isinstance(main_scope.get("requests"), list) else []
     scope_before = main_scope.get("before") if isinstance(main_scope.get("before"), list) else []
@@ -1789,6 +2313,17 @@ async def _case_w12(host: ProductionHost, client: ActionClient, case: Case, args
         and request.get("names") == requested_names
         for request in scope_requests
     )
+    scope_before_map = _property_value_map(scope_before, requested_path=requested_path)
+    scope_after_map = _property_value_map(scope_after, requested_path=requested_path)
+    scope_target_names_ok = set(scope_before_map) >= set(requested_names) and set(scope_after_map) >= set(requested_names)
+    scope_action_is_valid_change = (
+        action_scope_shape_ok
+        and scope_target_names_ok
+        and any(
+            _json_safe(scope_before_map.get(name)) != _json_safe(requested_values.get(name))
+            for name in requested_names
+        )
+    )
     scope_readback_ok = bool(scope_before) and scope_before == scope_after
     trial_ok = (
         _success(trial)
@@ -1798,8 +2333,21 @@ async def _case_w12(host: ProductionHost, client: ActionClient, case: Case, args
         and (not isinstance(before_trial_ref, Mapping) or trial_data.get("trial_model_tag") != before_trial_ref.get("model_tag"))
         and trial_data.get("main_model_untouched") is None
         and trial_data.get("main_model_unchanged_within_scope") is True
+        and trial_data.get("source_checkpoint_id") == checkpoint_id
+        and isinstance(trial_data.get("source_checkpoint"), Mapping)
+        and trial_data.get("source_checkpoint", {}).get("sha256") == checkpoint_data.get("sha256")
+        and isinstance(trial_data.get("trial_copy"), Mapping)
+        and trial_data.get("trial_copy", {}).get("verified") is True
+        and isinstance(trial_data.get("trial_copy", {}).get("bytes"), int)
+        and trial_data.get("trial_copy", {}).get("bytes", 0) > 0
+        and isinstance(trial_data.get("trial_copy", {}).get("copy_elapsed_ms"), (int, float))
+        and trial_data.get("trial_copy", {}).get("copy_elapsed_ms", -1) >= 0
+        and isinstance(trial_data.get("cleanup"), Mapping)
+        and trial_data.get("cleanup", {}).get("model_removed") is True
+        and trial_data.get("cleanup", {}).get("artifact_deleted") is True
         and main_scope.get("status") == "VERIFIED"
         and scope_request_ok
+        and scope_action_is_valid_change
         and scope_readback_ok
         and _success(after_trial)
         and _same_ref(before_trial_ref, after_trial_ref)
@@ -1813,11 +2361,16 @@ async def _case_w12(host: ProductionHost, client: ActionClient, case: Case, args
         scope_requests=scope_requests,
         scope_before=scope_before,
         scope_after=scope_after,
+        action_is_valid_change=scope_action_is_valid_change,
         main_model_untouched=trial_data.get("main_model_untouched"),
         main_model_unchanged_within_scope=trial_data.get("main_model_unchanged_within_scope"),
         main_model_scope_status=main_scope.get("status"),
+        source_checkpoint_id=trial_data.get("source_checkpoint_id"),
+        source_checkpoint=trial_data.get("source_checkpoint"),
+        trial_copy=trial_data.get("trial_copy"),
+        cleanup=trial_data.get("cleanup"),
     )
-    case.subcase("isolated_trial", "PASS" if trial_ok else "BLOCKED" if _error_code(trial) in {"UNSUPPORTED_OPERATION", "ENGINE_UNRESPONSIVE", "PERMISSION_DENIED", "ISOLATION_PROOF_REQUIRED"} else "FAIL", reason=None if trial_ok else "trial did not prove the requested property scope from actual typed before/after readback")
+    case.subcase("isolated_trial", "PASS" if trial_ok else "BLOCKED" if _error_code(trial) in {"UNSUPPORTED_OPERATION", "ENGINE_UNRESPONSIVE", "PERMISSION_DENIED", "ISOLATION_PROOF_REQUIRED", "CHECKPOINT_REQUIRED"} else "FAIL", reason=None if trial_ok else "trial did not prove the requested property scope from actual typed before/after readback")
 
     checkpoint_before = await _checkpoint_rows(client)
     model_before_permission = await _inspect_model(host, state, "w12-permission-before")
@@ -1829,26 +2382,132 @@ async def _case_w12(host: ProductionHost, client: ActionClient, case: Case, args
     permission_ok = (not _success(denied) and denied.get("_outer_isError") is True and _error_code(denied) == "PERMISSION_DENIED" and permission_before_revision == permission_after_revision and _same_ref(permission_before_ref, permission_after_ref) and _success(model_after_permission) and (checkpoint_before is None or checkpoint_after == checkpoint_before))
     case.subcase("permission_before_copy", "PASS" if permission_ok else "BLOCKED" if _blocked_payload(denied) or checkpoint_before is None else "FAIL", reason=None if permission_ok else "untrusted code was not refused before model/checkpoint state changed")
 
-    bad = {"operation_id": "node.property_set", "arguments": {"path": {"segments": [{"collection": "feature", "tag": "phase3_missing_feature"}]}, "properties": [{"name": "missing", "value": {"kind": "float64", "shape": [], "data": 1.0}}]}}
+    # Use a managed compile failure as the middle action.  It returns a
+    # structured failed row from the transaction runner, so the first valid
+    # property write is observable as applied and the final action is
+    # observably not executed; a path-resolution exception would instead be
+    # conservatively UNKNOWN and would not establish PARTIAL semantics.
+    bad = {
+        "operation_id": "code.execute_java",
+        "arguments": {
+            "source_artifact": "tools/java/Phase3SyntaxFailure.java",
+            "entrypoint": "Phase3SyntaxFailure#run",
+            "arguments": {},
+            "mode": "trusted",
+            "invariants": [],
+        },
+    }
     before_partial = await _inspect_model(host, state, "w12-partial-before")
+    before_partial_ref, before_partial_revision = _payload_execution(before_partial)
+    before_partial_scope_reply = await read_action_scope("w12-partial-before-values")
+    before_partial_scope_rows = _property_value_rows(before_partial_scope_reply)
+    before_partial_scope = _property_value_map(before_partial_scope_rows)
+    action_before_matches = bool(before_partial_scope) and all(
+        name in before_partial_scope for name in requested_names
+    )
     applied = await client.action("transaction.apply", {"actions": [action, bad, action], "invariants": [], "checkpoint_policy": "on_failure"}, key="w12-partial-apply", request="w12-partial-apply")
     partial_data = _data(applied)
-    partial_ok = (not _success(applied) and applied.get("_outer_isError") is True and partial_data.get("status") == "PARTIAL" and len(partial_data.get("applied", [])) == 1 and len(partial_data.get("failed", [])) == 1 and len(partial_data.get("not_executed", [])) == 1)
+    after_partial_scope_reply = await read_action_scope("w12-partial-after-values")
+    after_partial_scope_rows = _property_value_rows(after_partial_scope_reply)
+    after_partial_scope = _property_value_map(after_partial_scope_rows)
+    action_after_matches = bool(after_partial_scope) and all(
+        _json_safe(after_partial_scope.get(name)) == _json_safe(requested_values.get(name))
+        for name in requested_names
+    )
+    action_changed_and_read_back = (
+        action_scope_shape_ok
+        and action_before_matches
+        and action_after_matches
+        and any(
+            _json_safe(before_partial_scope.get(name)) != _json_safe(requested_values.get(name))
+            for name in requested_names
+        )
+    )
+    partial_shape_ok = (
+        not _success(applied)
+        and applied.get("_outer_isError") is True
+        and partial_data.get("status") == "PARTIAL"
+        and len(partial_data.get("applied", [])) == 1
+        and len(partial_data.get("failed", [])) == 1
+        and len(partial_data.get("not_executed", [])) == 1
+    )
     txn_id = partial_data.get("transaction_id")
     checkpoint_id = partial_data.get("checkpoint_id")
-    if partial_ok and txn_id:
-        restore = await client.action("transaction.recover", {"transaction_id": txn_id, "strategy": "checkpoint"}, key="w12-recover", request="w12-recover")
+    checkpoint_metadata = partial_data.get("checkpoint_metadata") if isinstance(partial_data.get("checkpoint_metadata"), Mapping) else {}
+    checkpoint_metadata_ok = (
+        isinstance(checkpoint_id, str)
+        and bool(checkpoint_id)
+        and checkpoint_metadata.get("checkpoint_id") == checkpoint_id
+        and isinstance(checkpoint_metadata.get("sha256"), str)
+        and len(checkpoint_metadata.get("sha256", "")) == 64
+        and isinstance(checkpoint_metadata.get("size"), int)
+        and checkpoint_metadata.get("size", 0) > 0
+        and isinstance(checkpoint_metadata.get("save_count"), int)
+        and checkpoint_metadata.get("save_count", 0) >= 1
+        and isinstance(checkpoint_metadata.get("save_elapsed_ms"), (int, float))
+        and checkpoint_metadata.get("save_elapsed_ms", -1) >= 0
+        and isinstance(checkpoint_metadata.get("restore_scope"), Mapping)
+    )
+    partial_pre_restore_ok = bool(txn_id) and partial_shape_ok and checkpoint_metadata_ok and action_changed_and_read_back
+    restored = False
+    restored_scope: dict[str, Mapping[str, Any]] = {}
+    restore_scope_ok = False
+    restore_checkpoint_ok = False
+    old_ref: dict[str, Any] | None = dict(state["ref"]) if isinstance(state.get("ref"), Mapping) else None
+    if partial_pre_restore_ok:
+        restore = await client.action(
+            "transaction.recover",
+            {"transaction_id": txn_id, "strategy": "checkpoint", "authorization_ref": "phase3-driver"},
+            key="w12-recover", request="w12-recover",
+        )
         new_ref, new_revision = _payload_execution(restore)
-        restored = False
         if _success(restore) and isinstance(new_ref, Mapping) and new_revision is not None:
-            old_ref = state.get("ref")
             state["ref"], state["revision"] = dict(new_ref), new_revision
             actual = await _inspect_model(host, state, "w12-restored-inspect")
             old_inspect = await host.call("model_inspect", {"refresh": False, "execution": _execution(key="w12-old-ref-invalid", request="w12-old-ref-invalid", ref=old_ref, revision=state.get("revision"))}) if isinstance(old_ref, Mapping) else {"success": False}
-            restored = _success(actual) and _same_ref(new_ref, _payload_execution(actual)[0]) and new_ref.get("generation", 0) > old_ref.get("generation", 0) and not _success(old_inspect) and _error_code(old_inspect) in {"MODEL_IDENTITY_MISMATCH", "NODE_NOT_FOUND", "STALE_MODEL_REF"}
-        partial_ok = partial_ok and restored
-    elif partial_ok and not txn_id:
-        partial_ok = False
+            restored_scope_reply = await read_action_scope("w12-restored-values")
+            restored_scope = _property_value_map(_property_value_rows(restored_scope_reply))
+            restored_scope_ok = (
+                _success(restored_scope_reply)
+                and bool(restored_scope)
+                and set(restored_scope) >= set(requested_names)
+                and all(
+                    _json_safe(restored_scope.get(name)) == _json_safe(before_partial_scope.get(name))
+                    for name in requested_names
+                )
+            )
+            restore_data = _data(restore)
+            restore_checkpoint_ok = (
+                restore_data.get("checkpoint_id") == checkpoint_id
+                and isinstance(restore_data.get("restore_scope"), Mapping)
+                and restore_data.get("restore_scope") == checkpoint_metadata.get("restore_scope")
+            )
+            restored = (
+                _success(actual)
+                and _same_ref(new_ref, _payload_execution(actual)[0])
+                and isinstance(old_ref, Mapping)
+                and new_ref.get("generation", 0) >= 1
+                and new_ref.get("model_tag") != old_ref.get("model_tag")
+                and not _success(old_inspect)
+                and _error_code(old_inspect) in {"MODEL_IDENTITY_MISMATCH", "NODE_NOT_FOUND", "STALE_MODEL_REF"}
+                and restored_scope_ok
+                and restore_checkpoint_ok
+            )
+    partial_ok = partial_pre_restore_ok and restored
+    case.assertion(
+        "partial_apply_checkpoint_readback_restore",
+        partial_ok,
+        transaction_id=txn_id,
+        checkpoint_id=checkpoint_id,
+        checkpoint_metadata=checkpoint_metadata,
+        before_scope=before_partial_scope,
+        requested_values=requested_values,
+        after_partial_scope=after_partial_scope,
+        restored_scope=restored_scope,
+        action_changed_and_read_back=action_changed_and_read_back,
+        checkpoint_metadata_verified=checkpoint_metadata_ok,
+        restore_checkpoint_verified=restore_checkpoint_ok,
+    )
     case.subcase("partial_apply_restore", "PASS" if partial_ok else "BLOCKED" if _error_code(applied) in {"UNSUPPORTED_OPERATION", "ENGINE_UNRESPONSIVE", "PERMISSION_DENIED"} else "FAIL", reason=None if partial_ok else "partial transaction or restored generation was not verified from actual metadata")
     case.finish()
 
@@ -1862,7 +2521,7 @@ def _request_plan(args: argparse.Namespace) -> dict[str, Any]:
         "attaches_existing_endpoint_only_when_live": bool(args.live),
         "arguments": vars(args),
         "cases": CASE_ORDER,
-        "source_artifacts": ["tools/java/Phase3Fixture.java", "tools/java/Phase3NoWrapper.java", "tools/java/Phase3PartialFailure.java", "tools/java/Phase3SyntaxFailure.java"],
+        "source_artifacts": ["tools/java/Phase3Fixture.java", "tools/java/Phase3NoWrapper.java", "tools/java/Phase3Readback.java", "tools/java/Phase3PartialFailure.java", "tools/java/Phase3SyntaxFailure.java"],
     }
 
 
@@ -1889,7 +2548,7 @@ async def run(args: argparse.Namespace) -> int:
     if invalid_selection:
         result["status"] = "FAIL"
         result["selection_error"] = {"unknown_case_ids": sorted(invalid_selection), "allowed_case_ids": list(CASE_ORDER)}
-    source_paths = [ROOT / item for item in ("tools/phase3_run_mcp.py", "tools/java/Phase3Fixture.java", "tools/java/Phase3NoWrapper.java", "tools/java/Phase3PartialFailure.java", "tools/java/Phase3SyntaxFailure.java")]
+    source_paths = [ROOT / item for item in ("tools/phase3_run_mcp.py", "tools/java/Phase3Fixture.java", "tools/java/Phase3NoWrapper.java", "tools/java/Phase3Readback.java", "tools/java/Phase3PartialFailure.java", "tools/java/Phase3SyntaxFailure.java")]
     _write_json(run_dir / "request.json", _request_plan(args))
     _write_json(run_dir / "source_snapshot.json", _hash_sources(source_paths))
     _write_json(run_dir / "environment.json", {

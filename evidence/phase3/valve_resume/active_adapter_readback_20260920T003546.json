@@ -1,0 +1,77 @@
+{
+  "recorded_at": "2026-09-20T00:36:33.650962+00:00",
+  "stage": "before model acceptance; probe Workers closed",
+  "verification": {
+    "verified": true,
+    "receipt": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-valve-runtime-20260920T003546033861Z/lifecycle.receipt.json",
+    "pid": 73823,
+    "birth": "Sun Sep 20 08:35:46 2026",
+    "endpoint": "127.0.0.1:56389",
+    "listener": {
+      "pid": 73823,
+      "endpoint": "*:56389",
+      "local_endpoint": "*:56389",
+      "remote_endpoint": null,
+      "state": "LISTEN",
+      "raw": "java    73823 everwalker   59u  IPv6 0xccaf550927758944      0t0  TCP *:56389 (LISTEN)"
+    },
+    "listener_binding": "wildcard",
+    "loopback_listener": false,
+    "worker_pid": null,
+    "established_client_pids": [],
+    "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+    "config_inode": 14720294,
+    "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+    "api_probe": {
+      "probe_kind": "comsol_java_api",
+      "observed_at": "2026-09-20T00:36:09Z",
+      "loopback_address": "127.0.0.1",
+      "loopback_port": 56389,
+      "authenticated_api_success": true,
+      "nonloopback_address": "192.168.100.152",
+      "nonloopback_port": 56389,
+      "nonloopback_api_exception_http_status": null,
+      "denial_evidence_source": "server_access_log",
+      "server_access_log": {
+        "status": "PASS",
+        "phase": "java_connect_only",
+        "path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-valve-runtime-20260920T003546033861Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-20.txt",
+        "inode": 28718181,
+        "offset_before": 0,
+        "offset_after": 261,
+        "segment_sha256": "ce6f0bd719dcfb2dc72e439b72c3ef0cb85fce1ab82447d87dc77eaef30adc6f",
+        "java_request_id": "g2-valve-nonloopback-connect",
+        "started_at": "2026-09-20T00:36:05Z",
+        "finished_at": "2026-09-20T00:36:09Z",
+        "entries": [
+          {
+            "peer": "127.0.0.1",
+            "method": "GET",
+            "route": "/webbridge/websocket",
+            "http_status": 101
+          },
+          {
+            "peer": "127.0.0.1",
+            "method": "GET",
+            "route": "/webbridge/websocket",
+            "http_status": 101
+          },
+          {
+            "peer": "192.168.100.152",
+            "method": "GET",
+            "route": "/webbridge/websocket",
+            "http_status": 403
+          }
+        ],
+        "parsed_nonloopback_entry": {
+          "peer": "192.168.100.152",
+          "method": "GET",
+          "route": "/webbridge/websocket",
+          "http_status": 403
+        },
+        "raw_probe_started_after_capture": true
+      }
+    },
+    "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer"
+  }
+}

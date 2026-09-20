@@ -1,0 +1,126 @@
+{
+  "recorded_at": "2026-09-20T00:56:28.902443+00:00",
+  "reviewer": "root",
+  "status": "INCOMPLETE",
+  "run_dir": "evidence/phase3/live-g2-rerun2-20260920T005500Z",
+  "transcript_sha256": "77adf739d7573f9c1db8c242ecb7a6455b06f48c365e575d26b1737219be8bf3",
+  "observed_setters": [
+    {
+      "transcript_index": 200,
+      "properties": [
+        {
+          "name": "planetype",
+          "value": {
+            "data": "quick",
+            "java_signature": "java.lang.String",
+            "kind": "string",
+            "shape": []
+          }
+        }
+      ],
+      "success": true,
+      "error": null,
+      "job_id": "6a18f081-952b-4a1c-9f08-2bd9d93ce942"
+    },
+    {
+      "transcript_index": 202,
+      "properties": [
+        {
+          "name": "geomattr",
+          "value": {
+            "data": [],
+            "java_signature": "java.lang.String[]",
+            "kind": "string",
+            "shape": [
+              0
+            ]
+          }
+        }
+      ],
+      "success": true,
+      "error": null,
+      "job_id": "1519aef8-ca74-4910-89ec-7ea89664fa71"
+    },
+    {
+      "transcript_index": 204,
+      "properties": [
+        {
+          "name": "degree",
+          "value": {
+            "data": [
+              1
+            ],
+            "java_signature": "int[]",
+            "kind": "int32",
+            "shape": [
+              1
+            ]
+          }
+        }
+      ],
+      "success": true,
+      "error": null,
+      "job_id": "e0ef5648-46bd-4e97-95b0-3d67bcf781ae"
+    },
+    {
+      "transcript_index": 206,
+      "properties": [
+        {
+          "name": "genpoints",
+          "value": {
+            "data": [
+              [
+                0.0,
+                0.0,
+                0.0
+              ],
+              [
+                1.0,
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                1.0,
+                0.0
+              ]
+            ],
+            "java_signature": "double[][]",
+            "kind": "float64",
+            "shape": [
+              3,
+              3
+            ]
+          }
+        }
+      ],
+      "success": true,
+      "error": null,
+      "job_id": "d8182bf3-35d9-4294-8c66-3d5a08bf4d26"
+    },
+    {
+      "transcript_index": 208,
+      "properties": [
+        {
+          "name": "reverse",
+          "value": {
+            "data": false,
+            "java_signature": "boolean",
+            "kind": "boolean",
+            "shape": []
+          }
+        }
+      ],
+      "success": false,
+      "error": {
+        "code": "EXECUTION_STATE_UNKNOWN",
+        "message": "legacy callback raised after write dispatch",
+        "safe_retry": false
+      },
+      "job_id": "174c7730-5037-4ce8-86f8-9cf337694aa1"
+    }
+  ],
+  "conclusion": "Four shape round trips passed; boolean setter returned UNKNOWN. Subsequent bound-model cases are blocked by this state and do not establish independent compiler failure. No package acceptance or replay authorized by this review.",
+  "next_action": "Execution agent diagnoses original control/Worker exception and mutation boundary before retry; preserve failed run.",
+  "scope_boundary": "Mac W08-W12 only; no Windows integration or W13."
+}

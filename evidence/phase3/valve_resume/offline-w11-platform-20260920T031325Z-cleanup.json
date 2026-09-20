@@ -1,0 +1,64 @@
+{
+  "generated_at": "2026-09-20T03:15:15.813841Z",
+  "limits": "Evidence is limited to offline W11 stdio/docs behavior and local help-source hashes; it does not claim live COMSOL or scientific acceptance.",
+  "owned_daemon": {
+    "active_jobs_before_stop": 0,
+    "attached_to_existing_server_before_stop": false,
+    "birth": "Sun Sep 20 11:13:40 2026",
+    "command_class": "python -m comsol_mcp._control_daemon",
+    "command_scope": "<repo>/.phase1-private/g2-offline-w11-platform-20260920T031325Z/control-private",
+    "control_port": 61294,
+    "job_counts_before_stop": {
+      "FAILED": 1,
+      "SUCCEEDED": 7
+    },
+    "network_before_stop": "127.0.0.1 listener only",
+    "pid": 92328,
+    "post_stop_home_handles_present": false,
+    "post_stop_pid_present": false,
+    "post_stop_port_listening": false,
+    "ppid": 1,
+    "server_running_before_stop": false,
+    "status_before_stop": "ready",
+    "term_exit_code": 0
+  },
+  "protected_shared_runtime": {
+    "listener": "*:56389",
+    "observed_after_cleanup": true,
+    "pid": 73823,
+    "touched": false
+  },
+  "public_audit": {
+    "default_help_source_verification": "PASS",
+    "private_path_hits": 0,
+    "sensitive_value_violations": 0,
+    "sha256_mismatches": [],
+    "transcript_rows": 10
+  },
+  "result": {
+    "binding": {
+      "reason": "--live was not supplied; live COMSOL cases were not attempted",
+      "status": "NOT_RUN"
+    },
+    "status": "PASS",
+    "subcases": {
+      "docs_root_boundary": "PASS",
+      "malicious_doc_is_data": "PASS",
+      "real_local_help_source_hash": "PASS",
+      "search_returns_version_source_hash": "PASS",
+      "source_fragment_readback": "PASS",
+      "unavailable_63_is_explicit": "PASS",
+      "zero_match_is_not_found": "PASS"
+    }
+  },
+  "run_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/offline-w11-platform-20260920T031325Z",
+  "schema_version": "g2.offline_w11_platform_cleanup.v1",
+  "scope": {
+    "live": false,
+    "model_operations": "NOT_RUN",
+    "only_case": "W11_T043_T036",
+    "server_xml_or_os_settings_changed": false
+  },
+  "sha256_manifest": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/offline-w11-platform-20260920T031325Z/SHA256SUMS.json",
+  "source_snapshot": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/offline-w11-platform-20260920T031325Z/source_snapshot.json"
+}

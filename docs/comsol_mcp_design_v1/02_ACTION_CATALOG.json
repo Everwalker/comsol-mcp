@@ -15214,6 +15214,11 @@
           "request_id": {
             "type": "string"
           },
+          "checkpoint_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Explicit immutable checkpoint bound to the current model ref, revision, and fingerprint"
+          },
           "actions": {
             "type": "array",
             "items": {
@@ -15389,7 +15394,7 @@
       "mcp_tool_name": "transaction_recover",
       "domain": "transaction",
       "purpose": "对部分失败执行显式恢复策略",
-      "arguments_signature": "transaction_id:str,strategy:str",
+      "arguments_signature": "transaction_id:str,strategy:str,authorization_ref:str?",
       "effect": "WRITE",
       "scope": "model",
       "gate": "G4",
@@ -15416,6 +15421,10 @@
           "expected_revision": {
             "type": "integer",
             "minimum": 0
+          },
+          "authorization_ref": {
+            "type": "string",
+            "minLength": 1
           },
           "idempotency_key": {
             "type": "string",

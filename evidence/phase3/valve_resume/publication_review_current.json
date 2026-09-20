@@ -1,0 +1,200 @@
+{
+  "schema_version": 1,
+  "review_kind": "public_candidate_publication_review_snapshot",
+  "reviewed_at": "2026-09-20T01:52:05Z",
+  "scope": {
+    "candidate_selection": [
+      "git diff --name-only",
+      "git ls-files --others --exclude-standard"
+    ],
+    "tracked_modified_candidate_count": 11,
+    "untracked_candidate_file_count": 105,
+    "candidate_file_count_before_this_report": 116,
+    "w12_changes_in_progress": true,
+    "incremental_recheck_required": true,
+    "private_machine_scan_performed": false,
+    "comsol_connection_or_process_operation": false
+  },
+  "publication_gate": {
+    "status": "CONDITIONAL",
+    "reason": "No credential, license material, or unredacted COMSOL help body was found in the snapshot. Public evidence and progress documentation still contain references to private run or preferences paths; scrub those references or approve their publication policy before export."
+  },
+  "checks": [
+    {
+      "id": "phase1_phase2_preservation",
+      "status": "PASS",
+      "category": "historical_evidence_integrity",
+      "paths": [
+        "evidence/phase1",
+        "evidence/phase2"
+      ],
+      "observations": {
+        "tracked_file_count": 210,
+        "working_tree_status_entries": 0,
+        "diff_name_status_entries": 0,
+        "diff_deletes_or_renames": 0
+      },
+      "reproducible_checks": [
+        "git status --short -- evidence/phase1 evidence/phase2",
+        "git diff --name-status -- evidence/phase1 evidence/phase2",
+        "git diff --name-status | awk '$1 ~ /D|R/ {n++} END {print n+0}'"
+      ],
+      "note": "No phase1 or phase2 evidence was modified, deleted, or renamed in this snapshot."
+    },
+    {
+      "id": "private_runtime_path_references",
+      "status": "FINDING",
+      "category": "private_runtime_path",
+      "severity": "publication_cleanup_required",
+      "paths_and_fields": [
+        {
+          "path": "docs/comsol_mcp_design_v1/PROGRESS.md",
+          "locations": [45, 81, 562],
+          "field_or_line": "private run or preferences path literals"
+        },
+        {
+          "path": "evidence/phase3/baseline/webbridge_config_selection_readback-20260919T232153Z.json",
+          "locations": ["prior_old_path_run_log.path"],
+          "field_or_line": "private run-log path reference"
+        },
+        {
+          "path": "evidence/phase3/baseline/webbridge_remote_addr_valve_proposal-20260919T232153Z.json",
+          "locations": ["diff.private_path", "private_proposal_dir"],
+          "field_or_line": "private proposal or run path references"
+        },
+        {
+          "path": "evidence/phase3/mac_owned_runtime/g2-valve-runtime-20260919T231415293264Z.json",
+          "locations": ["cleanup_command", "portfile", "prefs_dir", "recovery_dir", "run_dir", "tmp_dir"],
+          "field_or_line": "private runtime path references"
+        },
+        {
+          "path": "evidence/phase3/mac_owned_runtime/g2-valve-runtime-20260920T001537809701Z.json",
+          "locations": ["run_dir"],
+          "field_or_line": "private runtime path reference"
+        },
+        {
+          "path": "evidence/phase3/mac_owned_runtime/g2-valve-runtime-20260920T002102445575Z.json",
+          "locations": ["cleanup_command", "portfile", "prefs_dir", "recovery_dir", "run_dir", "tmp_dir"],
+          "field_or_line": "private runtime path references"
+        },
+        {
+          "path": "evidence/phase3/mac_owned_runtime/g2-valve-runtime-20260920T003546033861Z.json",
+          "locations": ["cleanup_command", "portfile", "prefs_dir", "proof.nonloopback.server_access_log.path", "recovery_dir", "run_dir", "tmp_dir"],
+          "field_or_line": "private runtime and access-log path references"
+        },
+        {
+          "path": "evidence/phase3/valve_resume/active_adapter_readback_20260920T003546.json",
+          "locations": ["verification.receipt", "verification.api_probe.server_access_log.path"],
+          "field_or_line": "private receipt and access-log path references"
+        },
+        {
+          "path": "evidence/phase3/valve_resume/active_probe_20260920T003546.log",
+          "locations": ["proof.nonloopback.server_access_log.path"],
+          "field_or_line": "private access-log path reference"
+        },
+        {
+          "path": "evidence/phase3/valve_resume/offline_refresh_cleanup_review.json",
+          "locations": [
+            "cleanup_observation.additional_profile_processes[*].command_scope",
+            "cleanup_observation.identity_before_stop.command_scope",
+            "source_run.command[7]"
+          ],
+          "field_or_line": "private runtime paths embedded in command-scope evidence"
+        },
+        {
+          "path": "evidence/phase3/valve_resume/phase2_disk_preservation.json",
+          "locations": ["private_backup"],
+          "field_or_line": "private backup path reference"
+        },
+        {
+          "path": "evidence/phase3/valve_resume/phase2_inputs_current_readback.json",
+          "locations": ["artifacts[2].path"],
+          "field_or_line": "private artifact path reference"
+        },
+        {
+          "path": "evidence/phase3/w12-trial-diagnostic-20260920T014415Z/result.json",
+          "locations": ["raw_private_path"],
+          "field_or_line": "private trial path reference"
+        },
+        {
+          "path": "evidence/phase3/w12-trial-diagnostic-20260920T014653Z/result.json",
+          "locations": ["raw_private_path"],
+          "field_or_line": "private trial path reference"
+        },
+        {
+          "path": "evidence/phase3/w12-trial-diagnostic-20260920T014824Z/result.json",
+          "locations": ["raw_private_path"],
+          "field_or_line": "private trial path reference"
+        },
+        {
+          "path": "evidence/phase3/w12-trial-diagnostic-20260920T014934Z/result.json",
+          "locations": ["raw_private_path"],
+          "field_or_line": "private trial path reference"
+        }
+      ],
+      "reproducible_check": "Parse JSON candidates and inspect string values for private-run markers; inspect markdown line numbers 45, 81, and 562 in the listed progress file. Values are intentionally omitted from this report."
+    },
+    {
+      "id": "credentials_and_authorization_material",
+      "status": "PASS",
+      "category": "credentials",
+      "observations": {
+        "credential_named_fields_reviewed": 49,
+        "live_credential_values_found": 0,
+        "runtime_credential_values": "descriptive or redacted placeholders only",
+        "authorization_values": "short approval metadata or redacted references; no token-shaped value",
+        "synthetic_fixture": "tests/test_phase3_acceptance_driver.py:433 contains a test-only bearer-secret fixture"
+      },
+      "reproducible_check": "For candidate JSON, recursively inspect fields named authorization, authorization_ref, credentials, credentials_source, password, token, secret, and API-key variants; classify only redacted/descriptive placeholders, approval prose, or test fixtures."
+    },
+    {
+      "id": "license_material",
+      "status": "PASS",
+      "category": "license_or_entitlement",
+      "observations": {
+        "license_or_entitlement_terms": "documentation, schema, test, and capability text only",
+        "license_keys_serials_activation_material_found": 0
+      },
+      "reproducible_check": "Inspect candidate values and assignment-shaped text for license, activation, entitlement, or serial material; no key-shaped material was found."
+    },
+    {
+      "id": "comsol_help_body_redaction",
+      "status": "PASS",
+      "category": "unredacted_help_body",
+      "observations": {
+        "offline_transcript_snippet_objects": 12,
+        "snippet_objects_with_redacted_document_text": 12,
+        "raw_help_body_fields_found": 0,
+        "malicious_fixture": "evidence/phase3/offline-review-20260920T010134Z/malicious_COMSOL_6.4.md is a short synthetic fixture, not a corpus excerpt"
+      },
+      "reproducible_check": "Inspect transcript snippet objects for redacted_document_text=true and scan candidate documentation fields for raw body text; only SHA-256 and character-count metadata were present."
+    },
+    {
+      "id": "implementation_and_test_path_literals",
+      "status": "PASS",
+      "category": "source_or_fixture_path_reference",
+      "paths_and_locations": [
+        "tools/phase3_run_mcp.py:161,387,2401",
+        "tools/phase3_remote_addr_valve_runtime.py:164,421",
+        "tests/test_g2_remote_isolation.py:376,388",
+        "tests/test_phase3_acceptance_driver.py:406"
+      ],
+      "note": "These are source implementation, redaction logic, or test-fixture references. The audit found no embedded private preferences content in these files."
+    },
+    {
+      "id": "transient_temp_paths",
+      "status": "PASS",
+      "category": "public_source_or_temp_path",
+      "paths_and_fields": [
+        "evidence/phase3/baseline/webbridge_config_selection_readback-20260919T232153Z.json:actual_server_config.loader_basis.path",
+        "evidence/phase3/baseline/webbridge_remote_addr_valve_proposal-20260919T232153Z.json:loader_evidence.path"
+      ],
+      "note": "Transient loader/source paths are path metadata, not credentials or preferences content, and are separate from the private-run path findings above."
+    }
+  ],
+  "follow_up": {
+    "required": true,
+    "action": "Re-run this review incrementally after W12 edits settle, then either redact the listed private path references or document an explicit publication exception.",
+    "report_self_excluded_from_candidate_count": true
+  }
+}

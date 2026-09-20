@@ -1,0 +1,50 @@
+{
+  "arguments": {
+    "adopt_tag": null,
+    "comsol_root": "/Applications/COMSOL64/Multiphysics",
+    "docs_source": [],
+    "docs_version": "6.4",
+    "fixture_component": "phase3comp",
+    "fixture_geometry": "phase3geom",
+    "fixture_model_name": "Phase3 G2 acceptance fixture",
+    "host": "127.0.0.1",
+    "jdk11": "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home",
+    "live": false,
+    "model_path": null,
+    "model_ref_json": null,
+    "only": "W09_T038_T039",
+    "port": 56388,
+    "prefs": null,
+    "private_home": "REDACTED_PATH",
+    "project_id": "comsol-mcp-phase3",
+    "python": "/Users/everwalker/Documents/Codex/2026-09-05/https-github-com-wjc9011-comsol-multiphysics/comsol-mcp-server/.venv/bin/python",
+    "run_dir": "evidence/phase3/offline-w09-boundary-20260920T030059Z",
+    "runtime_id": "COMSOL-6.4",
+    "skip_fixture": false,
+    "trusted_code": false,
+    "wp_tag": "wp3"
+  },
+  "attaches_existing_endpoint_only_when_live": false,
+  "cases": [
+    "W08_T008_T009_T010",
+    "W09_T038_T039",
+    "W10_T031_T032_T037",
+    "W11_T043_T036",
+    "W12_T029_T033_T050"
+  ],
+  "driver": "tools/phase3_run_mcp.py",
+  "production_entrypoint": [
+    "/Users/everwalker/Documents/Codex/2026-09-05/https-github-com-wjc9011-comsol-multiphysics/comsol-mcp-server/.venv/bin/python",
+    "-m",
+    "comsol_mcp.mcp_server"
+  ],
+  "source_artifacts": [
+    "tools/java/Phase3Fixture.java",
+    "tools/java/Phase3NoWrapper.java",
+    "tools/java/Phase3Readback.java",
+    "tools/java/Phase3PartialFailure.java",
+    "tools/java/Phase3SyntaxFailure.java"
+  ],
+  "starts_or_stops_comsol": false,
+  "stdio_only": true
+}

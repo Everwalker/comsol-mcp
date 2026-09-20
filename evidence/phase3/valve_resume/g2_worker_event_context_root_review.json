@@ -1,0 +1,11 @@
+{
+  "recorded_at": "2026-09-20T01:29:41.690217+00:00",
+  "status": "CONFIRMED_CODE_PATH_GAP",
+  "source": "comsol_mcp/_managed_backend.py",
+  "source_sha256": "68fc67d49885502ea9d1d0472ab52bef9d2a6a47912906949afa52af7992e4e0",
+  "finding": "G2 model invoke returns before legacy with self.context(operation_id,event_callback); Worker events are not associated with durable job. job_reconcile correctly refuses quiescence when recorded request IDs are empty.",
+  "authorized_fix": "Wrap G2 model dispatch in existing operation context; preserve unknown gate, original failed evidence, and no replay. Test direct/fallback/event lifetime and real recovery on fresh run.",
+  "historical_event_repair": "NOT_AUTHORIZED_AND_NOT_PERFORMED",
+  "evidence": "evidence/phase3/live-g2-rerun3-20260920T010300Z/recovery_append.json",
+  "evidence_sha256": "c42a5f0e5e2f599bcd572df809ce116163200987fa5c435a7c02a04d550cd629"
+}

@@ -1,0 +1,12 @@
+{
+  "recorded_at": "2026-09-20T02:35:49.313676+00:00",
+  "status": "FAIL",
+  "command": "python -m pytest -q (host permissions)",
+  "result": "1 failed, 413 passed, 1 skipped in 6.51s",
+  "failure": "test_trial_nested_code_steps_use_distinct_worker_ids_and_one_outer_job expected success=True, but trusted Java arbitrary scope correctly yields UNKNOWN",
+  "next_action": "Correct test expectation while proving distinct step request IDs and unchanged outer job event association. Do not weaken production scope gate.",
+  "source_sha256": {
+    "comsol_mcp/_managed_backend.py": "3b745c0d9a58967f205c060ea97642f5027dd08360f1267a3151844199ad7062",
+    "tests/test_g2_review_regressions.py": "392d7ca6ab7f087a5ec6717278850a0891568f477fe8443128e7b25647adfa63"
+  }
+}

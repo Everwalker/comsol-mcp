@@ -1,0 +1,17 @@
+{
+  "recorded_at": "2026-09-20T02:44:49.471142+00:00",
+  "run": "evidence/phase3/live-g2-rerun7-20260920T024249Z",
+  "status": "FAIL_PRESERVED",
+  "artifact_hash_check": "PASS",
+  "passed": [
+    "W08",
+    "W10",
+    "W12_preview",
+    "W12_checkpoint_binding",
+    "W12_isolated_trial",
+    "W12_permission_before_copy"
+  ],
+  "failure": "transaction.recover returned REVISION_CONFLICT because driver omitted authorization_ref after a PARTIAL write. Production refusal correct; restore did not execute.",
+  "source_review": "Driver now supplies the existing phase3-driver recovery authorization. Recovery still must prove new ref, old-ref rejection and actual target values restored.",
+  "next": "Fresh acceptance without relaxing restore gate."
+}

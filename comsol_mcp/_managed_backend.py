@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import socket
 import tempfile
+import time
 from typing import Any, Mapping
 
 from ._execution_contract import ExecutionContractError, SessionLedger, model_ref_from_mapping, canonical_project_path
@@ -23,6 +24,7 @@ from ._g2_engine import (
 from ._g2_code import compile_result, describe_source, execution_result, read_source
 from ._g2_transactions import TransactionStore, preview_transaction
 from ._g2_isolation import configured_receipt, verify_owned_server
+from ._platform_paths import default_comsol_help_roots
 
 # This is deliberately capability metadata rather than a promise of engine CAS.
 # The only live external mutation probe so far changed a scalar parameter.  The
@@ -89,19 +91,7 @@ class ManagedBackend:
         self.home, self.store = Path(home), store
         self.home.mkdir(mode=0o700, parents=True, exist_ok=True)
         self.project_root = Path(__file__).resolve().parents[1]
-        help_roots = [self.project_root]
-        configured_help = os.environ.get("COMSOL_DOCS_ROOT")
-        if configured_help:
-            help_roots.append(Path(configured_help))
-        # These are installation-owned official help roots on macOS.  The
-        # environment override is used on Windows/Linux; all are still
-        # checked by OfflineDocsIndex against real resolved paths.
-        for candidate in (
-            Path("/Applications/COMSOL64/Multiphysics/doc"),
-            Path("/Applications/COMSOL63/Multiphysics/doc"),
-        ):
-            if candidate.exists():
-                help_roots.append(candidate)
+        help_roots = default_comsol_help_roots(self.project_root)
         self.docs_index = OfflineDocsIndex(self.home / "docs_index.sqlite3", allowed_roots=help_roots)
         self.transactions = TransactionStore(self.home / "transactions.json")
         self.service, self.worker = service, worker
@@ -294,7 +284,15 @@ class ManagedBackend:
                          "transaction_preview", "transaction.preview", "checkpoint.list", "checkpoint.inspect", "checkpoint.diff"}:
             return self._invoke_g2_control(operation, arguments, execution, operation_id)
         if operation in IMPLEMENTED_OPERATIONS and operation not in {"registry.list", "registry.describe", "registry.search", "registry.manifest", "registry.call"}:
-            return self._invoke_g2_model(operation, arguments, execution, operation_id, event_callback)
+            # G2 actions may be reached directly or through the public
+            # operation_call/registry_call fallback.  Bind the persistent
+            # Worker's request-event context around both routes so the
+            # daemon's original job records submitted and observed request
+            # IDs for later reconciliation.  Keep this scope local to the
+            # current operation and let operation_context restore any outer
+            # context on every exit, including exceptions.
+            with self.context(operation_id, event_callback):
+                return self._invoke_g2_model(operation, arguments, execution, operation_id, event_callback)
         starter = operation in {"start_visible_main_workflow", "start_visible_main_workflow_async"}
         selections = {"model_create", "model_load", "load_visible_main_model", "load_current_main_model"}
         if (starter or operation in selections) and execution.get("model_ref"):
@@ -373,6 +371,12 @@ class ManagedBackend:
         except KeyError as exc:
             raise ExecutionContractError("PERMISSION_DENIED", f"unclassified nested G2 effect: {effect!r}") from exc
 
+    @staticmethod
+    def _validate_java_mode(operation: str, arguments: Mapping[str, Any]) -> None:
+        """Reject an untrusted Java mode before any write/copy ticket."""
+        if operation == "code.execute_java" and arguments.get("mode") not in {"trusted", "execute"}:
+            raise ExecutionContractError("PERMISSION_DENIED", "code execution requires mode=trusted or mode=execute")
+
     def _preflight_nested_actions(self, actions: Any) -> list[tuple[str, dict[str, Any], str]]:
         """Validate every nested action before a transaction checkpoint/copy.
 
@@ -401,6 +405,7 @@ class ManagedBackend:
                 raise ExecutionContractError("INVALID_REQUEST", f"action {index} arguments must be an object")
             if operation not in supported:
                 raise ExecutionContractError("UNSUPPORTED_OPERATION", f"nested transaction operation is not supported: {operation}")
+            self._validate_java_mode(operation, arguments)
             entry = validate_call(operation, arguments, allow_unbound_identity=True)
             permission = self._g2_nested_permission(entry.effect)
             if permission not in self.service.ledger.permissions:
@@ -551,6 +556,12 @@ class ManagedBackend:
         self.service.ledger._state_for(ref)
         body = self._g2_body(arguments)
         alias = self._g2_alias(operation)
+        # Reject an untrusted Java mode before entering the write-ticket
+        # service.  If this check were left inside the engine callback,
+        # ExecutionService would conservatively classify the callback
+        # exception as UNKNOWN after dispatch, even though no Java request or
+        # model mutation was authorized.
+        self._validate_java_mode(operation, body)
         if operation in {"node.property_set", "node.property_index_set", "node.property_entry_set",
                          "code.execute_java", "checkpoint.create", "checkpoint.restore",
                          "transaction.trial", "transaction.apply", "transaction.recover"}:
@@ -704,10 +715,146 @@ class ManagedBackend:
         if result.get("success"):
             info = result.get("data", {}).get("checkpoint_id")
             metadata = result.get("data", {})
+            state = self.service.ledger._state_for(ref)
+            metadata = self._bind_checkpoint_metadata(ref, metadata, state=state)
+            result.setdefault("data", {}).update(metadata)
             if metadata.get("sha256"):
                 self.store.persist_checkpoint(metadata.get("sha256"), metadata)
             self.transactions.put({"transaction_id": info or "checkpoint-" + metadata.get("sha256", "")[:12], "checkpoint_id": info, "status": "CHECKPOINT", "metadata": metadata})
         return result
+
+    @staticmethod
+    def _bind_checkpoint_metadata(ref, metadata: Mapping[str, Any], *, state) -> dict[str, Any]:
+        """Bind a published checkpoint to the exact managed model observation.
+
+        The binding is created by the backend after the ticketed save has
+        completed.  A caller can provide the checkpoint id and artifact hash,
+        but cannot choose the model epoch, revision, or fingerprint used by a
+        later isolated trial.
+        """
+        value = dict(metadata)
+        if not isinstance(value.get("checkpoint_id"), str) or not value["checkpoint_id"]:
+            raise ExecutionContractError("ARTIFACT_MISSING", "checkpoint save returned no checkpoint_id")
+        if not isinstance(value.get("sha256"), str) or len(value["sha256"]) != 64:
+            raise ExecutionContractError("ARTIFACT_MISSING", "checkpoint save returned no complete sha256")
+        source_revision = state.revision
+        source_fingerprint = state.fingerprint
+        source_external_event_counter = state.external_event_counter
+        if not isinstance(source_fingerprint, str) or not source_fingerprint:
+            raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "checkpoint source fingerprint is unavailable")
+        binding = {
+            "model_ref": ref.as_dict(),
+            "revision": source_revision,
+            "fingerprint": source_fingerprint,
+            "external_event_counter": source_external_event_counter,
+        }
+        value["source_binding"] = binding
+        value["source_model_ref"] = ref.as_dict()
+        value["source_revision"] = source_revision
+        value["source_fingerprint"] = source_fingerprint
+        value["source_external_event_counter"] = source_external_event_counter
+        value["source_sha256"] = value["sha256"]
+        return value
+
+    def _trial_checkpoint(self, ref, checkpoint_id: Any, state, expected_revision: Any) -> tuple[dict[str, Any], Path]:
+        """Validate an immutable checkpoint before any trial copy/load side effect."""
+        if not isinstance(checkpoint_id, str) or not checkpoint_id.strip():
+            raise ExecutionContractError("CHECKPOINT_REQUIRED", "transaction.trial requires an explicit checkpoint_id")
+        rows = self.store.list_metadata("checkpoints")
+        metadata = next((row for row in rows if row.get("checkpoint_id") == checkpoint_id), None)
+        if not isinstance(metadata, Mapping):
+            raise ExecutionContractError("NODE_NOT_FOUND", "trial checkpoint was not found")
+        binding = metadata.get("source_binding")
+        if not isinstance(binding, Mapping):
+            raise ExecutionContractError("CHECKPOINT_REQUIRED", "checkpoint is not bound to a managed model observation")
+        source_ref = binding.get("model_ref")
+        if not isinstance(source_ref, Mapping) or dict(source_ref) != ref.as_dict():
+            raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "trial checkpoint belongs to another model generation")
+        if binding.get("revision") != state.revision or metadata.get("source_revision") != state.revision:
+            raise ExecutionContractError("REVISION_CONFLICT", "trial checkpoint revision is stale")
+        if expected_revision != state.revision:
+            raise ExecutionContractError("REVISION_CONFLICT", "trial checkpoint requires the current expected_revision")
+        current_fingerprint = state.fingerprint
+        if binding.get("fingerprint") != current_fingerprint or metadata.get("source_fingerprint") != current_fingerprint:
+            raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "trial checkpoint fingerprint is stale")
+        if binding.get("external_event_counter") != state.external_event_counter or metadata.get("source_external_event_counter") != state.external_event_counter:
+            raise ExecutionContractError("REVISION_CONFLICT", "trial checkpoint external event counter is stale")
+        recorded_sha = metadata.get("sha256")
+        if not isinstance(recorded_sha, str) or len(recorded_sha) != 64 or metadata.get("source_sha256", recorded_sha) != recorded_sha:
+            raise ExecutionContractError("ARTIFACT_MISSING", "trial checkpoint has no authoritative sha256")
+        raw_path = metadata.get("path")
+        if not isinstance(raw_path, str) or not raw_path:
+            raise ExecutionContractError("ARTIFACT_MISSING", "trial checkpoint has no artifact path")
+        path = canonical_project_path(self.project_root, raw_path)
+        if path.suffix.lower() != ".mph" or not path.is_file():
+            raise ExecutionContractError("ARTIFACT_MISSING", "trial checkpoint artifact is unavailable")
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        if digest != recorded_sha:
+            raise ExecutionContractError("ARTIFACT_MISSING", "trial checkpoint hash does not match durable metadata")
+        return dict(metadata), path
+
+    @staticmethod
+    def _copy_trial_checkpoint(source: Path, destination: Path, expected_sha256: str) -> dict[str, Any]:
+        """Copy a verified checkpoint without overwriting an existing artifact."""
+        started_ns = time.monotonic_ns()
+        copied = 0
+        source_digest = hashlib.sha256()
+        created = False
+
+        def cleanup_owned() -> None:
+            if not created:
+                return
+            try:
+                destination.unlink(missing_ok=True)
+            except OSError as cleanup_exc:
+                raise ExecutionContractError(
+                    "EXECUTION_STATE_UNKNOWN",
+                    f"owned trial checkpoint cleanup failed: {destination}",
+                ) from cleanup_exc
+            if destination.exists():
+                raise ExecutionContractError(
+                    "EXECUTION_STATE_UNKNOWN",
+                    f"owned trial checkpoint remained after cleanup: {destination}",
+                )
+
+        try:
+            with source.open("rb") as reader, destination.open("xb") as writer:
+                created = True
+                while True:
+                    block = reader.read(1024 * 1024)
+                    if not block:
+                        break
+                    source_digest.update(block)
+                    writer.write(block)
+                    copied += len(block)
+                writer.flush()
+                os.fsync(writer.fileno())
+        except Exception as exc:
+            cleanup_owned()
+            if isinstance(exc, ExecutionContractError):
+                raise
+            raise ExecutionContractError("ARTIFACT_MISSING", "trial checkpoint copy failed") from exc
+        source_sha = source_digest.hexdigest()
+        copied_digest = hashlib.sha256()
+        try:
+            with destination.open("rb") as reader:
+                for block in iter(lambda: reader.read(1024 * 1024), b""):
+                    copied_digest.update(block)
+        except OSError as exc:
+            cleanup_owned()
+            raise ExecutionContractError("ARTIFACT_MISSING", "trial checkpoint copy readback failed") from exc
+        copied_sha = copied_digest.hexdigest()
+        if source_sha != expected_sha256 or copied_sha != expected_sha256:
+            cleanup_owned()
+            raise ExecutionContractError("ARTIFACT_MISSING", "trial checkpoint copy hash verification failed")
+        return {
+            "path": str(destination),
+            "bytes": copied,
+            "sha256": copied_sha,
+            "source_sha256": source_sha,
+            "copy_elapsed_ms": round((time.monotonic_ns() - started_ns) / 1_000_000, 3),
+            "verified": True,
+        }
 
     def _transaction_via_service(self, ref, body, alias, operation_id, execution):
         actions = body.get("actions", [])
@@ -722,7 +869,13 @@ class ManagedBackend:
             permission = self._g2_nested_permission(entry.effect)
             if permission not in self.service.ledger.permissions:
                 return {"success": False, "error": {"code": "PERMISSION_DENIED", "message": f"permission required: {permission}", "safe_retry": False}}
-            return self._run_g2_action(operation, ref.model_tag, args, operation_id)
+            # Each nested Worker request needs its own deterministic request
+            # identity.  The outer operation_id remains the durable job and
+            # operation-context key; reusing it for two Java actions would
+            # make PersistentJavaWorker treat the second body as an
+            # idempotency conflict (or replay the first body).
+            step_operation_id = f"{operation_id}:step:{_index}"
+            return self._run_g2_action(operation, ref.model_tag, args, step_operation_id)
         def callback(_args):
             # The checkpoint is part of the ticketed callback.  Permission,
             # current revision, and external-change checks therefore happen
@@ -730,6 +883,11 @@ class ManagedBackend:
             if body.get("checkpoint_policy", "on_failure") in {"always", "on_failure", "before"}:
                 checkpoint_root = self.project_root / "g2_artifacts" / "checkpoints"
                 metadata = create_checkpoint(self.worker, ref.model_tag, checkpoint_root / ("txn-" + operation_id + ".mph"), "transaction-before")
+                # This checkpoint protects recovery of a partial transaction;
+                # unlike checkpoint.create, it is intentionally not a trial
+                # source because its exact pre-action revision is not a
+                # committed post-save ledger observation.
+                metadata["recovery_only"] = True
                 checkpoint_id_holder["value"] = metadata["checkpoint_id"]
                 metadata_holder.update(metadata)
                 self.store.persist_checkpoint(metadata["sha256"], metadata)
@@ -760,23 +918,23 @@ class ManagedBackend:
             raise ExecutionContractError("REVISION_CONFLICT", "external model change requires reconciliation before trial")
         actions = body.get("actions", [])
         self._preflight_nested_actions(actions)
+        checkpoint_metadata, checkpoint_path = self._trial_checkpoint(ref, body.get("checkpoint_id"), state, expected_revision)
         scope_requests, scope_limitations = self._trial_scope_plan(actions)
         before_main = self.worker.backend_snapshot(ref.model_tag)
         trial_tag = "mcp_trial_" + operation_id.replace("-", "")[:16]
-        trial_root = self.project_root / "g2_artifacts" / "trials"
-        trial_path = trial_root / (trial_tag + ".mph")
-        trial_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        trial_path = canonical_project_path(self.project_root, self.project_root / "g2_artifacts" / "trials" / (trial_tag + ".mph"))
         if trial_tag in {str(tag) for tag in self.worker.client().tags()}:
             raise ExecutionContractError("ENGINE_BUSY", "trial model tag is already present; refusing to reuse it")
-        main = self.worker.client().model(ref.model_tag)
+        scope_before: list[dict[str, Any]] = []
+        if scope_requests:
+            scope_before = self._capture_trial_scope(ref.model_tag, scope_requests)
+        trial_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        copy_info = self._copy_trial_checkpoint(source=checkpoint_path, destination=trial_path, expected_sha256=checkpoint_metadata["sha256"])
         trial = None
         result = None
         cleanup_errors: list[str] = []
-        scope_before: list[dict[str, Any]] = []
+        cleanup = {"model_removed": False, "artifact_deleted": False, "errors": cleanup_errors}
         try:
-            if scope_requests:
-                scope_before = self._capture_trial_scope(ref.model_tag, scope_requests)
-            main.save(str(trial_path))
             trial = self.worker.client().load(trial_path, tag=trial_tag)
 
             def runner(operation, args, _index):
@@ -787,7 +945,8 @@ class ManagedBackend:
                 permission = self._g2_nested_permission(entry.effect)
                 if permission not in self.service.ledger.permissions:
                     return {"success": False, "error": {"code": "PERMISSION_DENIED", "message": f"permission required: {permission or entry.effect}", "safe_retry": False}}
-                return self._run_g2_action(operation, trial_tag, args, operation_id)
+                step_operation_id = f"{operation_id}:step:{_index}"
+                return self._run_g2_action(operation, trial_tag, args, step_operation_id)
             result = execute_transaction(self.worker, trial_tag, actions, runner=runner, invariants=body.get("invariants"))
         except Exception as exc:
             result = {"success": False, "data": {"status": "UNKNOWN"},
@@ -797,12 +956,16 @@ class ManagedBackend:
             try:
                 if trial is not None or trial_tag in {str(tag) for tag in self.worker.client().tags()}:
                     self.worker.client().remove(trial_tag)
+                cleanup["model_removed"] = trial_tag not in {str(tag) for tag in self.worker.client().tags()}
             except Exception as exc:
-                cleanup_errors.append(f"remove_trial_model: {type(exc).__name__}: {exc}")
+                cleanup_errors.append(f"remove_trial_model {trial_tag}: {type(exc).__name__}: {exc}")
             try:
                 trial_path.unlink(missing_ok=True)
+                cleanup["artifact_deleted"] = not trial_path.exists()
+                if not cleanup["artifact_deleted"]:
+                    cleanup_errors.append("remove_trial_artifact: file remained after unlink")
             except OSError as exc:
-                cleanup_errors.append(f"remove_trial_artifact: {type(exc).__name__}: {exc}")
+                cleanup_errors.append(f"remove_trial_artifact {trial_path}: {type(exc).__name__}: {exc}")
         try:
             after_main = self.worker.backend_snapshot(ref.model_tag)
         except Exception as exc:
@@ -810,7 +973,11 @@ class ManagedBackend:
             data = (result or {}).setdefault("data", {})
             data.update({"isolated_trial": True, "trial_model_tag": trial_tag,
                          "main_model_untouched": None,
-                         "main_model_fingerprint_scope": "unavailable"})
+                         "main_model_fingerprint_scope": "unavailable",
+                         "main_before": before_main, "main_after": None,
+                         "source_checkpoint_id": checkpoint_metadata.get("checkpoint_id"),
+                         "source_checkpoint": checkpoint_metadata,
+                         "trial_copy": copy_info, "cleanup": cleanup})
             (result or {}).update({"success": False, "execution_state_unknown": True,
                                    "error": {"code": "EXECUTION_STATE_UNKNOWN", "message": f"main model post-trial observation failed: {type(exc).__name__}", "safe_retry": False}})
             return result or {"success": False, "data": data,
@@ -840,7 +1007,15 @@ class ManagedBackend:
                      "main_model_untouched": None,
                      "main_model_unchanged_within_scope": scope_equal if scope_error is None else None,
                      "main_model_change_observation": "NO_CHANGE_WITHIN_SCOPED_FINGERPRINT" if observed_unchanged else "CHANGED_WITHIN_SCOPED_FINGERPRINT",
-                     "main_model_fingerprint_scope": "parameters+shallow_tree_identity; full property coverage unverified",
+                     "main_model_fingerprint_scope": before_main.get("fingerprint_scope", "parameters+shallow_tree_identity; full property coverage unverified"),
+                     "main_before": before_main,
+                     "main_after": after_main,
+                     "main_external_event_counter_before": before_main.get("external_event_counter"),
+                     "main_external_event_counter_after": after_main.get("external_event_counter"),
+                     "source_checkpoint_id": checkpoint_metadata.get("checkpoint_id"),
+                     "source_checkpoint": checkpoint_metadata,
+                     "trial_copy": copy_info,
+                     "cleanup": cleanup,
                      "main_model_scope": {"status": "VERIFIED" if scope_verified else "UNKNOWN",
                                           "operations": [row.get("operation") for row in scope_requests],
                                           "requests": scope_requests,

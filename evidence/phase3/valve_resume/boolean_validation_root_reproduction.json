@@ -1,0 +1,34 @@
+{
+  "recorded_at": "2026-09-20T00:59:21.887339+00:00",
+  "source_sha256": "4352fd42c7f57fcaa028dd0a6d3ce3604d0535a2ef73ae10325278bd47e6568f",
+  "evidence_transcript": "evidence/phase3/live-g2-rerun2-20260920T005500Z/transcript.json",
+  "schema_index": 6,
+  "request_index": 208,
+  "schema": {
+    "allowed_values": [
+      "on",
+      "off"
+    ],
+    "getter": "getBoolean",
+    "java_signature": "boolean",
+    "kind": "boolean",
+    "metadata_status": "KNOWN",
+    "name": "reverse",
+    "shape_rank": 0,
+    "type_id": "WorkPlane",
+    "value_type": "Boolean"
+  },
+  "typed_input": {
+    "data": false,
+    "java_signature": "boolean",
+    "kind": "boolean",
+    "shape": []
+  },
+  "pure_validation_reproduction": {
+    "reproduced": true,
+    "error_code": "INVALID_PROPERTY_VALUE",
+    "message": "property value is outside the allowed values"
+  },
+  "engine_called": false,
+  "inference": "Allowed string tokens on/off were compared directly to JSON false in local validation. property_set validates before its setter loop. The generic UNKNOWN envelope does not itself prove a COMSOL mutation."
+}

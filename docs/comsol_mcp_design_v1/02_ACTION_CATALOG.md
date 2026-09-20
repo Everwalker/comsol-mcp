@@ -407,10 +407,10 @@ JSON 附件为每个动作提供顶层输入 schema；类型见 common.schema.js
 | 拟议 MCP 工具 | 主要参数（除共同字段） | 完成动作 | 风险 / 阶段 |
 |---|---|---|---|
 | `transaction_preview` | `actions:objects,invariants:objects?` | 仅静态检查计划、权限、依赖与预算 | READ / G2 |
-| `transaction_trial` | `actions:objects,invariants:objects?` | 在副本执行计划并输出差异和验证 | COMPUTE / G2 |
+| `transaction_trial` | `actions:objects,invariants:objects?,checkpoint_id:str?` | 基于显式绑定checkpoint在副本执行计划并输出差异和验证 | COMPUTE / G2 |
 | `transaction_apply` | `actions:objects,invariants:objects?,checkpoint_policy:str` | 按前置修订、checkpoint和权限执行动作组 | WRITE / G2 |
 | `transaction_verify` | `transaction_id:str,checks:objects?` | 按不变量和回读核验一次事务 | EVALUATE / G2 |
-| `transaction_recover` | `transaction_id:str,strategy:str` | 对部分失败执行显式恢复策略 | WRITE / G4 |
+| `transaction_recover` | `transaction_id:str,strategy:str,authorization_ref:str?` | 对部分失败执行显式恢复策略 | WRITE / G4 |
 
 ## 文件、原始数据与数据外发（artifact）
 
@@ -446,4 +446,3 @@ JSON 附件为每个动作提供顶层输入 schema；类型见 common.schema.js
 | `docs_get` | `document_ref:str,section:str?,offset:int?,length:int?` | 读取具体文档范围并带来源 | READ / G2 |
 | `docs_examples` | `query:str,version:str` | 检索已验证/未验证示例并显示状态 | READ / G2 |
 | `docs_error_search` | `error:str,version:str,node_type:str?` | 按原始异常与节点类型检索诊断证据 | READ / G4 |
-

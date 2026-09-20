@@ -118,6 +118,31 @@ def _execution(ref, *, expected_revision=0, **extra):
     }
 
 
+def _install_trial_checkpoint(backend, ref, *, name="trial-source", payload=b"checkpoint source"):
+    path = backend.project_root / "g2_artifacts" / "checkpoints" / f"{name}.mph"
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    path.write_bytes(payload)
+    digest = hashlib.sha256(payload).hexdigest()
+    metadata = {
+        "checkpoint_id": f"checkpoint-{name}",
+        "path": str(path),
+        "sha256": digest,
+        "source_sha256": digest,
+        "source_binding": {
+            "model_ref": dict(ref),
+            "revision": 0,
+            "fingerprint": "fingerprint",
+            "external_event_counter": 0,
+        },
+        "source_model_ref": dict(ref),
+        "source_revision": 0,
+        "source_fingerprint": "fingerprint",
+        "source_external_event_counter": 0,
+    }
+    backend.store.persist_checkpoint(digest, metadata)
+    return metadata
+
+
 @pytest.mark.parametrize(
     ("operation", "arguments"),
     [
@@ -260,11 +285,12 @@ def test_trial_cleanup_failure_is_unknown_and_not_reported_as_success(backend_co
     backend, _unused_worker, service, ref = backend_context
     worker = _RecordingWorker(remove_fails=True)
     backend.worker = worker
+    checkpoint = _install_trial_checkpoint(backend, ref)
     monkeypatch.setattr(backend, "_require_g2_isolation", lambda: {"verified": True})
 
     result = backend._invoke_g2_model(
         "transaction.trial",
-        {"actions": []},
+        {"actions": [], "checkpoint_id": checkpoint["checkpoint_id"]},
         _execution(ref),
         "cleanup-failure",
         lambda _event: None,

@@ -9,6 +9,7 @@ from comsol_mcp._execution_contract import ExecutionContractError
 from comsol_mcp._g2_code import compile_result, describe_source, execution_result
 from comsol_mcp._g2_docs import OfflineDocsIndex
 from comsol_mcp._g2_engine import property_get, property_index_set, property_set
+from comsol_mcp._g2_contract import typed_value_from_engine
 from comsol_mcp._g2_registry import operation_describe, registry_manifest, validate_call
 from comsol_mcp._g2_transactions import TransactionStore, preview_transaction, run_transaction
 
@@ -17,8 +18,10 @@ class _Node:
     def __init__(self):
         self.values = {"flag": True, "empty": [], "matrix": [[1.0, 2.0]], "expr": "a+b"}
         self.calls = []
+        self.properties_calls = 0
 
     def properties(self):
+        self.properties_calls += 1
         return list(self.values)
 
     def getValueType(self, name):
@@ -67,6 +70,67 @@ def test_typed_get_preserves_empty_singleton_matrix_and_uses_authoritative_gette
     assert values["matrix"]["shape"] == [1, 2]
     assert values["expr"]["kind"] == "string" and values["expr"]["data"] == "a+b"
     assert node.calls == [("getDoubleArray", "empty"), ("getDoubleMatrix", "matrix"), ("getString", "expr")]
+    assert node.properties_calls == 0
+
+
+def test_typed_get_bounds_metadata_to_requested_names_and_preserves_unknown_rejection():
+    node = _Node()
+    result = property_get(_Worker(node), "m", {"segments": []}, ["flag", "flag"])
+    assert [row["name"] for row in result["properties"]] == ["flag", "flag"]
+    assert node.properties_calls == 0
+    assert node.calls == [("getBoolean", "flag"), ("getBoolean", "flag")]
+
+    class Unknown(_Node):
+        def getValueType(self, _name):
+            return "FutureComsolType"
+
+    unknown = Unknown()
+    with pytest.raises(ExecutionContractError) as exc:
+        property_get(_Worker(unknown), "m", {"segments": []}, ["flag"])
+    assert exc.value.code == "API_UNSUPPORTED"
+    assert unknown.properties_calls == 0
+
+
+@pytest.mark.parametrize(
+    ("value", "kind"),
+    [
+        (float("nan"), "float64"),
+        ([1.0, float("inf")], "float64"),
+        ([[0.0], [float("-inf")]], "float64"),
+        ({"real": float("nan"), "imag": 0.0}, "complex128"),
+    ],
+)
+def test_nonfinite_engine_readbacks_fail_closed_before_json_serialization(value, kind):
+    with pytest.raises(ExecutionContractError) as exc:
+        typed_value_from_engine(value, kind=kind)
+    assert exc.value.code == "API_UNSUPPORTED"
+    assert "non-finite" in str(exc.value)
+
+
+def test_nonfinite_property_get_has_no_write_and_serializable_error():
+    class NonFinite(_Node):
+        def __init__(self):
+            super().__init__()
+            self.values["invalid"] = [float("nan")]
+
+        def getValueType(self, name):
+            if name == "invalid":
+                return "DoubleArray"
+            return super().getValueType(name)
+
+        def getDoubleArray(self, name):
+            self.calls.append(("getDoubleArray", name))
+            return self.values[name]
+
+    node = NonFinite()
+    with pytest.raises(ExecutionContractError) as exc:
+        property_get(_Worker(node), "m", {"segments": []}, ["invalid"])
+    assert exc.value.code == "API_UNSUPPORTED"
+    assert not any(call[0] == "set" for call in node.calls)
+    # The structured error produced before the wire boundary contains no
+    # non-finite value and is therefore safe for the production serializer.
+    import json
+    json.dumps({"success": False, "data": {}, "error": {"code": exc.value.code, "message": str(exc.value)}}, allow_nan=False)
 
 
 def test_typed_set_and_index_use_java_signature_and_comsol_argument_order():
@@ -80,6 +144,62 @@ def test_typed_set_and_index_use_java_signature_and_comsol_argument_order():
     assert set_index_call[0:2] == ("setIndex", "matrix")
     assert set_index_call[3] == 3
     assert set_index_call[2]["java_signature"] == "double[]"
+
+
+@pytest.mark.parametrize("value", [False, True])
+def test_boolean_on_off_metadata_accepts_typed_json_boolean_without_set_string_conversion(value):
+    class BooleanEnum(_Node):
+        def getAllowedPropertyValues(self, name):
+            return ["on", "off"] if name == "flag" else None
+
+    node = BooleanEnum()
+    result = property_set(
+        _Worker(node), "m", {"segments": []},
+        [{"name": "flag", "value": {"kind": "boolean", "shape": [], "data": value}}],
+    )
+    assert result["success"] is True
+    assert result["data"]["applied"][0]["readback"]["data"] is value
+    assert [call[0:2] for call in node.calls] == [("set", "flag"), ("getBoolean", "flag")]
+
+
+@pytest.mark.parametrize(("allowed", "value"), [(["on"], True), (["off"], False)])
+def test_boolean_single_allowed_on_off_value_accepts_only_its_corresponding_bool(allowed, value):
+    class BooleanEnum(_Node):
+        def getAllowedPropertyValues(self, name):
+            return list(allowed) if name == "flag" else None
+
+    node = BooleanEnum()
+    result = property_set(
+        _Worker(node), "m", {"segments": []},
+        [{"name": "flag", "value": {"kind": "boolean", "shape": [], "data": value}}],
+    )
+    assert result["success"] is True
+    assert node.calls[0][0:2] == ("set", "flag")
+
+
+@pytest.mark.parametrize(
+    ("allowed", "value", "expected_code"),
+    [
+        (["off"], True, "INVALID_PROPERTY_VALUE"),
+        (["yes", "no"], False, "INVALID_PROPERTY_VALUE"),
+        ([0, 1], False, "INVALID_PROPERTY_VALUE"),
+        (["on", "off"], "on", "PROPERTY_TYPE_MISMATCH"),
+        (["on", "off"], 1, "PROPERTY_TYPE_MISMATCH"),
+    ],
+)
+def test_boolean_allowed_values_remain_fail_closed_before_set(allowed, value, expected_code):
+    class BooleanEnum(_Node):
+        def getAllowedPropertyValues(self, name):
+            return list(allowed) if name == "flag" else None
+
+    node = BooleanEnum()
+    with pytest.raises(ExecutionContractError) as exc:
+        property_set(
+            _Worker(node), "m", {"segments": []},
+            [{"name": "flag", "value": {"kind": "boolean", "shape": [], "data": value}}],
+        )
+    assert exc.value.code == expected_code
+    assert not any(call[0] == "set" for call in node.calls)
 
 
 def test_unknown_metadata_and_int64_writes_fail_closed():

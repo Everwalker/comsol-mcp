@@ -1,0 +1,238 @@
+{
+  "cleanup": {
+    "all_exit_codes": 0,
+    "method": "TERM sent individually to exact verified PIDs 90070, 90091, 90107, 90115",
+    "post_stop": {
+      "active_jobs": 0,
+      "control_ports_listening": false,
+      "exact_target_pids_present": false,
+      "private_home_file_handles_present": false
+    },
+    "private_probe_handles_present": false
+  },
+  "generated_at": "2026-09-20T03:05:57.751277Z",
+  "interpretation_and_limits": {
+    "bounded_inference": "This was a W09-only offline stdio/schema contract check. --live was omitted, binding was NOT_RUN, private runtimes reported server_running=false, and engine logs had no COMSOL connection markers.",
+    "not_claimed": "PASS is limited to offline W09 registry/stdio and operation-description schema evidence; it is not live COMSOL, model, numerical, or scientific acceptance."
+  },
+  "observed_run": {
+    "W09_status": "PASS",
+    "binding": {
+      "reason": "--live was not supplied; live COMSOL cases were not attempted",
+      "status": "NOT_RUN"
+    },
+    "engine_log_marker_counts": {
+      "56388": 0,
+      "56389": 0,
+      "model_adopt": 0,
+      "model_load": 0,
+      "mphserver": 0,
+      "server_connect": 0
+    },
+    "public_evidence_audit": {
+      "private_path_hits": 0,
+      "sensitive_fields_checked": 52,
+      "sensitive_value_violations": 0,
+      "sha256_mismatches": [],
+      "transcript_rows": 28
+    },
+    "result_status": "PASS",
+    "subcases": {
+      "error_propagation": "PASS",
+      "fallback_route": "PASS",
+      "hidden_legacy_managed_route": "PASS",
+      "host_profile_publication": "PASS",
+      "initialize_list_schema": "PASS",
+      "limited_host_capability_degradation": "PASS",
+      "profile_tool_list_shortening": "PASS",
+      "registry_paging": "PASS",
+      "registry_profile_manifests": "PASS",
+      "registry_schema": "PASS",
+      "structured_content_action_results": "PASS"
+    }
+  },
+  "owned_processes_before_cleanup": [
+    {
+      "active_jobs": 0,
+      "attached_to_existing_server": false,
+      "birth": "Sun Sep 20 11:01:17 2026",
+      "children": [],
+      "command_class": "python -m comsol_mcp._control_daemon",
+      "command_scope": "<repo>/.phase1-private/g2-offline-w09-boundary-20260920T030059Z/control-private",
+      "control_port": 58026,
+      "job_counts": {
+        "FAILED": 1
+      },
+      "label": "primary",
+      "network_observation": "127.0.0.1 listener only",
+      "pid": 90070,
+      "ppid": 1,
+      "server_running": false,
+      "status": "ready"
+    },
+    {
+      "active_jobs": 0,
+      "attached_to_existing_server": false,
+      "birth": "Sun Sep 20 11:01:18 2026",
+      "children": [],
+      "command_class": "python -m comsol_mcp._control_daemon",
+      "command_scope": "<repo>/.phase1-private/g2-acceptance/20260920T030117Z/profile-full/mcp-home/control-private",
+      "control_port": 58044,
+      "job_counts": {
+        "SUCCEEDED": 1
+      },
+      "label": "profile-full",
+      "network_observation": "127.0.0.1 listener only",
+      "pid": 90091,
+      "ppid": 1,
+      "server_running": false,
+      "status": "disconnected"
+    },
+    {
+      "active_jobs": 0,
+      "attached_to_existing_server": false,
+      "birth": "Sun Sep 20 11:01:19 2026",
+      "children": [],
+      "command_class": "python -m comsol_mcp._control_daemon",
+      "command_scope": "<repo>/.phase1-private/g2-acceptance/20260920T030117Z/profile-domain/mcp-home/control-private",
+      "control_port": 58057,
+      "job_counts": {
+        "SUCCEEDED": 1
+      },
+      "label": "profile-domain",
+      "network_observation": "127.0.0.1 listener only",
+      "pid": 90107,
+      "ppid": 1,
+      "server_running": false,
+      "status": "disconnected"
+    },
+    {
+      "active_jobs": 0,
+      "attached_to_existing_server": false,
+      "birth": "Sun Sep 20 11:01:19 2026",
+      "children": [],
+      "command_class": "python -m comsol_mcp._control_daemon",
+      "command_scope": "<repo>/.phase1-private/g2-acceptance/20260920T030117Z/profile-expert/mcp-home/control-private",
+      "control_port": 58071,
+      "job_counts": {
+        "SUCCEEDED": 1
+      },
+      "label": "profile-expert",
+      "network_observation": "127.0.0.1 listener only",
+      "pid": 90115,
+      "ppid": 1,
+      "server_running": false,
+      "status": "disconnected"
+    }
+  ],
+  "protected_shared_runtime": {
+    "interpretation": "Shared listener was read only; no shared process, endpoint, home, firewall, Windows, or XML action was performed.",
+    "listener": "*:56389",
+    "observed_after_cleanup": true,
+    "pid": 73823,
+    "touched": false
+  },
+  "schema_queries": {
+    "descriptions": [
+      {
+        "describe_tool": "operation_describe",
+        "error_code": null,
+        "field_required": false,
+        "input_schema_type": "object",
+        "operation_id": "transaction.recover",
+        "property_names": [
+          "authorization_ref",
+          "expected_revision",
+          "idempotency_key",
+          "model_ref",
+          "project_id",
+          "request_id",
+          "session_id",
+          "strategy",
+          "transaction_id"
+        ],
+        "required_field_present": true,
+        "success": true
+      },
+      {
+        "describe_tool": "operation_describe",
+        "error_code": null,
+        "field_required": false,
+        "input_schema_type": "object",
+        "operation_id": "transaction.trial",
+        "property_names": [
+          "actions",
+          "checkpoint_id",
+          "idempotency_key",
+          "invariants",
+          "model_ref",
+          "project_id",
+          "request_id",
+          "session_id"
+        ],
+        "required_field_present": true,
+        "success": true
+      }
+    ],
+    "probe_attempts": [
+      {
+        "attempt": "initial",
+        "cause": "System Python import failed with ModuleNotFoundError: mcp before stdio session creation; no daemon or COMSOL call was made.",
+        "status": "NOT_STARTED_RUNTIME",
+        "temporary_directory": "private temporary directory removed"
+      },
+      {
+        "attempt": "retry",
+        "python": "verified project Python 3.12 venv",
+        "status": "PASS",
+        "stdio_transcript_rows": 4
+      }
+    ],
+    "schema_assertion": "transaction.recover exposes authorization_ref and transaction.trial exposes checkpoint_id in their input_schema properties.",
+    "transport": "production MCP stdio via operation_describe"
+  },
+  "schema_version": "g2.offline_w09_boundary_query_cleanup.v1",
+  "scope": {
+    "W11_run": "NOT_RUN",
+    "comsol_server_start_stop": "NOT_ATTEMPTED",
+    "live": false,
+    "model_operations": "NOT_RUN",
+    "only_case": "W09_T038_T039",
+    "run_dir": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/offline-w09-boundary-20260920T030059Z",
+    "server_xml_or_os_settings_changed": false,
+    "sha256_manifest": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/offline-w09-boundary-20260920T030059Z/SHA256SUMS.json",
+    "source_snapshot": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/offline-w09-boundary-20260920T030059Z/source_snapshot.json"
+  },
+  "source_hashes": [
+    {
+      "path": "tools/phase3_run_mcp.py",
+      "sha256": "2456205231f35fa05043f7fff80c20766a6159f855a4c6bea076011554474719",
+      "size": 145576
+    },
+    {
+      "path": "tools/java/Phase3Fixture.java",
+      "sha256": "2fa1a3e21de95d7d806968d99fd45da14e6e12a45f19c76b442c66b87a653306",
+      "size": 3240
+    },
+    {
+      "path": "tools/java/Phase3NoWrapper.java",
+      "sha256": "e1016223dbd696cf435189dadb0e6d55ccc111026fd290e472a3591cc7062bb9",
+      "size": 1740
+    },
+    {
+      "path": "tools/java/Phase3Readback.java",
+      "sha256": "c501c911a1427a923ba66b117420d64a7f6156da98393a1db1317edda474f2fd",
+      "size": 1334
+    },
+    {
+      "path": "tools/java/Phase3PartialFailure.java",
+      "sha256": "18191f31b91df048bb8ff1f1df090fe41f98635363fe83d44e8095c69bbfdd96",
+      "size": 757
+    },
+    {
+      "path": "tools/java/Phase3SyntaxFailure.java",
+      "sha256": "97478991f58f96971c03482651c1b6fc6ab66dc290b2e15ca9273343e1e29f19",
+      "size": 345
+    }
+  ]
+}

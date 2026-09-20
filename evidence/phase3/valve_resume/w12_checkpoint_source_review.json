@@ -1,0 +1,16 @@
+{
+  "recorded_at": "2026-09-20T02:34:51.967448+00:00",
+  "status": "SOURCE_REVIEW_PASS_LIVE_PENDING",
+  "source": "comsol_mcp/_managed_backend.py",
+  "source_sha256": "3b745c0d9a58967f205c060ea97642f5027dd08360f1267a3151844199ad7062",
+  "reviewed_invariants": [
+    "Only completed explicit checkpoint.create binds the committed model ref/revision/fingerprint/event counter.",
+    "Internal transaction checkpoints are recovery_only.",
+    "Trial validates binding and file hash before copy/load.",
+    "Exclusive copy preserves existing destination and verifies reread SHA after fsync.",
+    "Trial does not save main model; full recorded fingerprint/event counter and action property scope remain checked.",
+    "Temporary model/file cleanup failures freeze the main model and return UNKNOWN.",
+    "Nested Java actions use per-step Worker request identity under the unchanged outer operation context."
+  ],
+  "scope": "Source review only; final software and real COMSOL evidence still required."
+}

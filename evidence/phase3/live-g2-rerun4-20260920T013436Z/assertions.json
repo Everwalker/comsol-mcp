@@ -1,0 +1,336 @@
+{
+  "W08_T008_T009_T010": {
+    "acceptance": [
+      "T008",
+      "T009",
+      "T010"
+    ],
+    "assertions": {
+      "malformed_typed_inputs_do_not_write": {
+        "after_revision": 9,
+        "before_revision": 9,
+        "pass": true
+      },
+      "same_key_retry_is_idempotent_and_conflict_is_rejected": {
+        "pass": true
+      },
+      "typed_primitive_kind_coverage": {
+        "pass": true,
+        "statuses": {
+          "boolean": "PASS",
+          "float64": "PASS",
+          "int32": "PASS",
+          "string": "PASS"
+        }
+      },
+      "typed_shape_categories_observed": {
+        "categories": [
+          "scalar",
+          "empty",
+          "singleton",
+          "matrix"
+        ],
+        "pass": true
+      },
+      "wp3_edit_preserves_sibling": {
+        "pass": true
+      }
+    },
+    "case_id": "W08_T008_T009_T010",
+    "finished_at": "2026-09-20T01:34:59.908182Z",
+    "package": "W08",
+    "reason": null,
+    "started_at": "2026-09-20T01:34:54.126306Z",
+    "status": "PASS",
+    "subcases": {
+      "empty": {
+        "property": "geomattr",
+        "shape": [
+          0
+        ],
+        "status": "PASS"
+      },
+      "idempotency": {
+        "status": "PASS"
+      },
+      "matrix": {
+        "property": "genpoints",
+        "shape": [
+          3,
+          3
+        ],
+        "status": "PASS"
+      },
+      "negative_no_write": {
+        "status": "PASS"
+      },
+      "scalar": {
+        "property": "planetype",
+        "shape": [],
+        "status": "PASS"
+      },
+      "singleton": {
+        "property": "degree",
+        "shape": [
+          1
+        ],
+        "status": "PASS"
+      },
+      "typed_kind_boolean": {
+        "property": "reverse",
+        "shape": [],
+        "status": "PASS"
+      },
+      "typed_kind_float64": {
+        "property": "quickx",
+        "shape": [],
+        "status": "PASS"
+      },
+      "typed_kind_int32": {
+        "property": "geomattrlevel",
+        "shape": [
+          0
+        ],
+        "status": "PASS"
+      },
+      "typed_kind_string": {
+        "property": "planetype",
+        "shape": [],
+        "status": "PASS"
+      },
+      "typed_primitive_kind_coverage": {
+        "status": "PASS"
+      },
+      "typed_round_trip": {
+        "status": "PASS"
+      },
+      "wp3_local_edit_sibling_identity": {
+        "after": {
+          "data": [
+            1.125,
+            1.0
+          ],
+          "java_signature": "double[]",
+          "kind": "float64",
+          "shape": [
+            2
+          ]
+        },
+        "before": {
+          "data": [
+            1.0,
+            1.0
+          ],
+          "java_signature": "double[]",
+          "kind": "float64",
+          "shape": [
+            2
+          ]
+        },
+        "sibling": "rectB",
+        "status": "PASS",
+        "target": "size"
+      }
+    }
+  },
+  "W09_T038_T039": {
+    "acceptance": [
+      "T038",
+      "T039"
+    ],
+    "assertions": {},
+    "case_id": "W09_T038_T039",
+    "finished_at": "2026-09-20T01:35:00.263081Z",
+    "package": "W09",
+    "reason": "excluded by --only",
+    "started_at": "2026-09-20T01:34:54.126311Z",
+    "status": "NOT_RUN",
+    "subcases": {}
+  },
+  "W10_T031_T032_T037": {
+    "acceptance": [
+      "T031",
+      "T032",
+      "T037"
+    ],
+    "assertions": {
+      "partial_job_reconciled_without_replay": {
+        "job_id": "f790acc0-06dc-436b-8659-6a8d52e79116",
+        "pass": true,
+        "reconciled_quiescent": true,
+        "reconciliation": [
+          {
+            "request_id": "wrk-a4bca6d7-7d30-4263-8829-714e91a1bd19",
+            "source": "durable_worker_observation",
+            "status": "SUCCEEDED"
+          },
+          {
+            "request_id": "wrk-17068634-e456-47f8-aa7d-1e09b47d4e3f",
+            "source": "durable_worker_observation",
+            "status": "SUCCEEDED"
+          },
+          {
+            "request_id": "ce07d7e4-13be-4d18-839c-1975fa0f3bf1",
+            "source": "durable_worker_observation",
+            "status": "FAILED"
+          },
+          {
+            "request_id": "wrk-db557a8c-67a8-4e4a-ae94-49bd37de6248",
+            "source": "durable_worker_observation",
+            "status": "SUCCEEDED"
+          },
+          {
+            "request_id": "wrk-d28d0492-9e58-49ad-9263-6dac0b4fb36c",
+            "source": "durable_worker_observation",
+            "status": "SUCCEEDED"
+          }
+        ],
+        "replay_performed": false,
+        "status": "UNKNOWN"
+      },
+      "public_api_mutation_and_independent_readback": {
+        "comments_changed": true,
+        "model_tag_ok": true,
+        "parameter_round_trip": true,
+        "pass": true,
+        "readback": {
+          "after_comments": "phase3-public-api-probe-20260920T013454Z",
+          "before_comments": "",
+          "marker": "phase3-public-api-probe-20260920T013454Z",
+          "model_tag": "mcp5",
+          "parameter_count": 3,
+          "parameter_names": [
+            "phase3_api_probe_0",
+            "phase3_api_probe_1",
+            "phase3_api_probe_2"
+          ],
+          "parameter_values": [
+            "1",
+            "2",
+            "3"
+          ]
+        }
+      },
+      "source_sha256": {
+        "tools/java/Phase3Fixture.java": "2fa1a3e21de95d7d806968d99fd45da14e6e12a45f19c76b442c66b87a653306",
+        "tools/java/Phase3NoWrapper.java": "e1016223dbd696cf435189dadb0e6d55ccc111026fd290e472a3591cc7062bb9",
+        "tools/java/Phase3PartialFailure.java": "18191f31b91df048bb8ff1f1df090fe41f98635363fe83d44e8095c69bbfdd96",
+        "tools/java/Phase3Readback.java": "c501c911a1427a923ba66b117420d64a7f6156da98393a1db1317edda474f2fd",
+        "tools/java/Phase3SyntaxFailure.java": "97478991f58f96971c03482651c1b6fc6ab66dc290b2e15ca9273343e1e29f19"
+      },
+      "syntax_failure_has_line_diagnostic": {
+        "diagnostics": [
+          {
+            "column": 28,
+            "end": 335,
+            "kind": "ERROR",
+            "line": 10,
+            "message": "illegal start of expression",
+            "source": "/Users/everwalker/Desktop/comsol-mcp-project/tools/java/Phase3SyntaxFailure.java",
+            "start": 335
+          }
+        ],
+        "pass": true
+      },
+      "three_reviewed_sources_compile_offline": {
+        "pass": true,
+        "sources": {
+          "tools/java/Phase3Fixture.java": {
+            "compiled": true,
+            "error_code": null,
+            "pass": true,
+            "source_sha256": "2fa1a3e21de95d7d806968d99fd45da14e6e12a45f19c76b442c66b87a653306"
+          },
+          "tools/java/Phase3NoWrapper.java": {
+            "compiled": true,
+            "error_code": null,
+            "pass": true,
+            "source_sha256": "e1016223dbd696cf435189dadb0e6d55ccc111026fd290e472a3591cc7062bb9"
+          },
+          "tools/java/Phase3PartialFailure.java": {
+            "compiled": true,
+            "error_code": null,
+            "pass": true,
+            "source_sha256": "18191f31b91df048bb8ff1f1df090fe41f98635363fe83d44e8095c69bbfdd96"
+          }
+        }
+      },
+      "traceback": "Traceback (most recent call last):\n  File \"/Users/everwalker/Desktop/comsol-mcp-project/tools/phase3_run_mcp.py\", line 2435, in run\n    await callback(*callback_args)\n  File \"/Users/everwalker/Desktop/comsol-mcp-project/tools/phase3_run_mcp.py\", line 1850, in _case_w10\n    case.subcase(\nTypeError: Case.subcase() got multiple values for argument 'status'\n"
+    },
+    "case_id": "W10_T031_T032_T037",
+    "finished_at": "2026-09-20T01:35:00.220657Z",
+    "package": "W10",
+    "reason": "TypeError: Case.subcase() got multiple values for argument 'status'",
+    "started_at": "2026-09-20T01:34:54.126313Z",
+    "status": "FAIL",
+    "subcases": {
+      "compile_readback_source": {
+        "status": "PASS"
+      },
+      "compile_reviewed_source": {
+        "status": "PASS"
+      },
+      "compile_reviewed_sources": {
+        "sources": {
+          "tools/java/Phase3Fixture.java": {
+            "compiled": true,
+            "error_code": null,
+            "pass": true,
+            "source_sha256": "2fa1a3e21de95d7d806968d99fd45da14e6e12a45f19c76b442c66b87a653306"
+          },
+          "tools/java/Phase3NoWrapper.java": {
+            "compiled": true,
+            "error_code": null,
+            "pass": true,
+            "source_sha256": "e1016223dbd696cf435189dadb0e6d55ccc111026fd290e472a3591cc7062bb9"
+          },
+          "tools/java/Phase3PartialFailure.java": {
+            "compiled": true,
+            "error_code": null,
+            "pass": true,
+            "source_sha256": "18191f31b91df048bb8ff1f1df090fe41f98635363fe83d44e8095c69bbfdd96"
+          }
+        },
+        "status": "PASS"
+      },
+      "describe_source_and_effect": {
+        "status": "PASS"
+      },
+      "execute_bound_model_readback": {
+        "status": "PASS"
+      },
+      "syntax_failure_is_compile_only": {
+        "status": "PASS"
+      }
+    }
+  },
+  "W11_T043_T036": {
+    "acceptance": [
+      "T043",
+      "T036"
+    ],
+    "assertions": {},
+    "case_id": "W11_T043_T036",
+    "finished_at": "2026-09-20T01:35:00.263091Z",
+    "package": "W11",
+    "reason": "excluded by --only",
+    "started_at": "2026-09-20T01:34:54.126314Z",
+    "status": "NOT_RUN",
+    "subcases": {}
+  },
+  "W12_T029_T033_T050": {
+    "acceptance": [
+      "T029",
+      "T033",
+      "T050"
+    ],
+    "assertions": {},
+    "case_id": "W12_T029_T033_T050",
+    "finished_at": "2026-09-20T01:35:00.226887Z",
+    "package": "W12",
+    "reason": "bound-model calls stopped after EXECUTION_STATE_UNKNOWN at code.execute_java (EXECUTION_STATE_UNKNOWN); reconcile before retry",
+    "started_at": "2026-09-20T01:34:54.126315Z",
+    "status": "BLOCKED",
+    "subcases": {}
+  }
+}

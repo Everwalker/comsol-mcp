@@ -1,0 +1,328 @@
+{
+  "binding": {
+    "model_ref": {
+      "generation": 1,
+      "model_tag": "mcp4",
+      "schema_version": 1,
+      "server_instance_id": "307d438bc808e23e4de0bd740b7b26018131387b7b5a1799505f3082f78c5705",
+      "session_id": "session-9f95c2e814acd5f99589961a"
+    },
+    "revision": 1,
+    "status": "PASS"
+  },
+  "cases": {
+    "W08_T008_T009_T010": {
+      "acceptance": [
+        "T008",
+        "T009",
+        "T010"
+      ],
+      "assertions": {
+        "malformed_typed_inputs_do_not_write": {
+          "after_revision": 9,
+          "before_revision": 9,
+          "pass": true
+        },
+        "same_key_retry_is_idempotent_and_conflict_is_rejected": {
+          "pass": true
+        },
+        "typed_primitive_kind_coverage": {
+          "pass": true,
+          "statuses": {
+            "boolean": "PASS",
+            "float64": "PASS",
+            "int32": "PASS",
+            "string": "PASS"
+          }
+        },
+        "typed_shape_categories_observed": {
+          "categories": [
+            "scalar",
+            "empty",
+            "singleton",
+            "matrix"
+          ],
+          "pass": true
+        },
+        "wp3_edit_preserves_sibling": {
+          "pass": true
+        }
+      },
+      "case_id": "W08_T008_T009_T010",
+      "finished_at": "2026-09-20T01:12:18.301049Z",
+      "package": "W08",
+      "reason": null,
+      "started_at": "2026-09-20T01:12:12.933306Z",
+      "status": "PASS",
+      "subcases": {
+        "empty": {
+          "property": "geomattr",
+          "shape": [
+            0
+          ],
+          "status": "PASS"
+        },
+        "idempotency": {
+          "status": "PASS"
+        },
+        "matrix": {
+          "property": "genpoints",
+          "shape": [
+            3,
+            3
+          ],
+          "status": "PASS"
+        },
+        "negative_no_write": {
+          "status": "PASS"
+        },
+        "scalar": {
+          "property": "planetype",
+          "shape": [],
+          "status": "PASS"
+        },
+        "singleton": {
+          "property": "degree",
+          "shape": [
+            1
+          ],
+          "status": "PASS"
+        },
+        "typed_kind_boolean": {
+          "property": "reverse",
+          "shape": [],
+          "status": "PASS"
+        },
+        "typed_kind_float64": {
+          "property": "quickx",
+          "shape": [],
+          "status": "PASS"
+        },
+        "typed_kind_int32": {
+          "property": "geomattrlevel",
+          "shape": [
+            0
+          ],
+          "status": "PASS"
+        },
+        "typed_kind_string": {
+          "property": "planetype",
+          "shape": [],
+          "status": "PASS"
+        },
+        "typed_primitive_kind_coverage": {
+          "status": "PASS"
+        },
+        "typed_round_trip": {
+          "status": "PASS"
+        },
+        "wp3_local_edit_sibling_identity": {
+          "after": {
+            "data": [
+              1.125,
+              1.0
+            ],
+            "java_signature": "double[]",
+            "kind": "float64",
+            "shape": [
+              2
+            ]
+          },
+          "before": {
+            "data": [
+              1.0,
+              1.0
+            ],
+            "java_signature": "double[]",
+            "kind": "float64",
+            "shape": [
+              2
+            ]
+          },
+          "sibling": "rectB",
+          "status": "PASS",
+          "target": "size"
+        }
+      }
+    },
+    "W09_T038_T039": {
+      "acceptance": [
+        "T038",
+        "T039"
+      ],
+      "assertions": {},
+      "case_id": "W09_T038_T039",
+      "finished_at": "2026-09-20T01:12:18.829352Z",
+      "package": "W09",
+      "reason": "excluded by --only",
+      "started_at": "2026-09-20T01:12:12.933310Z",
+      "status": "NOT_RUN",
+      "subcases": {}
+    },
+    "W10_T031_T032_T037": {
+      "acceptance": [
+        "T031",
+        "T032",
+        "T037"
+      ],
+      "assertions": {
+        "public_api_mutation_and_independent_readback": {
+          "comments_changed": false,
+          "model_tag_ok": true,
+          "parameter_round_trip": false,
+          "pass": false,
+          "readback": {
+            "entrypoint": "Phase3NoWrapper#run",
+            "executed": true,
+            "model_tag": "mcp4",
+            "readback": {
+              "after_comments": "phase3-public-api-probe-20260920T011212Z",
+              "before_comments": "",
+              "marker": "phase3-public-api-probe-20260920T011212Z",
+              "model_tag": "mcp4",
+              "parameter_count": 3,
+              "parameter_names": [
+                "phase3_api_probe_0",
+                "phase3_api_probe_1",
+                "phase3_api_probe_2"
+              ],
+              "parameter_values": [
+                "1",
+                "2",
+                "3"
+              ]
+            },
+            "source_sha256": "e1016223dbd696cf435189dadb0e6d55ccc111026fd290e472a3591cc7062bb9"
+          }
+        },
+        "source_sha256": {
+          "tools/java/Phase3Fixture.java": "2fa1a3e21de95d7d806968d99fd45da14e6e12a45f19c76b442c66b87a653306",
+          "tools/java/Phase3NoWrapper.java": "e1016223dbd696cf435189dadb0e6d55ccc111026fd290e472a3591cc7062bb9",
+          "tools/java/Phase3PartialFailure.java": "18191f31b91df048bb8ff1f1df090fe41f98635363fe83d44e8095c69bbfdd96",
+          "tools/java/Phase3Readback.java": "c501c911a1427a923ba66b117420d64a7f6156da98393a1db1317edda474f2fd",
+          "tools/java/Phase3SyntaxFailure.java": "97478991f58f96971c03482651c1b6fc6ab66dc290b2e15ca9273343e1e29f19"
+        },
+        "syntax_failure_has_line_diagnostic": {
+          "diagnostics": [
+            {
+              "column": 28,
+              "end": 335,
+              "kind": "ERROR",
+              "line": 10,
+              "message": "illegal start of expression",
+              "source": "/Users/everwalker/Desktop/comsol-mcp-project/tools/java/Phase3SyntaxFailure.java",
+              "start": 335
+            }
+          ],
+          "pass": true
+        },
+        "three_reviewed_sources_compile_offline": {
+          "pass": true,
+          "sources": {
+            "tools/java/Phase3Fixture.java": {
+              "compiled": true,
+              "error_code": null,
+              "pass": true,
+              "source_sha256": "2fa1a3e21de95d7d806968d99fd45da14e6e12a45f19c76b442c66b87a653306"
+            },
+            "tools/java/Phase3NoWrapper.java": {
+              "compiled": true,
+              "error_code": null,
+              "pass": true,
+              "source_sha256": "e1016223dbd696cf435189dadb0e6d55ccc111026fd290e472a3591cc7062bb9"
+            },
+            "tools/java/Phase3PartialFailure.java": {
+              "compiled": true,
+              "error_code": null,
+              "pass": true,
+              "source_sha256": "18191f31b91df048bb8ff1f1df090fe41f98635363fe83d44e8095c69bbfdd96"
+            }
+          }
+        }
+      },
+      "case_id": "W10_T031_T032_T037",
+      "finished_at": "2026-09-20T01:12:18.781637Z",
+      "package": "W10",
+      "reason": null,
+      "started_at": "2026-09-20T01:12:12.933312Z",
+      "status": "FAIL",
+      "subcases": {
+        "compile_readback_source": {
+          "status": "PASS"
+        },
+        "compile_reviewed_source": {
+          "status": "PASS"
+        },
+        "compile_reviewed_sources": {
+          "sources": {
+            "tools/java/Phase3Fixture.java": {
+              "compiled": true,
+              "error_code": null,
+              "pass": true,
+              "source_sha256": "2fa1a3e21de95d7d806968d99fd45da14e6e12a45f19c76b442c66b87a653306"
+            },
+            "tools/java/Phase3NoWrapper.java": {
+              "compiled": true,
+              "error_code": null,
+              "pass": true,
+              "source_sha256": "e1016223dbd696cf435189dadb0e6d55ccc111026fd290e472a3591cc7062bb9"
+            },
+            "tools/java/Phase3PartialFailure.java": {
+              "compiled": true,
+              "error_code": null,
+              "pass": true,
+              "source_sha256": "18191f31b91df048bb8ff1f1df090fe41f98635363fe83d44e8095c69bbfdd96"
+            }
+          },
+          "status": "PASS"
+        },
+        "describe_source_and_effect": {
+          "status": "PASS"
+        },
+        "execute_bound_model_readback": {
+          "reason": "execute returned invalid result",
+          "status": "FAIL"
+        },
+        "partial_execution_checkpoint": {
+          "reason": "partial execution/checkpoint restore did not produce verified state",
+          "status": "BLOCKED"
+        },
+        "syntax_failure_is_compile_only": {
+          "status": "PASS"
+        }
+      }
+    },
+    "W11_T043_T036": {
+      "acceptance": [
+        "T043",
+        "T036"
+      ],
+      "assertions": {},
+      "case_id": "W11_T043_T036",
+      "finished_at": "2026-09-20T01:12:18.829363Z",
+      "package": "W11",
+      "reason": "excluded by --only",
+      "started_at": "2026-09-20T01:12:12.933313Z",
+      "status": "NOT_RUN",
+      "subcases": {}
+    },
+    "W12_T029_T033_T050": {
+      "acceptance": [
+        "T029",
+        "T033",
+        "T050"
+      ],
+      "assertions": {},
+      "case_id": "W12_T029_T033_T050",
+      "finished_at": "2026-09-20T01:12:18.786985Z",
+      "package": "W12",
+      "reason": "bound-model calls stopped after EXECUTION_STATE_UNKNOWN at code.execute_java (EXECUTION_STATE_UNKNOWN); reconcile before retry",
+      "started_at": "2026-09-20T01:12:12.933314Z",
+      "status": "BLOCKED",
+      "subcases": {}
+    }
+  },
+  "live": true,
+  "scope": "Mac production MCP stdio acceptance driver",
+  "status": "FAIL"
+}

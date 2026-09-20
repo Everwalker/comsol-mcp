@@ -112,8 +112,16 @@ def property_get(worker: Any, model_tag: str, path: Mapping[str, Any], names: li
     if not isinstance(names, list) or not names or not all(isinstance(name, str) and name for name in names):
         raise ExecutionContractError("INVALID_REQUEST", "names must be a non-empty array of strings")
     node = resolve_node_path(_model(worker, model_tag), path)
-    schema_rows = property_schema_from_engine(node).get("properties", [])
-    schemas = {str(row.get("name")): row for row in schema_rows}
+    # A full ``properties()`` enumeration is one remote Worker round trip per
+    # metadata field for every property.  ``property_get`` is often called
+    # once per candidate property, so enumerating the complete table here can
+    # exhaust the local TCP ephemeral-port pool before the actual getter is
+    # reached.  Query only the requested properties, with one schema request
+    # per distinct name, while preserving duplicate names in the response.
+    schemas = {
+        name: property_schema_from_engine(node, name)
+        for name in dict.fromkeys(names)
+    }
     values = []
     for name in names:
         row = schemas.get(name)
@@ -132,8 +140,15 @@ def property_get(worker: Any, model_tag: str, path: Mapping[str, Any], names: li
 
 
 def _schemas_for(node: Any, properties: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
-    rows = property_schema_from_engine(node).get("properties", [])
-    by_name = {row.get("name"): row for row in rows}
+    # As in ``property_get``, keep the metadata query bounded by the caller's
+    # requested names.  This also ensures a multi-property setter does not
+    # perform an unrelated whole-node enumeration before validating input.
+    by_name = {
+        name: property_schema_from_engine(node, name)
+        for name in dict.fromkeys(
+            item.get("name") for item in properties if isinstance(item, Mapping) and isinstance(item.get("name"), str)
+        )
+    }
     out: dict[str, dict[str, Any]] = {}
     for item in properties:
         row = by_name.get(item["name"], {})

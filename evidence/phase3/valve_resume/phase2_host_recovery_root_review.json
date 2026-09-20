@@ -1,0 +1,34 @@
+{
+  "recorded_at": "2026-09-20T03:12:04.406260+00:00",
+  "status": "PASS",
+  "run": "evidence/phase3/phase2-host-disconnect-refined-live-20260920T030543Z",
+  "artifact_hash_check": "PASS",
+  "assertions": {
+    "production_fixture_load": true,
+    "solve_job_created": true,
+    "real_solve_running_at_disconnect": true,
+    "worker_request_submitted_before_disconnect": true,
+    "control_plane_sample_count": true,
+    "control_plane_p95_under_one_second": true,
+    "inspect_job_created": true,
+    "inspect_queued_behind_solver": true,
+    "inspect_has_no_java_submission_while_solver_pending": true,
+    "execution_deadline_warned_while_engine_running": true,
+    "execution_deadline_never_cancelled": true,
+    "no_progress_warning_recorded_while_engine_running": true,
+    "fresh_host_reuses_original_job": true,
+    "fresh_host_queries_original_job": true,
+    "job_operation_id_preserved": true,
+    "single_durable_operation": true,
+    "original_result_success": true,
+    "inspect_runs_only_after_solver_finished": true
+  },
+  "control_plane_p95_s": {
+    "health_s": 0.002390375011600554,
+    "status_s": 0.0027314999606460333,
+    "log_s": 0.003543583967257291
+  },
+  "original_job_id": "14ff16d5-46ff-41ab-8ed1-e5bfba2b3763",
+  "samples": 20,
+  "scope": "Observed actual pending solver call; submitting host disconnected; fresh host reused original job/idempotency; exactly one durable operation and original terminal success."
+}

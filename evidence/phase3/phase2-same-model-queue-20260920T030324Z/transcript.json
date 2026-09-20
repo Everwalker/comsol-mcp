@@ -1,0 +1,634 @@
+[
+  {
+    "host": "same-model-queue",
+    "operation": "server_connect",
+    "arguments": {
+      "host": "127.0.0.1",
+      "port": 56389,
+      "execution": {
+        "idempotency_key": "20260920T030345Z-followup-queue-connect",
+        "request_id": "20260920T030345Z-followup-queue-connect"
+      }
+    },
+    "elapsed_s": 1.2930385840008967,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "connected": true,
+        "server_ownership": "shared",
+        "endpoint": "127.0.0.1:56389",
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "server_instance_id": "7d3775c1e0dd1760afb55ed3839d3fb24bf7a68ac3cdf824d5d62b211861d9ff",
+        "external_change_detection": {
+          "coverage": "parameters+shallow_tree_identity",
+          "status": "SCOPED_EVIDENCE_ONLY",
+          "event_notifications": "UNVERIFIED",
+          "full_model_property_coverage": "UNVERIFIED",
+          "cas_guarantee": "NONE",
+          "evidence_source": "evidence/phase2/followup/20260918T142300Z-external-api",
+          "evidence_environment": "macOS arm64; COMSOL 6.4.0.293",
+          "other_platforms_or_versions": "UNVERIFIED"
+        },
+        "trusted_code": {
+          "enabled": false,
+          "os_sandbox": false,
+          "config": "COMSOL_MCP_TRUSTED_CODE"
+        },
+        "worker": {
+          "host": "127.0.0.1",
+          "port": 58678,
+          "pid": 90623,
+          "generation": 2,
+          "instance_id": "0cb737ac-e747-4132-b242-ddc135315cc0",
+          "connected": true,
+          "server": "127.0.0.1:56389"
+        }
+      },
+      "execution": {
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "model_ref": null,
+        "revision": null,
+        "request_id": "20260920T030345Z-followup-queue-connect",
+        "operation_id": "7e8deafe-c190-4c83-9345-696f9289784e",
+        "request_hash": "20434ae4dd627770beb405fd0d041b124684c76ca1ecae27139b6567ddf81d2c",
+        "idempotency_key": "20260920T030345Z-followup-queue-connect",
+        "job_id": "a1dc9a00-e7fb-4b58-bac9-1c2e1d3721ca"
+      }
+    }
+  },
+  {
+    "host": "same-model-queue",
+    "operation": "model_load",
+    "arguments": {
+      "path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/after.mph",
+      "execution": {
+        "idempotency_key": "20260920T030345Z-followup-queue-load",
+        "request_id": "20260920T030345Z-followup-queue-load"
+      }
+    },
+    "elapsed_s": 0.09552791598252952,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "label": "after.mph",
+        "file_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/after.mph",
+        "requested_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/after.mph",
+        "load_mode": "adopted-by-path",
+        "model_tag": "mcp_d1f828fed5fb"
+      },
+      "error": "",
+      "execution": {
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "7d3775c1e0dd1760afb55ed3839d3fb24bf7a68ac3cdf824d5d62b211861d9ff",
+          "model_tag": "mcp_d1f828fed5fb",
+          "generation": 1
+        },
+        "revision": 0,
+        "dirty": false,
+        "server_ownership": "shared",
+        "model_ownership": "user_owned",
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "request_id": "20260920T030345Z-followup-queue-load",
+        "operation_id": "6a06804f-16cf-4000-954b-b3a294c30919",
+        "request_hash": "e7fba846f70700efd6c1e8e24cb06c5156acf49109cac4cbe61ae434a20d15bd",
+        "idempotency_key": "20260920T030345Z-followup-queue-load",
+        "job_id": "761e87c0-2b9d-4d24-9839-d11c357a6e24"
+      }
+    }
+  },
+  {
+    "host": "same-model-queue",
+    "operation": "run_study",
+    "arguments": {
+      "study_tag": "std1",
+      "execution": {
+        "idempotency_key": "20260920T030345Z-followup-same-solve",
+        "request_id": "followup-same-solve",
+        "rpc_timeout_s": 0,
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "7d3775c1e0dd1760afb55ed3839d3fb24bf7a68ac3cdf824d5d62b211861d9ff",
+          "model_tag": "mcp_d1f828fed5fb",
+          "generation": 1
+        },
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "expected_revision": 0
+      }
+    },
+    "elapsed_s": 0.002841291017830372,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "job_id": "a7e772a9-f7a8-4cb5-bddc-8aaf0799947e",
+        "status": "QUEUED",
+        "rpc_wait_expired": true
+      },
+      "execution": {
+        "request_id": "followup-same-solve",
+        "operation_id": "ca2b4f75-fc1d-4481-8436-e39dc13c03cd",
+        "request_hash": "898d8ea78613c9e504e4f284a2c2418577fc854c5e8f6ed15d0ff3ca83a7db25",
+        "idempotency_key": "20260920T030345Z-followup-same-solve",
+        "job_id": "a7e772a9-f7a8-4cb5-bddc-8aaf0799947e"
+      }
+    }
+  },
+  {
+    "host": "same-model-queue",
+    "operation": "job_status",
+    "arguments": {
+      "job_id": "a7e772a9-f7a8-4cb5-bddc-8aaf0799947e"
+    },
+    "elapsed_s": 0.003555834002327174,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "job_id": "a7e772a9-f7a8-4cb5-bddc-8aaf0799947e",
+        "operation_id": "ca2b4f75-fc1d-4481-8436-e39dc13c03cd",
+        "status": "RUNNING",
+        "metadata": {
+          "arguments": {
+            "study_tag": "std1"
+          },
+          "engine_started_at": 1789873427.3317661,
+          "execution": {
+            "expected_revision": 0,
+            "idempotency_key": "20260920T030345Z-followup-same-solve",
+            "model_ref": {
+              "generation": 1,
+              "model_tag": "mcp_d1f828fed5fb",
+              "schema_version": 1,
+              "server_instance_id": "7d3775c1e0dd1760afb55ed3839d3fb24bf7a68ac3cdf824d5d62b211861d9ff",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "request_id": "followup-same-solve",
+            "rpc_timeout_s": 0,
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation": "run_study",
+          "queue_wait_s": 2.0208011846989393e-05
+        },
+        "created_at": "2026-09-20 03:03:47",
+        "started_at": "2026-09-20 03:03:47",
+        "finished_at": null,
+        "effective_timeouts": {
+          "execution_timeout_s": null,
+          "no_progress_warning_s": null,
+          "queue_timeout_s": null,
+          "rpc_timeout_s": 0
+        },
+        "operation": {
+          "operation_id": "ca2b4f75-fc1d-4481-8436-e39dc13c03cd",
+          "request_id": "followup-same-solve",
+          "idempotency_key": "20260920T030345Z-followup-same-solve",
+          "request_hash": "898d8ea78613c9e504e4f284a2c2418577fc854c5e8f6ed15d0ff3ca83a7db25",
+          "operation": "run_study",
+          "status": "RUNNING",
+          "result": null,
+          "metadata": {
+            "arguments": {
+              "study_tag": "std1"
+            },
+            "execution": {
+              "expected_revision": 0,
+              "idempotency_key": "20260920T030345Z-followup-same-solve",
+              "model_ref": {
+                "generation": 1,
+                "model_tag": "mcp_d1f828fed5fb",
+                "schema_version": 1,
+                "server_instance_id": "7d3775c1e0dd1760afb55ed3839d3fb24bf7a68ac3cdf824d5d62b211861d9ff",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "request_id": "followup-same-solve",
+              "rpc_timeout_s": 0,
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "operation": "run_study"
+          },
+          "created_at": "2026-09-20 03:03:47",
+          "started_at": "2026-09-20 03:03:47",
+          "finished_at": null,
+          "effective_timeouts": {
+            "execution_timeout_s": null,
+            "no_progress_warning_s": null,
+            "queue_timeout_s": null,
+            "rpc_timeout_s": 0
+          }
+        },
+        "result": null
+      }
+    }
+  },
+  {
+    "host": "same-model-queue",
+    "operation": "set_parameters",
+    "arguments": {
+      "parameters_json": "[{\"name\":\"phase2_same_model_queued\",\"expression\":\"1\"}]",
+      "execution": {
+        "idempotency_key": "20260920T030345Z-followup-same-queued",
+        "request_id": "followup-same-queued",
+        "queue_timeout_s": 0,
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "server_instance_id": "7d3775c1e0dd1760afb55ed3839d3fb24bf7a68ac3cdf824d5d62b211861d9ff",
+          "model_tag": "mcp_d1f828fed5fb",
+          "generation": 1
+        },
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "expected_revision": 0
+      }
+    },
+    "elapsed_s": 0.2329123750096187,
+    "outer_isError": true,
+    "payload": {
+      "success": false,
+      "data": {
+        "status": "NOT_EXECUTED"
+      },
+      "error": {
+        "code": "QUEUE_TIMEOUT",
+        "message": "request expired before engine dispatch",
+        "safe_retry": true
+      },
+      "execution": {
+        "request_id": "followup-same-queued",
+        "operation_id": "c8851fcd-b49f-4064-b34d-ce27be78ddee",
+        "request_hash": "8de611e873bb7fe950843daa3e4ae91a7f620cb8621d57830905e9a5c20ef593",
+        "idempotency_key": "20260920T030345Z-followup-same-queued",
+        "job_id": "5727c86e-8494-4279-8b7c-3c52970f46db"
+      }
+    }
+  },
+  {
+    "host": "same-model-queue",
+    "operation": "job_status",
+    "arguments": {
+      "job_id": "5727c86e-8494-4279-8b7c-3c52970f46db"
+    },
+    "elapsed_s": 0.002609291987027973,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "job_id": "5727c86e-8494-4279-8b7c-3c52970f46db",
+        "operation_id": "c8851fcd-b49f-4064-b34d-ce27be78ddee",
+        "status": "EXPIRED",
+        "metadata": {
+          "arguments": {
+            "parameters_json": "[{\"name\":\"phase2_same_model_queued\",\"expression\":\"1\"}]"
+          },
+          "execution": {
+            "expected_revision": 0,
+            "idempotency_key": "20260920T030345Z-followup-same-queued",
+            "model_ref": {
+              "generation": 1,
+              "model_tag": "mcp_d1f828fed5fb",
+              "schema_version": 1,
+              "server_instance_id": "7d3775c1e0dd1760afb55ed3839d3fb24bf7a68ac3cdf824d5d62b211861d9ff",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "queue_timeout_s": 0,
+            "request_id": "followup-same-queued",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "finished_observed_at": 1789873427.567894,
+          "operation": "set_parameters"
+        },
+        "created_at": "2026-09-20 03:03:47",
+        "started_at": null,
+        "finished_at": "2026-09-20 03:03:47",
+        "effective_timeouts": {
+          "execution_timeout_s": null,
+          "no_progress_warning_s": null,
+          "queue_timeout_s": 0,
+          "rpc_timeout_s": 30.0
+        },
+        "operation": {
+          "operation_id": "c8851fcd-b49f-4064-b34d-ce27be78ddee",
+          "request_id": "followup-same-queued",
+          "idempotency_key": "20260920T030345Z-followup-same-queued",
+          "request_hash": "8de611e873bb7fe950843daa3e4ae91a7f620cb8621d57830905e9a5c20ef593",
+          "operation": "set_parameters",
+          "status": "EXPIRED",
+          "result": {
+            "data": {
+              "status": "NOT_EXECUTED"
+            },
+            "error": {
+              "code": "QUEUE_TIMEOUT",
+              "message": "request expired before engine dispatch",
+              "safe_retry": true
+            },
+            "execution": {
+              "idempotency_key": "20260920T030345Z-followup-same-queued",
+              "job_id": "5727c86e-8494-4279-8b7c-3c52970f46db",
+              "operation_id": "c8851fcd-b49f-4064-b34d-ce27be78ddee",
+              "request_hash": "8de611e873bb7fe950843daa3e4ae91a7f620cb8621d57830905e9a5c20ef593",
+              "request_id": "followup-same-queued"
+            },
+            "success": false
+          },
+          "metadata": {
+            "arguments": {
+              "parameters_json": "[{\"name\":\"phase2_same_model_queued\",\"expression\":\"1\"}]"
+            },
+            "execution": {
+              "expected_revision": 0,
+              "idempotency_key": "20260920T030345Z-followup-same-queued",
+              "model_ref": {
+                "generation": 1,
+                "model_tag": "mcp_d1f828fed5fb",
+                "schema_version": 1,
+                "server_instance_id": "7d3775c1e0dd1760afb55ed3839d3fb24bf7a68ac3cdf824d5d62b211861d9ff",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "queue_timeout_s": 0,
+              "request_id": "followup-same-queued",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "operation": "set_parameters"
+          },
+          "created_at": "2026-09-20 03:03:47",
+          "started_at": null,
+          "finished_at": "2026-09-20 03:03:47",
+          "effective_timeouts": {
+            "execution_timeout_s": null,
+            "no_progress_warning_s": null,
+            "queue_timeout_s": 0,
+            "rpc_timeout_s": 30.0
+          }
+        },
+        "result": {
+          "data": {
+            "status": "NOT_EXECUTED"
+          },
+          "error": {
+            "code": "QUEUE_TIMEOUT",
+            "message": "request expired before engine dispatch",
+            "safe_retry": true
+          },
+          "execution": {
+            "idempotency_key": "20260920T030345Z-followup-same-queued",
+            "job_id": "5727c86e-8494-4279-8b7c-3c52970f46db",
+            "operation_id": "c8851fcd-b49f-4064-b34d-ce27be78ddee",
+            "request_hash": "8de611e873bb7fe950843daa3e4ae91a7f620cb8621d57830905e9a5c20ef593",
+            "request_id": "followup-same-queued"
+          },
+          "success": false
+        }
+      }
+    }
+  },
+  {
+    "host": "same-model-queue",
+    "operation": "job_status",
+    "arguments": {
+      "job_id": "a7e772a9-f7a8-4cb5-bddc-8aaf0799947e"
+    },
+    "elapsed_s": 0.002505208016373217,
+    "outer_isError": false,
+    "payload": {
+      "success": true,
+      "data": {
+        "job_id": "a7e772a9-f7a8-4cb5-bddc-8aaf0799947e",
+        "operation_id": "ca2b4f75-fc1d-4481-8436-e39dc13c03cd",
+        "status": "SUCCEEDED",
+        "metadata": {
+          "arguments": {
+            "study_tag": "std1"
+          },
+          "engine_started_at": 1789873427.3317661,
+          "execution": {
+            "expected_revision": 0,
+            "idempotency_key": "20260920T030345Z-followup-same-solve",
+            "model_ref": {
+              "generation": 1,
+              "model_tag": "mcp_d1f828fed5fb",
+              "schema_version": 1,
+              "server_instance_id": "7d3775c1e0dd1760afb55ed3839d3fb24bf7a68ac3cdf824d5d62b211861d9ff",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "request_id": "followup-same-solve",
+            "rpc_timeout_s": 0,
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "finished_observed_at": 1789873427.5677161,
+          "operation": "run_study",
+          "queue_wait_s": 2.0208011846989393e-05
+        },
+        "created_at": "2026-09-20 03:03:47",
+        "started_at": "2026-09-20 03:03:47",
+        "finished_at": "2026-09-20 03:03:47",
+        "effective_timeouts": {
+          "execution_timeout_s": null,
+          "no_progress_warning_s": null,
+          "queue_timeout_s": null,
+          "rpc_timeout_s": 0
+        },
+        "operation": {
+          "operation_id": "ca2b4f75-fc1d-4481-8436-e39dc13c03cd",
+          "request_id": "followup-same-solve",
+          "idempotency_key": "20260920T030345Z-followup-same-solve",
+          "request_hash": "898d8ea78613c9e504e4f284a2c2418577fc854c5e8f6ed15d0ff3ca83a7db25",
+          "operation": "run_study",
+          "status": "SUCCEEDED",
+          "result": {
+            "data": {
+              "datetime": "2026-09-20 11:03:47",
+              "label": "after.mph",
+              "log_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T030324Z/phase2-same-model-queue/mcp-home/logs/server.log",
+              "operations_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T030324Z/phase2-same-model-queue/mcp-home/logs/operations.jsonl",
+              "server": {
+                "attached_to_existing_server": true,
+                "comsol_root": "/Applications/COMSOL64/Multiphysics",
+                "current_model_label": "after.mph",
+                "current_model_origin": "bound-request",
+                "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/after.mph",
+                "datetime": "2026-09-20 11:03:47",
+                "desktop_client_role": "visual-client",
+                "desktop_should_connect": {
+                  "host": "127.0.0.1",
+                  "port": 56389
+                },
+                "last_command": "run_study",
+                "last_error": "",
+                "logs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T030324Z/phase2-same-model-queue/mcp-home/logs",
+                "mcp_home": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T030324Z/phase2-same-model-queue/mcp-home",
+                "outputs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T030324Z/phase2-same-model-queue/mcp-home/outputs",
+                "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+                "server_endpoint": "127.0.0.1:56389",
+                "server_host": "127.0.0.1",
+                "server_port": 56389,
+                "server_running": false,
+                "server_started_by_mcp": false,
+                "status": "ready",
+                "timestamp": 1789873427.561048,
+                "version": "0.1.9",
+                "workflow": {
+                  "current_main_model_path": "",
+                  "guard_level": "strict",
+                  "main_model_label": "",
+                  "main_model_path": "",
+                  "main_model_tag": "",
+                  "mcp_client_lifecycle": "persistent-required",
+                  "mode": "manual",
+                  "model_dimension": 0,
+                  "notes": "",
+                  "one_shot_client_allowed": false,
+                  "snapshot_dir": "",
+                  "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+                  "snapshot_prefix": "",
+                  "snapshot_save_mode": "copy",
+                  "updated_at": "2026-09-20 11:03:45",
+                  "visible_main_locked": false,
+                  "workflow_stage": "awaiting_manual_server"
+                }
+              },
+              "study_tag": "std1",
+              "timestamp": 1789873427.5610309,
+              "tool": "run_study"
+            },
+            "error": "",
+            "execution": {
+              "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+              "dirty": false,
+              "idempotency_key": "20260920T030345Z-followup-same-solve",
+              "job_id": "a7e772a9-f7a8-4cb5-bddc-8aaf0799947e",
+              "model_ownership": "user_owned",
+              "model_ref": {
+                "generation": 1,
+                "model_tag": "mcp_d1f828fed5fb",
+                "schema_version": 1,
+                "server_instance_id": "7d3775c1e0dd1760afb55ed3839d3fb24bf7a68ac3cdf824d5d62b211861d9ff",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "operation_id": "ca2b4f75-fc1d-4481-8436-e39dc13c03cd",
+              "request_hash": "898d8ea78613c9e504e4f284a2c2418577fc854c5e8f6ed15d0ff3ca83a7db25",
+              "request_id": "followup-same-solve",
+              "revision": 1,
+              "server_ownership": "shared",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "success": true
+          },
+          "metadata": {
+            "arguments": {
+              "study_tag": "std1"
+            },
+            "execution": {
+              "expected_revision": 0,
+              "idempotency_key": "20260920T030345Z-followup-same-solve",
+              "model_ref": {
+                "generation": 1,
+                "model_tag": "mcp_d1f828fed5fb",
+                "schema_version": 1,
+                "server_instance_id": "7d3775c1e0dd1760afb55ed3839d3fb24bf7a68ac3cdf824d5d62b211861d9ff",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "request_id": "followup-same-solve",
+              "rpc_timeout_s": 0,
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "operation": "run_study"
+          },
+          "created_at": "2026-09-20 03:03:47",
+          "started_at": "2026-09-20 03:03:47",
+          "finished_at": "2026-09-20 03:03:47",
+          "effective_timeouts": {
+            "execution_timeout_s": null,
+            "no_progress_warning_s": null,
+            "queue_timeout_s": null,
+            "rpc_timeout_s": 0
+          }
+        },
+        "result": {
+          "data": {
+            "datetime": "2026-09-20 11:03:47",
+            "label": "after.mph",
+            "log_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T030324Z/phase2-same-model-queue/mcp-home/logs/server.log",
+            "operations_path": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T030324Z/phase2-same-model-queue/mcp-home/logs/operations.jsonl",
+            "server": {
+              "attached_to_existing_server": true,
+              "comsol_root": "/Applications/COMSOL64/Multiphysics",
+              "current_model_label": "after.mph",
+              "current_model_origin": "bound-request",
+              "current_model_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/after.mph",
+              "datetime": "2026-09-20 11:03:47",
+              "desktop_client_role": "visual-client",
+              "desktop_should_connect": {
+                "host": "127.0.0.1",
+                "port": 56389
+              },
+              "last_command": "run_study",
+              "last_error": "",
+              "logs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T030324Z/phase2-same-model-queue/mcp-home/logs",
+              "mcp_home": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T030324Z/phase2-same-model-queue/mcp-home",
+              "outputs_dir": "/Users/everwalker/Desktop/comsol-mcp-project/.phase1-private/g2-acceptance/20260920T030324Z/phase2-same-model-queue/mcp-home/outputs",
+              "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+              "server_endpoint": "127.0.0.1:56389",
+              "server_host": "127.0.0.1",
+              "server_port": 56389,
+              "server_running": false,
+              "server_started_by_mcp": false,
+              "status": "ready",
+              "timestamp": 1789873427.561048,
+              "version": "0.1.9",
+              "workflow": {
+                "current_main_model_path": "",
+                "guard_level": "strict",
+                "main_model_label": "",
+                "main_model_path": "",
+                "main_model_tag": "",
+                "mcp_client_lifecycle": "persistent-required",
+                "mode": "manual",
+                "model_dimension": 0,
+                "notes": "",
+                "one_shot_client_allowed": false,
+                "snapshot_dir": "",
+                "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+                "snapshot_prefix": "",
+                "snapshot_save_mode": "copy",
+                "updated_at": "2026-09-20 11:03:45",
+                "visible_main_locked": false,
+                "workflow_stage": "awaiting_manual_server"
+              }
+            },
+            "study_tag": "std1",
+            "timestamp": 1789873427.5610309,
+            "tool": "run_study"
+          },
+          "error": "",
+          "execution": {
+            "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+            "dirty": false,
+            "idempotency_key": "20260920T030345Z-followup-same-solve",
+            "job_id": "a7e772a9-f7a8-4cb5-bddc-8aaf0799947e",
+            "model_ownership": "user_owned",
+            "model_ref": {
+              "generation": 1,
+              "model_tag": "mcp_d1f828fed5fb",
+              "schema_version": 1,
+              "server_instance_id": "7d3775c1e0dd1760afb55ed3839d3fb24bf7a68ac3cdf824d5d62b211861d9ff",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "operation_id": "ca2b4f75-fc1d-4481-8436-e39dc13c03cd",
+            "request_hash": "898d8ea78613c9e504e4f284a2c2418577fc854c5e8f6ed15d0ff3ca83a7db25",
+            "request_id": "followup-same-solve",
+            "revision": 1,
+            "server_ownership": "shared",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "success": true
+        }
+      }
+    }
+  }
+]

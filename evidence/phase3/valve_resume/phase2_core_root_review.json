@@ -1,0 +1,33 @@
+{
+  "recorded_at": "2026-09-20T03:00:54.661471+00:00",
+  "run": "evidence/phase3/phase2-run-20260920T025841Z",
+  "status": "PASS",
+  "scope": "Phase 2 live connect/load/write/solve/metric/save/fresh-MCP-reopen; T012 and T027 are NOT_RUN.",
+  "verified_assertions": {
+    "connect_load": true,
+    "feature_same_tag_type_idempotent": true,
+    "feature_same_tag_type_conflict": true,
+    "idempotency_same_body": true,
+    "idempotency_different_body": true,
+    "stale_revision": true,
+    "required_metric_outer_error": true,
+    "queue_after_solve": true,
+    "real_metric": true,
+    "saved": true,
+    "fresh_mcp_host_reopen": true
+  },
+  "queue_timeout_zero_pass": true,
+  "fresh_host": {
+    "mcp_process": "new",
+    "java_worker": "not asserted fresh",
+    "saved_path": "/Users/everwalker/Desktop/comsol-mcp-project/evidence/phase3/phase2-run-20260920T025841Z/after.mph"
+  },
+  "cleanup": "cleanup.json",
+  "source_artifacts": {
+    "after.mph": "fdcb2f47ec6f7151feaf61f238c6d39259353f0c163481584598ce675f90beef",
+    "second.mph": "2e8c518695c70fd22560b90595aa76586bd7b0a3c052f9f36522158c4be155d4",
+    "result.json": "21610a7e40af9f065ec4127b17976e4b8af8dc16b337ccc97abb714dcff20323",
+    "assertions.json": "4fc8036033e66cee275b1beef6fa945cbf63c092afc455a3e25e72ee626c9d64",
+    "cleanup.json": "3771b5aac23909ee58bd6f122e8312f69d99f79caa595cf002c02d9187344429"
+  }
+}

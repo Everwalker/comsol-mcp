@@ -1,0 +1,1008 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-09-20T02:38:03.731412+00:00",
+  "goal": "docs/comsol_mcp_design_v1/NEXT_GOAL_MAC_G2.md",
+  "scope": "Mac W08-W12 only; resumed Valve validation; live acceptance still blocked; no Windows integration or W13",
+  "status": "BLOCKED",
+  "mac_stage_passed": false,
+  "full_g2_certified": false,
+  "source": {
+    "manifest": "evidence/phase3/final_source_snapshot.json",
+    "dirty_snapshot_sha256": "715f2656b9831d486ee1a00f6874a588c9291bc3423416707fc3484181a4100b",
+    "baseline_head": "28605a6896668a64775ac6c1192ed50fef94b47f",
+    "baseline_tree": "0172bc996879ff92aaeea24b7b666e5b2d7c9be0",
+    "publication_manifest": "evidence/phase3/publication_source_snapshot.json"
+  },
+  "environment": {
+    "os": "macOS 27.0",
+    "architecture": "arm64",
+    "comsol": "6.4.0.293",
+    "jdk": "external Corretto11",
+    "python": "3.12.13",
+    "live_comsol_model_acceptance_performed": false
+  },
+  "software": {
+    "status": "PASS",
+    "passed": 332,
+    "skipped": 1,
+    "duration_seconds": 6.36,
+    "log": "evidence/phase3/review/final_publication_pytest.txt",
+    "scope": "Non-COMSOL regression including affected Phase2 software behavior; not a rerun of historical live engine cases"
+  },
+  "production_stdio": {
+    "result": "evidence/phase3/acceptance-final-03/result.json",
+    "transcript": "evidence/phase3/acceptance-final-03/transcript.json",
+    "environment": "evidence/phase3/acceptance-final-03/environment.json",
+    "scope": "Real stdio/control/Worker for applicable operations; limited-host capabilities simulated over real stdio"
+  },
+  "cases": {
+    "W08_T008_T009_T010": {
+      "acceptance": [
+        "T008",
+        "T009",
+        "T010"
+      ],
+      "assertions": {
+        "malformed_typed_inputs_do_not_write": {
+          "after_revision": 9,
+          "before_revision": 9,
+          "pass": true
+        },
+        "same_key_retry_is_idempotent_and_conflict_is_rejected": {
+          "pass": true
+        },
+        "typed_primitive_kind_coverage": {
+          "pass": true,
+          "statuses": {
+            "boolean": "PASS",
+            "float64": "PASS",
+            "int32": "PASS",
+            "string": "PASS"
+          }
+        },
+        "typed_shape_categories_observed": {
+          "categories": [
+            "scalar",
+            "empty",
+            "singleton",
+            "matrix"
+          ],
+          "pass": true
+        },
+        "wp3_edit_preserves_sibling": {
+          "pass": true
+        }
+      },
+      "case_id": "W08_T008_T009_T010",
+      "finished_at": "2026-09-20T01:36:59.445868Z",
+      "package": "W08",
+      "reason": null,
+      "started_at": "2026-09-20T01:36:53.631344Z",
+      "status": "PASS",
+      "subcases": {
+        "empty": {
+          "property": "geomattr",
+          "shape": [
+            0
+          ],
+          "status": "PASS"
+        },
+        "idempotency": {
+          "status": "PASS"
+        },
+        "matrix": {
+          "property": "genpoints",
+          "shape": [
+            3,
+            3
+          ],
+          "status": "PASS"
+        },
+        "negative_no_write": {
+          "status": "PASS"
+        },
+        "scalar": {
+          "property": "planetype",
+          "shape": [],
+          "status": "PASS"
+        },
+        "singleton": {
+          "property": "degree",
+          "shape": [
+            1
+          ],
+          "status": "PASS"
+        },
+        "typed_kind_boolean": {
+          "property": "reverse",
+          "shape": [],
+          "status": "PASS"
+        },
+        "typed_kind_float64": {
+          "property": "quickx",
+          "shape": [],
+          "status": "PASS"
+        },
+        "typed_kind_int32": {
+          "property": "geomattrlevel",
+          "shape": [
+            0
+          ],
+          "status": "PASS"
+        },
+        "typed_kind_string": {
+          "property": "planetype",
+          "shape": [],
+          "status": "PASS"
+        },
+        "typed_primitive_kind_coverage": {
+          "status": "PASS"
+        },
+        "typed_round_trip": {
+          "status": "PASS"
+        },
+        "wp3_local_edit_sibling_identity": {
+          "after": {
+            "data": [
+              1.125,
+              1.0
+            ],
+            "java_signature": "double[]",
+            "kind": "float64",
+            "shape": [
+              2
+            ]
+          },
+          "before": {
+            "data": [
+              1.0,
+              1.0
+            ],
+            "java_signature": "double[]",
+            "kind": "float64",
+            "shape": [
+              2
+            ]
+          },
+          "sibling": "rectB",
+          "status": "PASS",
+          "target": "size"
+        }
+      },
+      "evidence_run": "evidence/phase3/live-g2-rerun5-20260920T013629Z"
+    },
+    "W09_T038_T039": {
+      "acceptance": [
+        "T038",
+        "T039"
+      ],
+      "assertions": {
+        "actual_full_domain_expert_tools_list": {
+          "counts": {
+            "domain": 48,
+            "expert": 17,
+            "full": 65
+          },
+          "pass": true,
+          "strict_subsets": {
+            "domain_differs_expert": true,
+            "domain_of_full": true,
+            "expert_of_full": true
+          }
+        },
+        "fallback_strict_error_is_structured": {
+          "error_code": "INVALID_REQUEST",
+          "pass": true
+        },
+        "full_domain_expert_manifests": {
+          "pass": true,
+          "profiles": [
+            "full",
+            "domain",
+            "expert"
+          ]
+        },
+        "published_object_schemas": {
+          "pass": true
+        },
+        "registry_page_results_have_identity": {
+          "first_count": 5,
+          "next_cursor": "5",
+          "pass": true,
+          "second_count": 5
+        },
+        "registry_schema_describe": {
+          "pass": true
+        },
+        "stdio_initialize_and_tools_list": {
+          "pass": true,
+          "tool_count": 65
+        },
+        "structured_content_action_results": {
+          "call_count": 20,
+          "pass": true
+        },
+        "unknown_operation_is_error": {
+          "error_code": "UNSUPPORTED_OPERATION",
+          "pass": true
+        }
+      },
+      "case_id": "W09_T038_T039",
+      "finished_at": "2026-09-20T01:02:28.616528Z",
+      "package": "W09",
+      "reason": null,
+      "started_at": "2026-09-20T01:02:26.151728Z",
+      "status": "PASS",
+      "subcases": {
+        "error_propagation": {
+          "status": "PASS"
+        },
+        "fallback_route": {
+          "status": "PASS"
+        },
+        "hidden_legacy_managed_route": {
+          "profiles": {
+            "domain": {
+              "call": {
+                "error_code": "",
+                "outer_isError": false,
+                "pass": true,
+                "success": true
+              },
+              "describe": {
+                "error_code": null,
+                "operation_id": "configure_single_main_workflow",
+                "pass": true,
+                "route": "legacy managed backend"
+              },
+              "hidden": true,
+              "operation": "configure_single_main_workflow"
+            },
+            "expert": {
+              "call": {
+                "error_code": "",
+                "outer_isError": false,
+                "pass": true,
+                "success": true
+              },
+              "describe": {
+                "error_code": null,
+                "operation_id": "configure_single_main_workflow",
+                "pass": true,
+                "route": "legacy managed backend"
+              },
+              "hidden": true,
+              "operation": "configure_single_main_workflow"
+            },
+            "full": {
+              "call": {
+                "error_code": "",
+                "outer_isError": false,
+                "pass": true,
+                "success": true
+              },
+              "describe": {
+                "error_code": null,
+                "operation_id": "workflow_info",
+                "pass": true,
+                "route": "legacy managed backend"
+              },
+              "hidden": false,
+              "operation": "workflow_info"
+            }
+          },
+          "status": "PASS"
+        },
+        "host_profile_publication": {
+          "counts": {
+            "domain": 48,
+            "expert": 17,
+            "full": 65
+          },
+          "profiles": {
+            "domain": "PASS",
+            "expert": "PASS",
+            "full": "PASS"
+          },
+          "status": "PASS"
+        },
+        "initialize_list_schema": {
+          "status": "PASS",
+          "tool_count": 65
+        },
+        "limited_host_capability_degradation": {
+          "profiles": {
+            "domain": {
+              "capabilities": {
+                "dynamic_tools": false,
+                "image": false,
+                "tasks": false
+              },
+              "dynamic_fallback": "operation_describe/operation_call",
+              "image_fallback": "structuredContent/text",
+              "job_status_missing_task_is_error": true,
+              "pass": true,
+              "tasks_fallback": "job_status polling",
+              "text_only_operation_call": true
+            },
+            "expert": {
+              "capabilities": {
+                "dynamic_tools": false,
+                "image": false,
+                "tasks": false
+              },
+              "dynamic_fallback": "operation_describe/operation_call",
+              "image_fallback": "structuredContent/text",
+              "job_status_missing_task_is_error": true,
+              "pass": true,
+              "tasks_fallback": "job_status polling",
+              "text_only_operation_call": true
+            },
+            "full": {
+              "capabilities": {
+                "dynamic_tools": false,
+                "image": false,
+                "tasks": false
+              },
+              "dynamic_fallback": "operation_describe/operation_call",
+              "image_fallback": "structuredContent/text",
+              "job_status_missing_task_is_error": true,
+              "pass": true,
+              "tasks_fallback": "job_status polling",
+              "text_only_operation_call": true
+            }
+          },
+          "status": "PASS"
+        },
+        "profile_tool_list_shortening": {
+          "counts": {
+            "domain": 48,
+            "expert": 17,
+            "full": 65
+          },
+          "status": "PASS",
+          "strict_subsets": {
+            "domain_differs_expert": true,
+            "domain_of_full": true,
+            "expert_of_full": true
+          }
+        },
+        "registry_paging": {
+          "next_cursor": "5",
+          "status": "PASS"
+        },
+        "registry_profile_manifests": {
+          "status": "PASS"
+        },
+        "registry_schema": {
+          "status": "PASS"
+        },
+        "structured_content_action_results": {
+          "status": "PASS"
+        }
+      },
+      "evidence_run": "evidence/phase3/offline-review-20260920T010134Z"
+    },
+    "W10_T031_T032_T037": {
+      "acceptance": [
+        "T031",
+        "T032",
+        "T037"
+      ],
+      "assertions": {
+        "partial_current_state_observed_before_restore": {
+          "current_dirty": true,
+          "current_revision": 13,
+          "guard_expression": "1",
+          "parameter_names": [
+            "phase3_api_probe_0",
+            "phase3_api_probe_1",
+            "phase3_api_probe_2",
+            "phase3_code_guard"
+          ],
+          "pass": true
+        },
+        "partial_job_reconciled_without_replay": {
+          "job_id": "016c75a0-e84b-4d43-897f-291d97d1d03f",
+          "pass": true,
+          "reconciled_quiescent": true,
+          "reconciliation": [
+            {
+              "request_id": "wrk-64e19fa0-0429-40d1-a4d8-a637eabd2903",
+              "source": "durable_worker_observation",
+              "status": "SUCCEEDED"
+            },
+            {
+              "request_id": "wrk-636e4308-b5aa-4b80-9425-88d2961dcf04",
+              "source": "durable_worker_observation",
+              "status": "SUCCEEDED"
+            },
+            {
+              "request_id": "7358c65b-18e6-425b-899f-e767c7a6351f",
+              "source": "durable_worker_observation",
+              "status": "FAILED"
+            },
+            {
+              "request_id": "wrk-b4f62951-69c5-4d18-baf4-abf509facbcf",
+              "source": "durable_worker_observation",
+              "status": "SUCCEEDED"
+            },
+            {
+              "request_id": "wrk-14c2db42-24a5-4142-b401-fb8c3ead4a56",
+              "source": "durable_worker_observation",
+              "status": "SUCCEEDED"
+            }
+          ],
+          "replay_performed": false,
+          "status": "UNKNOWN"
+        },
+        "phase3_code_guard_and_public_api_restore": {
+          "guard_before_restore_ok": false,
+          "partial_error_code": "EXECUTION_STATE_UNKNOWN",
+          "partial_readback": {},
+          "pass": true,
+          "public_values_restored": true,
+          "reconciliation": [
+            {
+              "request_id": "wrk-64e19fa0-0429-40d1-a4d8-a637eabd2903",
+              "source": "durable_worker_observation",
+              "status": "SUCCEEDED"
+            },
+            {
+              "request_id": "wrk-636e4308-b5aa-4b80-9425-88d2961dcf04",
+              "source": "durable_worker_observation",
+              "status": "SUCCEEDED"
+            },
+            {
+              "request_id": "7358c65b-18e6-425b-899f-e767c7a6351f",
+              "source": "durable_worker_observation",
+              "status": "FAILED"
+            },
+            {
+              "request_id": "wrk-b4f62951-69c5-4d18-baf4-abf509facbcf",
+              "source": "durable_worker_observation",
+              "status": "SUCCEEDED"
+            },
+            {
+              "request_id": "wrk-14c2db42-24a5-4142-b401-fb8c3ead4a56",
+              "source": "durable_worker_observation",
+              "status": "SUCCEEDED"
+            }
+          ],
+          "reconciliation_ok": true,
+          "restored_readback": {
+            "comments": "phase3-public-api-probe-20260920T013653Z",
+            "model_tag": "mcp_restore_505b31dfc394f10d",
+            "parameters": {
+              "phase3_api_probe_0": "1",
+              "phase3_api_probe_1": "2",
+              "phase3_api_probe_2": "3"
+            },
+            "phase3_code_guard": null,
+            "phase3_code_guard_present": false
+          }
+        },
+        "public_api_mutation_and_independent_readback": {
+          "comments_changed": true,
+          "model_tag_ok": true,
+          "parameter_round_trip": true,
+          "pass": true,
+          "readback": {
+            "after_comments": "phase3-public-api-probe-20260920T013653Z",
+            "before_comments": "",
+            "marker": "phase3-public-api-probe-20260920T013653Z",
+            "model_tag": "mcp6",
+            "parameter_count": 3,
+            "parameter_names": [
+              "phase3_api_probe_0",
+              "phase3_api_probe_1",
+              "phase3_api_probe_2"
+            ],
+            "parameter_values": [
+              "1",
+              "2",
+              "3"
+            ]
+          }
+        },
+        "source_sha256": {
+          "tools/java/Phase3Fixture.java": "2fa1a3e21de95d7d806968d99fd45da14e6e12a45f19c76b442c66b87a653306",
+          "tools/java/Phase3NoWrapper.java": "e1016223dbd696cf435189dadb0e6d55ccc111026fd290e472a3591cc7062bb9",
+          "tools/java/Phase3PartialFailure.java": "18191f31b91df048bb8ff1f1df090fe41f98635363fe83d44e8095c69bbfdd96",
+          "tools/java/Phase3Readback.java": "c501c911a1427a923ba66b117420d64a7f6156da98393a1db1317edda474f2fd",
+          "tools/java/Phase3SyntaxFailure.java": "97478991f58f96971c03482651c1b6fc6ab66dc290b2e15ca9273343e1e29f19"
+        },
+        "syntax_failure_has_line_diagnostic": {
+          "diagnostics": [
+            {
+              "column": 28,
+              "end": 335,
+              "kind": "ERROR",
+              "line": 10,
+              "message": "illegal start of expression",
+              "source": "/Users/everwalker/Desktop/comsol-mcp-project/tools/java/Phase3SyntaxFailure.java",
+              "start": 335
+            }
+          ],
+          "pass": true
+        },
+        "three_reviewed_sources_compile_offline": {
+          "pass": true,
+          "sources": {
+            "tools/java/Phase3Fixture.java": {
+              "compiled": true,
+              "error_code": null,
+              "pass": true,
+              "source_sha256": "2fa1a3e21de95d7d806968d99fd45da14e6e12a45f19c76b442c66b87a653306"
+            },
+            "tools/java/Phase3NoWrapper.java": {
+              "compiled": true,
+              "error_code": null,
+              "pass": true,
+              "source_sha256": "e1016223dbd696cf435189dadb0e6d55ccc111026fd290e472a3591cc7062bb9"
+            },
+            "tools/java/Phase3PartialFailure.java": {
+              "compiled": true,
+              "error_code": null,
+              "pass": true,
+              "source_sha256": "18191f31b91df048bb8ff1f1df090fe41f98635363fe83d44e8095c69bbfdd96"
+            }
+          }
+        }
+      },
+      "case_id": "W10_T031_T032_T037",
+      "finished_at": "2026-09-20T01:36:59.985065Z",
+      "package": "W10",
+      "reason": null,
+      "started_at": "2026-09-20T01:36:53.631351Z",
+      "status": "PASS",
+      "subcases": {
+        "compile_readback_source": {
+          "status": "PASS"
+        },
+        "compile_reviewed_source": {
+          "status": "PASS"
+        },
+        "compile_reviewed_sources": {
+          "sources": {
+            "tools/java/Phase3Fixture.java": {
+              "compiled": true,
+              "error_code": null,
+              "pass": true,
+              "source_sha256": "2fa1a3e21de95d7d806968d99fd45da14e6e12a45f19c76b442c66b87a653306"
+            },
+            "tools/java/Phase3NoWrapper.java": {
+              "compiled": true,
+              "error_code": null,
+              "pass": true,
+              "source_sha256": "e1016223dbd696cf435189dadb0e6d55ccc111026fd290e472a3591cc7062bb9"
+            },
+            "tools/java/Phase3PartialFailure.java": {
+              "compiled": true,
+              "error_code": null,
+              "pass": true,
+              "source_sha256": "18191f31b91df048bb8ff1f1df090fe41f98635363fe83d44e8095c69bbfdd96"
+            }
+          },
+          "status": "PASS"
+        },
+        "describe_source_and_effect": {
+          "status": "PASS"
+        },
+        "execute_bound_model_readback": {
+          "status": "PASS"
+        },
+        "partial_execution_checkpoint": {
+          "status": "PASS"
+        },
+        "partial_job_reconciliation": {
+          "job_id": "016c75a0-e84b-4d43-897f-291d97d1d03f",
+          "observed_status": "UNKNOWN",
+          "reconciliation": [
+            {
+              "request_id": "wrk-64e19fa0-0429-40d1-a4d8-a637eabd2903",
+              "source": "durable_worker_observation",
+              "status": "SUCCEEDED"
+            },
+            {
+              "request_id": "wrk-636e4308-b5aa-4b80-9425-88d2961dcf04",
+              "source": "durable_worker_observation",
+              "status": "SUCCEEDED"
+            },
+            {
+              "request_id": "7358c65b-18e6-425b-899f-e767c7a6351f",
+              "source": "durable_worker_observation",
+              "status": "FAILED"
+            },
+            {
+              "request_id": "wrk-b4f62951-69c5-4d18-baf4-abf509facbcf",
+              "source": "durable_worker_observation",
+              "status": "SUCCEEDED"
+            },
+            {
+              "request_id": "wrk-14c2db42-24a5-4142-b401-fb8c3ead4a56",
+              "source": "durable_worker_observation",
+              "status": "SUCCEEDED"
+            }
+          ],
+          "status": "PASS"
+        },
+        "syntax_failure_is_compile_only": {
+          "status": "PASS"
+        }
+      },
+      "evidence_run": "evidence/phase3/live-g2-rerun5-20260920T013629Z"
+    },
+    "W11_T043_T036": {
+      "acceptance": [
+        "T043",
+        "T036"
+      ],
+      "assertions": {
+        "docs_source_snapshot": [
+          {
+            "exists": true,
+            "path": "/Applications/COMSOL64/Multiphysics/doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/PropFeature.html",
+            "sha256": "befb8cc1c0e3df1ce74d2fa2cd1377e73d378e5c26170558e9f40dc255cc3bc3",
+            "size": 87066
+          },
+          {
+            "exists": true,
+            "path": "/Applications/COMSOL64/Multiphysics/doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/util/ModelUtil.html",
+            "sha256": "a5e4c080407a673a5dd78e95b9fb089d92c0f518477ffdcc4f62b3348085c4eb",
+            "size": 78602
+          },
+          {
+            "exists": true,
+            "path": "/Applications/COMSOL64/Multiphysics/doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_ref_running.38.33.html",
+            "sha256": "36a9fa631e932121c1d6332d43dd86b433d80f237b88463d54544c310788500b",
+            "size": 245128
+          }
+        ],
+        "malicious_fixture_sha256": "a78c900e41f8f89f5ed0f7dcca570f7bc584efcccc0ff42160e18424fe9dd54b"
+      },
+      "case_id": "W11_T043_T036",
+      "finished_at": "2026-09-20T01:02:28.645666Z",
+      "package": "W11",
+      "reason": null,
+      "started_at": "2026-09-20T01:02:26.151731Z",
+      "status": "PASS",
+      "subcases": {
+        "docs_root_boundary": {
+          "status": "PASS"
+        },
+        "malicious_doc_is_data": {
+          "status": "PASS"
+        },
+        "real_local_help_source_hash": {
+          "status": "PASS"
+        },
+        "search_returns_version_source_hash": {
+          "status": "PASS"
+        },
+        "source_fragment_readback": {
+          "status": "PASS"
+        },
+        "unavailable_63_is_explicit": {
+          "observed_status": "UNAVAILABLE",
+          "status": "PASS"
+        },
+        "zero_match_is_not_found": {
+          "observed_status": "NOT_FOUND",
+          "result_count": 0,
+          "status": "PASS"
+        }
+      },
+      "evidence_run": "evidence/phase3/offline-review-20260920T010134Z"
+    },
+    "W12_T029_T033_T050": {
+      "acceptance": [
+        "T029",
+        "T033",
+        "T050"
+      ],
+      "assertions": {
+        "trial_scope_readback_is_limited_and_verified": {
+          "action_is_valid_change": false,
+          "main_model_scope_status": "VERIFIED",
+          "main_model_unchanged_within_scope": true,
+          "main_model_untouched": null,
+          "pass": false,
+          "requested_names": [
+            "planetype"
+          ],
+          "requested_path": {
+            "segments": [
+              {
+                "collection": "geom",
+                "tag": "phase3geom"
+              },
+              {
+                "collection": "feature",
+                "tag": "wp3"
+              }
+            ]
+          },
+          "scope_after": [
+            {
+              "operation": "node.property_set",
+              "path": {
+                "segments": [
+                  {
+                    "collection": "geom",
+                    "tag": "phase3geom"
+                  },
+                  {
+                    "collection": "feature",
+                    "tag": "wp3"
+                  }
+                ]
+              },
+              "properties": [
+                {
+                  "name": "planetype",
+                  "value": {
+                    "data": "quick",
+                    "java_signature": "java.lang.String",
+                    "kind": "string",
+                    "shape": []
+                  }
+                }
+              ]
+            }
+          ],
+          "scope_before": [
+            {
+              "operation": "node.property_set",
+              "path": {
+                "segments": [
+                  {
+                    "collection": "geom",
+                    "tag": "phase3geom"
+                  },
+                  {
+                    "collection": "feature",
+                    "tag": "wp3"
+                  }
+                ]
+              },
+              "properties": [
+                {
+                  "name": "planetype",
+                  "value": {
+                    "data": "quick",
+                    "java_signature": "java.lang.String",
+                    "kind": "string",
+                    "shape": []
+                  }
+                }
+              ]
+            }
+          ],
+          "scope_requests": [
+            {
+              "names": [
+                "planetype"
+              ],
+              "operation": "node.property_set",
+              "path": {
+                "segments": [
+                  {
+                    "collection": "geom",
+                    "tag": "phase3geom"
+                  },
+                  {
+                    "collection": "feature",
+                    "tag": "wp3"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "case_id": "W12_T029_T033_T050",
+      "finished_at": "2026-09-20T01:37:00.224680Z",
+      "package": "W12",
+      "reason": "bound-model calls stopped after EXECUTION_STATE_UNKNOWN at transaction.trial (EXECUTION_STATE_UNKNOWN); reconcile before retry",
+      "started_at": "2026-09-20T01:36:53.631353Z",
+      "status": "BLOCKED",
+      "subcases": {
+        "isolated_trial": {
+          "reason": "trial did not prove the requested property scope from actual typed before/after readback",
+          "status": "FAIL"
+        },
+        "preview_no_write": {
+          "status": "PASS"
+        }
+      },
+      "evidence_run": "evidence/phase3/live-g2-rerun5-20260920T013629Z"
+    }
+  },
+  "additional_cases": {
+    "T050_small_model_checkpoint_cost": {
+      "status": "BLOCKED",
+      "reason": "No verified isolated COMSOL runtime; save count/time/bytes implemented and software-tested only"
+    },
+    "T050_large_model_checkpoint_cost": {
+      "status": "NOT_RUN",
+      "reason": "No large model cost claim; small fixture cannot certify it"
+    },
+    "T043_real_63_source": {
+      "status": "BLOCKED",
+      "reason": "No accessible real6.3 corpus; explicit UNAVAILABLE tested"
+    },
+    "phase2_live_regression": {
+      "status": "BLOCKED",
+      "reason": "Isolation prerequisite absent; historical verified artifacts/hash evidence retained, current software regression passed"
+    }
+  },
+  "blocker": {
+    "reason": "The approved old target was catalina.home template, not the active webbridge catalina.base configuration; Java API non-loopback access was not denied.",
+    "missing_prerequisite": null,
+    "target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+    "proposal": "evidence/phase3/baseline/webbridge_remote_addr_valve_proposal-20260919T232153Z.json",
+    "replay_entrypoint": "tools/phase3_remote_addr_valve_runtime.py run --apply-valve",
+    "do_not_bypass_receipt": true,
+    "status": "RESOLVED_BY_ACTIVE_API_PROOF"
+  },
+  "retained_historical_limits": [
+    "W05-W07 scoped PASS retained",
+    "T011 native ModelChangedHandler callback FAIL retained",
+    "Parameter/shallow fingerprint is not full-model conflict detection or CAS",
+    "server_instance_id is Worker epoch, not observed COMSOL process UUID",
+    "Timeout is not cancellation; active-solve crash recovery not certified",
+    "Windows/IntelMac/6.3/GUI/unlicensed modules remain unverified"
+  ],
+  "restoration": {
+    "xml_original_sha256": "8bb393d2d803d1b7f6b124498742fa23b6310db9a28a6334f7462ec12d674bbe",
+    "content_hash_mode_owner_restored": true,
+    "complete_original_metadata_restored": false,
+    "residual": "com.apple.provenance introduced by first atomic replacement remains",
+    "readback": "evidence/phase3/mac_owned_runtime/final_readback-20260919T150458Z.json",
+    "latest_attempt_readback": "evidence/phase3/mac_owned_runtime/g2-valve-runtime-20260919T231415293264Z.json",
+    "corrected_target_untouched": false,
+    "latest_independent_readback": "evidence/phase3/valve_resume/restoration_readback.json",
+    "active_run_cleanup_pending": true
+  },
+  "preservation": "evidence/phase3/review/preservation_final.json",
+  "packaging": "evidence/phase3/packaging/r07-wheel-20260919T151404Z.json",
+  "capability_limits": "docs/comsol_mcp_design_v1/G2_CAPABILITIES.md",
+  "delivery": {
+    "authorized_remote": "origin",
+    "branch": "main",
+    "policy": "normal non-force phase-boundary push; verify resulting remoteSHA against localHEAD before reporting synchronization",
+    "status": "RESUME_CHANGES_NOT_PUBLISHED; prior checkpoint published as f3a1a0b04417d0df01003748fbd252b3097d3cb2"
+  },
+  "stop_boundary": "No W13; finish current Mac live cases, affected regressions, final Server/XML cleanup and phase delivery.",
+  "publication_redaction": "evidence/phase3/review/publication_redaction.json",
+  "cleanup": "evidence/phase3/review/owned_offline_cleanup_final.json",
+  "prior_checkpoint": "evidence/phase3/valve_resume/prior_phase3_acceptance.json",
+  "resume": {
+    "authorization": "evidence/phase3/valve_resume/authorization.json",
+    "baseline": "evidence/phase3/valve_resume/resume_baseline.json",
+    "first_valve_attempt": "evidence/phase3/mac_owned_runtime/g2-valve-runtime-20260919T231415293264Z.json",
+    "first_valve_result": "FAIL_RESTORED; non-loopback Java API unexpectedly connected; no model operations",
+    "root_cause": "evidence/phase3/valve_resume/config_target_diagnosis.json",
+    "corrected_proposal": "evidence/phase3/baseline/webbridge_remote_addr_valve_proposal-20260919T232153Z.json",
+    "corrected_proposal_status": "AUTHORIZED_VALIDATION_PENDING",
+    "prior_software_and_stdio_scope": "Previous 332-pass software and stdio checkpoint retained; not a current-source full regression claim",
+    "software": {
+      "status": "PASS",
+      "passed": 367,
+      "skipped": 1,
+      "duration_seconds": 6.38,
+      "log": "evidence/phase3/valve_resume/software_regression_host_final.txt",
+      "source_manifest": "evidence/phase3/valve_resume/final_software_source.json",
+      "scope": "Non-COMSOL regression; no runtime isolation claim",
+      "restricted_environment_attempt": "evidence/phase3/valve_resume/software_regression.txt",
+      "restricted_environment_limit": "Worker socket bind EPERM; host rerun passed"
+    },
+    "corrected_file_authorization": "evidence/phase3/valve_resume/webbridge_authorization.json",
+    "active_target_first_attempt": {
+      "result": "FAIL_BEFORE_SERVER_START",
+      "reason": "macOS added provenance xattr during approved in-place write; metadata guard rejected it",
+      "evidence": "evidence/phase3/mac_owned_runtime/g2-valve-runtime-20260920T001537809701Z.json",
+      "restoration": "evidence/phase3/mac_owned_runtime/g2-valve-runtime-20260920T001537809701Z-restore-readback-20260920T001751Z.json",
+      "original_content_inode_mode_owner_restored": true,
+      "full_original_metadata_restored": false,
+      "residual": "com.apple.provenance retained; no xattr removal or security setting change",
+      "model_operations": "NOT_RUN"
+    },
+    "active_api_proof": {
+      "status": "PASS",
+      "scope": "Owned Mac COMSOL6.4 API isolation, not model acceptance",
+      "runtime_receipt": "evidence/phase3/mac_owned_runtime/g2-valve-runtime-20260920T003546033861Z.json",
+      "production_adapter_readback": "evidence/phase3/valve_resume/active_adapter_readback_20260920T003546.json",
+      "focused_software": "evidence/phase3/valve_resume/log_proof_focused_tests.txt",
+      "denial_evidence_source": "server_access_log bounded around Java API request, plus explicit-source API transport403",
+      "java_exception_http_status": null,
+      "pid": 73823,
+      "port": 56389,
+      "server_state_at_recording": "RUNNING for authorized G2 acceptance; final cleanup still required"
+    },
+    "current_activity": "W08/W10/W12 production stdio PASS. Affected Phase2 regressions in progress; latest recover schema requires final W09 refresh. Final cleanup and publication remain.",
+    "w09_w11_refresh": {
+      "status": "PASS",
+      "run_dir": "evidence/phase3/offline-review-20260920T010134Z",
+      "result_sha256": "da9ec0ca43cc9f650e933fa492a464223aa51b6e63ec0c2f1c24814d076319a2",
+      "root_artifact_hash_check": "PASS",
+      "scope": "Production stdio registry/profile/fallback and local 6.4 help only; no COMSOL connection; unavailable 6.3 remains unavailable.",
+      "cleanup_evidence": "evidence/phase3/valve_resume/offline_refresh_cleanup_review.json",
+      "cleanup_status": "PASS_FOUR_OWNED_DAEMONS_EXITED"
+    },
+    "rerun3": {
+      "run_dir": "evidence/phase3/live-g2-rerun3-20260920T010300Z",
+      "overall": "FAIL",
+      "W08": "PASS",
+      "W10": "FAIL_WITH_DRIVER_READBACK_SCHEMA_ERROR_AND_UNRECONCILED_PARTIAL_JOB",
+      "W12": "BLOCKED_BY_UNRECONCILED_PARTIAL_JOB",
+      "artifact_hash_check": "PASS",
+      "next_action": "Use existing job_reconcile without replay, verify quiescence, restore checkpoint with current revision and explicit authorization, verify actual values. Correct driver readback extraction."
+    },
+    "g2_event_context_fix": {
+      "status": "LIVE_RECONCILIATION_PASS_RESTORATION_PENDING",
+      "evidence_run": "evidence/phase3/live-g2-rerun4-20260920T013436Z",
+      "original_job": "f790acc0-06dc-436b-8659-6a8d52e79116",
+      "original_status": "UNKNOWN",
+      "reconciled_quiescent": true,
+      "replay_performed": false,
+      "terminal_durable_worker_rows": 5,
+      "remaining": "Driver TypeError at subcase recording fixed; complete checkpoint restore and W12 in next run. Original FAIL retained."
+    },
+    "w12_trial_current_failure": {
+      "run_dir": "evidence/phase3/live-g2-rerun5-20260920T013629Z",
+      "status": "BLOCKED",
+      "observed": "Trial scoped target properties preserved, full fingerprint changed; actual fingerprint component cause not yet verified.",
+      "next_action": "Observe label/file path/time_modified/parameters across save-copy/load/trial/cleanup before authorizing semantic fix."
+    },
+    "completion_audit_gap": {
+      "requirement": "NEXT_GOAL_MAC_G2.md section 5.5: same tag with different node type must be rejected without modification",
+      "status": "PASS",
+      "finding": "Existing W08 driver PASS covered typed malformed inputs, shapes/kinds/wp3 sibling edits/idempotency; it did not yet include this explicit real-runtime type-conflict subcase. Existing historical PASS record is scoped to those cases, not proof of this omitted requirement.",
+      "next_action": "Preserve real same-tag/type no-write evidence.",
+      "evidence_run": "evidence/phase3/live-g2-rerun6-20260920T023806Z"
+    },
+    "w12_design_decision": "evidence/phase3/valve_resume/w12_explicit_checkpoint_decision.json",
+    "checkpoint_implementation_review": {
+      "status": "SOURCE_AND_SOFTWARE_PASS_LIVE_PENDING",
+      "source_review": "evidence/phase3/valve_resume/w12_checkpoint_source_review.json",
+      "software": {
+        "passed": 414,
+        "skipped": 1,
+        "duration_seconds": 6.63,
+        "output": "evidence/phase3/valve_resume/software_regression_host_checkpoint_review.txt",
+        "source_manifest": "evidence/phase3/valve_resume/software_regression_host_checkpoint_source.json"
+      },
+      "historical_test_failure": "evidence/phase3/valve_resume/software_regression_intermediate_20260920.json"
+    },
+    "w12_trial_root_cause": {
+      "status": "CONFIRMED",
+      "diagnostic": "evidence/phase3/w12-trial-diagnostic-20260920T015123Z/result.json",
+      "finding": "On the saved/restored test model, save(path,true) changes timeModified. Explicit checkpoint copy design avoids saving main during trial without weakening fingerprint gate."
+    },
+    "rerun6_review": "evidence/phase3/valve_resume/rerun6_root_review.json",
+    "w09_w11_final": {
+      "status": "PASS",
+      "run_dir": "evidence/phase3/offline-final-20260920T024149Z",
+      "root_review": "evidence/phase3/valve_resume/offline_final_root_review.json",
+      "cleanup_status": "PASS_FOUR_OWNED_DAEMONS_EXITED",
+      "scope": "W09 11 subcases; W11 7 subcases; no COMSOL connection; 6.3 unavailable remains explicit"
+    },
+    "mode_preflight_software": {
+      "status": "PASS",
+      "passed": 416,
+      "skipped": 1,
+      "duration_seconds": 6.59,
+      "log": "evidence/phase3/valve_resume/software_regression_host_mode_review.txt",
+      "source_manifest": "evidence/phase3/valve_resume/software_regression_host_mode_source.json"
+    },
+    "rerun7_review": "evidence/phase3/valve_resume/rerun7_root_review.json",
+    "g2_live_final": {
+      "status": "PASS",
+      "run_dir": "evidence/phase3/live-g2-rerun8-20260920T024658Z",
+      "root_review": "evidence/phase3/valve_resume/rerun8_root_review.json",
+      "scope": "W08/W10/W12 limited owned Mac model; no broad platform certification"
+    }
+  }
+}
