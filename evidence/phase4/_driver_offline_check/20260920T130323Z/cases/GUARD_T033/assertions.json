@@ -1,0 +1,111 @@
+{
+  "assertion_count": 3,
+  "case": {
+    "acceptance": [
+      "G3 §10 T033"
+    ],
+    "assertions": {
+      "operation_availability": {
+        "evaluate_expressions": {
+          "available": true,
+          "effect": "EVALUATE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "evaluation_policy",
+            "expressions_json",
+            "max_result_size"
+          ],
+          "mcp_tool_name": "evaluate_expressions",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "legacy managed backend",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        }
+      },
+      "static_evaluation_policy_documented": {
+        "evaluation_policy": null,
+        "implementation_status": "SUPPORTED_UNVERIFIED",
+        "pass": false,
+        "remediation": null
+      },
+      "subcase_inventory": {
+        "levels": [
+          "live",
+          "static"
+        ],
+        "missing": [],
+        "planned": 4,
+        "recorded": 4
+      }
+    },
+    "case_id": "GUARD_T033",
+    "finished_at": "2026-09-20T13:03:25.450090Z",
+    "package": "GUARD",
+    "reason": null,
+    "started_at": "2026-09-20T13:03:25.447069Z",
+    "status": "BLOCKED",
+    "subcases": {
+      "ephemeral_mutation_recorded_and_serial": {
+        "acceptance": "T033 ephemeral mutation recorded/serial",
+        "level": "live",
+        "reason": "offline run: --live was not supplied",
+        "status": "NOT_RUN"
+      },
+      "only_own_temporary_nodes_cleaned": {
+        "acceptance": "T033 only own nodes cleaned",
+        "level": "live",
+        "reason": "offline run: --live was not supplied",
+        "status": "NOT_RUN"
+      },
+      "pure_read_rejects_or_isolates": {
+        "acceptance": "T033 pure_read behaviour",
+        "level": "live",
+        "reason": "offline run: --live was not supplied",
+        "status": "NOT_RUN"
+      },
+      "static_evaluation_policy_documented": {
+        "acceptance": "T033 evaluation policy contract",
+        "evaluation_policy": null,
+        "level": "static",
+        "reason": "operation_describe does not publish an evaluation policy for evaluate_expressions in this build, so the T033 policy contract cannot be inspected",
+        "status": "BLOCKED"
+      }
+    }
+  },
+  "subcase_count": 4
+}

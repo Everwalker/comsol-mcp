@@ -1,0 +1,185 @@
+{
+  "case_id": "GUARD_T005",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver2phase4-describe-evaluate_expressions",
+          "request_id": "phase4-driver2phase4-describe-evaluate_expressions"
+        },
+        "operation_id": "evaluate_expressions"
+      },
+      "elapsed_s": 0.0034720840048976243,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver2phase4-describe-get_core_metrics",
+          "request_id": "phase4-driver2phase4-describe-get_core_metrics"
+        },
+        "operation_id": "get_core_metrics"
+      },
+      "elapsed_s": 0.0022747499751858413,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "depth": 2,
+        "execution": {
+          "expected_revision": 3,
+          "idempotency_key": "phase4-driver2t005-tree-before",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp11",
+            "schema_version": 1,
+            "server_instance_id": "f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver2t005-tree-before",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        }
+      },
+      "elapsed_s": 0.031213084002956748,
+      "operation": "model_tree",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "evaluation_policy": "ephemeral_mutation",
+        "execution": {
+          "expected_revision": 3,
+          "idempotency_key": "phase4-driver2user_derived_nodes_preserved",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp11",
+            "schema_version": 1,
+            "server_instance_id": "f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver2user_derived_nodes_preserved",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "expected_revision": 3,
+        "expressions_json": "[{\"name\": \"phase4_probe\", \"expression\": \"1+1\"}]",
+        "model_ref": {
+          "generation": 1,
+          "model_tag": "mcp11",
+          "schema_version": 1,
+          "server_instance_id": "f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "project_id": "comsol-mcp-phase4",
+        "session_id": "session-9f95c2e814acd5f99589961a"
+      },
+      "elapsed_s": 0.07318237499566749,
+      "operation": "evaluate_expressions",
+      "outer_isError": false,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "depth": 2,
+        "execution": {
+          "expected_revision": 4,
+          "idempotency_key": "phase4-driver2t005-tree-after",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp11",
+            "schema_version": 1,
+            "server_instance_id": "f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver2t005-tree-after",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        }
+      },
+      "elapsed_s": 0.03203175001544878,
+      "operation": "model_tree",
+      "outer_isError": false,
+      "sequence": 5
+    },
+    {
+      "arguments": {
+        "evaluation_policy": "ephemeral_mutation",
+        "execution": {
+          "expected_revision": 4,
+          "idempotency_key": "phase4-driver2t005-invalid",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp11",
+            "schema_version": 1,
+            "server_instance_id": "f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver2invalid",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "expected_revision": 4,
+        "expressions_json": "[{\"name\": \"phase4_bad\", \"expression\": \"1+*2\"}]",
+        "model_ref": {
+          "generation": 1,
+          "model_tag": "mcp11",
+          "schema_version": 1,
+          "server_instance_id": "f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "project_id": "comsol-mcp-phase4",
+        "session_id": "session-9f95c2e814acd5f99589961a"
+      },
+      "elapsed_s": 0.07990337500814348,
+      "operation": "evaluate_expressions",
+      "outer_isError": true,
+      "sequence": 6
+    },
+    {
+      "arguments": {
+        "depth": 2,
+        "execution": {
+          "expected_revision": 4,
+          "idempotency_key": "phase4-driver2t005-tree-after-bad",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp11",
+            "schema_version": 1,
+            "server_instance_id": "f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver2t005-tree-after-bad",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        }
+      },
+      "elapsed_s": 0.024593083013314754,
+      "operation": "model_tree",
+      "outer_isError": false,
+      "sequence": 7
+    },
+    {
+      "arguments": {
+        "depth": 2,
+        "execution": {
+          "expected_revision": 4,
+          "idempotency_key": "phase4-driver2t005-tree-cleanup",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp11",
+            "schema_version": 1,
+            "server_instance_id": "f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver2t005-tree-cleanup",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        }
+      },
+      "elapsed_s": 0.0226405420107767,
+      "operation": "model_tree",
+      "outer_isError": false,
+      "sequence": 8
+    }
+  ]
+}

@@ -1,0 +1,181 @@
+{
+  "case_id": "R03_LIVE",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driverphase4-describe-node-property_index_set",
+          "request_id": "phase4-driverphase4-describe-node-property_index_set"
+        },
+        "operation_id": "node.property_index_set"
+      },
+      "elapsed_s": 0.002936457982286811,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driverphase4-describe-node-property_entry_set",
+          "request_id": "phase4-driverphase4-describe-node-property_entry_set"
+        },
+        "operation_id": "node.property_entry_set"
+      },
+      "elapsed_s": 0.002215416985563934,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driverphase4-describe-node-property_get",
+          "request_id": "phase4-driverphase4-describe-node-property_get"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.0019521669601090252,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driverphase4-describe-transaction-preview",
+          "request_id": "phase4-driverphase4-describe-transaction-preview"
+        },
+        "operation_id": "transaction.preview"
+      },
+      "elapsed_s": 0.0019528329721651971,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "actions": [
+            {
+              "arguments": {
+                "indices": [],
+                "name": "phase4_probe",
+                "path": {
+                  "segments": []
+                },
+                "value": {
+                  "data": 1.0,
+                  "kind": "float64",
+                  "shape": []
+                }
+              },
+              "operation_id": "node.property_index_set"
+            },
+            {
+              "arguments": {
+                "name": "phase4_probe",
+                "path": {
+                  "segments": []
+                },
+                "value": {
+                  "data": 1.0,
+                  "kind": "float64",
+                  "shape": []
+                }
+              },
+              "operation_id": "node.property_entry_set"
+            }
+          ],
+          "invariants": [],
+          "project_id": "comsol-mcp-phase4"
+        },
+        "execution": {
+          "idempotency_key": "phase4-driverr03-static-malformed",
+          "request_id": "phase4-driverr03-static-malformed"
+        },
+        "operation_id": "transaction.preview"
+      },
+      "elapsed_s": 0.0029106250149197876,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 5
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 0,
+          "limit": 200,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp8",
+            "schema_version": 1,
+            "server_instance_id": "b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "query": {},
+          "root": {
+            "segments": []
+          },
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driverphase4-find-all",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp8",
+            "schema_version": 1,
+            "server_instance_id": "b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driverphase4-find-all",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.find"
+      },
+      "elapsed_s": 0.002490457962267101,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 6
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 0,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp8",
+            "schema_version": 1,
+            "server_instance_id": "b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "path": {
+            "segments": []
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driverphase4-schema",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp8",
+            "schema_version": 1,
+            "server_instance_id": "b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driverphase4-schema",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_schema"
+      },
+      "elapsed_s": 0.0020464169792830944,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 7
+    }
+  ]
+}

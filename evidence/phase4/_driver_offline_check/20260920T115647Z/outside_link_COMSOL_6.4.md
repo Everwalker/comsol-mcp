@@ -1,0 +1,1 @@
+/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-mcp-phase4-outside-x3io3_or/outside_COMSOL_6.4_guard.md

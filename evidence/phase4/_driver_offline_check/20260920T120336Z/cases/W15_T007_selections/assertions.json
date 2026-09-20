@@ -1,0 +1,239 @@
+{
+  "assertion_count": 3,
+  "case": {
+    "acceptance": [
+      "G3 §7 W15.T007"
+    ],
+    "assertions": {
+      "operation_availability": {
+        "physics.feature_update": {
+          "available": false,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": false,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+          "input_schema_properties": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "path",
+            "project_id",
+            "properties",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "physics_feature_update",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "physics.inspect": {
+          "available": false,
+          "effect": "READ",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": false,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+          "input_schema_properties": [
+            "depth",
+            "model_ref",
+            "path",
+            "project_id",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "physics_inspect",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "physics.selection_set": {
+          "available": false,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": false,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+          "input_schema_properties": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "path",
+            "project_id",
+            "request_id",
+            "selection",
+            "session_id"
+          ],
+          "mcp_tool_name": "physics_selection_set",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        }
+      },
+      "static_physics_selection_ops_executable": {
+        "operations": [
+          "physics.selection_set",
+          "physics.feature_create",
+          "physics.feature_update",
+          "selection.create",
+          "node.property_get"
+        ],
+        "pass": false
+      },
+      "subcase_inventory": {
+        "levels": [
+          "live",
+          "static"
+        ],
+        "missing": [],
+        "planned": 6,
+        "recorded": 6
+      }
+    },
+    "case_id": "W15_T007_selections",
+    "finished_at": "2026-09-20T12:03:37.664932Z",
+    "package": "W15",
+    "reason": null,
+    "started_at": "2026-09-20T12:03:37.652819Z",
+    "status": "BLOCKED",
+    "subcases": {
+      "feature_level_selection_set": {
+        "acceptance": "T007 feature-level selection",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: physics.selection_set(implementation_status=PROPOSED_NOT_IMPLEMENTED), physics.feature_create(implementation_status=unknown), physics.feature_update(implementation_status=PROPOSED_NOT_IMPLEMENTED), selection.create(implementation_status=unknown), node.property_get(implementation_status=unknown)",
+        "status": "BLOCKED"
+      },
+      "inherited_selection_not_writable": {
+        "acceptance": "T007 inherited selection fails accurately",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: physics.selection_set(implementation_status=PROPOSED_NOT_IMPLEMENTED), physics.feature_create(implementation_status=unknown), physics.feature_update(implementation_status=PROPOSED_NOT_IMPLEMENTED), selection.create(implementation_status=unknown), node.property_get(implementation_status=unknown)",
+        "status": "BLOCKED"
+      },
+      "named_selection_binding_readback": {
+        "acceptance": "T007 named selection binding",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: physics.selection_set(implementation_status=PROPOSED_NOT_IMPLEMENTED), physics.feature_create(implementation_status=unknown), physics.feature_update(implementation_status=PROPOSED_NOT_IMPLEMENTED), selection.create(implementation_status=unknown), node.property_get(implementation_status=unknown)",
+        "status": "BLOCKED"
+      },
+      "no_invalid_parent_feature_coupling": {
+        "acceptance": "T007 no phys.feature(phys_tag) misuse",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: physics.selection_set(implementation_status=PROPOSED_NOT_IMPLEMENTED), physics.feature_create(implementation_status=unknown), physics.feature_update(implementation_status=PROPOSED_NOT_IMPLEMENTED), selection.create(implementation_status=unknown), node.property_get(implementation_status=unknown)",
+        "status": "BLOCKED"
+      },
+      "physics_level_selection_set": {
+        "acceptance": "T007 physics-level selection",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: physics.selection_set(implementation_status=PROPOSED_NOT_IMPLEMENTED), physics.feature_create(implementation_status=unknown), physics.feature_update(implementation_status=PROPOSED_NOT_IMPLEMENTED), selection.create(implementation_status=unknown), node.property_get(implementation_status=unknown)",
+        "status": "BLOCKED"
+      },
+      "static_physics_selection_ops_availability": {
+        "acceptance": "T007 selection levels",
+        "level": "static",
+        "reason": "required operation(s) not executable in this build: physics.selection_set(implementation_status=PROPOSED_NOT_IMPLEMENTED), physics.feature_create(implementation_status=unknown), physics.feature_update(implementation_status=PROPOSED_NOT_IMPLEMENTED), selection.create(implementation_status=unknown), node.property_get(implementation_status=unknown)",
+        "status": "BLOCKED"
+      }
+    }
+  },
+  "subcase_count": 6
+}

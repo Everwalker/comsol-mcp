@@ -1,0 +1,109 @@
+{
+  "case_id": "R04_LIVE",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260920T120634Zphase4-describe-transaction-preview",
+          "request_id": "phase4-20260920T120634Zphase4-describe-transaction-preview"
+        },
+        "operation_id": "transaction.preview"
+      },
+      "elapsed_s": 0.0030851250048726797,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260920T120634Zphase4-describe-transaction-apply",
+          "request_id": "phase4-20260920T120634Zphase4-describe-transaction-apply"
+        },
+        "operation_id": "transaction.apply"
+      },
+      "elapsed_s": 0.0028237089863978326,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260920T120634Zphase4-describe-transaction-verify",
+          "request_id": "phase4-20260920T120634Zphase4-describe-transaction-verify"
+        },
+        "operation_id": "transaction.verify"
+      },
+      "elapsed_s": 0.003024666046258062,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "actions": [
+            {
+              "arguments": {
+                "include_values": false,
+                "path": {
+                  "segments": []
+                }
+              },
+              "operation_id": "node.inspect"
+            }
+          ],
+          "invariants": [
+            {}
+          ],
+          "project_id": "comsol-mcp-phase4"
+        },
+        "execution": {
+          "idempotency_key": "phase4-20260920T120634Zr04-malformed-invariant",
+          "request_id": "phase4-20260920T120634Zr04-malformed-invariant"
+        },
+        "operation_id": "transaction.preview"
+      },
+      "elapsed_s": 0.004374457988888025,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "actions": [
+            {
+              "arguments": {
+                "include_values": false,
+                "path": {
+                  "segments": []
+                }
+              },
+              "operation_id": "node.inspect"
+            }
+          ],
+          "invariants": [
+            {
+              "target": {
+                "segments": []
+              },
+              "type": "phase4.unsupported_invariant"
+            }
+          ],
+          "project_id": "comsol-mcp-phase4"
+        },
+        "execution": {
+          "idempotency_key": "phase4-20260920T120634Zr04-unsupported-invariant",
+          "request_id": "phase4-20260920T120634Zr04-unsupported-invariant"
+        },
+        "operation_id": "transaction.preview"
+      },
+      "elapsed_s": 0.003310041967779398,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 5
+    }
+  ]
+}

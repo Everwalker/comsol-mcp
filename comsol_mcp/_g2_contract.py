@@ -78,10 +78,15 @@ def signature_spec(signature: Any) -> dict[str, Any] | None:
 # A NodePath is data, never a Python/Java expression.  Keep this list small and
 # explicit.  New COMSOL collection accessors must be added with a versioned
 # adapter entry rather than becoming an arbitrary method-call escape hatch.
+# G3 additions were verified against the installed COMSOL 6.4.0.293 API
+# (javap of com.comsol.api_1.0.0.jar: Model, ModelNode/Component, Material,
+# Results, GeomSequence, MeshSequence, Physics, Study, SolverSequence).
 ACCESSOR_METHODS = frozenset({
     "active", "component", "dataset", "feature", "geom", "geometry", "material",
     "mesh", "modelNode", "numerical", "param", "physics", "result", "selection",
     "sol", "study", "table", "variable", "view", "plotGroup", "export",
+    "func", "multiphysics", "pair", "cpl", "coordSystem", "propertyGroup",
+    "extraDim", "probe",
 })
 
 
@@ -188,8 +193,15 @@ def validate_typed_value(value: Mapping[str, Any], *, expected: Mapping[str, Any
             _validate_scalar(kind, item)
     if "java_signature" in value and value["java_signature"] is not None and not isinstance(value["java_signature"], str):
         raise _error("PROPERTY_TYPE_MISMATCH", "java_signature must be a string")
-    if "unit" in value and value["unit"] is not None and not isinstance(value["unit"], str):
-        raise _error("PROPERTY_TYPE_MISMATCH", "unit must be a string")
+    if "unit" in value and value["unit"] is not None:
+        if not isinstance(value["unit"], str):
+            raise _error("PROPERTY_TYPE_MISMATCH", "unit must be a string")
+        # R01 contract: ``unit`` is metadata for the *textual* value and is
+        # never used for conversion.  Accepting it on a numeric/boolean kind
+        # would echo a unit while assigning a raw number in the property's
+        # own unit, so that combination is rejected before any write.
+        if kind not in {"expression", "string"}:
+            raise _error("PROPERTY_TYPE_MISMATCH", "unit may only accompany expression/string typed values; this layer never performs unit conversion")
     result = {"kind": kind, "shape": list(shape), "data": data}
     for field in ("unit", "java_signature"):
         if field in value:
@@ -197,6 +209,9 @@ def validate_typed_value(value: Mapping[str, Any], *, expected: Mapping[str, Any
     if expected:
         expected_kind = expected.get("kind") or expected.get("value_type")
         if expected_kind and expected_kind != kind and not (expected_kind == "string" and kind == "expression"):
+            if kind == "expression" and expected_kind in {"float64", "int32", "int64", "boolean", "complex128"}:
+                raise _error("PROPERTY_TYPE_MISMATCH",
+                             f"property expects {expected_kind}; an expression has no verified {expected_kind} readback view, so the write is rejected before it is dispatched")
             raise _error("PROPERTY_TYPE_MISMATCH", f"property expects {expected_kind}, received {kind}")
         expected_shape = expected.get("shape")
         if expected_shape is not None and tuple(expected_shape) != shape:

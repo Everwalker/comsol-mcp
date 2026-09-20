@@ -1,0 +1,279 @@
+{
+  "assertion_count": 4,
+  "case": {
+    "acceptance": [
+      "G3 §8 chain B"
+    ],
+    "assertions": {
+      "chain_b_reference": {
+        "alpha_m2_s": 1e-05,
+        "analytic_model": "transient 1D conduction with T(x,0)=T0 and T(L,t)=T0+dT for t>0: T(x,t) = T0 + dT*sin(pi*x/L)*exp(-alpha*(pi/L)^2*t); the slab is insulated elsewhere",
+        "config": {
+          "cp_j_kgk": 1000.0,
+          "delta_t_k": 20.0,
+          "height_m": 0.005,
+          "k_w_mk": 10.0,
+          "length_m": 0.01,
+          "normalized_error_limit": 0.001,
+          "rho_kg_m3": 1000.0,
+          "t0_k": 300.0,
+          "time_points_s": [
+            0.0,
+            0.5,
+            1.0,
+            2.0,
+            4.0
+          ],
+          "width_m": 0.01
+        },
+        "length_m": 0.01,
+        "reference_sha256": "f9ff3071815a92cd770d1f5d2e60e0622af5fe5195adb2a558963c549dcb2c07",
+        "relative_error_limit": 0.001,
+        "t0_k": 300.0,
+        "temperature_difference_k": 20.0
+      },
+      "operation_availability": {
+        "result.sample_path": {
+          "available": false,
+          "effect": "EVALUATE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": false,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+          "input_schema_properties": [
+            "idempotency_key",
+            "model_ref",
+            "path_definition",
+            "project_id",
+            "request_id",
+            "session_id",
+            "spec"
+          ],
+          "mcp_tool_name": "result_sample_path",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "study.run": {
+          "available": false,
+          "effect": "COMPUTE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": false,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+          "input_schema_properties": [
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "resources",
+            "session_id",
+            "study",
+            "timeout_s"
+          ],
+          "mcp_tool_name": "study_run",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "study.step_create": {
+          "available": false,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": false,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+          "input_schema_properties": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "properties",
+            "request_id",
+            "session_id",
+            "study",
+            "tag",
+            "type_id"
+          ],
+          "mcp_tool_name": "study_step_create",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        }
+      },
+      "static_chain_b_ops_executable": {
+        "operations": [
+          "model.create",
+          "geometry.feature_create",
+          "geometry.build",
+          "material.create",
+          "material.set_properties",
+          "physics.create",
+          "physics.feature_create",
+          "mesh.create",
+          "mesh.build",
+          "study.create",
+          "study.step_create",
+          "study.run",
+          "result.sample_path"
+        ],
+        "pass": false
+      },
+      "subcase_inventory": {
+        "levels": [
+          "fixture",
+          "live",
+          "static"
+        ],
+        "missing": [],
+        "planned": 6,
+        "recorded": 6
+      }
+    },
+    "case_id": "W16_T019_chainB_transient",
+    "finished_at": "2026-09-20T11:56:51.553398Z",
+    "package": "W16",
+    "reason": null,
+    "started_at": "2026-09-20T11:56:51.542303Z",
+    "status": "BLOCKED",
+    "subcases": {
+      "analytic_reference_preregistered": {
+        "acceptance": "T019 chain B analytic reference",
+        "alpha_m2_s": 1e-05,
+        "level": "fixture",
+        "sha256": "f9ff3071815a92cd770d1f5d2e60e0622af5fe5195adb2a558963c549dcb2c07",
+        "status": "PASS"
+      },
+      "normalized_max_error_le_1e-3": {
+        "acceptance": "T019 chain B normalized error <= 1e-3",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: model.create(implementation_status=unknown), geometry.feature_create(implementation_status=unknown), geometry.build(implementation_status=unknown), material.create(implementation_status=unknown), material.set_properties(implementation_status=unknown), physics.create(implementation_status=unknown), physics.feature_create(implementation_status=unknown), mesh.create(implementation_status=unknown), mesh.build(implementation_status=unknown), study.create(implementation_status=unknown), study.step_create(implementation_status=PROPOSED_NOT_IMPLEMENTED), study.run(implementation_status=PROPOSED_NOT_IMPLEMENTED), result.sample_path(implementation_status=PROPOSED_NOT_IMPLEMENTED)",
+        "status": "BLOCKED"
+      },
+      "static_chain_b_ops_availability": {
+        "acceptance": "T019 chain B transient chain",
+        "level": "static",
+        "reason": "required operation(s) not executable in this build: model.create(implementation_status=unknown), geometry.feature_create(implementation_status=unknown), geometry.build(implementation_status=unknown), material.create(implementation_status=unknown), material.set_properties(implementation_status=unknown), physics.create(implementation_status=unknown), physics.feature_create(implementation_status=unknown), mesh.create(implementation_status=unknown), mesh.build(implementation_status=unknown), study.create(implementation_status=unknown), study.step_create(implementation_status=PROPOSED_NOT_IMPLEMENTED), study.run(implementation_status=PROPOSED_NOT_IMPLEMENTED), result.sample_path(implementation_status=PROPOSED_NOT_IMPLEMENTED)",
+        "status": "BLOCKED"
+      },
+      "time_points_and_mesh_recorded": {
+        "acceptance": "T019 chain B time points and mesh evidence",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: model.create(implementation_status=unknown), geometry.feature_create(implementation_status=unknown), geometry.build(implementation_status=unknown), material.create(implementation_status=unknown), material.set_properties(implementation_status=unknown), physics.create(implementation_status=unknown), physics.feature_create(implementation_status=unknown), mesh.create(implementation_status=unknown), mesh.build(implementation_status=unknown), study.create(implementation_status=unknown), study.step_create(implementation_status=PROPOSED_NOT_IMPLEMENTED), study.run(implementation_status=PROPOSED_NOT_IMPLEMENTED), result.sample_path(implementation_status=PROPOSED_NOT_IMPLEMENTED)",
+        "status": "BLOCKED"
+      },
+      "transient_solve_produced_solution": {
+        "acceptance": "T019 chain B real transient solution",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: model.create(implementation_status=unknown), geometry.feature_create(implementation_status=unknown), geometry.build(implementation_status=unknown), material.create(implementation_status=unknown), material.set_properties(implementation_status=unknown), physics.create(implementation_status=unknown), physics.feature_create(implementation_status=unknown), mesh.create(implementation_status=unknown), mesh.build(implementation_status=unknown), study.create(implementation_status=unknown), study.step_create(implementation_status=PROPOSED_NOT_IMPLEMENTED), study.run(implementation_status=PROPOSED_NOT_IMPLEMENTED), result.sample_path(implementation_status=PROPOSED_NOT_IMPLEMENTED)",
+        "status": "BLOCKED"
+      },
+      "transient_study_and_initial_value": {
+        "acceptance": "T019 chain B transient study and initial value",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: model.create(implementation_status=unknown), geometry.feature_create(implementation_status=unknown), geometry.build(implementation_status=unknown), material.create(implementation_status=unknown), material.set_properties(implementation_status=unknown), physics.create(implementation_status=unknown), physics.feature_create(implementation_status=unknown), mesh.create(implementation_status=unknown), mesh.build(implementation_status=unknown), study.create(implementation_status=unknown), study.step_create(implementation_status=PROPOSED_NOT_IMPLEMENTED), study.run(implementation_status=PROPOSED_NOT_IMPLEMENTED), result.sample_path(implementation_status=PROPOSED_NOT_IMPLEMENTED)",
+        "status": "BLOCKED"
+      }
+    }
+  },
+  "subcase_count": 6
+}

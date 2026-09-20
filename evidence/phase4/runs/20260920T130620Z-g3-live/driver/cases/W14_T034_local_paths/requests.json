@@ -1,0 +1,116 @@
+{
+  "case_id": "W14_T034_local_paths",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driverphase4-describe-model-load",
+          "request_id": "phase4-driverphase4-describe-model-load"
+        },
+        "operation_id": "model.load"
+      },
+      "elapsed_s": 0.002370417001657188,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driverphase4-describe-model-save",
+          "request_id": "phase4-driverphase4-describe-model-save"
+        },
+        "operation_id": "model.save"
+      },
+      "elapsed_s": 0.0018866659956984222,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driverphase4-describe-geometry-import",
+          "request_id": "phase4-driverphase4-describe-geometry-import"
+        },
+        "operation_id": "geometry.import"
+      },
+      "elapsed_s": 0.0016656669904477894,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 1,
+          "idempotency_key": "phase4-drivermodel_save_load_roundtrip_hash",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp8",
+            "schema_version": 1,
+            "server_instance_id": "b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-drivermodel_save_load_roundtrip_hash",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "expected_revision": 1,
+        "model_ref": {
+          "generation": 1,
+          "model_tag": "mcp8",
+          "schema_version": 1,
+          "server_instance_id": "b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "path": "$REPO/evidence/phase4/runs/20260920T130620Z-g3-live/driver/local dir with spaces/中文目录/phase4-model 模型.mph",
+        "project_id": "comsol-mcp-phase4",
+        "session_id": "session-9f95c2e814acd5f99589961a"
+      },
+      "elapsed_s": 0.002463167009409517,
+      "operation": "save_model",
+      "outer_isError": true,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "artifact_id": "phase4-cad-artifact",
+          "expected_revision": 1,
+          "geometry": "geom1",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp8",
+            "schema_version": 1,
+            "server_instance_id": "b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "options": {
+            "repair": false
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "imp1"
+        },
+        "execution": {
+          "expected_revision": 1,
+          "idempotency_key": "phase4-drivert034-cad-import",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp8",
+            "schema_version": 1,
+            "server_instance_id": "b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-drivercad-import",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "geometry.import"
+      },
+      "elapsed_s": 0.0020485830027610064,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 5
+    }
+  ]
+}

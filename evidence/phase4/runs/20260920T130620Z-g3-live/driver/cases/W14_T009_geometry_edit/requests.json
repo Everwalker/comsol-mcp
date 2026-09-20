@@ -1,0 +1,231 @@
+{
+  "case_id": "W14_T009_geometry_edit",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driverphase4-describe-geometry-workplane_edit",
+          "request_id": "phase4-driverphase4-describe-geometry-workplane_edit"
+        },
+        "operation_id": "geometry.workplane_edit"
+      },
+      "elapsed_s": 0.0023025409900583327,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driverphase4-describe-geometry-array_create",
+          "request_id": "phase4-driverphase4-describe-geometry-array_create"
+        },
+        "operation_id": "geometry.array_create"
+      },
+      "elapsed_s": 0.0028898330056108534,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driverphase4-describe-geometry-build",
+          "request_id": "phase4-driverphase4-describe-geometry-build"
+        },
+        "operation_id": "geometry.build"
+      },
+      "elapsed_s": 0.0024543749750591815,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driverphase4-describe-geometry-measure",
+          "request_id": "phase4-driverphase4-describe-geometry-measure"
+        },
+        "operation_id": "geometry.measure"
+      },
+      "elapsed_s": 0.002290832984726876,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driverphase4-describe-geometry-feature_create",
+          "request_id": "phase4-driverphase4-describe-geometry-feature_create"
+        },
+        "operation_id": "geometry.feature_create"
+      },
+      "elapsed_s": 0.002428750041872263,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 5
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driverphase4-describe-geometry-feature_update",
+          "request_id": "phase4-driverphase4-describe-geometry-feature_update"
+        },
+        "operation_id": "geometry.feature_update"
+      },
+      "elapsed_s": 0.0024435409577563405,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 6
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driverphase4-describe-node-find",
+          "request_id": "phase4-driverphase4-describe-node-find"
+        },
+        "operation_id": "node.find"
+      },
+      "elapsed_s": 0.0031559999915771186,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 7
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driverphase4-describe-node-property_get",
+          "request_id": "phase4-driverphase4-describe-node-property_get"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.0022565419785678387,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 8
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 1,
+          "geometry": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "geom",
+                "tag": "geom1"
+              }
+            ]
+          },
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp8",
+            "schema_version": 1,
+            "server_instance_id": "b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "query": {
+            "metrics": [
+              "n_entities",
+              "volume",
+              "bounding_box"
+            ],
+            "mode": "objects"
+          },
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 1,
+          "idempotency_key": "phase4-drivergeometry-measure-57",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp8",
+            "schema_version": 1,
+            "server_instance_id": "b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-drivergeometry-measure-57",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "geometry.measure"
+      },
+      "elapsed_s": 0.0023743329802528024,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 9
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 1,
+          "inputs": {
+            "input": [
+              "r1"
+            ]
+          },
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp8",
+            "schema_version": 1,
+            "server_instance_id": "b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "parent": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "geom",
+                "tag": "geom1"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "properties": [
+            {
+              "name": "size",
+              "value": {
+                "data": [
+                  2,
+                  1
+                ],
+                "kind": "int32",
+                "shape": [
+                  2
+                ]
+              }
+            }
+          ],
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "arr1",
+          "type_id": "Array"
+        },
+        "execution": {
+          "expected_revision": 1,
+          "idempotency_key": "phase4-driverwork_plane_and_array_located",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp8",
+            "schema_version": 1,
+            "server_instance_id": "b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driverwork_plane_and_array_located",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "geometry.feature_create"
+      },
+      "elapsed_s": 0.00212583300890401,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 10
+    }
+  ]
+}

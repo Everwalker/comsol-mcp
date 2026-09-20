@@ -1,0 +1,125 @@
+{
+  "case_id": "W13_T048_selection_drift",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver4phase4-describe-selection-create",
+          "request_id": "phase4-driver4phase4-describe-selection-create"
+        },
+        "operation_id": "selection.create"
+      },
+      "elapsed_s": 0.00247391703305766,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver4phase4-describe-selection-measure",
+          "request_id": "phase4-driver4phase4-describe-selection-measure"
+        },
+        "operation_id": "selection.measure"
+      },
+      "elapsed_s": 0.0020570410415530205,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver4phase4-describe-selection-validate",
+          "request_id": "phase4-driver4phase4-describe-selection-validate"
+        },
+        "operation_id": "selection.validate"
+      },
+      "elapsed_s": 0.001987249997910112,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver4phase4-describe-physics-selection_set",
+          "request_id": "phase4-driver4phase4-describe-physics-selection_set"
+        },
+        "operation_id": "physics.selection_set"
+      },
+      "elapsed_s": 0.0018765419954434037,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "component": "comp1",
+          "definition": {
+            "box": {
+              "x": [
+                "0",
+                "0.001"
+              ]
+            },
+            "entity_dimension": 3
+          },
+          "expected_revision": 12,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "832a93e9eb6d6949fb0947f5b3aca2ba37a8c13fe3d010982b98f7ae36bc9acc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "sel1",
+          "type_id": "Box"
+        },
+        "execution": {
+          "expected_revision": 12,
+          "idempotency_key": "phase4-driver4named_selection_created_and_bound",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "832a93e9eb6d6949fb0947f5b3aca2ba37a8c13fe3d010982b98f7ae36bc9acc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver4named_selection_created_and_bound",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "selection.create"
+      },
+      "elapsed_s": 0.04126941703725606,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 5
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 12,
+          "idempotency_key": "phase4-driver4phase4-reconcile-model-phase4",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "832a93e9eb6d6949fb0947f5b3aca2ba37a8c13fe3d010982b98f7ae36bc9acc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver4phase4-reconcile-model-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.0030458749970421195,
+      "operation": "model_inspect",
+      "outer_isError": true,
+      "sequence": 6
+    }
+  ]
+}

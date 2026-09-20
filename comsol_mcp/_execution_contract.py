@@ -182,8 +182,39 @@ def permission_for_effect(effect: str, *, declared_effect: str | None = None) ->
     return permission
 
 
+#: G3 (W13-W16) catalogue effect -> legacy effect classification.  The
+#: catalogue stays the single source of truth (``_g3_ops.EFFECTS``); unknown
+#: catalogue effects are refused rather than defaulted.  ``DYNAMIC`` maps to
+#: the write class: the server-side decision for the dynamic G3 operations in
+#: this round is "mutating", and that is the strict path.
+_G3_CATALOG_EFFECTS: dict[str, str] = {
+    "READ": "inspect",
+    "WRITE": "project_write",
+    "STATE_WRITE": "state_write",
+    "FILE_WRITE": "file_write",
+    "EVALUATE": "evaluate",
+    "COMPUTE": "compute",
+    "TRUSTED_CODE": "trusted_code",
+    "DYNAMIC": "project_write",
+}
+
+
+def _g3_legacy_effect(tool_name: str) -> str | None:
+    """Classify a G3 domain-operation alias through its catalogue effect."""
+    try:
+        from ._g3_ops import EFFECTS
+    except Exception:
+        return None
+    for operation_id, catalog_effect in EFFECTS.items():
+        if operation_id.replace(".", "_") == tool_name:
+            return _G3_CATALOG_EFFECTS.get(str(catalog_effect).upper())
+    return None
+
+
 def permission_for_legacy_tool(tool_name: str) -> str:
     effect = LEGACY_TOOL_EFFECTS.get(tool_name)
+    if effect is None:
+        effect = _g3_legacy_effect(tool_name)
     if effect is None:
         raise ExecutionContractError("PERMISSION_DENIED", f"legacy tool has no effect classification: {tool_name}")
     return permission_for_effect(effect)

@@ -1,0 +1,255 @@
+{
+  "assertion_count": 4,
+  "case": {
+    "acceptance": [
+      "G3 §8 chain C"
+    ],
+    "assertions": {
+      "operation_availability": {
+        "material.set_properties": {
+          "available": false,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": false,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+          "input_schema_properties": [
+            "expected_revision",
+            "group",
+            "idempotency_key",
+            "model_ref",
+            "path",
+            "project_id",
+            "properties",
+            "provenance",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "material_set_properties",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "physics.feature_update": {
+          "available": false,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": false,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+          "input_schema_properties": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "path",
+            "project_id",
+            "properties",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "physics_feature_update",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "study.run": {
+          "available": false,
+          "effect": "COMPUTE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": false,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+          "input_schema_properties": [
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "resources",
+            "session_id",
+            "study",
+            "timeout_s"
+          ],
+          "mcp_tool_name": "study_run",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        }
+      },
+      "static_chain_c_ops_executable": {
+        "operations": [
+          "model.load",
+          "node.find",
+          "node.property_get",
+          "study.step_update",
+          "study.run",
+          "solver.inspect",
+          "model.save"
+        ],
+        "pass": false
+      },
+      "subcase_inventory": {
+        "levels": [
+          "fixture",
+          "live",
+          "static"
+        ],
+        "missing": [],
+        "planned": 7,
+        "recorded": 7
+      },
+      "user_style_model": {
+        "provided": false
+      }
+    },
+    "case_id": "W16_T019_chainC_continue",
+    "finished_at": "2026-09-20T11:48:38.480668Z",
+    "package": "W16",
+    "reason": null,
+    "started_at": "2026-09-20T11:48:38.471937Z",
+    "status": "BLOCKED",
+    "subcases": {
+      "derived_values_and_data_association_preserved": {
+        "acceptance": "T019 chain C derived values/associations",
+        "level": "live",
+        "reason": "the user-style continuation model was not supplied",
+        "status": "BLOCKED"
+      },
+      "manual_solver_preserved": {
+        "acceptance": "T019 chain C manual solver preserved",
+        "level": "live",
+        "reason": "the user-style continuation model was not supplied",
+        "status": "BLOCKED"
+      },
+      "non_target_nodes_preserved": {
+        "acceptance": "T019 chain C non-target nodes preserved",
+        "level": "live",
+        "reason": "the user-style continuation model was not supplied",
+        "status": "BLOCKED"
+      },
+      "solve_after_continuation": {
+        "acceptance": "T019 chain C solve after continuation",
+        "level": "live",
+        "reason": "the user-style continuation model was not supplied",
+        "status": "BLOCKED"
+      },
+      "static_chain_c_ops_availability": {
+        "acceptance": "T019 chain C continuation",
+        "level": "static",
+        "reason": "required operation(s) not executable in this build: model.load(implementation_status=unknown), node.find(implementation_status=unknown), node.property_get(implementation_status=unknown), study.step_update(implementation_status=unknown), study.run(implementation_status=PROPOSED_NOT_IMPLEMENTED), solver.inspect(implementation_status=unknown), model.save(implementation_status=unknown)",
+        "status": "BLOCKED"
+      },
+      "target_only_modified": {
+        "acceptance": "T019 chain C target-only modification",
+        "level": "live",
+        "reason": "the user-style continuation model was not supplied",
+        "status": "BLOCKED"
+      },
+      "user_style_model_available": {
+        "acceptance": "T019 chain C user-style model input",
+        "level": "fixture",
+        "reason": "no user-style continuation model was supplied (--chain-c-model)",
+        "status": "NOT_RUN"
+      }
+    }
+  },
+  "subcase_count": 7
+}

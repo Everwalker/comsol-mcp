@@ -1,0 +1,1261 @@
+{
+  "constraints": {
+    "chain_c_requires": {
+      "step_tag": "time",
+      "study_tag": "std1"
+    },
+    "satisfied": true,
+    "step_tag": "time",
+    "study_tag": "std1"
+  },
+  "continuation_command": "tools/phase4_run_mcp.py --live --chain-c-model $REPO/evidence/phase4/runs/20260920T130620Z-g3-live/chain_c_fixture_v11/chain_c_user_style.mph --only W16_T019_chainC_continue --run-dir <run-dir>",
+  "derived_values": {
+    "mode": "skipped",
+    "model_nodes_visited": 1,
+    "numerical_nodes_observed": [],
+    "published_tool_count": 65,
+    "reason": "--with-derived-value was not passed",
+    "requested": false,
+    "trusted_code_tool": null
+  },
+  "environment": {
+    "comsol_lifecycle": "not managed by this script (no COMSOL start/stop)",
+    "comsol_root": "/Applications/COMSOL64/Multiphysics",
+    "elapsed_s": 13.164,
+    "host": "127.0.0.1",
+    "isolation_receipt_present": true,
+    "jdk11": "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home",
+    "output": "$REPO/evidence/phase4/runs/20260920T130620Z-g3-live/chain_c_fixture_v11/chain_c_user_style.mph",
+    "port": 56389,
+    "prefs": "$REPO/PRIVATE_REDACTED/g2-valve-runtime-20260920T130556981606Z/prefs",
+    "private_home": "$REPO/evidence/phase4/runs/20260920T130620Z-g3-live/chain_c_fixture_v11/mcp-home",
+    "python": "$HOME/Documents/Codex/2026-09-05/https-github-com-wjc9011-comsol-multiphysics/comsol-mcp-server/.venv/bin/python",
+    "run_dir": "$REPO/evidence/phase4/runs/20260920T130620Z-g3-live/chain_c_fixture_v11",
+    "self_test": {
+      "missing_plan_steps": [],
+      "ok": true,
+      "plan_steps": 26,
+      "step_tag": "time",
+      "study_tag": "std1"
+    },
+    "started_at": "2026-09-20T13:16:20Z",
+    "tool_count": 65,
+    "tool_profile": "full"
+  },
+  "exit_code": 1,
+  "generated_at": "2026-09-20T13:16:34Z",
+  "kind": "phase4-chain-c-user-style-fixture",
+  "label": "G3 chain C user-style continuation model",
+  "manual_solver_edit": {
+    "applied": true,
+    "attempted": true,
+    "attempts": [
+      {
+        "engine_metadata": {
+          "getter": "getDouble",
+          "java_signature": "double",
+          "kind": "float64",
+          "metadata_status": "KNOWN",
+          "name": "rtol",
+          "shape_rank": 0,
+          "type_id": "Time",
+          "value_type": "Double"
+        },
+        "error_code": null,
+        "feature_type": "Time",
+        "path": {
+          "segments": [
+            {
+              "collection": "sol",
+              "tag": "sol1"
+            },
+            {
+              "collection": "feature",
+              "tag": "t1"
+            }
+          ]
+        },
+        "property": "rtol",
+        "readback": {
+          "path": {
+            "segments": [
+              {
+                "collection": "sol",
+                "tag": "sol1"
+              },
+              {
+                "collection": "feature",
+                "tag": "t1"
+              }
+            ]
+          },
+          "properties": [
+            {
+              "name": "rtol",
+              "value": {
+                "data": 1e-05,
+                "java_signature": "double",
+                "kind": "float64",
+                "shape": []
+              }
+            }
+          ]
+        },
+        "requested": 1e-05,
+        "status": "APPLIED",
+        "tag": "t1"
+      }
+    ],
+    "candidates": [
+      {
+        "feature_type": "Time",
+        "property": "rtol",
+        "value": 1e-05
+      },
+      {
+        "feature_type": "Stationary",
+        "property": "stol",
+        "value": 1e-06
+      },
+      {
+        "feature_type": "FullyCoupled",
+        "property": "maxiter",
+        "value": 50
+      },
+      {
+        "feature_type": "Direct",
+        "property": "linsolver",
+        "value": "pardiso"
+      }
+    ],
+    "feature_type": "Time",
+    "observed_features": [
+      {
+        "tag": "st1",
+        "type_id": "StudyStep"
+      },
+      {
+        "tag": "v1",
+        "type_id": "Variables"
+      },
+      {
+        "tag": "comp1_T",
+        "type_id": "Field"
+      },
+      {
+        "tag": "comp1_T2",
+        "type_id": "Field"
+      },
+      {
+        "tag": "t1",
+        "type_id": "Time"
+      },
+      {
+        "tag": "dDef",
+        "type_id": "Direct"
+      },
+      {
+        "tag": "aDef",
+        "type_id": "Advanced"
+      },
+      {
+        "tag": "se1",
+        "type_id": "Segregated"
+      },
+      {
+        "tag": "ss1",
+        "type_id": "SegregatedStep"
+      },
+      {
+        "tag": "ss2",
+        "type_id": "SegregatedStep"
+      },
+      {
+        "tag": "ll1",
+        "type_id": "LowerLimit"
+      },
+      {
+        "tag": "d1",
+        "type_id": "Direct"
+      },
+      {
+        "tag": "d2",
+        "type_id": "Direct"
+      },
+      {
+        "tag": "i1",
+        "type_id": "Iterative"
+      },
+      {
+        "tag": "ilDef",
+        "type_id": "IncompleteLU"
+      },
+      {
+        "tag": "mg1",
+        "type_id": "Multigrid"
+      },
+      {
+        "tag": "pr",
+        "type_id": "PreSmoother"
+      },
+      {
+        "tag": "po",
+        "type_id": "PostSmoother"
+      },
+      {
+        "tag": "cs",
+        "type_id": "CoarseSolver"
+      },
+      {
+        "tag": "i2",
+        "type_id": "Iterative"
+      },
+      {
+        "tag": "ilDef",
+        "type_id": "IncompleteLU"
+      },
+      {
+        "tag": "mg1",
+        "type_id": "Multigrid"
+      },
+      {
+        "tag": "pr",
+        "type_id": "PreSmoother"
+      },
+      {
+        "tag": "po",
+        "type_id": "PostSmoother"
+      },
+      {
+        "tag": "cs",
+        "type_id": "CoarseSolver"
+      }
+    ],
+    "path": {
+      "segments": [
+        {
+          "collection": "sol",
+          "tag": "sol1"
+        },
+        {
+          "collection": "feature",
+          "tag": "t1"
+        }
+      ]
+    },
+    "property": "rtol",
+    "solver": "sol1",
+    "tag": "t1",
+    "value": 1e-05
+  },
+  "model_ref": {
+    "generation": 1,
+    "model_tag": "mcp7",
+    "schema_version": 1,
+    "server_instance_id": "b30253468b59e741b18a60046c0e7ab236cd815e7b75d3c3ec91ab0b2b642021",
+    "session_id": "session-9f95c2e814acd5f99589961a"
+  },
+  "model_revision": 23,
+  "mph": {
+    "bytes": 3707004,
+    "exists": true,
+    "path": "$REPO/evidence/phase4/runs/20260920T130620Z-g3-live/chain_c_fixture_v11/chain_c_user_style.mph",
+    "sha256": "c6f626e7e69b199a5c5896fbd6208145f1aaef79bfda217eb669ba471c2908cd"
+  },
+  "ops_used": [
+    "code execution",
+    "definition.component_manage",
+    "geometry.build",
+    "geometry.feature_create",
+    "geometry.feature_update",
+    "geometry.sequence_create",
+    "material.create",
+    "material.list",
+    "material.selection_set",
+    "material.set_properties (property write)",
+    "mesh.build",
+    "mesh.create",
+    "mesh.feature_update",
+    "mesh.inspect",
+    "mesh.statistics",
+    "model.save",
+    "model_create",
+    "node.property_get",
+    "physics.create",
+    "physics.feature_create",
+    "physics.feature_update",
+    "physics.feature_update (property write)",
+    "physics.list",
+    "server_connect",
+    "solver.feature_update",
+    "solver.inspect",
+    "solver.list",
+    "study.create",
+    "study.inspect",
+    "study.physics_activation",
+    "study.run",
+    "study.solver_generate",
+    "study.step_create",
+    "study.step_update"
+  ],
+  "reopen_command": "tools/phase4_run_mcp.py --reopen-check $REPO/evidence/phase4/runs/20260920T130620Z-g3-live/chain_c_fixture_v11/chain_c_user_style.mph",
+  "session": {
+    "has_legacy_model_create": true,
+    "has_operation_call": true,
+    "initialize": {
+      "caller_owned_private_home": true,
+      "capabilities": {
+        "completions": null,
+        "experimental": {},
+        "logging": null,
+        "prompts": {
+          "listChanged": false
+        },
+        "resources": {
+          "listChanged": false,
+          "subscribe": false
+        },
+        "tasks": null,
+        "tools": {
+          "listChanged": false
+        }
+      },
+      "instruction_bytes": 0,
+      "private_home": "$REPO/evidence/phase4/runs/20260920T130620Z-g3-live/chain_c_fixture_v11/mcp-home",
+      "protocolVersion": "2025-11-25",
+      "server_name": "comsol-mcp-server",
+      "server_version": "1.29.1",
+      "tool_count": 65,
+      "tool_profile": "full"
+    },
+    "isolation_receipt_present": true,
+    "tool_count": 65
+  },
+  "sources": [
+    {
+      "exists": true,
+      "path": "$REPO/tools/phase4_run_mcp.py",
+      "sha256": "359c5b0b02c6146eb8aa05c96952e83dc02d26cfe341e84ddf96e38431cc4b3e",
+      "size": 287330
+    },
+    {
+      "exists": true,
+      "path": "$REPO/tools/phase4_chain_c_fixture.py",
+      "sha256": "21e367f3569e93125700aa5d9b8d6c4352c5870bed41790c1d0f32973858cd0f",
+      "size": 74574
+    },
+    {
+      "exists": true,
+      "path": "$REPO/tools/java/Phase4ChainCDerivedValue.java",
+      "sha256": "13a1a546f11fb4442132ea9e9753526283774b8fdc9e0372ec640f7b62e46174",
+      "size": 5328
+    }
+  ],
+  "startup_error": null,
+  "steps": [
+    {
+      "error_code": null,
+      "notes": "engine connection established before the build steps",
+      "operation": "server_connect",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "server_connect",
+      "success": true
+    },
+    {
+      "error_code": "",
+      "execution": {
+        "error_code": "",
+        "has_structured_content": true,
+        "operation_id": null,
+        "outer_isError": false,
+        "success": true
+      },
+      "model_ref": {
+        "generation": 1,
+        "model_tag": "mcp7",
+        "schema_version": 1,
+        "server_instance_id": "b30253468b59e741b18a60046c0e7ab236cd815e7b75d3c3ec91ab0b2b642021",
+        "session_id": "session-9f95c2e814acd5f99589961a"
+      },
+      "notes": "legacy published route: the strict model.create operation is not implemented",
+      "operation": "model_create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "model_create",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "definition.component_manage",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "component_create",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "geometry.sequence_create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "geometry_create",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "geometry.feature_create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "geometry_block",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": "size/pos typed from the Block node's own property metadata",
+      "operation": "geometry.feature_update",
+      "outer_isError": false,
+      "refused": [],
+      "request_arguments": [
+        "path",
+        "properties"
+      ],
+      "status": "APPLIED",
+      "step": "geometry_block",
+      "success": true,
+      "written": {
+        "pos": {
+          "engine_kind": "float64",
+          "engine_shape_rank": 1,
+          "engine_value_type": "DoubleArray",
+          "requested": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "size": {
+          "engine_kind": "float64",
+          "engine_shape_rank": 1,
+          "engine_value_type": "DoubleArray",
+          "requested": [
+            0.03,
+            0.02,
+            0.01
+          ]
+        }
+      }
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "geometry.build",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "geometry_build",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "material.create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "material_target",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": "group 'def'; expression text is written verbatim the engine returned no property metadata for ['density', 'heatcapacity', 'thermalconductivity']",
+      "operation": "material.set_properties (property write)",
+      "outer_isError": null,
+      "status": "SKIPPED",
+      "step": "material_target",
+      "success": false
+    },
+    {
+      "error_code": null,
+      "notes": "explicit domain binding: domain 1",
+      "operation": "material.selection_set",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "material_target",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "material.create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "material_unrelated",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": "deliberately unused material: a non-target node that must survive the engine returned no property metadata for ['density', 'heatcapacity', 'thermalconductivity']",
+      "operation": "material.set_properties (property write)",
+      "outer_isError": null,
+      "status": "SKIPPED",
+      "step": "material_unrelated",
+      "success": false
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "physics.create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "physics_create",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": "user initial temperature on feature 'init1' the engine returned no property metadata for ['T0']",
+      "operation": "physics.feature_update (property write)",
+      "outer_isError": null,
+      "status": "SKIPPED",
+      "step": "physics_initial_values",
+      "success": false
+    },
+    {
+      "error_code": null,
+      "notes": "verified heat-transfer boundary token TemperatureBoundary",
+      "operation": "physics.feature_create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "physics_temperature_boundary",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": "user boundary temperature",
+      "operation": "physics.feature_update",
+      "outer_isError": false,
+      "refused": [],
+      "request_arguments": [
+        "path",
+        "properties"
+      ],
+      "status": "APPLIED",
+      "step": "physics_temperature_boundary",
+      "success": true,
+      "written": {
+        "T0": {
+          "engine_kind": "string",
+          "engine_shape_rank": 0,
+          "engine_value_type": "String",
+          "requested": "353.15"
+        }
+      }
+    },
+    {
+      "error_code": null,
+      "notes": "second user boundary condition (non-target node)",
+      "operation": "physics.feature_create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "physics_heat_flux",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": "unrelated interface: switched off inside the study step, and must survive the continuation",
+      "operation": "physics.create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "physics_unrelated",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "mesh.create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "mesh_create",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "features": [
+        {
+          "tag": "size",
+          "type_id": "MeshSizeDefault"
+        }
+      ],
+      "notes": null,
+      "operation": "mesh.inspect",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "mesh_create",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": "no Size feature was found in the mesh sequence",
+      "operation": "mesh.feature_update",
+      "outer_isError": null,
+      "status": "SKIPPED",
+      "step": "mesh_size",
+      "success": false
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "mesh.build",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "mesh_build",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "mesh.statistics",
+      "outer_isError": false,
+      "statistics": {
+        "allowlist_entry_required": [
+          "stat"
+        ],
+        "build_time_ms": 0,
+        "component": "comp1",
+        "dof_estimate": {
+          "reason": "a mesh-only read has no verified COMSOL API that reports the assembled degrees of freedom; the DOF count belongs to the compiled equations of a study step (COMSOL Reference Manual, Compile Equations Statistics)",
+          "status": "NOT_AVAILABLE"
+        },
+        "element_count": 3399,
+        "element_types": [
+          "tet",
+          "tri",
+          "edg",
+          "vtx"
+        ],
+        "elements_by_dimension": null,
+        "has_second_order_elements": false,
+        "is_complete": true,
+        "is_empty": false,
+        "max_growth_rate": 3.47,
+        "max_volume": 4.319e-09,
+        "mean_growth_rate": 1.558,
+        "mean_quality": 0.6981,
+        "mesh": "mesh1",
+        "mesh_volume": 6e-06,
+        "min_quality": 0.3126,
+        "min_volume": 4.791e-10,
+        "notes": [
+          "a successful build is not a quality statement: report the measure, the minimum and the counts only when they were actually read"
+        ],
+        "path": {
+          "segments": [
+            {
+              "collection": "component",
+              "tag": "comp1"
+            },
+            {
+              "collection": "mesh",
+              "tag": "mesh1"
+            }
+          ]
+        },
+        "problems": [],
+        "quality_definition": "element quality is a dimensionless 0..1 measure; the comparison is only meaningful with the measure named by quality_measure",
+        "quality_measure": null,
+        "read_errors": {},
+        "sdim": 3,
+        "statistics": null,
+        "statistics_node_available": false,
+        "vertex_count": 754
+      },
+      "status": "APPLIED",
+      "step": "mesh_build",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "study.create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "study_create",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": "documented create string for Time Dependent is 'Transient'",
+      "operation": "study.step_create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "study_step_transient",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": "user time list, typed from the step's own property metadata",
+      "operation": "study.step_update",
+      "outer_isError": false,
+      "refused": [],
+      "request_arguments": [
+        "path",
+        "properties"
+      ],
+      "status": "APPLIED",
+      "step": "study_step_tlist",
+      "success": true,
+      "written": {
+        "tlist": {
+          "engine_kind": "float64",
+          "engine_shape_rank": 1,
+          "engine_value_type": "DoubleArray",
+          "requested": [
+            0.0,
+            0.5,
+            1.0,
+            2.0,
+            5.0
+          ]
+        }
+      }
+    },
+    {
+      "error_code": null,
+      "notes": "the unrelated interface 'ht2' is switched off in the transient step",
+      "operation": "study.physics_activation",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "study_physics_activation",
+      "success": true
+    },
+    {
+      "created": [
+        "sol1"
+      ],
+      "error_code": null,
+      "notes": "createAutoSequences('sol'): the sequence must be preserved, not regenerated",
+      "operation": "study.solver_generate",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "study_solver_generate",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "solver.list",
+      "outer_isError": false,
+      "solvers": [
+        {
+          "feature_count": 3,
+          "solver": "sol1",
+          "study": "std1"
+        }
+      ],
+      "status": "APPLIED",
+      "step": "solver_inspect",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "features": [
+        {
+          "tag": "st1",
+          "type_id": "StudyStep"
+        },
+        {
+          "tag": "v1",
+          "type_id": "Variables"
+        },
+        {
+          "tag": "comp1_T",
+          "type_id": "Field"
+        },
+        {
+          "tag": "comp1_T2",
+          "type_id": "Field"
+        },
+        {
+          "tag": "t1",
+          "type_id": "Time"
+        },
+        {
+          "tag": "dDef",
+          "type_id": "Direct"
+        },
+        {
+          "tag": "aDef",
+          "type_id": "Advanced"
+        },
+        {
+          "tag": "se1",
+          "type_id": "Segregated"
+        },
+        {
+          "tag": "ss1",
+          "type_id": "SegregatedStep"
+        },
+        {
+          "tag": "ss2",
+          "type_id": "SegregatedStep"
+        },
+        {
+          "tag": "ll1",
+          "type_id": "LowerLimit"
+        },
+        {
+          "tag": "d1",
+          "type_id": "Direct"
+        },
+        {
+          "tag": "d2",
+          "type_id": "Direct"
+        },
+        {
+          "tag": "i1",
+          "type_id": "Iterative"
+        },
+        {
+          "tag": "ilDef",
+          "type_id": "IncompleteLU"
+        },
+        {
+          "tag": "mg1",
+          "type_id": "Multigrid"
+        },
+        {
+          "tag": "pr",
+          "type_id": "PreSmoother"
+        },
+        {
+          "tag": "po",
+          "type_id": "PostSmoother"
+        },
+        {
+          "tag": "cs",
+          "type_id": "CoarseSolver"
+        },
+        {
+          "tag": "i2",
+          "type_id": "Iterative"
+        },
+        {
+          "tag": "ilDef",
+          "type_id": "IncompleteLU"
+        },
+        {
+          "tag": "mg1",
+          "type_id": "Multigrid"
+        },
+        {
+          "tag": "pr",
+          "type_id": "PreSmoother"
+        },
+        {
+          "tag": "po",
+          "type_id": "PostSmoother"
+        },
+        {
+          "tag": "cs",
+          "type_id": "CoarseSolver"
+        }
+      ],
+      "notes": null,
+      "operation": "solver.inspect",
+      "outer_isError": false,
+      "solver": "sol1",
+      "status": "APPLIED",
+      "step": "solver_inspect",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": "hand-edited Time feature 't1': rtol=1e-05",
+      "operation": "solver.feature_update",
+      "outer_isError": false,
+      "path": {
+        "segments": [
+          {
+            "collection": "sol",
+            "tag": "sol1"
+          },
+          {
+            "collection": "feature",
+            "tag": "t1"
+          }
+        ]
+      },
+      "property": "rtol",
+      "readback": {
+        "path": {
+          "segments": [
+            {
+              "collection": "sol",
+              "tag": "sol1"
+            },
+            {
+              "collection": "feature",
+              "tag": "t1"
+            }
+          ]
+        },
+        "properties": [
+          {
+            "name": "rtol",
+            "value": {
+              "data": 1e-05,
+              "java_signature": "double",
+              "kind": "float64",
+              "shape": []
+            }
+          }
+        ]
+      },
+      "status": "APPLIED",
+      "step": "manual_solver_edit",
+      "success": true,
+      "value": 1e-05
+    },
+    {
+      "computation": {
+        "getLastComputationDate": -1,
+        "getLastComputationTime": -1,
+        "getLastComputationVersion": ""
+      },
+      "error_code": null,
+      "notes": null,
+      "operation": "study.run",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "study_run",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": "--with-derived-value was not passed; no Derived Values node is claimed",
+      "numerical_nodes_observed": [],
+      "operation": "code execution",
+      "outer_isError": null,
+      "status": "SKIPPED",
+      "step": "derived_values",
+      "success": false
+    },
+    {
+      "bytes": 3707004,
+      "error_code": "",
+      "notes": null,
+      "operation": "model.save",
+      "outer_isError": false,
+      "path": "$REPO/evidence/phase4/runs/20260920T130620Z-g3-live/chain_c_fixture_v11/chain_c_user_style.mph",
+      "sha256": "c6f626e7e69b199a5c5896fbd6208145f1aaef79bfda217eb669ba471c2908cd",
+      "status": "APPLIED",
+      "step": "model_save",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "study.inspect",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "verify",
+      "success": true,
+      "target_step_present": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "node.property_get",
+      "outer_isError": false,
+      "property": "tlist",
+      "status": "APPLIED",
+      "step": "verify",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "solver.list",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "verify",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "physics.list",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "verify",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "material.list",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "verify",
+      "success": true
+    }
+  ],
+  "tlist": {
+    "engine_metadata": null,
+    "requested": [
+      0.0,
+      0.5,
+      1.0,
+      2.0,
+      5.0
+    ],
+    "write": {
+      "error_code": null,
+      "notes": "user time list, typed from the step's own property metadata",
+      "operation": "study.step_update",
+      "outer_isError": false,
+      "refused": [],
+      "request_arguments": [
+        "path",
+        "properties"
+      ],
+      "status": "APPLIED",
+      "step": "study_step_tlist",
+      "success": true,
+      "written": {
+        "tlist": {
+          "engine_kind": "float64",
+          "engine_shape_rank": 1,
+          "engine_value_type": "DoubleArray",
+          "requested": [
+            0.0,
+            0.5,
+            1.0,
+            2.0,
+            5.0
+          ]
+        }
+      }
+    }
+  },
+  "unverified": [
+    "the .mph is written and hashed, but the fixture does not reopen it: use tools/phase4_run_mcp.py --reopen-check to verify loadability in a fresh child",
+    "derived values are created only through the trusted-code route; without --with-derived-value (or when the route is refused) the model has no Derived Values node and the receipt says so",
+    "the chain C case itself addresses the continuation target as [{study,std1},{step,time}] with a row-list `properties`; the published operation layer rejects both forms (INVALID_NODE_PATH: unsupported path collection 'step'; INVALID_REQUEST: properties must be an object). The target this fixture prepares is writable with the verified shape -- [{study,std1},{feature,time}] plus a name->value mapping -- as replayed offline against the repository's fake node tree (tests/test_g3_chain_c_fixture.py::test_chain_c_fixture_tlist_write_works_on_the_repo_fake_tree)."
+  ],
+  "verification": {
+    "materials": {
+      "collection": "material",
+      "component": "comp1",
+      "errors": [],
+      "material_count": 2,
+      "materials": [
+        {
+          "dimension": 3,
+          "entities": [
+            1
+          ],
+          "entities_error": null,
+          "geometry": "geom1",
+          "is_inheriting": false,
+          "label": "材料 1",
+          "material_type": "solid",
+          "named": "",
+          "named_error": null,
+          "property_groups": [
+            "def"
+          ],
+          "read_status": "OK",
+          "selection": "material.selection()",
+          "selection_error": null,
+          "tag": "mat1",
+          "type_id": "Common"
+        },
+        {
+          "dimension": 3,
+          "entities": [],
+          "entities_error": null,
+          "geometry": "geom1",
+          "is_inheriting": false,
+          "label": "材料 2",
+          "material_type": "solid",
+          "named": "",
+          "named_error": null,
+          "property_groups": [
+            "def"
+          ],
+          "read_status": "OK",
+          "selection": "material.selection()",
+          "selection_error": null,
+          "tag": "mat2",
+          "type_id": "Common"
+        }
+      ],
+      "path": {
+        "segments": [
+          {
+            "collection": "component",
+            "tag": "comp1"
+          }
+        ]
+      },
+      "scope": "component",
+      "tag_source": "component('comp1').material().tags()"
+    },
+    "physics": {
+      "component": "comp1",
+      "geometry_source": "physics(<tag>).geom()",
+      "interface_count": 2,
+      "interfaces": [
+        {
+          "component": "comp1",
+          "feature_tags": [
+            "solid1",
+            "init1",
+            "ins1",
+            "idi1",
+            "ltneb1",
+            "os1",
+            "cib1",
+            "dcont1",
+            "temp1",
+            "hf1"
+          ],
+          "geometry": "geom1",
+          "selection": {
+            "dimension": null,
+            "entities": null,
+            "entities_error": {
+              "allowlist_entry_required": null,
+              "code": "ENGINE_CALL_FAILED",
+              "message": "COMSOL entities probe failed: JavaWorkerError"
+            },
+            "geometry": "geom1",
+            "is_inheriting": null,
+            "named": null,
+            "named_error": {
+              "allowlist_entry_required": null,
+              "code": "ENGINE_CALL_FAILED",
+              "message": "COMSOL named probe failed: JavaWorkerError"
+            }
+          },
+          "tag": "ht",
+          "type_id": "HeatTransfer"
+        },
+        {
+          "component": "comp1",
+          "feature_tags": [
+            "solid1",
+            "init1",
+            "ins1",
+            "idi1",
+            "ltneb1",
+            "os1",
+            "cib1",
+            "dcont1"
+          ],
+          "geometry": "geom1",
+          "selection": {
+            "dimension": null,
+            "entities": null,
+            "entities_error": {
+              "allowlist_entry_required": null,
+              "code": "ENGINE_CALL_FAILED",
+              "message": "COMSOL entities probe failed: JavaWorkerError"
+            },
+            "geometry": "geom1",
+            "is_inheriting": null,
+            "named": null,
+            "named_error": {
+              "allowlist_entry_required": null,
+              "code": "ENGINE_CALL_FAILED",
+              "message": "COMSOL named probe failed: JavaWorkerError"
+            }
+          },
+          "tag": "ht2",
+          "type_id": "HeatTransfer"
+        }
+      ],
+      "multiphysics_couplings": [],
+      "multiphysics_couplings_by_scope": [
+        {
+          "error": null,
+          "scope": "component",
+          "tags": []
+        },
+        {
+          "error": null,
+          "scope": "model",
+          "tags": []
+        }
+      ],
+      "multiphysics_scopes": "component(<tag>).multiphysics() plus the model-global model.multiphysics(); the per-scope tag lists never overwrite one another",
+      "path": {
+        "segments": [
+          {
+            "collection": "component",
+            "tag": "comp1"
+          }
+        ]
+      },
+      "scope": "component",
+      "tag_source": "component('comp1').physics().tags()",
+      "type_source": "physics(<tag>).getType()"
+    },
+    "solvers": [
+      {
+        "feature_count": 3,
+        "solver": "sol1",
+        "study": "std1"
+      }
+    ],
+    "study": {
+      "steps": [
+        {
+          "tag": "time",
+          "type_id": "Transient"
+        }
+      ],
+      "success": true,
+      "tag": "std1",
+      "target_step_present": true
+    },
+    "tlist": {
+      "path": {
+        "segments": [
+          {
+            "collection": "study",
+            "tag": "std1"
+          },
+          {
+            "collection": "feature",
+            "tag": "time"
+          }
+        ]
+      },
+      "properties": [
+        {
+          "name": "tlist",
+          "value": {
+            "data": [
+              0.0,
+              0.5,
+              1.0,
+              2.0,
+              5.0
+            ],
+            "java_signature": "double[]",
+            "kind": "float64",
+            "shape": [
+              5
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "warnings": [
+    "the initial-values feature could not be identified/written; see physics_initial_values",
+    "the mesh sequence exposes no Size feature; --mesh-size-level was not applied"
+  ]
+}

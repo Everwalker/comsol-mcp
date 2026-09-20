@@ -1,0 +1,996 @@
+{
+  "case_id": "R04_LIVE",
+  "results": [
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"actions\": {\"items\": {\"type\": \"object\"}, \"type\": \"array\"}, \"invariants\": {\"items\": {\"type\": \"object\"}, \"type\": \"array\"}, \"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"actions\"], \"title\": \"transaction.preview input\", \"type\": \"object\"}, \"domain\": \"transaction\", \"effect\": \"READ\", \"executable\": true, \"gate\": \"G2\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"actions\": {\"items\": {\"type\": \"object\"}, \"type\": \"array\"}, \"invariants\": {\"items\": {\"type\": \"object\"}, \"type\": \"array\"}, \"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"actions\"], \"title\": \"transaction.preview input\", \"type\": \"object\"}, \"mcp_tool_name\": \"transaction_preview\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"transaction.preview\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"仅静态检查计划、权限、依赖与预算\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 1,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "actions": {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "invariants": {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "actions"
+            ],
+            "title": "transaction.preview input",
+            "type": "object"
+          },
+          "domain": "transaction",
+          "effect": "READ",
+          "executable": true,
+          "gate": "G2",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "actions": {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "invariants": {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "actions"
+            ],
+            "title": "transaction.preview input",
+            "type": "object"
+          },
+          "mcp_tool_name": "transaction_preview",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "transaction.preview",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "仅静态检查计划、权限、依赖与预算",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"actions\": {\"items\": {\"type\": \"object\"}, \"type\": \"array\"}, \"checkpoint_policy\": {\"type\": \"string\"}, \"expected_revision\": {\"minimum\": 0, \"type\": \"integer\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"invariants\": {\"items\": {\"type\": \"object\"}, \"type\": \"array\"}, \"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"actions\", \"checkpoint_policy\"], \"title\": \"transaction.apply input\", \"type\": \"object\"}, \"domain\": \"transaction\", \"effect\": \"WRITE\", \"executable\": true, \"gate\": \"G2\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"actions\": {\"items\": {\"type\": \"object\"}, \"type\": \"array\"}, \"checkpoint_policy\": {\"type\": \"string\"}, \"expected_revision\": {\"minimum\": 0, \"type\": \"integer\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"invariants\": {\"items\": {\"type\": \"object\"}, \"type\": \"array\"}, \"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"actions\", \"checkpoint_policy\"], \"title\": \"transaction.apply input\", \"type\": \"object\"}, \"mcp_tool_name\": \"transaction_apply\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"transaction.apply\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"按前置修订、checkpoint和权限执行动作组\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\", \"readback_and_revision\", \"idempotency_and_partial_failure\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 2,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "actions": {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "checkpoint_policy": {
+                "type": "string"
+              },
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "invariants": {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "actions",
+              "checkpoint_policy"
+            ],
+            "title": "transaction.apply input",
+            "type": "object"
+          },
+          "domain": "transaction",
+          "effect": "WRITE",
+          "executable": true,
+          "gate": "G2",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "actions": {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "checkpoint_policy": {
+                "type": "string"
+              },
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "invariants": {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "actions",
+              "checkpoint_policy"
+            ],
+            "title": "transaction.apply input",
+            "type": "object"
+          },
+          "mcp_tool_name": "transaction_apply",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "transaction.apply",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "按前置修订、checkpoint和权限执行动作组",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful",
+            "readback_and_revision",
+            "idempotency_and_partial_failure"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"checks\": {\"items\": {\"type\": \"object\"}, \"type\": \"array\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}, \"transaction_id\": {\"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"idempotency_key\", \"transaction_id\"], \"title\": \"transaction.verify input\", \"type\": \"object\"}, \"domain\": \"transaction\", \"effect\": \"EVALUATE\", \"executable\": true, \"gate\": \"G2\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"checks\": {\"items\": {\"type\": \"object\"}, \"type\": \"array\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}, \"transaction_id\": {\"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"idempotency_key\", \"transaction_id\"], \"title\": \"transaction.verify input\", \"type\": \"object\"}, \"mcp_tool_name\": \"transaction_verify\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"transaction.verify\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"按不变量和回读核验一次事务\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 3,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "checks": {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "transaction_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "idempotency_key",
+              "transaction_id"
+            ],
+            "title": "transaction.verify input",
+            "type": "object"
+          },
+          "domain": "transaction",
+          "effect": "EVALUATE",
+          "executable": true,
+          "gate": "G2",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "checks": {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "transaction_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "idempotency_key",
+              "transaction_id"
+            ],
+            "title": "transaction.verify input",
+            "type": "object"
+          },
+          "mcp_tool_name": "transaction_verify",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "transaction.verify",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "按不变量和回读核验一次事务",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"INVALID_INVARIANT\", \"message\": \"invariant 0: invariant type is required\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driverr04-malformed-invariant\", \"job_id\": \"145580db-5db1-49c9-a1b0-04d9837a7178\", \"operation_id\": \"49882fe9-ca2f-4b3f-80fc-33de516076c2\", \"request_hash\": \"158b863311c3a31f137d558abaa423865f91b567a28d2969d5f92914567eb9ef\", \"request_id\": \"phase4-driverr04-malformed-invariant\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "INVALID_INVARIANT",
+      "error_message": "invariant 0: invariant type is required",
+      "operation": "operation_call",
+      "sequence": 4,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "INVALID_INVARIANT",
+          "message": "invariant 0: invariant type is required",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driverr04-malformed-invariant",
+          "job_id": "145580db-5db1-49c9-a1b0-04d9837a7178",
+          "operation_id": "49882fe9-ca2f-4b3f-80fc-33de516076c2",
+          "request_hash": "158b863311c3a31f137d558abaa423865f91b567a28d2969d5f92914567eb9ef",
+          "request_id": "phase4-driverr04-malformed-invariant"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"INVARIANT_UNSUPPORTED\", \"message\": \"invariant 0: unsupported invariant type 'phase4.unsupported_invariant'; supported: node_exists, node_type, property_equals, property_tolerance, selection_dimension, selection_non_empty\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driverr04-unsupported-invariant\", \"job_id\": \"d04c28fe-a624-4a06-a1cf-7917357da986\", \"operation_id\": \"7b8c1ebf-e17e-48d3-a9ef-c1d9207abeb5\", \"request_hash\": \"ad5b8eaf72485026e9e77bebe788f0d9a9c0e17e5167142d747ed860a58c1cac\", \"request_id\": \"phase4-driverr04-unsupported-invariant\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "INVARIANT_UNSUPPORTED",
+      "error_message": "invariant 0: unsupported invariant type 'phase4.unsupported_invariant'; supported: node_exists, node_type, property_equals, property_tolerance, selection_dimension, selection_non_empty",
+      "operation": "operation_call",
+      "sequence": 5,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "INVARIANT_UNSUPPORTED",
+          "message": "invariant 0: unsupported invariant type 'phase4.unsupported_invariant'; supported: node_exists, node_type, property_equals, property_tolerance, selection_dimension, selection_non_empty",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driverr04-unsupported-invariant",
+          "job_id": "d04c28fe-a624-4a06-a1cf-7917357da986",
+          "operation_id": "7b8c1ebf-e17e-48d3-a9ef-c1d9207abeb5",
+          "request_hash": "ad5b8eaf72485026e9e77bebe788f0d9a9c0e17e5167142d747ed860a58c1cac",
+          "request_id": "phase4-driverr04-unsupported-invariant"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"INVALID_INVARIANT\", \"message\": \"invariant 0: invariant type is required\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driverr04-violation\", \"job_id\": \"69b1a623-9030-4014-bb45-ee9798d4c7f1\", \"operation_id\": \"ec805249-d4d0-42b5-9241-f5afa6a16938\", \"request_hash\": \"82199cc8c7fdd4e8ddc3a95f7b84993fa793424b5b3037a7562f8d2723c46323\", \"request_id\": \"phase4-driverr04-violation\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "INVALID_INVARIANT",
+      "error_message": "invariant 0: invariant type is required",
+      "operation": "operation_call",
+      "sequence": 6,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "INVALID_INVARIANT",
+          "message": "invariant 0: invariant type is required",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driverr04-violation",
+          "job_id": "69b1a623-9030-4014-bb45-ee9798d4c7f1",
+          "operation_id": "ec805249-d4d0-42b5-9241-f5afa6a16938",
+          "request_hash": "82199cc8c7fdd4e8ddc3a95f7b84993fa793424b5b3037a7562f8d2723c46323",
+          "request_id": "phase4-driverr04-violation"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"INVALID_INVARIANT\", \"message\": \"invariant 0: invariant type is required\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driverr04-holds\", \"job_id\": \"ab0891f6-76ce-4b5d-be28-731ff3751d39\", \"operation_id\": \"6d5bb283-9552-40d0-b8b5-c88b86a16f3c\", \"request_hash\": \"234bb33c6f2df7ea8edbf04f8444ab8ffecc7a1666c979f787c2b11b19f7ffd5\", \"request_id\": \"phase4-driverr04-holds\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "INVALID_INVARIANT",
+      "error_message": "invariant 0: invariant type is required",
+      "operation": "operation_call",
+      "sequence": 7,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "INVALID_INVARIANT",
+          "message": "invariant 0: invariant type is required",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driverr04-holds",
+          "job_id": "ab0891f6-76ce-4b5d-be28-731ff3751d39",
+          "operation_id": "6d5bb283-9552-40d0-b8b5-c88b86a16f3c",
+          "request_hash": "234bb33c6f2df7ea8edbf04f8444ab8ffecc7a1666c979f787c2b11b19f7ffd5",
+          "request_id": "phase4-driverr04-holds"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"actions\": [{\"arguments\": {\"include_values\": false, \"path\": {\"segments\": []}}, \"operation_id\": \"node.inspect\"}], \"applied\": [], \"checkpoint_id\": \"checkpoint-10bc588ac0492da2d282\", \"checkpoint_metadata\": {\"checkpoint_id\": \"checkpoint-10bc588ac0492da2d282\", \"include_solution_requested\": false, \"label\": \"transaction-before\", \"path\": \"$REPO/g2_artifacts/checkpoints/txn-a483f2e2-9176-4988-9d48-248823bcf4ce.mph\", \"recovery_only\": true, \"restore_scope\": {\"external_dependencies\": false, \"gui_state\": \"unknown\", \"model_settings\": true, \"solution\": \"included_by_COMSOL_save_unverified\"}, \"save_count\": 1, \"save_elapsed_ms\": 8.843, \"sha256\": \"10bc588ac0492da2d2826b485ba8891b820a22745dc94ba82713e0d2e4dd6c59\", \"size\": 21784, \"solution_scope\": \"included_by_COMSOL_save_unverified\"}, \"checkpoint_policy\": \"on_failure\", \"created_at\": 1789910224.776024, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"transaction did not apply every action\", \"safe_retry\": false}, \"execution_state_unknown\": true, \"execution_status\": \"UNKNOWN\", \"failed\": [{\"index\": 0, \"operation_id\": \"node.inspect\", \"result\": {\"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"the selected node does not expose properties()\", \"safe_retry\": false}, \"success\": false}}], \"invariant_results\": {\"checks\": [], \"counts\": {\"not_run\": 0, \"optional\": 0, \"optional_failed\": 0, \"optional_passed\": 0, \"required\": 0, \"required_failed\": 0, \"required_passed\": 0, \"total\": 0}, \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp8\", \"schema_version\": 1, \"server_instance_id\": \"b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"reason\": \"actions did not complete\", \"revision\": 1, \"scope\": \"model_state\", \"status\": \"NOT_RUN\", \"unsupported\": []}, \"invariants\": [], \"isolation_proof\": {\"api_probe\": {\"authenticated_api_success\": true, \"denial_evidence_source\": \"server_access_log\", \"loopback_address\": \"127.0.0.1\", \"loopback_port\": 56389, \"nonloopback_address\": \"192.168.100.152\", \"nonloopback_api_exception_http_status\": null, \"nonloopback_port\": 56389, \"observed_at\": \"2026-09-20T13:06:11Z\", \"probe_kind\": \"comsol_java_api\", \"server_access_log\": {\"entries\": [{\"http_status\": 101, \"method\": \"GET\", \"peer\": \"127.0.0.1\", \"route\": \"/webbridge/websocket\"}, {\"http_status\": 101, \"method\": \"GET\", \"peer\": \"127.0.0.1\", \"route\": \"/webbridge/websocket\"}, {\"http_status\": 403, \"method\": \"GET\", \"peer\": \"192.168.100.152\", \"route\": \"/webbridge/websocket\"}], \"finished_at\": \"2026-09-20T13:06:11Z\", \"inode\": 29032287, \"java_request_id\": \"g2-valve-nonloopback-connect\", \"offset_after\": 261, \"offset_before\": 0, \"parsed_nonloopback_entry\": {\"http_status\": 403, \"method\": \"GET\", \"peer\": \"192.168.100.152\", \"route\": \"/webbridge/websocket\"}, \"path\": \"$REPO/PRIVATE_REDACTED/g2-valve-runtime-20260920T130556981606Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-20.txt\", \"phase\": \"java_connect_only\", \"raw_probe_started_after_capture\": true, \"segment_sha256\": \"66b96815507dff09377615d715a9647b7c8da0e44a14ba8f74a4e2fafed0d17c\", \"started_at\": \"2026-09-20T13:06:07Z\", \"status\": \"PASS\"}}, \"birth\": \"Sun Sep 20 21:05:57 2026\", \"config_inode\": 14720294, \"config_sha256\": \"1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357\", \"config_target\": \"/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml\", \"endpoint\": \"127.0.0.1:56389\", \"established_client_pids\": [8586, 11763], \"listener\": {\"endpoint\": \"*:56389\", \"local_endpoint\": \"*:56389\", \"pid\": 8586, \"raw\": \"java     8586 everwalker   59u  IPv6 0x7c08e3aec9d10b78      0t0  TCP *:56389 (LISTEN)\", \"remote_endpoint\": null, \"state\": \"LISTEN\"}, \"listener_binding\": \"wildcard\", \"loopback_listener\": false, \"pid\": 8586, \"proof_scope\": \"owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer\", \"receipt\": \"REDACTED\", \"verified\": true, \"worker_pid\": 11763}, \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp8\", \"schema_version\": 1, \"server_instance_id\": \"b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"not_executed\": [], \"partial_change\": false, \"pre_revision\": 0, \"requires_model_reconciliation\": true, \"revision\": 1, \"status\": \"UNKNOWN\", \"transaction_id\": \"txn-9f87a11b4b7346d1b19aa3c9ff86c45e\", \"verification_status\": \"NOT_RUN\"}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"transaction did not apply every action\", \"safe_retry\": false}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": true, \"idempotency_key\": \"phase4-driverr04-stale\", \"job_id\": \"38293747-6531-4710-b7ef-ca10151ce8c7\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp8\", \"schema_version\": 1, \"server_instance_id\": \"b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"a483f2e2-9176-4988-9d48-248823bcf4ce\", \"request_hash\": \"adab11b61829f926ed473f364465583ca85f21a79d9a8585dcc669b966590294\", \"request_id\": \"phase4-driverr04-stale\", \"revision\": 1, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "transaction did not apply every action",
+      "operation": "operation_call",
+      "sequence": 8,
+      "structuredContent": {
+        "data": {
+          "actions": [
+            {
+              "arguments": {
+                "include_values": false,
+                "path": {
+                  "segments": []
+                }
+              },
+              "operation_id": "node.inspect"
+            }
+          ],
+          "applied": [],
+          "checkpoint_id": "checkpoint-10bc588ac0492da2d282",
+          "checkpoint_metadata": {
+            "checkpoint_id": "checkpoint-10bc588ac0492da2d282",
+            "include_solution_requested": false,
+            "label": "transaction-before",
+            "path": "$REPO/g2_artifacts/checkpoints/txn-a483f2e2-9176-4988-9d48-248823bcf4ce.mph",
+            "recovery_only": true,
+            "restore_scope": {
+              "external_dependencies": false,
+              "gui_state": "unknown",
+              "model_settings": true,
+              "solution": "included_by_COMSOL_save_unverified"
+            },
+            "save_count": 1,
+            "save_elapsed_ms": 8.843,
+            "sha256": "10bc588ac0492da2d2826b485ba8891b820a22745dc94ba82713e0d2e4dd6c59",
+            "size": 21784,
+            "solution_scope": "included_by_COMSOL_save_unverified"
+          },
+          "checkpoint_policy": "on_failure",
+          "created_at": 1789910224.776024,
+          "error": {
+            "code": "EXECUTION_STATE_UNKNOWN",
+            "message": "transaction did not apply every action",
+            "safe_retry": false
+          },
+          "execution_state_unknown": true,
+          "execution_status": "UNKNOWN",
+          "failed": [
+            {
+              "index": 0,
+              "operation_id": "node.inspect",
+              "result": {
+                "error": {
+                  "code": "EXECUTION_STATE_UNKNOWN",
+                  "message": "the selected node does not expose properties()",
+                  "safe_retry": false
+                },
+                "success": false
+              }
+            }
+          ],
+          "invariant_results": {
+            "checks": [],
+            "counts": {
+              "not_run": 0,
+              "optional": 0,
+              "optional_failed": 0,
+              "optional_passed": 0,
+              "required": 0,
+              "required_failed": 0,
+              "required_passed": 0,
+              "total": 0
+            },
+            "model_ref": {
+              "generation": 1,
+              "model_tag": "mcp8",
+              "schema_version": 1,
+              "server_instance_id": "b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "reason": "actions did not complete",
+            "revision": 1,
+            "scope": "model_state",
+            "status": "NOT_RUN",
+            "unsupported": []
+          },
+          "invariants": [],
+          "isolation_proof": {
+            "api_probe": {
+              "authenticated_api_success": true,
+              "denial_evidence_source": "server_access_log",
+              "loopback_address": "127.0.0.1",
+              "loopback_port": 56389,
+              "nonloopback_address": "192.168.100.152",
+              "nonloopback_api_exception_http_status": null,
+              "nonloopback_port": 56389,
+              "observed_at": "2026-09-20T13:06:11Z",
+              "probe_kind": "comsol_java_api",
+              "server_access_log": {
+                "entries": [
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 403,
+                    "method": "GET",
+                    "peer": "192.168.100.152",
+                    "route": "/webbridge/websocket"
+                  }
+                ],
+                "finished_at": "2026-09-20T13:06:11Z",
+                "inode": 29032287,
+                "java_request_id": "g2-valve-nonloopback-connect",
+                "offset_after": 261,
+                "offset_before": 0,
+                "parsed_nonloopback_entry": {
+                  "http_status": 403,
+                  "method": "GET",
+                  "peer": "192.168.100.152",
+                  "route": "/webbridge/websocket"
+                },
+                "path": "$REPO/PRIVATE_REDACTED/g2-valve-runtime-20260920T130556981606Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-20.txt",
+                "phase": "java_connect_only",
+                "raw_probe_started_after_capture": true,
+                "segment_sha256": "66b96815507dff09377615d715a9647b7c8da0e44a14ba8f74a4e2fafed0d17c",
+                "started_at": "2026-09-20T13:06:07Z",
+                "status": "PASS"
+              }
+            },
+            "birth": "Sun Sep 20 21:05:57 2026",
+            "config_inode": 14720294,
+            "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+            "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+            "endpoint": "127.0.0.1:56389",
+            "established_client_pids": [
+              8586,
+              11763
+            ],
+            "listener": {
+              "endpoint": "*:56389",
+              "local_endpoint": "*:56389",
+              "pid": 8586,
+              "raw": "java     8586 everwalker   59u  IPv6 0x7c08e3aec9d10b78      0t0  TCP *:56389 (LISTEN)",
+              "remote_endpoint": null,
+              "state": "LISTEN"
+            },
+            "listener_binding": "wildcard",
+            "loopback_listener": false,
+            "pid": 8586,
+            "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+            "receipt": "REDACTED",
+            "verified": true,
+            "worker_pid": 11763
+          },
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp8",
+            "schema_version": 1,
+            "server_instance_id": "b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "not_executed": [],
+          "partial_change": false,
+          "pre_revision": 0,
+          "requires_model_reconciliation": true,
+          "revision": 1,
+          "status": "UNKNOWN",
+          "transaction_id": "txn-9f87a11b4b7346d1b19aa3c9ff86c45e",
+          "verification_status": "NOT_RUN"
+        },
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "transaction did not apply every action",
+          "safe_retry": false
+        },
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": true,
+          "idempotency_key": "phase4-driverr04-stale",
+          "job_id": "38293747-6531-4710-b7ef-ca10151ce8c7",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp8",
+            "schema_version": 1,
+            "server_instance_id": "b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "a483f2e2-9176-4988-9d48-248823bcf4ce",
+          "request_hash": "adab11b61829f926ed473f364465583ca85f21a79d9a8585dcc669b966590294",
+          "request_id": "phase4-driverr04-stale",
+          "revision": 1,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"reconcile unfinished engine work before new operations\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driverr04-checkpoint\", \"job_id\": \"39990d99-5890-43ee-b7c4-843a826d1802\", \"operation_id\": \"eb162d45-aff9-4839-bb18-7b73f085c320\", \"request_hash\": \"0069a1ec790526a08dfb3d6ea59b2af1e0130f061267a07a4a474ca0425ce3ed\", \"request_id\": \"phase4-driverr04-checkpoint\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "reconcile unfinished engine work before new operations",
+      "operation": "operation_call",
+      "sequence": 9,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "reconcile unfinished engine work before new operations",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driverr04-checkpoint",
+          "job_id": "39990d99-5890-43ee-b7c4-843a826d1802",
+          "operation_id": "eb162d45-aff9-4839-bb18-7b73f085c320",
+          "request_hash": "0069a1ec790526a08dfb3d6ea59b2af1e0130f061267a07a4a474ca0425ce3ed",
+          "request_id": "phase4-driverr04-checkpoint"
+        },
+        "success": false
+      },
+      "success": false
+    }
+  ]
+}

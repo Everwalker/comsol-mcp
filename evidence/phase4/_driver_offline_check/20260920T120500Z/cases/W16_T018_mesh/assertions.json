@@ -1,0 +1,365 @@
+{
+  "assertion_count": 4,
+  "case": {
+    "acceptance": [
+      "G3 §7 W16.T018"
+    ],
+    "assertions": {
+      "build_success_recorded_separately_from_quality": {
+        "build_status": "BLOCKED",
+        "pass": true,
+        "quality_status": "BLOCKED"
+      },
+      "operation_availability": {
+        "mesh.build": {
+          "available": false,
+          "effect": "COMPUTE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": false,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+          "input_schema_properties": [
+            "idempotency_key",
+            "model_ref",
+            "path",
+            "project_id",
+            "request_id",
+            "session_id",
+            "until_tag"
+          ],
+          "mcp_tool_name": "mesh_build",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "mesh.create": {
+          "available": false,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": false,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+          "input_schema_properties": [
+            "component",
+            "expected_revision",
+            "geometry",
+            "idempotency_key",
+            "mode",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "session_id",
+            "tag"
+          ],
+          "mcp_tool_name": "mesh_create",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "mesh.feature_create": {
+          "available": false,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": false,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+          "input_schema_properties": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "parent",
+            "project_id",
+            "properties",
+            "request_id",
+            "selection",
+            "session_id",
+            "tag",
+            "type_id"
+          ],
+          "mcp_tool_name": "mesh_feature_create",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "mesh.quality": {
+          "available": false,
+          "effect": "EVALUATE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": false,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+          "input_schema_properties": [
+            "bins",
+            "idempotency_key",
+            "metric",
+            "model_ref",
+            "path",
+            "project_id",
+            "request_id",
+            "selection",
+            "session_id"
+          ],
+          "mcp_tool_name": "mesh_quality",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "mesh.statistics": {
+          "available": false,
+          "effect": "READ",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": false,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+          "input_schema_properties": [
+            "model_ref",
+            "path",
+            "project_id",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "mesh_statistics",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        }
+      },
+      "static_mesh_ops_executable": {
+        "operations": [
+          "mesh.create",
+          "mesh.feature_create",
+          "mesh.feature_update",
+          "mesh.build",
+          "mesh.statistics",
+          "mesh.quality"
+        ],
+        "pass": false
+      },
+      "subcase_inventory": {
+        "levels": [
+          "live",
+          "protocol",
+          "static"
+        ],
+        "missing": [],
+        "planned": 7,
+        "recorded": 7
+      }
+    },
+    "case_id": "W16_T018_mesh",
+    "finished_at": "2026-09-20T11:48:38.430334Z",
+    "package": "W16",
+    "reason": null,
+    "started_at": "2026-09-20T11:48:38.414824Z",
+    "status": "BLOCKED",
+    "subcases": {
+      "build_success_is_not_quality_pass": {
+        "acceptance": "T018 build success != quality",
+        "level": "protocol",
+        "status": "PASS"
+      },
+      "free_tet_sequence_created": {
+        "acceptance": "T018 FreeTet sequence",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: mesh.create(implementation_status=PROPOSED_NOT_IMPLEMENTED), mesh.feature_create(implementation_status=PROPOSED_NOT_IMPLEMENTED), mesh.feature_update(implementation_status=unknown), mesh.build(implementation_status=PROPOSED_NOT_IMPLEMENTED), mesh.statistics(implementation_status=PROPOSED_NOT_IMPLEMENTED), mesh.quality(implementation_status=PROPOSED_NOT_IMPLEMENTED)",
+        "status": "BLOCKED"
+      },
+      "local_size_feature_applied": {
+        "acceptance": "T018 local Size feature",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: mesh.create(implementation_status=PROPOSED_NOT_IMPLEMENTED), mesh.feature_create(implementation_status=PROPOSED_NOT_IMPLEMENTED), mesh.feature_update(implementation_status=unknown), mesh.build(implementation_status=PROPOSED_NOT_IMPLEMENTED), mesh.statistics(implementation_status=PROPOSED_NOT_IMPLEMENTED), mesh.quality(implementation_status=PROPOSED_NOT_IMPLEMENTED)",
+        "status": "BLOCKED"
+      },
+      "modify_and_rebuild": {
+        "acceptance": "T018 modify and rebuild",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: mesh.create(implementation_status=PROPOSED_NOT_IMPLEMENTED), mesh.feature_create(implementation_status=PROPOSED_NOT_IMPLEMENTED), mesh.feature_update(implementation_status=unknown), mesh.build(implementation_status=PROPOSED_NOT_IMPLEMENTED), mesh.statistics(implementation_status=PROPOSED_NOT_IMPLEMENTED), mesh.quality(implementation_status=PROPOSED_NOT_IMPLEMENTED)",
+        "status": "BLOCKED"
+      },
+      "quality_definition_and_low_quality_locations": {
+        "acceptance": "T018 quality definition and low-quality locations",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: mesh.create(implementation_status=PROPOSED_NOT_IMPLEMENTED), mesh.feature_create(implementation_status=PROPOSED_NOT_IMPLEMENTED), mesh.feature_update(implementation_status=unknown), mesh.build(implementation_status=PROPOSED_NOT_IMPLEMENTED), mesh.statistics(implementation_status=PROPOSED_NOT_IMPLEMENTED), mesh.quality(implementation_status=PROPOSED_NOT_IMPLEMENTED)",
+        "status": "BLOCKED"
+      },
+      "static_mesh_ops_availability": {
+        "acceptance": "T018 mesh actions",
+        "level": "static",
+        "reason": "required operation(s) not executable in this build: mesh.create(implementation_status=PROPOSED_NOT_IMPLEMENTED), mesh.feature_create(implementation_status=PROPOSED_NOT_IMPLEMENTED), mesh.feature_update(implementation_status=unknown), mesh.build(implementation_status=PROPOSED_NOT_IMPLEMENTED), mesh.statistics(implementation_status=PROPOSED_NOT_IMPLEMENTED), mesh.quality(implementation_status=PROPOSED_NOT_IMPLEMENTED)",
+        "status": "BLOCKED"
+      },
+      "statistics_counts_and_coverage": {
+        "acceptance": "T018 statistics counts/coverage",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: mesh.create(implementation_status=PROPOSED_NOT_IMPLEMENTED), mesh.feature_create(implementation_status=PROPOSED_NOT_IMPLEMENTED), mesh.feature_update(implementation_status=unknown), mesh.build(implementation_status=PROPOSED_NOT_IMPLEMENTED), mesh.statistics(implementation_status=PROPOSED_NOT_IMPLEMENTED), mesh.quality(implementation_status=PROPOSED_NOT_IMPLEMENTED)",
+        "status": "BLOCKED"
+      }
+    }
+  },
+  "subcase_count": 7
+}

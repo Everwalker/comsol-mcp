@@ -1,0 +1,634 @@
+{
+  "assertion_count": 6,
+  "case": {
+    "acceptance": [
+      "G3 §7 W15.T017"
+    ],
+    "assertions": {
+      "engine_reconciliations": [
+        {
+          "at": "2026-09-20T14:16:02.517834Z",
+          "discovery": {
+            "active_jobs": [],
+            "available": true,
+            "error_code": null,
+            "note": "no published read lists unresolved jobs; the gate can only be released through a job id observed in this process (an earlier EXECUTION_STATE_UNKNOWN envelope)",
+            "status": "READY",
+            "worker_connected": true
+          },
+          "envelope_job_id": "1fed45fd-4cbb-42d2-8a97-a940a3563c11",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": true,
+          "job_reconcile": "no candidate job id was present in the refused envelope",
+          "jobs": [],
+          "message": "reconcile unfinished engine work before new operations",
+          "released": false,
+          "retry": "not performed: the gate was not released",
+          "targets": [],
+          "trigger": "control-gate refusal",
+          "trigger_tool": "operation_call",
+          "unresolved_before": []
+        }
+      ],
+      "operation_availability": {
+        "material.create": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "component",
+            "definition",
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "session_id",
+            "tag",
+            "type_id"
+          ],
+          "mcp_tool_name": "material_create",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "material.selection_set": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "path",
+            "project_id",
+            "request_id",
+            "selection",
+            "session_id"
+          ],
+          "mcp_tool_name": "material_selection_set",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "material.set_properties": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "expected_revision",
+            "group",
+            "idempotency_key",
+            "model_ref",
+            "path",
+            "project_id",
+            "properties",
+            "provenance",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "material_set_properties",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "material.validate": {
+          "available": true,
+          "effect": "EVALUATE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "checks",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "scope",
+            "session_id"
+          ],
+          "mcp_tool_name": "material_validate",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "node.property_get": {
+          "available": true,
+          "effect": "READ",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "model_ref",
+            "names",
+            "path",
+            "project_id",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "node_property_get",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        }
+      },
+      "static_material_ops_executable": {
+        "operations": [
+          "material.create",
+          "material.set_properties",
+          "material.selection_set",
+          "material.validate",
+          "node.property_get"
+        ],
+        "pass": true
+      },
+      "step_k_T_Cp_T_and_rho_expressions": {
+        "applied": null,
+        "comparisons": {
+          "density": {
+            "metadata_status": null,
+            "readback": null,
+            "readback_match": null,
+            "value_type": null
+          },
+          "heatcapacity": {
+            "metadata_status": null,
+            "readback": null,
+            "readback_match": null,
+            "value_type": null
+          },
+          "thermalconductivity": {
+            "metadata_status": null,
+            "readback": null,
+            "readback_match": null,
+            "value_type": null
+          }
+        },
+        "data_keys": [],
+        "elapsed_s": null,
+        "error_code": "EXECUTION_STATE_UNKNOWN",
+        "error_message": "reconcile unfinished engine work before new operations",
+        "operation": "material.set_properties",
+        "outer_isError": true,
+        "success": false
+      },
+      "subcase_inventory": {
+        "levels": [
+          "live",
+          "static"
+        ],
+        "missing": [],
+        "planned": 5,
+        "recorded": 5
+      },
+      "t017_target": {
+        "group_schema": {
+          "error_code": null,
+          "properties": [],
+          "success": true
+        },
+        "material_path": {
+          "segments": [
+            {
+              "collection": "component",
+              "tag": "comp1"
+            },
+            {
+              "collection": "material",
+              "tag": "p4mat"
+            }
+          ]
+        },
+        "material_ready": true,
+        "probe_fixture": {
+          "group_schema": {
+            "error_code": null,
+            "properties": [],
+            "success": true
+          },
+          "nodes": {
+            "block": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                },
+                {
+                  "collection": "geom",
+                  "tag": "p4geom"
+                },
+                {
+                  "collection": "feature",
+                  "tag": "p4blk"
+                }
+              ]
+            },
+            "component": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                }
+              ]
+            },
+            "geometry": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                },
+                {
+                  "collection": "geom",
+                  "tag": "p4geom"
+                }
+              ]
+            },
+            "material": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                },
+                {
+                  "collection": "material",
+                  "tag": "p4mat"
+                }
+              ]
+            },
+            "mesh": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                },
+                {
+                  "collection": "mesh",
+                  "tag": "p4mesh"
+                }
+              ]
+            },
+            "mesh_size": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                },
+                {
+                  "collection": "mesh",
+                  "tag": "p4mesh"
+                },
+                {
+                  "collection": "feature",
+                  "tag": "p4size"
+                }
+              ]
+            },
+            "physics": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                },
+                {
+                  "collection": "physics",
+                  "tag": "p4ht"
+                }
+              ]
+            },
+            "temperature": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                },
+                {
+                  "collection": "physics",
+                  "tag": "p4ht"
+                },
+                {
+                  "collection": "feature",
+                  "tag": "p4temp1"
+                }
+              ]
+            }
+          },
+          "steps": [
+            {
+              "error_code": null,
+              "message": null,
+              "operation": "definition.component_manage",
+              "status": "APPLIED",
+              "step": "component",
+              "success": true
+            },
+            {
+              "error_code": null,
+              "message": null,
+              "operation": "geometry.sequence_create",
+              "status": "APPLIED",
+              "step": "geometry",
+              "success": true
+            },
+            {
+              "error_code": null,
+              "message": null,
+              "operation": "geometry.feature_create",
+              "status": "APPLIED",
+              "step": "block",
+              "success": true
+            },
+            {
+              "error_code": null,
+              "message": null,
+              "operation": "mesh.create",
+              "status": "APPLIED",
+              "step": "mesh",
+              "success": true
+            },
+            {
+              "error_code": null,
+              "message": null,
+              "operation": "mesh.feature_create",
+              "status": "APPLIED",
+              "step": "mesh_size",
+              "success": true
+            },
+            {
+              "error_code": null,
+              "message": null,
+              "operation": "physics.create",
+              "status": "APPLIED",
+              "step": "physics",
+              "success": true
+            },
+            {
+              "error_code": null,
+              "message": null,
+              "operation": "physics.feature_create",
+              "status": "APPLIED",
+              "step": "temperature",
+              "success": true
+            },
+            {
+              "error_code": null,
+              "message": null,
+              "operation": "material.create",
+              "status": "APPLIED",
+              "step": "material",
+              "success": true
+            },
+            {
+              "error_code": null,
+              "operation": "node.property_schema",
+              "status": "READ",
+              "step": "material_group_schema"
+            },
+            {
+              "reason": "the fixture was created once for this run and is reused by this case",
+              "status": "REUSED",
+              "step": "reused"
+            }
+          ]
+        }
+      }
+    },
+    "case_id": "W15_T017_material",
+    "finished_at": "2026-09-20T14:16:02.520475Z",
+    "package": "W15",
+    "reason": null,
+    "started_at": "2026-09-20T14:16:02.499960Z",
+    "status": "BLOCKED",
+    "subcases": {
+      "anisotropic_tensor_and_coordinate_system": {
+        "acceptance": "T017 anisotropic tensor and frame",
+        "level": "live",
+        "reason": "prerequisite subcase k_T_Cp_T_and_rho_expressions did not pass",
+        "status": "NOT_RUN"
+      },
+      "k_T_Cp_T_and_rho_expressions": {
+        "acceptance": "T017 k(T)/Cp(T)/rho",
+        "level": "live",
+        "observed": {
+          "applied": null,
+          "comparisons": {
+            "density": {
+              "metadata_status": null,
+              "readback": null,
+              "readback_match": null,
+              "value_type": null
+            },
+            "heatcapacity": {
+              "metadata_status": null,
+              "readback": null,
+              "readback_match": null,
+              "value_type": null
+            },
+            "thermalconductivity": {
+              "metadata_status": null,
+              "readback": null,
+              "readback_match": null,
+              "value_type": null
+            }
+          },
+          "error_code": "EXECUTION_STATE_UNKNOWN"
+        },
+        "reason": "the material property write was refused: the engine state was unknown (reconcile unfinished engine work before new operations)",
+        "status": "BLOCKED"
+      },
+      "material_readback_after_update": {
+        "acceptance": "T017 material readback",
+        "level": "live",
+        "reason": "prerequisite subcase k_T_Cp_T_and_rho_expressions did not pass",
+        "status": "NOT_RUN"
+      },
+      "missing_required_property_preflight_error": {
+        "acceptance": "T017 missing required property preflight",
+        "level": "live",
+        "reason": "prerequisite subcase anisotropic_tensor_and_coordinate_system did not pass",
+        "status": "NOT_RUN"
+      },
+      "static_material_ops_availability": {
+        "acceptance": "T017 material actions",
+        "level": "static",
+        "status": "PASS"
+      }
+    }
+  },
+  "subcase_count": 5
+}

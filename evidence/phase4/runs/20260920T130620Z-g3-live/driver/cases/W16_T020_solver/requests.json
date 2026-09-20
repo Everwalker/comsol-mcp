@@ -1,0 +1,150 @@
+{
+  "case_id": "W16_T020_solver",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driverphase4-describe-solver-list",
+          "request_id": "phase4-driverphase4-describe-solver-list"
+        },
+        "operation_id": "solver.list"
+      },
+      "elapsed_s": 0.0027169170207343996,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driverphase4-describe-solver-inspect",
+          "request_id": "phase4-driverphase4-describe-solver-inspect"
+        },
+        "operation_id": "solver.inspect"
+      },
+      "elapsed_s": 0.002445375022944063,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driverphase4-describe-solver-feature_update",
+          "request_id": "phase4-driverphase4-describe-solver-feature_update"
+        },
+        "operation_id": "solver.feature_update"
+      },
+      "elapsed_s": 0.0019818750442937016,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driverphase4-describe-study-run",
+          "request_id": "phase4-driverphase4-describe-study-run"
+        },
+        "operation_id": "study.run"
+      },
+      "elapsed_s": 0.0019035410368815064,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driverphase4-describe-node-property_get",
+          "request_id": "phase4-driverphase4-describe-node-property_get"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.001840915996581316,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 5
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 1,
+          "filter": {
+            "study": "std1"
+          },
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp8",
+            "schema_version": 1,
+            "server_instance_id": "b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 1,
+          "idempotency_key": "phase4-driversolver_tree_read",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp8",
+            "schema_version": 1,
+            "server_instance_id": "b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driversolver_tree_read",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "solver.list"
+      },
+      "elapsed_s": 0.002644958032760769,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 6
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "depth": 4,
+          "expected_revision": 1,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp8",
+            "schema_version": 1,
+            "server_instance_id": "b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "path": {
+            "segments": [
+              {
+                "collection": "study",
+                "tag": "std1"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 1,
+          "idempotency_key": "phase4-drivert020-inspect",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp8",
+            "schema_version": 1,
+            "server_instance_id": "b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driversolver.inspect",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "solver.inspect"
+      },
+      "elapsed_s": 0.002445999998599291,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 7
+    }
+  ]
+}

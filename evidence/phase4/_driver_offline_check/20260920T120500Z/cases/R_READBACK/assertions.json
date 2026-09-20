@@ -1,0 +1,56 @@
+{
+  "assertion_count": 2,
+  "case": {
+    "acceptance": [
+      "G3 §7"
+    ],
+    "assertions": {
+      "r_round_statuses": {
+        "pass": true
+      },
+      "subcase_inventory": {
+        "levels": [
+          "rollup"
+        ],
+        "missing": [],
+        "planned": 4,
+        "recorded": 4
+      }
+    },
+    "case_id": "R_READBACK",
+    "finished_at": "2026-09-20T11:48:38.256922Z",
+    "package": "R",
+    "reason": null,
+    "started_at": "2026-09-20T11:48:38.256903Z",
+    "status": "NOT_RUN",
+    "subcases": {
+      "r01_expression_readback_status": {
+        "acceptance": "G3 R01 status roll-up",
+        "level": "rollup",
+        "reason": "roll-up of R01_LIVE: NOT_RUN",
+        "source_case": "R01_LIVE",
+        "status": "NOT_RUN"
+      },
+      "r03_indexed_keyed_readback_status": {
+        "acceptance": "G3 R03 status roll-up",
+        "level": "rollup",
+        "reason": "roll-up of R03_LIVE: NOT_RUN",
+        "source_case": "R03_LIVE",
+        "status": "NOT_RUN"
+      },
+      "r04_invariant_readback_status": {
+        "acceptance": "G3 R04 status roll-up",
+        "level": "rollup",
+        "reason": "roll-up of R04_LIVE: NOT_RUN",
+        "source_case": "R04_LIVE",
+        "status": "NOT_RUN"
+      },
+      "r_round_not_failed": {
+        "acceptance": "G3 R round has no FAIL",
+        "level": "rollup",
+        "status": "PASS"
+      }
+    }
+  },
+  "subcase_count": 4
+}

@@ -1,0 +1,598 @@
+{
+  "assertion_count": 8,
+  "case": {
+    "acceptance": [
+      "G3 §7 R03"
+    ],
+    "assertions": {
+      "indexed_envelope_consistency": {
+        "calls": 0,
+        "pass": false
+      },
+      "malformed_index_and_key_rejected_pre_engine": {
+        "engine_called": null,
+        "error_code": "INVALID_REQUEST",
+        "pass": true
+      },
+      "operation_availability": {
+        "node.property_entry_set": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "expected_revision",
+            "idempotency_key",
+            "key",
+            "model_ref",
+            "name",
+            "path",
+            "project_id",
+            "request_id",
+            "session_id",
+            "value"
+          ],
+          "mcp_tool_name": "node_property_entry_set",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "node.property_get": {
+          "available": true,
+          "effect": "READ",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "model_ref",
+            "names",
+            "path",
+            "project_id",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "node_property_get",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "node.property_index_set": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "expected_revision",
+            "idempotency_key",
+            "indices",
+            "model_ref",
+            "name",
+            "path",
+            "project_id",
+            "request_id",
+            "session_id",
+            "value"
+          ],
+          "mcp_tool_name": "node_property_index_set",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "transaction.preview": {
+          "available": true,
+          "effect": "READ",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "actions",
+            "invariants",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "transaction_preview",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        }
+      },
+      "r03_discovery": {
+        "available": {
+          "keyed": 0,
+          "matrix": 0,
+          "single": 0,
+          "vector": 0
+        },
+        "candidates": 0,
+        "probe_fixture": {
+          "created_candidates": 0,
+          "discovery": {
+            "count": 0,
+            "roots": {
+              "{\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"geom\", \"tag\": \"p4geom\"}, {\"collection\": \"feature\", \"tag\": \"p4blk\"}]}": {
+                "error_code": "IDEMPOTENCY_CONFLICT",
+                "success": false
+              },
+              "{\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"geom\", \"tag\": \"p4geom\"}]}": {
+                "error_code": "IDEMPOTENCY_CONFLICT",
+                "success": false
+              },
+              "{\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"material\", \"tag\": \"p4mat\"}]}": {
+                "error_code": "IDEMPOTENCY_CONFLICT",
+                "success": false
+              },
+              "{\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"mesh\", \"tag\": \"p4mesh\"}, {\"collection\": \"feature\", \"tag\": \"p4size\"}]}": {
+                "error_code": "IDEMPOTENCY_CONFLICT",
+                "success": false
+              },
+              "{\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"mesh\", \"tag\": \"p4mesh\"}]}": {
+                "error_code": "IDEMPOTENCY_CONFLICT",
+                "success": false
+              },
+              "{\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"physics\", \"tag\": \"p4ht\"}, {\"collection\": \"feature\", \"tag\": \"p4temp1\"}]}": {
+                "error_code": "IDEMPOTENCY_CONFLICT",
+                "success": false
+              },
+              "{\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"physics\", \"tag\": \"p4ht\"}]}": {
+                "error_code": "IDEMPOTENCY_CONFLICT",
+                "success": false
+              },
+              "{\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}]}": {
+                "error_code": "IDEMPOTENCY_CONFLICT",
+                "success": false
+              }
+            }
+          },
+          "fixture": {
+            "group_schema": {
+              "error_code": null,
+              "properties": [],
+              "success": true
+            },
+            "nodes": {
+              "block": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "geom",
+                    "tag": "p4geom"
+                  },
+                  {
+                    "collection": "feature",
+                    "tag": "p4blk"
+                  }
+                ]
+              },
+              "component": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  }
+                ]
+              },
+              "geometry": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "geom",
+                    "tag": "p4geom"
+                  }
+                ]
+              },
+              "material": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "material",
+                    "tag": "p4mat"
+                  }
+                ]
+              },
+              "mesh": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "mesh",
+                    "tag": "p4mesh"
+                  }
+                ]
+              },
+              "mesh_size": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "mesh",
+                    "tag": "p4mesh"
+                  },
+                  {
+                    "collection": "feature",
+                    "tag": "p4size"
+                  }
+                ]
+              },
+              "physics": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "physics",
+                    "tag": "p4ht"
+                  }
+                ]
+              },
+              "temperature": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "physics",
+                    "tag": "p4ht"
+                  },
+                  {
+                    "collection": "feature",
+                    "tag": "p4temp1"
+                  }
+                ]
+              }
+            },
+            "steps": [
+              {
+                "error_code": null,
+                "message": null,
+                "operation": "definition.component_manage",
+                "status": "APPLIED",
+                "step": "component",
+                "success": true
+              },
+              {
+                "error_code": null,
+                "message": null,
+                "operation": "geometry.sequence_create",
+                "status": "APPLIED",
+                "step": "geometry",
+                "success": true
+              },
+              {
+                "error_code": null,
+                "message": null,
+                "operation": "geometry.feature_create",
+                "status": "APPLIED",
+                "step": "block",
+                "success": true
+              },
+              {
+                "error_code": null,
+                "message": null,
+                "operation": "mesh.create",
+                "status": "APPLIED",
+                "step": "mesh",
+                "success": true
+              },
+              {
+                "error_code": null,
+                "message": null,
+                "operation": "mesh.feature_create",
+                "status": "APPLIED",
+                "step": "mesh_size",
+                "success": true
+              },
+              {
+                "error_code": null,
+                "message": null,
+                "operation": "physics.create",
+                "status": "APPLIED",
+                "step": "physics",
+                "success": true
+              },
+              {
+                "error_code": null,
+                "message": null,
+                "operation": "physics.feature_create",
+                "status": "APPLIED",
+                "step": "temperature",
+                "success": true
+              },
+              {
+                "error_code": null,
+                "message": null,
+                "operation": "material.create",
+                "status": "APPLIED",
+                "step": "material",
+                "success": true
+              },
+              {
+                "error_code": null,
+                "operation": "node.property_schema",
+                "status": "READ",
+                "step": "material_group_schema"
+              },
+              {
+                "reason": "the fixture was created once for this run and is reused by this case",
+                "status": "REUSED",
+                "step": "reused"
+              }
+            ]
+          },
+          "group_schema": {
+            "error_code": null,
+            "properties": [],
+            "success": true
+          },
+          "material_group_candidates": 0,
+          "status": "EMPTY"
+        },
+        "targets": []
+      },
+      "r03_discovery_base": {
+        "candidates": 0,
+        "find": {
+          "error_code": "IDEMPOTENCY_CONFLICT",
+          "success": false
+        }
+      },
+      "r03_malformed_index_preview": {
+        "engine_called": null,
+        "error_code": "INVALID_REQUEST",
+        "error_message": "indices must be a non-empty integer array",
+        "outer_isError": true,
+        "static_only": null,
+        "status": null,
+        "success": false
+      },
+      "static_indexed_ops_executable": {
+        "operations": [
+          "node.property_index_set",
+          "node.property_entry_set",
+          "node.property_get"
+        ],
+        "pass": true
+      },
+      "subcase_inventory": {
+        "levels": [
+          "live",
+          "protocol",
+          "static"
+        ],
+        "missing": [],
+        "planned": 10,
+        "recorded": 10
+      }
+    },
+    "case_id": "R03_LIVE",
+    "finished_at": "2026-09-20T13:39:50.185972Z",
+    "package": "R",
+    "reason": null,
+    "started_at": "2026-09-20T13:39:50.148414Z",
+    "status": "FAIL",
+    "subcases": {
+      "empty_or_single_element_property": {
+        "acceptance": "G3 R03 empty/single element",
+        "level": "live",
+        "reason": "the bound model exposed no empty or single-element 1-D property",
+        "status": "NOT_RUN"
+      },
+      "envelope_consistency": {
+        "acceptance": "G3 R03 outer isError/UNKNOWN consistent",
+        "level": "protocol",
+        "reason": "an indexed/keyed call returned an inner success that disagrees with the outer isError flag",
+        "status": "FAIL"
+      },
+      "keyed_entry_set_and_readback": {
+        "acceptance": "G3 R03 keyed entry",
+        "level": "live",
+        "reason": "no keyed (property-group) entry property could be discovered or created on the bound model",
+        "status": "NOT_RUN"
+      },
+      "matrix_cell_or_row_readback": {
+        "acceptance": "G3 R03 matrix cell/row",
+        "level": "live",
+        "reason": "no 2-D property was exposed",
+        "status": "NOT_RUN"
+      },
+      "non_target_items_unchanged": {
+        "acceptance": "G3 R03 non-target items unchanged",
+        "level": "live",
+        "reason": "no multi-element property was exposed",
+        "status": "NOT_RUN"
+      },
+      "setter_noop_or_normalized_value_detected": {
+        "acceptance": "G3 R03 setter success but value differs",
+        "level": "live",
+        "reason": "no 1-D property was exposed",
+        "status": "NOT_RUN"
+      },
+      "static_indexed_ops_executable": {
+        "acceptance": "G3 R03 indexed/keyed readback path",
+        "level": "static",
+        "status": "PASS"
+      },
+      "static_malformed_index_and_key_rejected_pre_engine": {
+        "acceptance": "G3 R03 write-before rejection",
+        "level": "protocol",
+        "observed": {
+          "engine_called": null,
+          "error_code": "INVALID_REQUEST",
+          "error_message": "indices must be a non-empty integer array",
+          "outer_isError": true,
+          "static_only": null,
+          "status": null,
+          "success": false
+        },
+        "status": "PASS"
+      },
+      "vector_element_readback": {
+        "acceptance": "G3 R03 vector element",
+        "level": "live",
+        "reason": "no 1-D property with at least two elements was exposed",
+        "status": "NOT_RUN"
+      },
+      "wrong_index_rejected_without_write": {
+        "acceptance": "G3 R03 wrong index/key",
+        "level": "live",
+        "reason": "no 1-D property was exposed",
+        "status": "NOT_RUN"
+      }
+    }
+  },
+  "subcase_count": 10
+}

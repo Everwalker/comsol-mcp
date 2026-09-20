@@ -1,0 +1,105 @@
+{
+  "case_id": "R03_LIVE",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260920T120500Zphase4-describe-node-property_index_set",
+          "request_id": "phase4-20260920T120500Zphase4-describe-node-property_index_set"
+        },
+        "operation_id": "node.property_index_set"
+      },
+      "elapsed_s": 0.001953249971847981,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260920T120500Zphase4-describe-node-property_entry_set",
+          "request_id": "phase4-20260920T120500Zphase4-describe-node-property_entry_set"
+        },
+        "operation_id": "node.property_entry_set"
+      },
+      "elapsed_s": 0.001971375022549182,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260920T120500Zphase4-describe-node-property_get",
+          "request_id": "phase4-20260920T120500Zphase4-describe-node-property_get"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.0018240000354126096,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260920T120500Zphase4-describe-transaction-preview",
+          "request_id": "phase4-20260920T120500Zphase4-describe-transaction-preview"
+        },
+        "operation_id": "transaction.preview"
+      },
+      "elapsed_s": 0.0017339999903924763,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "actions": [
+            {
+              "arguments": {
+                "indices": [],
+                "name": "phase4_probe",
+                "path": {
+                  "segments": []
+                },
+                "value": {
+                  "data": 1.0,
+                  "kind": "float64",
+                  "shape": []
+                }
+              },
+              "operation_id": "node.property_index_set"
+            },
+            {
+              "arguments": {
+                "name": "phase4_probe",
+                "path": {
+                  "segments": []
+                },
+                "value": {
+                  "data": 1.0,
+                  "kind": "float64",
+                  "shape": []
+                }
+              },
+              "operation_id": "node.property_entry_set"
+            }
+          ],
+          "invariants": [],
+          "project_id": "comsol-mcp-phase4"
+        },
+        "execution": {
+          "idempotency_key": "phase4-20260920T120500Zr03-static-malformed",
+          "request_id": "phase4-20260920T120500Zr03-static-malformed"
+        },
+        "operation_id": "transaction.preview"
+      },
+      "elapsed_s": 0.0022852920228615403,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 5
+    }
+  ]
+}

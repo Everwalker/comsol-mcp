@@ -1,0 +1,114 @@
+{
+  "assertion_count": 9,
+  "case": {
+    "acceptance": [
+      "G3 §10 T035"
+    ],
+    "assertions": {
+      "operation_availability": {},
+      "outside_file_unchanged": {
+        "after": "752ad993fa5ebc69f3f9a054a6305fd64956fae799437dfe87a38202ecc13d73",
+        "before": "752ad993fa5ebc69f3f9a054a6305fd64956fae799437dfe87a38202ecc13d73"
+      },
+      "run_leak_scan": {
+        "credential_hits": [],
+        "private_path_hits": [],
+        "scanned_files": 102
+      },
+      "static_docs_guard_ops_executable": {
+        "operations": [
+          "docs.index",
+          "docs.search"
+        ],
+        "pass": false
+      },
+      "subcase_inventory": {
+        "levels": [
+          "live",
+          "protocol"
+        ],
+        "missing": [],
+        "planned": 6,
+        "recorded": 6
+      },
+      "t035_credential_ingest": {
+        "credential_sha256": "REDACTED",
+        "index": {
+          "error_code": null,
+          "has_structured_content": true,
+          "operation_id": null,
+          "outer_isError": false,
+          "success": true
+        },
+        "search": {
+          "error_code": null,
+          "has_structured_content": true,
+          "operation_id": null,
+          "outer_isError": false,
+          "success": true
+        }
+      },
+      "t035_fixtures": {
+        "credential_fixture": "REDACTED",
+        "outside_file": "/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-mcp-phase4-outside-qujiowpr/outside_COMSOL_6.4_guard.md",
+        "outside_sha256": "752ad993fa5ebc69f3f9a054a6305fd64956fae799437dfe87a38202ecc13d73",
+        "symlink": "$REPO/evidence/phase4/_driver_offline_check/20260920T120500Z/outside_link_COMSOL_6.4.md"
+      },
+      "t035_index_attempts": {},
+      "t035_leak_scan": {
+        "credential_fixture_hits": [],
+        "credential_hits": [],
+        "credential_leak_hits": [],
+        "excluded_fixtures": [
+          "credentials_COMSOL_6.4.md"
+        ],
+        "private_path_hits": [],
+        "scanned_files": 84
+      }
+    },
+    "case_id": "GUARD_T035",
+    "finished_at": "2026-09-20T11:48:38.527846Z",
+    "package": "GUARD",
+    "reason": null,
+    "started_at": "2026-09-20T11:48:38.514049Z",
+    "status": "BLOCKED",
+    "subcases": {
+      "credential_text_not_persisted": {
+        "acceptance": "T035 credentials never persisted",
+        "hits": [],
+        "level": "protocol",
+        "status": "PASS"
+      },
+      "failed_denial_does_not_modify_files": {
+        "acceptance": "T035 failed access changes nothing",
+        "level": "live",
+        "status": "PASS"
+      },
+      "outside_workspace_source_denied": {
+        "acceptance": "T035 outside-workspace source",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: docs.index(implementation_status=unknown), docs.search(implementation_status=unknown)",
+        "status": "BLOCKED"
+      },
+      "outside_write_attempt_denied": {
+        "acceptance": "T035 outside write attempt",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: docs.index(implementation_status=unknown), docs.search(implementation_status=unknown)",
+        "status": "BLOCKED"
+      },
+      "private_paths_not_in_evidence": {
+        "acceptance": "T035 private paths redacted",
+        "hits": [],
+        "level": "protocol",
+        "status": "PASS"
+      },
+      "symlink_outside_denied": {
+        "acceptance": "T035 symlink/reparse escape",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: docs.index(implementation_status=unknown), docs.search(implementation_status=unknown)",
+        "status": "BLOCKED"
+      }
+    }
+  },
+  "subcase_count": 6
+}

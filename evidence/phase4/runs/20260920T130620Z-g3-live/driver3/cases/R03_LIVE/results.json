@@ -1,0 +1,2445 @@
+{
+  "case_id": "R03_LIVE",
+  "results": [
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"expected_revision\": {\"minimum\": 0, \"type\": \"integer\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"indices\": {\"items\": {\"type\": \"integer\"}, \"type\": \"array\"}, \"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"name\": {\"type\": \"string\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}, \"value\": {\"$ref\": \"common.schema.json#/$defs/TypedValue\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"path\", \"name\", \"indices\", \"value\"], \"title\": \"node.property_index_set input\", \"type\": \"object\"}, \"domain\": \"node\", \"effect\": \"WRITE\", \"executable\": true, \"gate\": \"G2\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"expected_revision\": {\"minimum\": 0, \"type\": \"integer\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"indices\": {\"items\": {\"type\": \"integer\"}, \"type\": \"array\"}, \"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"name\": {\"type\": \"string\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}, \"value\": {\"$ref\": \"common.schema.json#/$defs/TypedValue\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"path\", \"name\", \"indices\", \"value\"], \"title\": \"node.property_index_set input\", \"type\": \"object\"}, \"mcp_tool_name\": \"node_property_index_set\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"node.property_index_set\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"按明确索引设置数组/矩阵元素\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\", \"readback_and_revision\", \"idempotency_and_partial_failure\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 1,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "indices": {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "value": {
+                "$ref": "common.schema.json#/$defs/TypedValue"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "path",
+              "name",
+              "indices",
+              "value"
+            ],
+            "title": "node.property_index_set input",
+            "type": "object"
+          },
+          "domain": "node",
+          "effect": "WRITE",
+          "executable": true,
+          "gate": "G2",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "indices": {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "name": {
+                "type": "string"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "value": {
+                "$ref": "common.schema.json#/$defs/TypedValue"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "path",
+              "name",
+              "indices",
+              "value"
+            ],
+            "title": "node.property_index_set input",
+            "type": "object"
+          },
+          "mcp_tool_name": "node_property_index_set",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "node.property_index_set",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "按明确索引设置数组/矩阵元素",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful",
+            "readback_and_revision",
+            "idempotency_and_partial_failure"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"expected_revision\": {\"minimum\": 0, \"type\": \"integer\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"key\": {\"type\": \"string\"}, \"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"name\": {\"type\": \"string\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}, \"value\": {\"$ref\": \"common.schema.json#/$defs/TypedValue\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"path\", \"name\", \"key\", \"value\"], \"title\": \"node.property_entry_set input\", \"type\": \"object\"}, \"domain\": \"node\", \"effect\": \"WRITE\", \"executable\": true, \"gate\": \"G2\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"expected_revision\": {\"minimum\": 0, \"type\": \"integer\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"key\": {\"type\": \"string\"}, \"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"name\": {\"type\": \"string\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}, \"value\": {\"$ref\": \"common.schema.json#/$defs/TypedValue\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"path\", \"name\", \"key\", \"value\"], \"title\": \"node.property_entry_set input\", \"type\": \"object\"}, \"mcp_tool_name\": \"node_property_entry_set\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"node.property_entry_set\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"按entry key设置值\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\", \"readback_and_revision\", \"idempotency_and_partial_failure\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 2,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "key": {
+                "type": "string"
+              },
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "value": {
+                "$ref": "common.schema.json#/$defs/TypedValue"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "path",
+              "name",
+              "key",
+              "value"
+            ],
+            "title": "node.property_entry_set input",
+            "type": "object"
+          },
+          "domain": "node",
+          "effect": "WRITE",
+          "executable": true,
+          "gate": "G2",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "key": {
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "name": {
+                "type": "string"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "value": {
+                "$ref": "common.schema.json#/$defs/TypedValue"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "path",
+              "name",
+              "key",
+              "value"
+            ],
+            "title": "node.property_entry_set input",
+            "type": "object"
+          },
+          "mcp_tool_name": "node_property_entry_set",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "node.property_entry_set",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "按entry key设置值",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful",
+            "readback_and_revision",
+            "idempotency_and_partial_failure"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"names\": {\"items\": {\"type\": \"string\"}, \"type\": \"array\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"path\", \"names\"], \"title\": \"node.property_get input\", \"type\": \"object\"}, \"domain\": \"node\", \"effect\": \"READ\", \"executable\": true, \"gate\": \"G2\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"names\": {\"items\": {\"type\": \"string\"}, \"type\": \"array\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"path\", \"names\"], \"title\": \"node.property_get input\", \"type\": \"object\"}, \"mcp_tool_name\": \"node_property_get\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"node.property_get\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"按类型回读一个或多个属性\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 3,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "names": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "path",
+              "names"
+            ],
+            "title": "node.property_get input",
+            "type": "object"
+          },
+          "domain": "node",
+          "effect": "READ",
+          "executable": true,
+          "gate": "G2",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "names": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "path",
+              "names"
+            ],
+            "title": "node.property_get input",
+            "type": "object"
+          },
+          "mcp_tool_name": "node_property_get",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "node.property_get",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "按类型回读一个或多个属性",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"actions\": {\"items\": {\"type\": \"object\"}, \"type\": \"array\"}, \"invariants\": {\"items\": {\"type\": \"object\"}, \"type\": \"array\"}, \"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"actions\"], \"title\": \"transaction.preview input\", \"type\": \"object\"}, \"domain\": \"transaction\", \"effect\": \"READ\", \"executable\": true, \"gate\": \"G2\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"actions\": {\"items\": {\"type\": \"object\"}, \"type\": \"array\"}, \"invariants\": {\"items\": {\"type\": \"object\"}, \"type\": \"array\"}, \"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"actions\"], \"title\": \"transaction.preview input\", \"type\": \"object\"}, \"mcp_tool_name\": \"transaction_preview\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"transaction.preview\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"仅静态检查计划、权限、依赖与预算\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 4,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "actions": {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "invariants": {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "actions"
+            ],
+            "title": "transaction.preview input",
+            "type": "object"
+          },
+          "domain": "transaction",
+          "effect": "READ",
+          "executable": true,
+          "gate": "G2",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "actions": {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "invariants": {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "actions"
+            ],
+            "title": "transaction.preview input",
+            "type": "object"
+          },
+          "mcp_tool_name": "transaction_preview",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "transaction.preview",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "仅静态检查计划、权限、依赖与预算",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"reconcile unfinished engine work before new operations\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver3r03-static-malformed\", \"job_id\": \"1856be44-bc20-41f2-8fb1-992f204ad8f1\", \"operation_id\": \"198c8ac7-6e49-4a1b-b0ef-13614edb0e6d\", \"request_hash\": \"0e47ba2a16789cebced86c75df1ca2ffea79ddb47cb7b31d7537ddd72038736d\", \"request_id\": \"phase4-driver3r03-static-malformed\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "reconcile unfinished engine work before new operations",
+      "operation": "operation_call",
+      "sequence": 5,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "reconcile unfinished engine work before new operations",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver3r03-static-malformed",
+          "job_id": "1856be44-bc20-41f2-8fb1-992f204ad8f1",
+          "operation_id": "198c8ac7-6e49-4a1b-b0ef-13614edb0e6d",
+          "request_hash": "0e47ba2a16789cebced86c75df1ca2ffea79ddb47cb7b31d7537ddd72038736d",
+          "request_id": "phase4-driver3r03-static-malformed"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"active_jobs\": [], \"control_pid\": 26629, \"session\": {\"connected\": true, \"endpoint\": \"127.0.0.1:56389\", \"external_change_detection\": {\"cas_guarantee\": \"NONE\", \"coverage\": \"parameters+shallow_tree_identity\", \"event_notifications\": \"UNVERIFIED\", \"evidence_environment\": \"macOS arm64; COMSOL 6.4.0.293\", \"evidence_source\": \"evidence/phase2/followup/20260918T142300Z-external-api\", \"full_model_property_coverage\": \"UNVERIFIED\", \"other_platforms_or_versions\": \"UNVERIFIED\", \"status\": \"SCOPED_EVIDENCE_ONLY\"}, \"server_instance_id\": \"a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf\", \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\", \"trusted_code\": {\"config\": \"COMSOL_MCP_TRUSTED_CODE\", \"enabled\": false, \"os_sandbox\": false}, \"worker\": {\"connected\": true, \"generation\": 2, \"host\": \"127.0.0.1\", \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"pid\": 26634, \"port\": 54944, \"server\": \"127.0.0.1:56389\"}}, \"status\": \"READY\", \"worker\": {\"changed_count\": 0, \"connected\": true, \"generation\": 2, \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"observed_at\": 1789913761.9714592, \"ok\": true, \"queued_or_running\": 0, \"server\": \"127.0.0.1:56389\", \"status\": \"HEALTHY\"}, \"worker_connected\": true}, \"execution\": {\"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "session_health",
+      "sequence": 6,
+      "structuredContent": {
+        "data": {
+          "active_jobs": [],
+          "control_pid": 26629,
+          "session": {
+            "connected": true,
+            "endpoint": "127.0.0.1:56389",
+            "external_change_detection": {
+              "cas_guarantee": "NONE",
+              "coverage": "parameters+shallow_tree_identity",
+              "event_notifications": "UNVERIFIED",
+              "evidence_environment": "macOS arm64; COMSOL 6.4.0.293",
+              "evidence_source": "evidence/phase2/followup/20260918T142300Z-external-api",
+              "full_model_property_coverage": "UNVERIFIED",
+              "other_platforms_or_versions": "UNVERIFIED",
+              "status": "SCOPED_EVIDENCE_ONLY"
+            },
+            "server_instance_id": "a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf",
+            "server_ownership": "shared",
+            "session_id": "session-9f95c2e814acd5f99589961a",
+            "trusted_code": {
+              "config": "COMSOL_MCP_TRUSTED_CODE",
+              "enabled": false,
+              "os_sandbox": false
+            },
+            "worker": {
+              "connected": true,
+              "generation": 2,
+              "host": "127.0.0.1",
+              "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+              "pid": 26634,
+              "port": 54944,
+              "server": "127.0.0.1:56389"
+            }
+          },
+          "status": "READY",
+          "worker": {
+            "changed_count": 0,
+            "connected": true,
+            "generation": 2,
+            "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+            "observed_at": 1789913761.9714592,
+            "ok": true,
+            "queued_or_running": 0,
+            "server": "127.0.0.1:56389",
+            "status": "HEALTHY"
+          },
+          "worker_connected": true
+        },
+        "execution": {
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"reconcile unfinished engine work before new operations\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver3phase4-find-116\", \"job_id\": \"619f03bd-44b5-49ca-a729-549eea2efcc9\", \"operation_id\": \"803ad6d6-9224-4bfd-9811-8a85d4545901\", \"request_hash\": \"5ca004ac812765a0272b4c89c9e42627b58b3c3f5a6bc47e427668dc45265089\", \"request_id\": \"phase4-driver3phase4-find-116\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "reconcile unfinished engine work before new operations",
+      "operation": "operation_call",
+      "sequence": 7,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "reconcile unfinished engine work before new operations",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver3phase4-find-116",
+          "job_id": "619f03bd-44b5-49ca-a729-549eea2efcc9",
+          "operation_id": "803ad6d6-9224-4bfd-9811-8a85d4545901",
+          "request_hash": "5ca004ac812765a0272b4c89c9e42627b58b3c3f5a6bc47e427668dc45265089",
+          "request_id": "phase4-driver3phase4-find-116"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"active_jobs\": [], \"control_pid\": 26629, \"session\": {\"connected\": true, \"endpoint\": \"127.0.0.1:56389\", \"external_change_detection\": {\"cas_guarantee\": \"NONE\", \"coverage\": \"parameters+shallow_tree_identity\", \"event_notifications\": \"UNVERIFIED\", \"evidence_environment\": \"macOS arm64; COMSOL 6.4.0.293\", \"evidence_source\": \"evidence/phase2/followup/20260918T142300Z-external-api\", \"full_model_property_coverage\": \"UNVERIFIED\", \"other_platforms_or_versions\": \"UNVERIFIED\", \"status\": \"SCOPED_EVIDENCE_ONLY\"}, \"server_instance_id\": \"a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf\", \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\", \"trusted_code\": {\"config\": \"COMSOL_MCP_TRUSTED_CODE\", \"enabled\": false, \"os_sandbox\": false}, \"worker\": {\"connected\": true, \"generation\": 2, \"host\": \"127.0.0.1\", \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"pid\": 26634, \"port\": 54944, \"server\": \"127.0.0.1:56389\"}}, \"status\": \"READY\", \"worker\": {\"changed_count\": 0, \"connected\": true, \"generation\": 2, \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"observed_at\": 1789913761.9714592, \"ok\": true, \"queued_or_running\": 0, \"server\": \"127.0.0.1:56389\", \"status\": \"HEALTHY\"}, \"worker_connected\": true}, \"execution\": {\"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "session_health",
+      "sequence": 8,
+      "structuredContent": {
+        "data": {
+          "active_jobs": [],
+          "control_pid": 26629,
+          "session": {
+            "connected": true,
+            "endpoint": "127.0.0.1:56389",
+            "external_change_detection": {
+              "cas_guarantee": "NONE",
+              "coverage": "parameters+shallow_tree_identity",
+              "event_notifications": "UNVERIFIED",
+              "evidence_environment": "macOS arm64; COMSOL 6.4.0.293",
+              "evidence_source": "evidence/phase2/followup/20260918T142300Z-external-api",
+              "full_model_property_coverage": "UNVERIFIED",
+              "other_platforms_or_versions": "UNVERIFIED",
+              "status": "SCOPED_EVIDENCE_ONLY"
+            },
+            "server_instance_id": "a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf",
+            "server_ownership": "shared",
+            "session_id": "session-9f95c2e814acd5f99589961a",
+            "trusted_code": {
+              "config": "COMSOL_MCP_TRUSTED_CODE",
+              "enabled": false,
+              "os_sandbox": false
+            },
+            "worker": {
+              "connected": true,
+              "generation": 2,
+              "host": "127.0.0.1",
+              "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+              "pid": 26634,
+              "port": 54944,
+              "server": "127.0.0.1:56389"
+            }
+          },
+          "status": "READY",
+          "worker": {
+            "changed_count": 0,
+            "connected": true,
+            "generation": 2,
+            "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+            "observed_at": 1789913761.9714592,
+            "ok": true,
+            "queued_or_running": 0,
+            "server": "127.0.0.1:56389",
+            "status": "HEALTHY"
+          },
+          "worker_connected": true
+        },
+        "execution": {
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"reconcile unfinished engine work before new operations\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver3phase4-find-117\", \"job_id\": \"e460f7f9-c77e-4de9-948f-bef7e964b928\", \"operation_id\": \"70d5b80c-6ba1-4538-94d0-4e5d7ad85171\", \"request_hash\": \"c3db86d8e91a55a54cd5c2ca61114b97a25dc97f568735e932747511abdfa14c\", \"request_id\": \"phase4-driver3phase4-find-117\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "reconcile unfinished engine work before new operations",
+      "operation": "operation_call",
+      "sequence": 9,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "reconcile unfinished engine work before new operations",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver3phase4-find-117",
+          "job_id": "e460f7f9-c77e-4de9-948f-bef7e964b928",
+          "operation_id": "70d5b80c-6ba1-4538-94d0-4e5d7ad85171",
+          "request_hash": "c3db86d8e91a55a54cd5c2ca61114b97a25dc97f568735e932747511abdfa14c",
+          "request_id": "phase4-driver3phase4-find-117"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"active_jobs\": [], \"control_pid\": 26629, \"session\": {\"connected\": true, \"endpoint\": \"127.0.0.1:56389\", \"external_change_detection\": {\"cas_guarantee\": \"NONE\", \"coverage\": \"parameters+shallow_tree_identity\", \"event_notifications\": \"UNVERIFIED\", \"evidence_environment\": \"macOS arm64; COMSOL 6.4.0.293\", \"evidence_source\": \"evidence/phase2/followup/20260918T142300Z-external-api\", \"full_model_property_coverage\": \"UNVERIFIED\", \"other_platforms_or_versions\": \"UNVERIFIED\", \"status\": \"SCOPED_EVIDENCE_ONLY\"}, \"server_instance_id\": \"a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf\", \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\", \"trusted_code\": {\"config\": \"COMSOL_MCP_TRUSTED_CODE\", \"enabled\": false, \"os_sandbox\": false}, \"worker\": {\"connected\": true, \"generation\": 2, \"host\": \"127.0.0.1\", \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"pid\": 26634, \"port\": 54944, \"server\": \"127.0.0.1:56389\"}}, \"status\": \"READY\", \"worker\": {\"changed_count\": 0, \"connected\": true, \"generation\": 2, \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"observed_at\": 1789913761.9714592, \"ok\": true, \"queued_or_running\": 0, \"server\": \"127.0.0.1:56389\", \"status\": \"HEALTHY\"}, \"worker_connected\": true}, \"execution\": {\"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "session_health",
+      "sequence": 10,
+      "structuredContent": {
+        "data": {
+          "active_jobs": [],
+          "control_pid": 26629,
+          "session": {
+            "connected": true,
+            "endpoint": "127.0.0.1:56389",
+            "external_change_detection": {
+              "cas_guarantee": "NONE",
+              "coverage": "parameters+shallow_tree_identity",
+              "event_notifications": "UNVERIFIED",
+              "evidence_environment": "macOS arm64; COMSOL 6.4.0.293",
+              "evidence_source": "evidence/phase2/followup/20260918T142300Z-external-api",
+              "full_model_property_coverage": "UNVERIFIED",
+              "other_platforms_or_versions": "UNVERIFIED",
+              "status": "SCOPED_EVIDENCE_ONLY"
+            },
+            "server_instance_id": "a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf",
+            "server_ownership": "shared",
+            "session_id": "session-9f95c2e814acd5f99589961a",
+            "trusted_code": {
+              "config": "COMSOL_MCP_TRUSTED_CODE",
+              "enabled": false,
+              "os_sandbox": false
+            },
+            "worker": {
+              "connected": true,
+              "generation": 2,
+              "host": "127.0.0.1",
+              "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+              "pid": 26634,
+              "port": 54944,
+              "server": "127.0.0.1:56389"
+            }
+          },
+          "status": "READY",
+          "worker": {
+            "changed_count": 0,
+            "connected": true,
+            "generation": 2,
+            "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+            "observed_at": 1789913761.9714592,
+            "ok": true,
+            "queued_or_running": 0,
+            "server": "127.0.0.1:56389",
+            "status": "HEALTHY"
+          },
+          "worker_connected": true
+        },
+        "execution": {
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"reconcile unfinished engine work before new operations\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver3phase4-find-118\", \"job_id\": \"8d9a06c0-0ba6-4af0-b9a7-e62cfa5e9001\", \"operation_id\": \"49caae21-17a0-4786-b7bc-c07b20f9c693\", \"request_hash\": \"df8978f15088c399d5a26dbd1f759a10a3d36174284b56636d654cf7a4fbb561\", \"request_id\": \"phase4-driver3phase4-find-118\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "reconcile unfinished engine work before new operations",
+      "operation": "operation_call",
+      "sequence": 11,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "reconcile unfinished engine work before new operations",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver3phase4-find-118",
+          "job_id": "8d9a06c0-0ba6-4af0-b9a7-e62cfa5e9001",
+          "operation_id": "49caae21-17a0-4786-b7bc-c07b20f9c693",
+          "request_hash": "df8978f15088c399d5a26dbd1f759a10a3d36174284b56636d654cf7a4fbb561",
+          "request_id": "phase4-driver3phase4-find-118"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"active_jobs\": [], \"control_pid\": 26629, \"session\": {\"connected\": true, \"endpoint\": \"127.0.0.1:56389\", \"external_change_detection\": {\"cas_guarantee\": \"NONE\", \"coverage\": \"parameters+shallow_tree_identity\", \"event_notifications\": \"UNVERIFIED\", \"evidence_environment\": \"macOS arm64; COMSOL 6.4.0.293\", \"evidence_source\": \"evidence/phase2/followup/20260918T142300Z-external-api\", \"full_model_property_coverage\": \"UNVERIFIED\", \"other_platforms_or_versions\": \"UNVERIFIED\", \"status\": \"SCOPED_EVIDENCE_ONLY\"}, \"server_instance_id\": \"a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf\", \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\", \"trusted_code\": {\"config\": \"COMSOL_MCP_TRUSTED_CODE\", \"enabled\": false, \"os_sandbox\": false}, \"worker\": {\"connected\": true, \"generation\": 2, \"host\": \"127.0.0.1\", \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"pid\": 26634, \"port\": 54944, \"server\": \"127.0.0.1:56389\"}}, \"status\": \"READY\", \"worker\": {\"changed_count\": 0, \"connected\": true, \"generation\": 2, \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"observed_at\": 1789913761.9714592, \"ok\": true, \"queued_or_running\": 0, \"server\": \"127.0.0.1:56389\", \"status\": \"HEALTHY\"}, \"worker_connected\": true}, \"execution\": {\"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "session_health",
+      "sequence": 12,
+      "structuredContent": {
+        "data": {
+          "active_jobs": [],
+          "control_pid": 26629,
+          "session": {
+            "connected": true,
+            "endpoint": "127.0.0.1:56389",
+            "external_change_detection": {
+              "cas_guarantee": "NONE",
+              "coverage": "parameters+shallow_tree_identity",
+              "event_notifications": "UNVERIFIED",
+              "evidence_environment": "macOS arm64; COMSOL 6.4.0.293",
+              "evidence_source": "evidence/phase2/followup/20260918T142300Z-external-api",
+              "full_model_property_coverage": "UNVERIFIED",
+              "other_platforms_or_versions": "UNVERIFIED",
+              "status": "SCOPED_EVIDENCE_ONLY"
+            },
+            "server_instance_id": "a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf",
+            "server_ownership": "shared",
+            "session_id": "session-9f95c2e814acd5f99589961a",
+            "trusted_code": {
+              "config": "COMSOL_MCP_TRUSTED_CODE",
+              "enabled": false,
+              "os_sandbox": false
+            },
+            "worker": {
+              "connected": true,
+              "generation": 2,
+              "host": "127.0.0.1",
+              "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+              "pid": 26634,
+              "port": 54944,
+              "server": "127.0.0.1:56389"
+            }
+          },
+          "status": "READY",
+          "worker": {
+            "changed_count": 0,
+            "connected": true,
+            "generation": 2,
+            "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+            "observed_at": 1789913761.9714592,
+            "ok": true,
+            "queued_or_running": 0,
+            "server": "127.0.0.1:56389",
+            "status": "HEALTHY"
+          },
+          "worker_connected": true
+        },
+        "execution": {
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"reconcile unfinished engine work before new operations\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver3phase4-find-119\", \"job_id\": \"3c6df2e7-6497-40ca-bc4d-0d0b25f482a8\", \"operation_id\": \"d047d54f-47b4-4123-9b94-8c6ff67a931b\", \"request_hash\": \"03d79e33a11315e6c123b28d5df7b52d346ac8b6afa7eb28d211b9947073eb7c\", \"request_id\": \"phase4-driver3phase4-find-119\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "reconcile unfinished engine work before new operations",
+      "operation": "operation_call",
+      "sequence": 13,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "reconcile unfinished engine work before new operations",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver3phase4-find-119",
+          "job_id": "3c6df2e7-6497-40ca-bc4d-0d0b25f482a8",
+          "operation_id": "d047d54f-47b4-4123-9b94-8c6ff67a931b",
+          "request_hash": "03d79e33a11315e6c123b28d5df7b52d346ac8b6afa7eb28d211b9947073eb7c",
+          "request_id": "phase4-driver3phase4-find-119"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"active_jobs\": [], \"control_pid\": 26629, \"session\": {\"connected\": true, \"endpoint\": \"127.0.0.1:56389\", \"external_change_detection\": {\"cas_guarantee\": \"NONE\", \"coverage\": \"parameters+shallow_tree_identity\", \"event_notifications\": \"UNVERIFIED\", \"evidence_environment\": \"macOS arm64; COMSOL 6.4.0.293\", \"evidence_source\": \"evidence/phase2/followup/20260918T142300Z-external-api\", \"full_model_property_coverage\": \"UNVERIFIED\", \"other_platforms_or_versions\": \"UNVERIFIED\", \"status\": \"SCOPED_EVIDENCE_ONLY\"}, \"server_instance_id\": \"a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf\", \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\", \"trusted_code\": {\"config\": \"COMSOL_MCP_TRUSTED_CODE\", \"enabled\": false, \"os_sandbox\": false}, \"worker\": {\"connected\": true, \"generation\": 2, \"host\": \"127.0.0.1\", \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"pid\": 26634, \"port\": 54944, \"server\": \"127.0.0.1:56389\"}}, \"status\": \"READY\", \"worker\": {\"changed_count\": 0, \"connected\": true, \"generation\": 2, \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"observed_at\": 1789913761.9714592, \"ok\": true, \"queued_or_running\": 0, \"server\": \"127.0.0.1:56389\", \"status\": \"HEALTHY\"}, \"worker_connected\": true}, \"execution\": {\"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "session_health",
+      "sequence": 14,
+      "structuredContent": {
+        "data": {
+          "active_jobs": [],
+          "control_pid": 26629,
+          "session": {
+            "connected": true,
+            "endpoint": "127.0.0.1:56389",
+            "external_change_detection": {
+              "cas_guarantee": "NONE",
+              "coverage": "parameters+shallow_tree_identity",
+              "event_notifications": "UNVERIFIED",
+              "evidence_environment": "macOS arm64; COMSOL 6.4.0.293",
+              "evidence_source": "evidence/phase2/followup/20260918T142300Z-external-api",
+              "full_model_property_coverage": "UNVERIFIED",
+              "other_platforms_or_versions": "UNVERIFIED",
+              "status": "SCOPED_EVIDENCE_ONLY"
+            },
+            "server_instance_id": "a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf",
+            "server_ownership": "shared",
+            "session_id": "session-9f95c2e814acd5f99589961a",
+            "trusted_code": {
+              "config": "COMSOL_MCP_TRUSTED_CODE",
+              "enabled": false,
+              "os_sandbox": false
+            },
+            "worker": {
+              "connected": true,
+              "generation": 2,
+              "host": "127.0.0.1",
+              "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+              "pid": 26634,
+              "port": 54944,
+              "server": "127.0.0.1:56389"
+            }
+          },
+          "status": "READY",
+          "worker": {
+            "changed_count": 0,
+            "connected": true,
+            "generation": 2,
+            "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+            "observed_at": 1789913761.9714592,
+            "ok": true,
+            "queued_or_running": 0,
+            "server": "127.0.0.1:56389",
+            "status": "HEALTHY"
+          },
+          "worker_connected": true
+        },
+        "execution": {
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"reconcile unfinished engine work before new operations\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver3phase4-find-120\", \"job_id\": \"59102c71-00b7-400f-8940-4b24acbe54ee\", \"operation_id\": \"3ec1a9a4-6299-4b31-8b31-cf83e592569c\", \"request_hash\": \"f8e8dbd8ed250c78019197009f54352f162d52654cba62966cce909d8b63efc6\", \"request_id\": \"phase4-driver3phase4-find-120\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "reconcile unfinished engine work before new operations",
+      "operation": "operation_call",
+      "sequence": 15,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "reconcile unfinished engine work before new operations",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver3phase4-find-120",
+          "job_id": "59102c71-00b7-400f-8940-4b24acbe54ee",
+          "operation_id": "3ec1a9a4-6299-4b31-8b31-cf83e592569c",
+          "request_hash": "f8e8dbd8ed250c78019197009f54352f162d52654cba62966cce909d8b63efc6",
+          "request_id": "phase4-driver3phase4-find-120"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"active_jobs\": [], \"control_pid\": 26629, \"session\": {\"connected\": true, \"endpoint\": \"127.0.0.1:56389\", \"external_change_detection\": {\"cas_guarantee\": \"NONE\", \"coverage\": \"parameters+shallow_tree_identity\", \"event_notifications\": \"UNVERIFIED\", \"evidence_environment\": \"macOS arm64; COMSOL 6.4.0.293\", \"evidence_source\": \"evidence/phase2/followup/20260918T142300Z-external-api\", \"full_model_property_coverage\": \"UNVERIFIED\", \"other_platforms_or_versions\": \"UNVERIFIED\", \"status\": \"SCOPED_EVIDENCE_ONLY\"}, \"server_instance_id\": \"a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf\", \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\", \"trusted_code\": {\"config\": \"COMSOL_MCP_TRUSTED_CODE\", \"enabled\": false, \"os_sandbox\": false}, \"worker\": {\"connected\": true, \"generation\": 2, \"host\": \"127.0.0.1\", \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"pid\": 26634, \"port\": 54944, \"server\": \"127.0.0.1:56389\"}}, \"status\": \"READY\", \"worker\": {\"changed_count\": 0, \"connected\": true, \"generation\": 2, \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"observed_at\": 1789913761.9714592, \"ok\": true, \"queued_or_running\": 0, \"server\": \"127.0.0.1:56389\", \"status\": \"HEALTHY\"}, \"worker_connected\": true}, \"execution\": {\"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "session_health",
+      "sequence": 16,
+      "structuredContent": {
+        "data": {
+          "active_jobs": [],
+          "control_pid": 26629,
+          "session": {
+            "connected": true,
+            "endpoint": "127.0.0.1:56389",
+            "external_change_detection": {
+              "cas_guarantee": "NONE",
+              "coverage": "parameters+shallow_tree_identity",
+              "event_notifications": "UNVERIFIED",
+              "evidence_environment": "macOS arm64; COMSOL 6.4.0.293",
+              "evidence_source": "evidence/phase2/followup/20260918T142300Z-external-api",
+              "full_model_property_coverage": "UNVERIFIED",
+              "other_platforms_or_versions": "UNVERIFIED",
+              "status": "SCOPED_EVIDENCE_ONLY"
+            },
+            "server_instance_id": "a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf",
+            "server_ownership": "shared",
+            "session_id": "session-9f95c2e814acd5f99589961a",
+            "trusted_code": {
+              "config": "COMSOL_MCP_TRUSTED_CODE",
+              "enabled": false,
+              "os_sandbox": false
+            },
+            "worker": {
+              "connected": true,
+              "generation": 2,
+              "host": "127.0.0.1",
+              "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+              "pid": 26634,
+              "port": 54944,
+              "server": "127.0.0.1:56389"
+            }
+          },
+          "status": "READY",
+          "worker": {
+            "changed_count": 0,
+            "connected": true,
+            "generation": 2,
+            "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+            "observed_at": 1789913761.9714592,
+            "ok": true,
+            "queued_or_running": 0,
+            "server": "127.0.0.1:56389",
+            "status": "HEALTHY"
+          },
+          "worker_connected": true
+        },
+        "execution": {
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"reconcile unfinished engine work before new operations\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver3phase4-find-121\", \"job_id\": \"051c5685-dba4-4610-ae1b-83ed8cec3c85\", \"operation_id\": \"c67a21d6-0e55-46c4-9801-e6e714964728\", \"request_hash\": \"1754a6bac3d25f39705fe6a0dc88bc80dc247db1c9e6523e6ccad474de29cf40\", \"request_id\": \"phase4-driver3phase4-find-121\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "reconcile unfinished engine work before new operations",
+      "operation": "operation_call",
+      "sequence": 17,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "reconcile unfinished engine work before new operations",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver3phase4-find-121",
+          "job_id": "051c5685-dba4-4610-ae1b-83ed8cec3c85",
+          "operation_id": "c67a21d6-0e55-46c4-9801-e6e714964728",
+          "request_hash": "1754a6bac3d25f39705fe6a0dc88bc80dc247db1c9e6523e6ccad474de29cf40",
+          "request_id": "phase4-driver3phase4-find-121"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"active_jobs\": [], \"control_pid\": 26629, \"session\": {\"connected\": true, \"endpoint\": \"127.0.0.1:56389\", \"external_change_detection\": {\"cas_guarantee\": \"NONE\", \"coverage\": \"parameters+shallow_tree_identity\", \"event_notifications\": \"UNVERIFIED\", \"evidence_environment\": \"macOS arm64; COMSOL 6.4.0.293\", \"evidence_source\": \"evidence/phase2/followup/20260918T142300Z-external-api\", \"full_model_property_coverage\": \"UNVERIFIED\", \"other_platforms_or_versions\": \"UNVERIFIED\", \"status\": \"SCOPED_EVIDENCE_ONLY\"}, \"server_instance_id\": \"a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf\", \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\", \"trusted_code\": {\"config\": \"COMSOL_MCP_TRUSTED_CODE\", \"enabled\": false, \"os_sandbox\": false}, \"worker\": {\"connected\": true, \"generation\": 2, \"host\": \"127.0.0.1\", \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"pid\": 26634, \"port\": 54944, \"server\": \"127.0.0.1:56389\"}}, \"status\": \"READY\", \"worker\": {\"changed_count\": 0, \"connected\": true, \"generation\": 2, \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"observed_at\": 1789913761.9714592, \"ok\": true, \"queued_or_running\": 0, \"server\": \"127.0.0.1:56389\", \"status\": \"HEALTHY\"}, \"worker_connected\": true}, \"execution\": {\"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "session_health",
+      "sequence": 18,
+      "structuredContent": {
+        "data": {
+          "active_jobs": [],
+          "control_pid": 26629,
+          "session": {
+            "connected": true,
+            "endpoint": "127.0.0.1:56389",
+            "external_change_detection": {
+              "cas_guarantee": "NONE",
+              "coverage": "parameters+shallow_tree_identity",
+              "event_notifications": "UNVERIFIED",
+              "evidence_environment": "macOS arm64; COMSOL 6.4.0.293",
+              "evidence_source": "evidence/phase2/followup/20260918T142300Z-external-api",
+              "full_model_property_coverage": "UNVERIFIED",
+              "other_platforms_or_versions": "UNVERIFIED",
+              "status": "SCOPED_EVIDENCE_ONLY"
+            },
+            "server_instance_id": "a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf",
+            "server_ownership": "shared",
+            "session_id": "session-9f95c2e814acd5f99589961a",
+            "trusted_code": {
+              "config": "COMSOL_MCP_TRUSTED_CODE",
+              "enabled": false,
+              "os_sandbox": false
+            },
+            "worker": {
+              "connected": true,
+              "generation": 2,
+              "host": "127.0.0.1",
+              "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+              "pid": 26634,
+              "port": 54944,
+              "server": "127.0.0.1:56389"
+            }
+          },
+          "status": "READY",
+          "worker": {
+            "changed_count": 0,
+            "connected": true,
+            "generation": 2,
+            "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+            "observed_at": 1789913761.9714592,
+            "ok": true,
+            "queued_or_running": 0,
+            "server": "127.0.0.1:56389",
+            "status": "HEALTHY"
+          },
+          "worker_connected": true
+        },
+        "execution": {
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"reconcile unfinished engine work before new operations\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver3phase4-find-122\", \"job_id\": \"9fffb418-019e-4e13-8c12-62d27792e6d9\", \"operation_id\": \"66a9239a-4599-4f66-ba96-5c71aac25e96\", \"request_hash\": \"46376db19fec9987d15056c590adb5754114468a534991c9d2e354c357b9d214\", \"request_id\": \"phase4-driver3phase4-find-122\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "reconcile unfinished engine work before new operations",
+      "operation": "operation_call",
+      "sequence": 19,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "reconcile unfinished engine work before new operations",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver3phase4-find-122",
+          "job_id": "9fffb418-019e-4e13-8c12-62d27792e6d9",
+          "operation_id": "66a9239a-4599-4f66-ba96-5c71aac25e96",
+          "request_hash": "46376db19fec9987d15056c590adb5754114468a534991c9d2e354c357b9d214",
+          "request_id": "phase4-driver3phase4-find-122"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"active_jobs\": [], \"control_pid\": 26629, \"session\": {\"connected\": true, \"endpoint\": \"127.0.0.1:56389\", \"external_change_detection\": {\"cas_guarantee\": \"NONE\", \"coverage\": \"parameters+shallow_tree_identity\", \"event_notifications\": \"UNVERIFIED\", \"evidence_environment\": \"macOS arm64; COMSOL 6.4.0.293\", \"evidence_source\": \"evidence/phase2/followup/20260918T142300Z-external-api\", \"full_model_property_coverage\": \"UNVERIFIED\", \"other_platforms_or_versions\": \"UNVERIFIED\", \"status\": \"SCOPED_EVIDENCE_ONLY\"}, \"server_instance_id\": \"a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf\", \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\", \"trusted_code\": {\"config\": \"COMSOL_MCP_TRUSTED_CODE\", \"enabled\": false, \"os_sandbox\": false}, \"worker\": {\"connected\": true, \"generation\": 2, \"host\": \"127.0.0.1\", \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"pid\": 26634, \"port\": 54944, \"server\": \"127.0.0.1:56389\"}}, \"status\": \"READY\", \"worker\": {\"changed_count\": 0, \"connected\": true, \"generation\": 2, \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"observed_at\": 1789913761.9714592, \"ok\": true, \"queued_or_running\": 0, \"server\": \"127.0.0.1:56389\", \"status\": \"HEALTHY\"}, \"worker_connected\": true}, \"execution\": {\"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "session_health",
+      "sequence": 20,
+      "structuredContent": {
+        "data": {
+          "active_jobs": [],
+          "control_pid": 26629,
+          "session": {
+            "connected": true,
+            "endpoint": "127.0.0.1:56389",
+            "external_change_detection": {
+              "cas_guarantee": "NONE",
+              "coverage": "parameters+shallow_tree_identity",
+              "event_notifications": "UNVERIFIED",
+              "evidence_environment": "macOS arm64; COMSOL 6.4.0.293",
+              "evidence_source": "evidence/phase2/followup/20260918T142300Z-external-api",
+              "full_model_property_coverage": "UNVERIFIED",
+              "other_platforms_or_versions": "UNVERIFIED",
+              "status": "SCOPED_EVIDENCE_ONLY"
+            },
+            "server_instance_id": "a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf",
+            "server_ownership": "shared",
+            "session_id": "session-9f95c2e814acd5f99589961a",
+            "trusted_code": {
+              "config": "COMSOL_MCP_TRUSTED_CODE",
+              "enabled": false,
+              "os_sandbox": false
+            },
+            "worker": {
+              "connected": true,
+              "generation": 2,
+              "host": "127.0.0.1",
+              "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+              "pid": 26634,
+              "port": 54944,
+              "server": "127.0.0.1:56389"
+            }
+          },
+          "status": "READY",
+          "worker": {
+            "changed_count": 0,
+            "connected": true,
+            "generation": 2,
+            "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+            "observed_at": 1789913761.9714592,
+            "ok": true,
+            "queued_or_running": 0,
+            "server": "127.0.0.1:56389",
+            "status": "HEALTHY"
+          },
+          "worker_connected": true
+        },
+        "execution": {
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"reconcile unfinished engine work before new operations\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver3phase4-find-123\", \"job_id\": \"fb68f834-b1ba-41e7-ac69-ee032203fe7f\", \"operation_id\": \"4b2b07c2-13e6-4d2a-8cc0-33c749e7a11e\", \"request_hash\": \"1750f62ea7e047ab70b605c0d51184e730718843b9bfae1c1210fcdb95c635ea\", \"request_id\": \"phase4-driver3phase4-find-123\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "reconcile unfinished engine work before new operations",
+      "operation": "operation_call",
+      "sequence": 21,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "reconcile unfinished engine work before new operations",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver3phase4-find-123",
+          "job_id": "fb68f834-b1ba-41e7-ac69-ee032203fe7f",
+          "operation_id": "4b2b07c2-13e6-4d2a-8cc0-33c749e7a11e",
+          "request_hash": "1750f62ea7e047ab70b605c0d51184e730718843b9bfae1c1210fcdb95c635ea",
+          "request_id": "phase4-driver3phase4-find-123"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"active_jobs\": [], \"control_pid\": 26629, \"session\": {\"connected\": true, \"endpoint\": \"127.0.0.1:56389\", \"external_change_detection\": {\"cas_guarantee\": \"NONE\", \"coverage\": \"parameters+shallow_tree_identity\", \"event_notifications\": \"UNVERIFIED\", \"evidence_environment\": \"macOS arm64; COMSOL 6.4.0.293\", \"evidence_source\": \"evidence/phase2/followup/20260918T142300Z-external-api\", \"full_model_property_coverage\": \"UNVERIFIED\", \"other_platforms_or_versions\": \"UNVERIFIED\", \"status\": \"SCOPED_EVIDENCE_ONLY\"}, \"server_instance_id\": \"a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf\", \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\", \"trusted_code\": {\"config\": \"COMSOL_MCP_TRUSTED_CODE\", \"enabled\": false, \"os_sandbox\": false}, \"worker\": {\"connected\": true, \"generation\": 2, \"host\": \"127.0.0.1\", \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"pid\": 26634, \"port\": 54944, \"server\": \"127.0.0.1:56389\"}}, \"status\": \"READY\", \"worker\": {\"changed_count\": 0, \"connected\": true, \"generation\": 2, \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"observed_at\": 1789913761.9714592, \"ok\": true, \"queued_or_running\": 0, \"server\": \"127.0.0.1:56389\", \"status\": \"HEALTHY\"}, \"worker_connected\": true}, \"execution\": {\"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "session_health",
+      "sequence": 22,
+      "structuredContent": {
+        "data": {
+          "active_jobs": [],
+          "control_pid": 26629,
+          "session": {
+            "connected": true,
+            "endpoint": "127.0.0.1:56389",
+            "external_change_detection": {
+              "cas_guarantee": "NONE",
+              "coverage": "parameters+shallow_tree_identity",
+              "event_notifications": "UNVERIFIED",
+              "evidence_environment": "macOS arm64; COMSOL 6.4.0.293",
+              "evidence_source": "evidence/phase2/followup/20260918T142300Z-external-api",
+              "full_model_property_coverage": "UNVERIFIED",
+              "other_platforms_or_versions": "UNVERIFIED",
+              "status": "SCOPED_EVIDENCE_ONLY"
+            },
+            "server_instance_id": "a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf",
+            "server_ownership": "shared",
+            "session_id": "session-9f95c2e814acd5f99589961a",
+            "trusted_code": {
+              "config": "COMSOL_MCP_TRUSTED_CODE",
+              "enabled": false,
+              "os_sandbox": false
+            },
+            "worker": {
+              "connected": true,
+              "generation": 2,
+              "host": "127.0.0.1",
+              "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+              "pid": 26634,
+              "port": 54944,
+              "server": "127.0.0.1:56389"
+            }
+          },
+          "status": "READY",
+          "worker": {
+            "changed_count": 0,
+            "connected": true,
+            "generation": 2,
+            "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+            "observed_at": 1789913761.9714592,
+            "ok": true,
+            "queued_or_running": 0,
+            "server": "127.0.0.1:56389",
+            "status": "HEALTHY"
+          },
+          "worker_connected": true
+        },
+        "execution": {
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"reconcile unfinished engine work before new operations\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver3phase4-find-124\", \"job_id\": \"09ccda44-d01f-45b4-be89-016984d74ae6\", \"operation_id\": \"273f39b3-6bd6-44ae-bf9f-ae07dbab700f\", \"request_hash\": \"cc8e129b8e8e0b78b1b978d27fd20ad16589930264569eafb0442bde763bd479\", \"request_id\": \"phase4-driver3phase4-find-124\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "reconcile unfinished engine work before new operations",
+      "operation": "operation_call",
+      "sequence": 23,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "reconcile unfinished engine work before new operations",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver3phase4-find-124",
+          "job_id": "09ccda44-d01f-45b4-be89-016984d74ae6",
+          "operation_id": "273f39b3-6bd6-44ae-bf9f-ae07dbab700f",
+          "request_hash": "cc8e129b8e8e0b78b1b978d27fd20ad16589930264569eafb0442bde763bd479",
+          "request_id": "phase4-driver3phase4-find-124"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"active_jobs\": [], \"control_pid\": 26629, \"session\": {\"connected\": true, \"endpoint\": \"127.0.0.1:56389\", \"external_change_detection\": {\"cas_guarantee\": \"NONE\", \"coverage\": \"parameters+shallow_tree_identity\", \"event_notifications\": \"UNVERIFIED\", \"evidence_environment\": \"macOS arm64; COMSOL 6.4.0.293\", \"evidence_source\": \"evidence/phase2/followup/20260918T142300Z-external-api\", \"full_model_property_coverage\": \"UNVERIFIED\", \"other_platforms_or_versions\": \"UNVERIFIED\", \"status\": \"SCOPED_EVIDENCE_ONLY\"}, \"server_instance_id\": \"a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf\", \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\", \"trusted_code\": {\"config\": \"COMSOL_MCP_TRUSTED_CODE\", \"enabled\": false, \"os_sandbox\": false}, \"worker\": {\"connected\": true, \"generation\": 2, \"host\": \"127.0.0.1\", \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"pid\": 26634, \"port\": 54944, \"server\": \"127.0.0.1:56389\"}}, \"status\": \"READY\", \"worker\": {\"changed_count\": 0, \"connected\": true, \"generation\": 2, \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"observed_at\": 1789913761.9714592, \"ok\": true, \"queued_or_running\": 0, \"server\": \"127.0.0.1:56389\", \"status\": \"HEALTHY\"}, \"worker_connected\": true}, \"execution\": {\"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "session_health",
+      "sequence": 24,
+      "structuredContent": {
+        "data": {
+          "active_jobs": [],
+          "control_pid": 26629,
+          "session": {
+            "connected": true,
+            "endpoint": "127.0.0.1:56389",
+            "external_change_detection": {
+              "cas_guarantee": "NONE",
+              "coverage": "parameters+shallow_tree_identity",
+              "event_notifications": "UNVERIFIED",
+              "evidence_environment": "macOS arm64; COMSOL 6.4.0.293",
+              "evidence_source": "evidence/phase2/followup/20260918T142300Z-external-api",
+              "full_model_property_coverage": "UNVERIFIED",
+              "other_platforms_or_versions": "UNVERIFIED",
+              "status": "SCOPED_EVIDENCE_ONLY"
+            },
+            "server_instance_id": "a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf",
+            "server_ownership": "shared",
+            "session_id": "session-9f95c2e814acd5f99589961a",
+            "trusted_code": {
+              "config": "COMSOL_MCP_TRUSTED_CODE",
+              "enabled": false,
+              "os_sandbox": false
+            },
+            "worker": {
+              "connected": true,
+              "generation": 2,
+              "host": "127.0.0.1",
+              "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+              "pid": 26634,
+              "port": 54944,
+              "server": "127.0.0.1:56389"
+            }
+          },
+          "status": "READY",
+          "worker": {
+            "changed_count": 0,
+            "connected": true,
+            "generation": 2,
+            "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+            "observed_at": 1789913761.9714592,
+            "ok": true,
+            "queued_or_running": 0,
+            "server": "127.0.0.1:56389",
+            "status": "HEALTHY"
+          },
+          "worker_connected": true
+        },
+        "execution": {
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"reconcile unfinished engine work before new operations\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver3probe-node-schema-block-125\", \"job_id\": \"c85027bf-4b5e-4d12-bc73-c147c8229e70\", \"operation_id\": \"028c2051-d243-4a8d-95de-d86eaf3e58a6\", \"request_hash\": \"a8cdd3e4c8e057011d4b6098472890bff47c6df5a096eae5a414996fc83929e7\", \"request_id\": \"phase4-driver3probe-node-schema-block\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "reconcile unfinished engine work before new operations",
+      "operation": "operation_call",
+      "sequence": 25,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "reconcile unfinished engine work before new operations",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver3probe-node-schema-block-125",
+          "job_id": "c85027bf-4b5e-4d12-bc73-c147c8229e70",
+          "operation_id": "028c2051-d243-4a8d-95de-d86eaf3e58a6",
+          "request_hash": "a8cdd3e4c8e057011d4b6098472890bff47c6df5a096eae5a414996fc83929e7",
+          "request_id": "phase4-driver3probe-node-schema-block"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"active_jobs\": [], \"control_pid\": 26629, \"session\": {\"connected\": true, \"endpoint\": \"127.0.0.1:56389\", \"external_change_detection\": {\"cas_guarantee\": \"NONE\", \"coverage\": \"parameters+shallow_tree_identity\", \"event_notifications\": \"UNVERIFIED\", \"evidence_environment\": \"macOS arm64; COMSOL 6.4.0.293\", \"evidence_source\": \"evidence/phase2/followup/20260918T142300Z-external-api\", \"full_model_property_coverage\": \"UNVERIFIED\", \"other_platforms_or_versions\": \"UNVERIFIED\", \"status\": \"SCOPED_EVIDENCE_ONLY\"}, \"server_instance_id\": \"a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf\", \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\", \"trusted_code\": {\"config\": \"COMSOL_MCP_TRUSTED_CODE\", \"enabled\": false, \"os_sandbox\": false}, \"worker\": {\"connected\": true, \"generation\": 2, \"host\": \"127.0.0.1\", \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"pid\": 26634, \"port\": 54944, \"server\": \"127.0.0.1:56389\"}}, \"status\": \"READY\", \"worker\": {\"changed_count\": 0, \"connected\": true, \"generation\": 2, \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"observed_at\": 1789913761.9714592, \"ok\": true, \"queued_or_running\": 0, \"server\": \"127.0.0.1:56389\", \"status\": \"HEALTHY\"}, \"worker_connected\": true}, \"execution\": {\"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "session_health",
+      "sequence": 26,
+      "structuredContent": {
+        "data": {
+          "active_jobs": [],
+          "control_pid": 26629,
+          "session": {
+            "connected": true,
+            "endpoint": "127.0.0.1:56389",
+            "external_change_detection": {
+              "cas_guarantee": "NONE",
+              "coverage": "parameters+shallow_tree_identity",
+              "event_notifications": "UNVERIFIED",
+              "evidence_environment": "macOS arm64; COMSOL 6.4.0.293",
+              "evidence_source": "evidence/phase2/followup/20260918T142300Z-external-api",
+              "full_model_property_coverage": "UNVERIFIED",
+              "other_platforms_or_versions": "UNVERIFIED",
+              "status": "SCOPED_EVIDENCE_ONLY"
+            },
+            "server_instance_id": "a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf",
+            "server_ownership": "shared",
+            "session_id": "session-9f95c2e814acd5f99589961a",
+            "trusted_code": {
+              "config": "COMSOL_MCP_TRUSTED_CODE",
+              "enabled": false,
+              "os_sandbox": false
+            },
+            "worker": {
+              "connected": true,
+              "generation": 2,
+              "host": "127.0.0.1",
+              "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+              "pid": 26634,
+              "port": 54944,
+              "server": "127.0.0.1:56389"
+            }
+          },
+          "status": "READY",
+          "worker": {
+            "changed_count": 0,
+            "connected": true,
+            "generation": 2,
+            "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+            "observed_at": 1789913761.9714592,
+            "ok": true,
+            "queued_or_running": 0,
+            "server": "127.0.0.1:56389",
+            "status": "HEALTHY"
+          },
+          "worker_connected": true
+        },
+        "execution": {
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"reconcile unfinished engine work before new operations\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver3probe-node-schema-mesh_size-126\", \"job_id\": \"47427d1d-c2f2-48ac-a9a8-4e64dcfd9444\", \"operation_id\": \"4242a37a-2cb9-443d-923f-c4dc1feb8be8\", \"request_hash\": \"48f175bb0c622ee660757771992a380439c7f6aa4e06e9ffd12308a323974fcb\", \"request_id\": \"phase4-driver3probe-node-schema-mesh_size\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "reconcile unfinished engine work before new operations",
+      "operation": "operation_call",
+      "sequence": 27,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "reconcile unfinished engine work before new operations",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver3probe-node-schema-mesh_size-126",
+          "job_id": "47427d1d-c2f2-48ac-a9a8-4e64dcfd9444",
+          "operation_id": "4242a37a-2cb9-443d-923f-c4dc1feb8be8",
+          "request_hash": "48f175bb0c622ee660757771992a380439c7f6aa4e06e9ffd12308a323974fcb",
+          "request_id": "phase4-driver3probe-node-schema-mesh_size"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"active_jobs\": [], \"control_pid\": 26629, \"session\": {\"connected\": true, \"endpoint\": \"127.0.0.1:56389\", \"external_change_detection\": {\"cas_guarantee\": \"NONE\", \"coverage\": \"parameters+shallow_tree_identity\", \"event_notifications\": \"UNVERIFIED\", \"evidence_environment\": \"macOS arm64; COMSOL 6.4.0.293\", \"evidence_source\": \"evidence/phase2/followup/20260918T142300Z-external-api\", \"full_model_property_coverage\": \"UNVERIFIED\", \"other_platforms_or_versions\": \"UNVERIFIED\", \"status\": \"SCOPED_EVIDENCE_ONLY\"}, \"server_instance_id\": \"a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf\", \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\", \"trusted_code\": {\"config\": \"COMSOL_MCP_TRUSTED_CODE\", \"enabled\": false, \"os_sandbox\": false}, \"worker\": {\"connected\": true, \"generation\": 2, \"host\": \"127.0.0.1\", \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"pid\": 26634, \"port\": 54944, \"server\": \"127.0.0.1:56389\"}}, \"status\": \"READY\", \"worker\": {\"changed_count\": 0, \"connected\": true, \"generation\": 2, \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"observed_at\": 1789913761.9714592, \"ok\": true, \"queued_or_running\": 0, \"server\": \"127.0.0.1:56389\", \"status\": \"HEALTHY\"}, \"worker_connected\": true}, \"execution\": {\"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "session_health",
+      "sequence": 28,
+      "structuredContent": {
+        "data": {
+          "active_jobs": [],
+          "control_pid": 26629,
+          "session": {
+            "connected": true,
+            "endpoint": "127.0.0.1:56389",
+            "external_change_detection": {
+              "cas_guarantee": "NONE",
+              "coverage": "parameters+shallow_tree_identity",
+              "event_notifications": "UNVERIFIED",
+              "evidence_environment": "macOS arm64; COMSOL 6.4.0.293",
+              "evidence_source": "evidence/phase2/followup/20260918T142300Z-external-api",
+              "full_model_property_coverage": "UNVERIFIED",
+              "other_platforms_or_versions": "UNVERIFIED",
+              "status": "SCOPED_EVIDENCE_ONLY"
+            },
+            "server_instance_id": "a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf",
+            "server_ownership": "shared",
+            "session_id": "session-9f95c2e814acd5f99589961a",
+            "trusted_code": {
+              "config": "COMSOL_MCP_TRUSTED_CODE",
+              "enabled": false,
+              "os_sandbox": false
+            },
+            "worker": {
+              "connected": true,
+              "generation": 2,
+              "host": "127.0.0.1",
+              "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+              "pid": 26634,
+              "port": 54944,
+              "server": "127.0.0.1:56389"
+            }
+          },
+          "status": "READY",
+          "worker": {
+            "changed_count": 0,
+            "connected": true,
+            "generation": 2,
+            "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+            "observed_at": 1789913761.9714592,
+            "ok": true,
+            "queued_or_running": 0,
+            "server": "127.0.0.1:56389",
+            "status": "HEALTHY"
+          },
+          "worker_connected": true
+        },
+        "execution": {
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"reconcile unfinished engine work before new operations\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver3probe-node-schema-temperature-127\", \"job_id\": \"139c1295-1175-4c1a-8918-0c335e7673b9\", \"operation_id\": \"ed7ba1bf-2480-47a2-b6d8-22a9f9ce7858\", \"request_hash\": \"fffc569371af5eb0f0122def38642cd58e240ad6eecf45b5997d3da2720494e9\", \"request_id\": \"phase4-driver3probe-node-schema-temperature\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "reconcile unfinished engine work before new operations",
+      "operation": "operation_call",
+      "sequence": 29,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "reconcile unfinished engine work before new operations",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver3probe-node-schema-temperature-127",
+          "job_id": "139c1295-1175-4c1a-8918-0c335e7673b9",
+          "operation_id": "ed7ba1bf-2480-47a2-b6d8-22a9f9ce7858",
+          "request_hash": "fffc569371af5eb0f0122def38642cd58e240ad6eecf45b5997d3da2720494e9",
+          "request_id": "phase4-driver3probe-node-schema-temperature"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"active_jobs\": [], \"control_pid\": 26629, \"session\": {\"connected\": true, \"endpoint\": \"127.0.0.1:56389\", \"external_change_detection\": {\"cas_guarantee\": \"NONE\", \"coverage\": \"parameters+shallow_tree_identity\", \"event_notifications\": \"UNVERIFIED\", \"evidence_environment\": \"macOS arm64; COMSOL 6.4.0.293\", \"evidence_source\": \"evidence/phase2/followup/20260918T142300Z-external-api\", \"full_model_property_coverage\": \"UNVERIFIED\", \"other_platforms_or_versions\": \"UNVERIFIED\", \"status\": \"SCOPED_EVIDENCE_ONLY\"}, \"server_instance_id\": \"a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf\", \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\", \"trusted_code\": {\"config\": \"COMSOL_MCP_TRUSTED_CODE\", \"enabled\": false, \"os_sandbox\": false}, \"worker\": {\"connected\": true, \"generation\": 2, \"host\": \"127.0.0.1\", \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"pid\": 26634, \"port\": 54944, \"server\": \"127.0.0.1:56389\"}}, \"status\": \"READY\", \"worker\": {\"changed_count\": 0, \"connected\": true, \"generation\": 2, \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"observed_at\": 1789913761.9714592, \"ok\": true, \"queued_or_running\": 0, \"server\": \"127.0.0.1:56389\", \"status\": \"HEALTHY\"}, \"worker_connected\": true}, \"execution\": {\"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "session_health",
+      "sequence": 30,
+      "structuredContent": {
+        "data": {
+          "active_jobs": [],
+          "control_pid": 26629,
+          "session": {
+            "connected": true,
+            "endpoint": "127.0.0.1:56389",
+            "external_change_detection": {
+              "cas_guarantee": "NONE",
+              "coverage": "parameters+shallow_tree_identity",
+              "event_notifications": "UNVERIFIED",
+              "evidence_environment": "macOS arm64; COMSOL 6.4.0.293",
+              "evidence_source": "evidence/phase2/followup/20260918T142300Z-external-api",
+              "full_model_property_coverage": "UNVERIFIED",
+              "other_platforms_or_versions": "UNVERIFIED",
+              "status": "SCOPED_EVIDENCE_ONLY"
+            },
+            "server_instance_id": "a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf",
+            "server_ownership": "shared",
+            "session_id": "session-9f95c2e814acd5f99589961a",
+            "trusted_code": {
+              "config": "COMSOL_MCP_TRUSTED_CODE",
+              "enabled": false,
+              "os_sandbox": false
+            },
+            "worker": {
+              "connected": true,
+              "generation": 2,
+              "host": "127.0.0.1",
+              "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+              "pid": 26634,
+              "port": 54944,
+              "server": "127.0.0.1:56389"
+            }
+          },
+          "status": "READY",
+          "worker": {
+            "changed_count": 0,
+            "connected": true,
+            "generation": 2,
+            "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+            "observed_at": 1789913761.9714592,
+            "ok": true,
+            "queued_or_running": 0,
+            "server": "127.0.0.1:56389",
+            "status": "HEALTHY"
+          },
+          "worker_connected": true
+        },
+        "execution": {
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"reconcile unfinished engine work before new operations\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver3probe-node-schema-physics-128\", \"job_id\": \"25230a6b-c0bc-42fb-b11b-218b972227c8\", \"operation_id\": \"e21c5fe1-805e-48e6-bf9f-6f89adbea240\", \"request_hash\": \"d88676f10f7429cc54749c7712a2a5b94d57daa5360f32f6ec87b4967fdaa7e8\", \"request_id\": \"phase4-driver3probe-node-schema-physics\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "reconcile unfinished engine work before new operations",
+      "operation": "operation_call",
+      "sequence": 31,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "reconcile unfinished engine work before new operations",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver3probe-node-schema-physics-128",
+          "job_id": "25230a6b-c0bc-42fb-b11b-218b972227c8",
+          "operation_id": "e21c5fe1-805e-48e6-bf9f-6f89adbea240",
+          "request_hash": "d88676f10f7429cc54749c7712a2a5b94d57daa5360f32f6ec87b4967fdaa7e8",
+          "request_id": "phase4-driver3probe-node-schema-physics"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"active_jobs\": [], \"control_pid\": 26629, \"session\": {\"connected\": true, \"endpoint\": \"127.0.0.1:56389\", \"external_change_detection\": {\"cas_guarantee\": \"NONE\", \"coverage\": \"parameters+shallow_tree_identity\", \"event_notifications\": \"UNVERIFIED\", \"evidence_environment\": \"macOS arm64; COMSOL 6.4.0.293\", \"evidence_source\": \"evidence/phase2/followup/20260918T142300Z-external-api\", \"full_model_property_coverage\": \"UNVERIFIED\", \"other_platforms_or_versions\": \"UNVERIFIED\", \"status\": \"SCOPED_EVIDENCE_ONLY\"}, \"server_instance_id\": \"a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf\", \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\", \"trusted_code\": {\"config\": \"COMSOL_MCP_TRUSTED_CODE\", \"enabled\": false, \"os_sandbox\": false}, \"worker\": {\"connected\": true, \"generation\": 2, \"host\": \"127.0.0.1\", \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"pid\": 26634, \"port\": 54944, \"server\": \"127.0.0.1:56389\"}}, \"status\": \"READY\", \"worker\": {\"changed_count\": 0, \"connected\": true, \"generation\": 2, \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"observed_at\": 1789913761.9714592, \"ok\": true, \"queued_or_running\": 0, \"server\": \"127.0.0.1:56389\", \"status\": \"HEALTHY\"}, \"worker_connected\": true}, \"execution\": {\"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "session_health",
+      "sequence": 32,
+      "structuredContent": {
+        "data": {
+          "active_jobs": [],
+          "control_pid": 26629,
+          "session": {
+            "connected": true,
+            "endpoint": "127.0.0.1:56389",
+            "external_change_detection": {
+              "cas_guarantee": "NONE",
+              "coverage": "parameters+shallow_tree_identity",
+              "event_notifications": "UNVERIFIED",
+              "evidence_environment": "macOS arm64; COMSOL 6.4.0.293",
+              "evidence_source": "evidence/phase2/followup/20260918T142300Z-external-api",
+              "full_model_property_coverage": "UNVERIFIED",
+              "other_platforms_or_versions": "UNVERIFIED",
+              "status": "SCOPED_EVIDENCE_ONLY"
+            },
+            "server_instance_id": "a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf",
+            "server_ownership": "shared",
+            "session_id": "session-9f95c2e814acd5f99589961a",
+            "trusted_code": {
+              "config": "COMSOL_MCP_TRUSTED_CODE",
+              "enabled": false,
+              "os_sandbox": false
+            },
+            "worker": {
+              "connected": true,
+              "generation": 2,
+              "host": "127.0.0.1",
+              "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+              "pid": 26634,
+              "port": 54944,
+              "server": "127.0.0.1:56389"
+            }
+          },
+          "status": "READY",
+          "worker": {
+            "changed_count": 0,
+            "connected": true,
+            "generation": 2,
+            "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+            "observed_at": 1789913761.9714592,
+            "ok": true,
+            "queued_or_running": 0,
+            "server": "127.0.0.1:56389",
+            "status": "HEALTHY"
+          },
+          "worker_connected": true
+        },
+        "execution": {
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"reconcile unfinished engine work before new operations\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver3probe-node-schema-material-129\", \"job_id\": \"f67cbaaa-52a2-400a-81fe-6aee3a9c8edd\", \"operation_id\": \"feadd63a-b881-4061-81cb-83a6947c998a\", \"request_hash\": \"65334cca56451c46dba62ba316f16e2862a2a2efccd00d4a2b09434b602f6e08\", \"request_id\": \"phase4-driver3probe-node-schema-material\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "reconcile unfinished engine work before new operations",
+      "operation": "operation_call",
+      "sequence": 33,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "reconcile unfinished engine work before new operations",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver3probe-node-schema-material-129",
+          "job_id": "f67cbaaa-52a2-400a-81fe-6aee3a9c8edd",
+          "operation_id": "feadd63a-b881-4061-81cb-83a6947c998a",
+          "request_hash": "65334cca56451c46dba62ba316f16e2862a2a2efccd00d4a2b09434b602f6e08",
+          "request_id": "phase4-driver3probe-node-schema-material"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"active_jobs\": [], \"control_pid\": 26629, \"session\": {\"connected\": true, \"endpoint\": \"127.0.0.1:56389\", \"external_change_detection\": {\"cas_guarantee\": \"NONE\", \"coverage\": \"parameters+shallow_tree_identity\", \"event_notifications\": \"UNVERIFIED\", \"evidence_environment\": \"macOS arm64; COMSOL 6.4.0.293\", \"evidence_source\": \"evidence/phase2/followup/20260918T142300Z-external-api\", \"full_model_property_coverage\": \"UNVERIFIED\", \"other_platforms_or_versions\": \"UNVERIFIED\", \"status\": \"SCOPED_EVIDENCE_ONLY\"}, \"server_instance_id\": \"a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf\", \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\", \"trusted_code\": {\"config\": \"COMSOL_MCP_TRUSTED_CODE\", \"enabled\": false, \"os_sandbox\": false}, \"worker\": {\"connected\": true, \"generation\": 2, \"host\": \"127.0.0.1\", \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"pid\": 26634, \"port\": 54944, \"server\": \"127.0.0.1:56389\"}}, \"status\": \"READY\", \"worker\": {\"changed_count\": 0, \"connected\": true, \"generation\": 2, \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"observed_at\": 1789913761.9714592, \"ok\": true, \"queued_or_running\": 0, \"server\": \"127.0.0.1:56389\", \"status\": \"HEALTHY\"}, \"worker_connected\": true}, \"execution\": {\"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "session_health",
+      "sequence": 34,
+      "structuredContent": {
+        "data": {
+          "active_jobs": [],
+          "control_pid": 26629,
+          "session": {
+            "connected": true,
+            "endpoint": "127.0.0.1:56389",
+            "external_change_detection": {
+              "cas_guarantee": "NONE",
+              "coverage": "parameters+shallow_tree_identity",
+              "event_notifications": "UNVERIFIED",
+              "evidence_environment": "macOS arm64; COMSOL 6.4.0.293",
+              "evidence_source": "evidence/phase2/followup/20260918T142300Z-external-api",
+              "full_model_property_coverage": "UNVERIFIED",
+              "other_platforms_or_versions": "UNVERIFIED",
+              "status": "SCOPED_EVIDENCE_ONLY"
+            },
+            "server_instance_id": "a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf",
+            "server_ownership": "shared",
+            "session_id": "session-9f95c2e814acd5f99589961a",
+            "trusted_code": {
+              "config": "COMSOL_MCP_TRUSTED_CODE",
+              "enabled": false,
+              "os_sandbox": false
+            },
+            "worker": {
+              "connected": true,
+              "generation": 2,
+              "host": "127.0.0.1",
+              "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+              "pid": 26634,
+              "port": 54944,
+              "server": "127.0.0.1:56389"
+            }
+          },
+          "status": "READY",
+          "worker": {
+            "changed_count": 0,
+            "connected": true,
+            "generation": 2,
+            "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+            "observed_at": 1789913761.9714592,
+            "ok": true,
+            "queued_or_running": 0,
+            "server": "127.0.0.1:56389",
+            "status": "HEALTHY"
+          },
+          "worker_connected": true
+        },
+        "execution": {
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"reconcile unfinished engine work before new operations\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver3probe-node-schema-geometry-130\", \"job_id\": \"0a6e1598-0db8-463c-a844-be0b8eeb399c\", \"operation_id\": \"21697008-b529-4ac9-b71c-b8e627355483\", \"request_hash\": \"6f66dddfb745e63beecec0d63cecb24f1792bd359a4f40e230e3b979a398c3be\", \"request_id\": \"phase4-driver3probe-node-schema-geometry\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "reconcile unfinished engine work before new operations",
+      "operation": "operation_call",
+      "sequence": 35,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "reconcile unfinished engine work before new operations",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver3probe-node-schema-geometry-130",
+          "job_id": "0a6e1598-0db8-463c-a844-be0b8eeb399c",
+          "operation_id": "21697008-b529-4ac9-b71c-b8e627355483",
+          "request_hash": "6f66dddfb745e63beecec0d63cecb24f1792bd359a4f40e230e3b979a398c3be",
+          "request_id": "phase4-driver3probe-node-schema-geometry"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"active_jobs\": [], \"control_pid\": 26629, \"session\": {\"connected\": true, \"endpoint\": \"127.0.0.1:56389\", \"external_change_detection\": {\"cas_guarantee\": \"NONE\", \"coverage\": \"parameters+shallow_tree_identity\", \"event_notifications\": \"UNVERIFIED\", \"evidence_environment\": \"macOS arm64; COMSOL 6.4.0.293\", \"evidence_source\": \"evidence/phase2/followup/20260918T142300Z-external-api\", \"full_model_property_coverage\": \"UNVERIFIED\", \"other_platforms_or_versions\": \"UNVERIFIED\", \"status\": \"SCOPED_EVIDENCE_ONLY\"}, \"server_instance_id\": \"a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf\", \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\", \"trusted_code\": {\"config\": \"COMSOL_MCP_TRUSTED_CODE\", \"enabled\": false, \"os_sandbox\": false}, \"worker\": {\"connected\": true, \"generation\": 2, \"host\": \"127.0.0.1\", \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"pid\": 26634, \"port\": 54944, \"server\": \"127.0.0.1:56389\"}}, \"status\": \"READY\", \"worker\": {\"changed_count\": 0, \"connected\": true, \"generation\": 2, \"instance_id\": \"d77a7b1c-06d9-4fd7-970e-2f5abd0b4065\", \"observed_at\": 1789913761.9714592, \"ok\": true, \"queued_or_running\": 0, \"server\": \"127.0.0.1:56389\", \"status\": \"HEALTHY\"}, \"worker_connected\": true}, \"execution\": {\"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "session_health",
+      "sequence": 36,
+      "structuredContent": {
+        "data": {
+          "active_jobs": [],
+          "control_pid": 26629,
+          "session": {
+            "connected": true,
+            "endpoint": "127.0.0.1:56389",
+            "external_change_detection": {
+              "cas_guarantee": "NONE",
+              "coverage": "parameters+shallow_tree_identity",
+              "event_notifications": "UNVERIFIED",
+              "evidence_environment": "macOS arm64; COMSOL 6.4.0.293",
+              "evidence_source": "evidence/phase2/followup/20260918T142300Z-external-api",
+              "full_model_property_coverage": "UNVERIFIED",
+              "other_platforms_or_versions": "UNVERIFIED",
+              "status": "SCOPED_EVIDENCE_ONLY"
+            },
+            "server_instance_id": "a45bc9bbb37dce1f69470b8bda99ac097fa64f6d65fb57b0eeca1e016d033cbf",
+            "server_ownership": "shared",
+            "session_id": "session-9f95c2e814acd5f99589961a",
+            "trusted_code": {
+              "config": "COMSOL_MCP_TRUSTED_CODE",
+              "enabled": false,
+              "os_sandbox": false
+            },
+            "worker": {
+              "connected": true,
+              "generation": 2,
+              "host": "127.0.0.1",
+              "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+              "pid": 26634,
+              "port": 54944,
+              "server": "127.0.0.1:56389"
+            }
+          },
+          "status": "READY",
+          "worker": {
+            "changed_count": 0,
+            "connected": true,
+            "generation": 2,
+            "instance_id": "d77a7b1c-06d9-4fd7-970e-2f5abd0b4065",
+            "observed_at": 1789913761.9714592,
+            "ok": true,
+            "queued_or_running": 0,
+            "server": "127.0.0.1:56389",
+            "status": "HEALTHY"
+          },
+          "worker_connected": true
+        },
+        "execution": {
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    }
+  ]
+}

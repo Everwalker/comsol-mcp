@@ -194,7 +194,22 @@ class OfflineDocsIndex:
                                content_sha256=row["content_sha256"], version=row["version"], product=row["product"],
                                title=row["title"], offset=int(row["offset"]), content=row["content"])
 
-    def search(self, *, query: str, version: str, product: str | None = None, limit: int = 10) -> dict[str, Any]:
+    def search(self, *, query: str, version: str, product: str | None = None,
+               node_type: str | None = None, limit: int = 10) -> dict[str, Any]:
+        """Search one exact runtime version, optionally within one product.
+
+        Two independent filters exist and must not be aliased onto each other:
+
+        * ``product`` selects the product dimension a document was indexed
+          for (exact match on the recorded product name).
+        * ``node_type`` is a content dimension: the COMSOL node/feature type
+          name is matched case-insensitively against the document title or
+          content (containment), because a node type name is not a product.
+
+        Both filters count toward availability: when the version/filters match
+        no indexed document the result is UNAVAILABLE; when documents exist but
+        the query terms score nothing the result is NOT_FOUND.
+        """
         if not isinstance(query, str) or not query.strip() or not isinstance(version, str) or not version.strip():
             raise ExecutionContractError("INVALID_REQUEST", "query and version are required")
         if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
@@ -203,6 +218,12 @@ class OfflineDocsIndex:
         params: list[Any] = [version]
         if product:
             where.append("product=?"); params.append(product)
+        if node_type is not None:
+            if not isinstance(node_type, str):
+                raise ExecutionContractError("INVALID_REQUEST", "node_type must be a string")
+            if node_type.strip():
+                needle = f"%{node_type.strip().lower()}%"
+                where.append("(lower(title) LIKE ? OR lower(content) LIKE ?)"); params.extend([needle, needle])
         available = self.db.execute(f"SELECT COUNT(*) FROM documents WHERE {' AND '.join(where)}", params).fetchone()[0]
         if not available:
             return {"status": "UNAVAILABLE", "version": version, "results": [], "query": query}

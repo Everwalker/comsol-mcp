@@ -1,0 +1,308 @@
+{
+  "constraints": {
+    "chain_c_requires": {
+      "step_tag": "time",
+      "study_tag": "std1"
+    },
+    "satisfied": true,
+    "step_tag": "time",
+    "study_tag": "std1"
+  },
+  "continuation_command": "tools/phase4_run_mcp.py --live --chain-c-model $REPO/evidence/phase4/runs/20260920T130620Z-g3-live/chain_c_fixture_v7/chain_c_user_style.mph --only W16_T019_chainC_continue --run-dir <run-dir>",
+  "derived_values": {
+    "mode": "skipped",
+    "reason": "--with-derived-value was not passed"
+  },
+  "environment": {
+    "comsol_lifecycle": "not managed by this script (no COMSOL start/stop)",
+    "comsol_root": "/Applications/COMSOL64/Multiphysics",
+    "elapsed_s": 3.087,
+    "host": "127.0.0.1",
+    "isolation_receipt_present": true,
+    "jdk11": "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home",
+    "output": "$REPO/evidence/phase4/runs/20260920T130620Z-g3-live/chain_c_fixture_v7/chain_c_user_style.mph",
+    "port": 56389,
+    "prefs": "$REPO/PRIVATE_REDACTED/g2-valve-runtime-20260920T130556981606Z/prefs",
+    "private_home": "$REPO/evidence/phase4/runs/20260920T130620Z-g3-live/chain_c_fixture_v7/mcp-home",
+    "python": "$HOME/Documents/Codex/2026-09-05/https-github-com-wjc9011-comsol-multiphysics/comsol-mcp-server/.venv/bin/python",
+    "run_dir": "$REPO/evidence/phase4/runs/20260920T130620Z-g3-live/chain_c_fixture_v7",
+    "self_test": {
+      "missing_plan_steps": [],
+      "ok": true,
+      "plan_steps": 26,
+      "step_tag": "time",
+      "study_tag": "std1"
+    },
+    "started_at": "2026-09-20T13:14:29Z",
+    "tool_count": 65,
+    "tool_profile": "full"
+  },
+  "exit_code": 3,
+  "generated_at": "2026-09-20T13:14:33Z",
+  "kind": "phase4-chain-c-user-style-fixture",
+  "label": "G3 chain C user-style continuation model",
+  "manual_solver_edit": {
+    "applied": false,
+    "attempted": false,
+    "candidates": []
+  },
+  "model_ref": {
+    "generation": 1,
+    "model_tag": "mcp3",
+    "schema_version": 1,
+    "server_instance_id": "145af77012cbc5afe596c8d8fe59b6a00605028c18a38adb30f7e6dae7852ceb",
+    "session_id": "session-9f95c2e814acd5f99589961a"
+  },
+  "model_revision": 8,
+  "mph": {
+    "bytes": null,
+    "exists": false,
+    "path": "$REPO/evidence/phase4/runs/20260920T130620Z-g3-live/chain_c_fixture_v7/chain_c_user_style.mph",
+    "sha256": null
+  },
+  "ops_used": [
+    "blocked capability",
+    "definition.component_manage",
+    "geometry.build",
+    "geometry.feature_create",
+    "geometry.feature_update",
+    "geometry.sequence_create",
+    "material.create",
+    "material.selection_set",
+    "material.set_properties (property write)",
+    "model_create",
+    "physics.create",
+    "server_connect"
+  ],
+  "reopen_command": "tools/phase4_run_mcp.py --reopen-check $REPO/evidence/phase4/runs/20260920T130620Z-g3-live/chain_c_fixture_v7/chain_c_user_style.mph",
+  "session": {
+    "has_legacy_model_create": true,
+    "has_operation_call": true,
+    "initialize": {
+      "caller_owned_private_home": true,
+      "capabilities": {
+        "completions": null,
+        "experimental": {},
+        "logging": null,
+        "prompts": {
+          "listChanged": false
+        },
+        "resources": {
+          "listChanged": false,
+          "subscribe": false
+        },
+        "tasks": null,
+        "tools": {
+          "listChanged": false
+        }
+      },
+      "instruction_bytes": 0,
+      "private_home": "$REPO/evidence/phase4/runs/20260920T130620Z-g3-live/chain_c_fixture_v7/mcp-home",
+      "protocolVersion": "2025-11-25",
+      "server_name": "comsol-mcp-server",
+      "server_version": "1.29.1",
+      "tool_count": 65,
+      "tool_profile": "full"
+    },
+    "isolation_receipt_present": true,
+    "tool_count": 65
+  },
+  "sources": [
+    {
+      "exists": true,
+      "path": "$REPO/tools/phase4_run_mcp.py",
+      "sha256": "59d95dd38a1e8d2198facb8a8f2793be2051e20af103df00bac2085d524f7b16",
+      "size": 287354
+    },
+    {
+      "exists": true,
+      "path": "$REPO/tools/phase4_chain_c_fixture.py",
+      "sha256": "0d23e3e5e9fe68dd51766f3a5b1103e8809e3f35d9fddd2c4d7d88f9199fd0e0",
+      "size": 74598
+    },
+    {
+      "exists": true,
+      "path": "$REPO/tools/java/Phase4ChainCDerivedValue.java",
+      "sha256": "13a1a546f11fb4442132ea9e9753526283774b8fdc9e0372ec640f7b62e46174",
+      "size": 5328
+    }
+  ],
+  "startup_error": "blocked: physics 'ht' could not be created: ENGINE_CALL_FAILED",
+  "steps": [
+    {
+      "error_code": null,
+      "notes": "engine connection established before the build steps",
+      "operation": "server_connect",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "server_connect",
+      "success": true
+    },
+    {
+      "error_code": "",
+      "execution": {
+        "error_code": "",
+        "has_structured_content": true,
+        "operation_id": null,
+        "outer_isError": false,
+        "success": true
+      },
+      "model_ref": {
+        "generation": 1,
+        "model_tag": "mcp3",
+        "schema_version": 1,
+        "server_instance_id": "145af77012cbc5afe596c8d8fe59b6a00605028c18a38adb30f7e6dae7852ceb",
+        "session_id": "session-9f95c2e814acd5f99589961a"
+      },
+      "notes": "legacy published route: the strict model.create operation is not implemented",
+      "operation": "model_create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "model_create",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "definition.component_manage",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "component_create",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "geometry.sequence_create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "geometry_create",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "geometry.feature_create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "geometry_block",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": "size/pos typed from the Block node's own property metadata",
+      "operation": "geometry.feature_update",
+      "outer_isError": false,
+      "refused": [],
+      "request_arguments": [
+        "path",
+        "properties"
+      ],
+      "status": "APPLIED",
+      "step": "geometry_block",
+      "success": true,
+      "written": {
+        "pos": {
+          "engine_kind": "float64",
+          "engine_shape_rank": 1,
+          "engine_value_type": "DoubleArray",
+          "requested": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "size": {
+          "engine_kind": "float64",
+          "engine_shape_rank": 1,
+          "engine_value_type": "DoubleArray",
+          "requested": [
+            0.03,
+            0.02,
+            0.01
+          ]
+        }
+      }
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "geometry.build",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "geometry_build",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "material.create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "material_target",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": "group 'def'; expression text is written verbatim the engine returned no property metadata for ['density', 'heatcapacity', 'thermalconductivity']",
+      "operation": "material.set_properties (property write)",
+      "outer_isError": null,
+      "status": "SKIPPED",
+      "step": "material_target",
+      "success": false
+    },
+    {
+      "error_code": null,
+      "notes": "explicit domain binding: domain 1",
+      "operation": "material.selection_set",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "material_target",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "material.create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "material_unrelated",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": "deliberately unused material: a non-target node that must survive the engine returned no property metadata for ['density', 'heatcapacity', 'thermalconductivity']",
+      "operation": "material.set_properties (property write)",
+      "outer_isError": null,
+      "status": "SKIPPED",
+      "step": "material_unrelated",
+      "success": false
+    },
+    {
+      "error_code": "ENGINE_CALL_FAILED",
+      "notes": null,
+      "operation": "physics.create",
+      "outer_isError": true,
+      "status": "FAILED",
+      "step": "physics_create",
+      "success": false
+    },
+    {
+      "error_code": null,
+      "notes": "blocked: physics 'ht' could not be created: ENGINE_CALL_FAILED",
+      "operation": "blocked capability",
+      "outer_isError": null,
+      "status": "BLOCKED",
+      "step": "fixture",
+      "success": false
+    }
+  ],
+  "tlist": {},
+  "unverified": [
+    "the .mph is written and hashed, but the fixture does not reopen it: use tools/phase4_run_mcp.py --reopen-check to verify loadability in a fresh child",
+    "derived values are created only through the trusted-code route; without --with-derived-value (or when the route is refused) the model has no Derived Values node and the receipt says so",
+    "the chain C case itself addresses the continuation target as [{study,std1},{step,time}] with a row-list `properties`; the published operation layer rejects both forms (INVALID_NODE_PATH: unsupported path collection 'step'; INVALID_REQUEST: properties must be an object). The target this fixture prepares is writable with the verified shape -- [{study,std1},{feature,time}] plus a name->value mapping -- as replayed offline against the repository's fake node tree (tests/test_g3_chain_c_fixture.py::test_chain_c_fixture_tlist_write_works_on_the_repo_fake_tree)."
+  ],
+  "verification": {},
+  "warnings": []
+}

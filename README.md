@@ -10,6 +10,29 @@
 这个项目的目标不是把 COMSOL 当成黑盒批处理器，而是让自动化过程保持可见：
 你可以在 Desktop 中实时观察 MCP 对几何、参数、网格、求解和保存流程的修改。
 
+## 当前实现状态（2026-09-20，G3 进行中）
+
+> 本节描述**当前** registry 与入口；下方“主要特性/最近功能更新/工具列表”保留为历史说明（50 个 legacy
+> 工具的基线快照），当前计数以下文为准。**live 验收未完成，不得声称已验收。**
+
+- **MCP 工具面**：`full` profile 当前静态发布 **65 个工具**（51 legacy + 7 执行/控制 + 7 registry/fallback），
+  `domain`/`expert` 为收窄的展示过滤；legacy 名称与参数保持兼容。
+- **领域操作面**：G3 新增 **96 个 operation** —— W13 29 / W14 17 / W15 19 / W16 28 + runtime 2 + results 1，
+  经 `operation_call` / `registry_call`(别名) / `operation_describe` 调用（不是 96 个新增静态工具）；
+  其中 **72 个需要隔离执行路径**（所有非 READ 效果）。
+- **入口与文档**：`docs/comsol_mcp_design_v1/` 下的 `NEXT_GOAL_MAC_G3.md`（本轮 Goal）、
+  `G3_EXECUTION_PLAN.md`、`G3_REVIEW_FIXES.md`（R01–R06 补修与真实计数）、`G3_CAPABILITIES.md`（能力边界）、
+  `G3_OPERATIONS.md`（逐操作覆盖表）、`PROGRESS.md`（G3 段）。
+- **验收驱动**：`python tools/phase4_run_mcp.py`（仅生产 stdio；**从不**启动/停止 COMSOL）。不加 `--live`
+  跑离线/协议检查；`--live` 需要另行验证的任务自有运行时与隔离回执，并需按已批准的 webbridge 阀门流程
+  （`tools/phase3_remote_addr_valve_runtime.py`：临时启用已审查的 localhost RemoteAddrValve → 启动任务自有
+  Server → 收集隔离证明 → 验收 → 停止并恢复原文件/hash）。
+- **当前状态**：软件/协议面 **1359 passed, 1 skipped**；实机 live 运行（`driver`…`driver4`）中
+  `GUARD_T038`/`GUARD_T035`/`GUARD_T005` **PASS**，`GUARD_T010` **NOT_RUN**，`GUARD_T033` **FAIL**，
+  W13–W16 与 R01/R03/R04 的 live 子项因 managed-revision 记账 **BLOCKED/FAIL**；reopen-check 未运行。
+  记录为 `IMPLEMENTED_WITH_BLOCKED_ACCEPTANCE`，**不是** `G3_MAC_EXECUTABLE_SCOPE_PASS`。
+  Windows/Intel Mac/COMSOL 6.3/GUI 继续保持 UNVERIFIED。
+
 ## 主要特性
 
 - 连接已有的 COMSOL Multiphysics Server
@@ -17,7 +40,8 @@
 - 支持 visible-main 主模型锁，避免误切换或误保存模型
 - 支持参数设置、表达式求值、几何特征创建/更新/删除、物理场、变量、求解器配置和研究运行
 - 支持主模型快照、当前模型保存、异步加载大型 `.mph`
-- 公开工具接口稳定，目前注册 50 个 MCP tools
+- 公开工具接口稳定；历史基线为 50 个 MCP tools，**当前 full profile 发布 65 个工具 + 96 个领域 operation**
+  （见上文“当前实现状态”）
 
 ## 最近功能更新
 
@@ -315,6 +339,40 @@ The goal is visible automation. Instead of treating COMSOL as a black-box
 batch runner, this server lets you watch geometry, parameters, mesh, solve
 steps, and saved snapshots evolve in COMSOL Desktop.
 
+### Current implementation status (2026-09-20, G3 in progress)
+
+> This section describes the **current** registry and entry points. The
+> "Features"/"Recent Updates"/tool list below is retained as history (the
+> 50-legacy-tool baseline snapshot). **Live acceptance is incomplete — do not
+> claim acceptance.**
+
+- **MCP tool surface:** the `full` profile currently publishes **65 tools**
+  (51 legacy + 7 execution/control + 7 registry/fallback); `domain`/`expert`
+  narrow the static publication only. Legacy names and arguments stay compatible.
+- **Domain-operation surface:** G3 adds **96 operations** — W13 29 / W14 17 /
+  W15 19 / W16 28 + runtime 2 + `result.sample_path` 1 — called through
+  `operation_call` / `registry_call` (alias) / `operation_describe`, not as 96
+  extra static tools; **72** of them require the isolated execution path
+  (every effect other than `READ`).
+- **Docs:** `docs/comsol_mcp_design_v1/` — `NEXT_GOAL_MAC_G3.md` (this phase),
+  `G3_EXECUTION_PLAN.md`, `G3_REVIEW_FIXES.md` (R01–R06 fixes and real counts),
+  `G3_CAPABILITIES.md` (capability boundaries), `G3_OPERATIONS.md` (per-operation
+  coverage table), `PROGRESS.md` (G3 section).
+- **Acceptance driver:** `python tools/phase4_run_mcp.py` (production stdio only;
+  it never starts or stops COMSOL). Run without `--live` for offline/protocol
+  checks. `--live` requires an independently verified task-owned runtime with the
+  approved webbridge valve procedure
+  (`tools/phase3_remote_addr_valve_runtime.py`: temporarily enable the reviewed
+  localhost RemoteAddrValve → start a task-owned Server → collect the isolation
+  proof → run acceptance → stop and restore the original file/hash).
+- **Status:** software/protocol suite **1359 passed, 1 skipped**; in the live
+  runs (`driver`…`driver4`) `GUARD_T038`/`GUARD_T035`/`GUARD_T005` **PASS**,
+  `GUARD_T010` **NOT_RUN**, `GUARD_T033` **FAIL**, and the W13–W16 plus
+  R01/R03/R04 live subcases are **BLOCKED/FAIL** on managed-revision
+  bookkeeping; the reopen-check has not run. Recorded as
+  `IMPLEMENTED_WITH_BLOCKED_ACCEPTANCE`, **not** `G3_MAC_EXECUTABLE_SCOPE_PASS`.
+  Windows, Intel Mac, COMSOL 6.3 and GUI remain UNVERIFIED.
+
 ### Features
 
 - Attach to an existing COMSOL Multiphysics Server
@@ -322,7 +380,9 @@ steps, and saved snapshots evolve in COMSOL Desktop.
 - Lock the visible main model to prevent accidental model switching
 - Set parameters, evaluate expressions, edit geometry and physics features, configure solvers, run mesh and studies
 - Save main-model snapshots and handle large `.mph` loads asynchronously
-- Stable MCP tool surface with 50 registered tools
+- Stable MCP tool surface; the historical baseline was 50 tools — the current
+  `full` profile publishes **65 tools + 96 domain operations** (see "Current
+  implementation status" above)
 
 ### Recent Updates
 

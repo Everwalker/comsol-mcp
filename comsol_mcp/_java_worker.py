@@ -341,7 +341,7 @@ class PersistentJavaWorker:
 
     def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
                queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
-        if kind not in {"connect", "disconnect", "model", "modelutil", "model_snapshot", "call", "lock_selftest", "code_compile", "code_execute"}:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "model_snapshot", "call", "children", "walk", "lock_selftest", "code_compile", "code_execute"}:
             raise JavaWorkerError("unknown private worker command")
         body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
         if queue_timeout_s is not None:
@@ -416,6 +416,45 @@ class PersistentJavaWorker:
         return result
 
     def client(self) -> "RemoteClient": return RemoteClient(self)
+
+    def probe_children(self, node: "RemoteJava", candidates: list[Mapping[str, str]], *,
+                       request_id: str | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        """R02: list one node's children in a single engine-side batch.
+
+        The worker probes every candidate collection inside its serial engine
+        task.  Collections the node does not expose are omitted; every other
+        failure is returned in ``errors`` - it is never silently dropped.
+        """
+        if not isinstance(node, RemoteJava):
+            raise JavaWorkerError("probe_children requires a worker node handle")
+        reply = self.submit("children", {"handle": node._handle, "generation": node._generation,
+                                         "candidates": [dict(item) for item in candidates]},
+                            request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+        result = _decode_reply(reply, self)
+        if not isinstance(result, Mapping):
+            raise JavaWorkerError("worker children probe returned an invalid result")
+        return dict(result)
+
+    def walk_nodes(self, node: "RemoteJava", *, query: Mapping[str, Any], candidates: list[Mapping[str, str]],
+                   max_nodes: int, max_seconds: float, skip_visited: int, limit: int,
+                   request_id: str | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        """R02: deterministic, budgeted node-tree walk inside one engine task.
+
+        ``skip_visited`` replays the deterministic walk prefix for a resumed
+        cursor; budgets only charge nodes beyond that prefix.  The reply is
+        validated by the engine before it reaches the wire.
+        """
+        if not isinstance(node, RemoteJava):
+            raise JavaWorkerError("walk_nodes requires a worker node handle")
+        reply = self.submit("walk", {"handle": node._handle, "generation": node._generation,
+                                     "query": dict(query), "candidates": [dict(item) for item in candidates],
+                                     "max_nodes": int(max_nodes), "max_seconds": float(max_seconds),
+                                     "skip_visited": int(skip_visited), "limit": int(limit)},
+                            request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+        result = _decode_reply(reply, self)
+        if not isinstance(result, Mapping):
+            raise JavaWorkerError("worker walk returned an invalid result")
+        return dict(result)
 
     def close(self) -> None:
         # Only the child started by this instance is eligible for termination. No COMSOL server is touched.

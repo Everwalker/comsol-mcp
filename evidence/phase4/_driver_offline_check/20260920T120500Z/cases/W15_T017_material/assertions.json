@@ -1,0 +1,238 @@
+{
+  "assertion_count": 3,
+  "case": {
+    "acceptance": [
+      "G3 §7 W15.T017"
+    ],
+    "assertions": {
+      "operation_availability": {
+        "material.create": {
+          "available": false,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": false,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+          "input_schema_properties": [
+            "component",
+            "definition",
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "session_id",
+            "tag",
+            "type_id"
+          ],
+          "mcp_tool_name": "material_create",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "material.set_properties": {
+          "available": false,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": false,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+          "input_schema_properties": [
+            "expected_revision",
+            "group",
+            "idempotency_key",
+            "model_ref",
+            "path",
+            "project_id",
+            "properties",
+            "provenance",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "material_set_properties",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "material.validate": {
+          "available": false,
+          "effect": "EVALUATE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": false,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+          "input_schema_properties": [
+            "checks",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "scope",
+            "session_id"
+          ],
+          "mcp_tool_name": "material_validate",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        }
+      },
+      "static_material_ops_executable": {
+        "operations": [
+          "material.create",
+          "material.set_properties",
+          "material.selection_set",
+          "material.validate",
+          "node.property_get"
+        ],
+        "pass": false
+      },
+      "subcase_inventory": {
+        "levels": [
+          "live",
+          "static"
+        ],
+        "missing": [],
+        "planned": 5,
+        "recorded": 5
+      }
+    },
+    "case_id": "W15_T017_material",
+    "finished_at": "2026-09-20T11:48:38.401477Z",
+    "package": "W15",
+    "reason": null,
+    "started_at": "2026-09-20T11:48:38.392933Z",
+    "status": "BLOCKED",
+    "subcases": {
+      "anisotropic_tensor_and_coordinate_system": {
+        "acceptance": "T017 anisotropic tensor and frame",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: material.create(implementation_status=PROPOSED_NOT_IMPLEMENTED), material.set_properties(implementation_status=PROPOSED_NOT_IMPLEMENTED), material.selection_set(implementation_status=unknown), material.validate(implementation_status=PROPOSED_NOT_IMPLEMENTED), node.property_get(implementation_status=unknown)",
+        "status": "BLOCKED"
+      },
+      "k_T_Cp_T_and_rho_expressions": {
+        "acceptance": "T017 k(T)/Cp(T)/rho",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: material.create(implementation_status=PROPOSED_NOT_IMPLEMENTED), material.set_properties(implementation_status=PROPOSED_NOT_IMPLEMENTED), material.selection_set(implementation_status=unknown), material.validate(implementation_status=PROPOSED_NOT_IMPLEMENTED), node.property_get(implementation_status=unknown)",
+        "status": "BLOCKED"
+      },
+      "material_readback_after_update": {
+        "acceptance": "T017 material readback",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: material.create(implementation_status=PROPOSED_NOT_IMPLEMENTED), material.set_properties(implementation_status=PROPOSED_NOT_IMPLEMENTED), material.selection_set(implementation_status=unknown), material.validate(implementation_status=PROPOSED_NOT_IMPLEMENTED), node.property_get(implementation_status=unknown)",
+        "status": "BLOCKED"
+      },
+      "missing_required_property_preflight_error": {
+        "acceptance": "T017 missing required property preflight",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: material.create(implementation_status=PROPOSED_NOT_IMPLEMENTED), material.set_properties(implementation_status=PROPOSED_NOT_IMPLEMENTED), material.selection_set(implementation_status=unknown), material.validate(implementation_status=PROPOSED_NOT_IMPLEMENTED), node.property_get(implementation_status=unknown)",
+        "status": "BLOCKED"
+      },
+      "static_material_ops_availability": {
+        "acceptance": "T017 material actions",
+        "level": "static",
+        "reason": "required operation(s) not executable in this build: material.create(implementation_status=PROPOSED_NOT_IMPLEMENTED), material.set_properties(implementation_status=PROPOSED_NOT_IMPLEMENTED), material.selection_set(implementation_status=unknown), material.validate(implementation_status=PROPOSED_NOT_IMPLEMENTED), node.property_get(implementation_status=unknown)",
+        "status": "BLOCKED"
+      }
+    }
+  },
+  "subcase_count": 5
+}

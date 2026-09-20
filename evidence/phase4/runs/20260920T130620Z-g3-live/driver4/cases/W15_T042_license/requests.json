@@ -1,0 +1,147 @@
+{
+  "case_id": "W15_T042_license",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver4phase4-describe-runtime-license_inspect",
+          "request_id": "phase4-driver4phase4-describe-runtime-license_inspect"
+        },
+        "operation_id": "runtime.license_inspect"
+      },
+      "elapsed_s": 0.0025510829873383045,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver4phase4-describe-runtime-capabilities",
+          "request_id": "phase4-driver4phase4-describe-runtime-capabilities"
+        },
+        "operation_id": "runtime.capabilities"
+      },
+      "elapsed_s": 0.002051584015134722,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver4phase4-describe-node-property_get",
+          "request_id": "phase4-driver4phase4-describe-node-property_get"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.001801416976377368,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 13,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "832a93e9eb6d6949fb0947f5b3aca2ba37a8c13fe3d010982b98f7ae36bc9acc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "products": [
+            "HeatTransfer"
+          ],
+          "project_id": "comsol-mcp-phase4",
+          "runtime_id": "COMSOL-6.4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 13,
+          "idempotency_key": "phase4-driver4license_inspect_records_has_product",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "832a93e9eb6d6949fb0947f5b3aca2ba37a8c13fe3d010982b98f7ae36bc9acc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver4license_inspect_records_has_product",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "runtime.license_inspect"
+      },
+      "elapsed_s": 0.008621708024293184,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "products": [
+            "HeatTransfer"
+          ],
+          "project_id": "comsol-mcp-phase4",
+          "runtime_id": "COMSOL-6.4"
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver4t042-inspect",
+          "request_id": "phase4-driver4inspect"
+        },
+        "operation_id": "runtime.license_inspect"
+      },
+      "elapsed_s": 0.0031732500065118074,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 5
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 14,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "832a93e9eb6d6949fb0947f5b3aca2ba37a8c13fe3d010982b98f7ae36bc9acc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "geometry"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 14,
+          "idempotency_key": "phase4-driver4authorized_product_usable",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "832a93e9eb6d6949fb0947f5b3aca2ba37a8c13fe3d010982b98f7ae36bc9acc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver4authorized_product_usable",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.0069868750288151205,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 6
+    }
+  ]
+}

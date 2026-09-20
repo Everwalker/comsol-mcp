@@ -1,0 +1,106 @@
+{
+  "case_id": "W13_T006_variables",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver2phase4-describe-variable-group_create",
+          "request_id": "phase4-driver2phase4-describe-variable-group_create"
+        },
+        "operation_id": "variable.group_create"
+      },
+      "elapsed_s": 0.0028551669674925506,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver2phase4-describe-variable-set",
+          "request_id": "phase4-driver2phase4-describe-variable-set"
+        },
+        "operation_id": "variable.set"
+      },
+      "elapsed_s": 0.0022002499899826944,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver2phase4-describe-variable-get",
+          "request_id": "phase4-driver2phase4-describe-variable-get"
+        },
+        "operation_id": "variable.get"
+      },
+      "elapsed_s": 0.0023680839804001153,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver2phase4-describe-manage_variables",
+          "request_id": "phase4-driver2phase4-describe-manage_variables"
+        },
+        "operation_id": "manage_variables"
+      },
+      "elapsed_s": 0.025941208994481713,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver2phase4-describe-evaluate_expressions",
+          "request_id": "phase4-driver2phase4-describe-evaluate_expressions"
+        },
+        "operation_id": "evaluate_expressions"
+      },
+      "elapsed_s": 0.002698624972254038,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 5
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "component": "comp1",
+          "expected_revision": 9,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp9",
+            "schema_version": 1,
+            "server_instance_id": "f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "var1"
+        },
+        "execution": {
+          "expected_revision": 9,
+          "idempotency_key": "phase4-driver2variables_two_in_one_group",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp9",
+            "schema_version": 1,
+            "server_instance_id": "f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver2variables_two_in_one_group",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "variable.group_create"
+      },
+      "elapsed_s": 0.035812208021525294,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 6
+    }
+  ]
+}

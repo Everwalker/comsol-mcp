@@ -1,0 +1,55 @@
+{
+  "case_id": "GUARD_T038",
+  "requests": [
+    {
+      "arguments": {
+        "operation_id": "phase4.does.not.exist"
+      },
+      "elapsed_s": 0.002472834021318704,
+      "operation": "operation_describe",
+      "outer_isError": true,
+      "sequence": 1
+    },
+    {
+      "arguments": {},
+      "elapsed_s": 0.017005832982249558,
+      "operation": "registry_list",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "cursor": "100"
+      },
+      "elapsed_s": 0.01936224999371916,
+      "operation": "registry_list",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "cursor": "200"
+      },
+      "elapsed_s": 0.029590416990686208,
+      "operation": "registry_list",
+      "outer_isError": false,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "finish": "full"
+        },
+        "execution": {
+          "finish": "full",
+          "idempotency_key": "phase4-partial"
+        },
+        "operation_id": "phase4.partial.failure"
+      },
+      "elapsed_s": 0.004049125011079013,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 5
+    }
+  ]
+}

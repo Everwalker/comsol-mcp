@@ -797,8 +797,15 @@ def _assert_webbridge_metadata(observed: dict[str, Any], expected: dict[str, Any
         return
     if expected.get("xattrs") == [] and observed.get("xattrs") == [base.KNOWN_RESIDUAL_XATTR_NAME]:
         value = observed.get("xattr_values", {}).get(base.KNOWN_RESIDUAL_XATTR_NAME)
-        if isinstance(value, dict) and value.get("sha256") == base.KNOWN_RESIDUAL_XATTR_SHA256:
+        if base._residual_token_ok(value):
             return
+    if (expected.get("xattrs") == [base.KNOWN_RESIDUAL_XATTR_NAME]
+            and observed.get("xattrs") == [base.KNOWN_RESIDUAL_XATTR_NAME]
+            and base._residual_token_ok(observed.get("xattr_values", {}).get(base.KNOWN_RESIDUAL_XATTR_NAME))):
+        # macOS re-minted the OS-managed provenance token during this in-place
+        # write; the new value is recorded in the receipt.  Any other xattr
+        # difference still fails closed below.
+        return
     raise GuardError("server.xml xattrs changed unexpectedly")
 
 

@@ -1,0 +1,435 @@
+{
+  "case_id": "GUARD_T005",
+  "results": [
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"additionalProperties\": false, \"properties\": {\"evaluation_policy\": {\"default\": \"ephemeral_mutation\", \"title\": \"Evaluation Policy\", \"type\": \"string\"}, \"expressions_json\": {\"default\": \"[]\", \"title\": \"Expressions Json\", \"type\": \"string\"}, \"max_result_size\": {\"default\": 0, \"title\": \"Max Result Size\", \"type\": \"integer\"}}, \"title\": \"evaluate_expressionsArguments\", \"type\": \"object\"}, \"domain\": \"legacy\", \"effect\": \"EVALUATE\", \"executable\": true, \"gate\": \"W01 compatibility mapping plus ordinary service gate\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"additionalProperties\": false, \"properties\": {\"evaluation_policy\": {\"default\": \"ephemeral_mutation\", \"title\": \"Evaluation Policy\", \"type\": \"string\"}, \"expressions_json\": {\"default\": \"[]\", \"title\": \"Expressions Json\", \"type\": \"string\"}, \"max_result_size\": {\"default\": 0, \"title\": \"Max Result Size\", \"type\": \"integer\"}}, \"title\": \"evaluate_expressionsArguments\", \"type\": \"object\"}, \"mcp_tool_name\": \"evaluate_expressions\", \"notes\": \"Hidden from a narrowed static publication profile only; callable through operation_call with this explicit mapping. Input schema is generated from the registered FastMCP function signature; unknown fields are rejected before dispatch.\", \"operation_id\": \"evaluate_expressions\", \"output_contract\": \"success/data/error/execution envelope\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"Managed compatibility route for the original MCP tool\", \"required_tests\": [\"legacy_fallback\", \"permission_gate\"], \"route\": \"legacy managed backend\", \"scope\": \"legacy managed service\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 1,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "evaluation_policy": {
+                "default": "ephemeral_mutation",
+                "title": "Evaluation Policy",
+                "type": "string"
+              },
+              "expressions_json": {
+                "default": "[]",
+                "title": "Expressions Json",
+                "type": "string"
+              },
+              "max_result_size": {
+                "default": 0,
+                "title": "Max Result Size",
+                "type": "integer"
+              }
+            },
+            "title": "evaluate_expressionsArguments",
+            "type": "object"
+          },
+          "domain": "legacy",
+          "effect": "EVALUATE",
+          "executable": true,
+          "gate": "W01 compatibility mapping plus ordinary service gate",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "evaluation_policy": {
+                "default": "ephemeral_mutation",
+                "title": "Evaluation Policy",
+                "type": "string"
+              },
+              "expressions_json": {
+                "default": "[]",
+                "title": "Expressions Json",
+                "type": "string"
+              },
+              "max_result_size": {
+                "default": 0,
+                "title": "Max Result Size",
+                "type": "integer"
+              }
+            },
+            "title": "evaluate_expressionsArguments",
+            "type": "object"
+          },
+          "mcp_tool_name": "evaluate_expressions",
+          "notes": "Hidden from a narrowed static publication profile only; callable through operation_call with this explicit mapping. Input schema is generated from the registered FastMCP function signature; unknown fields are rejected before dispatch.",
+          "operation_id": "evaluate_expressions",
+          "output_contract": "success/data/error/execution envelope",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "Managed compatibility route for the original MCP tool",
+          "required_tests": [
+            "legacy_fallback",
+            "permission_gate"
+          ],
+          "route": "legacy managed backend",
+          "scope": "legacy managed service",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"additionalProperties\": false, \"properties\": {\"evaluation_policy\": {\"default\": \"ephemeral_mutation\", \"title\": \"Evaluation Policy\", \"type\": \"string\"}, \"metrics_json\": {\"default\": \"[]\", \"title\": \"Metrics Json\", \"type\": \"string\"}}, \"title\": \"get_core_metricsArguments\", \"type\": \"object\"}, \"domain\": \"legacy\", \"effect\": \"EVALUATE\", \"executable\": true, \"gate\": \"W01 compatibility mapping plus ordinary service gate\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"additionalProperties\": false, \"properties\": {\"evaluation_policy\": {\"default\": \"ephemeral_mutation\", \"title\": \"Evaluation Policy\", \"type\": \"string\"}, \"metrics_json\": {\"default\": \"[]\", \"title\": \"Metrics Json\", \"type\": \"string\"}}, \"title\": \"get_core_metricsArguments\", \"type\": \"object\"}, \"mcp_tool_name\": \"get_core_metrics\", \"notes\": \"Hidden from a narrowed static publication profile only; callable through operation_call with this explicit mapping. Input schema is generated from the registered FastMCP function signature; unknown fields are rejected before dispatch.\", \"operation_id\": \"get_core_metrics\", \"output_contract\": \"success/data/error/execution envelope\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"Managed compatibility route for the original MCP tool\", \"required_tests\": [\"legacy_fallback\", \"permission_gate\"], \"route\": \"legacy managed backend\", \"scope\": \"legacy managed service\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 2,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "evaluation_policy": {
+                "default": "ephemeral_mutation",
+                "title": "Evaluation Policy",
+                "type": "string"
+              },
+              "metrics_json": {
+                "default": "[]",
+                "title": "Metrics Json",
+                "type": "string"
+              }
+            },
+            "title": "get_core_metricsArguments",
+            "type": "object"
+          },
+          "domain": "legacy",
+          "effect": "EVALUATE",
+          "executable": true,
+          "gate": "W01 compatibility mapping plus ordinary service gate",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "evaluation_policy": {
+                "default": "ephemeral_mutation",
+                "title": "Evaluation Policy",
+                "type": "string"
+              },
+              "metrics_json": {
+                "default": "[]",
+                "title": "Metrics Json",
+                "type": "string"
+              }
+            },
+            "title": "get_core_metricsArguments",
+            "type": "object"
+          },
+          "mcp_tool_name": "get_core_metrics",
+          "notes": "Hidden from a narrowed static publication profile only; callable through operation_call with this explicit mapping. Input schema is generated from the registered FastMCP function signature; unknown fields are rejected before dispatch.",
+          "operation_id": "get_core_metrics",
+          "output_contract": "success/data/error/execution envelope",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "Managed compatibility route for the original MCP tool",
+          "required_tests": [
+            "legacy_fallback",
+            "permission_gate"
+          ],
+          "route": "legacy managed backend",
+          "scope": "legacy managed service",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"reconcile unfinished engine work before new operations\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-drivert005-tree-before\", \"job_id\": \"8fe9a2fc-993b-4cbf-91f0-e9594fa2c833\", \"operation_id\": \"ebd03231-973a-4de7-a614-544da39e0d37\", \"request_hash\": \"4b13027684e26ed19ccfecaa1316c5d8540bc99b06fbe6caced0113f1582010e\", \"request_id\": \"phase4-drivert005-tree-before\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "reconcile unfinished engine work before new operations",
+      "operation": "model_tree",
+      "sequence": 3,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "reconcile unfinished engine work before new operations",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-drivert005-tree-before",
+          "job_id": "8fe9a2fc-993b-4cbf-91f0-e9594fa2c833",
+          "operation_id": "ebd03231-973a-4de7-a614-544da39e0d37",
+          "request_hash": "4b13027684e26ed19ccfecaa1316c5d8540bc99b06fbe6caced0113f1582010e",
+          "request_id": "phase4-drivert005-tree-before"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"reconcile unfinished engine work before new operations\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driveruser_derived_nodes_preserved\", \"job_id\": \"a2f6f00a-a374-424d-837c-30477170ccd6\", \"operation_id\": \"1b06fcca-9383-439f-b69e-01fc6a511a49\", \"request_hash\": \"615883c58b8ea84b6c1d63b09ccf2e8e013423e950a5a001eccb575c5642dce4\", \"request_id\": \"phase4-driveruser_derived_nodes_preserved\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "reconcile unfinished engine work before new operations",
+      "operation": "evaluate_expressions",
+      "sequence": 4,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "reconcile unfinished engine work before new operations",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driveruser_derived_nodes_preserved",
+          "job_id": "a2f6f00a-a374-424d-837c-30477170ccd6",
+          "operation_id": "1b06fcca-9383-439f-b69e-01fc6a511a49",
+          "request_hash": "615883c58b8ea84b6c1d63b09ccf2e8e013423e950a5a001eccb575c5642dce4",
+          "request_id": "phase4-driveruser_derived_nodes_preserved"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"reconcile unfinished engine work before new operations\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-drivert005-tree-after\", \"job_id\": \"10b82c2e-f818-404e-a827-021d025dec87\", \"operation_id\": \"dcf91836-7d9f-4f09-9bd5-a1c447b31f0c\", \"request_hash\": \"4b13027684e26ed19ccfecaa1316c5d8540bc99b06fbe6caced0113f1582010e\", \"request_id\": \"phase4-drivert005-tree-after\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "reconcile unfinished engine work before new operations",
+      "operation": "model_tree",
+      "sequence": 5,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "reconcile unfinished engine work before new operations",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-drivert005-tree-after",
+          "job_id": "10b82c2e-f818-404e-a827-021d025dec87",
+          "operation_id": "dcf91836-7d9f-4f09-9bd5-a1c447b31f0c",
+          "request_hash": "4b13027684e26ed19ccfecaa1316c5d8540bc99b06fbe6caced0113f1582010e",
+          "request_id": "phase4-drivert005-tree-after"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"reconcile unfinished engine work before new operations\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-drivert005-invalid\", \"job_id\": \"1125bb35-4477-41e0-a5e9-929e90cf28c4\", \"operation_id\": \"7d0ed1a8-b5e0-4e06-aceb-d046fdb52eb6\", \"request_hash\": \"6ce1a9298ec2bc9b13961e0d681cf04cdc0daff6cc61a49749f7fa5583e95f84\", \"request_id\": \"phase4-driverinvalid\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "reconcile unfinished engine work before new operations",
+      "operation": "evaluate_expressions",
+      "sequence": 6,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "reconcile unfinished engine work before new operations",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-drivert005-invalid",
+          "job_id": "1125bb35-4477-41e0-a5e9-929e90cf28c4",
+          "operation_id": "7d0ed1a8-b5e0-4e06-aceb-d046fdb52eb6",
+          "request_hash": "6ce1a9298ec2bc9b13961e0d681cf04cdc0daff6cc61a49749f7fa5583e95f84",
+          "request_id": "phase4-driverinvalid"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"reconcile unfinished engine work before new operations\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-drivert005-tree-after-bad\", \"job_id\": \"50160681-5c96-43ef-ae55-cc0475cd2fee\", \"operation_id\": \"bf4295ff-558f-4963-9121-5b6e4aa52786\", \"request_hash\": \"4b13027684e26ed19ccfecaa1316c5d8540bc99b06fbe6caced0113f1582010e\", \"request_id\": \"phase4-drivert005-tree-after-bad\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "reconcile unfinished engine work before new operations",
+      "operation": "model_tree",
+      "sequence": 7,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "reconcile unfinished engine work before new operations",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-drivert005-tree-after-bad",
+          "job_id": "50160681-5c96-43ef-ae55-cc0475cd2fee",
+          "operation_id": "bf4295ff-558f-4963-9121-5b6e4aa52786",
+          "request_hash": "4b13027684e26ed19ccfecaa1316c5d8540bc99b06fbe6caced0113f1582010e",
+          "request_id": "phase4-drivert005-tree-after-bad"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"reconcile unfinished engine work before new operations\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-drivert005-tree-cleanup\", \"job_id\": \"af8e33b1-92a4-4608-9e55-d31130ee9320\", \"operation_id\": \"907c4f66-caa6-4a79-8005-1ff10b6c33da\", \"request_hash\": \"4b13027684e26ed19ccfecaa1316c5d8540bc99b06fbe6caced0113f1582010e\", \"request_id\": \"phase4-drivert005-tree-cleanup\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "reconcile unfinished engine work before new operations",
+      "operation": "model_tree",
+      "sequence": 8,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "reconcile unfinished engine work before new operations",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-drivert005-tree-cleanup",
+          "job_id": "af8e33b1-92a4-4608-9e55-d31130ee9320",
+          "operation_id": "907c4f66-caa6-4a79-8005-1ff10b6c33da",
+          "request_hash": "4b13027684e26ed19ccfecaa1316c5d8540bc99b06fbe6caced0113f1582010e",
+          "request_id": "phase4-drivert005-tree-cleanup"
+        },
+        "success": false
+      },
+      "success": false
+    }
+  ]
+}

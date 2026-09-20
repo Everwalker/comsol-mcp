@@ -1213,3 +1213,73 @@ All 211 tracked Phase1/2 evidence files remain byte-identical to the prior deliv
 Implementation, tests and evidence published to `Everwalker/comsol-mcp:main` as `e8766ae2ae25d439a07d00aba9ac79b32d36e361`; fetched tree `715c91cc14caec0f5c94e0890c0ed7e8d68afb7f` exactly matches local commit `29deb785ebbe636ba7864a8c62750e8d42aad99a`. Terminal push lacked credentials; the authenticated connector used an ordinary child commit and `force=false`. Original local branch/commit retained; `codex/mac-g2-accepted-delivery` tracks the remote history. This audit-only receipt update follows the verified implementation commit.
 
 `final_goal_audit.json` records the bounded requirement review. All authorized applicable Mac work, affected regression and cleanup are complete. No Windows integration, no W13, and no additional automation or runtime started. Final reply verifies the resulting audit commit SHA/tree against remote before closing the goal.
+
+## G3 — R01–R06 补修 + W13–W16 领域操作（Mac，2026-09-20）
+
+**状态：IMPLEMENTED_WITH_BLOCKED_ACCEPTANCE。** 软件/协议面完成并有回归；实机（live）验收未完成，
+**不构成** `G3_MAC_EXECUTABLE_SCOPE_PASS`。Goal：`docs/comsol_mcp_design_v1/NEXT_GOAL_MAC_G3.md`；
+计划 `G3_EXECUTION_PLAN.md`；补修记录 `G3_REVIEW_FIXES.md`；能力边界 `G3_CAPABILITIES.md`；
+操作覆盖表 `G3_OPERATIONS.md`；验收摘要 `evidence/phase4_acceptance.json`。
+基线：本地分支 `codex/mac-g2-accepted-delivery`，HEAD `1c6a5e982742b6c1a92054409383fbfbbc56658e`
+（与审查 SHA 一致；本轮未 commit、未同步）。
+
+### 软件面（可复算）
+
+- 全量软件回归（本轮实际执行）：`pytest tests/ -q -p no:randomly` → **1359 passed, 1 skipped**
+  （1 skipped 为既有 Windows-only 跳过项；解释器 `…/comsol-mcp-server/.venv/bin/python`，cwd 指向本仓库）。
+- 领域操作面：`_g3_ops` 发布 **96** 个 operation —— W13 **29** / W14 **17** / W15 **19** / W16 **28** /
+  runtime **2** / results **1**；无跳过模块、无重复 id。效果全部取自动作目录（96/96 `catalog`），
+  `REQUIRES_ISOLATION` **72** 项（= 全部非 READ）。MCP 静态发布面仍为 `full` profile **65 个工具**。
+- R01–R06 回归：`test_g3_r01_expression.py` **10**、`r02_discovery.py` **13**、`r03_indexed.py` **21**、
+  `r04_invariants.py` **23**、`r05_store.py` **12**、`r06_docs_query.py` **5**（合计 84；
+  另有 `test_g3_common.py` 118、`test_g3_w13/14/15/16.py` 145/139/141/73、`test_g3_runtime.py` 76、
+  `test_g3_results.py` 90、`test_g3_wiring.py` 5、驱动/回放 55）。
+- 离线驱动（无 COMSOL Server，仅经生产 stdio 入口）：用例 **PASS 1 | FAIL 0 | BLOCKED 2 | NOT_RUN 20**，
+  子用例 **PASS 40 | FAIL 0 | BLOCKED 6 | NOT_RUN 102**；证据 `evidence/phase4/_driver_offline_check/`
+  （最新 `20260920T130323Z`）。离线 0 FAIL：协议/线格式/静态可用性检查全部通过或按能力显式 BLOCKED/NOT_RUN。
+- 修复要点：R01 表达式↔字符串文本语义（逐字节、rule `exact_text_expression_string_mapping`，unit 仅元数据、
+  容差显式）+ 驱动引用缺键不再当作匹配；R02 集合发现/分页/错误/预算与游标绑定；R03 indexed/keyed **权威回读**
+  （目标元素 + 非目标不变，无权威读路径写前拒绝）；R04 类型化 invariants + `execution_status`/
+  `verification_status` 分离与检查三态；R05 `STORE_CORRUPT` 与显式 `recover()` 审计；
+  R06.4 `docs` 的 `node_type` 不再被当作 `product` 过滤。
+
+### 实机面（本任务自有 Server + 已批准 webbridge valve）
+
+- 运行时生命周期：`g2-valve-runtime-20260920T130556981606Z` **STOPPED_RESTORED** —— 已批准的最小
+  RemoteAddrValve 变更 → 任务自有 Server → 验收 → 停止并恢复原文件；恢复后内容 SHA256
+  `95478d7624e778c694c714d9215797c0c0076fd707a4eedf2bedbaa6bafe6625`（与原件一致，inode 14720294 保留）。
+  macOS 就地写入会重铸 `com.apple.provenance`，门禁改为“记录到同族形态 + 精确记录观测值”
+  （`evidence/phase4/valve_resume/valve_residual_refamily_and_restore_20260920T130551Z.json`，
+  xattr 残留如实保留）。防火墙无变更；无全局改动。
+- 隔离证明：每次 mutation 信封携带 isolation proof（loopback Java API 已认证 + 非 loopback 192.168.100.152
+  被 HTTP 403 拒绝 + Server access-log 关联）；监听仍为 wildcard + 请求层过滤，非 loopback 绑定。
+- 链 C 夹具：`evidence/phase4/runs/20260920T130620Z-g3-live/chain_c_fixture_v11/chain_c_user_style.mph`
+  sha256 `c6f626e7e69b199a5c5896fbd6208145f1aaef79bfda217eb669ba471c2908cd`（3,707,004 字节），
+  **经公开操作构建并真实求解**（exit 1 对应四个已记录 SKIPPED 步骤：材料属性名修正前、初值 T0、
+  无 Size 特征、Derived Values 关闭）。
+- 受保护性 live：`GUARD_T038`（错误传播/结构化结果/IsError 一致）**PASS**、`GUARD_T035`（docs 路径与
+  凭据保护）**PASS**、`GUARD_T005`（用户节点保留/无效表达式不删节点/临时节点清理）**PASS**；
+  `GUARD_T010`（幂等）**NOT_RUN**；`GUARD_T033`（求值策略/临时节点归属）**FAIL**（产品缺口，未修复）。
+- 驱动用例计数（run `driver`/`driver2`/`driver3`/`driver4`，各自用例 PASS/FAIL/BLOCKED/NOT_RUN）：
+  **2/7/12/2**、**3/18/1/1**、**2/3/17/1**、**3/7/12/1**（子用例 47/15/18/68、55/24/9/62、
+  49/6/36/60、68/8/24/50）。driver4 的 `summary.md`/`index.json` 自报 `PASS 3 | FAIL 7 | BLOCKED 12 | NOT_RUN 1`；
+  `evidence/phase4_acceptance.json` 记为 `FAIL 6 | BLOCKED 13`（相差一例，以运行目录为准）。
+  R01 的同文本回读、R03 的错误 index 拒绝与 setter no-op 检出已 live PASS；其余 live 子项 BLOCKED/NOT_RUN。
+
+### 未完成 / 阻塞（不称阶段通过）
+
+- **W13–W16 live 验收 BLOCKED/FAIL**：managed-revision 语义（external-change 门禁 + 多调用流程中的
+  stale `expected_revision` 采纳）与少量引擎级拒绝（材料属性 rank 不匹配；`physics.feature_create` `ins1`；
+  T020 solver 子特征路径 tag；链 C `solver.inspect` 路径）——**NOT_RUN/BLOCKED**，非可用子项已用夹具
+  显式记录，未以放宽门槛或删除断言达成。
+- **R01/R03/R04 live 探针**受同一 revision 记账阻塞（其契约层静态/协议层 PASS）；R02/R05 无专用 live 用例
+  （R02 实机回读 UNVERIFIED；R05 属本地持久化契约）。
+- **产品缺口（保留 FAIL）**：T042 许可证探针 payload 模型身份不匹配；T033 `evaluate_expressions` 无求值策略、
+  无临时节点归属报告、`3*3` 空值；`begin_write` dirty 门禁先于 revision 比较且拒绝信封携带不一致的
+  `expected_revision`。
+- **reopen-check（新 Worker 重新打开检验）未运行**；最终验收运行未到达；**未同步远端**（live 验收未完成，
+  提交与证据保留在本地）。
+- 未覆盖组合继续 UNVERIFIED：Windows x64、macOS Intel、COMSOL 6.3、GUI/Desktop、未授权商业模块、
+  大模型 checkpoint 成本。
+- 传输/清理：本轮未改代码以外的安装文件；webbridge 原字节/inode 已恢复（xattr 残留如实记录）；
+  `evidence/phase4/` 与 `.phase1-private/` 私有运行目录保留，公开只放脱敏信息与追溯 hash。

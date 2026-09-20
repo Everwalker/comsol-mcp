@@ -59,7 +59,8 @@ CATALOG_PATH = _select_catalog_path()
 # These are the G2 actions with a control-plane implementation in this
 # repository.  The registry deliberately keeps the list narrower than the
 # 272-action design catalog so an unimplemented action cannot be called by
-# accident.
+# accident.  G3 (W13-W16) domain operations live in ``_g3_ops`` and extend
+# this surface through ``is_implemented`` below.
 IMPLEMENTED_OPERATIONS = frozenset({
     "registry.list", "registry.describe", "registry.search", "registry.call", "registry.manifest",
     "node.inspect", "node.children", "node.find", "node.property_schema", "node.property_get",
@@ -69,6 +70,23 @@ IMPLEMENTED_OPERATIONS = frozenset({
     "transaction.preview", "transaction.trial", "transaction.apply", "transaction.verify", "transaction.recover",
     "docs.index", "docs.search", "docs.get", "docs.examples", "docs.error_search",
 })
+
+
+def is_implemented(operation_id: str) -> bool:
+    """True when the operation has a control-plane implementation in this build.
+
+    G2 keeps a frozen allow-list; the G3 domain modules register their own
+    executable set in ``_g3_ops``.  The import is lazy so this module stays
+    importable while G2-only deployments exist and to avoid an import cycle
+    (``_g3_ops`` reads the catalog through this module).
+    """
+    if operation_id in IMPLEMENTED_OPERATIONS:
+        return True
+    try:
+        from ._g3_ops import IMPLEMENTED_OPERATIONS as g3_implemented
+    except Exception:
+        return False
+    return operation_id in g3_implemented
 
 MCP_ALIASES = {
     "registry.list": "registry_list",
@@ -222,7 +240,7 @@ class ActionEntry:
             "effect": self.effect,
             "scope": self.scope,
             "gate": self.gate,
-            "implementation_status": self.implementation_status,
+            "implementation_status": "SUPPORTED_UNVERIFIED" if is_implemented(self.operation_id) else self.implementation_status,
             # ``input_schema`` is the schema clients should actually use on
             # the production wire.  Keep the design catalog form alongside it
             # so a reviewer can see the compatibility delta rather than
@@ -236,7 +254,7 @@ class ActionEntry:
             "route": self.route,
             "required_tests": list(self.required_tests),
             "notes": self.notes,
-            "executable": self.operation_id in IMPLEMENTED_OPERATIONS or self.operation_id in LEGACY_FALLBACK_NAMES,
+            "executable": is_implemented(self.operation_id) or self.operation_id in LEGACY_FALLBACK_NAMES,
         }
 
 
@@ -292,6 +310,17 @@ def _effective_input_schema(catalog_schema: Mapping[str, Any], operation_id: str
         # Identity remains optional context, unlike apply/trial/restore.
         effective["required"] = [name for name in effective.get("required", [])
                                  if name not in {"session_id", "model_ref", "expected_revision"}]
+    if operation_id in {"node.children", "node.find"}:
+        # R02 continuation and traversal budgets are additive to the reviewed
+        # catalog schema; the engine adapter validates their exact shape.
+        properties.setdefault("budget", {
+            "type": "object",
+            "properties": {"max_nodes": {"type": "integer"}, "max_seconds": {"type": "number"}, "max_rpc": {"type": "integer"}},
+            "additionalProperties": False,
+            "description": "Traversal budget for the resumable node search; values are validated by the engine adapter.",
+        })
+    if operation_id == "node.find":
+        properties.setdefault("cursor", {"type": "string", "description": "Continuation cursor returned by a truncated search."})
     return effective
 
 
@@ -308,6 +337,9 @@ def _catalog_entries() -> tuple[ActionEntry, ...]:
         if not isinstance(item, Mapping) or not isinstance(item.get("operation_id"), str):
             continue
         operation_id = item["operation_id"]
+        # Import-time value stays side-effect free; ``as_dict`` recomputes it
+        # through ``is_implemented`` at call time so the G3 modules (loaded
+        # lazily) are reflected without an import cycle.
         status = "SUPPORTED_UNVERIFIED" if operation_id in IMPLEMENTED_OPERATIONS else str(item.get("implementation_status", "PROPOSED_NOT_IMPLEMENTED"))
         entries.append(ActionEntry(
             operation_id=operation_id,
@@ -434,11 +466,16 @@ def registry_manifest(profile: str | None = None) -> dict[str, Any]:
     profile = profile or "full"
     if profile not in {"full", "domain", "expert"}:
         raise ExecutionContractError("INVALID_REQUEST", "profile must be full, domain, or expert")
-    executable = [entry for entry in ENTRIES if entry.operation_id in IMPLEMENTED_OPERATIONS]
+    executable = [entry for entry in ENTRIES if is_implemented(entry.operation_id)]
     if profile == "domain":
         # Domain profile is a presentation filter.  It retains registry_call
         # so an operation absent from a static host can still be selected.
-        executable = [entry for entry in executable if entry.domain in {"registry", "node", "docs", "transaction", "checkpoint"}]
+        # G3 (W13-W16) domain actions belong to this profile.
+        executable = [entry for entry in executable if entry.domain in {
+            "registry", "node", "docs", "transaction", "checkpoint",
+            "parameter", "variable", "function", "selection", "geometry", "definition",
+            "material", "physics", "mesh", "study", "solver",
+        }]
     elif profile == "expert":
         executable = [entry for entry in executable if entry.domain in {"registry", "node", "code", "transaction", "checkpoint"}]
     return {
@@ -466,8 +503,8 @@ def validate_call(operation_id: str, arguments: Any, *, allow_unbound_identity: 
     """
     legacy = _legacy_entry(operation_id)
     entry = legacy if legacy is not None else _entry(operation_id)
-    if legacy is None and entry.operation_id not in IMPLEMENTED_OPERATIONS:
-        raise ExecutionContractError("UNSUPPORTED_OPERATION", f"operation is cataloged but not executable in this G2 build: {operation_id}")
+    if legacy is None and not is_implemented(entry.operation_id):
+        raise ExecutionContractError("UNSUPPORTED_OPERATION", f"operation is cataloged but not executable in this build: {operation_id}")
     if not isinstance(arguments, Mapping):
         raise ExecutionContractError("INVALID_REQUEST", "registry call arguments must be an object")
     schema = _effective_input_schema(entry.input_schema, entry.operation_id)
@@ -603,6 +640,21 @@ def _validate_operation_shape(operation_id: str, arguments: Mapping[str, Any]) -
         sources = arguments.get("sources")
         if not isinstance(sources, list) or not sources or not all(isinstance(item, str) and item for item in sources):
             raise ExecutionContractError("INVALID_REQUEST", "sources must be a non-empty array of paths")
+    if operation_id in {"node.children", "node.find"}:
+        budget = arguments.get("budget")
+        if budget is not None:
+            if not isinstance(budget, Mapping):
+                raise ExecutionContractError("INVALID_REQUEST", "budget must be an object")
+            unknown = sorted(set(budget) - {"max_nodes", "max_seconds", "max_rpc"})
+            if unknown:
+                raise ExecutionContractError("INVALID_REQUEST", f"budget has unsupported fields: {', '.join(unknown)}")
+            for name in ("max_nodes", "max_rpc"):
+                if name in budget and (isinstance(budget[name], bool) or not isinstance(budget[name], int) or budget[name] < 1):
+                    raise ExecutionContractError("INVALID_REQUEST", f"budget.{name} must be a positive integer")
+            if "max_seconds" in budget and (isinstance(budget["max_seconds"], bool) or not isinstance(budget["max_seconds"], (int, float)) or budget["max_seconds"] <= 0):
+                raise ExecutionContractError("INVALID_REQUEST", "budget.max_seconds must be a positive number")
+        if operation_id == "node.find" and arguments.get("cursor") is not None and not isinstance(arguments.get("cursor"), str):
+            raise ExecutionContractError("INVALID_REQUEST", "cursor must be a string")
 
 
 def operation_for_tool(name: str) -> str:

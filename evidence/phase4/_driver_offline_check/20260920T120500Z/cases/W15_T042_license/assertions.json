@@ -1,0 +1,166 @@
+{
+  "assertion_count": 3,
+  "case": {
+    "acceptance": [
+      "G3 §7 W15.T042"
+    ],
+    "assertions": {
+      "operation_availability": {
+        "runtime.capabilities": {
+          "available": false,
+          "effect": "READ",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": false,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+          "input_schema_properties": [
+            "refresh",
+            "request_id",
+            "runtime_id"
+          ],
+          "mcp_tool_name": "runtime_capabilities",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "control plane",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "runtime.license_inspect": {
+          "available": false,
+          "effect": "READ",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": false,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+          "input_schema_properties": [
+            "products",
+            "request_id",
+            "runtime_id"
+          ],
+          "mcp_tool_name": "runtime_license_inspect",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "control plane",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        }
+      },
+      "static_license_ops_executable": {
+        "operations": [
+          "runtime.license_inspect"
+        ],
+        "pass": false
+      },
+      "subcase_inventory": {
+        "levels": [
+          "live",
+          "static"
+        ],
+        "missing": [],
+        "planned": 5,
+        "recorded": 5
+      }
+    },
+    "case_id": "W15_T042_license",
+    "finished_at": "2026-09-20T11:48:38.412396Z",
+    "package": "W15",
+    "reason": null,
+    "started_at": "2026-09-20T11:48:38.405885Z",
+    "status": "BLOCKED",
+    "subcases": {
+      "authorized_product_usable": {
+        "acceptance": "T042 authorized product works",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: runtime.license_inspect(implementation_status=PROPOSED_NOT_IMPLEMENTED)",
+        "status": "BLOCKED"
+      },
+      "license_inspect_records_has_product": {
+        "acceptance": "T042 hasProduct evidence",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: runtime.license_inspect(implementation_status=PROPOSED_NOT_IMPLEMENTED)",
+        "status": "BLOCKED"
+      },
+      "missing_product_blocks_with_blocked_license": {
+        "acceptance": "T042 BLOCKED_LICENSE not fake success",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: runtime.license_inspect(implementation_status=PROPOSED_NOT_IMPLEMENTED)",
+        "status": "BLOCKED"
+      },
+      "probe_does_not_occupy_license": {
+        "acceptance": "T042 probe does not consume a seat",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: runtime.license_inspect(implementation_status=PROPOSED_NOT_IMPLEMENTED)",
+        "status": "BLOCKED"
+      },
+      "static_license_ops_availability": {
+        "acceptance": "T042 license probe",
+        "level": "static",
+        "reason": "required operation(s) not executable in this build: runtime.license_inspect(implementation_status=PROPOSED_NOT_IMPLEMENTED)",
+        "status": "BLOCKED"
+      }
+    }
+  },
+  "subcase_count": 5
+}

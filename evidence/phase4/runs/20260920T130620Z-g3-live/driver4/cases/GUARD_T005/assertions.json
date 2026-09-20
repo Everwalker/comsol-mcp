@@ -1,0 +1,678 @@
+{
+  "assertion_count": 7,
+  "case": {
+    "acceptance": [
+      "G3 §10 T005"
+    ],
+    "assertions": {
+      "engine_reconciliations": [
+        {
+          "at": "2026-09-20T14:30:39.885788Z",
+          "envelope_job_id": "b791efbf-7be5-4bcb-a4fb-2ae37e4d3bf3",
+          "error_code": "REVISION_CONFLICT",
+          "gate": false,
+          "message": "external model change requires reconciliation",
+          "precondition": "external-change",
+          "refresh": {
+            "at": "2026-09-20T14:30:39.885794Z",
+            "available": true,
+            "dirty": null,
+            "error_code": "IDEMPOTENCY_CONFLICT",
+            "model_ref": {
+              "generation": 1,
+              "model_tag": "mcp_e0fa49674127",
+              "schema_version": 1,
+              "server_instance_id": "832a93e9eb6d6949fb0947f5b3aca2ba37a8c13fe3d010982b98f7ae36bc9acc",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "note": "the reconcile read reports the ledger revision and whether the model still carries an unacknowledged engine change",
+            "refresh": true,
+            "released": false,
+            "revision": null,
+            "sent_expected_revision": 2,
+            "session_id": "session-9f95c2e814acd5f99589961a",
+            "success": false,
+            "tool": "model_inspect"
+          },
+          "retry": "not performed: the published model_inspect reconcile read did not report a released revision",
+          "sent_expected_revision": 2,
+          "trigger": "managed revision conflict",
+          "trigger_tool": "evaluate_expressions"
+        },
+        {
+          "at": "2026-09-20T14:30:39.914544Z",
+          "envelope_job_id": "3d8a0cd6-2ad7-4161-936d-aae938616214",
+          "error_code": "REVISION_CONFLICT",
+          "gate": false,
+          "message": "external model change requires reconciliation",
+          "precondition": "external-change",
+          "refresh": {
+            "at": "2026-09-20T14:30:39.914551Z",
+            "available": true,
+            "dirty": null,
+            "error_code": "IDEMPOTENCY_CONFLICT",
+            "model_ref": {
+              "generation": 1,
+              "model_tag": "mcp_e0fa49674127",
+              "schema_version": 1,
+              "server_instance_id": "832a93e9eb6d6949fb0947f5b3aca2ba37a8c13fe3d010982b98f7ae36bc9acc",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "note": "the reconcile read reports the ledger revision and whether the model still carries an unacknowledged engine change",
+            "refresh": true,
+            "released": false,
+            "revision": null,
+            "sent_expected_revision": 2,
+            "session_id": "session-9f95c2e814acd5f99589961a",
+            "success": false,
+            "tool": "model_inspect"
+          },
+          "retry": "not performed: the published model_inspect reconcile read did not report a released revision",
+          "sent_expected_revision": 2,
+          "trigger": "managed revision conflict",
+          "trigger_tool": "evaluate_expressions"
+        }
+      ],
+      "operation_availability": {
+        "evaluate_expressions": {
+          "available": true,
+          "effect": "EVALUATE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "evaluation_policy",
+            "expressions_json",
+            "max_result_size"
+          ],
+          "mcp_tool_name": "evaluate_expressions",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "legacy managed backend",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "get_core_metrics": {
+          "available": true,
+          "effect": "EVALUATE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "evaluation_policy",
+            "metrics_json"
+          ],
+          "mcp_tool_name": "get_core_metrics",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "legacy managed backend",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        }
+      },
+      "static_evaluation_ops_available": {
+        "operations": [
+          "evaluate_expressions"
+        ],
+        "pass": true
+      },
+      "step_user_derived_nodes_preserved": {
+        "data_keys": [],
+        "elapsed_s": null,
+        "error_code": "REVISION_CONFLICT",
+        "error_message": "external model change requires reconciliation",
+        "operation": "evaluate_expressions",
+        "outer_isError": true,
+        "reconciliations": [
+          {
+            "at": "2026-09-20T14:30:39.192460Z",
+            "envelope_job_id": "5374aa2b-9146-441f-ae76-8ccaa6c22b5a",
+            "error_code": "REVISION_CONFLICT",
+            "gate": false,
+            "message": "external model change requires reconciliation",
+            "precondition": "external-change",
+            "refresh": {
+              "at": "2026-09-20T14:30:39.192465Z",
+              "available": true,
+              "dirty": null,
+              "error_code": "IDEMPOTENCY_CONFLICT",
+              "model_ref": {
+                "generation": 1,
+                "model_tag": "mcp_e0fa49674127",
+                "schema_version": 1,
+                "server_instance_id": "832a93e9eb6d6949fb0947f5b3aca2ba37a8c13fe3d010982b98f7ae36bc9acc",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "note": "the reconcile read reports the ledger revision and whether the model still carries an unacknowledged engine change",
+              "refresh": true,
+              "released": false,
+              "revision": null,
+              "sent_expected_revision": 2,
+              "session_id": "session-9f95c2e814acd5f99589961a",
+              "success": false,
+              "tool": "model_inspect"
+            },
+            "retry": "not performed: the published model_inspect reconcile read did not report a released revision",
+            "sent_expected_revision": 2,
+            "trigger": "managed revision conflict",
+            "trigger_tool": "create_feature"
+          },
+          {
+            "at": "2026-09-20T14:30:39.885788Z",
+            "envelope_job_id": "b791efbf-7be5-4bcb-a4fb-2ae37e4d3bf3",
+            "error_code": "REVISION_CONFLICT",
+            "gate": false,
+            "message": "external model change requires reconciliation",
+            "precondition": "external-change",
+            "refresh": {
+              "at": "2026-09-20T14:30:39.885794Z",
+              "available": true,
+              "dirty": null,
+              "error_code": "IDEMPOTENCY_CONFLICT",
+              "model_ref": {
+                "generation": 1,
+                "model_tag": "mcp_e0fa49674127",
+                "schema_version": 1,
+                "server_instance_id": "832a93e9eb6d6949fb0947f5b3aca2ba37a8c13fe3d010982b98f7ae36bc9acc",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "note": "the reconcile read reports the ledger revision and whether the model still carries an unacknowledged engine change",
+              "refresh": true,
+              "released": false,
+              "revision": null,
+              "sent_expected_revision": 2,
+              "session_id": "session-9f95c2e814acd5f99589961a",
+              "success": false,
+              "tool": "model_inspect"
+            },
+            "retry": "not performed: the published model_inspect reconcile read did not report a released revision",
+            "sent_expected_revision": 2,
+            "trigger": "managed revision conflict",
+            "trigger_tool": "evaluate_expressions"
+          }
+        ],
+        "revision_conflict": {
+          "error_code": "REVISION_CONFLICT",
+          "job_id": "b791efbf-7be5-4bcb-a4fb-2ae37e4d3bf3",
+          "message": "external model change requires reconciliation",
+          "precondition": "external-change"
+        },
+        "success": false
+      },
+      "subcase_inventory": {
+        "levels": [
+          "live",
+          "static"
+        ],
+        "missing": [],
+        "planned": 4,
+        "recorded": 4
+      },
+      "t005_tree_diff": {
+        "derived_values": [],
+        "identical": true,
+        "stored": {
+          "data_keys": [],
+          "elapsed_s": null,
+          "error_code": "REVISION_CONFLICT",
+          "error_message": "external model change requires reconciliation",
+          "operation": "evaluate_expressions",
+          "outer_isError": true,
+          "reconciliations": [
+            {
+              "at": "2026-09-20T14:30:39.192460Z",
+              "envelope_job_id": "5374aa2b-9146-441f-ae76-8ccaa6c22b5a",
+              "error_code": "REVISION_CONFLICT",
+              "gate": false,
+              "message": "external model change requires reconciliation",
+              "precondition": "external-change",
+              "refresh": {
+                "at": "2026-09-20T14:30:39.192465Z",
+                "available": true,
+                "dirty": null,
+                "error_code": "IDEMPOTENCY_CONFLICT",
+                "model_ref": {
+                  "generation": 1,
+                  "model_tag": "mcp_e0fa49674127",
+                  "schema_version": 1,
+                  "server_instance_id": "832a93e9eb6d6949fb0947f5b3aca2ba37a8c13fe3d010982b98f7ae36bc9acc",
+                  "session_id": "session-9f95c2e814acd5f99589961a"
+                },
+                "note": "the reconcile read reports the ledger revision and whether the model still carries an unacknowledged engine change",
+                "refresh": true,
+                "released": false,
+                "revision": null,
+                "sent_expected_revision": 2,
+                "session_id": "session-9f95c2e814acd5f99589961a",
+                "success": false,
+                "tool": "model_inspect"
+              },
+              "retry": "not performed: the published model_inspect reconcile read did not report a released revision",
+              "sent_expected_revision": 2,
+              "trigger": "managed revision conflict",
+              "trigger_tool": "create_feature"
+            },
+            {
+              "at": "2026-09-20T14:30:39.885788Z",
+              "envelope_job_id": "b791efbf-7be5-4bcb-a4fb-2ae37e4d3bf3",
+              "error_code": "REVISION_CONFLICT",
+              "gate": false,
+              "message": "external model change requires reconciliation",
+              "precondition": "external-change",
+              "refresh": {
+                "at": "2026-09-20T14:30:39.885794Z",
+                "available": true,
+                "dirty": null,
+                "error_code": "IDEMPOTENCY_CONFLICT",
+                "model_ref": {
+                  "generation": 1,
+                  "model_tag": "mcp_e0fa49674127",
+                  "schema_version": 1,
+                  "server_instance_id": "832a93e9eb6d6949fb0947f5b3aca2ba37a8c13fe3d010982b98f7ae36bc9acc",
+                  "session_id": "session-9f95c2e814acd5f99589961a"
+                },
+                "note": "the reconcile read reports the ledger revision and whether the model still carries an unacknowledged engine change",
+                "refresh": true,
+                "released": false,
+                "revision": null,
+                "sent_expected_revision": 2,
+                "session_id": "session-9f95c2e814acd5f99589961a",
+                "success": false,
+                "tool": "model_inspect"
+              },
+              "retry": "not performed: the published model_inspect reconcile read did not report a released revision",
+              "sent_expected_revision": 2,
+              "trigger": "managed revision conflict",
+              "trigger_tool": "evaluate_expressions"
+            }
+          ],
+          "revision_conflict": {
+            "error_code": "REVISION_CONFLICT",
+            "job_id": "b791efbf-7be5-4bcb-a4fb-2ae37e4d3bf3",
+            "message": "external model change requires reconciliation",
+            "precondition": "external-change"
+          },
+          "success": false
+        }
+      },
+      "unknown_job_ledger": {
+        "entries": [
+          {
+            "first_seen_at": "2026-09-20T14:30:30.157554Z",
+            "job_id": "82dda588-cd5f-4ba8-a9a0-a27ce08be348",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "legacy callback raised after write dispatch",
+            "last_seen_at": "2026-09-20T14:30:30.157585Z",
+            "observations": [
+              {
+                "at": "2026-09-20T14:30:30.157587Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "legacy callback raised after write dispatch",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-20T14:30:30.163129Z",
+                "error_code": null,
+                "job_id": "82dda588-cd5f-4ba8-a9a0-a27ce08be348",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-0756dcb6-5e33-482a-9666-a773c1461645",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-b2f50bd4-8d0c-480f-becd-eca6f406e76b",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-db8cd5a1-2773-44a0-9349-635a38223602",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-882a0389-cd4d-412d-8576-a8737771b4b9",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-5bb0cf3f-c3ee-4e26-97e3-2f92a43487a9",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-f06d4072-8618-4a29-a90d-1a39f19e5730",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-20585f38-ea33-4d18-bf81-334d0d087919",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-5c171cfe-6319-4db0-be9f-29482a7cf7d1",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-20T14:30:30.163153Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-20T14:30:30.258109Z",
+            "job_id": "fc07a654-9b1b-44ba-994e-d01db05f6637",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "legacy callback raised after write dispatch",
+            "last_seen_at": "2026-09-20T14:30:30.258152Z",
+            "observations": [
+              {
+                "at": "2026-09-20T14:30:30.258154Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "legacy callback raised after write dispatch",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-20T14:30:30.264105Z",
+                "error_code": null,
+                "job_id": "fc07a654-9b1b-44ba-994e-d01db05f6637",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-f99de157-ff89-4bef-a2e4-5a1f92f21457",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-02c52542-3d7b-43d8-ad2f-f5f415dd699e",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-11b2bc60-a3b1-4a95-8060-2a1fdcf87298",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-5de60819-a451-475b-abe7-a8b2d399a09b",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-28759f80-2789-4134-836b-2e2451acc833",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-380bb99d-4061-4b32-9f3a-d077b54f1ce9",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-8729aabb-e559-4a21-ba96-887dfe97b0ae",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-46ce6b84-d46a-49b2-ac52-64574ca7c15c",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-20T14:30:30.264129Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-20T14:30:39.167339Z",
+            "job_id": "75fa62d3-c066-4416-a4d3-ccc51cf93945",
+            "last_error_code": null,
+            "last_message": null,
+            "last_seen_at": "2026-09-20T14:30:39.167391Z",
+            "observations": [
+              {
+                "at": "2026-09-20T14:30:39.167393Z",
+                "error_code": null,
+                "message": null,
+                "tool": "create_feature"
+              }
+            ],
+            "operation": "create_feature",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-20T14:30:39.176584Z",
+                "error_code": null,
+                "job_id": "75fa62d3-c066-4416-a4d3-ccc51cf93945",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-72e8f5d8-9af1-4a0f-a901-ebc118d66221",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-685ce2c8-fb6b-4208-8a0b-62afb66b61ee",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-36590096-5e0b-4ac5-b190-31ff28cabe60",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-f81f1151-fa92-44c3-bbdf-a1f1a196c856",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-3f348a5b-42e0-4932-a863-324c7452ac6c",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-0c577134-67f1-4f5b-86bd-dbcdd8837882",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-a9af5a83-f9b9-4c15-99fa-90ba0ccc71f0",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-bfb8039d-a892-46ea-a33c-6cc1a98167f5",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-d2fd3848-d39f-4404-b4d5-f66f6160c4f5",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-fc811154-e288-45f9-b35c-3501cb86e52d",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-a18bed37-144d-47e7-b059-f785e3e48eeb",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-111d2df9-5444-4dd0-8407-456128c293bd",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-32226502-d1ba-4334-8f79-7045c68b2516",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-fb167549-cc94-4aa2-bce3-f00ad06b1360",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-2815660c-6f5c-4db2-a448-c128af6c1556",
+                    "source": "durable_worker_observation",
+                    "status": "FAILED"
+                  },
+                  {
+                    "request_id": "wrk-45c5dc4d-64fe-4f0b-8a1f-1f631de2c991",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-1bb8f741-81b3-401d-abc2-e946846561f4",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-d9ea5466-4ce9-42bb-b4cc-b757406c4505",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-20T14:30:39.176614Z",
+            "status": "UNKNOWN"
+          }
+        ],
+        "gate_refusals": {
+          "by_tool": {},
+          "count": 0,
+          "first": null,
+          "last": null
+        },
+        "note": "the driver records every job id an envelope reported as UNKNOWN (no published read lists the unresolved jobs) and releases each one through the published job_reconcile read before it replays a refused call once",
+        "released_jobs": [
+          "82dda588-cd5f-4ba8-a9a0-a27ce08be348",
+          "fc07a654-9b1b-44ba-994e-d01db05f6637",
+          "75fa62d3-c066-4416-a4d3-ccc51cf93945"
+        ],
+        "still_blocked": [],
+        "unresolved_jobs": []
+      }
+    },
+    "case_id": "GUARD_T005",
+    "finished_at": "2026-09-20T14:30:39.952145Z",
+    "package": "GUARD",
+    "reason": null,
+    "started_at": "2026-09-20T14:30:39.852456Z",
+    "status": "PASS",
+    "subcases": {
+      "invalid_expression_does_not_delete_nodes": {
+        "acceptance": "T005 invalid expression is non-destructive",
+        "error_code": "REVISION_CONFLICT",
+        "level": "live",
+        "status": "PASS"
+      },
+      "static_evaluation_ops_available": {
+        "acceptance": "T005 evaluation route",
+        "level": "static",
+        "status": "PASS"
+      },
+      "temporary_nodes_cleaned": {
+        "acceptance": "T005 temporary nodes cleaned",
+        "level": "live",
+        "status": "PASS"
+      },
+      "user_derived_nodes_preserved": {
+        "acceptance": "T005 user nodes preserved",
+        "level": "live",
+        "status": "PASS"
+      }
+    }
+  },
+  "subcase_count": 4
+}

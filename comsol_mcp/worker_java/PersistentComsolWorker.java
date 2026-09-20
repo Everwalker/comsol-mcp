@@ -48,14 +48,43 @@ public final class PersistentComsolWorker {
       "getData", "getImag", "getBoolean", "getBooleanArray", "getBooleanMatrix",
       "getDouble", "getDoubleArray", "getDoubleMatrix", "getInt", "getIntArray", "getIntMatrix",
       "getString", "getStringArray", "getStringMatrix", "getType", "getValueType",
+      "getEntryKeys", "getEntryKeyIndex",
       "isActive", "isComplex", "isGeometryMeshDependent", "isInheriting", "isInitialized",
       "label", "location", "locationUri", "mesh", "model", "modelNode", "name", "numerical",
       "param", "physics", "properties", "remove", "rename", "result", "run", "runAll",
       "runNoGen", "save", "selection", "set", "setIndex", "setEntry", "sol", "study", "tag", "tags",
-      "timeModified", "title", "update", "varnames", "variable", "all", "entities", "inherit", "named", "material"));
+      "timeModified", "title", "update", "varnames", "variable", "all", "entities", "inherit", "named", "material",
+      // G3: accessors verified against the installed COMSOL 6.4.0.293 API
+      // (javap of apiplugins/com.comsol.api_1.0.0.jar).
+      "func", "multiphysics", "pair", "cpl", "coordSystem", "propertyGroup", "extraDim",
+      "probe", "view", "getUsedProducts",
+      // G3 W13: parameter/variable group handling, function evaluation and
+      // import, measure selections, and geometry adjacency accessors (javap of
+      // com.comsol.model_1.0.0.jar + the local COMSOL 6.4 knowledge base).
+      "group", "move", "evaluate", "evaluateUnit", "evaluateComplex", "scope", "dim", "dimension",
+      "functionNames", "importData", "refresh", "measure",
+      "getArea", "getVolume", "getLength", "getPerimeter", "getBoundaryArea", "getBoundaryVolume",
+      "getBoundingBox", "getNEntities", "getNFiniteVoids", "getVtxCoord", "getVtxDistance",
+      "getEdgeAngle", "getAdj", "getSDim", "lengthUnit",
+      // G3 W15 (material/physics/multiphysics) and W16 (mesh/study/solver)
+      // engine surface, javap-verified by those workstreams (2026-09-20).
+      "automatic", "buildTime", "clearMesh", "current", "getDefaultSolnum", "getErrorMessage",
+      "getGeomEntities", "getInformationMessage", "getM", "getMaxDimension", "getMaxGrowthRate",
+      "getMaxVolume", "getMeanGrowthRate", "getMeanQuality", "getMinQuality", "getMinVolume",
+      "getN", "getNStepsBack", "getNnz", "getNumElem", "getNumVertex", "getPNames",
+      "getParamNames", "getParamVals", "getQualityDistr", "getQualityMeasure", "getSequenceType",
+      "getTypes", "getWarningMessage", "hasError", "hasInformation", "hasProblem",
+      "hasProblemOrInformation", "hasProblems", "hasProblemsOrInformation", "hasSecondOrderElements",
+      "hasWarning", "isAttached", "isAutomatic", "isComplete", "isEmpty", "isGenConv",
+      "isGenIntermediatePlots", "isGenPlots", "isPlotUndefVals", "isStoreCompleteHistory",
+      "isStoreSolution", "problem", "problems", "setQualityMeasure", "setSolveFor", "solveFor",
+      "type", "hasProperty", "materialType", "addInput", "removeInput", "input"));
   private static final Set<String> MODEL_UTIL = new HashSet<>(Arrays.asList(
       "create", "load", "model", "remove", "tags", "uniquetag", "modelsUsedByOtherClients",
-      "getComsolVersion"));
+      "getComsolVersion",
+      // G3 runtime licence probe: documented, non-seat-consuming query
+      // (javap com.comsol.model.util.ModelUtil; KB Programming Reference p.42).
+      "hasProduct"));
 
   private final String token;
   private final String instanceId = UUID.randomUUID().toString();
@@ -168,7 +197,7 @@ public final class PersistentComsolWorker {
     if ("codec_selftest".equals(type)) return map("ok", true, "result", encode(map("kind", "map", "nested", map("value", 7), "array", Arrays.asList("x", 2))));
     if ("reflection_selftest".equals(type)) return map("ok", true, "result", reflectionSelftest());
     if ("shutdown".equals(type)) return error("PERMISSION_DENIED", "worker shutdown is controlled by its owner process");
-    if (!"connect".equals(type) && !"call".equals(type) && !"model".equals(type) && !"modelutil".equals(type) && !"model_snapshot".equals(type) && !"disconnect".equals(type) && !"lock_selftest".equals(type) && !"code_compile".equals(type) && !"code_execute".equals(type))
+    if (!"connect".equals(type) && !"call".equals(type) && !"model".equals(type) && !"modelutil".equals(type) && !"model_snapshot".equals(type) && !"disconnect".equals(type) && !"lock_selftest".equals(type) && !"code_compile".equals(type) && !"code_execute".equals(type) && !"children".equals(type) && !"walk".equals(type))
       return error("UNKNOWN_COMMAND", "unsupported internal worker command");
     String id = requiredId(request);
     RequestState old = requests.get(id);
@@ -199,6 +228,8 @@ public final class PersistentComsolWorker {
       else if ("modelutil".equals(type)) result = modelUtil(request);
       else if ("code_compile".equals(type)) result = compileJava(request);
       else if ("code_execute".equals(type)) result = executeJava(request);
+      else if ("children".equals(type)) result = childrenProbe(request);
+      else if ("walk".equals(type)) result = walk(request);
       else result = call(request);
       state.succeed(encode(result));
     } catch (WorkerFailure t) {
@@ -424,6 +455,153 @@ public final class PersistentComsolWorker {
     String method = string(request.get("method")); if (!METHODS.contains(method)) throw new SecurityException("METHOD_REJECTED");
     return invoke(target, target.getClass(), method, list(request.get("args")));
   }
+
+  // ---- G3 R02: batch collection discovery and a deterministic tree walk ----
+  // Both commands run inside the serial engine task.  Child objects are kept
+  // as transient Java references (never registered as wire handles), so a
+  // walk of thousands of nodes does not grow the handle table.
+
+  private Object childrenProbe(Map<String, Object> request) throws Exception {
+    ensureConnected();
+    requireGeneration(request);
+    Object target = requireHandle(request);
+    List<Object> errors = new ArrayList<>();
+    List<Object> rows = new ArrayList<>();
+    for (Object row : probeChildren(target, list(request.get("candidates")), errors)) {
+      @SuppressWarnings("unchecked")
+      Map<String, Object> wire = new LinkedHashMap<>((Map<String, Object>) row);
+      wire.remove("_node");
+      rows.add(wire);
+    }
+    return map("children", rows, "errors", errors);
+  }
+
+  private Object walk(Map<String, Object> request) throws Exception {
+    ensureConnected();
+    requireGeneration(request);
+    Object start = requireHandle(request);
+    List<Object> candidates = list(request.get("candidates"));
+    @SuppressWarnings("unchecked")
+    Map<String, Object> query = request.get("query") instanceof Map ? (Map<String, Object>) request.get("query") : new LinkedHashMap<>();
+    boolean hasTag = query.containsKey("tag");
+    boolean hasType = query.containsKey("type_id") || query.containsKey("type");
+    boolean hasLabel = query.containsKey("label");
+    String wantedTag = string(query.get("tag"));
+    String wantedType = string(query.containsKey("type_id") ? query.get("type_id") : query.get("type"));
+    String wantedLabel = string(query.get("label"));
+    int maxNodes = (int) number(request.get("max_nodes"), 2000);
+    double maxSeconds = request.get("max_seconds") instanceof Number ? ((Number) request.get("max_seconds")).doubleValue() : 20.0;
+    int skipVisited = (int) number(request.get("skip_visited"), 0);
+    int limit = (int) number(request.get("limit"), 100);
+    if (maxNodes < 1 || limit < 1 || skipVisited < 0 || !(maxSeconds > 0)) throw new IllegalArgumentException("walk budget is invalid");
+    long deadline = System.currentTimeMillis() + (long) Math.ceil(maxSeconds * 1000.0);
+    Deque<Object[]> queue = new ArrayDeque<>();
+    queue.add(new Object[]{start, new ArrayList<Object>()});
+    int visited = 0;
+    int matchedInCall = 0;
+    List<Object> matches = new ArrayList<>();
+    List<Object> errors = new ArrayList<>();
+    String truncated = null;
+    boolean complete = false;
+    while (true) {
+      if (queue.isEmpty()) { complete = true; break; }
+      if (visited - skipVisited >= maxNodes) { truncated = "node_budget"; break; }
+      if (System.currentTimeMillis() > deadline) { truncated = "time_budget"; break; }
+      Object[] item = queue.poll();
+      Object node = item[0];
+      @SuppressWarnings("unchecked")
+      List<Object> segments = (List<Object>) item[1];
+      visited++;
+      if (visited > skipVisited) {
+        String tag = safeInvokeString(node, "tag");
+        String typeId = safeInvokeString(node, "getType");
+        String label = safeInvokeString(node, "label");
+        boolean matchesQuery = (!hasTag || wantedTag.equals(tag)) && (!hasType || wantedType.equals(typeId)) && (!hasLabel || wantedLabel.equals(label));
+        if (matchesQuery) {
+          matchedInCall++;
+          matches.add(map("segments", segments, "tag", tag, "type_id", typeId, "label", label));
+          if (matches.size() >= limit) { truncated = "match_limit"; break; }
+        }
+      }
+      for (Object child : probeChildren(node, candidates, errors)) {
+        @SuppressWarnings("unchecked")
+        Map<String, Object> row = (Map<String, Object>) child;
+        List<Object> childSegments = new ArrayList<>(segments);
+        if (Boolean.TRUE.equals(row.get("accessor"))) childSegments.add(map("accessor", row.get("collection")));
+        else childSegments.add(map("collection", row.get("collection"), "tag", row.get("tag")));
+        queue.add(new Object[]{row.get("_node"), childSegments});
+      }
+    }
+    return map("matches", matches, "visited", visited, "matched_in_call", matchedInCall,
+        "complete", complete, "truncated_reason", truncated, "errors", errors, "generation", generation.get());
+  }
+
+  @SuppressWarnings("unchecked")
+  private List<Object> probeChildren(Object node, List<Object> candidates, List<Object> errors) {
+    List<Object> rows = new ArrayList<>();
+    for (Object entry : candidates) {
+      if (!(entry instanceof Map)) continue;
+      Map<String, Object> spec = (Map<String, Object>) entry;
+      String collection = string(spec.get("collection"));
+      String method = string(spec.get("method"));
+      if (collection.isEmpty() || method.isEmpty()) continue;
+      if (!METHODS.contains(method)) {
+        if (errors.size() < 50) errors.add(map("collection", collection, "code", "METHOD_NOT_ALLOWED", "message", "accessor is not in the worker allowlist"));
+        continue;
+      }
+      Object container;
+      try { container = invoke(node, node.getClass(), method, Collections.emptyList()); }
+      catch (NoSuchMethodException notApplicable) { continue; } // this node does not expose the collection
+      catch (Exception exc) {
+        if (errors.size() < 50) errors.add(map("collection", collection, "code", "COLLECTION_PROBE_FAILED", "message", exc.getClass().getSimpleName() + ": " + String.valueOf(exc.getMessage())));
+        continue;
+      }
+      List<Object> tags;
+      try { tags = list(invoke(container, container.getClass(), "tags", Collections.emptyList())); }
+      catch (NoSuchMethodException nodeLike) {
+        // A zero-arg accessor that returns a node (for example a Work Plane's
+        // inner geometry) rather than a tag container.
+        rows.add(map("collection", collection, "accessor", true, "_node", container));
+        continue;
+      } catch (Exception exc) {
+        if (errors.size() < 50) errors.add(map("collection", collection, "code", "TAGS_PROBE_FAILED", "message", exc.getClass().getSimpleName()));
+        continue;
+      }
+      for (Object tagObject : tags) {
+        String tag = string(tagObject);
+        if (tag.isEmpty()) continue;
+        Object child;
+        try { child = invoke(container, container.getClass(), "get", Collections.singletonList(tag)); }
+        catch (Exception exc) {
+          if (errors.size() < 50) errors.add(map("collection", collection, "code", "CHILD_RESOLVE_FAILED", "message", exc.getClass().getSimpleName()));
+          continue;
+        }
+        rows.add(map("collection", collection, "tag", tag, "_node", child));
+      }
+    }
+    return rows;
+  }
+
+  private void requireGeneration(Map<String, Object> request) {
+    long claimed = number(request.get("generation"), -1);
+    if (claimed != generation.get()) throw new IllegalStateException("STALE_WORKER_HANDLE");
+  }
+
+  private Object requireHandle(Map<String, Object> request) {
+    String handle = string(request.get("handle"));
+    Object target = handles.get(handle);
+    if (target == null) throw new IllegalArgumentException("UNKNOWN_WORKER_HANDLE");
+    return target;
+  }
+
+  private String safeInvokeString(Object node, String method) {
+    try {
+      Object value = invoke(node, node.getClass(), method, Collections.emptyList());
+      return value == null ? null : String.valueOf(value);
+    } catch (Exception ignored) {
+      return null;
+    }
+  }
   private Object invoke(Object target, Class<?> type, String name, List<Object> args) throws Exception {
     Method selected = null; Object[] selectedArgs = null; int selectedScore = Integer.MAX_VALUE; boolean ambiguous = false;
     for (Method method : publicMethods(type)) {
@@ -498,7 +676,11 @@ public final class PersistentComsolWorker {
     }
     if (type.isArray() && value instanceof List) {
       int score=0; for(Object item:(List<Object>)value) { int itemScore = conversionScore(type.getComponentType(), item); if (itemScore >= 100000) return 100000; score += itemScore; }
-      return score;
+      // Prefer the least-nested array when an empty (or partial) list matches
+      // several array overloads (String[] over String[][]) so that an empty
+      // argument is not reported as an ambiguous overload.
+      int depth = 0; for (Class<?> component = type.getComponentType(); component != null && component.isArray(); component = component.getComponentType()) depth++;
+      return score + depth;
     }
     return 100000;
   }

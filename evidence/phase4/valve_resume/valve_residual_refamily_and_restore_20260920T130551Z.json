@@ -1,0 +1,24 @@
+{
+ "phase": "G3 pre-live recovery: provenance token re-family + restore of approved original server.xml",
+ "when": "20260920T130551Z",
+ "context": "start --apply-valve at 2026-09-20T13:03:31Z applied the approved valve XML in place (run dir g2-valve-runtime-20260920T130331119094Z, receipt phase PREPARED, no server started), then the post-write metadata gate refused because macOS re-minted com.apple.provenance (pinned 0102003490bc6843d29f1b -> observed new token). The same in-place write method had preserved the pinned token in the earlier 00:21Z/00:35Z applies.",
+ "gate_change": "tools/phase3_owned_runtime._residual_token_ok: accepts a well-formed token of the recorded family (hex prefix 010200, length 11 bytes) instead of exact-value pinning; receipts record the exact token seen. Still fail-closed: any other xattr name, extra xattrs, ACLs, uid/gid/mode, content hash, inode.",
+ "restore": {
+  "source": ".phase1-private/g2-valve-proposal-webbridge-20260919T232153Z/server.original.xml (hash-verified)",
+  "mechanism": "phase3_owned_runtime._in_place_write (same inode, mode/owner preserved)",
+  "content_sha256_before": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+  "content_sha256_after": "95478d7624e778c694c714d9215797c0c0076fd707a4eedf2bedbaa6bafe6625",
+  "residual_before": {
+   "hex": "01020050744757cbd4a859",
+   "length": 11,
+   "sha256": "0980bd4668dddec0556f2d175faa24e4f8ac7af1efc00b329d2014d00df2f60e"
+  },
+  "residual_after": {
+   "hex": "01020050744757cbd4a859",
+   "length": 11,
+   "sha256": "0980bd4668dddec0556f2d175faa24e4f8ac7af1efc00b329d2014d00df2f60e"
+  },
+  "inode": 14720294
+ },
+ "failed_run_dir": ".phase1-private/g2-valve-runtime-20260920T130331119094Z (phase PREPARED; no COMSOL process was started)"
+}

@@ -1,0 +1,357 @@
+{
+  "assertion_count": 5,
+  "case": {
+    "acceptance": [
+      "G3 §7 W13.T016"
+    ],
+    "assertions": {
+      "non_axisymmetric_fixture_hash_recorded": {
+        "pass": true,
+        "rows": 16,
+        "sha256": "bfc1583e343b3d533d75e1acd832309f9111da2ed4a57e2025546d41f5a11c81"
+      },
+      "operation_availability": {
+        "function.create": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "definition",
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "scope",
+            "session_id",
+            "tag",
+            "type_id"
+          ],
+          "mcp_tool_name": "function_create",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "function.data_import": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "artifact_id",
+            "expected_revision",
+            "idempotency_key",
+            "layout",
+            "model_ref",
+            "path",
+            "project_id",
+            "request_id",
+            "session_id",
+            "units"
+          ],
+          "mcp_tool_name": "function_data_import",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "function.evaluate": {
+          "available": true,
+          "effect": "EVALUATE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "arguments",
+            "derivative",
+            "idempotency_key",
+            "model_ref",
+            "path",
+            "project_id",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "function_evaluate",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "function.inspect": {
+          "available": true,
+          "effect": "READ",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "model_ref",
+            "path",
+            "project_id",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "function_inspect",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        }
+      },
+      "static_function_data_ops_executable": {
+        "operations": [
+          "function.create",
+          "function.data_import",
+          "function.inspect",
+          "function.evaluate"
+        ],
+        "pass": true
+      },
+      "subcase_inventory": {
+        "levels": [
+          "fixture",
+          "live",
+          "static"
+        ],
+        "missing": [],
+        "planned": 6,
+        "recorded": 6
+      },
+      "t016_fixture": {
+        "angular_probe_grid": [
+          {
+            "Q": 100000.0,
+            "angle_deg": 0.0,
+            "x": 0.0005,
+            "x_mm": 0.5,
+            "y": 0.0,
+            "y_mm": 0.0
+          },
+          {
+            "Q": 139951.9052838329,
+            "angle_deg": 30.0,
+            "x": 0.00043301270189221935,
+            "x_mm": 0.43301270189221935,
+            "y": 0.00024999999999999995,
+            "y_mm": 0.24999999999999994
+          },
+          {
+            "Q": 139951.9052838329,
+            "angle_deg": 60.0,
+            "x": 0.00025000000000000006,
+            "x_mm": 0.25000000000000006,
+            "y": 0.0004330127018922193,
+            "y_mm": 0.4330127018922193
+          },
+          {
+            "Q": 100000.0,
+            "angle_deg": 90.0,
+            "x": 3.061616997868383e-20,
+            "x_mm": 3.061616997868383e-17,
+            "y": 0.0005,
+            "y_mm": 0.5
+          },
+          {
+            "Q": 0.0,
+            "angle_deg": 180.0,
+            "x": -0.0005,
+            "x_mm": -0.5,
+            "y": 6.123233995736766e-20,
+            "y_mm": 6.123233995736766e-17
+          },
+          {
+            "Q": 0.0,
+            "angle_deg": 270.0,
+            "x": -9.184850993605149e-20,
+            "x_mm": -9.18485099360515e-17,
+            "y": -0.0005,
+            "y_mm": -0.5
+          }
+        ],
+        "columns": "x[m],y[m],Q[W/m^2]",
+        "path": "$REPO/evidence/phase4/_driver_offline_check/20260920T120634Z/phase4_non_axisymmetric_q_xy.csv",
+        "radial_mean_of_angle_average": 79983.9684279443,
+        "rows": 16,
+        "sha256": "bfc1583e343b3d533d75e1acd832309f9111da2ed4a57e2025546d41f5a11c81"
+      }
+    },
+    "case_id": "W13_T016_2D_data",
+    "finished_at": "2026-09-20T12:06:35.295720Z",
+    "package": "W13",
+    "reason": null,
+    "started_at": "2026-09-20T12:06:35.279644Z",
+    "status": "NOT_RUN",
+    "subcases": {
+      "interpolation_and_extrapolation_settings_recorded": {
+        "acceptance": "T016 interpolation/extrapolation traceability",
+        "level": "live",
+        "reason": "offline run: --live was not supplied",
+        "status": "NOT_RUN"
+      },
+      "m_mm_coordinate_conversion": {
+        "acceptance": "T016 m/mm data coordinate units",
+        "level": "live",
+        "reason": "offline run: --live was not supplied",
+        "status": "NOT_RUN"
+      },
+      "non_axisymmetric_fixture_hash_recorded": {
+        "acceptance": "T016 Q(x,y) fixture and hash",
+        "level": "fixture",
+        "status": "PASS"
+      },
+      "radial_average_not_substituted": {
+        "acceptance": "T016 no radial averaging",
+        "level": "live",
+        "reason": "offline run: --live was not supplied",
+        "status": "NOT_RUN"
+      },
+      "static_function_data_ops_availability": {
+        "acceptance": "T016 interpolation functions",
+        "level": "static",
+        "status": "PASS"
+      },
+      "two_d_interpolation_angular_difference_preserved": {
+        "acceptance": "T016 angular difference preserved",
+        "level": "live",
+        "reason": "offline run: --live was not supplied",
+        "status": "NOT_RUN"
+      }
+    }
+  },
+  "subcase_count": 6
+}

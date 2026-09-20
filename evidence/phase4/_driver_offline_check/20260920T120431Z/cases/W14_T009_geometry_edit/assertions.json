@@ -1,0 +1,303 @@
+{
+  "assertion_count": 3,
+  "case": {
+    "acceptance": [
+      "G3 §7 W14.T009"
+    ],
+    "assertions": {
+      "operation_availability": {
+        "geometry.array_create": {
+          "available": false,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": false,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+          "input_schema_properties": [
+            "definition",
+            "expected_revision",
+            "geometry",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "session_id",
+            "tag"
+          ],
+          "mcp_tool_name": "geometry_array_create",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "geometry.build": {
+          "available": false,
+          "effect": "COMPUTE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": false,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+          "input_schema_properties": [
+            "geometry",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "session_id",
+            "until_tag"
+          ],
+          "mcp_tool_name": "geometry_build",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "geometry.measure": {
+          "available": false,
+          "effect": "EVALUATE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": false,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+          "input_schema_properties": [
+            "geometry",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "query",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "geometry_measure",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "geometry.workplane_edit": {
+          "available": false,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": false,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+          "input_schema_properties": [
+            "actions",
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "session_id",
+            "workplane"
+          ],
+          "mcp_tool_name": "geometry_workplane_edit",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        }
+      },
+      "static_geometry_ops_executable": {
+        "operations": [
+          "geometry.workplane_edit",
+          "geometry.array_create",
+          "geometry.feature_update",
+          "geometry.build",
+          "geometry.measure",
+          "node.find",
+          "node.property_get"
+        ],
+        "pass": false
+      },
+      "subcase_inventory": {
+        "levels": [
+          "live",
+          "static"
+        ],
+        "missing": [],
+        "planned": 7,
+        "recorded": 7
+      }
+    },
+    "case_id": "W14_T009_geometry_edit",
+    "finished_at": "2026-09-20T12:04:32.852010Z",
+    "package": "W14",
+    "reason": null,
+    "started_at": "2026-09-20T12:04:32.838706Z",
+    "status": "BLOCKED",
+    "subcases": {
+      "count_position_spacing_quantified": {
+        "acceptance": "T009 count/position/spacing contract",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: geometry.workplane_edit(implementation_status=PROPOSED_NOT_IMPLEMENTED), geometry.array_create(implementation_status=PROPOSED_NOT_IMPLEMENTED), geometry.feature_update(implementation_status=unknown), geometry.build(implementation_status=PROPOSED_NOT_IMPLEMENTED), geometry.measure(implementation_status=PROPOSED_NOT_IMPLEMENTED), node.find(implementation_status=unknown), node.property_get(implementation_status=unknown)",
+        "status": "BLOCKED"
+      },
+      "left_most_object_preserved": {
+        "acceptance": "T009 keep the left-most object",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: geometry.workplane_edit(implementation_status=PROPOSED_NOT_IMPLEMENTED), geometry.array_create(implementation_status=PROPOSED_NOT_IMPLEMENTED), geometry.feature_update(implementation_status=unknown), geometry.build(implementation_status=PROPOSED_NOT_IMPLEMENTED), geometry.measure(implementation_status=PROPOSED_NOT_IMPLEMENTED), node.find(implementation_status=unknown), node.property_get(implementation_status=unknown)",
+        "status": "BLOCKED"
+      },
+      "local_subfeature_edit_applied": {
+        "acceptance": "T009 edit selected sub-feature only",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: geometry.workplane_edit(implementation_status=PROPOSED_NOT_IMPLEMENTED), geometry.array_create(implementation_status=PROPOSED_NOT_IMPLEMENTED), geometry.feature_update(implementation_status=unknown), geometry.build(implementation_status=PROPOSED_NOT_IMPLEMENTED), geometry.measure(implementation_status=PROPOSED_NOT_IMPLEMENTED), node.find(implementation_status=unknown), node.property_get(implementation_status=unknown)",
+        "status": "BLOCKED"
+      },
+      "main_model_not_replaced": {
+        "acceptance": "T009 main model identity",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: geometry.workplane_edit(implementation_status=PROPOSED_NOT_IMPLEMENTED), geometry.array_create(implementation_status=PROPOSED_NOT_IMPLEMENTED), geometry.feature_update(implementation_status=unknown), geometry.build(implementation_status=PROPOSED_NOT_IMPLEMENTED), geometry.measure(implementation_status=PROPOSED_NOT_IMPLEMENTED), node.find(implementation_status=unknown), node.property_get(implementation_status=unknown)",
+        "status": "BLOCKED"
+      },
+      "sibling_features_unchanged": {
+        "acceptance": "T009 sibling features preserved",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: geometry.workplane_edit(implementation_status=PROPOSED_NOT_IMPLEMENTED), geometry.array_create(implementation_status=PROPOSED_NOT_IMPLEMENTED), geometry.feature_update(implementation_status=unknown), geometry.build(implementation_status=PROPOSED_NOT_IMPLEMENTED), geometry.measure(implementation_status=PROPOSED_NOT_IMPLEMENTED), node.find(implementation_status=unknown), node.property_get(implementation_status=unknown)",
+        "status": "BLOCKED"
+      },
+      "static_geometry_ops_availability": {
+        "acceptance": "T009 nested Work Plane edit",
+        "level": "static",
+        "reason": "required operation(s) not executable in this build: geometry.workplane_edit(implementation_status=PROPOSED_NOT_IMPLEMENTED), geometry.array_create(implementation_status=PROPOSED_NOT_IMPLEMENTED), geometry.feature_update(implementation_status=unknown), geometry.build(implementation_status=PROPOSED_NOT_IMPLEMENTED), geometry.measure(implementation_status=PROPOSED_NOT_IMPLEMENTED), node.find(implementation_status=unknown), node.property_get(implementation_status=unknown)",
+        "status": "BLOCKED"
+      },
+      "work_plane_and_array_located": {
+        "acceptance": "T009 locate wp3 and rectangular array",
+        "level": "live",
+        "reason": "required operation(s) not executable in this build: geometry.workplane_edit(implementation_status=PROPOSED_NOT_IMPLEMENTED), geometry.array_create(implementation_status=PROPOSED_NOT_IMPLEMENTED), geometry.feature_update(implementation_status=unknown), geometry.build(implementation_status=PROPOSED_NOT_IMPLEMENTED), geometry.measure(implementation_status=PROPOSED_NOT_IMPLEMENTED), node.find(implementation_status=unknown), node.property_get(implementation_status=unknown)",
+        "status": "BLOCKED"
+      }
+    }
+  },
+  "subcase_count": 7
+}

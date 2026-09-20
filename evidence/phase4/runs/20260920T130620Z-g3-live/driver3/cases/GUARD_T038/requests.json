@@ -1,0 +1,67 @@
+{
+  "case_id": "GUARD_T038",
+  "requests": [
+    {
+      "arguments": {
+        "operation_id": "phase4.does.not.exist"
+      },
+      "elapsed_s": 0.002423125028144568,
+      "operation": "operation_describe",
+      "outer_isError": true,
+      "sequence": 1
+    },
+    {
+      "arguments": {},
+      "elapsed_s": 0.017222957976628095,
+      "operation": "registry_list",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "cursor": "100"
+      },
+      "elapsed_s": 0.02005891699809581,
+      "operation": "registry_list",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "cursor": "200"
+      },
+      "elapsed_s": 0.014113833021838218,
+      "operation": "registry_list",
+      "outer_isError": false,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "finish": "full"
+        },
+        "execution": {
+          "finish": "full",
+          "idempotency_key": "phase4-partial"
+        },
+        "operation_id": "phase4.partial.failure"
+      },
+      "elapsed_s": 0.003699457971379161,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 5
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver3reconcile-discover",
+          "request_id": "phase4-driver3session_health"
+        }
+      },
+      "elapsed_s": 0.0019329999922774732,
+      "operation": "session_health",
+      "outer_isError": false,
+      "sequence": 6
+    }
+  ]
+}

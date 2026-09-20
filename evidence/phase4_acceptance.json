@@ -1,0 +1,195 @@
+{
+ "schema": "comsol-mcp-g3/phase4-acceptance/1",
+ "generated_at": "2026-09-20T14:33:52Z",
+ "goal": "docs/comsol_mcp_design_v1/NEXT_GOAL_MAC_G3.md",
+ "repo": {
+  "path": "/Users/everwalker/Desktop/comsol-mcp-project",
+  "branch": "codex/mac-g2-accepted-delivery",
+  "head": "1c6a5e982742b6c1a92054409383fbfbbc56658e"
+ },
+ "environment": {
+  "os": "macOS 27.0 (arm64)",
+  "comsol": "COMSOL 6.4 (6.4.0.293) at /Applications/COMSOL64",
+  "jdk": "Amazon Corretto 11",
+  "python": "comsol-mcp-server/.venv (CPython 3.12)"
+ },
+ "software_verification": {
+  "full_suite": {
+   "command": "pytest tests/ -q -p no:randomly",
+   "result": "1359 passed, 1 skipped (pre-existing Windows-only skip)",
+   "verified": true
+  },
+  "offline_driver_run": {
+   "command": "tools/phase4_run_mcp.py (offline full)",
+   "cases": "PASS 1 | FAIL 0 | BLOCKED 2 | NOT_RUN 20",
+   "subcases": "PASS 40 | FAIL 0 | BLOCKED 6 | NOT_RUN 102"
+  },
+  "w13_ops_published": 29,
+  "w14_ops": 17,
+  "w15_ops": 19,
+  "w16_ops": 28,
+  "runtime_ops": 2,
+  "results_ops": 1
+ },
+ "worktree": {
+  "changed_or_untracked_count": 47,
+  "status_head": [
+   " M comsol_mcp/_execution_contract.py",
+   " M comsol_mcp/_g2_contract.py",
+   " M comsol_mcp/_g2_docs.py",
+   " M comsol_mcp/_g2_engine.py",
+   " M comsol_mcp/_g2_registry.py",
+   " M comsol_mcp/_g2_transactions.py",
+   " M comsol_mcp/_java_worker.py",
+   " M comsol_mcp/_managed_backend.py",
+   " M comsol_mcp/worker_java/PersistentComsolWorker.java",
+   " M tests/test_phase3_remote_addr_valve_runtime.py",
+   " M tools/phase3_owned_runtime.py",
+   " M tools/phase3_remote_addr_valve_runtime.py",
+   "?? .g3-private/",
+   "?? comsol_mcp/_g3_common.py",
+   "?? comsol_mcp/_g3_ops.py",
+   "?? comsol_mcp/_g3_results.py",
+   "?? comsol_mcp/_g3_runtime.py",
+   "?? comsol_mcp/_g3_w13.py",
+   "?? comsol_mcp/_g3_w14.py",
+   "?? comsol_mcp/_g3_w15.py",
+   "?? comsol_mcp/_g3_w16.py",
+   "?? docs/comsol_mcp_design_v1/G3_EXECUTION_PLAN.md",
+   "?? docs/comsol_mcp_design_v1/NEXT_GOAL_MAC_G3.md",
+   "?? evidence/phase3/mac_owned_runtime/g2-valve-runtime-20260920T130331119094Z.json",
+   "?? evidence/phase3/mac_owned_runtime/g2-valve-runtime-20260920T130556981606Z.json",
+   "?? evidence/phase4/",
+   "?? tests/test_g3_chain_c_fixture.py",
+   "?? tests/test_g3_common.py",
+   "?? tests/test_g3_phase4_driver.py",
+   "?? tests/test_g3_phase4_reconcile_and_probes.py",
+   "?? tests/test_g3_phase4_wire_replay.py",
+   "?? tests/test_g3_r01_expression.py",
+   "?? tests/test_g3_r02_discovery.py",
+   "?? tests/test_g3_r03_indexed.py",
+   "?? tests/test_g3_r04_invariants.py",
+   "?? tests/test_g3_r05_store.py",
+   "?? tests/test_g3_r06_docs_query.py",
+   "?? tests/test_g3_results.py",
+   "?? tests/test_g3_runtime.py",
+   "?? tests/test_g3_w13.py"
+  ]
+ },
+ "key_file_sha256": {
+  "comsol_mcp/_g2_contract.py": "e169f518dd781a65a7d54a0180f7d79b684ea448ab3ecb85aa1e34f3fcdcdbb8",
+  "comsol_mcp/_g2_engine.py": "16b9eb3d63fc803f8e5413f7976fa7ecb3f1c67e495e715fbdbd7d7f929af56f",
+  "comsol_mcp/_g2_transactions.py": "d8c5d84d58f205627df5e31489360b4ef2e7759d7ef67b916dc4fc5318cfba80",
+  "comsol_mcp/_g2_registry.py": "15185b3c23607354a0203d12e73f0ca2b75bafa38d39ed5d26701db011d0df00",
+  "comsol_mcp/_g2_docs.py": "af8d7825a3db29b9f33e1dbb3b5f19e32a8713136595a97b5e7433114337cbd5",
+  "comsol_mcp/_managed_backend.py": "27cd84a522a0862362dc0cef25c062b7f59abe2c3420172356efc6cdfacbb3af",
+  "comsol_mcp/_execution_contract.py": "b1e257fd22052238bda0a48d12b14da49b29855e8dedcc93344f0cf6be7d8047",
+  "comsol_mcp/_g3_common.py": "81a24712eb1e6c60706073eedbe13596712def5ac8a252bb8dc69591d662725f",
+  "comsol_mcp/_g3_ops.py": "5964af54eb6f0dbd5544c33a668d11b308251b113e3f0419d50e1523f92582fa",
+  "comsol_mcp/_g3_w13.py": "80019209c6bc2dc2c8243cb7d3e917a8379b1071e542b39560cba74ed251f550",
+  "comsol_mcp/_g3_w14.py": "e51ee10b63a100464314103f6fff33451deefedaf2ed2f9a2928393fcbfe1a2f",
+  "comsol_mcp/_g3_w15.py": "0df4ffcb23d76aeb22fa7f63fe56dd4b8eb797fc48c8d889a5eda64970524b60",
+  "comsol_mcp/_g3_w16.py": "a20acc0e2455d7e3f76c96486fdf88b4d8f7d40fc0d96f44df51979c174ccc2a",
+  "comsol_mcp/_g3_runtime.py": "11e2bbd96e66a4726d45d70bf29f52155984a62e7b47fdefb7a99c6bd1eea84a",
+  "comsol_mcp/_g3_results.py": "8617bb259d12be6f5bd61f4e74c105375b5f631597c5c6b6d625a4290e7120b7",
+  "comsol_mcp/worker_java/PersistentComsolWorker.java": "81da0c0ee3b2e9ae0644f5fccdb8214b76ba70f93b81370a0b0b12fe8f090d15",
+  "tools/phase4_run_mcp.py": "1132d46197c459717ce6091a8e613b519c355a60fd57b7f03096b175c53138dd",
+  "tools/phase4_chain_c_fixture.py": "21e367f3569e93125700aa5d9b8d6c4352c5870bed41790c1d0f32973858cd0f",
+  "tools/phase3_owned_runtime.py": "1b1fd6f4a17b7ecd49232aaba10827908ecbf3f83412dad32bc7919942c4099b",
+  "tools/phase3_remote_addr_valve_runtime.py": "2799d1cb18fcad23479b516503fb7f61afe30bb0dda0bcfc114090c2464f257c"
+ },
+ "test_file_sha256": {
+  "tests/test_g3_chain_c_fixture.py": "041c7f7602acbacf19d692fd0660b49a05eb8596df2adc36ad66e8518d87a425",
+  "tests/test_g3_common.py": "cb332bfd8fd42f3365ed5fc4965987402dc9e004f6a1dc4d60119f0a2b93a8b5",
+  "tests/test_g3_phase4_driver.py": "edd4babe1d6cf5f9ce512d789820cfe827330394f9ecef02435e95e9a4392744",
+  "tests/test_g3_phase4_reconcile_and_probes.py": "bdaaf0a3dfdac3287c712e5dae98290e750f955f36a167cfaf6499915993c970",
+  "tests/test_g3_phase4_wire_replay.py": "1dee7fe772b5fcc7e327f03bca3cef3fad5148bfa97107cda2f44ad421fd99ef",
+  "tests/test_g3_r01_expression.py": "8c7a2aee5a10ffb246b55da88babda91e587d6c0fe1e8f24b310a635493a1482",
+  "tests/test_g3_r02_discovery.py": "fc12bb8ee90fbb1ad25b991606032189d6af6e42d14cdaa854b479580d27e1ab",
+  "tests/test_g3_r03_indexed.py": "8c25119eaa313cb91c245152ad24f1c3a0d49dc5b87ad2f179ea4c6a7a434e4a",
+  "tests/test_g3_r04_invariants.py": "9c0b7b8ab995ffee22b8bc49a34a8c92fbd9bf72c16c73e140c74532c619f129",
+  "tests/test_g3_r05_store.py": "60709ad8e75e94271add52d6ef43f53e289bba6b97fac1fd5afce9c199df429c",
+  "tests/test_g3_r06_docs_query.py": "131e8738f86d00b5534cd26ff9bdb38d8bd9cf35d9bb6e4dde27e80f889c2aa2",
+  "tests/test_g3_results.py": "b3aeaf11c0886092072e00ac4d33531371a357779caf6b17dbf9103ac1decead",
+  "tests/test_g3_runtime.py": "cf186758ce8a906f47983b5e63da14ad20a208b9411701ce2d932d03e53c2eb3",
+  "tests/test_g3_w13.py": "2bf7843f248603cf52a0e0df60e740bac2ab4546f93ba0662a379b0940dd5abf",
+  "tests/test_g3_w14.py": "0d0fa080cac39841ba81e342d008c079dc88c5eb776309e4d811964b838c5a7f",
+  "tests/test_g3_w15.py": "327acbed7c44da7a6cc60489e7ec2eba95325e30e6f9aaaa7f50e617fb95c07c",
+  "tests/test_g3_w16.py": "f5093d03f20dfd9e954032ac0e95d5860d24902a7897c61dcaa84f41fd17ddff",
+  "tests/test_g3_wiring.py": "ab0c213e661ce9c26d1b4742ee14d0ec658f9f8994078277300a40b3e1484590",
+  "tests/test_phase3_remote_addr_valve_runtime.py": "4929c73e773988ecbb1a47ed46e5725bd65e255d4bcad203b285cbb2f950852e",
+  "tests/test_g2_w08_w12.py": "53c3c2474c91b28e11d935a7c6bc6f0c6a816cfc23912d89151524c2e6e3411c"
+ },
+ "live_performed": {
+  "task_owned_server": {
+   "valve_run_dir": ".phase1-private/g2-valve-runtime-20260920T130556981606Z",
+   "receipt": ".phase1-private/g2-valve-runtime-20260920T130556981606Z/lifecycle.receipt.json",
+   "probe": "PROBE_PASS (loopback java API connect; non-loopback 192.168.100.152 denied HTTP 403 with server access-log evidence)",
+   "cleanup": "STOPPED_RESTORED; restored_sha256=95478d7624e778c694c714d9215797c0c0076fd707a4eedf2bedbaa6bafe6625 (original; inode 14720294 preserved)",
+   "public_evidence": "evidence/phase3/mac_owned_runtime/g2-valve-runtime-20260920T130556981606Z.json",
+   "xattr_note": "macOS re-minted com.apple.provenance on an in-place write; gate adjusted to family-shape acceptance with exact values recorded (evidence/phase4/valve_resume/valve_residual_refamily_and_restore_20260920T130551Z.json)"
+  },
+  "chain_c_fixture": {
+   "run_dir": "evidence/phase4/runs/20260920T130620Z-g3-live/chain_c_fixture_v11",
+   "mph": "chain_c_user_style.mph sha256 c6f626e7e69b199a5c5896fbd6208145f1aaef79bfda217eb669ba471c2908cd (3,707,004 bytes)",
+   "outcome": "built and solved via published operations; exit 1 for four documented SKIPPED steps (material property names pre-fix, init T0, no Size feature, derived values off)"
+  },
+  "driver_runs": [
+   {
+    "run": "driver",
+    "cases": "PASS 2 | FAIL 7 | BLOCKED 12 | NOT_RUN 2",
+    "blocker": "unreconciled UNKNOWN job closed the engine gate"
+   },
+   {
+    "run": "driver2",
+    "cases": "PASS 3 | FAIL 18 | BLOCKED 1 | NOT_RUN 1",
+    "blocker": "case-level issues incl. REVISION_CONFLICT propagation"
+   },
+   {
+    "run": "driver3",
+    "cases": "PASS 2 | FAIL 3 | BLOCKED 17 | NOT_RUN 1",
+    "blocker": "gate re-closed; driver could not discover unresolved job id"
+   },
+   {
+    "run": "driver4",
+    "cases": "PASS 3 | FAIL 7 | BLOCKED 12 | NOT_RUN 1",
+    "blocker": "revision-adoption long tail (external-change / stale expected_revision), engine-level refusals (material rank, ins1 feature, solver path tags)",
+    "subcases": "PASS 68 | FAIL 8 | BLOCKED 24 | NOT_RUN 50",
+    "runner_tail_note": "final runner output (authoritative); earlier summary read was mid-write"
+   }
+  ],
+  "guards_live_pass": [
+   "GUARD_T038",
+   "GUARD_T035",
+   "GUARD_T005"
+  ],
+  "isolation_proof": "present in every mutation envelope (loopback established + 403 denial + access-log correlation)"
+ },
+ "verified_live": [
+  "task-owned COMSOL server lifecycle with approved webbridge valve; loopback-only proof; every mutation carried isolation_proof",
+  "published-operation surface live-reachable (65 tools); server_connect/model_create legacy route; geometry/workplane feature creation; mesh/study/solver creation on real engine; study.run solve; model.save",
+  "GUARD_T038/T035/T005 live PASS in driver4; R06.4 docs contract; valve restore exact-hash"
+ ],
+ "blocked_or_unverified_live": [
+  "W13-W16 acceptance lives remain BLOCKED/FAIL on managed-revision semantics (external-change gate + stale expected_revision adoption across multi-call flows) and a few engine-level refusals (material property rank mismatch; physics.feature_create ins1; solver sub-feature path tags in T020; chainC solver.inspect path)",
+  "R01/R03/R04 live probes blocked by the same revision bookkeeping (not by their contracts; static/protocol layers PASS)",
+  "T042 license: model identity mismatch on license probe payload; T033: product gaps (no evaluation policy, no temp-node ownership, empty value)",
+  "reopen-check (fresh worker) not run; final acceptance run not reached"
+ ],
+ "product_findings": [
+  "engine gate refusal envelopes carry only the refused job's id; no published read lists unresolved jobs (driver-side ledger workaround added)",
+  "job_reconcile quiescent requires durable worker_request events; jobs without them can stay non-quiescent",
+  "material def-group writes on fresh Common materials: hasProperty()=false while KB documents direct propertyGroup('def').set('density'/'heatcapacity'/'thermalconductivity'); product gate corrected (KB-sourced)",
+  "evaluate_expressions: no evaluation policy published; no temporary-node ownership report; empty value for 3*3",
+  "begin_write dirty gate precedes revision comparison; refusal carries inconsistent expected_revision"
+ ],
+ "not_performed": [
+  "remote sync/push (live acceptance incomplete; retained locally)",
+  "final report per Goal §12 in docs (report delivered in-session)"
+ ],
+ "paths": {
+  "runs_root": "evidence/phase4/runs/20260920T130620Z-g3-live",
+  "offline_checks": "evidence/phase4/_driver_offline_check",
+  "g3_plan": "docs/comsol_mcp_design_v1/G3_EXECUTION_PLAN.md"
+ }
+}

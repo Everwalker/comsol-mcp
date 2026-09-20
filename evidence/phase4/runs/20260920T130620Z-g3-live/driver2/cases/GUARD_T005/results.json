@@ -1,0 +1,721 @@
+{
+  "case_id": "GUARD_T005",
+  "results": [
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"additionalProperties\": false, \"properties\": {\"evaluation_policy\": {\"default\": \"ephemeral_mutation\", \"title\": \"Evaluation Policy\", \"type\": \"string\"}, \"expressions_json\": {\"default\": \"[]\", \"title\": \"Expressions Json\", \"type\": \"string\"}, \"max_result_size\": {\"default\": 0, \"title\": \"Max Result Size\", \"type\": \"integer\"}}, \"title\": \"evaluate_expressionsArguments\", \"type\": \"object\"}, \"domain\": \"legacy\", \"effect\": \"EVALUATE\", \"executable\": true, \"gate\": \"W01 compatibility mapping plus ordinary service gate\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"additionalProperties\": false, \"properties\": {\"evaluation_policy\": {\"default\": \"ephemeral_mutation\", \"title\": \"Evaluation Policy\", \"type\": \"string\"}, \"expressions_json\": {\"default\": \"[]\", \"title\": \"Expressions Json\", \"type\": \"string\"}, \"max_result_size\": {\"default\": 0, \"title\": \"Max Result Size\", \"type\": \"integer\"}}, \"title\": \"evaluate_expressionsArguments\", \"type\": \"object\"}, \"mcp_tool_name\": \"evaluate_expressions\", \"notes\": \"Hidden from a narrowed static publication profile only; callable through operation_call with this explicit mapping. Input schema is generated from the registered FastMCP function signature; unknown fields are rejected before dispatch.\", \"operation_id\": \"evaluate_expressions\", \"output_contract\": \"success/data/error/execution envelope\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"Managed compatibility route for the original MCP tool\", \"required_tests\": [\"legacy_fallback\", \"permission_gate\"], \"route\": \"legacy managed backend\", \"scope\": \"legacy managed service\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 1,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "evaluation_policy": {
+                "default": "ephemeral_mutation",
+                "title": "Evaluation Policy",
+                "type": "string"
+              },
+              "expressions_json": {
+                "default": "[]",
+                "title": "Expressions Json",
+                "type": "string"
+              },
+              "max_result_size": {
+                "default": 0,
+                "title": "Max Result Size",
+                "type": "integer"
+              }
+            },
+            "title": "evaluate_expressionsArguments",
+            "type": "object"
+          },
+          "domain": "legacy",
+          "effect": "EVALUATE",
+          "executable": true,
+          "gate": "W01 compatibility mapping plus ordinary service gate",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "evaluation_policy": {
+                "default": "ephemeral_mutation",
+                "title": "Evaluation Policy",
+                "type": "string"
+              },
+              "expressions_json": {
+                "default": "[]",
+                "title": "Expressions Json",
+                "type": "string"
+              },
+              "max_result_size": {
+                "default": 0,
+                "title": "Max Result Size",
+                "type": "integer"
+              }
+            },
+            "title": "evaluate_expressionsArguments",
+            "type": "object"
+          },
+          "mcp_tool_name": "evaluate_expressions",
+          "notes": "Hidden from a narrowed static publication profile only; callable through operation_call with this explicit mapping. Input schema is generated from the registered FastMCP function signature; unknown fields are rejected before dispatch.",
+          "operation_id": "evaluate_expressions",
+          "output_contract": "success/data/error/execution envelope",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "Managed compatibility route for the original MCP tool",
+          "required_tests": [
+            "legacy_fallback",
+            "permission_gate"
+          ],
+          "route": "legacy managed backend",
+          "scope": "legacy managed service",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"additionalProperties\": false, \"properties\": {\"evaluation_policy\": {\"default\": \"ephemeral_mutation\", \"title\": \"Evaluation Policy\", \"type\": \"string\"}, \"metrics_json\": {\"default\": \"[]\", \"title\": \"Metrics Json\", \"type\": \"string\"}}, \"title\": \"get_core_metricsArguments\", \"type\": \"object\"}, \"domain\": \"legacy\", \"effect\": \"EVALUATE\", \"executable\": true, \"gate\": \"W01 compatibility mapping plus ordinary service gate\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"additionalProperties\": false, \"properties\": {\"evaluation_policy\": {\"default\": \"ephemeral_mutation\", \"title\": \"Evaluation Policy\", \"type\": \"string\"}, \"metrics_json\": {\"default\": \"[]\", \"title\": \"Metrics Json\", \"type\": \"string\"}}, \"title\": \"get_core_metricsArguments\", \"type\": \"object\"}, \"mcp_tool_name\": \"get_core_metrics\", \"notes\": \"Hidden from a narrowed static publication profile only; callable through operation_call with this explicit mapping. Input schema is generated from the registered FastMCP function signature; unknown fields are rejected before dispatch.\", \"operation_id\": \"get_core_metrics\", \"output_contract\": \"success/data/error/execution envelope\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"Managed compatibility route for the original MCP tool\", \"required_tests\": [\"legacy_fallback\", \"permission_gate\"], \"route\": \"legacy managed backend\", \"scope\": \"legacy managed service\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 2,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "evaluation_policy": {
+                "default": "ephemeral_mutation",
+                "title": "Evaluation Policy",
+                "type": "string"
+              },
+              "metrics_json": {
+                "default": "[]",
+                "title": "Metrics Json",
+                "type": "string"
+              }
+            },
+            "title": "get_core_metricsArguments",
+            "type": "object"
+          },
+          "domain": "legacy",
+          "effect": "EVALUATE",
+          "executable": true,
+          "gate": "W01 compatibility mapping plus ordinary service gate",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "evaluation_policy": {
+                "default": "ephemeral_mutation",
+                "title": "Evaluation Policy",
+                "type": "string"
+              },
+              "metrics_json": {
+                "default": "[]",
+                "title": "Metrics Json",
+                "type": "string"
+              }
+            },
+            "title": "get_core_metricsArguments",
+            "type": "object"
+          },
+          "mcp_tool_name": "get_core_metrics",
+          "notes": "Hidden from a narrowed static publication profile only; callable through operation_call with this explicit mapping. Input schema is generated from the registered FastMCP function signature; unknown fields are rejected before dispatch.",
+          "operation_id": "get_core_metrics",
+          "output_contract": "success/data/error/execution envelope",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "Managed compatibility route for the original MCP tool",
+          "required_tests": [
+            "legacy_fallback",
+            "permission_gate"
+          ],
+          "route": "legacy managed backend",
+          "scope": "legacy managed service",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"component_details\": [{\"geometries\": [\"geom1\"], \"materials\": [], \"meshes\": [], \"physics\": [], \"tag\": \"comp1\"}], \"components\": [\"comp1\"], \"datasets\": [], \"file_path\": \"\", \"label\": \"G3 chain B transient conduction\", \"parameters\": [], \"results\": [], \"solutions\": [], \"studies\": [\"std1\"]}, \"error\": \"\", \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-driver2t005-tree-before\", \"job_id\": \"7d335044-c0e3-4d82-9f9c-a9daa33e16c7\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp11\", \"schema_version\": 1, \"server_instance_id\": \"f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"3e577e40-0305-49d1-b1d3-6973e269b962\", \"request_hash\": \"de1d20e0f88c446b39bd7591a381ea56bc9111991fe45b7d4e955b5e0d63068e\", \"request_id\": \"phase4-driver2t005-tree-before\", \"revision\": 3, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": "",
+      "error_message": "",
+      "operation": "model_tree",
+      "sequence": 3,
+      "structuredContent": {
+        "data": {
+          "component_details": [
+            {
+              "geometries": [
+                "geom1"
+              ],
+              "materials": [],
+              "meshes": [],
+              "physics": [],
+              "tag": "comp1"
+            }
+          ],
+          "components": [
+            "comp1"
+          ],
+          "datasets": [],
+          "file_path": "",
+          "label": "G3 chain B transient conduction",
+          "parameters": [],
+          "results": [],
+          "solutions": [],
+          "studies": [
+            "std1"
+          ]
+        },
+        "error": "",
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-driver2t005-tree-before",
+          "job_id": "7d335044-c0e3-4d82-9f9c-a9daa33e16c7",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp11",
+            "schema_version": 1,
+            "server_instance_id": "f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "3e577e40-0305-49d1-b1d3-6973e269b962",
+          "request_hash": "de1d20e0f88c446b39bd7591a381ea56bc9111991fe45b7d4e955b5e0d63068e",
+          "request_id": "phase4-driver2t005-tree-before",
+          "revision": 3,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"count\": 1, \"datetime\": \"2026-09-20 21:39:52\", \"ephemeral_mutation\": true, \"evaluation_policy\": \"ephemeral_mutation\", \"label\": \"G3 chain B transient conduction\", \"log_path\": \"$REPO/PRIVATE_REDACTED/g3-phase4-live2/mcp-home/logs/server.log\", \"max_result_size_ignored\": null, \"operations_path\": \"$REPO/PRIVATE_REDACTED/g3-phase4-live2/mcp-home/logs/operations.jsonl\", \"results\": [{\"expression\": \"1+1\", \"last_value\": [], \"name\": \"phase4_probe\", \"ok\": true, \"value\": []}], \"server\": {\"attached_to_existing_server\": true, \"comsol_root\": \"/Applications/COMSOL64/Multiphysics\", \"current_model_label\": \"G3 chain B transient conduction\", \"current_model_origin\": \"bound-request\", \"current_model_path\": \"\", \"datetime\": \"2026-09-20 21:39:52\", \"desktop_client_role\": \"visual-client\", \"desktop_should_connect\": {\"host\": \"127.0.0.1\", \"port\": 56389}, \"last_command\": \"evaluate_expressions\", \"last_error\": \"\", \"logs_dir\": \"$REPO/PRIVATE_REDACTED/g3-phase4-live2/mcp-home/logs\", \"mcp_home\": \"$REPO/PRIVATE_REDACTED/g3-phase4-live2/mcp-home\", \"outputs_dir\": \"$REPO/PRIVATE_REDACTED/g3-phase4-live2/mcp-home/outputs\", \"recommended_desktop_flow\": \"visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.\", \"server_endpoint\": \"127.0.0.1:56389\", \"server_host\": \"127.0.0.1\", \"server_port\": 56389, \"server_running\": false, \"server_started_by_mcp\": false, \"status\": \"ready\", \"timestamp\": 1789911592.938499, \"version\": \"0.1.9\", \"workflow\": {\"current_main_model_path\": \"\", \"guard_level\": \"strict\", \"main_model_label\": \"\", \"main_model_path\": \"\", \"main_model_tag\": \"\", \"mcp_client_lifecycle\": \"persistent-required\", \"mode\": \"manual\", \"model_dimension\": 0, \"notes\": \"\", \"one_shot_client_allowed\": false, \"snapshot_dir\": \"\", \"snapshot_name_template\": \"{prefix}_{label}_{timestamp}.mph\", \"snapshot_prefix\": \"\", \"snapshot_save_mode\": \"copy\", \"updated_at\": \"2026-09-20 21:39:47\", \"visible_main_locked\": false, \"workflow_stage\": \"awaiting_manual_server\"}}, \"timestamp\": 1789911592.938478, \"tool\": \"evaluate_expressions\"}, \"error\": \"\", \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-driver2user_derived_nodes_preserved\", \"job_id\": \"8fd62257-7efb-4d67-a2ff-36888475bb40\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp11\", \"schema_version\": 1, \"server_instance_id\": \"f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"863e0d90-a603-4cd9-a551-22c1a9be9500\", \"request_hash\": \"af187632caf2002b8f9c450c5194e0687a0c6bf9dd0b05770c0fb95523a2ae90\", \"request_id\": \"phase4-driver2user_derived_nodes_preserved\", \"revision\": 4, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": "",
+      "error_message": "",
+      "operation": "evaluate_expressions",
+      "sequence": 4,
+      "structuredContent": {
+        "data": {
+          "count": 1,
+          "datetime": "2026-09-20 21:39:52",
+          "ephemeral_mutation": true,
+          "evaluation_policy": "ephemeral_mutation",
+          "label": "G3 chain B transient conduction",
+          "log_path": "$REPO/PRIVATE_REDACTED/g3-phase4-live2/mcp-home/logs/server.log",
+          "max_result_size_ignored": null,
+          "operations_path": "$REPO/PRIVATE_REDACTED/g3-phase4-live2/mcp-home/logs/operations.jsonl",
+          "results": [
+            {
+              "expression": "1+1",
+              "last_value": [],
+              "name": "phase4_probe",
+              "ok": true,
+              "value": []
+            }
+          ],
+          "server": {
+            "attached_to_existing_server": true,
+            "comsol_root": "/Applications/COMSOL64/Multiphysics",
+            "current_model_label": "G3 chain B transient conduction",
+            "current_model_origin": "bound-request",
+            "current_model_path": "",
+            "datetime": "2026-09-20 21:39:52",
+            "desktop_client_role": "visual-client",
+            "desktop_should_connect": {
+              "host": "127.0.0.1",
+              "port": 56389
+            },
+            "last_command": "evaluate_expressions",
+            "last_error": "",
+            "logs_dir": "$REPO/PRIVATE_REDACTED/g3-phase4-live2/mcp-home/logs",
+            "mcp_home": "$REPO/PRIVATE_REDACTED/g3-phase4-live2/mcp-home",
+            "outputs_dir": "$REPO/PRIVATE_REDACTED/g3-phase4-live2/mcp-home/outputs",
+            "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+            "server_endpoint": "127.0.0.1:56389",
+            "server_host": "127.0.0.1",
+            "server_port": 56389,
+            "server_running": false,
+            "server_started_by_mcp": false,
+            "status": "ready",
+            "timestamp": 1789911592.938499,
+            "version": "0.1.9",
+            "workflow": {
+              "current_main_model_path": "",
+              "guard_level": "strict",
+              "main_model_label": "",
+              "main_model_path": "",
+              "main_model_tag": "",
+              "mcp_client_lifecycle": "persistent-required",
+              "mode": "manual",
+              "model_dimension": 0,
+              "notes": "",
+              "one_shot_client_allowed": false,
+              "snapshot_dir": "",
+              "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+              "snapshot_prefix": "",
+              "snapshot_save_mode": "copy",
+              "updated_at": "2026-09-20 21:39:47",
+              "visible_main_locked": false,
+              "workflow_stage": "awaiting_manual_server"
+            }
+          },
+          "timestamp": 1789911592.938478,
+          "tool": "evaluate_expressions"
+        },
+        "error": "",
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-driver2user_derived_nodes_preserved",
+          "job_id": "8fd62257-7efb-4d67-a2ff-36888475bb40",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp11",
+            "schema_version": 1,
+            "server_instance_id": "f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "863e0d90-a603-4cd9-a551-22c1a9be9500",
+          "request_hash": "af187632caf2002b8f9c450c5194e0687a0c6bf9dd0b05770c0fb95523a2ae90",
+          "request_id": "phase4-driver2user_derived_nodes_preserved",
+          "revision": 4,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"component_details\": [{\"geometries\": [\"geom1\"], \"materials\": [], \"meshes\": [], \"physics\": [], \"tag\": \"comp1\"}], \"components\": [\"comp1\"], \"datasets\": [], \"file_path\": \"\", \"label\": \"G3 chain B transient conduction\", \"parameters\": [], \"results\": [], \"solutions\": [], \"studies\": [\"std1\"]}, \"error\": \"\", \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-driver2t005-tree-after\", \"job_id\": \"c8d71c14-0339-495b-ac5f-26724e06f0fb\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp11\", \"schema_version\": 1, \"server_instance_id\": \"f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"4155c707-0c8a-4d94-a708-1c8b2d6436d2\", \"request_hash\": \"ce6f4345c8f1c5a1366319c1fe225b6c7d7374fc08cf6c3f20a06abcfbe7285f\", \"request_id\": \"phase4-driver2t005-tree-after\", \"revision\": 4, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": "",
+      "error_message": "",
+      "operation": "model_tree",
+      "sequence": 5,
+      "structuredContent": {
+        "data": {
+          "component_details": [
+            {
+              "geometries": [
+                "geom1"
+              ],
+              "materials": [],
+              "meshes": [],
+              "physics": [],
+              "tag": "comp1"
+            }
+          ],
+          "components": [
+            "comp1"
+          ],
+          "datasets": [],
+          "file_path": "",
+          "label": "G3 chain B transient conduction",
+          "parameters": [],
+          "results": [],
+          "solutions": [],
+          "studies": [
+            "std1"
+          ]
+        },
+        "error": "",
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-driver2t005-tree-after",
+          "job_id": "c8d71c14-0339-495b-ac5f-26724e06f0fb",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp11",
+            "schema_version": 1,
+            "server_instance_id": "f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "4155c707-0c8a-4d94-a708-1c8b2d6436d2",
+          "request_hash": "ce6f4345c8f1c5a1366319c1fe225b6c7d7374fc08cf6c3f20a06abcfbe7285f",
+          "request_id": "phase4-driver2t005-tree-after",
+          "revision": 4,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"count\": 1, \"datetime\": \"2026-09-20 21:39:53\", \"ephemeral_mutation\": true, \"evaluation_policy\": \"ephemeral_mutation\", \"execution_state_unknown\": false, \"failed_item_may_have_changed\": false, \"label\": \"G3 chain B transient conduction\", \"log_path\": \"$REPO/PRIVATE_REDACTED/g3-phase4-live2/mcp-home/logs/server.log\", \"max_result_size_ignored\": null, \"operations_path\": \"$REPO/PRIVATE_REDACTED/g3-phase4-live2/mcp-home/logs/operations.jsonl\", \"partial_change\": false, \"results\": [{\"error\": \"EvalGlobal failed: {\\\"completed_at_ms\\\": \\\"1789911592994\\\", \\\"failure\\\": {\\\"code\\\": \\\"ENGINE_CALL_FAILED\\\", \\\"execution_state_unknown\\\": true, \\\"message\\\": \\\"FlException: Syntax_error_in_expression\\\", \\\"ok\\\": false}, \\\"ok\\\": false, \\\"queued_at_ms\\\": \\\"1789911592992\\\", \\\"request_id\\\": \\\"wrk-1ffddd10-03f7-42ef-bbc3-fb713aeabb9b\\\", \\\"started_at_ms\\\": \\\"1789911592992\\\", \\\"status\\\": \\\"FAILED\\\", \\\"type\\\": \\\"call\\\"}; Eval/getData fallback failed: {\\\"completed_at_ms\\\": \\\"1789911593006\\\", \\\"failure\\\": {\\\"code\\\": \\\"ENGINE_CALL_FAILED\\\", \\\"execution_state_unknown\\\": true, \\\"message\\\": \\\"FlException: Syntax_error_in_expression\\\", \\\"ok\\\": false}, \\\"ok\\\": false, \\\"queued_at_ms\\\": \\\"1789911593004\\\", \\\"request_id\\\": \\\"wrk-3d6e845f-ce97-4180-b33d-a60b967a7a6f\\\", \\\"started_at_ms\\\": \\\"1789911593004\\\", \\\"status\\\": \\\"FAILED\\\", \\\"type\\\": \\\"call\\\"}\", \"expression\": \"1+*2\", \"name\": \"phase4_bad\", \"ok\": false}], \"safe_retry\": true, \"server\": {\"attached_to_existing_server\": true, \"comsol_root\": \"/Applications/COMSOL64/Multiphysics\", \"current_model_label\": \"G3 chain B transient conduction\", \"current_model_origin\": \"bound-request\", \"current_model_path\": \"\", \"datetime\": \"2026-09-20 21:39:53\", \"desktop_client_role\": \"visual-client\", \"desktop_should_connect\": {\"host\": \"127.0.0.1\", \"port\": 56389}, \"last_command\": \"evaluate_expressions\", \"last_error\": \"One or more expressions could not be evaluated.\", \"logs_dir\": \"$REPO/PRIVATE_REDACTED/g3-phase4-live2/mcp-home/logs\", \"mcp_home\": \"$REPO/PRIVATE_REDACTED/g3-phase4-live2/mcp-home\", \"outputs_dir\": \"$REPO/PRIVATE_REDACTED/g3-phase4-live2/mcp-home/outputs\", \"recommended_desktop_flow\": \"visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.\", \"server_endpoint\": \"127.0.0.1:56389\", \"server_host\": \"127.0.0.1\", \"server_port\": 56389, \"server_running\": false, \"server_started_by_mcp\": false, \"status\": \"ready\", \"timestamp\": 1789911593.0519621, \"version\": \"0.1.9\", \"workflow\": {\"current_main_model_path\": \"\", \"guard_level\": \"strict\", \"main_model_label\": \"\", \"main_model_path\": \"\", \"main_model_tag\": \"\", \"mcp_client_lifecycle\": \"persistent-required\", \"mode\": \"manual\", \"model_dimension\": 0, \"notes\": \"\", \"one_shot_client_allowed\": false, \"snapshot_dir\": \"\", \"snapshot_name_template\": \"{prefix}_{label}_{timestamp}.mph\", \"snapshot_prefix\": \"\", \"snapshot_save_mode\": \"copy\", \"updated_at\": \"2026-09-20 21:39:47\", \"visible_main_locked\": false, \"workflow_stage\": \"awaiting_manual_server\"}}, \"status\": \"partial\", \"timestamp\": 1789911593.051949, \"tool\": \"evaluate_expressions\"}, \"error\": \"One or more expressions could not be evaluated.\", \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-driver2t005-invalid\", \"job_id\": \"f3279556-0f96-4edf-a67d-4ad0e0df9da2\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp11\", \"schema_version\": 1, \"server_instance_id\": \"f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"662db7d5-21dc-41f9-a404-e8a6a9591366\", \"request_hash\": \"bb8ce97c8055d69d96a9593e7473ac2e41c0145d56a9ee3bc5d7d7013f2dd461\", \"request_id\": \"phase4-driver2invalid\", \"revision\": 4, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "One or more expressions could not be evaluated.",
+      "error_message": "One or more expressions could not be evaluated.",
+      "operation": "evaluate_expressions",
+      "sequence": 6,
+      "structuredContent": {
+        "data": {
+          "count": 1,
+          "datetime": "2026-09-20 21:39:53",
+          "ephemeral_mutation": true,
+          "evaluation_policy": "ephemeral_mutation",
+          "execution_state_unknown": false,
+          "failed_item_may_have_changed": false,
+          "label": "G3 chain B transient conduction",
+          "log_path": "$REPO/PRIVATE_REDACTED/g3-phase4-live2/mcp-home/logs/server.log",
+          "max_result_size_ignored": null,
+          "operations_path": "$REPO/PRIVATE_REDACTED/g3-phase4-live2/mcp-home/logs/operations.jsonl",
+          "partial_change": false,
+          "results": [
+            {
+              "error": "EvalGlobal failed: {\"completed_at_ms\": \"1789911592994\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: Syntax_error_in_expression\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1789911592992\", \"request_id\": \"wrk-1ffddd10-03f7-42ef-bbc3-fb713aeabb9b\", \"started_at_ms\": \"1789911592992\", \"status\": \"FAILED\", \"type\": \"call\"}; Eval/getData fallback failed: {\"completed_at_ms\": \"1789911593006\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: Syntax_error_in_expression\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1789911593004\", \"request_id\": \"wrk-3d6e845f-ce97-4180-b33d-a60b967a7a6f\", \"started_at_ms\": \"1789911593004\", \"status\": \"FAILED\", \"type\": \"call\"}",
+              "expression": "1+*2",
+              "name": "phase4_bad",
+              "ok": false
+            }
+          ],
+          "safe_retry": true,
+          "server": {
+            "attached_to_existing_server": true,
+            "comsol_root": "/Applications/COMSOL64/Multiphysics",
+            "current_model_label": "G3 chain B transient conduction",
+            "current_model_origin": "bound-request",
+            "current_model_path": "",
+            "datetime": "2026-09-20 21:39:53",
+            "desktop_client_role": "visual-client",
+            "desktop_should_connect": {
+              "host": "127.0.0.1",
+              "port": 56389
+            },
+            "last_command": "evaluate_expressions",
+            "last_error": "One or more expressions could not be evaluated.",
+            "logs_dir": "$REPO/PRIVATE_REDACTED/g3-phase4-live2/mcp-home/logs",
+            "mcp_home": "$REPO/PRIVATE_REDACTED/g3-phase4-live2/mcp-home",
+            "outputs_dir": "$REPO/PRIVATE_REDACTED/g3-phase4-live2/mcp-home/outputs",
+            "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+            "server_endpoint": "127.0.0.1:56389",
+            "server_host": "127.0.0.1",
+            "server_port": 56389,
+            "server_running": false,
+            "server_started_by_mcp": false,
+            "status": "ready",
+            "timestamp": 1789911593.0519621,
+            "version": "0.1.9",
+            "workflow": {
+              "current_main_model_path": "",
+              "guard_level": "strict",
+              "main_model_label": "",
+              "main_model_path": "",
+              "main_model_tag": "",
+              "mcp_client_lifecycle": "persistent-required",
+              "mode": "manual",
+              "model_dimension": 0,
+              "notes": "",
+              "one_shot_client_allowed": false,
+              "snapshot_dir": "",
+              "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+              "snapshot_prefix": "",
+              "snapshot_save_mode": "copy",
+              "updated_at": "2026-09-20 21:39:47",
+              "visible_main_locked": false,
+              "workflow_stage": "awaiting_manual_server"
+            }
+          },
+          "status": "partial",
+          "timestamp": 1789911593.051949,
+          "tool": "evaluate_expressions"
+        },
+        "error": "One or more expressions could not be evaluated.",
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-driver2t005-invalid",
+          "job_id": "f3279556-0f96-4edf-a67d-4ad0e0df9da2",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp11",
+            "schema_version": 1,
+            "server_instance_id": "f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "662db7d5-21dc-41f9-a404-e8a6a9591366",
+          "request_hash": "bb8ce97c8055d69d96a9593e7473ac2e41c0145d56a9ee3bc5d7d7013f2dd461",
+          "request_id": "phase4-driver2invalid",
+          "revision": 4,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"component_details\": [{\"geometries\": [\"geom1\"], \"materials\": [], \"meshes\": [], \"physics\": [], \"tag\": \"comp1\"}], \"components\": [\"comp1\"], \"datasets\": [], \"file_path\": \"\", \"label\": \"G3 chain B transient conduction\", \"parameters\": [], \"results\": [], \"solutions\": [], \"studies\": [\"std1\"]}, \"error\": \"\", \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-driver2t005-tree-after-bad\", \"job_id\": \"0b10525f-c615-4e8a-b66a-ee0d7f255d50\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp11\", \"schema_version\": 1, \"server_instance_id\": \"f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"14cb3ea3-acdc-4e33-8ad4-932d48eb63b9\", \"request_hash\": \"ce6f4345c8f1c5a1366319c1fe225b6c7d7374fc08cf6c3f20a06abcfbe7285f\", \"request_id\": \"phase4-driver2t005-tree-after-bad\", \"revision\": 4, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": "",
+      "error_message": "",
+      "operation": "model_tree",
+      "sequence": 7,
+      "structuredContent": {
+        "data": {
+          "component_details": [
+            {
+              "geometries": [
+                "geom1"
+              ],
+              "materials": [],
+              "meshes": [],
+              "physics": [],
+              "tag": "comp1"
+            }
+          ],
+          "components": [
+            "comp1"
+          ],
+          "datasets": [],
+          "file_path": "",
+          "label": "G3 chain B transient conduction",
+          "parameters": [],
+          "results": [],
+          "solutions": [],
+          "studies": [
+            "std1"
+          ]
+        },
+        "error": "",
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-driver2t005-tree-after-bad",
+          "job_id": "0b10525f-c615-4e8a-b66a-ee0d7f255d50",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp11",
+            "schema_version": 1,
+            "server_instance_id": "f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "14cb3ea3-acdc-4e33-8ad4-932d48eb63b9",
+          "request_hash": "ce6f4345c8f1c5a1366319c1fe225b6c7d7374fc08cf6c3f20a06abcfbe7285f",
+          "request_id": "phase4-driver2t005-tree-after-bad",
+          "revision": 4,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"component_details\": [{\"geometries\": [\"geom1\"], \"materials\": [], \"meshes\": [], \"physics\": [], \"tag\": \"comp1\"}], \"components\": [\"comp1\"], \"datasets\": [], \"file_path\": \"\", \"label\": \"G3 chain B transient conduction\", \"parameters\": [], \"results\": [], \"solutions\": [], \"studies\": [\"std1\"]}, \"error\": \"\", \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-driver2t005-tree-cleanup\", \"job_id\": \"dfcf62dd-581f-4f0c-a71d-ecd44a7f7cfe\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp11\", \"schema_version\": 1, \"server_instance_id\": \"f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"b572b969-e7cc-4620-95ec-4f5c5095461a\", \"request_hash\": \"ce6f4345c8f1c5a1366319c1fe225b6c7d7374fc08cf6c3f20a06abcfbe7285f\", \"request_id\": \"phase4-driver2t005-tree-cleanup\", \"revision\": 4, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": "",
+      "error_message": "",
+      "operation": "model_tree",
+      "sequence": 8,
+      "structuredContent": {
+        "data": {
+          "component_details": [
+            {
+              "geometries": [
+                "geom1"
+              ],
+              "materials": [],
+              "meshes": [],
+              "physics": [],
+              "tag": "comp1"
+            }
+          ],
+          "components": [
+            "comp1"
+          ],
+          "datasets": [],
+          "file_path": "",
+          "label": "G3 chain B transient conduction",
+          "parameters": [],
+          "results": [],
+          "solutions": [],
+          "studies": [
+            "std1"
+          ]
+        },
+        "error": "",
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-driver2t005-tree-cleanup",
+          "job_id": "dfcf62dd-581f-4f0c-a71d-ecd44a7f7cfe",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp11",
+            "schema_version": 1,
+            "server_instance_id": "f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "b572b969-e7cc-4620-95ec-4f5c5095461a",
+          "request_hash": "ce6f4345c8f1c5a1366319c1fe225b6c7d7374fc08cf6c3f20a06abcfbe7285f",
+          "request_id": "phase4-driver2t005-tree-cleanup",
+          "revision": 4,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "alpha_m2_s": 1e-05,
+  "analytic_model": "transient 1D conduction with T(x,0)=T0 and T(L,t)=T0+dT for t>0: T(x,t) = T0 + dT*sin(pi*x/L)*exp(-alpha*(pi/L)^2*t); the slab is insulated elsewhere",
+  "config": {
+    "cp_j_kgk": 1000.0,
+    "delta_t_k": 20.0,
+    "height_m": 0.005,
+    "k_w_mk": 10.0,
+    "length_m": 0.01,
+    "normalized_error_limit": 0.001,
+    "rho_kg_m3": 1000.0,
+    "t0_k": 300.0,
+    "time_points_s": [
+      0.0,
+      0.5,
+      1.0,
+      2.0,
+      4.0
+    ],
+    "width_m": 0.01
+  },
+  "decay_factors": [
+    {
+      "factor": 1.0,
+      "t_s": 0.0
+    },
+    {
+      "factor": 0.6104980252657971,
+      "t_s": 0.5
+    },
+    {
+      "factor": 0.3727078388534379,
+      "t_s": 1.0
+    },
+    {
+      "factor": 0.13891113314280024,
+      "t_s": 2.0
+    },
+    {
+      "factor": 0.019296302911016774,
+      "t_s": 4.0
+    }
+  ],
+  "length_m": 0.01,
+  "relative_error_limit": 0.001,
+  "t0_k": 300.0,
+  "temperature_difference_k": 20.0
+}

@@ -1,0 +1,275 @@
+{
+  "case_id": "W14_T009_geometry_edit",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver4phase4-describe-geometry-workplane_edit",
+          "request_id": "phase4-driver4phase4-describe-geometry-workplane_edit"
+        },
+        "operation_id": "geometry.workplane_edit"
+      },
+      "elapsed_s": 0.0025716250529512763,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver4phase4-describe-geometry-array_create",
+          "request_id": "phase4-driver4phase4-describe-geometry-array_create"
+        },
+        "operation_id": "geometry.array_create"
+      },
+      "elapsed_s": 0.0037981669884175062,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver4phase4-describe-geometry-build",
+          "request_id": "phase4-driver4phase4-describe-geometry-build"
+        },
+        "operation_id": "geometry.build"
+      },
+      "elapsed_s": 0.002007166971452534,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver4phase4-describe-geometry-measure",
+          "request_id": "phase4-driver4phase4-describe-geometry-measure"
+        },
+        "operation_id": "geometry.measure"
+      },
+      "elapsed_s": 0.001958084001671523,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver4phase4-describe-geometry-feature_create",
+          "request_id": "phase4-driver4phase4-describe-geometry-feature_create"
+        },
+        "operation_id": "geometry.feature_create"
+      },
+      "elapsed_s": 0.0019332919619046152,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 5
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver4phase4-describe-geometry-feature_update",
+          "request_id": "phase4-driver4phase4-describe-geometry-feature_update"
+        },
+        "operation_id": "geometry.feature_update"
+      },
+      "elapsed_s": 0.0024912500521168113,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 6
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver4phase4-describe-node-find",
+          "request_id": "phase4-driver4phase4-describe-node-find"
+        },
+        "operation_id": "node.find"
+      },
+      "elapsed_s": 0.00254379102261737,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 7
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver4phase4-describe-node-property_get",
+          "request_id": "phase4-driver4phase4-describe-node-property_get"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.0020156659884378314,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 8
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 12,
+          "geometry": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "geom",
+                "tag": "geom1"
+              }
+            ]
+          },
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "832a93e9eb6d6949fb0947f5b3aca2ba37a8c13fe3d010982b98f7ae36bc9acc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "query": {
+            "metrics": [
+              "n_entities",
+              "volume",
+              "bounding_box"
+            ],
+            "mode": "objects"
+          },
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 12,
+          "idempotency_key": "phase4-driver4geometry-measure-322",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "832a93e9eb6d6949fb0947f5b3aca2ba37a8c13fe3d010982b98f7ae36bc9acc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver4geometry-measure-322",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "geometry.measure"
+      },
+      "elapsed_s": 0.0387016250169836,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 9
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 12,
+          "idempotency_key": "phase4-driver4phase4-reconcile-model-phase4",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "832a93e9eb6d6949fb0947f5b3aca2ba37a8c13fe3d010982b98f7ae36bc9acc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver4phase4-reconcile-model-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.003076624998357147,
+      "operation": "model_inspect",
+      "outer_isError": true,
+      "sequence": 10
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 12,
+          "inputs": {
+            "input": [
+              "r1"
+            ]
+          },
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "832a93e9eb6d6949fb0947f5b3aca2ba37a8c13fe3d010982b98f7ae36bc9acc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "parent": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "geom",
+                "tag": "geom1"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "properties": [
+            {
+              "name": "size",
+              "value": {
+                "data": [
+                  2,
+                  1
+                ],
+                "kind": "int32",
+                "shape": [
+                  2
+                ]
+              }
+            }
+          ],
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "arr1",
+          "type_id": "Array"
+        },
+        "execution": {
+          "expected_revision": 12,
+          "idempotency_key": "phase4-driver4work_plane_and_array_located",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "832a93e9eb6d6949fb0947f5b3aca2ba37a8c13fe3d010982b98f7ae36bc9acc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver4work_plane_and_array_located",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "geometry.feature_create"
+      },
+      "elapsed_s": 0.03626500000245869,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 11
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 12,
+          "idempotency_key": "phase4-driver4phase4-reconcile-model-phase4",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "832a93e9eb6d6949fb0947f5b3aca2ba37a8c13fe3d010982b98f7ae36bc9acc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver4phase4-reconcile-model-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.0021826670272275805,
+      "operation": "model_inspect",
+      "outer_isError": true,
+      "sequence": 12
+    }
+  ]
+}

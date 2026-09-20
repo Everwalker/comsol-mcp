@@ -1,0 +1,2740 @@
+{
+  "case_id": "R01_LIVE",
+  "results": [
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"name\": {\"type\": \"string\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"path\"], \"title\": \"node.property_schema input\", \"type\": \"object\"}, \"domain\": \"node\", \"effect\": \"READ\", \"executable\": true, \"gate\": \"G2\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"name\": {\"type\": \"string\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"path\"], \"title\": \"node.property_schema input\", \"type\": \"object\"}, \"mcp_tool_name\": \"node_property_schema\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"node.property_schema\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"取得属性类型、枚举、索引信息\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 1,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "path"
+            ],
+            "title": "node.property_schema input",
+            "type": "object"
+          },
+          "domain": "node",
+          "effect": "READ",
+          "executable": true,
+          "gate": "G2",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "name": {
+                "type": "string"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "path"
+            ],
+            "title": "node.property_schema input",
+            "type": "object"
+          },
+          "mcp_tool_name": "node_property_schema",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "node.property_schema",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "取得属性类型、枚举、索引信息",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"names\": {\"items\": {\"type\": \"string\"}, \"type\": \"array\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"path\", \"names\"], \"title\": \"node.property_get input\", \"type\": \"object\"}, \"domain\": \"node\", \"effect\": \"READ\", \"executable\": true, \"gate\": \"G2\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"names\": {\"items\": {\"type\": \"string\"}, \"type\": \"array\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"path\", \"names\"], \"title\": \"node.property_get input\", \"type\": \"object\"}, \"mcp_tool_name\": \"node_property_get\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"node.property_get\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"按类型回读一个或多个属性\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 2,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "names": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "path",
+              "names"
+            ],
+            "title": "node.property_get input",
+            "type": "object"
+          },
+          "domain": "node",
+          "effect": "READ",
+          "executable": true,
+          "gate": "G2",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "names": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "path",
+              "names"
+            ],
+            "title": "node.property_get input",
+            "type": "object"
+          },
+          "mcp_tool_name": "node_property_get",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "node.property_get",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "按类型回读一个或多个属性",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"expected_revision\": {\"minimum\": 0, \"type\": \"integer\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"properties\": {\"$ref\": \"common.schema.json#/$defs/PropertySet\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"path\", \"properties\"], \"title\": \"node.property_set input\", \"type\": \"object\"}, \"domain\": \"node\", \"effect\": \"WRITE\", \"executable\": true, \"gate\": \"G2\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"expected_revision\": {\"minimum\": 0, \"type\": \"integer\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"properties\": {\"$ref\": \"common.schema.json#/$defs/PropertySet\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"path\", \"properties\"], \"title\": \"node.property_set input\", \"type\": \"object\"}, \"mcp_tool_name\": \"node_property_set\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"node.property_set\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"设置带类型的标量/向量/矩阵并回读\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\", \"readback_and_revision\", \"idempotency_and_partial_failure\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 3,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "properties": {
+                "$ref": "common.schema.json#/$defs/PropertySet"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "path",
+              "properties"
+            ],
+            "title": "node.property_set input",
+            "type": "object"
+          },
+          "domain": "node",
+          "effect": "WRITE",
+          "executable": true,
+          "gate": "G2",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "properties": {
+                "$ref": "common.schema.json#/$defs/PropertySet"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "path",
+              "properties"
+            ],
+            "title": "node.property_set input",
+            "type": "object"
+          },
+          "mcp_tool_name": "node_property_set",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "node.property_set",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "设置带类型的标量/向量/矩阵并回读",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful",
+            "readback_and_revision",
+            "idempotency_and_partial_failure"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"actions\": {\"items\": {\"type\": \"object\"}, \"type\": \"array\"}, \"invariants\": {\"items\": {\"type\": \"object\"}, \"type\": \"array\"}, \"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"actions\"], \"title\": \"transaction.preview input\", \"type\": \"object\"}, \"domain\": \"transaction\", \"effect\": \"READ\", \"executable\": true, \"gate\": \"G2\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"actions\": {\"items\": {\"type\": \"object\"}, \"type\": \"array\"}, \"invariants\": {\"items\": {\"type\": \"object\"}, \"type\": \"array\"}, \"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"actions\"], \"title\": \"transaction.preview input\", \"type\": \"object\"}, \"mcp_tool_name\": \"transaction_preview\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"transaction.preview\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"仅静态检查计划、权限、依赖与预算\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 4,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "actions": {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "invariants": {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "actions"
+            ],
+            "title": "transaction.preview input",
+            "type": "object"
+          },
+          "domain": "transaction",
+          "effect": "READ",
+          "executable": true,
+          "gate": "G2",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "actions": {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "invariants": {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "actions"
+            ],
+            "title": "transaction.preview input",
+            "type": "object"
+          },
+          "mcp_tool_name": "transaction_preview",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "transaction.preview",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "仅静态检查计划、权限、依赖与预算",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"PROPERTY_TYPE_MISMATCH\", \"message\": \"typed value must be an object\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver2r01-static-malformed\", \"job_id\": \"bbed1e26-3abd-4396-9ec2-504a0148efe2\", \"operation_id\": \"60c595da-1c5f-4a3d-8951-1c464f0ff9c0\", \"request_hash\": \"c13070dc7c0ea1aa824bac81a50b0c54538b349803059d9bf5cf3edc882e4351\", \"request_id\": \"phase4-driver2r01-static-malformed\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "PROPERTY_TYPE_MISMATCH",
+      "error_message": "typed value must be an object",
+      "operation": "operation_call",
+      "sequence": 5,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "PROPERTY_TYPE_MISMATCH",
+          "message": "typed value must be an object",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver2r01-static-malformed",
+          "job_id": "bbed1e26-3abd-4396-9ec2-504a0148efe2",
+          "operation_id": "60c595da-1c5f-4a3d-8951-1c464f0ff9c0",
+          "request_hash": "c13070dc7c0ea1aa824bac81a50b0c54538b349803059d9bf5cf3edc882e4351",
+          "request_id": "phase4-driver2r01-static-malformed"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"budget\": {\"max_nodes\": 2000, \"max_rpc\": 5000, \"max_seconds\": 20.0}, \"complete\": false, \"count\": 1, \"errors\": [{\"code\": \"METHOD_NOT_ALLOWED\", \"collection\": \"table\", \"message\": \"accessor is not in the worker allowlist\"}, {\"code\": \"METHOD_NOT_ALLOWED\", \"collection\": \"export\", \"message\": \"accessor is not in the worker allowlist\"}], \"incomplete\": true, \"next_cursor\": null, \"results\": [{\"label\": \"Phase4 G3 acceptance fixture\", \"path\": {\"segments\": []}, \"tag\": \"mcp9\", \"type_id\": null}], \"status\": \"INCOMPLETE\", \"truncated\": false, \"truncated_reason\": null, \"visited\": 1}, \"error\": null, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-driver2phase4-find-all\", \"job_id\": \"66c0bac5-b79d-4b6c-bbb7-606748f7cc03\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp9\", \"schema_version\": 1, \"server_instance_id\": \"f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"9b30be4f-09b7-4465-a89e-4419ab07181a\", \"request_hash\": \"91cc8c006fae5f8cce849c7fec310d6d1ff49516b665b490546dcacd67feb793\", \"request_id\": \"phase4-driver2phase4-find-all\", \"revision\": 0, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_call",
+      "sequence": 6,
+      "structuredContent": {
+        "data": {
+          "budget": {
+            "max_nodes": 2000,
+            "max_rpc": 5000,
+            "max_seconds": 20.0
+          },
+          "complete": false,
+          "count": 1,
+          "errors": [
+            {
+              "code": "METHOD_NOT_ALLOWED",
+              "collection": "table",
+              "message": "accessor is not in the worker allowlist"
+            },
+            {
+              "code": "METHOD_NOT_ALLOWED",
+              "collection": "export",
+              "message": "accessor is not in the worker allowlist"
+            }
+          ],
+          "incomplete": true,
+          "next_cursor": null,
+          "results": [
+            {
+              "label": "Phase4 G3 acceptance fixture",
+              "path": {
+                "segments": []
+              },
+              "tag": "mcp9",
+              "type_id": null
+            }
+          ],
+          "status": "INCOMPLETE",
+          "truncated": false,
+          "truncated_reason": null,
+          "visited": 1
+        },
+        "error": null,
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-driver2phase4-find-all",
+          "job_id": "66c0bac5-b79d-4b6c-bbb7-606748f7cc03",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp9",
+            "schema_version": 1,
+            "server_instance_id": "f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "9b30be4f-09b7-4465-a89e-4419ab07181a",
+          "request_hash": "91cc8c006fae5f8cce849c7fec310d6d1ff49516b665b490546dcacd67feb793",
+          "request_id": "phase4-driver2phase4-find-all",
+          "revision": 0,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"API_UNSUPPORTED\", \"message\": \"the selected node does not expose properties()\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver2phase4-schema\", \"job_id\": \"c4edfb82-e681-4576-b2e6-9cc87b3c6a0d\", \"operation_id\": \"04cc4333-bcae-4652-9a75-ed2db86b18ea\", \"request_hash\": \"7892f10d0954b3f344ffee8a129502427084a12f223bad031c9b1d7366fa3179\", \"request_id\": \"phase4-driver2phase4-schema\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "API_UNSUPPORTED",
+      "error_message": "the selected node does not expose properties()",
+      "operation": "operation_call",
+      "sequence": 7,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "API_UNSUPPORTED",
+          "message": "the selected node does not expose properties()",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver2phase4-schema",
+          "job_id": "c4edfb82-e681-4576-b2e6-9cc87b3c6a0d",
+          "operation_id": "04cc4333-bcae-4652-9a75-ed2db86b18ea",
+          "request_hash": "7892f10d0954b3f344ffee8a129502427084a12f223bad031c9b1d7366fa3179",
+          "request_id": "phase4-driver2phase4-schema"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"action\": \"create\", \"created\": true, \"isolation_proof\": {\"api_probe\": {\"authenticated_api_success\": true, \"denial_evidence_source\": \"server_access_log\", \"loopback_address\": \"127.0.0.1\", \"loopback_port\": 56389, \"nonloopback_address\": \"192.168.100.152\", \"nonloopback_api_exception_http_status\": null, \"nonloopback_port\": 56389, \"observed_at\": \"2026-09-20T13:06:11Z\", \"probe_kind\": \"comsol_java_api\", \"server_access_log\": {\"entries\": [{\"http_status\": 101, \"method\": \"GET\", \"peer\": \"127.0.0.1\", \"route\": \"/webbridge/websocket\"}, {\"http_status\": 101, \"method\": \"GET\", \"peer\": \"127.0.0.1\", \"route\": \"/webbridge/websocket\"}, {\"http_status\": 403, \"method\": \"GET\", \"peer\": \"192.168.100.152\", \"route\": \"/webbridge/websocket\"}], \"finished_at\": \"2026-09-20T13:06:11Z\", \"inode\": 29032287, \"java_request_id\": \"g2-valve-nonloopback-connect\", \"offset_after\": 261, \"offset_before\": 0, \"parsed_nonloopback_entry\": {\"http_status\": 403, \"method\": \"GET\", \"peer\": \"192.168.100.152\", \"route\": \"/webbridge/websocket\"}, \"path\": \"$REPO/PRIVATE_REDACTED/g2-valve-runtime-20260920T130556981606Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-20.txt\", \"phase\": \"java_connect_only\", \"raw_probe_started_after_capture\": true, \"segment_sha256\": \"66b96815507dff09377615d715a9647b7c8da0e44a14ba8f74a4e2fafed0d17c\", \"started_at\": \"2026-09-20T13:06:07Z\", \"status\": \"PASS\"}}, \"birth\": \"Sun Sep 20 21:05:57 2026\", \"config_inode\": 14720294, \"config_sha256\": \"1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357\", \"config_target\": \"/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml\", \"endpoint\": \"127.0.0.1:56389\", \"established_client_pids\": [8586, 18388], \"listener\": {\"endpoint\": \"*:56389\", \"local_endpoint\": \"*:56389\", \"pid\": 8586, \"raw\": \"java     8586 everwalker   59u  IPv6 0x7c08e3aec9d10b78      0t0  TCP *:56389 (LISTEN)\", \"remote_endpoint\": null, \"state\": \"LISTEN\"}, \"listener_binding\": \"wildcard\", \"loopback_listener\": false, \"pid\": 8586, \"proof_scope\": \"owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer\", \"receipt\": \"REDACTED\", \"verified\": true, \"worker_pid\": 18388}, \"notes\": [\"the two-argument create form is create(<tag>,<type>) with Component|ExtraDim|MeshComponent; the ambiguous create(<tag>,<basetag>) form is not offered\"], \"readback\": {\"tags\": [\"comp1\"]}, \"tag\": \"comp1\", \"type_id\": null, \"type_readback\": \"Component\"}, \"error\": null, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-driver2probe-component\", \"job_id\": \"66c2d60c-9f5c-435a-9bfa-c0fe9d32b81b\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp9\", \"schema_version\": 1, \"server_instance_id\": \"f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"4ac107d2-3913-4a87-a17e-1d3073d1ff07\", \"request_hash\": \"d97da8dad657421c9067106dc052551a27463671a038e83e8d5e56839cbb5d4d\", \"request_id\": \"phase4-driver2probe-component\", \"revision\": 1, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_call",
+      "sequence": 8,
+      "structuredContent": {
+        "data": {
+          "action": "create",
+          "created": true,
+          "isolation_proof": {
+            "api_probe": {
+              "authenticated_api_success": true,
+              "denial_evidence_source": "server_access_log",
+              "loopback_address": "127.0.0.1",
+              "loopback_port": 56389,
+              "nonloopback_address": "192.168.100.152",
+              "nonloopback_api_exception_http_status": null,
+              "nonloopback_port": 56389,
+              "observed_at": "2026-09-20T13:06:11Z",
+              "probe_kind": "comsol_java_api",
+              "server_access_log": {
+                "entries": [
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 403,
+                    "method": "GET",
+                    "peer": "192.168.100.152",
+                    "route": "/webbridge/websocket"
+                  }
+                ],
+                "finished_at": "2026-09-20T13:06:11Z",
+                "inode": 29032287,
+                "java_request_id": "g2-valve-nonloopback-connect",
+                "offset_after": 261,
+                "offset_before": 0,
+                "parsed_nonloopback_entry": {
+                  "http_status": 403,
+                  "method": "GET",
+                  "peer": "192.168.100.152",
+                  "route": "/webbridge/websocket"
+                },
+                "path": "$REPO/PRIVATE_REDACTED/g2-valve-runtime-20260920T130556981606Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-20.txt",
+                "phase": "java_connect_only",
+                "raw_probe_started_after_capture": true,
+                "segment_sha256": "66b96815507dff09377615d715a9647b7c8da0e44a14ba8f74a4e2fafed0d17c",
+                "started_at": "2026-09-20T13:06:07Z",
+                "status": "PASS"
+              }
+            },
+            "birth": "Sun Sep 20 21:05:57 2026",
+            "config_inode": 14720294,
+            "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+            "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+            "endpoint": "127.0.0.1:56389",
+            "established_client_pids": [
+              8586,
+              18388
+            ],
+            "listener": {
+              "endpoint": "*:56389",
+              "local_endpoint": "*:56389",
+              "pid": 8586,
+              "raw": "java     8586 everwalker   59u  IPv6 0x7c08e3aec9d10b78      0t0  TCP *:56389 (LISTEN)",
+              "remote_endpoint": null,
+              "state": "LISTEN"
+            },
+            "listener_binding": "wildcard",
+            "loopback_listener": false,
+            "pid": 8586,
+            "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+            "receipt": "REDACTED",
+            "verified": true,
+            "worker_pid": 18388
+          },
+          "notes": [
+            "the two-argument create form is create(<tag>,<type>) with Component|ExtraDim|MeshComponent; the ambiguous create(<tag>,<basetag>) form is not offered"
+          ],
+          "readback": {
+            "tags": [
+              "comp1"
+            ]
+          },
+          "tag": "comp1",
+          "type_id": null,
+          "type_readback": "Component"
+        },
+        "error": null,
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-driver2probe-component",
+          "job_id": "66c2d60c-9f5c-435a-9bfa-c0fe9d32b81b",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp9",
+            "schema_version": 1,
+            "server_instance_id": "f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "4ac107d2-3913-4a87-a17e-1d3073d1ff07",
+          "request_hash": "d97da8dad657421c9067106dc052551a27463671a038e83e8d5e56839cbb5d4d",
+          "request_id": "phase4-driver2probe-component",
+          "revision": 1,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"axisymmetric\": null, \"axisymmetric_requested\": false, \"component\": \"comp1\", \"created\": true, \"dimension\": 3, \"dimension_readback\": 3, \"features\": [\"fin\"], \"isolation_proof\": {\"api_probe\": {\"authenticated_api_success\": true, \"denial_evidence_source\": \"server_access_log\", \"loopback_address\": \"127.0.0.1\", \"loopback_port\": 56389, \"nonloopback_address\": \"192.168.100.152\", \"nonloopback_api_exception_http_status\": null, \"nonloopback_port\": 56389, \"observed_at\": \"2026-09-20T13:06:11Z\", \"probe_kind\": \"comsol_java_api\", \"server_access_log\": {\"entries\": [{\"http_status\": 101, \"method\": \"GET\", \"peer\": \"127.0.0.1\", \"route\": \"/webbridge/websocket\"}, {\"http_status\": 101, \"method\": \"GET\", \"peer\": \"127.0.0.1\", \"route\": \"/webbridge/websocket\"}, {\"http_status\": 403, \"method\": \"GET\", \"peer\": \"192.168.100.152\", \"route\": \"/webbridge/websocket\"}], \"finished_at\": \"2026-09-20T13:06:11Z\", \"inode\": 29032287, \"java_request_id\": \"g2-valve-nonloopback-connect\", \"offset_after\": 261, \"offset_before\": 0, \"parsed_nonloopback_entry\": {\"http_status\": 403, \"method\": \"GET\", \"peer\": \"192.168.100.152\", \"route\": \"/webbridge/websocket\"}, \"path\": \"$REPO/PRIVATE_REDACTED/g2-valve-runtime-20260920T130556981606Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-20.txt\", \"phase\": \"java_connect_only\", \"raw_probe_started_after_capture\": true, \"segment_sha256\": \"66b96815507dff09377615d715a9647b7c8da0e44a14ba8f74a4e2fafed0d17c\", \"started_at\": \"2026-09-20T13:06:07Z\", \"status\": \"PASS\"}}, \"birth\": \"Sun Sep 20 21:05:57 2026\", \"config_inode\": 14720294, \"config_sha256\": \"1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357\", \"config_target\": \"/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml\", \"endpoint\": \"127.0.0.1:56389\", \"established_client_pids\": [8586, 18388], \"listener\": {\"endpoint\": \"*:56389\", \"local_endpoint\": \"*:56389\", \"pid\": 8586, \"raw\": \"java     8586 everwalker   59u  IPv6 0x7c08e3aec9d10b78      0t0  TCP *:56389 (LISTEN)\", \"remote_endpoint\": null, \"state\": \"LISTEN\"}, \"listener_binding\": \"wildcard\", \"loopback_listener\": false, \"pid\": 8586, \"proof_scope\": \"owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer\", \"receipt\": \"REDACTED\", \"verified\": true, \"worker_pid\": 18388}, \"length_unit\": \"m\", \"notes\": [\"geometry sequences are created with the documented create(<tag>,<sdim>) call; the axisymmetric flag is refused before the write because its documented setter is not in the worker allow-list, so this layer never claims an axisymmetric geometry it did not set\"], \"path\": {\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"geom\", \"tag\": \"p4geom\"}]}, \"readback\": {\"geometries\": [\"p4geom\"]}, \"tag\": \"p4geom\", \"unavailable\": {\"axisymmetric\": {\"allowlist_entry_required\": \"axisymmetric\", \"method\": \"axisymmetric\", \"note\": \"the COMSOL 6.4 API documents this method, but the installed PersistentComsolWorker METHODS allow-list does not contain it, so no value can be read or written through the worker\", \"status\": \"UNVERIFIED_WORKER_METHOD_UNAVAILABLE\"}, \"isAxisymmetric\": {\"allowlist_entry_required\": \"isAxisymmetric\", \"method\": \"isAxisymmetric\", \"note\": \"the COMSOL 6.4 API documents this method, but the installed PersistentComsolWorker METHODS allow-list does not contain it, so no value can be read or written through the worker\", \"status\": \"UNVERIFIED_WORKER_METHOD_UNAVAILABLE\"}}}, \"error\": null, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-driver2probe-geometry\", \"job_id\": \"e42817fe-b3bb-4b7c-a380-4577d541526a\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp9\", \"schema_version\": 1, \"server_instance_id\": \"f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"b217d6c1-4843-428b-ac06-def7cbecdbd8\", \"request_hash\": \"433457b4688d6623642b47c543d66aab8e215790782e2f857d084f0bc2c3816c\", \"request_id\": \"phase4-driver2probe-geometry\", \"revision\": 2, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_call",
+      "sequence": 9,
+      "structuredContent": {
+        "data": {
+          "axisymmetric": null,
+          "axisymmetric_requested": false,
+          "component": "comp1",
+          "created": true,
+          "dimension": 3,
+          "dimension_readback": 3,
+          "features": [
+            "fin"
+          ],
+          "isolation_proof": {
+            "api_probe": {
+              "authenticated_api_success": true,
+              "denial_evidence_source": "server_access_log",
+              "loopback_address": "127.0.0.1",
+              "loopback_port": 56389,
+              "nonloopback_address": "192.168.100.152",
+              "nonloopback_api_exception_http_status": null,
+              "nonloopback_port": 56389,
+              "observed_at": "2026-09-20T13:06:11Z",
+              "probe_kind": "comsol_java_api",
+              "server_access_log": {
+                "entries": [
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 403,
+                    "method": "GET",
+                    "peer": "192.168.100.152",
+                    "route": "/webbridge/websocket"
+                  }
+                ],
+                "finished_at": "2026-09-20T13:06:11Z",
+                "inode": 29032287,
+                "java_request_id": "g2-valve-nonloopback-connect",
+                "offset_after": 261,
+                "offset_before": 0,
+                "parsed_nonloopback_entry": {
+                  "http_status": 403,
+                  "method": "GET",
+                  "peer": "192.168.100.152",
+                  "route": "/webbridge/websocket"
+                },
+                "path": "$REPO/PRIVATE_REDACTED/g2-valve-runtime-20260920T130556981606Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-20.txt",
+                "phase": "java_connect_only",
+                "raw_probe_started_after_capture": true,
+                "segment_sha256": "66b96815507dff09377615d715a9647b7c8da0e44a14ba8f74a4e2fafed0d17c",
+                "started_at": "2026-09-20T13:06:07Z",
+                "status": "PASS"
+              }
+            },
+            "birth": "Sun Sep 20 21:05:57 2026",
+            "config_inode": 14720294,
+            "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+            "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+            "endpoint": "127.0.0.1:56389",
+            "established_client_pids": [
+              8586,
+              18388
+            ],
+            "listener": {
+              "endpoint": "*:56389",
+              "local_endpoint": "*:56389",
+              "pid": 8586,
+              "raw": "java     8586 everwalker   59u  IPv6 0x7c08e3aec9d10b78      0t0  TCP *:56389 (LISTEN)",
+              "remote_endpoint": null,
+              "state": "LISTEN"
+            },
+            "listener_binding": "wildcard",
+            "loopback_listener": false,
+            "pid": 8586,
+            "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+            "receipt": "REDACTED",
+            "verified": true,
+            "worker_pid": 18388
+          },
+          "length_unit": "m",
+          "notes": [
+            "geometry sequences are created with the documented create(<tag>,<sdim>) call; the axisymmetric flag is refused before the write because its documented setter is not in the worker allow-list, so this layer never claims an axisymmetric geometry it did not set"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "geom",
+                "tag": "p4geom"
+              }
+            ]
+          },
+          "readback": {
+            "geometries": [
+              "p4geom"
+            ]
+          },
+          "tag": "p4geom",
+          "unavailable": {
+            "axisymmetric": {
+              "allowlist_entry_required": "axisymmetric",
+              "method": "axisymmetric",
+              "note": "the COMSOL 6.4 API documents this method, but the installed PersistentComsolWorker METHODS allow-list does not contain it, so no value can be read or written through the worker",
+              "status": "UNVERIFIED_WORKER_METHOD_UNAVAILABLE"
+            },
+            "isAxisymmetric": {
+              "allowlist_entry_required": "isAxisymmetric",
+              "method": "isAxisymmetric",
+              "note": "the COMSOL 6.4 API documents this method, but the installed PersistentComsolWorker METHODS allow-list does not contain it, so no value can be read or written through the worker",
+              "status": "UNVERIFIED_WORKER_METHOD_UNAVAILABLE"
+            }
+          }
+        },
+        "error": null,
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-driver2probe-geometry",
+          "job_id": "e42817fe-b3bb-4b7c-a380-4577d541526a",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp9",
+            "schema_version": 1,
+            "server_instance_id": "f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "b217d6c1-4843-428b-ac06-def7cbecdbd8",
+          "request_hash": "433457b4688d6623642b47c543d66aab8e215790782e2f857d084f0bc2c3816c",
+          "request_id": "phase4-driver2probe-geometry",
+          "revision": 2,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"applied\": [{\"comparison\": {\"matched\": true, \"requested_kind\": \"float64\", \"returned_kind\": \"float64\", \"rule\": \"exact\"}, \"name\": \"size\", \"readback\": {\"data\": [0.001, 0.001, 0.001], \"java_signature\": \"double[]\", \"kind\": \"float64\", \"shape\": [3]}, \"readback_match\": true, \"value\": {\"data\": [0.001, 0.001, 0.001], \"java_signature\": \"double[]\", \"kind\": \"float64\", \"shape\": [3]}}, {\"comparison\": {\"matched\": true, \"requested_kind\": \"float64\", \"returned_kind\": \"float64\", \"rule\": \"exact\"}, \"name\": \"pos\", \"readback\": {\"data\": [0.0, 0.0, 0.0], \"java_signature\": \"double[]\", \"kind\": \"float64\", \"shape\": [3]}, \"readback_match\": true, \"value\": {\"data\": [0.0, 0.0, 0.0], \"java_signature\": \"double[]\", \"kind\": \"float64\", \"shape\": [3]}}], \"applied_count\": 2, \"created\": true, \"engine_error\": null, \"execution_state_unknown\": false, \"failed\": [], \"failed_count\": 0, \"feature_tags\": [\"p4blk\", \"fin\"], \"inputs\": {\"applied\": [], \"failed\": [], \"not_executed\": [], \"requested\": {}}, \"isolation_proof\": {\"api_probe\": {\"authenticated_api_success\": true, \"denial_evidence_source\": \"server_access_log\", \"loopback_address\": \"127.0.0.1\", \"loopback_port\": 56389, \"nonloopback_address\": \"192.168.100.152\", \"nonloopback_api_exception_http_status\": null, \"nonloopback_port\": 56389, \"observed_at\": \"2026-09-20T13:06:11Z\", \"probe_kind\": \"comsol_java_api\", \"server_access_log\": {\"entries\": [{\"http_status\": 101, \"method\": \"GET\", \"peer\": \"127.0.0.1\", \"route\": \"/webbridge/websocket\"}, {\"http_status\": 101, \"method\": \"GET\", \"peer\": \"127.0.0.1\", \"route\": \"/webbridge/websocket\"}, {\"http_status\": 403, \"method\": \"GET\", \"peer\": \"192.168.100.152\", \"route\": \"/webbridge/websocket\"}], \"finished_at\": \"2026-09-20T13:06:11Z\", \"inode\": 29032287, \"java_request_id\": \"g2-valve-nonloopback-connect\", \"offset_after\": 261, \"offset_before\": 0, \"parsed_nonloopback_entry\": {\"http_status\": 403, \"method\": \"GET\", \"peer\": \"192.168.100.152\", \"route\": \"/webbridge/websocket\"}, \"path\": \"$REPO/PRIVATE_REDACTED/g2-valve-runtime-20260920T130556981606Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-20.txt\", \"phase\": \"java_connect_only\", \"raw_probe_started_after_capture\": true, \"segment_sha256\": \"66b96815507dff09377615d715a9647b7c8da0e44a14ba8f74a4e2fafed0d17c\", \"started_at\": \"2026-09-20T13:06:07Z\", \"status\": \"PASS\"}}, \"birth\": \"Sun Sep 20 21:05:57 2026\", \"config_inode\": 14720294, \"config_sha256\": \"1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357\", \"config_target\": \"/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml\", \"endpoint\": \"127.0.0.1:56389\", \"established_client_pids\": [8586, 18388], \"listener\": {\"endpoint\": \"*:56389\", \"local_endpoint\": \"*:56389\", \"pid\": 8586, \"raw\": \"java     8586 everwalker   59u  IPv6 0x7c08e3aec9d10b78      0t0  TCP *:56389 (LISTEN)\", \"remote_endpoint\": null, \"state\": \"LISTEN\"}, \"listener_binding\": \"wildcard\", \"loopback_listener\": false, \"pid\": 8586, \"proof_scope\": \"owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer\", \"receipt\": \"REDACTED\", \"verified\": true, \"worker_pid\": 18388}, \"not_executed\": [], \"not_executed_count\": 0, \"ok\": true, \"partial_change\": true, \"path\": {\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"geom\", \"tag\": \"p4geom\"}, {\"collection\": \"feature\", \"tag\": \"p4blk\"}]}, \"properties\": {\"pos\": {\"data\": [0.0, 0.0, 0.0], \"java_signature\": \"double[]\", \"kind\": \"float64\", \"shape\": [3]}, \"size\": {\"data\": [0.001, 0.001, 0.001], \"java_signature\": \"double[]\", \"kind\": \"float64\", \"shape\": [3]}}, \"property_source\": \"documented_property_table\", \"sequence_kind\": \"geometry_sequence\", \"sequence_path\": {\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"geom\", \"tag\": \"p4geom\"}]}, \"status\": \"APPLIED\", \"tag\": \"p4blk\", \"type_id\": \"Block\", \"type_readback\": \"Block\"}, \"error\": null, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-driver2probe-block\", \"job_id\": \"c9f5b79d-51f4-4d07-9264-d118956c00be\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp9\", \"schema_version\": 1, \"server_instance_id\": \"f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"1f99f8b8-04f2-4841-954c-d2bb112a690f\", \"request_hash\": \"a6fd9219c4fc2220adb849ffeaaae5543bc9eaaafdc931d26e2bd1e9d160c27a\", \"request_id\": \"phase4-driver2probe-block\", \"revision\": 3, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_call",
+      "sequence": 10,
+      "structuredContent": {
+        "data": {
+          "applied": [
+            {
+              "comparison": {
+                "matched": true,
+                "requested_kind": "float64",
+                "returned_kind": "float64",
+                "rule": "exact"
+              },
+              "name": "size",
+              "readback": {
+                "data": [
+                  0.001,
+                  0.001,
+                  0.001
+                ],
+                "java_signature": "double[]",
+                "kind": "float64",
+                "shape": [
+                  3
+                ]
+              },
+              "readback_match": true,
+              "value": {
+                "data": [
+                  0.001,
+                  0.001,
+                  0.001
+                ],
+                "java_signature": "double[]",
+                "kind": "float64",
+                "shape": [
+                  3
+                ]
+              }
+            },
+            {
+              "comparison": {
+                "matched": true,
+                "requested_kind": "float64",
+                "returned_kind": "float64",
+                "rule": "exact"
+              },
+              "name": "pos",
+              "readback": {
+                "data": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "java_signature": "double[]",
+                "kind": "float64",
+                "shape": [
+                  3
+                ]
+              },
+              "readback_match": true,
+              "value": {
+                "data": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "java_signature": "double[]",
+                "kind": "float64",
+                "shape": [
+                  3
+                ]
+              }
+            }
+          ],
+          "applied_count": 2,
+          "created": true,
+          "engine_error": null,
+          "execution_state_unknown": false,
+          "failed": [],
+          "failed_count": 0,
+          "feature_tags": [
+            "p4blk",
+            "fin"
+          ],
+          "inputs": {
+            "applied": [],
+            "failed": [],
+            "not_executed": [],
+            "requested": {}
+          },
+          "isolation_proof": {
+            "api_probe": {
+              "authenticated_api_success": true,
+              "denial_evidence_source": "server_access_log",
+              "loopback_address": "127.0.0.1",
+              "loopback_port": 56389,
+              "nonloopback_address": "192.168.100.152",
+              "nonloopback_api_exception_http_status": null,
+              "nonloopback_port": 56389,
+              "observed_at": "2026-09-20T13:06:11Z",
+              "probe_kind": "comsol_java_api",
+              "server_access_log": {
+                "entries": [
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 403,
+                    "method": "GET",
+                    "peer": "192.168.100.152",
+                    "route": "/webbridge/websocket"
+                  }
+                ],
+                "finished_at": "2026-09-20T13:06:11Z",
+                "inode": 29032287,
+                "java_request_id": "g2-valve-nonloopback-connect",
+                "offset_after": 261,
+                "offset_before": 0,
+                "parsed_nonloopback_entry": {
+                  "http_status": 403,
+                  "method": "GET",
+                  "peer": "192.168.100.152",
+                  "route": "/webbridge/websocket"
+                },
+                "path": "$REPO/PRIVATE_REDACTED/g2-valve-runtime-20260920T130556981606Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-20.txt",
+                "phase": "java_connect_only",
+                "raw_probe_started_after_capture": true,
+                "segment_sha256": "66b96815507dff09377615d715a9647b7c8da0e44a14ba8f74a4e2fafed0d17c",
+                "started_at": "2026-09-20T13:06:07Z",
+                "status": "PASS"
+              }
+            },
+            "birth": "Sun Sep 20 21:05:57 2026",
+            "config_inode": 14720294,
+            "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+            "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+            "endpoint": "127.0.0.1:56389",
+            "established_client_pids": [
+              8586,
+              18388
+            ],
+            "listener": {
+              "endpoint": "*:56389",
+              "local_endpoint": "*:56389",
+              "pid": 8586,
+              "raw": "java     8586 everwalker   59u  IPv6 0x7c08e3aec9d10b78      0t0  TCP *:56389 (LISTEN)",
+              "remote_endpoint": null,
+              "state": "LISTEN"
+            },
+            "listener_binding": "wildcard",
+            "loopback_listener": false,
+            "pid": 8586,
+            "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+            "receipt": "REDACTED",
+            "verified": true,
+            "worker_pid": 18388
+          },
+          "not_executed": [],
+          "not_executed_count": 0,
+          "ok": true,
+          "partial_change": true,
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "geom",
+                "tag": "p4geom"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4blk"
+              }
+            ]
+          },
+          "properties": {
+            "pos": {
+              "data": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "java_signature": "double[]",
+              "kind": "float64",
+              "shape": [
+                3
+              ]
+            },
+            "size": {
+              "data": [
+                0.001,
+                0.001,
+                0.001
+              ],
+              "java_signature": "double[]",
+              "kind": "float64",
+              "shape": [
+                3
+              ]
+            }
+          },
+          "property_source": "documented_property_table",
+          "sequence_kind": "geometry_sequence",
+          "sequence_path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "geom",
+                "tag": "p4geom"
+              }
+            ]
+          },
+          "status": "APPLIED",
+          "tag": "p4blk",
+          "type_id": "Block",
+          "type_readback": "Block"
+        },
+        "error": null,
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-driver2probe-block",
+          "job_id": "c9f5b79d-51f4-4d07-9264-d118956c00be",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp9",
+            "schema_version": 1,
+            "server_instance_id": "f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "1f99f8b8-04f2-4841-954c-d2bb112a690f",
+          "request_hash": "a6fd9219c4fc2220adb849ffeaaae5543bc9eaaafdc931d26e2bd1e9d160c27a",
+          "request_id": "phase4-driver2probe-block",
+          "revision": 3,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"applied\": [{\"method\": \"component.mesh().create\", \"readback\": {\"tags\": [\"p4mesh\"]}, \"requested\": {\"geometry\": \"p4geom\", \"tag\": \"p4mesh\"}, \"step\": \"create\"}], \"applied_count\": 1, \"component\": \"comp1\", \"engine_error\": null, \"execution_state_unknown\": false, \"failed\": [], \"failed_count\": 0, \"geometry\": \"p4geom\", \"isolation_proof\": {\"api_probe\": {\"authenticated_api_success\": true, \"denial_evidence_source\": \"server_access_log\", \"loopback_address\": \"127.0.0.1\", \"loopback_port\": 56389, \"nonloopback_address\": \"192.168.100.152\", \"nonloopback_api_exception_http_status\": null, \"nonloopback_port\": 56389, \"observed_at\": \"2026-09-20T13:06:11Z\", \"probe_kind\": \"comsol_java_api\", \"server_access_log\": {\"entries\": [{\"http_status\": 101, \"method\": \"GET\", \"peer\": \"127.0.0.1\", \"route\": \"/webbridge/websocket\"}, {\"http_status\": 101, \"method\": \"GET\", \"peer\": \"127.0.0.1\", \"route\": \"/webbridge/websocket\"}, {\"http_status\": 403, \"method\": \"GET\", \"peer\": \"192.168.100.152\", \"route\": \"/webbridge/websocket\"}], \"finished_at\": \"2026-09-20T13:06:11Z\", \"inode\": 29032287, \"java_request_id\": \"g2-valve-nonloopback-connect\", \"offset_after\": 261, \"offset_before\": 0, \"parsed_nonloopback_entry\": {\"http_status\": 403, \"method\": \"GET\", \"peer\": \"192.168.100.152\", \"route\": \"/webbridge/websocket\"}, \"path\": \"$REPO/PRIVATE_REDACTED/g2-valve-runtime-20260920T130556981606Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-20.txt\", \"phase\": \"java_connect_only\", \"raw_probe_started_after_capture\": true, \"segment_sha256\": \"66b96815507dff09377615d715a9647b7c8da0e44a14ba8f74a4e2fafed0d17c\", \"started_at\": \"2026-09-20T13:06:07Z\", \"status\": \"PASS\"}}, \"birth\": \"Sun Sep 20 21:05:57 2026\", \"config_inode\": 14720294, \"config_sha256\": \"1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357\", \"config_target\": \"/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml\", \"endpoint\": \"127.0.0.1:56389\", \"established_client_pids\": [8586, 18388], \"listener\": {\"endpoint\": \"*:56389\", \"local_endpoint\": \"*:56389\", \"pid\": 8586, \"raw\": \"java     8586 everwalker   59u  IPv6 0x7c08e3aec9d10b78      0t0  TCP *:56389 (LISTEN)\", \"remote_endpoint\": null, \"state\": \"LISTEN\"}, \"listener_binding\": \"wildcard\", \"loopback_listener\": false, \"pid\": 8586, \"proof_scope\": \"owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer\", \"receipt\": \"REDACTED\", \"verified\": true, \"worker_pid\": 18388}, \"mode\": null, \"mode_semantics\": {\"physics_controlled\": \"mesh.automatic(true)\", \"user_controlled\": \"mesh.automatic(false)\"}, \"not_executed\": [], \"not_executed_count\": 0, \"ok\": true, \"partial_change\": true, \"path\": {\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"mesh\", \"tag\": \"p4mesh\"}]}, \"readback\": {\"allowlist_entry_required\": [], \"errors\": {}, \"readable\": true, \"state\": {\"current\": \"size\", \"geom\": \"p4geom\", \"getSDim\": 3, \"isAutomatic\": true}}, \"status\": \"APPLIED\", \"tag\": \"p4mesh\", \"tag_readback\": [\"p4mesh\"], \"type_note\": \"a meshing sequence has no getType() type string; the create call is the documented model.component(<ctag>).mesh().create(<mtag>,<gtag>) -- javap com.comsol.model.MeshList.create(java.lang.String tag, java.lang.String gtag) (\\\"Creates a meshing sequence\\\", params tag + gtag) inherited by com.comsol.model.ComponentMeshList\"}, \"error\": null, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-driver2probe-mesh\", \"job_id\": \"1b9b9a01-35c0-4dd5-9363-16e58305b109\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp9\", \"schema_version\": 1, \"server_instance_id\": \"f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"5e3bf6bc-6ef0-485a-8adc-b7934a991a96\", \"request_hash\": \"305a942fa7a327f06b3aac815f5d0717502541437017d3ddd5e15f122b04b98a\", \"request_id\": \"phase4-driver2probe-mesh\", \"revision\": 4, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_call",
+      "sequence": 11,
+      "structuredContent": {
+        "data": {
+          "applied": [
+            {
+              "method": "component.mesh().create",
+              "readback": {
+                "tags": [
+                  "p4mesh"
+                ]
+              },
+              "requested": {
+                "geometry": "p4geom",
+                "tag": "p4mesh"
+              },
+              "step": "create"
+            }
+          ],
+          "applied_count": 1,
+          "component": "comp1",
+          "engine_error": null,
+          "execution_state_unknown": false,
+          "failed": [],
+          "failed_count": 0,
+          "geometry": "p4geom",
+          "isolation_proof": {
+            "api_probe": {
+              "authenticated_api_success": true,
+              "denial_evidence_source": "server_access_log",
+              "loopback_address": "127.0.0.1",
+              "loopback_port": 56389,
+              "nonloopback_address": "192.168.100.152",
+              "nonloopback_api_exception_http_status": null,
+              "nonloopback_port": 56389,
+              "observed_at": "2026-09-20T13:06:11Z",
+              "probe_kind": "comsol_java_api",
+              "server_access_log": {
+                "entries": [
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 403,
+                    "method": "GET",
+                    "peer": "192.168.100.152",
+                    "route": "/webbridge/websocket"
+                  }
+                ],
+                "finished_at": "2026-09-20T13:06:11Z",
+                "inode": 29032287,
+                "java_request_id": "g2-valve-nonloopback-connect",
+                "offset_after": 261,
+                "offset_before": 0,
+                "parsed_nonloopback_entry": {
+                  "http_status": 403,
+                  "method": "GET",
+                  "peer": "192.168.100.152",
+                  "route": "/webbridge/websocket"
+                },
+                "path": "$REPO/PRIVATE_REDACTED/g2-valve-runtime-20260920T130556981606Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-20.txt",
+                "phase": "java_connect_only",
+                "raw_probe_started_after_capture": true,
+                "segment_sha256": "66b96815507dff09377615d715a9647b7c8da0e44a14ba8f74a4e2fafed0d17c",
+                "started_at": "2026-09-20T13:06:07Z",
+                "status": "PASS"
+              }
+            },
+            "birth": "Sun Sep 20 21:05:57 2026",
+            "config_inode": 14720294,
+            "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+            "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+            "endpoint": "127.0.0.1:56389",
+            "established_client_pids": [
+              8586,
+              18388
+            ],
+            "listener": {
+              "endpoint": "*:56389",
+              "local_endpoint": "*:56389",
+              "pid": 8586,
+              "raw": "java     8586 everwalker   59u  IPv6 0x7c08e3aec9d10b78      0t0  TCP *:56389 (LISTEN)",
+              "remote_endpoint": null,
+              "state": "LISTEN"
+            },
+            "listener_binding": "wildcard",
+            "loopback_listener": false,
+            "pid": 8586,
+            "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+            "receipt": "REDACTED",
+            "verified": true,
+            "worker_pid": 18388
+          },
+          "mode": null,
+          "mode_semantics": {
+            "physics_controlled": "mesh.automatic(true)",
+            "user_controlled": "mesh.automatic(false)"
+          },
+          "not_executed": [],
+          "not_executed_count": 0,
+          "ok": true,
+          "partial_change": true,
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "mesh",
+                "tag": "p4mesh"
+              }
+            ]
+          },
+          "readback": {
+            "allowlist_entry_required": [],
+            "errors": {},
+            "readable": true,
+            "state": {
+              "current": "size",
+              "geom": "p4geom",
+              "getSDim": 3,
+              "isAutomatic": true
+            }
+          },
+          "status": "APPLIED",
+          "tag": "p4mesh",
+          "tag_readback": [
+            "p4mesh"
+          ],
+          "type_note": "a meshing sequence has no getType() type string; the create call is the documented model.component(<ctag>).mesh().create(<mtag>,<gtag>) -- javap com.comsol.model.MeshList.create(java.lang.String tag, java.lang.String gtag) (\"Creates a meshing sequence\", params tag + gtag) inherited by com.comsol.model.ComponentMeshList"
+        },
+        "error": null,
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-driver2probe-mesh",
+          "job_id": "1b9b9a01-35c0-4dd5-9363-16e58305b109",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp9",
+            "schema_version": 1,
+            "server_instance_id": "f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "5e3bf6bc-6ef0-485a-8adc-b7934a991a96",
+          "request_hash": "305a942fa7a327f06b3aac815f5d0717502541437017d3ddd5e15f122b04b98a",
+          "request_id": "phase4-driver2probe-mesh",
+          "revision": 4,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"applied\": [{\"method\": \"mesh(...).create(tag, type)\", \"readback\": {\"tags\": [\"size\", \"p4size\"], \"type\": \"Size\"}, \"requested\": {\"tag\": \"p4size\", \"type_id\": \"Size\"}, \"step\": \"create\"}], \"applied_count\": 1, \"documented_properties\": [\"custom\", \"hauto\", \"hcurve\", \"hcurveactive\", \"hgrad\", \"hgradactive\", \"hmax\", \"hmaxactive\", \"hmin\", \"hminactive\", \"hnarrow\", \"hnarrowactive\", \"table\"], \"engine_error\": null, \"execution_state_unknown\": false, \"failed\": [{\"error\": {\"code\": \"PROPERTY_TYPE_MISMATCH\", \"message\": \"property expects float64, received int32\"}, \"execution_state_unknown\": false, \"partial_change\": true, \"step\": \"properties\"}], \"failed_count\": 1, \"feature_properties_readable\": true, \"isolation_proof\": {\"api_probe\": {\"authenticated_api_success\": true, \"denial_evidence_source\": \"server_access_log\", \"loopback_address\": \"127.0.0.1\", \"loopback_port\": 56389, \"nonloopback_address\": \"192.168.100.152\", \"nonloopback_api_exception_http_status\": null, \"nonloopback_port\": 56389, \"observed_at\": \"2026-09-20T13:06:11Z\", \"probe_kind\": \"comsol_java_api\", \"server_access_log\": {\"entries\": [{\"http_status\": 101, \"method\": \"GET\", \"peer\": \"127.0.0.1\", \"route\": \"/webbridge/websocket\"}, {\"http_status\": 101, \"method\": \"GET\", \"peer\": \"127.0.0.1\", \"route\": \"/webbridge/websocket\"}, {\"http_status\": 403, \"method\": \"GET\", \"peer\": \"192.168.100.152\", \"route\": \"/webbridge/websocket\"}], \"finished_at\": \"2026-09-20T13:06:11Z\", \"inode\": 29032287, \"java_request_id\": \"g2-valve-nonloopback-connect\", \"offset_after\": 261, \"offset_before\": 0, \"parsed_nonloopback_entry\": {\"http_status\": 403, \"method\": \"GET\", \"peer\": \"192.168.100.152\", \"route\": \"/webbridge/websocket\"}, \"path\": \"$REPO/PRIVATE_REDACTED/g2-valve-runtime-20260920T130556981606Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-20.txt\", \"phase\": \"java_connect_only\", \"raw_probe_started_after_capture\": true, \"segment_sha256\": \"66b96815507dff09377615d715a9647b7c8da0e44a14ba8f74a4e2fafed0d17c\", \"started_at\": \"2026-09-20T13:06:07Z\", \"status\": \"PASS\"}}, \"birth\": \"Sun Sep 20 21:05:57 2026\", \"config_inode\": 14720294, \"config_sha256\": \"1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357\", \"config_target\": \"/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml\", \"endpoint\": \"127.0.0.1:56389\", \"established_client_pids\": [8586, 18388], \"listener\": {\"endpoint\": \"*:56389\", \"local_endpoint\": \"*:56389\", \"pid\": 8586, \"raw\": \"java     8586 everwalker   59u  IPv6 0x7c08e3aec9d10b78      0t0  TCP *:56389 (LISTEN)\", \"remote_endpoint\": null, \"state\": \"LISTEN\"}, \"listener_binding\": \"wildcard\", \"loopback_listener\": false, \"pid\": 8586, \"proof_scope\": \"owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer\", \"receipt\": \"REDACTED\", \"verified\": true, \"worker_pid\": 18388}, \"not_executed\": [], \"not_executed_count\": 0, \"ok\": false, \"parent_path\": {\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"mesh\", \"tag\": \"p4mesh\"}]}, \"partial_change\": true, \"path\": {\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"mesh\", \"tag\": \"p4mesh\"}, {\"collection\": \"feature\", \"tag\": \"p4size\"}]}, \"property_source\": \"refused\", \"readback\": {\"allowlist_entry_required\": [\"errors\", \"isBuilt\", \"message\", \"status\", \"warnings\"], \"errors\": {\"errors\": {\"allowlist_entry_required\": \"errors\", \"code\": \"ENGINE_CALL_FAILED\", \"message\": \"COMSOL errors probe failed: JavaWorkerError\"}, \"isBuilt\": {\"allowlist_entry_required\": \"isBuilt\", \"code\": \"ENGINE_CALL_FAILED\", \"message\": \"COMSOL isBuilt probe failed: JavaWorkerError\"}, \"message\": {\"allowlist_entry_required\": \"message\", \"code\": \"ENGINE_CALL_FAILED\", \"message\": \"COMSOL message probe failed: JavaWorkerError\"}, \"status\": {\"allowlist_entry_required\": \"status\", \"code\": \"ENGINE_CALL_FAILED\", \"message\": \"COMSOL status probe failed: JavaWorkerError\"}, \"warnings\": {\"allowlist_entry_required\": \"warnings\", \"code\": \"ENGINE_CALL_FAILED\", \"message\": \"COMSOL warnings probe failed: JavaWorkerError\"}}, \"readable\": true, \"state\": {\"hasError\": false, \"hasWarning\": false, \"problems\": []}}, \"selection\": null, \"status\": \"PARTIAL_FAILURE\", \"tag\": \"p4size\", \"type_id\": \"Size\", \"type_readback\": \"Size\", \"type_source\": \"comsol_api_mesh.49.100 (Table 4-2, Table 4-36)\"}, \"error\": null, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-driver2probe-mesh_size\", \"job_id\": \"59dca68b-ecfb-4a93-97b7-51fa8a057a51\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp9\", \"schema_version\": 1, \"server_instance_id\": \"f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"a8db18b5-ebe0-425e-8381-e02fb43e5cfd\", \"request_hash\": \"733082f3664c77f202088d2e91f18689570969e01c9506d44f2e29f94defabc0\", \"request_id\": \"phase4-driver2probe-mesh_size\", \"revision\": 5, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_call",
+      "sequence": 12,
+      "structuredContent": {
+        "data": {
+          "applied": [
+            {
+              "method": "mesh(...).create(tag, type)",
+              "readback": {
+                "tags": [
+                  "size",
+                  "p4size"
+                ],
+                "type": "Size"
+              },
+              "requested": {
+                "tag": "p4size",
+                "type_id": "Size"
+              },
+              "step": "create"
+            }
+          ],
+          "applied_count": 1,
+          "documented_properties": [
+            "custom",
+            "hauto",
+            "hcurve",
+            "hcurveactive",
+            "hgrad",
+            "hgradactive",
+            "hmax",
+            "hmaxactive",
+            "hmin",
+            "hminactive",
+            "hnarrow",
+            "hnarrowactive",
+            "table"
+          ],
+          "engine_error": null,
+          "execution_state_unknown": false,
+          "failed": [
+            {
+              "error": {
+                "code": "PROPERTY_TYPE_MISMATCH",
+                "message": "property expects float64, received int32"
+              },
+              "execution_state_unknown": false,
+              "partial_change": true,
+              "step": "properties"
+            }
+          ],
+          "failed_count": 1,
+          "feature_properties_readable": true,
+          "isolation_proof": {
+            "api_probe": {
+              "authenticated_api_success": true,
+              "denial_evidence_source": "server_access_log",
+              "loopback_address": "127.0.0.1",
+              "loopback_port": 56389,
+              "nonloopback_address": "192.168.100.152",
+              "nonloopback_api_exception_http_status": null,
+              "nonloopback_port": 56389,
+              "observed_at": "2026-09-20T13:06:11Z",
+              "probe_kind": "comsol_java_api",
+              "server_access_log": {
+                "entries": [
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 403,
+                    "method": "GET",
+                    "peer": "192.168.100.152",
+                    "route": "/webbridge/websocket"
+                  }
+                ],
+                "finished_at": "2026-09-20T13:06:11Z",
+                "inode": 29032287,
+                "java_request_id": "g2-valve-nonloopback-connect",
+                "offset_after": 261,
+                "offset_before": 0,
+                "parsed_nonloopback_entry": {
+                  "http_status": 403,
+                  "method": "GET",
+                  "peer": "192.168.100.152",
+                  "route": "/webbridge/websocket"
+                },
+                "path": "$REPO/PRIVATE_REDACTED/g2-valve-runtime-20260920T130556981606Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-20.txt",
+                "phase": "java_connect_only",
+                "raw_probe_started_after_capture": true,
+                "segment_sha256": "66b96815507dff09377615d715a9647b7c8da0e44a14ba8f74a4e2fafed0d17c",
+                "started_at": "2026-09-20T13:06:07Z",
+                "status": "PASS"
+              }
+            },
+            "birth": "Sun Sep 20 21:05:57 2026",
+            "config_inode": 14720294,
+            "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+            "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+            "endpoint": "127.0.0.1:56389",
+            "established_client_pids": [
+              8586,
+              18388
+            ],
+            "listener": {
+              "endpoint": "*:56389",
+              "local_endpoint": "*:56389",
+              "pid": 8586,
+              "raw": "java     8586 everwalker   59u  IPv6 0x7c08e3aec9d10b78      0t0  TCP *:56389 (LISTEN)",
+              "remote_endpoint": null,
+              "state": "LISTEN"
+            },
+            "listener_binding": "wildcard",
+            "loopback_listener": false,
+            "pid": 8586,
+            "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+            "receipt": "REDACTED",
+            "verified": true,
+            "worker_pid": 18388
+          },
+          "not_executed": [],
+          "not_executed_count": 0,
+          "ok": false,
+          "parent_path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "mesh",
+                "tag": "p4mesh"
+              }
+            ]
+          },
+          "partial_change": true,
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "mesh",
+                "tag": "p4mesh"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4size"
+              }
+            ]
+          },
+          "property_source": "refused",
+          "readback": {
+            "allowlist_entry_required": [
+              "errors",
+              "isBuilt",
+              "message",
+              "status",
+              "warnings"
+            ],
+            "errors": {
+              "errors": {
+                "allowlist_entry_required": "errors",
+                "code": "ENGINE_CALL_FAILED",
+                "message": "COMSOL errors probe failed: JavaWorkerError"
+              },
+              "isBuilt": {
+                "allowlist_entry_required": "isBuilt",
+                "code": "ENGINE_CALL_FAILED",
+                "message": "COMSOL isBuilt probe failed: JavaWorkerError"
+              },
+              "message": {
+                "allowlist_entry_required": "message",
+                "code": "ENGINE_CALL_FAILED",
+                "message": "COMSOL message probe failed: JavaWorkerError"
+              },
+              "status": {
+                "allowlist_entry_required": "status",
+                "code": "ENGINE_CALL_FAILED",
+                "message": "COMSOL status probe failed: JavaWorkerError"
+              },
+              "warnings": {
+                "allowlist_entry_required": "warnings",
+                "code": "ENGINE_CALL_FAILED",
+                "message": "COMSOL warnings probe failed: JavaWorkerError"
+              }
+            },
+            "readable": true,
+            "state": {
+              "hasError": false,
+              "hasWarning": false,
+              "problems": []
+            }
+          },
+          "selection": null,
+          "status": "PARTIAL_FAILURE",
+          "tag": "p4size",
+          "type_id": "Size",
+          "type_readback": "Size",
+          "type_source": "comsol_api_mesh.49.100 (Table 4-2, Table 4-36)"
+        },
+        "error": null,
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-driver2probe-mesh_size",
+          "job_id": "59dca68b-ecfb-4a93-97b7-51fa8a057a51",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp9",
+            "schema_version": 1,
+            "server_instance_id": "f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "a8db18b5-ebe0-425e-8381-e02fb43e5cfd",
+          "request_hash": "733082f3664c77f202088d2e91f18689570969e01c9506d44f2e29f94defabc0",
+          "request_id": "phase4-driver2probe-mesh_size",
+          "revision": 5,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"applied\": [{\"action\": \"create\", \"geometry\": \"p4geom\", \"geometry_length_unit\": \"m\", \"method\": \"physics().create(tag, type_id, geometry)\", \"readback\": {\"geometry\": \"p4geom\", \"tags\": [\"p4ht\"], \"type\": \"HeatTransfer\"}, \"tag\": \"p4ht\", \"type_id\": \"HeatTransfer\"}], \"applied_count\": 1, \"component\": \"comp1\", \"execution_state_unknown\": false, \"failed\": [], \"failed_count\": 0, \"isolation_proof\": {\"api_probe\": {\"authenticated_api_success\": true, \"denial_evidence_source\": \"server_access_log\", \"loopback_address\": \"127.0.0.1\", \"loopback_port\": 56389, \"nonloopback_address\": \"192.168.100.152\", \"nonloopback_api_exception_http_status\": null, \"nonloopback_port\": 56389, \"observed_at\": \"2026-09-20T13:06:11Z\", \"probe_kind\": \"comsol_java_api\", \"server_access_log\": {\"entries\": [{\"http_status\": 101, \"method\": \"GET\", \"peer\": \"127.0.0.1\", \"route\": \"/webbridge/websocket\"}, {\"http_status\": 101, \"method\": \"GET\", \"peer\": \"127.0.0.1\", \"route\": \"/webbridge/websocket\"}, {\"http_status\": 403, \"method\": \"GET\", \"peer\": \"192.168.100.152\", \"route\": \"/webbridge/websocket\"}], \"finished_at\": \"2026-09-20T13:06:11Z\", \"inode\": 29032287, \"java_request_id\": \"g2-valve-nonloopback-connect\", \"offset_after\": 261, \"offset_before\": 0, \"parsed_nonloopback_entry\": {\"http_status\": 403, \"method\": \"GET\", \"peer\": \"192.168.100.152\", \"route\": \"/webbridge/websocket\"}, \"path\": \"$REPO/PRIVATE_REDACTED/g2-valve-runtime-20260920T130556981606Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-20.txt\", \"phase\": \"java_connect_only\", \"raw_probe_started_after_capture\": true, \"segment_sha256\": \"66b96815507dff09377615d715a9647b7c8da0e44a14ba8f74a4e2fafed0d17c\", \"started_at\": \"2026-09-20T13:06:07Z\", \"status\": \"PASS\"}}, \"birth\": \"Sun Sep 20 21:05:57 2026\", \"config_inode\": 14720294, \"config_sha256\": \"1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357\", \"config_target\": \"/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml\", \"endpoint\": \"127.0.0.1:56389\", \"established_client_pids\": [8586, 18388], \"listener\": {\"endpoint\": \"*:56389\", \"local_endpoint\": \"*:56389\", \"pid\": 8586, \"raw\": \"java     8586 everwalker   59u  IPv6 0x7c08e3aec9d10b78      0t0  TCP *:56389 (LISTEN)\", \"remote_endpoint\": null, \"state\": \"LISTEN\"}, \"listener_binding\": \"wildcard\", \"loopback_listener\": false, \"pid\": 8586, \"proof_scope\": \"owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer\", \"receipt\": \"REDACTED\", \"verified\": true, \"worker_pid\": 18388}, \"license_hint\": {\"note\": \"a hint only; physics.create does not allocate a license on its own\", \"products\": [], \"source\": \"base_product\"}, \"not_executed\": [], \"not_executed_count\": 0, \"ok\": true, \"partial_change\": true, \"path\": {\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"physics\", \"tag\": \"p4ht\"}]}, \"scope\": \"component\", \"selection\": {\"dimension\": null, \"entities\": null, \"entities_error\": {\"allowlist_entry_required\": null, \"code\": \"ENGINE_CALL_FAILED\", \"message\": \"COMSOL entities probe failed: JavaWorkerError\"}, \"geometry\": \"p4geom\", \"is_inheriting\": null, \"named\": null, \"named_error\": {\"allowlist_entry_required\": null, \"code\": \"ENGINE_CALL_FAILED\", \"message\": \"COMSOL named probe failed: JavaWorkerError\"}}, \"status\": \"APPLIED\", \"tag\": \"p4ht\", \"type_id\": \"HeatTransfer\", \"type_verified_source\": \"completion_data\"}, \"error\": null, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-driver2probe-physics\", \"job_id\": \"50693730-2c16-4c9d-a152-bc95a0d7820a\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp9\", \"schema_version\": 1, \"server_instance_id\": \"f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"0c3de012-0c8b-462f-b829-1140ab498605\", \"request_hash\": \"d22a0f3e5c2e02c37cde0af7e7fea219170907046987b7bfcebc71aea4c8f159\", \"request_id\": \"phase4-driver2probe-physics\", \"revision\": 6, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_call",
+      "sequence": 13,
+      "structuredContent": {
+        "data": {
+          "applied": [
+            {
+              "action": "create",
+              "geometry": "p4geom",
+              "geometry_length_unit": "m",
+              "method": "physics().create(tag, type_id, geometry)",
+              "readback": {
+                "geometry": "p4geom",
+                "tags": [
+                  "p4ht"
+                ],
+                "type": "HeatTransfer"
+              },
+              "tag": "p4ht",
+              "type_id": "HeatTransfer"
+            }
+          ],
+          "applied_count": 1,
+          "component": "comp1",
+          "execution_state_unknown": false,
+          "failed": [],
+          "failed_count": 0,
+          "isolation_proof": {
+            "api_probe": {
+              "authenticated_api_success": true,
+              "denial_evidence_source": "server_access_log",
+              "loopback_address": "127.0.0.1",
+              "loopback_port": 56389,
+              "nonloopback_address": "192.168.100.152",
+              "nonloopback_api_exception_http_status": null,
+              "nonloopback_port": 56389,
+              "observed_at": "2026-09-20T13:06:11Z",
+              "probe_kind": "comsol_java_api",
+              "server_access_log": {
+                "entries": [
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 403,
+                    "method": "GET",
+                    "peer": "192.168.100.152",
+                    "route": "/webbridge/websocket"
+                  }
+                ],
+                "finished_at": "2026-09-20T13:06:11Z",
+                "inode": 29032287,
+                "java_request_id": "g2-valve-nonloopback-connect",
+                "offset_after": 261,
+                "offset_before": 0,
+                "parsed_nonloopback_entry": {
+                  "http_status": 403,
+                  "method": "GET",
+                  "peer": "192.168.100.152",
+                  "route": "/webbridge/websocket"
+                },
+                "path": "$REPO/PRIVATE_REDACTED/g2-valve-runtime-20260920T130556981606Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-20.txt",
+                "phase": "java_connect_only",
+                "raw_probe_started_after_capture": true,
+                "segment_sha256": "66b96815507dff09377615d715a9647b7c8da0e44a14ba8f74a4e2fafed0d17c",
+                "started_at": "2026-09-20T13:06:07Z",
+                "status": "PASS"
+              }
+            },
+            "birth": "Sun Sep 20 21:05:57 2026",
+            "config_inode": 14720294,
+            "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+            "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+            "endpoint": "127.0.0.1:56389",
+            "established_client_pids": [
+              8586,
+              18388
+            ],
+            "listener": {
+              "endpoint": "*:56389",
+              "local_endpoint": "*:56389",
+              "pid": 8586,
+              "raw": "java     8586 everwalker   59u  IPv6 0x7c08e3aec9d10b78      0t0  TCP *:56389 (LISTEN)",
+              "remote_endpoint": null,
+              "state": "LISTEN"
+            },
+            "listener_binding": "wildcard",
+            "loopback_listener": false,
+            "pid": 8586,
+            "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+            "receipt": "REDACTED",
+            "verified": true,
+            "worker_pid": 18388
+          },
+          "license_hint": {
+            "note": "a hint only; physics.create does not allocate a license on its own",
+            "products": [],
+            "source": "base_product"
+          },
+          "not_executed": [],
+          "not_executed_count": 0,
+          "ok": true,
+          "partial_change": true,
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "physics",
+                "tag": "p4ht"
+              }
+            ]
+          },
+          "scope": "component",
+          "selection": {
+            "dimension": null,
+            "entities": null,
+            "entities_error": {
+              "allowlist_entry_required": null,
+              "code": "ENGINE_CALL_FAILED",
+              "message": "COMSOL entities probe failed: JavaWorkerError"
+            },
+            "geometry": "p4geom",
+            "is_inheriting": null,
+            "named": null,
+            "named_error": {
+              "allowlist_entry_required": null,
+              "code": "ENGINE_CALL_FAILED",
+              "message": "COMSOL named probe failed: JavaWorkerError"
+            }
+          },
+          "status": "APPLIED",
+          "tag": "p4ht",
+          "type_id": "HeatTransfer",
+          "type_verified_source": "completion_data"
+        },
+        "error": null,
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-driver2probe-physics",
+          "job_id": "50693730-2c16-4c9d-a152-bc95a0d7820a",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp9",
+            "schema_version": 1,
+            "server_instance_id": "f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "0c3de012-0c8b-462f-b829-1140ab498605",
+          "request_hash": "d22a0f3e5c2e02c37cde0af7e7fea219170907046987b7bfcebc71aea4c8f159",
+          "request_id": "phase4-driver2probe-physics",
+          "revision": 6,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"applied\": [{\"action\": \"create\", \"entity_dimension\": 2, \"method\": \"feature().create(tag, type_id[, dim])\", \"readback\": {\"tags\": [\"solid1\", \"init1\", \"ins1\", \"idi1\", \"ltneb1\", \"os1\", \"cib1\", \"dcont1\", \"p4temp1\"], \"type\": \"TemperatureBoundary\"}, \"tag\": \"p4temp1\", \"token_source\": \"REDACTED\", \"type_id\": \"TemperatureBoundary\"}, {\"action\": \"set_properties\", \"properties\": [{\"comparison\": {\"matched\": true, \"requested_kind\": \"expression\", \"returned_kind\": \"string\", \"rule\": \"exact_text_expression_string_mapping\"}, \"name\": \"T0\", \"readback\": {\"data\": \"300[K]\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"shape\": []}, \"readback_match\": true, \"value\": {\"data\": \"300[K]\", \"java_signature\": \"java.lang.String\", \"kind\": \"expression\", \"shape\": []}}], \"readback_values\": {\"T0\": {\"data\": \"300[K]\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"shape\": []}}}], \"applied_count\": 2, \"entity_dimension\": 2, \"execution_state_unknown\": false, \"failed\": [], \"failed_count\": 0, \"isolation_proof\": {\"api_probe\": {\"authenticated_api_success\": true, \"denial_evidence_source\": \"server_access_log\", \"loopback_address\": \"127.0.0.1\", \"loopback_port\": 56389, \"nonloopback_address\": \"192.168.100.152\", \"nonloopback_api_exception_http_status\": null, \"nonloopback_port\": 56389, \"observed_at\": \"2026-09-20T13:06:11Z\", \"probe_kind\": \"comsol_java_api\", \"server_access_log\": {\"entries\": [{\"http_status\": 101, \"method\": \"GET\", \"peer\": \"127.0.0.1\", \"route\": \"/webbridge/websocket\"}, {\"http_status\": 101, \"method\": \"GET\", \"peer\": \"127.0.0.1\", \"route\": \"/webbridge/websocket\"}, {\"http_status\": 403, \"method\": \"GET\", \"peer\": \"192.168.100.152\", \"route\": \"/webbridge/websocket\"}], \"finished_at\": \"2026-09-20T13:06:11Z\", \"inode\": 29032287, \"java_request_id\": \"g2-valve-nonloopback-connect\", \"offset_after\": 261, \"offset_before\": 0, \"parsed_nonloopback_entry\": {\"http_status\": 403, \"method\": \"GET\", \"peer\": \"192.168.100.152\", \"route\": \"/webbridge/websocket\"}, \"path\": \"$REPO/PRIVATE_REDACTED/g2-valve-runtime-20260920T130556981606Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-20.txt\", \"phase\": \"java_connect_only\", \"raw_probe_started_after_capture\": true, \"segment_sha256\": \"66b96815507dff09377615d715a9647b7c8da0e44a14ba8f74a4e2fafed0d17c\", \"started_at\": \"2026-09-20T13:06:07Z\", \"status\": \"PASS\"}}, \"birth\": \"Sun Sep 20 21:05:57 2026\", \"config_inode\": 14720294, \"config_sha256\": \"1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357\", \"config_target\": \"/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml\", \"endpoint\": \"127.0.0.1:56389\", \"established_client_pids\": [8586, 18388], \"listener\": {\"endpoint\": \"*:56389\", \"local_endpoint\": \"*:56389\", \"pid\": 8586, \"raw\": \"java     8586 everwalker   59u  IPv6 0x7c08e3aec9d10b78      0t0  TCP *:56389 (LISTEN)\", \"remote_endpoint\": null, \"state\": \"LISTEN\"}, \"listener_binding\": \"wildcard\", \"loopback_listener\": false, \"pid\": 8586, \"proof_scope\": \"owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer\", \"receipt\": \"REDACTED\", \"verified\": true, \"worker_pid\": 18388}, \"not_executed\": [], \"not_executed_count\": 0, \"ok\": true, \"parent_path\": {\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"physics\", \"tag\": \"p4ht\"}]}, \"partial_change\": true, \"path\": {\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"physics\", \"tag\": \"p4ht\"}, {\"collection\": \"feature\", \"tag\": \"p4temp1\"}]}, \"selection\": {\"dimension\": null, \"entities\": null, \"entities_error\": {\"allowlist_entry_required\": null, \"code\": \"ENGINE_CALL_FAILED\", \"message\": \"COMSOL entities probe failed: JavaWorkerError\"}, \"geometry\": null, \"is_inheriting\": null, \"named\": null, \"named_error\": {\"allowlist_entry_required\": null, \"code\": \"ENGINE_CALL_FAILED\", \"message\": \"COMSOL named probe failed: JavaWorkerError\"}}, \"status\": \"APPLIED\", \"tag\": \"p4temp1\", \"type_id\": \"TemperatureBoundary\"}, \"error\": null, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-driver2probe-temperature\", \"job_id\": \"36816dbc-aec9-46e6-95fe-55c17e97a8bb\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp9\", \"schema_version\": 1, \"server_instance_id\": \"f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"b0f04e41-d238-47e3-aefd-44d3ec785a7b\", \"request_hash\": \"1cbbe7ec66737ba8220c3e75c1a03f6df5a694e237ac048474fc511076f57935\", \"request_id\": \"phase4-driver2probe-temperature\", \"revision\": 7, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_call",
+      "sequence": 14,
+      "structuredContent": {
+        "data": {
+          "applied": [
+            {
+              "action": "create",
+              "entity_dimension": 2,
+              "method": "feature().create(tag, type_id[, dim])",
+              "readback": {
+                "tags": [
+                  "solid1",
+                  "init1",
+                  "ins1",
+                  "idi1",
+                  "ltneb1",
+                  "os1",
+                  "cib1",
+                  "dcont1",
+                  "p4temp1"
+                ],
+                "type": "TemperatureBoundary"
+              },
+              "tag": "p4temp1",
+              "token_source": "REDACTED",
+              "type_id": "TemperatureBoundary"
+            },
+            {
+              "action": "set_properties",
+              "properties": [
+                {
+                  "comparison": {
+                    "matched": true,
+                    "requested_kind": "expression",
+                    "returned_kind": "string",
+                    "rule": "exact_text_expression_string_mapping"
+                  },
+                  "name": "T0",
+                  "readback": {
+                    "data": "300[K]",
+                    "java_signature": "java.lang.String",
+                    "kind": "string",
+                    "shape": []
+                  },
+                  "readback_match": true,
+                  "value": {
+                    "data": "300[K]",
+                    "java_signature": "java.lang.String",
+                    "kind": "expression",
+                    "shape": []
+                  }
+                }
+              ],
+              "readback_values": {
+                "T0": {
+                  "data": "300[K]",
+                  "java_signature": "java.lang.String",
+                  "kind": "string",
+                  "shape": []
+                }
+              }
+            }
+          ],
+          "applied_count": 2,
+          "entity_dimension": 2,
+          "execution_state_unknown": false,
+          "failed": [],
+          "failed_count": 0,
+          "isolation_proof": {
+            "api_probe": {
+              "authenticated_api_success": true,
+              "denial_evidence_source": "server_access_log",
+              "loopback_address": "127.0.0.1",
+              "loopback_port": 56389,
+              "nonloopback_address": "192.168.100.152",
+              "nonloopback_api_exception_http_status": null,
+              "nonloopback_port": 56389,
+              "observed_at": "2026-09-20T13:06:11Z",
+              "probe_kind": "comsol_java_api",
+              "server_access_log": {
+                "entries": [
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 403,
+                    "method": "GET",
+                    "peer": "192.168.100.152",
+                    "route": "/webbridge/websocket"
+                  }
+                ],
+                "finished_at": "2026-09-20T13:06:11Z",
+                "inode": 29032287,
+                "java_request_id": "g2-valve-nonloopback-connect",
+                "offset_after": 261,
+                "offset_before": 0,
+                "parsed_nonloopback_entry": {
+                  "http_status": 403,
+                  "method": "GET",
+                  "peer": "192.168.100.152",
+                  "route": "/webbridge/websocket"
+                },
+                "path": "$REPO/PRIVATE_REDACTED/g2-valve-runtime-20260920T130556981606Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-20.txt",
+                "phase": "java_connect_only",
+                "raw_probe_started_after_capture": true,
+                "segment_sha256": "66b96815507dff09377615d715a9647b7c8da0e44a14ba8f74a4e2fafed0d17c",
+                "started_at": "2026-09-20T13:06:07Z",
+                "status": "PASS"
+              }
+            },
+            "birth": "Sun Sep 20 21:05:57 2026",
+            "config_inode": 14720294,
+            "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+            "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+            "endpoint": "127.0.0.1:56389",
+            "established_client_pids": [
+              8586,
+              18388
+            ],
+            "listener": {
+              "endpoint": "*:56389",
+              "local_endpoint": "*:56389",
+              "pid": 8586,
+              "raw": "java     8586 everwalker   59u  IPv6 0x7c08e3aec9d10b78      0t0  TCP *:56389 (LISTEN)",
+              "remote_endpoint": null,
+              "state": "LISTEN"
+            },
+            "listener_binding": "wildcard",
+            "loopback_listener": false,
+            "pid": 8586,
+            "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+            "receipt": "REDACTED",
+            "verified": true,
+            "worker_pid": 18388
+          },
+          "not_executed": [],
+          "not_executed_count": 0,
+          "ok": true,
+          "parent_path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "physics",
+                "tag": "p4ht"
+              }
+            ]
+          },
+          "partial_change": true,
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "physics",
+                "tag": "p4ht"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4temp1"
+              }
+            ]
+          },
+          "selection": {
+            "dimension": null,
+            "entities": null,
+            "entities_error": {
+              "allowlist_entry_required": null,
+              "code": "ENGINE_CALL_FAILED",
+              "message": "COMSOL entities probe failed: JavaWorkerError"
+            },
+            "geometry": null,
+            "is_inheriting": null,
+            "named": null,
+            "named_error": {
+              "allowlist_entry_required": null,
+              "code": "ENGINE_CALL_FAILED",
+              "message": "COMSOL named probe failed: JavaWorkerError"
+            }
+          },
+          "status": "APPLIED",
+          "tag": "p4temp1",
+          "type_id": "TemperatureBoundary"
+        },
+        "error": null,
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-driver2probe-temperature",
+          "job_id": "36816dbc-aec9-46e6-95fe-55c17e97a8bb",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp9",
+            "schema_version": 1,
+            "server_instance_id": "f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "b0f04e41-d238-47e3-aefd-44d3ec785a7b",
+          "request_hash": "1cbbe7ec66737ba8220c3e75c1a03f6df5a694e237ac048474fc511076f57935",
+          "request_id": "phase4-driver2probe-temperature",
+          "revision": 7,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"applied\": [{\"action\": \"create\", \"method\": \"material().create\", \"readback\": {\"tags\": [\"p4mat\"], \"type\": \"Common\"}, \"tag\": \"p4mat\", \"type_id\": \"Common\"}], \"applied_count\": 1, \"component\": \"comp1\", \"execution_state_unknown\": false, \"failed\": [{\"action\": \"set_properties\", \"error\": {\"code\": \"API_UNSUPPORTED\", \"message\": \"definition.properties[def] property 'thermalconductivity' does not exist on this COMSOL node (hasProperty() is false); this layer never creates an unknown material/physics property\"}, \"execution_state_unknown\": false, \"group\": \"def\", \"partial_change\": true, \"property\": null, \"requested_properties\": [\"thermalconductivity\", \"density\", \"heatcapacity\"]}], \"failed_count\": 1, \"isolation_proof\": {\"api_probe\": {\"authenticated_api_success\": true, \"denial_evidence_source\": \"server_access_log\", \"loopback_address\": \"127.0.0.1\", \"loopback_port\": 56389, \"nonloopback_address\": \"192.168.100.152\", \"nonloopback_api_exception_http_status\": null, \"nonloopback_port\": 56389, \"observed_at\": \"2026-09-20T13:06:11Z\", \"probe_kind\": \"comsol_java_api\", \"server_access_log\": {\"entries\": [{\"http_status\": 101, \"method\": \"GET\", \"peer\": \"127.0.0.1\", \"route\": \"/webbridge/websocket\"}, {\"http_status\": 101, \"method\": \"GET\", \"peer\": \"127.0.0.1\", \"route\": \"/webbridge/websocket\"}, {\"http_status\": 403, \"method\": \"GET\", \"peer\": \"192.168.100.152\", \"route\": \"/webbridge/websocket\"}], \"finished_at\": \"2026-09-20T13:06:11Z\", \"inode\": 29032287, \"java_request_id\": \"g2-valve-nonloopback-connect\", \"offset_after\": 261, \"offset_before\": 0, \"parsed_nonloopback_entry\": {\"http_status\": 403, \"method\": \"GET\", \"peer\": \"192.168.100.152\", \"route\": \"/webbridge/websocket\"}, \"path\": \"$REPO/PRIVATE_REDACTED/g2-valve-runtime-20260920T130556981606Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-20.txt\", \"phase\": \"java_connect_only\", \"raw_probe_started_after_capture\": true, \"segment_sha256\": \"66b96815507dff09377615d715a9647b7c8da0e44a14ba8f74a4e2fafed0d17c\", \"started_at\": \"2026-09-20T13:06:07Z\", \"status\": \"PASS\"}}, \"birth\": \"Sun Sep 20 21:05:57 2026\", \"config_inode\": 14720294, \"config_sha256\": \"1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357\", \"config_target\": \"/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml\", \"endpoint\": \"127.0.0.1:56389\", \"established_client_pids\": [8586, 18388], \"listener\": {\"endpoint\": \"*:56389\", \"local_endpoint\": \"*:56389\", \"pid\": 8586, \"raw\": \"java     8586 everwalker   59u  IPv6 0x7c08e3aec9d10b78      0t0  TCP *:56389 (LISTEN)\", \"remote_endpoint\": null, \"state\": \"LISTEN\"}, \"listener_binding\": \"wildcard\", \"loopback_listener\": false, \"pid\": 8586, \"proof_scope\": \"owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer\", \"receipt\": \"REDACTED\", \"verified\": true, \"worker_pid\": 18388}, \"license_hint\": {\"note\": \"a hint only: the authoritative check is the model's own used-product list\", \"products\": [], \"source\": \"base_product\"}, \"not_executed\": [], \"not_executed_count\": 0, \"ok\": false, \"partial_change\": true, \"path\": {\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"material\", \"tag\": \"p4mat\"}]}, \"readback\": {\"property_groups\": [\"def\"], \"tags\": [\"p4mat\"], \"type\": \"Common\"}, \"scope\": \"component\", \"status\": \"PARTIAL_FAILURE\", \"tag\": \"p4mat\", \"type_id\": \"Common\", \"type_verified_source\": \"Programming Reference p.148\"}, \"error\": null, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-driver2probe-material\", \"job_id\": \"8a10a665-44d7-435c-9078-758454901f18\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp9\", \"schema_version\": 1, \"server_instance_id\": \"f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"1864e3b5-c186-480b-b2ea-2aa718740fe2\", \"request_hash\": \"2b29533183582e3ad9a92b5016132bc7dc883d3e4d89cdc97804e6bed451b49e\", \"request_id\": \"phase4-driver2probe-material\", \"revision\": 8, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_call",
+      "sequence": 15,
+      "structuredContent": {
+        "data": {
+          "applied": [
+            {
+              "action": "create",
+              "method": "material().create",
+              "readback": {
+                "tags": [
+                  "p4mat"
+                ],
+                "type": "Common"
+              },
+              "tag": "p4mat",
+              "type_id": "Common"
+            }
+          ],
+          "applied_count": 1,
+          "component": "comp1",
+          "execution_state_unknown": false,
+          "failed": [
+            {
+              "action": "set_properties",
+              "error": {
+                "code": "API_UNSUPPORTED",
+                "message": "definition.properties[def] property 'thermalconductivity' does not exist on this COMSOL node (hasProperty() is false); this layer never creates an unknown material/physics property"
+              },
+              "execution_state_unknown": false,
+              "group": "def",
+              "partial_change": true,
+              "property": null,
+              "requested_properties": [
+                "thermalconductivity",
+                "density",
+                "heatcapacity"
+              ]
+            }
+          ],
+          "failed_count": 1,
+          "isolation_proof": {
+            "api_probe": {
+              "authenticated_api_success": true,
+              "denial_evidence_source": "server_access_log",
+              "loopback_address": "127.0.0.1",
+              "loopback_port": 56389,
+              "nonloopback_address": "192.168.100.152",
+              "nonloopback_api_exception_http_status": null,
+              "nonloopback_port": 56389,
+              "observed_at": "2026-09-20T13:06:11Z",
+              "probe_kind": "comsol_java_api",
+              "server_access_log": {
+                "entries": [
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 403,
+                    "method": "GET",
+                    "peer": "192.168.100.152",
+                    "route": "/webbridge/websocket"
+                  }
+                ],
+                "finished_at": "2026-09-20T13:06:11Z",
+                "inode": 29032287,
+                "java_request_id": "g2-valve-nonloopback-connect",
+                "offset_after": 261,
+                "offset_before": 0,
+                "parsed_nonloopback_entry": {
+                  "http_status": 403,
+                  "method": "GET",
+                  "peer": "192.168.100.152",
+                  "route": "/webbridge/websocket"
+                },
+                "path": "$REPO/PRIVATE_REDACTED/g2-valve-runtime-20260920T130556981606Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-20.txt",
+                "phase": "java_connect_only",
+                "raw_probe_started_after_capture": true,
+                "segment_sha256": "66b96815507dff09377615d715a9647b7c8da0e44a14ba8f74a4e2fafed0d17c",
+                "started_at": "2026-09-20T13:06:07Z",
+                "status": "PASS"
+              }
+            },
+            "birth": "Sun Sep 20 21:05:57 2026",
+            "config_inode": 14720294,
+            "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+            "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+            "endpoint": "127.0.0.1:56389",
+            "established_client_pids": [
+              8586,
+              18388
+            ],
+            "listener": {
+              "endpoint": "*:56389",
+              "local_endpoint": "*:56389",
+              "pid": 8586,
+              "raw": "java     8586 everwalker   59u  IPv6 0x7c08e3aec9d10b78      0t0  TCP *:56389 (LISTEN)",
+              "remote_endpoint": null,
+              "state": "LISTEN"
+            },
+            "listener_binding": "wildcard",
+            "loopback_listener": false,
+            "pid": 8586,
+            "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+            "receipt": "REDACTED",
+            "verified": true,
+            "worker_pid": 18388
+          },
+          "license_hint": {
+            "note": "a hint only: the authoritative check is the model's own used-product list",
+            "products": [],
+            "source": "base_product"
+          },
+          "not_executed": [],
+          "not_executed_count": 0,
+          "ok": false,
+          "partial_change": true,
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "material",
+                "tag": "p4mat"
+              }
+            ]
+          },
+          "readback": {
+            "property_groups": [
+              "def"
+            ],
+            "tags": [
+              "p4mat"
+            ],
+            "type": "Common"
+          },
+          "scope": "component",
+          "status": "PARTIAL_FAILURE",
+          "tag": "p4mat",
+          "type_id": "Common",
+          "type_verified_source": "Programming Reference p.148"
+        },
+        "error": null,
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-driver2probe-material",
+          "job_id": "8a10a665-44d7-435c-9078-758454901f18",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp9",
+            "schema_version": 1,
+            "server_instance_id": "f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "1864e3b5-c186-480b-b2ea-2aa718740fe2",
+          "request_hash": "2b29533183582e3ad9a92b5016132bc7dc883d3e4d89cdc97804e6bed451b49e",
+          "request_id": "phase4-driver2probe-material",
+          "revision": 8,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"properties\": []}, \"error\": null, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-driver2probe-group-schema\", \"job_id\": \"ea2eeacc-1701-4b19-9c9c-b31f2377c45e\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp9\", \"schema_version\": 1, \"server_instance_id\": \"f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"0ad20ff0-3499-4851-8644-5a298beff920\", \"request_hash\": \"b21f71d8813699f7a195ba38cabf04e2fafb78f24e91cd631c6178724ac3bb30\", \"request_id\": \"phase4-driver2probe-group-schema\", \"revision\": 8, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_call",
+      "sequence": 16,
+      "structuredContent": {
+        "data": {
+          "properties": []
+        },
+        "error": null,
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-driver2probe-group-schema",
+          "job_id": "ea2eeacc-1701-4b19-9c9c-b31f2377c45e",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp9",
+            "schema_version": 1,
+            "server_instance_id": "f790fe276a16b991c849fb335e7aac3a11a4b12264c3f2a704b68cd313c9c98f",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "0ad20ff0-3499-4851-8644-5a298beff920",
+          "request_hash": "b21f71d8813699f7a195ba38cabf04e2fafb78f24e91cd631c6178724ac3bb30",
+          "request_id": "phase4-driver2probe-group-schema",
+          "revision": 8,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"IDEMPOTENCY_CONFLICT\", \"message\": \"idempotency key was reused with a different request body\", \"safe_retry\": false}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "IDEMPOTENCY_CONFLICT",
+      "error_message": "idempotency key was reused with a different request body",
+      "operation": "operation_call",
+      "sequence": 17,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "IDEMPOTENCY_CONFLICT",
+          "message": "idempotency key was reused with a different request body",
+          "safe_retry": false
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"IDEMPOTENCY_CONFLICT\", \"message\": \"idempotency key was reused with a different request body\", \"safe_retry\": false}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "IDEMPOTENCY_CONFLICT",
+      "error_message": "idempotency key was reused with a different request body",
+      "operation": "operation_call",
+      "sequence": 18,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "IDEMPOTENCY_CONFLICT",
+          "message": "idempotency key was reused with a different request body",
+          "safe_retry": false
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"IDEMPOTENCY_CONFLICT\", \"message\": \"idempotency key was reused with a different request body\", \"safe_retry\": false}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "IDEMPOTENCY_CONFLICT",
+      "error_message": "idempotency key was reused with a different request body",
+      "operation": "operation_call",
+      "sequence": 19,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "IDEMPOTENCY_CONFLICT",
+          "message": "idempotency key was reused with a different request body",
+          "safe_retry": false
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"IDEMPOTENCY_CONFLICT\", \"message\": \"idempotency key was reused with a different request body\", \"safe_retry\": false}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "IDEMPOTENCY_CONFLICT",
+      "error_message": "idempotency key was reused with a different request body",
+      "operation": "operation_call",
+      "sequence": 20,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "IDEMPOTENCY_CONFLICT",
+          "message": "idempotency key was reused with a different request body",
+          "safe_retry": false
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"IDEMPOTENCY_CONFLICT\", \"message\": \"idempotency key was reused with a different request body\", \"safe_retry\": false}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "IDEMPOTENCY_CONFLICT",
+      "error_message": "idempotency key was reused with a different request body",
+      "operation": "operation_call",
+      "sequence": 21,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "IDEMPOTENCY_CONFLICT",
+          "message": "idempotency key was reused with a different request body",
+          "safe_retry": false
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"IDEMPOTENCY_CONFLICT\", \"message\": \"idempotency key was reused with a different request body\", \"safe_retry\": false}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "IDEMPOTENCY_CONFLICT",
+      "error_message": "idempotency key was reused with a different request body",
+      "operation": "operation_call",
+      "sequence": 22,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "IDEMPOTENCY_CONFLICT",
+          "message": "idempotency key was reused with a different request body",
+          "safe_retry": false
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"IDEMPOTENCY_CONFLICT\", \"message\": \"idempotency key was reused with a different request body\", \"safe_retry\": false}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "IDEMPOTENCY_CONFLICT",
+      "error_message": "idempotency key was reused with a different request body",
+      "operation": "operation_call",
+      "sequence": 23,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "IDEMPOTENCY_CONFLICT",
+          "message": "idempotency key was reused with a different request body",
+          "safe_retry": false
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"IDEMPOTENCY_CONFLICT\", \"message\": \"idempotency key was reused with a different request body\", \"safe_retry\": false}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "IDEMPOTENCY_CONFLICT",
+      "error_message": "idempotency key was reused with a different request body",
+      "operation": "operation_call",
+      "sequence": 24,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "IDEMPOTENCY_CONFLICT",
+          "message": "idempotency key was reused with a different request body",
+          "safe_retry": false
+        },
+        "success": false
+      },
+      "success": false
+    }
+  ]
+}

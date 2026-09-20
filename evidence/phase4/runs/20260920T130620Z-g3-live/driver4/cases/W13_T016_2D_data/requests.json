@@ -1,0 +1,120 @@
+{
+  "case_id": "W13_T016_2D_data",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver4phase4-describe-function-create",
+          "request_id": "phase4-driver4phase4-describe-function-create"
+        },
+        "operation_id": "function.create"
+      },
+      "elapsed_s": 0.003010124957654625,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver4phase4-describe-function-data_import",
+          "request_id": "phase4-driver4phase4-describe-function-data_import"
+        },
+        "operation_id": "function.data_import"
+      },
+      "elapsed_s": 0.003639875038061291,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver4phase4-describe-function-inspect",
+          "request_id": "phase4-driver4phase4-describe-function-inspect"
+        },
+        "operation_id": "function.inspect"
+      },
+      "elapsed_s": 0.003430958022363484,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver4phase4-describe-function-evaluate",
+          "request_id": "phase4-driver4phase4-describe-function-evaluate"
+        },
+        "operation_id": "function.evaluate"
+      },
+      "elapsed_s": 0.004295125021599233,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "definition": {
+            "data_unit": "W/m^2",
+            "extrapolation": "none",
+            "interpolation": "linear"
+          },
+          "expected_revision": 12,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "832a93e9eb6d6949fb0947f5b3aca2ba37a8c13fe3d010982b98f7ae36bc9acc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "int1",
+          "type_id": "Interpolation"
+        },
+        "execution": {
+          "expected_revision": 12,
+          "idempotency_key": "phase4-driver4two_d_interpolation_angular_difference_preserved",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "832a93e9eb6d6949fb0947f5b3aca2ba37a8c13fe3d010982b98f7ae36bc9acc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver4two_d_interpolation_angular_difference_preserved",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "function.create"
+      },
+      "elapsed_s": 0.06340825004735962,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 5
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 12,
+          "idempotency_key": "phase4-driver4phase4-reconcile-model-phase4",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "832a93e9eb6d6949fb0947f5b3aca2ba37a8c13fe3d010982b98f7ae36bc9acc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver4phase4-reconcile-model-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.0030768340220674872,
+      "operation": "model_inspect",
+      "outer_isError": true,
+      "sequence": 6
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "api_route": "/webbridge/websocket",
+  "config_change": "documented localhost RemoteAddrValve only",
+  "content_sha256_at_failure": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+  "credentials": "not_recorded",
+  "failure": "GuardError",
+  "failure_reason": "server.xml provenance value is not the recorded task residual",
+  "global_firewall_changes": false,
+  "metadata_residual": {
+    "name": "com.apple.provenance",
+    "original_xattrs": [
+      "com.apple.provenance"
+    ],
+    "preserved_in_place": true,
+    "source": "introduced by the first in-place write to the active webbridge server.xml during the approved lifecycle; xattr removal returned EPERM",
+    "value_length": 11,
+    "value_sha256": "e2c0d6ae2c81b5eeb02d1c6e0fd7e40ae224dac6a79cba36c138ef26cc6ed0be"
+  },
+  "model_operations": "NOT_RUN",
+  "original_sha256": "95478d7624e778c694c714d9215797c0c0076fd707a4eedf2bedbaa6bafe6625",
+  "port": 56389,
+  "proposed_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+  "public_evidence": "evidence/phase3/mac_owned_runtime/g2-valve-runtime-20260920T130331119094Z.json",
+  "restore_error": "GuardError: server.xml provenance value is not the recorded task residual",
+  "restored": false,
+  "run_dir": ".phase1-private/g2-valve-runtime-20260920T130331119094Z",
+  "run_id": "g2-valve-runtime-20260920T130331119094Z",
+  "schema_version": 2,
+  "solve_operations": "NOT_RUN",
+  "source_sha256": {
+    "comsol_mcp/_g2_isolation.py": "363c4d890a2862671595f88e40a7dbdba1efae1a14a78005f10333e40ec3e5dd",
+    "tools/phase3_owned_runtime.py": "1668ad31ffc640646b05373c2de308709aeafe82c6506ae2765285b1d5446e99",
+    "tools/phase3_remote_addr_valve_runtime.py": "447262bf00c1a260a8ddbcf1d49667e1616a20d6ef9cc7c700de4d1306dd3df2"
+  },
+  "status": "FAIL",
+  "windows_probe": "NOT_RUN"
+}

@@ -1,0 +1,185 @@
+{
+  "case_id": "W15_T017_material",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver4phase4-describe-material-create",
+          "request_id": "phase4-driver4phase4-describe-material-create"
+        },
+        "operation_id": "material.create"
+      },
+      "elapsed_s": 0.0027733329916372895,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver4phase4-describe-material-set_properties",
+          "request_id": "phase4-driver4phase4-describe-material-set_properties"
+        },
+        "operation_id": "material.set_properties"
+      },
+      "elapsed_s": 0.002070499991532415,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver4phase4-describe-material-validate",
+          "request_id": "phase4-driver4phase4-describe-material-validate"
+        },
+        "operation_id": "material.validate"
+      },
+      "elapsed_s": 0.0020431249868124723,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver4phase4-describe-material-selection_set",
+          "request_id": "phase4-driver4phase4-describe-material-selection_set"
+        },
+        "operation_id": "material.selection_set"
+      },
+      "elapsed_s": 0.001891916966997087,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver4phase4-describe-node-property_get",
+          "request_id": "phase4-driver4phase4-describe-node-property_get"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.002312875003553927,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 5
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 13,
+          "group": "def",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "832a93e9eb6d6949fb0947f5b3aca2ba37a8c13fe3d010982b98f7ae36bc9acc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "material",
+                "tag": "p4mat"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "properties": [
+            {
+              "name": "thermalconductivity",
+              "value": {
+                "data": [
+                  [
+                    "10[W/(m*K)]",
+                    "0",
+                    "0"
+                  ],
+                  [
+                    "0",
+                    "10[W/(m*K)]",
+                    "0"
+                  ],
+                  [
+                    "0",
+                    "0",
+                    "10[W/(m*K)]"
+                  ]
+                ],
+                "kind": "expression",
+                "shape": [
+                  3,
+                  3
+                ],
+                "unit": "W/(m*K)"
+              }
+            },
+            {
+              "name": "density",
+              "value": {
+                "data": "7850[kg/m^3]",
+                "kind": "expression",
+                "shape": []
+              }
+            },
+            {
+              "name": "heatcapacity",
+              "value": {
+                "data": "500[J/(kg*K)]+0.1[J/(kg*K^2)]*(T-293.15[K])",
+                "kind": "expression",
+                "shape": []
+              }
+            }
+          ],
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 13,
+          "idempotency_key": "phase4-driver4k_T_Cp_T_and_rho_expressions",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "832a93e9eb6d6949fb0947f5b3aca2ba37a8c13fe3d010982b98f7ae36bc9acc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver4k_T_Cp_T_and_rho_expressions",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "material.set_properties"
+      },
+      "elapsed_s": 0.0384451660211198,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 6
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 13,
+          "idempotency_key": "phase4-driver4phase4-reconcile-model-phase4",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "832a93e9eb6d6949fb0947f5b3aca2ba37a8c13fe3d010982b98f7ae36bc9acc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver4phase4-reconcile-model-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.0024719160282984376,
+      "operation": "model_inspect",
+      "outer_isError": true,
+      "sequence": 7
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "recorded_at": "2026-09-20T00:00:00+08:00",
+  "user_reply": "批准：按与 G2 完全相同的最小范围复用（启用注释块→任务自有 Server→验收后停止并恢复原文件/hash；不含防火墙、共享 Server、其他文件）",
+  "approved_question_scope": "Temporarily enable the reviewed localhost RemoteAddrValve in the active bin/servers/webbridge/conf/server.xml for the G3 (R01-R06 + W13-W16) live acceptance, start a task-owned Server, then stop and restore original bytes/hash.",
+  "goal": "docs/comsol_mcp_design_v1/NEXT_GOAL_MAC_G3.md",
+  "baseline_head": "1c6a5e982742b6c1a92054409383fbfbbc56658e",
+  "target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+  "original_sha256": "95478d7624e778c694c714d9215797c0c0076fd707a4eedf2bedbaa6bafe6625",
+  "approved_applied_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+  "prepared_proposal": ".phase1-private/g2-valve-proposal-webbridge-20260919T232153Z/server.remote_addr_valve.xml",
+  "excluded": [
+    "PF/firewall changes",
+    "Windows integration",
+    "W17",
+    "unrelated process termination",
+    "shared Server modification"
+  ],
+  "model_operations": "Permitted by the G3 goal only after verified owned-runtime isolation",
+  "status": "AUTHORIZED_VALIDATION_PENDING"
+}

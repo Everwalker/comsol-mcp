@@ -71,6 +71,16 @@ def test_webbridge_restore_uses_recorded_target_and_metadata_snapshot(tmp_path: 
     target = tmp_path / "server.xml"
     target.write_bytes(proposed)
     metadata = runtime.base._file_metadata(target)
+    residual = metadata.get("xattr_values", {}).get(runtime.base.KNOWN_RESIDUAL_XATTR_NAME)
+    if isinstance(residual, dict) and residual.get("hex") != runtime.base.KNOWN_RESIDUAL_XATTR_HEX:
+        # Some hosts stamp every newly created file with an unremovable
+        # ``com.apple.provenance`` value whose tail differs per creator
+        # process, so a fixture can never reproduce the pinned residual of the
+        # installed file.  Pin the observed value for this fixture snapshot
+        # only; the fail-closed policy itself is covered by
+        # test_webbridge_metadata_guard_rejects_unapproved_provenance_value.
+        monkeypatch.setattr(runtime.base, "KNOWN_RESIDUAL_XATTR_HEX", residual["hex"])
+        monkeypatch.setattr(runtime.base, "KNOWN_RESIDUAL_XATTR_SHA256", residual["sha256"])
     monkeypatch.setattr(runtime, "SERVER_XML", target)
     receipt = {
         "config": {
@@ -112,9 +122,33 @@ def test_webbridge_metadata_guard_preserves_known_provenance_residual():
 
     runtime._assert_webbridge_metadata(observed, expected)
 
-    observed["xattr_values"][runtime.base.KNOWN_RESIDUAL_XATTR_NAME]["sha256"] = "bad"
+    # A token outside the recorded family is refused; a re-minted member of the
+    # family is accepted (and recorded by the receipts).
+    observed["xattr_values"][runtime.base.KNOWN_RESIDUAL_XATTR_NAME] = {
+        "hex": "deadbeef", "length": 4, "sha256": "0" * 64,
+    }
     with pytest.raises((runtime.GuardError, runtime.base.GuardError), match="xattrs|provenance"):
         runtime._assert_webbridge_metadata(observed, expected)
+
+
+def test_webbridge_metadata_guard_rejects_unapproved_provenance_value():
+    """The in-place update policy stays fail-closed for any other xattr value."""
+    metadata = {
+        "uid": 501,
+        "gid": 80,
+        "mode": 0o755,
+        "xattrs": [runtime.base.KNOWN_RESIDUAL_XATTR_NAME],
+        "xattr_values": {
+            runtime.base.KNOWN_RESIDUAL_XATTR_NAME: {
+                "hex": "010200ffffffffffff",
+                "length": 10,
+                "sha256": "0" * 64,
+            }
+        },
+        "acl_entries": [],
+    }
+    with pytest.raises(runtime.base.GuardError, match="provenance"):
+        runtime.base._assert_approved_target_metadata(metadata)
 
 
 def test_authenticated_socket_pair_requires_exact_loopback_bidirectional_pair():

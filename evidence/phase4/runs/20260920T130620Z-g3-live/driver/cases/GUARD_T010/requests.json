@@ -1,0 +1,164 @@
+{
+  "case_id": "GUARD_T010",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driverphase4-describe-node-property_set",
+          "request_id": "phase4-driverphase4-describe-node-property_set"
+        },
+        "operation_id": "node.property_set"
+      },
+      "elapsed_s": 0.002053332980722189,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driverphase4-describe-transaction-apply",
+          "request_id": "phase4-driverphase4-describe-transaction-apply"
+        },
+        "operation_id": "transaction.apply"
+      },
+      "elapsed_s": 0.002195708977524191,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driverphase4-describe-create_feature",
+          "request_id": "phase4-driverphase4-describe-create_feature"
+        },
+        "operation_id": "create_feature"
+      },
+      "elapsed_s": 0.0020765000372193754,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 1,
+          "limit": 200,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp8",
+            "schema_version": 1,
+            "server_instance_id": "b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "query": {},
+          "root": {
+            "segments": []
+          },
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 1,
+          "idempotency_key": "phase4-driverphase4-find-all",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp8",
+            "schema_version": 1,
+            "server_instance_id": "b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driverphase4-find-all",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.find"
+      },
+      "elapsed_s": 0.0017836670158430934,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "add_to_main": false,
+        "component": "comp1",
+        "execution": {
+          "expected_revision": 1,
+          "idempotency_key": "phase4-driversame_tag_same_type_duplicate_rejected_or_idempotent",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp8",
+            "schema_version": 1,
+            "server_instance_id": "b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driversame_tag_same_type_duplicate_rejected_or_idempotent",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "expected_revision": 1,
+        "feature_type": "Rectangle",
+        "geometry": "geom1",
+        "model_ref": {
+          "generation": 1,
+          "model_tag": "mcp8",
+          "schema_version": 1,
+          "server_instance_id": "b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "project_id": "comsol-mcp-phase4",
+        "properties": {
+          "size": [
+            "0.001",
+            "0.001"
+          ]
+        },
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "tag": "phase4_dup_probe"
+      },
+      "elapsed_s": 0.0023263340117409825,
+      "operation": "create_feature",
+      "outer_isError": true,
+      "sequence": 5
+    },
+    {
+      "arguments": {
+        "add_to_main": false,
+        "component": "comp1",
+        "execution": {
+          "expected_revision": 1,
+          "idempotency_key": "phase4-driversame_tag_different_type_rejected",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp8",
+            "schema_version": 1,
+            "server_instance_id": "b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driversame_tag_different_type_rejected",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "expected_revision": 1,
+        "feature_type": "Circle",
+        "geometry": "geom1",
+        "model_ref": {
+          "generation": 1,
+          "model_tag": "mcp8",
+          "schema_version": 1,
+          "server_instance_id": "b4b51130017f71181649a06026cae57bfb3fa9a64a5d0959df76cdccd70a0d32",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "project_id": "comsol-mcp-phase4",
+        "properties": {
+          "r": "0.001"
+        },
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "tag": "phase4_dup_probe"
+      },
+      "elapsed_s": 0.0021780839888378978,
+      "operation": "create_feature",
+      "outer_isError": true,
+      "sequence": 6
+    }
+  ]
+}

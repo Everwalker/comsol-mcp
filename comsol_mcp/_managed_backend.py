@@ -15,16 +15,43 @@ from ._execution_contract import ExecutionContractError, SessionLedger, model_re
 from ._execution_service import ExecutionService
 from ._runtime_state import save_runtime_state, restore_runtime_state
 from ._g2_docs import OfflineDocsIndex
-from ._g2_registry import IMPLEMENTED_OPERATIONS, LEGACY_FALLBACK_NAMES, validate_call
+from ._g2_registry import IMPLEMENTED_OPERATIONS, LEGACY_FALLBACK_NAMES, is_implemented, validate_call
 from ._g2_contract import NodePath
 from ._g2_engine import (
     children_node, create_checkpoint, execute_transaction, find_nodes, inspect_node,
     property_entry_set, property_get, property_index_set, property_schema, property_set,
 )
 from ._g2_code import compile_result, describe_source, execution_result, read_source
-from ._g2_transactions import TransactionStore, preview_transaction
+from ._g2_transactions import TransactionStore, preview_transaction, validate_invariants
 from ._g2_isolation import configured_receipt, verify_owned_server
 from ._platform_paths import default_comsol_help_roots
+
+#: G3 (W13-W16) catalogue effect -> write-ticket effect classification.  The
+#: catalogue remains the single source of truth (``_g3_ops.EFFECTS``); this
+#: table only translates its effect names.  An unrecognised effect fails
+#: closed instead of defaulting to an inspect permission.  ``DYNAMIC`` is
+#: resolved server-side to the write class: every dynamic G3 sub-action in
+#: this round mutates the model, so the strictest path is the honest default.
+_G3_EFFECT_MAP: dict[str, str] = {
+    "READ": "inspect",
+    "WRITE": "project_write",
+    "STATE_WRITE": "state_write",
+    "FILE_WRITE": "file_write",
+    "EVALUATE": "evaluate",
+    "COMPUTE": "compute",
+    "TRUSTED_CODE": "trusted_code",
+    "DYNAMIC": "project_write",
+}
+
+
+def _g3_operations() -> frozenset[str]:
+    """G3 operation ids published by the domain modules (empty when absent)."""
+    try:
+        from ._g3_ops import IMPLEMENTED_OPERATIONS as g3_operations
+    except Exception:
+        return frozenset()
+    return g3_operations
+
 
 # This is deliberately capability metadata rather than a promise of engine CAS.
 # The only live external mutation probe so far changed a scalar parameter.  The
@@ -283,7 +310,7 @@ class ManagedBackend:
                          "code.inspect_run", "code_inspect_run",
                          "transaction_preview", "transaction.preview", "checkpoint.list", "checkpoint.inspect", "checkpoint.diff"}:
             return self._invoke_g2_control(operation, arguments, execution, operation_id)
-        if operation in IMPLEMENTED_OPERATIONS and operation not in {"registry.list", "registry.describe", "registry.search", "registry.manifest", "registry.call"}:
+        if is_implemented(operation) and operation not in {"registry.list", "registry.describe", "registry.search", "registry.manifest", "registry.call"}:
             # G2 actions may be reached directly or through the public
             # operation_call/registry_call fallback.  Bind the persistent
             # Worker's request-event context around both routes so the
@@ -467,11 +494,20 @@ class ManagedBackend:
         if operation in {"docs.search", "docs.get", "docs.examples", "docs.error_search"}:
             body = self._g2_body(arguments)
             if operation in {"docs.search", "docs.examples", "docs.error_search"}:
-                query = body.get("query", "") if operation != "docs.error_search" else body.get("error", "")
-                if operation == "docs.examples":
-                    query = (query + " example tutorial").strip()
+                # The declared input schemas decide the dimensions:
+                # docs.search carries ``product``, docs.error_search carries
+                # ``node_type`` (a node/feature type filter, never a product),
+                # and docs.examples carries neither - so a node_type is never
+                # aliased onto the product dimension here.
+                if operation == "docs.error_search":
+                    query, product, node_type = body.get("error", ""), None, body.get("node_type")
+                elif operation == "docs.examples":
+                    query = (body.get("query", "") + " example tutorial").strip()
+                    product = node_type = None
+                else:
+                    query, product, node_type = body.get("query", ""), body.get("product"), body.get("node_type")
                 result = self.docs_index.search(query=query, version=body.get("version", ""),
-                                                product=body.get("product") if operation == "docs.search" else body.get("node_type"),
+                                                product=product, node_type=node_type,
                                                 limit=body.get("limit", 10))
             else:
                 result = self.docs_index.get(document_ref=body.get("document_ref", ""), section=body.get("section"), offset=body.get("offset", 0), length=body.get("length", 6000))
@@ -553,7 +589,7 @@ class ManagedBackend:
         if not isinstance(ref_mapping, dict):
             raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "model_ref is required for this operation")
         ref = model_ref_from_mapping(ref_mapping)
-        self.service.ledger._state_for(ref)
+        bound_revision = self.service.ledger._state_for(ref).revision
         body = self._g2_body(arguments)
         alias = self._g2_alias(operation)
         # Reject an untrusted Java mode before entering the write-ticket
@@ -562,6 +598,12 @@ class ManagedBackend:
         # exception as UNKNOWN after dispatch, even though no Java request or
         # model mutation was authorized.
         self._validate_java_mode(operation, body)
+
+        if operation in _g3_operations():
+            # G3 (W13-W16) domain operations use the same bound-model,
+            # revision and write-ticket path as the G2 model surface; the
+            # catalogue effect decides permission and isolation inside.
+            return self._invoke_g3_model(operation, ref, body, execution, operation_id, session)
         if operation in {"node.property_set", "node.property_index_set", "node.property_entry_set",
                          "code.execute_java", "checkpoint.create", "checkpoint.restore",
                          "transaction.trial", "transaction.apply", "transaction.recover"}:
@@ -597,11 +639,13 @@ class ManagedBackend:
                 result.setdefault("data", {})["isolation_proof"] = isolation
             return result
         if operation == "transaction.verify":
-            callback = lambda _args: self._verify_transaction_record(body.get("transaction_id", ""), body.get("checks", []))
+            # R04: the durable record is only accepted for the model the caller
+            # is bound to; cross-model verification is refused.
+            callback = lambda _args: self._verify_transaction_record(body.get("transaction_id", ""), body.get("checks", []), requested_ref=ref.as_dict())
             return self.service.execute_legacy(alias, callback, body, model_ref=ref,
                 expected_revision=execution.get("expected_revision", arguments.get("expected_revision")),
                 request_id=execution.get("request_id"), session_id=session, effect="evaluate")
-        callback = lambda _args: self._run_g2_action(operation, ref.model_tag, body, operation_id)
+        callback = lambda _args: self._run_g2_action(operation, ref.model_tag, body, operation_id, model_revision=bound_revision)
         result = self.service.execute_legacy(alias, callback, body, model_ref=ref,
             expected_revision=execution.get("expected_revision", arguments.get("expected_revision")),
             request_id=execution.get("request_id"), session_id=session, effect={
@@ -613,10 +657,52 @@ class ManagedBackend:
             result.setdefault("data", {})["isolation_proof"] = isolation
         return result
 
-    def _run_g2_action(self, operation: str, model_tag: str, body: dict[str, Any], operation_id: str) -> dict[str, Any]:
+    def _invoke_g3_model(self, operation, ref, body, execution, operation_id, session):
+        """Dispatch a G3 (W13-W16) domain operation through the shared write-ticket service.
+
+        The catalogue effect recorded in ``_g3_ops`` — never the request body —
+        decides the permission and whether the isolated (owned-server) path is
+        required, mirroring the G2 mutation gate.  A G3 operation raises
+        ``ExecutionContractError`` only *before* its first engine mutation;
+        post-dispatch outcomes are reported as data (``status``/
+        ``partial_change``/``execution_state_unknown``).  A raise is therefore
+        mapped back to its own error code here instead of being flattened into
+        ``EXECUTION_STATE_UNKNOWN`` by the conservative legacy-callback path.
+        """
+        from ._g3_ops import DISPATCH, EFFECTS, REQUIRES_ISOLATION
+        if self.service is None or self.worker is None:
+            raise ExecutionContractError("ENGINE_UNRESPONSIVE", "a connected persistent Worker is required")
+        function = DISPATCH.get(operation)
+        if function is None:
+            raise ExecutionContractError("UNSUPPORTED_OPERATION", f"G3 operation is not executable: {operation}")
+        effect = _G3_EFFECT_MAP.get(str(EFFECTS.get(operation, "")).upper())
+        if effect is None:
+            raise ExecutionContractError("PERMISSION_DENIED", f"unclassified G3 effect for operation {operation}")
+        isolation = self._require_g2_isolation() if operation in REQUIRES_ISOLATION else None
+        alias = self._g2_alias(operation)
+
+        def callback(_args: dict[str, Any]) -> dict[str, Any]:
+            try:
+                data = function(self.worker, ref.model_tag, dict(body))
+            except ExecutionContractError as exc:
+                # Pre-write refusal: no engine dispatch happened, so keep the
+                # operation's own code and mark the ticket failed/unchanged.
+                return {"success": False, "data": {"status": "REFUSED"}, "error": exc.as_dict()}
+            if not isinstance(data, Mapping):
+                raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", f"G3 operation {operation} returned no data mapping")
+            return {"success": True, "data": dict(data)}
+
+        result = self.service.execute_legacy(alias, callback, body, model_ref=ref,
+            expected_revision=execution.get("expected_revision", body.get("expected_revision")),
+            request_id=execution.get("request_id"), session_id=session, effect=effect)
+        if isolation is not None:
+            result.setdefault("data", {})["isolation_proof"] = isolation
+        return result
+
+    def _run_g2_action(self, operation: str, model_tag: str, body: dict[str, Any], operation_id: str, *, model_revision: int | None = None) -> dict[str, Any]:
         if operation == "node.inspect": data = inspect_node(self.worker, model_tag, body.get("path", {}), include_values=bool(body.get("include_values", False)))
-        elif operation == "node.children": data = children_node(self.worker, model_tag, body.get("path", {}), cursor=body.get("cursor"), limit=body.get("limit", 100))
-        elif operation == "node.find": data = find_nodes(self.worker, model_tag, body.get("query", {}), root=body.get("root"), limit=body.get("limit", 100))
+        elif operation == "node.children": data = children_node(self.worker, model_tag, body.get("path", {}), cursor=body.get("cursor"), limit=body.get("limit", 100), model_revision=model_revision)
+        elif operation == "node.find": data = find_nodes(self.worker, model_tag, body.get("query", {}), root=body.get("root"), limit=body.get("limit", 100), cursor=body.get("cursor"), model_revision=model_revision, budget=body.get("budget"))
         elif operation == "node.property_schema": data = property_schema(self.worker, model_tag, body.get("path", {}), body.get("name"))
         elif operation == "node.property_get": data = property_get(self.worker, model_tag, body.get("path", {}), body.get("names", []))
         elif operation == "node.property_set": data = property_set(self.worker, model_tag, body.get("path", {}), body.get("properties", []))
@@ -646,19 +732,33 @@ class ManagedBackend:
                 data.setdefault("error", {})["code"] = "COMPILE_ERROR"
                 data["error"]["safe_retry"] = True
         elif operation == "transaction.verify":
-            return self._verify_transaction_record(body.get("transaction_id", ""), body.get("checks", []))
+            # A nested/legacy verify has no bound model identity, so it cannot
+            # confirm that the durable record belongs to this model.  Refuse
+            # instead of reporting another model's verification as this one's.
+            raise ExecutionContractError("MODEL_IDENTITY_MISMATCH",
+                                         "transaction.verify requires the bound managed model_ref")
         else:
             raise ExecutionContractError("UNSUPPORTED_OPERATION", f"G2 model operation is not implemented: {operation}")
         if isinstance(data, dict) and "success" in data:
             return data
         return {"success": True, "data": data}
 
-    def _verify_transaction_record(self, transaction_id: str, checks: Any) -> dict[str, Any]:
+    def _verify_transaction_record(self, transaction_id: str, checks: Any, *, requested_ref: Mapping[str, Any] | None = None) -> dict[str, Any]:
         """Evaluate the small durable-record check vocabulary explicitly.
 
-        A check that cannot be evaluated from the durable transaction/readback
-        record is reported as NOT_RUN.  It never becomes a passing boolean by
-        echoing the requested check or the transaction's terminal status.
+        R04 scope annotation: every check below re-reads the *durable
+        transaction record*, so its scope is ``durable_record``.  Live model
+        state is not re-read here - that evidence belongs to the apply-time
+        ``invariant_results``, which are bound to the model_ref/revision of the
+        observation they were evaluated against and are reported alongside.
+        A check that cannot be evaluated from the durable record is NOT_RUN; it
+        never becomes a passing boolean by echoing the request or the
+        transaction's terminal status.
+
+        When the caller supplies the requested model binding (the public
+        transaction.verify path always does), a record bound to a different
+        model - or to no model at all - is refused instead of being reported as
+        this model's verification.
         """
         record = self.transactions.get(transaction_id)
         if not record:
@@ -666,6 +766,16 @@ class ManagedBackend:
                     "error": {"code": "NODE_NOT_FOUND", "message": "transaction not found", "safe_retry": False}}
         if not isinstance(checks, list):
             raise ExecutionContractError("INVALID_REQUEST", "checks must be an array")
+        record_ref = record.get("model_ref")
+        if not isinstance(record_ref, Mapping):
+            metadata = record.get("metadata") if isinstance(record.get("metadata"), Mapping) else {}
+            record_ref = metadata.get("source_model_ref") or (metadata.get("source_binding") or {}).get("model_ref")
+        if requested_ref is not None:
+            if not isinstance(record_ref, Mapping) or dict(record_ref) != dict(requested_ref):
+                raise ExecutionContractError(
+                    "MODEL_IDENTITY_MISMATCH",
+                    "durable transaction record is not bound to the requested model",
+                )
         rows: list[dict[str, Any]] = []
         unsupported = False
         failed = False
@@ -686,21 +796,44 @@ class ManagedBackend:
 
         for index, check in enumerate(checks):
             if not isinstance(check, Mapping):
-                unsupported = True; rows.append({"index": index, "status": "NOT_RUN", "reason": "check is not an object"}); continue
+                unsupported = True; rows.append({"index": index, "scope": "durable_record",
+                                                 "status": "NOT_RUN", "reason": "check is not an object"}); continue
             field = check.get("field", check.get("path"))
             expected_present = "equals" in check or "expected" in check
             expected = check.get("equals", check.get("expected"))
             if not isinstance(field, (str, list)) or not expected_present:
-                unsupported = True; rows.append({"index": index, "status": "NOT_RUN", "reason": "supported checks require field/path and equals/expected"}); continue
+                unsupported = True
+                rows.append({"index": index, "scope": "durable_record", "status": "NOT_RUN",
+                             "reason": "supported checks require field/path and equals/expected"}); continue
             present, actual = lookup(record, field)
             if not present:
-                failed = True; rows.append({"index": index, "status": "FAILED", "field": field, "reason": "field unavailable"}); continue
+                failed = True
+                rows.append({"index": index, "scope": "durable_record", "status": "FAILED",
+                             "field": field, "reason": "field unavailable"}); continue
             passed = actual == expected
             failed |= not passed
-            rows.append({"index": index, "status": "PASSED" if passed else "FAILED", "field": field, "actual": actual, "expected": expected})
+            rows.append({"index": index, "scope": "durable_record", "status": "PASSED" if passed else "FAILED",
+                         "field": field, "actual": actual, "expected": expected})
         status = "NOT_RUN" if unsupported or not checks else ("FAILED" if failed else "VERIFIED")
+        raw_invariants = record.get("invariant_results")
+        invariant_results = dict(raw_invariants) if isinstance(raw_invariants, Mapping) else {}
         data = {"transaction_id": transaction_id, "transaction": record, "checks": rows,
-                "status": status, "verified": status == "VERIFIED"}
+                "status": status, "verified": status == "VERIFIED",
+                "scope": "durable_record",
+                "model_ref": dict(record_ref) if isinstance(record_ref, Mapping) else None,
+                "revision": record.get("revision"),
+                "execution_status": record.get("execution_status", record.get("status")),
+                "verification_status": record.get("verification_status", "NOT_RUN"),
+                "invariant_results": invariant_results,
+                "live_model_state": {
+                    "scope": "model_state",
+                    "source": "transaction.apply invariant_results",
+                    "status": invariant_results.get("status", "NOT_RUN"),
+                    "model_ref": invariant_results.get("model_ref"),
+                    "revision": invariant_results.get("revision"),
+                    "checks": invariant_results.get("checks", []),
+                    "note": ("Apply-time evidence bound to the recorded model_ref/revision; this call re-reads the durable record only and is not a live re-read of the current model."),
+                }}
         return {"success": True, "data": data, "error": None}
 
     def _checkpoint_via_service(self, ref, body, alias, operation_id, execution):
@@ -862,6 +995,10 @@ class ManagedBackend:
         # create its before-checkpoint.  The callback repeats the permission
         # check as defense in depth for any future runner change.
         self._preflight_nested_actions(actions)
+        # R04: reject an unsupported/malformed required invariant here, before
+        # the checkpoint file and before any action is dispatched.
+        invariants = body.get("invariants")
+        validate_invariants(invariants)
         checkpoint_id_holder: dict[str, str | None] = {"value": None}
         metadata_holder: dict[str, dict[str, Any]] = {}
         def runner(operation, args, _index):
@@ -891,15 +1028,29 @@ class ManagedBackend:
                 checkpoint_id_holder["value"] = metadata["checkpoint_id"]
                 metadata_holder.update(metadata)
                 self.store.persist_checkpoint(metadata["sha256"], metadata)
+            # The record is bound to the exact managed model observation: the
+            # pre-apply revision is recorded here and the post-apply revision is
+            # bound below, once the ticketed callback has finished.
             return execute_transaction(self.worker, ref.model_tag, actions, runner=runner,
-                                       invariants=body.get("invariants"), checkpoint_id=checkpoint_id_holder["value"])
+                                       invariants=invariants, checkpoint_id=checkpoint_id_holder["value"],
+                                       model_ref=ref.as_dict(),
+                                       pre_revision=self.service.ledger._state_for(ref).revision)
         result = self.service.execute_legacy(alias, callback, body, model_ref=ref, expected_revision=execution.get("expected_revision", body.get("expected_revision")), request_id=execution.get("request_id"), session_id=execution.get("session_id"), effect="project_write")
         txn = result.get("data", {})
         if metadata_holder:
             txn["checkpoint_id"] = checkpoint_id_holder["value"]
             txn["checkpoint_metadata"] = dict(metadata_holder)
         if txn.get("transaction_id"):
+            # Bind the durable record to the model identity and to the revision
+            # the transaction left behind, so a later verify can refuse a record
+            # that belongs to another model generation.
+            state = self.service.ledger._state_for(ref)
             txn["model_ref"] = ref.as_dict()
+            txn["revision"] = state.revision
+            invariant_results = txn.get("invariant_results")
+            if isinstance(invariant_results, dict):
+                invariant_results["model_ref"] = ref.as_dict()
+                invariant_results["revision"] = state.revision
             self.transactions.put(txn)
         return result
 

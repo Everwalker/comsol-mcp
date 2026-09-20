@@ -1,0 +1,526 @@
+{
+  "assertion_count": 10,
+  "case": {
+    "acceptance": [
+      "G3 §10 T038"
+    ],
+    "assertions": {
+      "envelope_consistency": {
+        "calls": 480,
+        "mismatches": []
+      },
+      "error_propagation": {
+        "probe": {
+          "error_code": "UNSUPPORTED_OPERATION",
+          "has_structured_content": true,
+          "operation_id": null,
+          "outer_isError": true,
+          "success": false
+        },
+        "release": {
+          "gate": false,
+          "released": false,
+          "retry": "not performed: a first-hand UNKNOWN result is this call's evidence",
+          "still_blocked": null,
+          "targets": [],
+          "trigger": "first-hand UNKNOWN result"
+        },
+        "unknown_engine_state": null
+      },
+      "initialize": {
+        "caller_owned_private_home": true,
+        "capabilities": {
+          "completions": null,
+          "experimental": {},
+          "logging": null,
+          "prompts": {
+            "listChanged": false
+          },
+          "resources": {
+            "listChanged": false,
+            "subscribe": false
+          },
+          "tasks": null,
+          "tools": {
+            "listChanged": false
+          }
+        },
+        "instruction_bytes": 0,
+        "private_home": "$REPO/PRIVATE_REDACTED/g3-phase4-live4/mcp-home",
+        "protocolVersion": "2025-11-25",
+        "server_name": "comsol-mcp-server",
+        "server_version": "1.29.1",
+        "tool_count": 65,
+        "tool_profile": "full"
+      },
+      "partial_failure": {
+        "probe": {
+          "error_code": "UNSUPPORTED_OPERATION",
+          "has_structured_content": true,
+          "operation_id": null,
+          "outer_isError": true,
+          "success": false
+        },
+        "release": {
+          "gate": false,
+          "released": false,
+          "retry": "not performed: a first-hand UNKNOWN result is this call's evidence",
+          "still_blocked": null,
+          "targets": [],
+          "trigger": "first-hand UNKNOWN result"
+        },
+        "unknown_engine_state": null
+      },
+      "registry_paging_no_duplicates": {
+        "operations": 273,
+        "pages": 3,
+        "pass": true,
+        "total_reported": 273,
+        "unique": 273
+      },
+      "stdio_isolation": {
+        "engine_log": "$REPO/evidence/phase4/runs/20260920T130620Z-g3-live/driver4/primary.engine.log",
+        "engine_log_bytes": 77922,
+        "jsonrpc_frames_on_engine_log": 0
+      },
+      "structured_content_envelope": {
+        "legacy_calls": 4,
+        "pass": true,
+        "strict_calls": 476,
+        "strict_calls_without_structured_content": [],
+        "tool_calls": 480
+      },
+      "subcase_inventory": {
+        "levels": [
+          "protocol"
+        ],
+        "missing": [],
+        "planned": 7,
+        "recorded": 7
+      },
+      "tools_list_schemas": {
+        "pass": true,
+        "tool_count": 65,
+        "tools": [
+          "check_server_port",
+          "commit_current_main_model",
+          "configure_single_main_workflow",
+          "configure_solver",
+          "create_feature",
+          "create_physics",
+          "create_physics_feature",
+          "create_solver_config",
+          "delete_feature",
+          "ensure_component",
+          "ensure_geometry",
+          "ensure_mesh",
+          "evaluate_expressions",
+          "get_core_metrics",
+          "get_parameters",
+          "job_log",
+          "job_reconcile",
+          "job_result",
+          "job_status",
+          "list_physics",
+          "list_physics_features",
+          "list_solver_config",
+          "list_solver_features",
+          "load_current_main_model",
+          "load_visible_main_model",
+          "manage_variables",
+          "mcp_tool_audit",
+          "model_adopt",
+          "model_create",
+          "model_inspect",
+          "model_load",
+          "model_tree",
+          "operation_call",
+          "operation_describe",
+          "prune_loaded_models",
+          "registry_call",
+          "registry_describe",
+          "registry_list",
+          "registry_manifest",
+          "registry_search",
+          "remove_physics",
+          "remove_physics_feature",
+          "run_feature",
+          "run_study",
+          "run_study_async",
+          "run_study_status",
+          "run_visible_main_iteration",
+          "runtime_poc_v64",
+          "save_main_model_snapshot",
+          "save_model",
+          "server_connect",
+          "server_disconnect",
+          "server_info",
+          "server_start",
+          "session_health",
+          "set_parameters",
+          "set_physics_selection",
+          "start_visible_main_workflow",
+          "start_visible_main_workflow_async",
+          "unlock_visible_main",
+          "update_feature",
+          "update_physics_feature",
+          "verify_visible_main_session",
+          "visible_main_workflow_status",
+          "workflow_info"
+        ]
+      },
+      "unknown_job_ledger": {
+        "entries": [
+          {
+            "first_seen_at": "2026-09-20T14:30:30.157554Z",
+            "job_id": "82dda588-cd5f-4ba8-a9a0-a27ce08be348",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "legacy callback raised after write dispatch",
+            "last_seen_at": "2026-09-20T14:30:30.157585Z",
+            "observations": [
+              {
+                "at": "2026-09-20T14:30:30.157587Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "legacy callback raised after write dispatch",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-20T14:30:30.163129Z",
+                "error_code": null,
+                "job_id": "82dda588-cd5f-4ba8-a9a0-a27ce08be348",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-0756dcb6-5e33-482a-9666-a773c1461645",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-b2f50bd4-8d0c-480f-becd-eca6f406e76b",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-db8cd5a1-2773-44a0-9349-635a38223602",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-882a0389-cd4d-412d-8576-a8737771b4b9",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-5bb0cf3f-c3ee-4e26-97e3-2f92a43487a9",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-f06d4072-8618-4a29-a90d-1a39f19e5730",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-20585f38-ea33-4d18-bf81-334d0d087919",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-5c171cfe-6319-4db0-be9f-29482a7cf7d1",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-20T14:30:30.163153Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-20T14:30:30.258109Z",
+            "job_id": "fc07a654-9b1b-44ba-994e-d01db05f6637",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "legacy callback raised after write dispatch",
+            "last_seen_at": "2026-09-20T14:30:30.258152Z",
+            "observations": [
+              {
+                "at": "2026-09-20T14:30:30.258154Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "legacy callback raised after write dispatch",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-20T14:30:30.264105Z",
+                "error_code": null,
+                "job_id": "fc07a654-9b1b-44ba-994e-d01db05f6637",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-f99de157-ff89-4bef-a2e4-5a1f92f21457",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-02c52542-3d7b-43d8-ad2f-f5f415dd699e",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-11b2bc60-a3b1-4a95-8060-2a1fdcf87298",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-5de60819-a451-475b-abe7-a8b2d399a09b",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-28759f80-2789-4134-836b-2e2451acc833",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-380bb99d-4061-4b32-9f3a-d077b54f1ce9",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-8729aabb-e559-4a21-ba96-887dfe97b0ae",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-46ce6b84-d46a-49b2-ac52-64574ca7c15c",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-20T14:30:30.264129Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-20T14:30:39.167339Z",
+            "job_id": "75fa62d3-c066-4416-a4d3-ccc51cf93945",
+            "last_error_code": null,
+            "last_message": null,
+            "last_seen_at": "2026-09-20T14:30:39.167391Z",
+            "observations": [
+              {
+                "at": "2026-09-20T14:30:39.167393Z",
+                "error_code": null,
+                "message": null,
+                "tool": "create_feature"
+              }
+            ],
+            "operation": "create_feature",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-20T14:30:39.176584Z",
+                "error_code": null,
+                "job_id": "75fa62d3-c066-4416-a4d3-ccc51cf93945",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-72e8f5d8-9af1-4a0f-a901-ebc118d66221",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-685ce2c8-fb6b-4208-8a0b-62afb66b61ee",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-36590096-5e0b-4ac5-b190-31ff28cabe60",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-f81f1151-fa92-44c3-bbdf-a1f1a196c856",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-3f348a5b-42e0-4932-a863-324c7452ac6c",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-0c577134-67f1-4f5b-86bd-dbcdd8837882",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-a9af5a83-f9b9-4c15-99fa-90ba0ccc71f0",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-bfb8039d-a892-46ea-a33c-6cc1a98167f5",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-d2fd3848-d39f-4404-b4d5-f66f6160c4f5",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-fc811154-e288-45f9-b35c-3501cb86e52d",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-a18bed37-144d-47e7-b059-f785e3e48eeb",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-111d2df9-5444-4dd0-8407-456128c293bd",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-32226502-d1ba-4334-8f79-7045c68b2516",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-fb167549-cc94-4aa2-bce3-f00ad06b1360",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-2815660c-6f5c-4db2-a448-c128af6c1556",
+                    "source": "durable_worker_observation",
+                    "status": "FAILED"
+                  },
+                  {
+                    "request_id": "wrk-45c5dc4d-64fe-4f0b-8a1f-1f631de2c991",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-1bb8f741-81b3-401d-abc2-e946846561f4",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-d9ea5466-4ce9-42bb-b4cc-b757406c4505",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-20T14:30:39.176614Z",
+            "status": "UNKNOWN"
+          }
+        ],
+        "gate_refusals": {
+          "by_tool": {},
+          "count": 0,
+          "first": null,
+          "last": null
+        },
+        "note": "the driver records every job id an envelope reported as UNKNOWN (no published read lists the unresolved jobs) and releases each one through the published job_reconcile read before it replays a refused call once",
+        "released_jobs": [
+          "82dda588-cd5f-4ba8-a9a0-a27ce08be348",
+          "fc07a654-9b1b-44ba-994e-d01db05f6637",
+          "75fa62d3-c066-4416-a4d3-ccc51cf93945"
+        ],
+        "still_blocked": [],
+        "unresolved_jobs": []
+      }
+    },
+    "case_id": "GUARD_T038",
+    "finished_at": "2026-09-20T14:30:39.611117Z",
+    "package": "GUARD",
+    "reason": null,
+    "started_at": "2026-09-20T14:30:39.271699Z",
+    "status": "PASS",
+    "subcases": {
+      "error_propagation_structured": {
+        "acceptance": "T038 structured errors",
+        "level": "protocol",
+        "observed": {
+          "error_code": "UNSUPPORTED_OPERATION",
+          "has_structured_content": true,
+          "operation_id": null,
+          "outer_isError": true,
+          "success": false
+        },
+        "status": "PASS"
+      },
+      "initialize_and_tools_list_schemas": {
+        "acceptance": "T038 tools/list schema validity",
+        "level": "protocol",
+        "status": "PASS",
+        "tool_count": 65
+      },
+      "outer_iserror_matches_success": {
+        "acceptance": "T038 isError semantics",
+        "calls": 480,
+        "level": "protocol",
+        "mismatches": [],
+        "status": "PASS"
+      },
+      "partial_failure_not_reported_as_success": {
+        "acceptance": "T038 partial failure not all-success",
+        "level": "protocol",
+        "observed": {
+          "error_code": "UNSUPPORTED_OPERATION",
+          "has_structured_content": true,
+          "operation_id": null,
+          "outer_isError": true,
+          "success": false
+        },
+        "status": "PASS"
+      },
+      "registry_paging_continuation": {
+        "acceptance": "T038 pagination",
+        "level": "protocol",
+        "operations": 273,
+        "pages": 3,
+        "status": "PASS",
+        "total_reported": 273,
+        "unique": 273
+      },
+      "stdio_log_isolation": {
+        "acceptance": "T038 stdout/stderr isolation",
+        "level": "protocol",
+        "lines": [],
+        "status": "PASS"
+      },
+      "structured_content_action_results": {
+        "acceptance": "T038 structuredContent envelope",
+        "level": "protocol",
+        "missing": [],
+        "status": "PASS",
+        "strict_calls": 476
+      }
+    }
+  },
+  "subcase_count": 7
+}

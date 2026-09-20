@@ -1,0 +1,405 @@
+{
+  "assertion_count": 10,
+  "case": {
+    "acceptance": [
+      "G3 §10 T035"
+    ],
+    "assertions": {
+      "engine_reconciliations": [
+        {
+          "at": "2026-09-20T14:16:02.960868Z",
+          "discovery": {
+            "active_jobs": [],
+            "available": true,
+            "error_code": null,
+            "note": "no published read lists unresolved jobs; the gate can only be released through a job id observed in this process (an earlier EXECUTION_STATE_UNKNOWN envelope)",
+            "status": "READY",
+            "worker_connected": true
+          },
+          "envelope_job_id": "d7deb1fc-b094-4f71-b459-9064e2739edb",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": true,
+          "job_reconcile": "no candidate job id was present in the refused envelope",
+          "jobs": [],
+          "message": "reconcile unfinished engine work before new operations",
+          "released": false,
+          "retry": "not performed: the gate was not released",
+          "targets": [],
+          "trigger": "control-gate refusal",
+          "trigger_tool": "operation_call",
+          "unresolved_before": []
+        },
+        {
+          "at": "2026-09-20T14:16:02.965301Z",
+          "discovery": {
+            "active_jobs": [],
+            "available": true,
+            "error_code": null,
+            "note": "no published read lists unresolved jobs; the gate can only be released through a job id observed in this process (an earlier EXECUTION_STATE_UNKNOWN envelope)",
+            "status": "READY",
+            "worker_connected": true
+          },
+          "envelope_job_id": "3c9c113a-b484-4792-a45b-638e519c2a2b",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": true,
+          "job_reconcile": "no candidate job id was present in the refused envelope",
+          "jobs": [],
+          "message": "reconcile unfinished engine work before new operations",
+          "released": false,
+          "retry": "not performed: the gate was not released",
+          "targets": [],
+          "trigger": "control-gate refusal",
+          "trigger_tool": "operation_call",
+          "unresolved_before": []
+        },
+        {
+          "at": "2026-09-20T14:16:02.969787Z",
+          "discovery": {
+            "active_jobs": [],
+            "available": true,
+            "error_code": null,
+            "note": "no published read lists unresolved jobs; the gate can only be released through a job id observed in this process (an earlier EXECUTION_STATE_UNKNOWN envelope)",
+            "status": "READY",
+            "worker_connected": true
+          },
+          "envelope_job_id": "c3ecc07d-f4e3-4a3a-b31f-a04f701443a2",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": true,
+          "job_reconcile": "no candidate job id was present in the refused envelope",
+          "jobs": [],
+          "message": "reconcile unfinished engine work before new operations",
+          "released": false,
+          "retry": "not performed: the gate was not released",
+          "targets": [],
+          "trigger": "control-gate refusal",
+          "trigger_tool": "operation_call",
+          "unresolved_before": []
+        },
+        {
+          "at": "2026-09-20T14:16:02.974420Z",
+          "discovery": {
+            "active_jobs": [],
+            "available": true,
+            "error_code": null,
+            "note": "no published read lists unresolved jobs; the gate can only be released through a job id observed in this process (an earlier EXECUTION_STATE_UNKNOWN envelope)",
+            "status": "READY",
+            "worker_connected": true
+          },
+          "envelope_job_id": "0d463c23-9dcb-42f1-a2fc-cad43aa54125",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": true,
+          "job_reconcile": "no candidate job id was present in the refused envelope",
+          "jobs": [],
+          "message": "reconcile unfinished engine work before new operations",
+          "released": false,
+          "retry": "not performed: the gate was not released",
+          "targets": [],
+          "trigger": "control-gate refusal",
+          "trigger_tool": "operation_call",
+          "unresolved_before": []
+        },
+        {
+          "at": "2026-09-20T14:16:02.978459Z",
+          "discovery": {
+            "active_jobs": [],
+            "available": true,
+            "error_code": null,
+            "note": "no published read lists unresolved jobs; the gate can only be released through a job id observed in this process (an earlier EXECUTION_STATE_UNKNOWN envelope)",
+            "status": "READY",
+            "worker_connected": true
+          },
+          "envelope_job_id": "dd532430-acf7-4e94-917c-db3b78508f72",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": true,
+          "job_reconcile": "no candidate job id was present in the refused envelope",
+          "jobs": [],
+          "message": "reconcile unfinished engine work before new operations",
+          "released": false,
+          "retry": "not performed: the gate was not released",
+          "targets": [],
+          "trigger": "control-gate refusal",
+          "trigger_tool": "operation_call",
+          "unresolved_before": []
+        }
+      ],
+      "operation_availability": {
+        "docs.index": {
+          "available": true,
+          "effect": "STATE_WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "idempotency_key",
+            "product",
+            "project_id",
+            "request_id",
+            "runtime_id",
+            "sources",
+            "version"
+          ],
+          "mcp_tool_name": "docs_index",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "control plane",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "docs.search": {
+          "available": true,
+          "effect": "READ",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "limit",
+            "product",
+            "project_id",
+            "query",
+            "request_id",
+            "version"
+          ],
+          "mcp_tool_name": "docs_search",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "control plane",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        }
+      },
+      "outside_file_unchanged": {
+        "after": "752ad993fa5ebc69f3f9a054a6305fd64956fae799437dfe87a38202ecc13d73",
+        "before": "752ad993fa5ebc69f3f9a054a6305fd64956fae799437dfe87a38202ecc13d73"
+      },
+      "run_leak_scan": {
+        "credential_hits": [],
+        "private_path_hits": [],
+        "runtime_state_hits": [],
+        "scanned_files": 103
+      },
+      "static_docs_guard_ops_executable": {
+        "operations": [
+          "docs.index",
+          "docs.search"
+        ],
+        "pass": true
+      },
+      "subcase_inventory": {
+        "levels": [
+          "live",
+          "protocol",
+          "static"
+        ],
+        "missing": [],
+        "planned": 7,
+        "recorded": 7
+      },
+      "t035_credential_ingest": {
+        "credential_sha256": "REDACTED",
+        "index": {
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "has_structured_content": true,
+          "operation_id": null,
+          "outer_isError": true,
+          "success": false
+        },
+        "search": {
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "has_structured_content": true,
+          "operation_id": null,
+          "outer_isError": true,
+          "success": false
+        }
+      },
+      "t035_fixtures": {
+        "credential_fixture": "REDACTED",
+        "outside_file": "/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-mcp-phase4-outside-h756tvrn/outside_COMSOL_6.4_guard.md",
+        "outside_sha256": "752ad993fa5ebc69f3f9a054a6305fd64956fae799437dfe87a38202ecc13d73",
+        "symlink": "$REPO/evidence/phase4/runs/20260920T130620Z-g3-live/driver3/outside_link_COMSOL_6.4.md"
+      },
+      "t035_index_attempts": {
+        "outside_directory_index": {
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "has_structured_content": true,
+          "operation_id": null,
+          "outer_isError": true,
+          "success": false
+        },
+        "outside_index": {
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "has_structured_content": true,
+          "operation_id": null,
+          "outer_isError": true,
+          "success": false
+        },
+        "symlink_index": {
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "has_structured_content": true,
+          "operation_id": null,
+          "outer_isError": true,
+          "success": false
+        }
+      },
+      "t035_leak_scan": {
+        "credential_fixture_hits": [],
+        "credential_hits": [],
+        "credential_leak_hits": [],
+        "excluded_fixtures": [
+          "credentials_COMSOL_6.4.md"
+        ],
+        "private_home_scanned": "$REPO/PRIVATE_REDACTED/g3-phase4-live3/mcp-home",
+        "private_path_hits": [],
+        "runtime_state_hits": [],
+        "scanned_files": 85
+      }
+    },
+    "case_id": "GUARD_T035",
+    "finished_at": "2026-09-20T14:16:03.004042Z",
+    "package": "GUARD",
+    "reason": null,
+    "started_at": "2026-09-20T14:16:02.951910Z",
+    "status": "BLOCKED",
+    "subcases": {
+      "credential_text_not_persisted": {
+        "acceptance": "T035 credentials never persisted",
+        "hits": [],
+        "level": "protocol",
+        "status": "PASS"
+      },
+      "failed_denial_does_not_modify_files": {
+        "acceptance": "T035 failed access changes nothing",
+        "level": "live",
+        "status": "PASS"
+      },
+      "outside_workspace_source_denied": {
+        "acceptance": "T035 outside-workspace source",
+        "level": "live",
+        "observed": {
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "error_message": "reconcile unfinished engine work before new operations",
+          "identity": {
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "has_structured_content": true,
+            "operation_id": null,
+            "outer_isError": true,
+            "success": false
+          },
+          "outer_isError": true
+        },
+        "reason": "an outside-workspace documentation source was accepted or the denial was not explicit: the call was refused with an unknown engine state (EXECUTION_STATE_UNKNOWN; released through job_reconcile)",
+        "status": "BLOCKED"
+      },
+      "outside_write_attempt_denied": {
+        "acceptance": "T035 outside write attempt",
+        "level": "live",
+        "observed": {
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "error_message": "reconcile unfinished engine work before new operations",
+          "identity": {
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "has_structured_content": true,
+            "operation_id": null,
+            "outer_isError": true,
+            "success": false
+          },
+          "outer_isError": true
+        },
+        "reason": "an outside directory could be registered as an indexable source: the call was refused with an unknown engine state (EXECUTION_STATE_UNKNOWN; released through job_reconcile)",
+        "status": "BLOCKED"
+      },
+      "private_paths_not_in_evidence": {
+        "acceptance": "T035 private paths redacted",
+        "level": "protocol",
+        "status": "PASS"
+      },
+      "static_docs_guard_ops_executable": {
+        "acceptance": "T035 outside-workspace source guard",
+        "level": "static",
+        "status": "PASS"
+      },
+      "symlink_outside_denied": {
+        "acceptance": "T035 symlink/reparse escape",
+        "level": "live",
+        "observed": {
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "error_message": "reconcile unfinished engine work before new operations",
+          "identity": {
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "has_structured_content": true,
+            "operation_id": null,
+            "outer_isError": true,
+            "success": false
+          },
+          "outer_isError": true
+        },
+        "reason": "a symlink pointing outside the workspace was accepted as a documentation source: the call was refused with an unknown engine state (EXECUTION_STATE_UNKNOWN; released through job_reconcile)",
+        "status": "BLOCKED"
+      }
+    }
+  },
+  "subcase_count": 7
+}

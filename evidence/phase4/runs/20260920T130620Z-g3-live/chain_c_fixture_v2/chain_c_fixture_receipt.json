@@ -1,0 +1,143 @@
+{
+  "constraints": {
+    "chain_c_requires": {
+      "step_tag": "time",
+      "study_tag": "std1"
+    },
+    "satisfied": true,
+    "step_tag": "time",
+    "study_tag": "std1"
+  },
+  "continuation_command": "tools/phase4_run_mcp.py --live --chain-c-model $REPO/evidence/phase4/runs/20260920T130620Z-g3-live/chain_c_fixture_v2/chain_c_user_style.mph --only W16_T019_chainC_continue --run-dir <run-dir>",
+  "derived_values": {
+    "mode": "skipped",
+    "reason": "--with-derived-value was not passed"
+  },
+  "environment": {
+    "comsol_lifecycle": "not managed by this script (no COMSOL start/stop)",
+    "comsol_root": "/Applications/COMSOL64/Multiphysics",
+    "elapsed_s": 1.512,
+    "host": "127.0.0.1",
+    "isolation_receipt_present": true,
+    "jdk11": "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home",
+    "output": "$REPO/evidence/phase4/runs/20260920T130620Z-g3-live/chain_c_fixture_v2/chain_c_user_style.mph",
+    "port": 56389,
+    "prefs": "$REPO/evidence/phase4/runs/20260920T130620Z-g3-live/prefs",
+    "private_home": "$REPO/evidence/phase4/runs/20260920T130620Z-g3-live/chain_c_fixture_v2/mcp-home",
+    "python": "$HOME/Documents/Codex/2026-09-05/https-github-com-wjc9011-comsol-multiphysics/comsol-mcp-server/.venv/bin/python",
+    "run_dir": "$REPO/evidence/phase4/runs/20260920T130620Z-g3-live/chain_c_fixture_v2",
+    "self_test": {
+      "missing_plan_steps": [],
+      "ok": true,
+      "plan_steps": 26,
+      "step_tag": "time",
+      "study_tag": "std1"
+    },
+    "started_at": "2026-09-20T13:07:20Z",
+    "tool_count": 65,
+    "tool_profile": "full"
+  },
+  "exit_code": 3,
+  "generated_at": "2026-09-20T13:07:21Z",
+  "kind": "phase4-chain-c-user-style-fixture",
+  "label": "G3 chain C user-style continuation model",
+  "manual_solver_edit": {
+    "applied": false,
+    "attempted": false,
+    "candidates": []
+  },
+  "model_ref": null,
+  "model_revision": null,
+  "mph": {
+    "bytes": null,
+    "exists": false,
+    "path": "$REPO/evidence/phase4/runs/20260920T130620Z-g3-live/chain_c_fixture_v2/chain_c_user_style.mph",
+    "sha256": null
+  },
+  "ops_used": [
+    "blocked capability",
+    "server_connect"
+  ],
+  "reopen_command": "tools/phase4_run_mcp.py --reopen-check $REPO/evidence/phase4/runs/20260920T130620Z-g3-live/chain_c_fixture_v2/chain_c_user_style.mph",
+  "session": {
+    "has_legacy_model_create": true,
+    "has_operation_call": true,
+    "initialize": {
+      "caller_owned_private_home": true,
+      "capabilities": {
+        "completions": null,
+        "experimental": {},
+        "logging": null,
+        "prompts": {
+          "listChanged": false
+        },
+        "resources": {
+          "listChanged": false,
+          "subscribe": false
+        },
+        "tasks": null,
+        "tools": {
+          "listChanged": false
+        }
+      },
+      "instruction_bytes": 0,
+      "private_home": "$REPO/evidence/phase4/runs/20260920T130620Z-g3-live/chain_c_fixture_v2/mcp-home",
+      "protocolVersion": "2025-11-25",
+      "server_name": "comsol-mcp-server",
+      "server_version": "1.29.1",
+      "tool_count": 65,
+      "tool_profile": "full"
+    },
+    "isolation_receipt_present": true,
+    "tool_count": 65
+  },
+  "sources": [
+    {
+      "exists": true,
+      "path": "$REPO/tools/phase4_run_mcp.py",
+      "sha256": "59d95dd38a1e8d2198facb8a8f2793be2051e20af103df00bac2085d524f7b16",
+      "size": 287354
+    },
+    {
+      "exists": true,
+      "path": "$REPO/tools/phase4_chain_c_fixture.py",
+      "sha256": "39020130b045d134a5333b5518ef4ea096f1488ed9ea94878e30efb1e9a34f23",
+      "size": 73825
+    },
+    {
+      "exists": true,
+      "path": "$REPO/tools/java/Phase4ChainCDerivedValue.java",
+      "sha256": "13a1a546f11fb4442132ea9e9753526283774b8fdc9e0372ec640f7b62e46174",
+      "size": 5328
+    }
+  ],
+  "startup_error": "blocked: server_connect failed: EXECUTION_STATE_UNKNOWN",
+  "steps": [
+    {
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "notes": "server_connect failed: EXECUTION_STATE_UNKNOWN",
+      "operation": "server_connect",
+      "outer_isError": true,
+      "status": "BLOCKED",
+      "step": "server_connect",
+      "success": false
+    },
+    {
+      "error_code": null,
+      "notes": "blocked: server_connect failed: EXECUTION_STATE_UNKNOWN",
+      "operation": "blocked capability",
+      "outer_isError": null,
+      "status": "BLOCKED",
+      "step": "fixture",
+      "success": false
+    }
+  ],
+  "tlist": {},
+  "unverified": [
+    "the .mph is written and hashed, but the fixture does not reopen it: use tools/phase4_run_mcp.py --reopen-check to verify loadability in a fresh child",
+    "derived values are created only through the trusted-code route; without --with-derived-value (or when the route is refused) the model has no Derived Values node and the receipt says so",
+    "the chain C case itself addresses the continuation target as [{study,std1},{step,time}] with a row-list `properties`; the published operation layer rejects both forms (INVALID_NODE_PATH: unsupported path collection 'step'; INVALID_REQUEST: properties must be an object). The target this fixture prepares is writable with the verified shape -- [{study,std1},{feature,time}] plus a name->value mapping -- as replayed offline against the repository's fake node tree (tests/test_g3_chain_c_fixture.py::test_chain_c_fixture_tlist_write_works_on_the_repo_fake_tree)."
+  ],
+  "verification": {},
+  "warnings": []
+}
