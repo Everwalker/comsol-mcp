@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "recorded_at": "2026-09-20T03:20:53.605036+00:00",
+  "recorded_at": "2026-09-20T03:30:33.525427+00:00",
   "goal": "docs/comsol_mcp_design_v1/NEXT_GOAL_MAC_G2.md",
   "scope": "Mac arm64 COMSOL6.4.0.293 W08-W12 executable scope only; no Windows integration, no W13",
   "status": "PASS_MAC_EXECUTABLE_SCOPE",
@@ -2978,7 +2978,11 @@
     "authorized_remote": "origin",
     "branch": "main",
     "policy": "normal non-force phase-boundary push; verify resulting remoteSHA against localHEAD before reporting synchronization",
-    "status": "LOCAL_ACCEPTANCE_COMPLETE_PENDING_NONFORCE_PUBLICATION"
+    "status": "PASS_IMPLEMENTATION_PUBLISHED_VERIFIED",
+    "implementation_commit": "e8766ae2ae25d439a07d00aba9ac79b32d36e361",
+    "implementation_tree": "715c91cc14caec0f5c94e0890c0ed7e8d68afb7f",
+    "receipt": "evidence/phase3/valve_resume/publication_verified.json",
+    "tracking_branch": "codex/mac-g2-accepted-delivery"
   },
   "stop_boundary": "Stop after publication of this W08-W12 Mac scope; do not start W13.",
   "publication_redaction": "evidence/phase3/review/publication_redaction.json",
@@ -3033,7 +3037,7 @@
       "port": 56389,
       "server_state_at_recording": "RUNNING for authorized G2 acceptance; final cleanup still required"
     },
-    "current_activity": "All applicable G2 and affected Phase2 tests passed; owned runtime stopped/XML restored; final publication pending.",
+    "current_activity": "Complete: applicable Mac G2 and affected Phase2 passed; runtime/config restored; implementation published with exact tree match. Audit receipt follow-up only, no further feature work.",
     "w09_w11_refresh": {
       "status": "PASS",
       "run_dir": "evidence/phase3/offline-review-20260920T010134Z",

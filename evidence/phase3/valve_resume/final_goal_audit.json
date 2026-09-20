@@ -1,6 +1,6 @@
 {
-  "recorded_at": "2026-09-20T03:22:01.573296+00:00",
-  "status": "LOCAL_ACCEPTANCE_PASS_PUBLICATION_PENDING",
+  "recorded_at": "2026-09-20T03:30:33.525427+00:00",
+  "status": "PASS_MAC_EXECUTABLE_SCOPE",
   "goal_source": "docs/comsol_mcp_design_v1/NEXT_GOAL_MAC_G2.md",
   "goal_sha256": "f7a9e1c9c841fbda1189ccc64c0c357facaafb1afa0f28e2b90e37c26593bbf9",
   "requirements": [
@@ -397,11 +397,11 @@
     },
     {
       "requirement": "11.publication",
-      "status": "PENDING",
+      "status": "PASS",
       "evidence": [
-        "origin/main"
+        "evidence/phase3/valve_resume/publication_verified.json"
       ],
-      "scope": "Await final normal push and matching local/remote SHA/tree."
+      "scope": "Non-force ordinary child commit published; fetched remote commit and tree match the reviewed local implementation tree. Original local branch retained."
     },
     {
       "requirement": "12.scope",
@@ -413,6 +413,7 @@
     }
   ],
   "runtime_cleanup": "PASS",
-  "publication": "PENDING",
-  "scope_exclusions": "Windows/IntelMac/COMSOL6.3/GUI/unlicensed modules/large-model costs remain unverified or unavailable. Native callback FAIL retained."
+  "publication": "PASS",
+  "scope_exclusions": "Windows/IntelMac/COMSOL6.3/GUI/unlicensed modules/large-model costs remain unverified or unavailable. Native callback FAIL retained.",
+  "publication_receipt": "evidence/phase3/valve_resume/publication_verified.json"
 }

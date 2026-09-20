@@ -1207,3 +1207,9 @@ Final software regression: **419 passed, 1 skipped in 6.20s**, with 89-file sour
 All current-run control/Worker processes and dedicated Server PID 73823 stopped. Port 56389 is absent; active webbridge XML SHA256 restored to `95478d7624e778c694c714d9215797c0c0076fd707a4eedf2bedbaa6bafe6625`, with inode/mode/owner restored. Recorded provenance xattr retained. Historical Phase2 processes were not touched. The mounted dedicated disk-test volume, complete MPH, checkpoints and failure artifacts are retained.
 
 All 211 tracked Phase1/2 evidence files remain byte-identical to the prior delivery baseline. A new generated disk-test path contains only a relocation pointer into phase3. Native callback FAIL, Windows/Intel Mac/6.3/GUI and large-model cost limits remain unchanged; this is not full G2 or six-combination certification. No W13 work performed. Local acceptance complete; final non-force publication and remote SHA/tree verification are the remaining delivery step.
+
+### 2026-09-20 G2 publication verified and stop boundary
+
+Implementation, tests and evidence published to `Everwalker/comsol-mcp:main` as `e8766ae2ae25d439a07d00aba9ac79b32d36e361`; fetched tree `715c91cc14caec0f5c94e0890c0ed7e8d68afb7f` exactly matches local commit `29deb785ebbe636ba7864a8c62750e8d42aad99a`. Terminal push lacked credentials; the authenticated connector used an ordinary child commit and `force=false`. Original local branch/commit retained; `codex/mac-g2-accepted-delivery` tracks the remote history. This audit-only receipt update follows the verified implementation commit.
+
+`final_goal_audit.json` records the bounded requirement review. All authorized applicable Mac work, affected regression and cleanup are complete. No Windows integration, no W13, and no additional automation or runtime started. Final reply verifies the resulting audit commit SHA/tree against remote before closing the goal.
