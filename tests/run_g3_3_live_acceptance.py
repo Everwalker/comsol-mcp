@@ -88,10 +88,17 @@ class AcceptanceRunner:
         for d in (self.prefs_dir, self.tmp_dir, self.recovery_dir, self.locks_dir, self.artifacts_dir):
             d.mkdir(parents=True, exist_ok=True)
         self.verifier_worker: PersistentJavaWorker | None = None
+        # §11/§12 evidence: the raw log of this run, the run's own server PID and
+        # the engine-reported COMSOL version (read from the engine, not declared).
+        self.log_lines: list[str] = []
+        self.last_server_pid: int | None = None
+        self.comsol_version: str | None = None
 
     def log(self, msg: str) -> None:
         timestamp = datetime.now(timezone.utc).isoformat()
-        print(f"[{timestamp}] {msg}", flush=True)
+        line = f"[{timestamp}] {msg}"
+        self.log_lines.append(line)
+        print(line, flush=True)
 
     def record_case(
         self,
@@ -159,12 +166,113 @@ class AcceptanceRunner:
     def stop_server(self) -> None:
         if self.server_proc is not None:
             self.log(f"Stopping isolated mphserver PID {self.server_proc.pid}...")
+            self.last_server_pid = self.server_proc.pid
             self.server_proc.terminate()
             try:
                 self.server_proc.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 self.server_proc.kill()
             self.server_proc = None
+
+    # -------------------------------------------------------------------
+    # §11/§12 evidence helpers
+    # -------------------------------------------------------------------
+
+    @staticmethod
+    def _pid_alive(pid: int | None) -> bool:
+        """A real liveness probe for a PID this run owns."""
+        if not pid:
+            return False
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True
+        return True
+
+    def source_manifest(self) -> dict[str, Any]:
+        """The source identity every report of this run is bound to (§11/§12).
+
+        The aggregate is git's own ``ls-tree -r HEAD`` listing (path + blob id),
+        so the identity of the *committed* source is bound without re-hashing
+        70 MB of blobs by hand, and the dirty manifest is captured explicitly: a
+        ledger produced from an uncommitted worktree is what made the delivered
+        evidence unverifiable.
+        """
+        def git(*args: str) -> str:
+            return subprocess.check_output(["git", *args], cwd=ROOT, text=True).strip()
+
+        head = git("rev-parse", "HEAD")
+        tree = git("rev-parse", "HEAD^{tree}")
+        branch = git("rev-parse", "--abbrev-ref", "HEAD")
+        status = git("status", "--porcelain")
+        dirty = [line[3:].strip() for line in status.splitlines() if line.strip()]
+        digest = hashlib.sha256()
+        tracked = 0
+        for line in git("ls-tree", "-r", "HEAD").splitlines():
+            if not line.strip():
+                continue
+            meta, path = line.split("\t", 1)
+            digest.update(path.encode("utf-8"))
+            digest.update(b"\0")
+            digest.update(meta.encode("utf-8"))
+            digest.update(b"\n")
+            tracked += 1
+        listed = [p for p in git("ls-files").splitlines() if p.strip()]
+        present = sum(1 for path in listed if (ROOT / path).exists())
+        return {
+            "head": head,
+            "tree": tree,
+            "branch": branch,
+            "dirty_paths": dirty,
+            "tracked_files": tracked,
+            "tracked_files_listed": len(listed),
+            "tracked_files_present_in_worktree": present,
+            "source_blob_map_sha256": digest.hexdigest(),
+            "captured_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+    def check_locks_released(self) -> dict[str, Any]:
+        """§12: a remaining lock *file* is inert; the assertion is that no OS lock is held.
+
+        The Java worker takes its endpoint lock with ``java.nio.channels.FileLock``
+        (a POSIX record lock), so the matching probe is ``fcntl.lockf`` -- ``flock``
+        lives in a different lock space on macOS and would always report "free".
+        """
+        import fcntl  # POSIX-only probe; this suite targets macOS
+
+        held: list[str] = []
+        files: list[dict[str, Any]] = []
+        for path in sorted(self.locks_dir.glob("*.lock")):
+            size = path.stat().st_size
+            entry: dict[str, Any] = {
+                "name": path.name,
+                "size": size,
+                "sha256": _sha256(path) if size else None,
+            }
+            with path.open("r+b") as handle:
+                try:
+                    fcntl.lockf(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    fcntl.lockf(handle, fcntl.LOCK_UN)
+                    entry["held"] = False
+                except OSError:
+                    entry["held"] = True
+                    held.append(path.name)
+            files.append(entry)
+        return {"lock_files": files, "locks_held": len(held), "held_names": held}
+
+    def engine_version(self) -> str | None:
+        """The COMSOL version reported by the engine (never a declared string)."""
+        if self.verifier_worker is None:
+            return None
+        try:
+            reported = self.verifier_worker.client().getComsolVersion()
+        except Exception as exc:  # reported, not swallowed
+            self.log(f"  engine version read failed: {type(exc).__name__}: {exc}")
+            return None
+        return str(reported) if reported is not None else None
+
 
     def make_worker(self, label: str) -> PersistentJavaWorker:
         state_dir = self.run_dir / f"worker_{label}"
@@ -183,28 +291,43 @@ class AcceptanceRunner:
     # Case C00: Clean Recovery Verification & Wheel Out-of-tree Test
     # -----------------------------------------------------------------------
     def run_c00(self) -> None:
-        self.log("Executing C00: Clean recovery and wheel out-of-tree verification...")
+        self.log("Executing C00: clean recovery, source binding and wheel out-of-tree verification...")
         try:
-            # Check commit and tree match PIN.json
+            # §11/§12: this ledger is only meaningful if it is bound to a commit.
+            # The delivered run was produced from an uncommitted worktree, so the
+            # new run records its source identity and refuses to proceed from a
+            # tree with modified tracked files.
+            manifest = self.source_manifest()
+            self.source = manifest
+            run_evidence_prefix = f"evidence/phase4_3/runs/{self.run_id}"
+            unexpected_dirty = [
+                path for path in manifest["dirty_paths"]
+                if not path.startswith(run_evidence_prefix)
+            ]
+            assert not unexpected_dirty, (
+                "C00 requires a committed source tree: the acceptance ledger has to be bound to a "
+                f"commit, but these tracked paths are modified: {unexpected_dirty[:5]}"
+            )
+            assert manifest["tracked_files"] == manifest["tracked_files_listed"], (
+                "git ls-tree HEAD and git ls-files disagree on the tracked file count: "
+                f"{manifest['tracked_files']} vs {manifest['tracked_files_listed']}"
+            )
+            assert manifest["tracked_files_present_in_worktree"] == manifest["tracked_files"], (
+                f"{manifest['tracked_files'] - manifest['tracked_files_present_in_worktree']} tracked "
+                "files are missing from the working tree"
+            )
+
+            # The pack inventory is historical evidence for the *pin* commit: it is
+            # recorded, not reused as this run's count (ACCEPTANCE C00 requires the
+            # committed file count to come from the actual list).
             pin_file = ROOT.parent / "PIN.json"
-            pin_data = json.loads(pin_file.read_text(encoding="utf-8"))
-            expected_commit = pin_data["commit"]
-            expected_tree = pin_data["tree"]
-
-            # Git rev-parse in repository
-            git_commit = subprocess.check_output(
-                ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
-            ).strip()
-            git_parent = subprocess.check_output(
-                ["git", "rev-parse", "HEAD~1"], cwd=ROOT, text=True
-            ).strip() if subprocess.run(["git", "rev-parse", "HEAD~1"], cwd=ROOT, capture_output=True).returncode == 0 else git_commit
-
-            # Tracked file count from review/source_inventory.json
+            pin_data = json.loads(pin_file.read_text(encoding="utf-8")) if pin_file.is_file() else {}
             inv_file = ROOT.parent / "review" / "source_inventory.json"
-            inv_data = json.loads(inv_file.read_text(encoding="utf-8"))
-            tracked_count = inv_data.get("file_count") or inv_data.get("tracked_file_count", 0)
+            pack_inventory = json.loads(inv_file.read_text(encoding="utf-8")) if inv_file.is_file() else {}
 
-            # Build wheel and install in fresh venv
+            # Build the wheel and install it into a fresh venv.  The import check
+            # runs from a neutral cwd: with cwd=ROOT, sys.path[0] = "" resolves to
+            # the repository source and "out-of-tree import" would prove nothing.
             wheel_dir = self.run_dir / "wheel_dist"
             wheel_dir.mkdir(parents=True, exist_ok=True)
             build_res = subprocess.run(
@@ -220,7 +343,6 @@ class AcceptanceRunner:
             wheel_path = wheel_files[0]
             wheel_sha = _sha256(wheel_path)
 
-            # Test installation into fresh temp venv
             test_venv_dir = self.run_dir / "test_venv"
             venv_res = subprocess.run(
                 [sys.executable, "-m", "venv", str(test_venv_dir)],
@@ -237,27 +359,47 @@ class AcceptanceRunner:
             )
             assert install_res.returncode == 0, f"wheel install failed: {install_res.stderr}"
 
+            neutral_cwd = self.run_dir / "neutral_cwd"
+            neutral_cwd.mkdir(parents=True, exist_ok=True)
             import_res = subprocess.run(
-                [str(venv_python), "-c", "import comsol_mcp; print(comsol_mcp.__file__)"],
+                [str(venv_python), "-c",
+                 "import comsol_mcp, pathlib, sys; "
+                 "print(pathlib.Path(comsol_mcp.__file__).resolve()); "
+                 "print(pathlib.Path(sys.path[0] or '.').resolve())"],
+                cwd=neutral_cwd,
                 capture_output=True,
                 text=True,
             )
             assert import_res.returncode == 0, f"wheel import failed: {import_res.stderr}"
-            installed_path = import_res.stdout.strip()
+            import_lines = [line for line in import_res.stdout.splitlines() if line.strip()]
+            installed_path = Path(import_lines[0])
+            import_cwd = Path(import_lines[1]) if len(import_lines) > 1 else neutral_cwd
+            assert not installed_path.is_relative_to(ROOT.resolve()), (
+                f"the wheel import resolved to the repository source ({installed_path}); the "
+                "out-of-tree property is not proven"
+            )
+            assert installed_path.is_relative_to(test_venv_dir.resolve()), (
+                f"the wheel import did not resolve into the fresh venv: {installed_path}"
+            )
 
             self.record_case(
                 "C00",
-                "Clean Recovery & Wheel Verification",
+                "Clean Recovery, Source Binding & Wheel Verification",
                 "PASS",
                 "protocol",
                 {
-                    "expected_commit": expected_commit,
-                    "actual_head_or_parent": git_parent,
-                    "expected_tree": expected_tree,
-                    "tracked_files": tracked_count,
+                    "source_manifest": manifest,
+                    "run_evidence_paths_excluded_from_dirty_check": [run_evidence_prefix],
+                    "pack_pin_commit": pin_data.get("commit"),
+                    "pack_pin_tree": pin_data.get("tree"),
+                    "pack_inventory_file_count": pack_inventory.get("file_count"),
+                    "pack_inventory_source_commit": pack_inventory.get("source_commit"),
+                    "tracked_files": manifest["tracked_files"],
+                    "tracked_file_count_source": "git ls-tree -r HEAD (actual list)",
                     "wheel_path": str(wheel_path),
                     "wheel_sha256": wheel_sha,
-                    "out_of_tree_import": installed_path,
+                    "out_of_tree_import": str(installed_path),
+                    "out_of_tree_import_cwd": str(import_cwd),
                 },
             )
         except Exception as exc:
@@ -1626,34 +1768,63 @@ public final class C07Builder {
     # Case C17: Teardown, Evidence Publishing & Scoping
     # -----------------------------------------------------------------------
     def run_c17(self) -> None:
-        self.log("Executing C17: Teardown and evidence finalization...")
+        self.log("Executing C17: teardown and evidence finalization...")
         try:
-            # First disconnect and close persistent verifier worker
+            # Read the engine-reported version *before* the worker goes away, so the
+            # ledger never carries a declared version string (§12).
+            self.comsol_version = self.engine_version()
+
+            teardown_errors: list[str] = []
             if self.verifier_worker is not None:
                 try:
                     self.verifier_worker.client().disconnect()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    teardown_errors.append(f"disconnect: {type(exc).__name__}: {exc}")
                 try:
                     self.verifier_worker.close()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    teardown_errors.append(f"close: {type(exc).__name__}: {exc}")
                 self.verifier_worker = None
 
-            # Stop isolated mphserver
             self.stop_server()
+            time.sleep(1.0)  # let the process table and lock ownership settle
 
-            # Check all lock files in locks_dir are released
-            active_locks = list(self.locks_dir.glob("*.lock"))
+            lock_report = self.check_locks_released()
+            server_alive = self._pid_alive(self.last_server_pid)
+            prior = {cid: case["status"] for cid, case in self.cases.items() if cid != "C17"}
+            failed = sorted(cid for cid, status in prior.items() if status != "PASS")
+            derived_tag = (
+                "G3_3_MAC_W17_VERIFIED_SCOPED" if not failed else "G3_3_ACCEPTANCE_FAILED"
+            )
+
+            assert not teardown_errors, f"teardown reported errors: {teardown_errors}"
+            assert not server_alive, (
+                f"the isolated mphserver this suite started (PID {self.last_server_pid}) is still "
+                "alive after teardown"
+            )
+            assert lock_report["locks_held"] == 0, (
+                f"{lock_report['locks_held']} worker endpoint lock(s) are still held: "
+                f"{lock_report['held_names']}"
+            )
+
             self.record_case(
                 "C17",
                 "Teardown & Verification Ledger Finalization",
                 "PASS",
                 "protocol",
                 {
-                    "isolated_server_stopped": True,
-                    "active_locks_count": len(active_locks),
-                    "status_tag": "G3_3_MAC_W17_VERIFIED_SCOPED",
+                    "isolated_server_pid": self.last_server_pid,
+                    "isolated_server_alive_after_teardown": server_alive,
+                    "isolated_server_stopped": not server_alive,
+                    "lock_files_remaining": lock_report["lock_files"],
+                    "locks_held": lock_report["locks_held"],
+                    "lock_probe": "fcntl.lockf(LOCK_EX|LOCK_NB) per endpoint lock file",
+                    "teardown_errors": teardown_errors,
+                    "status_tag": derived_tag,
+                    "status_tag_derived_from": "every case recorded in this run",
+                    "cases_recorded_before_teardown": len(prior),
+                    "failed_cases": failed,
+                    "engine_reported_comsol_version": self.comsol_version,
                     "stop_boundary": "W17 (not entering W18)",
                 },
             )
@@ -1711,16 +1882,28 @@ public final class C07Builder {
     def write_acceptance_evidence(self, elapsed_s: float) -> None:
         # Build comprehensive phase4_3_acceptance.json
         all_passed = all(c["status"] == "PASS" for c in self.cases.values())
+        source = getattr(self, "source", None) or self.source_manifest()
+        runner_path = Path(__file__).resolve()
         summary = {
             "schema": "comsol-mcp-g3/phase4_3-acceptance/1",
             "goal": "NEXT_GOAL.md: G3.3 clean-room recovery, evidence correction, and W17 verification",
             "status": "G3_3_MAC_W17_VERIFIED_SCOPED" if all_passed else "ACCEPTANCE_FAILED",
             "run_id": self.run_id,
+            "run_dir": str(self.run_dir),
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "elapsed_seconds": elapsed_s,
             "platform": sys.platform,
             "python_version": sys.version,
-            "comsol_version": "COMSOL Multiphysics 6.4 (Build 293)",
+            "comsol_version": self.comsol_version,
+            "comsol_version_source": (
+                "ModelUtil.getComsolVersion() via the run's worker"
+                if self.comsol_version
+                else "unavailable: the engine did not report a version in this run"
+            ),
+            # §11/§12: the ledger is bound to the source it was produced from.
+            "source_manifest": source,
+            "runner_sha256": _sha256(runner_path),
+            "runner_command": sys.argv,
             "total_cases": len(self.cases),
             "passed_cases": sum(1 for c in self.cases.values() if c["status"] == "PASS"),
             "failed_cases": sum(1 for c in self.cases.values() if c["status"] != "PASS"),
@@ -1733,14 +1916,37 @@ public final class C07Builder {
             "cases": self.cases,
         }
 
-        # Write top-level evidence file
-        out_ledger = ROOT / "evidence" / "phase4_3_acceptance.json"
-        out_ledger.write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-        self.log(f"Wrote acceptance ledger: {out_ledger}")
-
-        # Write run-specific evidence files
-        (self.evidence_dir / "result.json").write_text(
-            json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        # Write in-tree evidence first: every later digest covers real files.
+        self.evidence_dir.mkdir(parents=True, exist_ok=True)
+        payload = json.dumps(summary, indent=2, ensure_ascii=False) + "\n"
+        (self.evidence_dir / "result.json").write_text(payload, encoding="utf-8")
+        (self.evidence_dir / "assertions.json").write_text(
+            json.dumps(
+                {
+                    "run_id": self.run_id,
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
+                    "source_manifest": source,
+                    "assertions": [
+                        {
+                            "case_id": case["case_id"],
+                            "name": case["name"],
+                            "status": case["status"],
+                            "evidence_level": case["evidence_level"],
+                            "error": case["error"],
+                            "details": case["details"],
+                            "timestamp": case["timestamp"],
+                        }
+                        for case in self.cases.values()
+                    ],
+                },
+                indent=2,
+                ensure_ascii=False,
+            ) + "\n",
+            encoding="utf-8",
+        )
+        (self.evidence_dir / "runner.log").write_text("\n".join(self.log_lines) + "\n", encoding="utf-8")
+        (self.evidence_dir / "source_manifest.json").write_text(
+            json.dumps(source, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
         )
         (self.evidence_dir / "case_inventory.json").write_text(
             json.dumps(list(self.cases.keys()), indent=2) + "\n", encoding="utf-8"
@@ -1749,23 +1955,36 @@ public final class C07Builder {
             json.dumps(
                 {
                     "comsol_root": str(COMSOL_ROOT),
+                    "comsol_version": self.comsol_version,
+                    "comsol_version_source": summary["comsol_version_source"],
                     "jdk_home": str(JDK11),
                     "python_executable": sys.executable,
                     "platform": sys.platform,
+                    "cwd": str(Path.cwd()),
+                    "command": sys.argv,
+                    "run_dir": str(self.run_dir),
                 },
                 indent=2,
             ) + "\n",
             encoding="utf-8",
         )
 
-        # Generate SHA256SUMS for run artifacts
-        sums = {}
-        for f in self.artifacts_dir.glob("*"):
-            if f.is_file():
-                sums[f.name] = _sha256(f)
+        # SHA256SUMS covers the run artifacts *and* the evidence written above, so
+        # the digests a verifier checks are themselves part of the run.
+        sums: dict[str, str] = {}
+        for directory, prefix in ((self.artifacts_dir, ""), (self.evidence_dir, "evidence/")):
+            for f in sorted(directory.glob("*")):
+                if f.is_file() and f.name != "SHA256SUMS.json":
+                    sums[f"{prefix}{f.name}"] = _sha256(f)
         (self.evidence_dir / "SHA256SUMS.json").write_text(
-            json.dumps(sums, indent=2) + "\n", encoding="utf-8"
+            json.dumps(sums, indent=2, sort_keys=True) + "\n", encoding="utf-8"
         )
+
+        # The top-level ledger is written last: it is the published artifact and it
+        # must reflect a run whose evidence already exists on disk.
+        out_ledger = ROOT / "evidence" / "phase4_3_acceptance.json"
+        out_ledger.write_text(payload, encoding="utf-8")
+        self.log(f"Wrote acceptance ledger: {out_ledger}")
         self.log(f"All run artifacts and evidence saved to {self.evidence_dir}")
 
 
@@ -1775,7 +1994,12 @@ def main() -> None:
     args = parser.parse_args()
 
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    run_dir = Path(args.run_dir) if args.run_dir else Path(tempfile.mkdtemp(prefix=f"g3_3_acceptance_{stamp}_"))
+    if args.run_dir:
+        run_dir = Path(args.run_dir).expanduser().resolve()
+    else:
+        # §11: run evidence lives inside the repository, so the ledger's run_id,
+        # its per-run directory and the SHA256SUMS digests all resolve in-tree.
+        run_dir = ROOT / "evidence" / "phase4_3" / "runs" / f"live_acceptance_{stamp}"
     runner = AcceptanceRunner(run_dir)
     runner.run_all()
 
