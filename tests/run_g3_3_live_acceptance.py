@@ -71,6 +71,46 @@ def _to_float(v: Any) -> float:
     return float(v) if v is not None else 0.0
 
 
+def _flatten_scalars(payload: Any) -> list[float]:
+    """Flatten a ``result_at_points`` payload into a flat list of floats.
+
+    Used to compare a pre-save read against a post-reopen read of the same spec
+    without depending on the nesting depth of the response shape.
+    """
+    if isinstance(payload, Mapping):
+        for key in ("values", "real", "data"):
+            if key in payload:
+                return _flatten_scalars(payload[key])
+        raise AssertionError(f"cannot flatten mapping without values/real/data: {sorted(payload)[:5]}")
+    if isinstance(payload, (list, tuple)):
+        flattened: list[float] = []
+        for item in payload:
+            flattened.extend(_flatten_scalars(item))
+        return flattened
+    if payload is None:
+        raise AssertionError("cannot flatten None")
+    return [float(payload)]
+
+
+def _tail(values: list[float], count: int) -> list[float]:
+    assert len(values) >= count, f"expected at least {count} values, got {len(values)}"
+    return values[-count:]
+
+
+def _reopen_evaluator(values: list[float], prefix: str) -> Any:
+    """Index an already-read value list by expectation name, e.g. ``T_p2`` -> values[1].
+
+    The list must come from the *reopened* artifact: the delivered case instead
+    returned the pre-save value from the evaluator for every expression, which
+    turned the stored-value comparison into ``x == x``.
+    """
+    def evaluate(model: Any, expr: str) -> float:
+        parts = str(expr).rsplit(prefix, 1)
+        assert len(parts) == 2, f"expectation {expr!r} does not carry the {prefix!r} index"
+        return values[int(parts[1]) - 1]
+    return evaluate
+
+
 class AcceptanceRunner:
     def __init__(self, run_dir: Path) -> None:
         self.run_dir = run_dir
@@ -201,7 +241,12 @@ class AcceptanceRunner:
         evidence unverifiable.
         """
         def git(*args: str) -> str:
-            return subprocess.check_output(["git", *args], cwd=ROOT, text=True).strip()
+            return subprocess.check_output(
+                ["git", "-c", "core.quotePath=false", *args], cwd=ROOT, text=True
+            ).strip()
+
+        def git_bytes(*args: str) -> bytes:
+            return subprocess.check_output(["git", "-c", "core.quotePath=false", *args], cwd=ROOT)
 
         head = git("rev-parse", "HEAD")
         tree = git("rev-parse", "HEAD^{tree}")
@@ -225,17 +270,19 @@ class AcceptanceRunner:
         dirty = tracked_dirty + untracked
         digest = hashlib.sha256()
         tracked = 0
-        for line in git("ls-tree", "-r", "HEAD").splitlines():
-            if not line.strip():
+        # -z + core.quotePath=false: names are raw, so non-ASCII paths (this tree
+        # has Chinese-named files) compare and resolve like any other path.
+        for entry in git_bytes("ls-tree", "-r", "-z", "HEAD").split(b"\0"):
+            if not entry:
                 continue
-            meta, path = line.split("\t", 1)
-            digest.update(path.encode("utf-8"))
+            meta, path = entry.split(b"\t", 1)
+            digest.update(path)
             digest.update(b"\0")
-            digest.update(meta.encode("utf-8"))
+            digest.update(meta)
             digest.update(b"\n")
             tracked += 1
-        listed = [p for p in git("ls-files").splitlines() if p.strip()]
-        present = sum(1 for path in listed if (ROOT / path).exists())
+        listed = [p for p in git_bytes("ls-files", "-z").split(b"\0") if p]
+        present = sum(1 for path in listed if (ROOT / path.decode("utf-8", "surrogateescape")).exists())
         return {
             "head": head,
             "tree": tree,
@@ -950,45 +997,89 @@ public final class C07Builder {
                 "coordinate_unit": "m",
                 "frame": "spatial",
             })
-            vals_b = read_b["values"][0]
+            # The delivered case compared the reopened read with itself -- the receipt
+            # expectations and the evaluator both came from vals_b -- so it proved
+            # nothing.  The receipt is now the *pre-save* read taken by the build
+            # worker, and the evaluator reads the reopened artifact in this fresh
+            # worker: stored-solution preservation across save/reopen.
+            pre_b_flat = _flatten_scalars(pre_b["values"])
+            reopen_b_flat = _flatten_scalars(read_b["values"])
+            assert len(pre_b_flat) == len(reopen_b_flat), (
+                "chain B pre-save and post-reopen reads differ in shape: "
+                f"{len(pre_b_flat)} vs {len(reopen_b_flat)} values"
+            )
+            assert len(reopen_b_flat) >= 3, f"chain B read returned {len(reopen_b_flat)} values"
+            assert all(293.15 - 1e-6 <= value <= 353.15 + 1e-6 for value in reopen_b_flat), (
+                "chain B stored temperatures leave the boundary range 293.15..353.15 K: "
+                f"{[round(value, 4) for value in reopen_b_flat]}"
+            )
+            checked_b = _tail(pre_b_flat, 3)
             receipt_b = {
                 "model_sha256": sha_b,
                 "dataset": "dset1",
                 "expectations": {
-                    "T_p1": {"expected": vals_b[0][0], "tolerance": 1e-3},
-                    "T_p2": {"expected": vals_b[0][1], "tolerance": 1e-3},
-                    "T_p3": {"expected": vals_b[0][2], "tolerance": 1e-3},
+                    f"T_p{index + 1}": {"expected": value, "tolerance": 1e-3}
+                    for index, value in enumerate(checked_b)
                 },
+                "expectation_source": (
+                    "pre-save read of the build worker before model_b.save "
+                    "(transient final time steps)"
+                ),
             }
             report_b = verify_reopen(
                 reopened_b,
                 receipt_b,
                 mph_path=mph_b,
-                evaluator=lambda m, expr: (
-                    vals_b[0][0] if expr == "T_p1" else (vals_b[0][1] if expr == "T_p2" else vals_b[0][2])
-                ),
+                evaluator=_reopen_evaluator(_tail(reopen_b_flat, 3), "T_p"),
             )
             assert report_b["status"] == "PASS"
+            assert all(item["abs_diff"] <= 1e-3 for item in report_b["comparisons"].values()), (
+                f"chain B comparisons exceeded tolerance: {report_b['comparisons']}"
+            )
 
             # Check Chain C
             reopened_c = worker2.client().load(str(mph_c), "reopen_c")
+            read_c = result_at_points(worker2, "reopen_c", {
+                "spec": {"expressions": ["T"], "solution": {"dataset": "dset1"}},
+                "points": [[0.025, 0.005]],
+                "coordinate_unit": "m",
+                "frame": "spatial",
+            })
+            # Same defect as chain B: the delivered evaluator ignored the model and
+            # returned the pre-save value for every expression, so the comparison was
+            # pre_c == pre_c.  The receipt keeps the pre-save read and the evaluator
+            # reads the reopened artifact.  `derived_values` is no longer written onto
+            # the model object -- verify_reopen reads the result-node tags from the
+            # engine itself and fails closed when it cannot.
+            pre_c_flat = _flatten_scalars(pre_c["values"])
+            reopen_c_flat = _flatten_scalars(read_c["values"])
+            assert len(pre_c_flat) == len(reopen_c_flat) >= 1, (
+                f"chain C pre-save/post-reopen shape mismatch: {len(pre_c_flat)} vs {len(reopen_c_flat)}"
+            )
+            num_tags = list(reopened_c._call("result")._call("numerical")._call("tags"))
+            assert "user_derived_probe" in [str(tag) for tag in num_tags], (
+                f"the reopened chain C model does not expose its derived-value node: {num_tags}"
+            )
             receipt_c = {
                 "model_sha256": sha_c,
                 "dataset": "dset1",
                 "derived_values": ["user_derived_probe"],
                 "expectations": {
-                    "T_mid": {"expected": pre_c["values"][0][0][0], "tolerance": 1e-3},
+                    f"T_mid{index + 1}": {"expected": value, "tolerance": 1e-3}
+                    for index, value in enumerate(_tail(pre_c_flat, 1))
                 },
+                "expectation_source": "pre-save read of the build worker before model_c.save",
             }
-            num_tags = reopened_c._call("result")._call("numerical")._call("tags")
-            reopened_c.derived_values = list(num_tags)
             report_c = verify_reopen(
                 reopened_c,
                 receipt_c,
                 mph_path=mph_c,
-                evaluator=lambda m, expr: pre_c["values"][0][0][0],
+                evaluator=_reopen_evaluator(_tail(reopen_c_flat, 1), "T_mid"),
             )
             assert report_c["status"] == "PASS"
+            assert all(item["abs_diff"] <= 1e-3 for item in report_c["comparisons"].values()), (
+                f"chain C comparisons exceeded tolerance: {report_c['comparisons']}"
+            )
 
             # Load benchmark models for C04–C14 in verifier worker
             self.log("  Loading benchmark models in verifier worker...")
@@ -997,10 +1088,11 @@ public final class C07Builder {
             worker2.client().load(str(mph_06), "reopen_c06")
             worker2.client().load(str(mph_07), "reopen_c07")
 
-            # Independent re-solve check (separate case)
-            self.log("  Running independent re-solve case on reopened model...")
-            resolve_res = worker2.client().model("reopen_a").solve("std1")
-            self.log(f"  Independent re-solve returned: {resolve_res}")
+            # §8: the independent re-solve is its own case (C03R) and runs after this
+            # case has been recorded, so a re-solve failure can neither be reported as
+            # part of the Gate A verdict nor be hidden behind it.  The delivered suite
+            # solved `reopen_a` right here, inside a block documented "(NO RE-SOLVE)",
+            # and recorded a hardcoded independent_resolve_verified: True.
 
             # ---------------------------------------------------------------
             # Negative Controls (calling the SAME verify_reopen checker)
@@ -1065,7 +1157,15 @@ public final class C07Builder {
                     "bench_c05_mph": str(mph_05),
                     "bench_c06_mph": str(mph_06),
                     "bench_c07_mph": str(mph_07),
-                    "independent_resolve_verified": True,
+                    "expectation_source": {
+                        "chain_a": "analytic linear profile 293.15 + 1200*x K at x = 0.0125/0.025/0.0375 m",
+                        "chain_b": "pre-save read of the build worker (stored-value preservation across save/reopen)",
+                        "chain_c": "pre-save read of the build worker (stored-value preservation across save/reopen)",
+                    },
+                    "chain_b_values_checked": len(checked_b),
+                    "chain_b_bound_check": "293.15 K <= T <= 353.15 K on every stored value",
+                    "chain_c_derived_value_source": "engine read of result/numerical tags in the reopened worker",
+                    "independent_resolve": "separate case C03R (§8); not part of this case",
                     "negative_controls_tested": [
                         "ARTIFACT_HASH_MISMATCH",
                         "DATASET_NOT_FOUND",
@@ -1074,6 +1174,64 @@ public final class C07Builder {
                     ],
                 },
             )
+            # ---------------------------------------------------------------
+            # C03R: the independent re-solve, recorded as its own case (§8)
+            # ---------------------------------------------------------------
+            self.log("Executing C03R: independent re-solve and indistinguishability...")
+            try:
+                resolve_spec = {
+                    "spec": {"expressions": ["T"], "solution": {"dataset": "dset1"}},
+                    "points": [[0.0125, 0.005], [0.0250, 0.005], [0.0375, 0.005]],
+                    "coordinate_unit": "m",
+                    "frame": "spatial",
+                }
+                stored_flat = _flatten_scalars(
+                    result_at_points(worker2, "reopen_a", resolve_spec)["values"]
+                )
+                started = time.monotonic()
+                solve_result = worker2.client().model("reopen_a").solve("std1")
+                elapsed = time.monotonic() - started
+                resolved_flat = _flatten_scalars(
+                    result_at_points(worker2, "reopen_a", resolve_spec)["values"]
+                )
+                assert len(resolved_flat) == len(stored_flat) >= 3, (
+                    f"the re-solve changed the read shape: {len(stored_flat)} vs {len(resolved_flat)}"
+                )
+                deltas = [abs(after - before) for before, after in zip(stored_flat, resolved_flat)]
+                assert max(deltas) <= 1e-3, (
+                    "the stored solution and the re-solved solution are distinguishable: "
+                    f"max |delta| = {max(deltas):.6e} over {len(deltas)} values"
+                )
+                resolved_mph = self.artifacts_dir / "chain_a_resolved.mph"
+                reopened_a.save(str(resolved_mph))
+                self.record_case(
+                    "C03R",
+                    "Independent Re-solve & Indistinguishability",
+                    "PASS",
+                    "numerical",
+                    {
+                        "model": "reopen_a",
+                        "solve_result": str(solve_result),
+                        "elapsed_seconds": elapsed,
+                        "values_compared": len(deltas),
+                        "max_abs_delta": max(deltas),
+                        "tolerance": 1e-3,
+                        "stored_values": stored_flat,
+                        "resolved_values": resolved_flat,
+                        "resolved_artifact": str(resolved_mph),
+                        "resolved_artifact_sha256": _sha256(resolved_mph),
+                        "solution_tags": list(reopened_a.sol().tags()),
+                        "dof": None,
+                        "dof_note": "mesh/DoF statistics are not exposed by this worker method surface",
+                        "why_separate": (
+                            "§8: a re-solve may not be folded into the Gate A reopen verdict; the "
+                            "delivered suite ran it inside the case documented '(NO RE-SOLVE)'"
+                        ),
+                    },
+                )
+            except Exception as exc:
+                self.record_case("C03R", "Independent Re-solve", "FAIL", "numerical", {}, error=str(exc))
+
             # Retain worker2 as persistent verifier worker across C04–C15
             self.verifier_worker = worker2
         except Exception as exc:
@@ -1364,12 +1522,27 @@ public final class C07Builder {
             assert abs(sp_val["real"] - 3.0) < 1e-6
             assert abs(sp_val["imag"] - 1.0) < 1e-6
 
-            # 3. Disallow silent zero-padding on complex field lacking imaginary data
+            # 3. Negative control: complex data without an imaginary part must be
+            # rejected, never silently zero-padded.  The delivered control wrapped its
+            # own assertion in `except Exception: pass`, and AssertionError is an
+            # Exception, so the control passed even when padding occurred.
             try:
-                transform_complex_data([1.0, 2.0], None, mode="preserve", is_complex=True)
-                raise AssertionError("Expected failure when imag data missing for complex field")
-            except Exception:
-                pass
+                padded = transform_complex_data([1.0, 2.0], None, mode="preserve", is_complex=True)
+            except ExecutionContractError as exc:
+                assert exc.code == "COMPLEX_DATA_ERROR", (
+                    f"complex data without an imaginary part was rejected with the unexpected "
+                    f"contract code {exc.code!r}: {exc}"
+                )
+                zero_padding_rejection: dict[str, Any] = {
+                    "rejected": True,
+                    "error_code": exc.code,
+                    "message": str(exc),
+                }
+            else:
+                raise AssertionError(
+                    "a complex field evaluated without imaginary data was accepted and returned "
+                    f"{padded!r}; silent zero-padding must be rejected"
+                )
 
             self.record_case(
                 "C09",
@@ -1384,7 +1557,7 @@ public final class C07Builder {
                     "integral_phase": val_phase,
                     "spatial_point": [1.0, 1.0],
                     "spatial_complex_value": sp_val,
-                    "zero_padding_rejection_verified": True,
+                    "zero_padding_rejection": zero_padding_rejection,
                 },
             )
         except Exception as exc:
@@ -1548,43 +1721,94 @@ public final class C07Builder {
         try:
             store = ArtifactStore(project_root=ROOT)
 
-            # 1. Path traversal escape rejected
+            # 1. Path traversal escape rejected.  The delivered control asserted the
+            # right thing but recorded a hardcoded `traversal_rejected: True`; record
+            # the refusal the gate actually produced instead.
             try:
-                store.resolve_safe_path("../../etc/passwd")
-                raise AssertionError("Expected path traversal rejection")
-            except (ExecutionContractError, PermissionError):
-                pass
+                resolved = store.resolve_safe_path("../../etc/passwd")
+            except ExecutionContractError as exc:
+                assert exc.code in {"PERMISSION_DENIED", "PATH_ESCAPES_PROJECT_ROOT"}, (
+                    f"traversal refusal used an unexpected contract code: {exc.code}"
+                )
+                traversal_rejection: dict[str, Any] = {
+                    "rejected": True,
+                    "error_code": exc.code,
+                    "message": str(exc),
+                }
+            except PermissionError as exc:
+                traversal_rejection = {
+                    "rejected": True,
+                    "error_code": "PermissionError",
+                    "message": str(exc),
+                }
+            else:
+                raise AssertionError(
+                    f"a path escaping the approved project root resolved to {resolved!r} "
+                    "instead of being refused"
+                )
 
             # 2. Atomic export failure preservation via export_field_data
             target = self.artifacts_dir / "preserved.txt"
             target.write_text("ORIGINAL_CONTENT")
             orig_sha = _sha256(target)
+            entries_before = sorted(p.name for p in self.artifacts_dir.iterdir())
 
             try:
                 store.export_field_data(
                     str(target),
                     {"status": {"ok": False, "engine_error": "SIMULATED_FAILURE"}, "values": [1, 2, 3]},
                 )
-                raise AssertionError("Expected export failure")
-            except ExecutionContractError:
-                pass
+            except ExecutionContractError as exc:
+                export_refusal: dict[str, Any] = {
+                    "rejected": True,
+                    "error_code": exc.code,
+                    "message": str(exc),
+                }
+            else:
+                raise AssertionError("export_field_data accepted a failed engine payload")
 
             assert target.read_text() == "ORIGINAL_CONTENT"
             assert _sha256(target) == orig_sha
 
-            # 3. Atomic save rollback via atomic_save
+            # 3. Atomic save rollback via atomic_save.  The control has to prove the
+            # writer ran and staged partial content: refusing the call before the
+            # writer is reached (e.g. via the path gate) would leave the original
+            # untouched and make the rollback assertions pass without proving anything.
             from comsol_mcp._atomic_save import atomic_save, AtomicSaveError
+
+            writer_ran: dict[str, Any] = {"ran": False, "staged": None}
+
             def failing_writer(tmp_p: Path) -> None:
+                writer_ran["ran"] = True
                 tmp_p.write_text("PARTIAL_CONTENT")
-                raise RuntimeError("Simulation error during export")
+                writer_ran["staged"] = tmp_p.read_text()
+                raise RuntimeError("simulated engine failure during export")
 
             try:
                 atomic_save(str(target), failing_writer, project_root=ROOT)
-            except (AtomicSaveError, RuntimeError):
-                pass
+            except (AtomicSaveError, RuntimeError) as exc:
+                rollback: dict[str, Any] = {
+                    "rejected": True,
+                    "error_type": type(exc).__name__,
+                    "message": str(exc),
+                }
+            else:
+                raise AssertionError("atomic_save reported success although its writer raised")
 
+            assert writer_ran["ran"], (
+                "the rollback control never reached the writer, so the rollback path was not "
+                "exercised (the call was refused earlier)"
+            )
+            assert writer_ran["staged"] == "PARTIAL_CONTENT", (
+                f"the writer did not stage partial content: {writer_ran['staged']!r}"
+            )
             assert target.read_text() == "ORIGINAL_CONTENT"
             assert _sha256(target) == orig_sha
+            entries_after = sorted(p.name for p in self.artifacts_dir.iterdir())
+            assert entries_after == entries_before, (
+                "atomic_save left temporary artifacts behind after rollback: "
+                f"{sorted(set(entries_after) - set(entries_before))}"
+            )
 
             self.record_case(
                 "C12",
@@ -1592,9 +1816,13 @@ public final class C07Builder {
                 "PASS",
                 "protocol",
                 {
-                    "traversal_rejected": True,
-                    "atomic_rollback_verified": True,
+                    "traversal_rejection": traversal_rejection,
+                    "export_failure_rejection": export_refusal,
+                    "atomic_rollback": rollback,
+                    "writer_reached": writer_ran["ran"],
+                    "writer_staged_content": writer_ran["staged"],
                     "preserved_original_sha256": orig_sha,
+                    "artifacts_dir_entries_unchanged": entries_after == entries_before,
                 },
             )
         except Exception as exc:
@@ -1760,17 +1988,60 @@ public final class C07Builder {
     # Case C16: Packaging, Dependencies & Schema
     # -----------------------------------------------------------------------
     def run_c16(self) -> None:
-        self.log("Executing C16: Packaging, dependencies and schemas...")
+        self.log("Executing C16: packaging, dependency locks and wheel resources...")
         try:
             pyproject = ROOT / "pyproject.toml"
-            assert pyproject.is_file()
+            assert pyproject.is_file(), f"pyproject.toml missing at {pyproject}"
             content = pyproject.read_text(encoding="utf-8")
-            assert "dependencies = [" in content
+            assert "dependencies = [" in content, "pyproject.toml declares no dependencies list"
 
-            # Check wheel exists
+            lock_files = [
+                ROOT / "constraints-macos-arm64-py313.txt",
+                ROOT / "requirements-windows-cp312.txt",
+                ROOT / "pip-freeze-fresh.txt",
+            ]
+            absent_locks = [str(p.name) for p in lock_files if not p.is_file()]
+            assert not absent_locks, f"dependency lock files missing: {absent_locks}"
+
             wheel_dir = self.run_dir / "wheel_dist"
-            wheels = list(wheel_dir.glob("*.whl"))
-            assert len(wheels) == 1
+            wheels = sorted(wheel_dir.glob("*.whl"))
+            assert len(wheels) == 1, (
+                f"expected exactly one built wheel in {wheel_dir}, found {[w.name for w in wheels]} "
+                "-- C00 builds it and C16 verifies what is inside it"
+            )
+            wheel_path = wheels[0]
+
+            # The resources inside the wheel are what the server loads at runtime:
+            # without them the action catalog and the Java worker are simply absent.
+            import zipfile
+
+            with zipfile.ZipFile(wheel_path) as archive:
+                names = archive.namelist()
+                required_suffixes = [
+                    "comsol_mcp/data/g2/02_ACTION_CATALOG.json",
+                    "comsol_mcp/data/g2/common.schema.json",
+                    "comsol_mcp/worker_java/PersistentComsolWorker.java",
+                ]
+                resources: dict[str, Any] = {}
+                for suffix in required_suffixes:
+                    matches = [n for n in names if n.endswith(suffix)]
+                    assert matches, (
+                        f"wheel {wheel_path.name} does not package {suffix}; first entries: {names[:10]}"
+                    )
+                    payload = archive.read(matches[0])
+                    resources[suffix] = {
+                        "entry": matches[0],
+                        "size": archive.getinfo(matches[0]).file_size,
+                        "sha256": _sha256_bytes(payload),
+                    }
+                catalog = json.loads(
+                    archive.read(resources[required_suffixes[0]]["entry"]).decode("utf-8")
+                )
+                schema = json.loads(
+                    archive.read(resources[required_suffixes[1]]["entry"]).decode("utf-8")
+                )
+                assert isinstance(catalog, dict) and catalog, "packaged action catalog is not a non-empty object"
+                assert isinstance(schema, dict) and schema, "packaged common.schema.json is not a non-empty object"
 
             self.record_case(
                 "C16",
@@ -1779,8 +2050,16 @@ public final class C07Builder {
                 "static",
                 {
                     "pyproject": str(pyproject),
-                    "wheel_file": str(wheels[0]),
-                    "schema_contract_valid": True,
+                    "pyproject_sha256": _sha256(pyproject),
+                    "dependency_lock_files": {
+                        p.name: _sha256(p) for p in lock_files
+                    },
+                    "wheel_file": str(wheel_path),
+                    "wheel_sha256": _sha256(wheel_path),
+                    "wheel_resource_manifest_source": "read out of the built wheel with zipfile",
+                    "wheel_resources": resources,
+                    "action_catalog_entries": len(catalog),
+                    "schema_top_level_keys": sorted(schema)[:10],
                 },
             )
         except Exception as exc:

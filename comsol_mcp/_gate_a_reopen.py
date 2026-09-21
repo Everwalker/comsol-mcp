@@ -42,6 +42,41 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _read_derived_value_tags(model: Any) -> list[str] | None:
+    """List the derived-value (result/numerical) node tags of a reopened model.
+
+    A live model is queried through the engine -- ``model.result().numerical().tags()``
+    -- because the earlier check only read a ``derived_values`` attribute that the
+    acceptance driver had written onto the model object itself, so the live path
+    verified nothing.  The attribute is still consulted first, since the in-memory
+    fakes used by the unit tests expose it.
+
+    ``None`` means "cannot establish": the caller reports that as a failure rather
+    than treating an unreadable list as a pass.
+    """
+    attribute = getattr(model, "derived_values", None)
+    if attribute is not None:
+        return [str(tag) for tag in attribute]
+
+    readers = (
+        lambda: model.result().numerical().tags(),
+        lambda: model._call("result")._call("numerical")._call("tags"),
+        lambda: model.java.result().numerical().tags(),
+    )
+    for read in readers:
+        try:
+            tags = read()
+        except Exception:
+            continue
+        if tags is None:
+            continue
+        try:
+            return [str(tag) for tag in tags]
+        except TypeError:
+            continue
+    return None
+
+
 def verify_reopen(
     model: Any,
     receipt: Mapping[str, Any],
@@ -153,16 +188,30 @@ def verify_reopen(
     # 4. Derived values verification
     expected_dv = receipt.get("derived_values")
     if expected_dv:
-        actual_dv = getattr(model, "derived_values", None)
-        if actual_dv is not None:
-            missing = [dv for dv in expected_dv if dv not in actual_dv]
-            if missing:
-                raise ReopenVerificationError(
-                    "DERIVED_VALUES_MISSING",
-                    f"Required derived values nodes missing: {missing}",
-                    {"missing": missing, "available": list(actual_dv)},
-                )
-        report["checks"].append({"name": "derived_values", "status": "PASS"})
+        actual_dv = _read_derived_value_tags(model)
+        if actual_dv is None:
+            raise ReopenVerificationError(
+                "DERIVED_VALUES_UNREADABLE",
+                "The receipt requires derived-value nodes but the reopened model exposes no way "
+                "to list them; an unreadable list is not a passing check",
+                {"expected": list(expected_dv)},
+            )
+        missing = [dv for dv in expected_dv if dv not in actual_dv]
+        if missing:
+            raise ReopenVerificationError(
+                "DERIVED_VALUES_MISSING",
+                f"Required derived values nodes missing: {missing}",
+                {"missing": missing, "available": list(actual_dv)},
+            )
+        report["checks"].append(
+            {
+                "name": "derived_values",
+                "status": "PASS",
+                "expected": list(expected_dv),
+                "available": list(actual_dv),
+                "source": "model attribute, else model.result().numerical().tags() from the engine",
+            }
+        )
 
     # 5. Numerical stored solution verification
     expectations = receipt.get("expectations", {})
