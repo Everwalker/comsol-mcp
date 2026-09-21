@@ -63,11 +63,16 @@ Every engine call below is verified against one of two local sources:
   * The canonical stored-time route is ``SolutionInfo``
     (``model.sol(<tag>).getSolutioninfo()`` -> ``getLevelNames()/getSolnum()/
     getVals()/getOuterSolnum()``, documented in
-    ``comsol_api_solver.51.10.html``).  Its accessors are *not* on the worker
-    method allow-list (see ``ALLOWLIST_ADDITIONS``), so this adapter uses the
-    verified substitutes it *can* call - the numerical feature's own transient
-    ``t`` property, ``SolverSequence.getPVals()`` and the associated study
-    step's type/``tlist``/``tunit`` - and reports which one it used in
+    ``comsol_api_solver.51.10.html``).  The G3.3 §4 (F04) fix publishes the four
+    accessors this module actually calls (``getSolutioninfo``,
+    ``getOuterSolnum``, ``getMaxInner``, ``getLevelNames`` - see
+    ``ALLOWLIST_ADDITIONS_PUBLISHED``) and ``dataset.solution_indices`` reads the
+    outer/inner axes from them instead of inventing an index; the remaining
+    SolutionInfo accessors and the EvaluationGroup route stay reported in
+    ``ALLOWLIST_ADDITIONS``.  ``result.sample_path`` keeps using the verified
+    substitutes it *can* call - the numerical feature's own transient ``t``
+    property, ``SolverSequence.getPVals()`` and the associated study step's
+    type/``tlist``/``tunit`` - and reports which one it used in
     ``solution_axis.source``.  Nothing is ever invented: an axis that cannot be
     read is reported as unavailable and the ``t`` column is omitted.
 
@@ -206,13 +211,9 @@ DOUBLE_MATRIX_KIND = "float64"
 ALLOWLIST_ADDITIONS: tuple[str, ...] = (
     # SolutionInfo (comsol_api_solver.51.10): the canonical stored output-time /
     # level-name route; needs the accessor plus its methods.
-    "getSolutioninfo",
-    "getLevelNames",
     "getLevels",
     "getSolnum",
     "getVals",
-    "getOuterSolnum",
-    "getMaxInner",
     # Study.getSolverSequences(String) would attribute a solver sequence to a
     # study *step* exactly, instead of the study-level association used here.
     "getSolverSequences",
@@ -220,6 +221,23 @@ ALLOWLIST_ADDITIONS: tuple[str, ...] = (
     # "looplevelinput first/last + getReal()" route for output times.
     "evaluationGroup",
     "looplevelinput",
+)
+
+#: SolutionInfo route entries that were *published* by the G3.3 §4 (F04) fix and
+#: are now actually called by ``read_solution_binding``.  They are listed here
+#: (and kept out of ``ALLOWLIST_ADDITIONS``) because the Java worker allow-list
+#: and this adapter have to agree: a name reported as "missing" while the code
+#: dispatches it is exactly the silent-hole class the allow-list test forbids.
+#: javap -cp apiplugins/com.comsol.api_1.0.0.jar (COMSOL 6.4.0.293):
+#:   SolverSequence.getSolutioninfo() -> SolutionInfo
+#:   SolutionInfo.getOuterSolnum() -> int[]
+#:   SolutionInfo.getMaxInner(int[]) -> int
+#:   SolutionInfo.getLevelNames() -> String[]
+ALLOWLIST_ADDITIONS_PUBLISHED: tuple[str, ...] = (
+    "getSolutioninfo",
+    "getOuterSolnum",
+    "getMaxInner",
+    "getLevelNames",
 )
 
 #: Solver-sequence introspection that the worker *does* publish but that this
@@ -1708,52 +1726,93 @@ def dataset_solution_indices(worker: Any, model_tag: str, arguments: Mapping[str
         }
 
     sol_node = _call(sol_list, "get", solution_tag) if hasattr(sol_list, "get") else _call(model, "sol", solution_tag)
-    pvals = None
-    try:
-        pvals = _call(sol_node, "getPVals")
-    except Exception:
-        pass
+
+    # §4: every metadata read below is either used or *reported*.  A failed read
+    # is never converted into a value: the earlier revision fabricated
+    # ``outer_indices = [1]`` and reported ``binding_complete = True`` while its
+    # two SolutionInfo calls were refused by the worker allow-list and the
+    # exception was swallowed, so the response claimed metadata it had never
+    # read.
+    read_errors: list[dict[str, Any]] = []
+
+    def _read(node: Any, method: str, *args: Any) -> Any:
+        try:
+            return _call_recorded(node, method, *args, errors=read_errors)
+        except ExecutionContractError:
+            return None
+
+    pvals = _read(sol_node, "getPVals")
 
     study_tag = _string_or_none(sol_node, "study", [])
     steps, _ = _study_steps(model, study_tag, []) if study_tag else ([], None)
     is_transient = any(step.get("type") in TIME_DEPENDENT_STUDY_STEPS for step in steps)
 
     time_values: list[float] = []
-    if is_transient and pvals is not None:
+    if is_transient and pvals:
         time_values = [float(v) for v in pvals]
+    if time_values:
+        time_axis_source = "stored output times from SolverSequence.getPVals()"
+    elif is_transient:
+        time_axis_source = "unavailable: transient solution but getPVals() returned no values"
+    else:
+        time_axis_source = "steady: no time axis"
 
-    sol_count = len(pvals) if pvals is not None else 1
-    inner_indices = list(range(1, sol_count + 1))
-    outer_indices = [1]
-    try:
-        sol_info = _call(sol_node, "getSolutioninfo")
-        if sol_info is not None:
-            outers = _call(sol_info, "getOuterSolnum")
-            if outers is not None and len(outers) > 0:
-                outer_indices = [int(x) for x in outers]
-    except Exception:
-        pass
+    sol_info = _read(sol_node, "getSolutioninfo")
+    outer_indices: list[int] = []
+    inner_indices: list[int] = []
+    level_names: list[str] = []
+    if sol_info is not None:
+        outers = _read(sol_info, "getOuterSolnum")
+        if outers:
+            outer_indices = [int(x) for x in outers]
+        levels = _read(sol_info, "getLevelNames")
+        if levels:
+            level_names = [str(x) for x in levels]
+        if outer_indices:
+            max_inner = _read(sol_info, "getMaxInner", outer_indices)
+            if max_inner is not None:
+                inner_indices = list(range(1, int(max_inner) + 1))
+
+    axis_metadata_complete = bool(outer_indices and inner_indices)
+    if not axis_metadata_complete:
+        read_errors.append({
+            "method": "SolutionInfo",
+            "code": "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+            "message": "outer/inner solution axes could not be read from the engine; "
+                       "no default index is invented and operations that select a "
+                       "solution axis stay refused",
+            "allowlist_entry_required": None,
+        })
 
     parameters: dict[str, Any] = {}
-    try:
-        pnames = _call(sol_node, "getParamNames")
-        param_vals = _call(sol_node, "getParamVals")
-        if pnames and param_vals:
-            for n, v in zip(pnames, param_vals):
-                parameters[str(n)] = list(v) if isinstance(v, (list, tuple)) else v
-    except Exception:
-        pass
+    pnames = _read(sol_node, "getParamNames")
+    param_vals = _read(sol_node, "getParamVals")
+    if pnames and param_vals:
+        for n, v in zip(pnames, param_vals):
+            parameters[str(n)] = list(v) if isinstance(v, (list, tuple)) else v
 
     return {
         "dataset": tag,
         "solution": solution_tag,
         "study": study_tag,
         "binding_complete": True,
+        "binding_source": "dataset property 'solution'/'data' resolved against model.sol().tags()",
+        "axis_metadata_complete": axis_metadata_complete,
+        "axis_metadata_source": "SolverSequence.getSolutioninfo() + SolutionInfo.getOuterSolnum()/"
+                                "getMaxInner()/getLevelNames()",
         "time_values": time_values,
+        "time_axis_source": time_axis_source,
         "inner_indices": inner_indices,
         "outer_indices": outer_indices,
+        "level_names": level_names,
         "parameters": parameters,
-        "solution_count": sol_count,
+        # §4: index-pairing two arrays is not proof of the full parameter
+        # combination, so completeness is reported instead of asserted (the
+        # combination map would need SolutionInfo.mapToSolnum()).
+        "parameters_complete": False,
+        "parameters_source": "SolverSequence.getParamNames()/getParamVals() (index-paired)",
+        "solution_count": len(pvals) if pvals else len(inner_indices),
+        "read_errors": read_errors,
     }
 
 
@@ -1887,6 +1946,36 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
     if complex_mode not in COMPLEX_MODES:
         raise ExecutionContractError("API_UNSUPPORTED", f"complex_mode {complex_mode!r} is not supported; valid: {sorted(COMPLEX_MODES)}")
 
+    # §4: unimplemented per-solution selections are refused explicitly, never
+    # silently ignored.  ``inner`` *is* implemented (see the SolutionBinding
+    # slice below), the other four are not, so they get a contract error.
+    for name in ("outer", "time", "frequency", "parameters"):
+        if solution_spec.get(name) is not None or spec.get(name) is not None:
+            raise ExecutionContractError(
+                "API_UNSUPPORTED",
+                f"spec.solution.{name} selection is not implemented by this operation; "
+                f"the request was refused instead of being ignored (implemented: "
+                f"'inner' plus the dataset/solution tag)",
+            )
+
+    # §3: the denominator is M = ∫w dμ read from the engine.  A caller-supplied
+    # constant is refused outright: it is exactly the "hardcode the denominator"
+    # route the measure requirement exists to prevent.
+    if spec.get("denominator_measure") is not None:
+        raise ExecutionContractError(
+            "API_UNSUPPORTED",
+            "spec.denominator_measure is not accepted; the denominator M = ∫w dμ is read from the "
+            "engine over the same dataset/selection/solution axes as the numerator",
+        )
+
+    weight_expression = spec.get("weight_expression")
+    if weight_expression is not None and not isinstance(weight_expression, str):
+        raise ExecutionContractError(
+            "INVALID_REQUEST", "spec.weight_expression must be a COMSOL expression string"
+        )
+    if isinstance(weight_expression, str) and not weight_expression.strip():
+        raise ExecutionContractError("INVALID_REQUEST", "spec.weight_expression must not be empty")
+
     storage = spec.get("storage", "auto")
 
     model = bound_model(worker, model_tag)
@@ -1952,6 +2041,11 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
     engine_error = None
     transformed = None
     is_complex = False
+    # §3: reported in every outcome, including the failure path, so the response
+    # never depends on how far the aggregate block got before an error.
+    denominator_measure = None
+    cross_section_measure = None
+    denominator_source = None
 
     try:
         feature = _call(numerical_list, "create", ephemeral_tag, feat_type)
@@ -2021,16 +2115,17 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
                 v = v.get("real", 0.0)
             return float(v) if v is not None else 0.0
 
-        denominator_measure = None
-        cross_section_measure = None
-        if aggregate in ("average", "std", "rms"):
+        if aggregate in ("average", "std", "rms") or weight_expression:
             meas_tag = f"{ephemeral_tag}_meas"
             meas_feat = None
             m_raw = None
+            m_read_error: str | None = None
+            # §3: the measure integrand is w for a weighted aggregate, 1 otherwise.
+            measure_expr = [weight_expression] if weight_expression else ["1"]
             try:
                 meas_feat = _call(numerical_list, "create", meas_tag, ms.integral_feature_type)
                 _call(meas_feat, "set", "data", dataset_tag)
-                _call(meas_feat, "set", "expr", ["1"])
+                _call(meas_feat, "set", "expr", measure_expr)
                 ms.apply_selection(meas_feat)
                 if is_axisymmetric:
                     try:
@@ -2046,8 +2141,9 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
                     m_raw = _call(meas_feat, "getData")
                 except Exception:
                     m_raw = _call(meas_feat, "getReal")
-            except Exception:
+            except Exception as exc:
                 m_raw = None
+                m_read_error = f"{type(exc).__name__}: {exc}"
 
             if is_axisymmetric and meas_feat is not None:
                 try:
@@ -2066,76 +2162,165 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
                     pass
 
             m_val = _to_float(m_raw) if m_raw is not None else None
-            if m_val is not None and m_val > 0.0:
-                denominator_measure = m_val
-            elif isinstance(spec.get("denominator_measure"), (int, float)):
-                denominator_measure = float(spec["denominator_measure"])
-            else:
-                denominator_measure = float(spec.get("denominator_measure", 1.0))
-
-            if denominator_measure <= 0.0 or not math.isfinite(denominator_measure):
+            if m_val is None or not math.isfinite(m_val) or m_val <= 0.0:
+                # §3: the denominator is M = ∫w dμ read from the engine.  A failed
+                # read is reported and the operation fails; it is never replaced
+                # by 1.0 or by a caller-supplied constant.
+                if meas_feat is not None:
+                    try:
+                        _call(numerical_list, "remove", meas_tag)
+                    except Exception:
+                        pass
                 raise ExecutionContractError(
                     "ZERO_OR_INVALID_MEASURE",
-                    f"spatial measure must be positive and finite, got {denominator_measure}",
+                    f"the spatial measure M = ∫w dμ could not be read from the engine "
+                    f"(value {m_val!r}, read error {m_read_error!r}); a hardcoded or "
+                    f"caller-supplied denominator is not accepted",
                 )
+            denominator_measure = m_val
+            denominator_source = (
+                f"engine integral of w={weight_expression!r} over the selection"
+                if weight_expression
+                else "engine integral of 1 over the selection"
+            )
+
+            # §3: a weighted aggregate uses the numerator ∫w·f dμ over the *same*
+            # dataset/selection/solution axes as the measure M = ∫w dμ.
+            num_tag = f"{ephemeral_tag}_num"
+            num_feat = None
+            if weight_expression:
+                try:
+                    num_feat = _call(numerical_list, "create", num_tag, ms.integral_feature_type)
+                    _call(num_feat, "set", "data", dataset_tag)
+                    _call(num_feat, "set", "expr", [f"({weight_expression})*({e})" for e in expressions])
+                    ms.apply_selection(num_feat)
+                    _call(num_feat, "run")
+                    try:
+                        num_raw = _call(num_feat, "getData")
+                    except Exception:
+                        num_raw = _call(num_feat, "getReal")
+                except Exception as exc:
+                    raise ExecutionContractError(
+                        "ENGINE_CALL_FAILED",
+                        f"the weighted numerator ∫w·f dμ could not be evaluated: "
+                        f"{type(exc).__name__}: {exc}",
+                    )
+                transformed = num_raw
+
+            def _divide_by_measure(value: Any) -> Any:
+                if isinstance(value, (int, float)):
+                    return float(value) / denominator_measure
+                if isinstance(value, list):
+                    return [
+                        _divide_by_measure(item) if isinstance(item, (int, float, list)) else item
+                        for item in value
+                    ]
+                return value
+
+            # The aggregation feature used for the variance/square integrals: the
+            # weighted numerator when a weight is given, the measure feature
+            # otherwise.  The measure feature's ``expr`` is restored afterwards so
+            # the reported measure stays M = ∫w dμ.
+            aggregate_feature = num_feat if weight_expression else meas_feat
 
             if aggregate == "average":
-                if feat_type.startswith("Av") and m_raw is not None and m_val != _to_float(raw_real):
+                if weight_expression:
+                    transformed = _divide_by_measure(transformed)
+                elif feat_type.startswith("Av"):
+                    # The Av* feature already returns the mean over the selection;
+                    # dividing again would divide by the measure twice.  The rule
+                    # is the feature type, not a value comparison: the earlier
+                    # ``m_val != _to_float(raw_real)`` heuristic silently skipped
+                    # the division whenever the mean happened to equal the
+                    # measure (e.g. a constant field f ≡ V).
                     pass
                 else:
-                    if isinstance(transformed, (int, float)):
-                        transformed = float(transformed) / denominator_measure
-                    elif isinstance(transformed, list):
-                        transformed = [float(v) / denominator_measure if isinstance(v, (int, float)) else v for v in transformed]
+                    transformed = _divide_by_measure(transformed)
 
             elif aggregate == "std":
-                mean_val = _to_float(transformed)
-                std_val = None
-                if meas_feat is not None and m_raw is not None:
-                    try:
-                        var_exprs = [f"({e} - ({mean_val}))^2" for e in expressions]
-                        _call(meas_feat, "set", "expr", var_exprs)
-                        _call(meas_feat, "run")
-                        try:
-                            v_raw = _call(meas_feat, "getData")
-                        except Exception:
-                            v_raw = _call(meas_feat, "getReal")
-                        var_int = _to_float(v_raw)
-                        var_val = max(0.0, var_int / denominator_measure)
-                        std_val = math.sqrt(var_val)
-                    except Exception:
-                        std_val = None
-
-                if std_val is not None:
-                    transformed = std_val
+                base_val = _to_float(transformed)
+                if feat_type.startswith("Av") and not weight_expression:
+                    mean_val = base_val
                 else:
-                    transformed = 0.0
+                    mean_val = base_val / denominator_measure
+                if aggregate_feature is None:
+                    raise ExecutionContractError(
+                        "ZERO_OR_INVALID_MEASURE",
+                        "the variance integral ∫w(f-mean)^2 dμ needs the measure feature, which is "
+                        "not available",
+                    )
+                if weight_expression:
+                    var_exprs = [f"({weight_expression})*(({e}) - ({mean_val}))^2" for e in expressions]
+                else:
+                    var_exprs = [f"({e} - ({mean_val}))^2" for e in expressions]
+                try:
+                    _call(aggregate_feature, "set", "expr", var_exprs)
+                    _call(aggregate_feature, "run")
+                    try:
+                        v_raw = _call(aggregate_feature, "getData")
+                    except Exception:
+                        v_raw = _call(aggregate_feature, "getReal")
+                    var_int = _to_float(v_raw)
+                except Exception as exc:
+                    # §3: no silent degradation to std = 0.0.
+                    raise ExecutionContractError(
+                        "ENGINE_CALL_FAILED",
+                        f"the variance integral ∫w(f-mean)^2 dμ could not be evaluated: "
+                        f"{type(exc).__name__}: {exc}",
+                    )
+                var_val = var_int / denominator_measure
+                if -1e-12 < var_val < 0.0:
+                    var_val = 0.0  # float cancellation only
+                if var_val < 0.0 or not math.isfinite(var_val):
+                    raise ExecutionContractError(
+                        "INVALID_RESULT",
+                        f"variance {var_val!r} is not a finite non-negative number",
+                    )
+                transformed = math.sqrt(var_val)
 
             elif aggregate == "rms":
-                rms_val = None
-                if meas_feat is not None and m_raw is not None:
-                    try:
-                        sq_exprs = [f"({e})^2" for e in expressions]
-                        _call(meas_feat, "set", "expr", sq_exprs)
-                        _call(meas_feat, "run")
-                        try:
-                            s_raw = _call(meas_feat, "getData")
-                        except Exception:
-                            s_raw = _call(meas_feat, "getReal")
-                        sq_int = _to_float(s_raw)
-                        ms_val = max(0.0, sq_int / denominator_measure)
-                        rms_val = math.sqrt(ms_val)
-                    except Exception:
-                        rms_val = None
-
-                if rms_val is not None:
-                    transformed = rms_val
+                if aggregate_feature is None:
+                    raise ExecutionContractError(
+                        "ZERO_OR_INVALID_MEASURE",
+                        "the square integral ∫w|f|² dμ needs the measure feature, which is not available",
+                    )
+                if weight_expression:
+                    sq_exprs = [f"({weight_expression})*(({e})^2)" for e in expressions]
                 else:
-                    transformed = abs(_to_float(transformed))
+                    sq_exprs = [f"({e})^2" for e in expressions]
+                try:
+                    _call(aggregate_feature, "set", "expr", sq_exprs)
+                    _call(aggregate_feature, "run")
+                    try:
+                        s_raw = _call(aggregate_feature, "getData")
+                    except Exception:
+                        s_raw = _call(aggregate_feature, "getReal")
+                    sq_int = _to_float(s_raw)
+                except Exception as exc:
+                    # §3: no silent degradation to rms = |mean|.
+                    raise ExecutionContractError(
+                        "ENGINE_CALL_FAILED",
+                        f"the square integral ∫w|f|² dμ could not be evaluated: "
+                        f"{type(exc).__name__}: {exc}",
+                    )
+                ms_val = sq_int / denominator_measure
+                if -1e-12 < ms_val < 0.0:
+                    ms_val = 0.0  # float cancellation only
+                if ms_val < 0.0 or not math.isfinite(ms_val):
+                    raise ExecutionContractError(
+                        "INVALID_RESULT",
+                        f"mean square {ms_val!r} is not a finite non-negative number",
+                    )
+                transformed = math.sqrt(ms_val)
 
             if meas_feat is not None:
                 try:
                     _call(numerical_list, "remove", meas_tag)
+                except Exception:
+                    pass
+            if num_feat is not None:
+                try:
+                    _call(numerical_list, "remove", num_tag)
                 except Exception:
                     pass
 
@@ -2188,6 +2373,7 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
         "revolved_measure": denominator_measure if is_axisymmetric else None,
         "cross_section_measure": cross_section_measure,
         "denominator_measure": denominator_measure if aggregate in ("average", "std", "rms") else None,
+        "denominator_source": denominator_source,
         "total_elements": total_elements,
         "cleanup": cleanup,
         "status": {

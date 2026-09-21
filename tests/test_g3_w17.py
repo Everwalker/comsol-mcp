@@ -235,6 +235,17 @@ class FWiredTree:
         self.solver.getParamNames = lambda *args: self.solver._guard("getParamNames", args) or self.solver.props["getParamNames"]
         self.solver.getParamVals = lambda *args: self.solver._guard("getParamVals", args) or self.solver.props["getParamVals"]
 
+        # SolutionInfo route (§4/F04): dataset.solution_indices reads the real
+        # outer/inner axes through SolverSequence.getSolutioninfo(), so the fake
+        # exposes the same four accessors the live worker now allow-lists.
+        self.solution_info = FNode(tag="solutioninfo", type_id="SolutionInfo",
+                                   props={"getOuterSolnum": [1], "getMaxInner": 3,
+                                          "getLevelNames": ["outer", "inner"]})
+        self.solution_info.getOuterSolnum = lambda *args: self.solution_info._guard("getOuterSolnum", args) or self.solution_info.props["getOuterSolnum"]
+        self.solution_info.getMaxInner = lambda *args: self.solution_info._guard("getMaxInner", args) or self.solution_info.props["getMaxInner"]
+        self.solution_info.getLevelNames = lambda *args: self.solution_info._guard("getLevelNames", args) or self.solution_info.props["getLevelNames"]
+        self.solver.getSolutioninfo = lambda *args: self.solver._guard("getSolutioninfo", args) or self.solution_info
+
         self.study_step = FNode(tag="time", type_id="Transient", props={"tlist": "range(0,0.1,0.2)", "tunit": "s"})
         self.study_features = FList(node_type="StudyFeature")
         self.study_features.items["time"] = self.study_step
@@ -437,6 +448,44 @@ def test_dataset_solution_indices() -> None:
     tree.dataset_list.items["dset_unbound"] = unbound_dset
     unbound_res = dispatch("dataset.solution_indices", worker, "Model", {"path": "dset_unbound"})
     assert unbound_res["binding_complete"] is True or unbound_res["solution"] == "sol1"
+
+
+def test_solution_indices_never_invents_an_axis_when_the_engine_refuses_it() -> None:
+    """§4/F04: a refused SolutionInfo read must not become ``outer_indices=[1]``.
+
+    The pre-fix code returned ``binding_complete: True`` with a hardcoded
+    ``outer_indices = [1]`` while both SolutionInfo calls were refused by the
+    worker allow-list and the exception was swallowed, so the response claimed
+    metadata it had never read.
+    """
+    tree = FWiredTree()
+    tree.solver.unavailable.add("getSolutioninfo")
+
+    data = dispatch("dataset.solution_indices", tree.worker, "Model", {"path": "dset1"})
+
+    assert data["outer_indices"] == []
+    assert data["inner_indices"] == []
+    assert data["axis_metadata_complete"] is False
+    refused = {entry["method"]: entry for entry in data["read_errors"]}
+    assert "getSolutioninfo" in refused
+    # The refusal is reported as an allow-list gap, never converted into a value.
+    assert refused["getSolutioninfo"]["allowlist_entry_required"] == "getSolutioninfo"
+    assert data["parameters_complete"] is False
+
+
+def test_solution_indices_reads_the_outer_axis_from_the_engine() -> None:
+    """The outer axis is engine-driven: two stored outer solutions appear as [1, 2]."""
+    tree = FWiredTree()
+    tree.solution_info.props["getOuterSolnum"] = [1, 2]
+    tree.solution_info.props["getMaxInner"] = 2
+
+    data = dispatch("dataset.solution_indices", tree.worker, "Model", {"path": "dset1"})
+
+    assert data["outer_indices"] == [1, 2]
+    assert data["inner_indices"] == [1, 2]
+    assert data["axis_metadata_complete"] is True
+    assert data["level_names"] == ["outer", "inner"]
+    assert data["read_errors"] == []
 
 
 def test_result_evaluate_complex_field_modes() -> None:
@@ -730,3 +779,145 @@ def test_field_export_large_data_and_chunk_verification(tmp_path: Path) -> None:
     content = json.loads(dest_file.read_text(encoding="utf-8"))
     assert content["values"] == large_data
     assert content["metadata"]["dataset"] == "dset1"
+
+
+# ---------------------------------------------------------------------------
+# §3 measure and §4 selection contracts (G3.3 remediation)
+# ---------------------------------------------------------------------------
+
+
+def test_the_measure_is_engine_read_and_never_substituted() -> None:
+    """§3: a failed ``M = ∫w dμ`` read must fail the operation.
+
+    The pre-fix code fell back to ``spec.denominator_measure`` and then to a
+    hardcoded ``1.0``, so an average over a domain whose measure could not be
+    read was still published as a successful number.
+    """
+    tree = FWiredTree(numerical_real=150.0)
+    original = tree.numerical_list.factory
+
+    def refusing_factory(tag: str, *args: Any) -> Any:
+        if tag.endswith("_meas"):
+            raise FakeEngineError("measure feature could not be created", code="ENGINE_CALL_FAILED")
+        return original(tag, *args)
+
+    tree.numerical_list.factory = refusing_factory
+
+    with pytest.raises(ExecutionContractError) as exc_info:
+        dispatch("result.evaluate", tree.worker, "Model", {
+            "spec": {"expressions": ["T"], "solution": {"dataset": "dset1"},
+                     "aggregate": "average", "complex_mode": "real"},
+        })
+    assert exc_info.value.code == "ZERO_OR_INVALID_MEASURE"
+    assert "denominator" in str(exc_info.value)
+
+
+def test_a_caller_supplied_denominator_is_refused() -> None:
+    """§3: the denominator comes from the engine, so ``denominator_measure`` is refused."""
+    tree = FWiredTree()
+    with pytest.raises(ExecutionContractError) as exc_info:
+        dispatch("result.evaluate", tree.worker, "Model", {
+            "spec": {"expressions": ["T"], "solution": {"dataset": "dset1"},
+                     "aggregate": "average", "denominator_measure": 1.0},
+        })
+    assert exc_info.value.code == "API_UNSUPPORTED"
+    assert "denominator_measure" in str(exc_info.value)
+
+
+def test_unimplemented_solution_selections_are_refused_not_ignored() -> None:
+    """§4: unsupported per-solution selection keys raise instead of being ignored."""
+    tree = FWiredTree()
+    for key in ("outer", "time", "frequency", "parameters"):
+        with pytest.raises(ExecutionContractError) as exc_info:
+            dispatch("result.evaluate", tree.worker, "Model", {
+                "spec": {"expressions": ["T"], "solution": {"dataset": "dset1", key: 1}},
+            })
+        assert exc_info.value.code == "API_UNSUPPORTED", key
+        assert key in str(exc_info.value)
+
+
+def test_std_and_rms_fail_instead_of_degrading_to_zero_or_abs_mean() -> None:
+    """§3: no silent ``std = 0.0`` / ``rms = |mean|`` when the integral cannot be read."""
+    for aggregate in ("std", "rms"):
+        tree = FWiredTree(numerical_real=150.0)
+        original = tree.numerical_list.factory
+
+        class _RefusingSecondRead(FNumericalFeature):
+            def _refuse(self) -> None:
+                expr = str(self.props.get("expr"))
+                if "^2" in expr or "- (" in expr:
+                    raise FakeEngineError("variance/square integral failed", code="ENGINE_CALL_FAILED")
+
+            def getData(self) -> Any:
+                self._refuse()
+                return super().getData()
+
+            def getReal(self) -> Any:
+                self._refuse()
+                return super().getReal()
+
+        def factory(tag: str, *args: Any, _original: Any = original) -> Any:
+            feat = _original(tag, *args)
+            if tag.endswith("_meas"):
+                feat.__class__ = _RefusingSecondRead
+            return feat
+
+        tree.numerical_list.factory = factory
+
+        with pytest.raises(ExecutionContractError) as exc_info:
+            dispatch("result.evaluate", tree.worker, "Model", {
+                "spec": {"expressions": ["T"], "solution": {"dataset": "dset1"},
+                         "aggregate": aggregate, "complex_mode": "real"},
+            })
+        assert exc_info.value.code in {"ENGINE_CALL_FAILED", "INVALID_RESULT"}, (aggregate, exc_info.value)
+
+
+def test_weighted_average_uses_the_weighted_measure_and_numerator() -> None:
+    """§3: ``M = ∫w dμ`` and ``average = ∫w·f dμ / M`` are both read from the engine."""
+    tree = FWiredTree(numerical_real=150.0)
+    created: list[tuple[str, Any]] = []
+    original = tree.numerical_list.factory
+
+    def factory(tag: str, *args: Any) -> Any:
+        feat = original(tag, *args)
+        created.append((tag, feat))
+        return feat
+
+    tree.numerical_list.factory = factory
+
+    data = dispatch("result.evaluate", tree.worker, "Model", {
+        "spec": {"expressions": ["T"], "solution": {"dataset": "dset1"},
+                 "aggregate": "average", "complex_mode": "real",
+                 "weight_expression": "2"},
+    })
+
+    measure = next(feat for tag, feat in created if tag.endswith("_meas"))
+    numerator = next(feat for tag, feat in created if tag.endswith("_num"))
+    # The measure integrates w (not 1) and the numerator integrates w*f.
+    assert measure.props["expr"] == ["2"]
+    assert numerator.props["expr"] == ["(2)*(T)"]
+    # The fake returns 150.0 for both integrals, so ∫w·f/∫w = 1.0.
+    assert math.isclose(data["values"], 1.0, rel_tol=1e-12)
+    assert data["denominator_measure"] == 150.0
+    assert "w='2'" in (data["denominator_source"] or "")
+
+
+def test_weighted_average_differs_from_the_unweighted_one() -> None:
+    """The weight changes the result, so a silent no-op would be visible."""
+    unweighted = FWiredTree(numerical_real=150.0)
+    unweighted_avg = dispatch("result.evaluate", unweighted.worker, "Model", {
+        "spec": {"expressions": ["T"], "solution": {"dataset": "dset1"},
+                 "aggregate": "average", "complex_mode": "real"},
+    })
+    weighted = FWiredTree(numerical_real=150.0)
+    weighted_avg = dispatch("result.evaluate", weighted.worker, "Model", {
+        "spec": {"expressions": ["T"], "solution": {"dataset": "dset1"},
+                 "aggregate": "average", "complex_mode": "real",
+                 "weight_expression": "2"},
+    })
+    # Unweighted: the Av* feature already returns the mean (150.0).  Weighted:
+    # ∫w·f/∫w = 1.0 with this fixture, so the two paths are distinguishable.
+    assert unweighted_avg["values"] == 150.0
+    assert weighted_avg["values"] == 1.0
+    assert unweighted_avg["denominator_source"] == "engine integral of 1 over the selection"
+

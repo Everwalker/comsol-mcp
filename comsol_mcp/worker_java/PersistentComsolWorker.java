@@ -96,7 +96,17 @@ public final class PersistentComsolWorker {
       // W17: result, numerical and table API methods javap-verified
       "getImagData", "clearTableData", "getColumnHeaders", "getRowHeaders",
       "getTableData", "getNRows", "setTableData", "addRow", "addRows",
-      "setResult", "appendResult", "getFilledReal", "getFilledImag"));
+      "setResult", "appendResult", "getFilledReal", "getFilledImag",
+      // G3.3 §4 (F04): the SolutionInfo route for real stored-solution
+      // metadata.  javap -cp apiplugins/com.comsol.api_1.0.0.jar (installed
+      // COMSOL 6.4.0.293):
+      //   SolverSequence.getSolutioninfo() -> com.comsol.model.SolutionInfo
+      //   SolutionInfo.getOuterSolnum() -> int[]
+      //   SolutionInfo.getMaxInner(int[]) -> int
+      //   SolutionInfo.getLevelNames() -> java.lang.String[]
+      // Published here so dataset.solution_indices reads the outer/inner axes
+      // from the engine instead of fabricating outer_indices=[1].
+      "getSolutioninfo", "getOuterSolnum", "getMaxInner", "getLevelNames"));
   private static final Set<String> MODEL_UTIL = new HashSet<>(Arrays.asList(
       "create", "load", "model", "remove", "tags", "uniquetag", "modelsUsedByOtherClients",
       "getComsolVersion",
