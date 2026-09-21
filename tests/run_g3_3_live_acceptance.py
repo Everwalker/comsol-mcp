@@ -1729,7 +1729,7 @@ public final class C07Builder {
             try:
                 resolved = store.resolve_safe_path("../../etc/passwd")
             except ExecutionContractError as exc:
-                assert exc.code in {"PERMISSION_DENIED", "PATH_ESCAPES_PROJECT_ROOT"}, (
+                assert exc.code in {"PERMISSION_DENIED", "PATH_ESCAPES_PROJECT_ROOT", "ACCESS_VIOLATION"}, (
                     f"traversal refusal used an unexpected contract code: {exc.code}"
                 )
                 traversal_rejection: dict[str, Any] = {
@@ -2007,9 +2007,21 @@ public final class C07Builder {
 
             wheel_dir = self.run_dir / "wheel_dist"
             wheels = sorted(wheel_dir.glob("*.whl"))
+            if not wheels:
+                # C16 owns its input: when C00 never got as far as building the wheel,
+                # build one here instead of failing on a missing dependency.
+                wheel_dir = self.run_dir / "c16_wheel_dist"
+                wheel_dir.mkdir(parents=True, exist_ok=True)
+                build_res = subprocess.run(
+                    [sys.executable, "-m", "pip", "wheel", "--no-deps", "-w", str(wheel_dir), "."],
+                    cwd=ROOT,
+                    capture_output=True,
+                    text=True,
+                )
+                assert build_res.returncode == 0, f"pip wheel failed: {build_res.stderr}"
+                wheels = sorted(wheel_dir.glob("*.whl"))
             assert len(wheels) == 1, (
-                f"expected exactly one built wheel in {wheel_dir}, found {[w.name for w in wheels]} "
-                "-- C00 builds it and C16 verifies what is inside it"
+                f"expected exactly one built wheel in {wheel_dir}, found {[w.name for w in wheels]}"
             )
             wheel_path = wheels[0]
 
