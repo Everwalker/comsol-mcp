@@ -207,7 +207,22 @@ class AcceptanceRunner:
         tree = git("rev-parse", "HEAD^{tree}")
         branch = git("rev-parse", "--abbrev-ref", "HEAD")
         status = git("status", "--porcelain")
-        dirty = [line[3:].strip() for line in status.splitlines() if line.strip()]
+        tracked_dirty: list[str] = []
+        untracked: list[str] = []
+        for line in status.splitlines():
+            if not line.strip():
+                continue
+            path = line[3:].strip()
+            (untracked if line.startswith("??") else tracked_dirty).append(path)
+        # An untracked file inside the source or test tree can be imported by the
+        # run without ever showing up as a modified tracked file, so it is a
+        # binding defect; an untracked evidence directory is not.
+        source_roots = ("comsol_mcp/", "tests/", "tools/", "scripts/")
+        untracked_in_source = sorted(
+            path for path in untracked
+            if path.startswith(source_roots) or ("/" not in path and path.endswith(".py"))
+        )
+        dirty = tracked_dirty + untracked
         digest = hashlib.sha256()
         tracked = 0
         for line in git("ls-tree", "-r", "HEAD").splitlines():
@@ -226,6 +241,9 @@ class AcceptanceRunner:
             "tree": tree,
             "branch": branch,
             "dirty_paths": dirty,
+            "tracked_dirty_paths": tracked_dirty,
+            "untracked_paths": untracked,
+            "untracked_paths_in_source_tree": untracked_in_source,
             "tracked_files": tracked,
             "tracked_files_listed": len(listed),
             "tracked_files_present_in_worktree": present,
@@ -301,12 +319,16 @@ class AcceptanceRunner:
             self.source = manifest
             run_evidence_prefix = f"evidence/phase4_3/runs/{self.run_id}"
             unexpected_dirty = [
-                path for path in manifest["dirty_paths"]
+                path for path in manifest["tracked_dirty_paths"]
                 if not path.startswith(run_evidence_prefix)
             ]
             assert not unexpected_dirty, (
                 "C00 requires a committed source tree: the acceptance ledger has to be bound to a "
                 f"commit, but these tracked paths are modified: {unexpected_dirty[:5]}"
+            )
+            assert not manifest["untracked_paths_in_source_tree"], (
+                "untracked files inside the source or test tree can be imported by this run without "
+                f"ever appearing as a modified tracked file: {manifest['untracked_paths_in_source_tree'][:5]}"
             )
             assert manifest["tracked_files"] == manifest["tracked_files_listed"], (
                 "git ls-tree HEAD and git ls-files disagree on the tracked file count: "
