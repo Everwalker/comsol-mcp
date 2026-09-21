@@ -5388,6 +5388,8 @@ async def _case_w13_t006(host: ProductionHost, client: ActionClient, case: Case,
     # its defining expression is the number, on both routes.
     first_two = "2"
     first_three = "3"
+    global_group = f"{args.variable_group}_global"
+    global_path = _variable_readback_path(args, global_group, None)
     if route == "domain":
         created = await _step(case, host, client, args, state, name="variables_two_in_one_group",
                               operation="variable.group_create",
@@ -5404,6 +5406,14 @@ async def _case_w13_t006(host: ProductionHost, client: ActionClient, case: Case,
                                    "variables": [{"name": "q1", "expression": first_two},
                                                  {"name": "q2", "expression": first_three}]},
                         prereq="variables_two_in_one_group", store=store)
+            await client.action("variable.group_create", {"tag": global_group})
+            await client.action("variable.set", {"group": global_path,
+                                                 "variables": [{"name": "g1", "expression": "5"},
+                                                               {"name": "g2", "expression": "g1*4"}]})
+            await client.action("variable.set", {"group": group_path,
+                                                 "variables": [{"name": "q1", "expression": "4"}]})
+            await client.action("variable.set", {"group": global_path,
+                                                 "variables": [{"name": "g1", "expression": "10"}]})
             readback = await _step(case, host, client, args, state, name="no_bogus_name_expr_variables",
                                    operation="variable.get",
                                    arguments={"group": group_path, "names": ["q1", "q2"]},
@@ -5469,9 +5479,10 @@ async def _case_w13_t006(host: ProductionHost, client: ActionClient, case: Case,
     if case.subcase_status("expression_evaluates_after_modification") == "PASS":
         await _step(case, host, client, args, state, name="component_and_global_scope",
                     operation="evaluate_expressions",
-                    arguments={"expressions_json": json.dumps([{"name": "global_probe", "expression": "1+1"}]),
+                    arguments={"expressions_json": json.dumps([{"name": "global_probe", "expression": "g1"},
+                                                               {"name": "global_dep_probe", "expression": "g2"}]),
                                "evaluation_policy": "ephemeral_mutation"},
-                    store=store, check=_check_expression_values({"global_probe": 2.0}))
+                    store=store, check=_check_expression_values({"global_probe": 10.0, "global_dep_probe": 40.0}))
     else:
         _mark(case, "component_and_global_scope", "NOT_RUN",
               "the component variable evaluation did not pass; the global-scope probe was not attempted")

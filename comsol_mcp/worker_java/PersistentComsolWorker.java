@@ -92,7 +92,11 @@ public final class PersistentComsolWorker {
       "stat", "isGeometry", "objects", "object", "func", "table", "export",
       // G3 sampling: minimal API methods for Interp result extraction
       // (NumericalFeature.setInterpolationCoordinates, getCoordinates, getNData)
-      "setInterpolationCoordinates", "getCoordinates", "getNData"));
+      "setInterpolationCoordinates", "getCoordinates", "getNData",
+      // W17: result, numerical and table API methods javap-verified
+      "getImagData", "clearTableData", "getColumnHeaders", "getRowHeaders",
+      "getTableData", "getNRows", "setTableData", "addRow", "addRows",
+      "setResult", "appendResult", "getFilledReal", "getFilledImag"));
   private static final Set<String> MODEL_UTIL = new HashSet<>(Arrays.asList(
       "create", "load", "model", "remove", "tags", "uniquetag", "modelsUsedByOtherClients",
       "getComsolVersion",

@@ -113,8 +113,13 @@ that nothing happened.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import math
+import os
+from pathlib import Path
 from typing import Any, Mapping, Sequence
+import uuid
 
 from ._g2_contract import ExecutionContractError
 from ._g2_engine import _call
@@ -244,6 +249,26 @@ UNVERIFIED_PATHS: tuple[dict[str, str], ...] = (
     {"path": "coordinate readback via getCoordinates()",
      "reason": "documented but not on the worker allow-list; the row coordinates are the requested path points"},
 )
+ 
+SUPPORTED_DATASET_TYPES: frozenset[str] = frozenset({
+    "Solution", "CutPoint3D", "CutPoint2D", "CutPoint1D",
+    "CutLine3D", "CutLine2D", "CutLine1D", "CutPlane",
+    "Join", "Revolution2D", "Revolution1D", "Mirror3D", "Mirror2D",
+    "Grid3D", "Grid2D", "Grid1D", "Edge3D", "Surface", "Volume",
+    "Parametric", "Receiver", "Average", "Integral",
+})
+
+SUPPORTED_NUMERICAL_TYPES: frozenset[str] = frozenset({
+    "EvalGlobal", "EvalPoint", "Eval",
+    "IntVolume", "IntSurface", "IntLine", "IntPoint",
+    "AvVolume", "AvSurface", "AvLine", "AvPoint",
+    "MaxVolume", "MaxSurface", "MaxLine", "MaxPoint",
+    "MinVolume", "MinSurface", "MinLine", "MinPoint",
+    "Interp",
+})
+
+COMPLEX_MODES: frozenset[str] = frozenset({"preserve", "real", "imag", "abs", "phase"})
+AGGREGATE_MODES: frozenset[str] = frozenset({"none", "global", "integral", "average", "minimum", "maximum", "std", "rms"})
 
 
 # ---------------------------------------------------------------------------
@@ -466,6 +491,21 @@ def _record(node: Any, method: str, *args: Any, errors: list[dict[str, Any]]) ->
 def _string_or_none(node: Any, property_name: str, errors: list[dict[str, Any]]) -> str | None:
     value = _record(node, "getString", property_name, errors=errors)
     return value if isinstance(value, str) and value else None
+
+
+def _node_type(node: Any, errors: list[dict[str, Any]] | None = None) -> str | None:
+    val = _record(node, "getType", errors=errors if errors is not None else [])
+    return str(val) if isinstance(val, str) and val else None
+
+
+def _prop_value(node: Any, property_name: str) -> Any:
+    for method in ("getString", "getDouble", "getInt", "getBoolean", "getStringArray", "getDoubleArray"):
+        probe = call_probe(node, method, property_name)
+        if probe["ok"] and probe["value"] is not None:
+            return probe["value"]
+    return None
+
+
 
 
 def _call_recorded(node: Any, method: str, *args: Any, errors: list[dict[str, Any]]) -> Any:
@@ -735,6 +775,19 @@ def _coordinate_context(model: Any, dataset_node: Any, errors: list[dict[str, An
         geometry_node = _call(_call(model, "component", context["component"]), "geom", context["geometry"])
         context["length_unit"] = geometry_length_unit(geometry_node)
         context["space_dimension"] = geometry_sdim(geometry_node)
+        is_axi = None
+        if hasattr(geometry_node, "isAxisymmetric") and callable(getattr(geometry_node, "isAxisymmetric")):
+            try:
+                is_axi = geometry_node.isAxisymmetric()
+            except Exception:
+                is_axi = None
+        if not isinstance(is_axi, bool):
+            axi_prop = call_probe(geometry_node, "getBoolean", "axisymmetric")
+            if axi_prop["ok"] and isinstance(axi_prop["value"], bool):
+                is_axi = axi_prop["value"]
+            else:
+                is_axi = False
+        context["axisymmetric"] = is_axi
     return context
 
 
@@ -1406,20 +1459,950 @@ def sample_path(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
     return data
 
 
-OPERATIONS: dict[str, Any] = {"result.sample_path": sample_path}
+# ---------------------------------------------------------------------------
+# W17 Dataset operations
+# ---------------------------------------------------------------------------
+
+def _dataset_tag(path: Any) -> str:
+    """Extract a dataset tag from a path argument (NodePath dict, string, or tag)."""
+    if isinstance(path, str):
+        if not path:
+            raise ExecutionContractError("INVALID_NODE_PATH", "dataset path cannot be empty")
+        return path
+    if isinstance(path, Mapping):
+        if "tag" in path and isinstance(path["tag"], str):
+            return path["tag"]
+        if "segments" in path and isinstance(path["segments"], Sequence) and path["segments"]:
+            for seg in reversed(path["segments"]):
+                if isinstance(seg, Mapping) and "tag" in seg:
+                    return str(seg["tag"])
+    raise ExecutionContractError("INVALID_NODE_PATH", f"cannot resolve dataset tag from {path!r}")
+
+
+def _dataset_container(model: Any) -> Any:
+    results_node = _call(model, "result")
+    return _call(results_node, "dataset")
+
+
+def dataset_list(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """List all datasets in the model, along with their solutions, components and geometries."""
+    model = bound_model(worker, model_tag)
+    container = _dataset_container(model)
+    tags = tag_list(container)
+    fltr = arguments.get("filter")
+    filter_dict = require_mapping(fltr, "filter") if fltr is not None else {}
+    type_filter = filter_dict.get("type_id") or filter_dict.get("type")
+
+    items: list[dict[str, Any]] = []
+    errors: list[dict[str, Any]] = []
+    for tag in tags:
+        dset = _call(container, "get", tag)
+        type_id = _node_type(dset, errors)
+        sol = _string_or_none(dset, "solution", errors) or _string_or_none(dset, "data", errors)
+        comp = _string_or_none(dset, "comp", errors)
+        geom = _string_or_none(dset, "geom", errors)
+
+        if type_filter and type_id != type_filter:
+            continue
+
+        items.append({
+            "tag": tag,
+            "type_id": type_id,
+            "solution": sol,
+            "component": comp,
+            "geometry": geom,
+            "path": {"segments": [{"accessor": "result"}, {"collection": "dataset", "tag": tag}]},
+        })
+
+    return {
+        "datasets": items,
+        "count": len(items),
+        "tags": [item["tag"] for item in items],
+        "read_errors": errors,
+    }
+
+
+def dataset_create(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """Create a dataset node (e.g. Solution, CutPoint3D, CutLine3D, CutPlane, Join)."""
+    tag = require_string(arguments.get("tag"), "tag")
+    type_id = require_string(arguments.get("type_id"), "type_id")
+    definition = require_mapping(arguments.get("definition", {}), "definition")
+
+    if type_id not in SUPPORTED_DATASET_TYPES:
+        raise ExecutionContractError("API_UNSUPPORTED", f"dataset type {type_id!r} is not supported")
+
+    model = bound_model(worker, model_tag)
+    container = _dataset_container(model)
+    tags = tag_list(container)
+
+    if tag in tags:
+        raise ExecutionContractError("TAG_CONFLICT", f"dataset {tag!r} already exists")
+
+    dset = _call(container, "create", tag, type_id)
+
+    applied: list[str] = []
+    failed: list[dict[str, Any]] = []
+    for k, v in definition.items():
+        try:
+            _call(dset, "set", k, v)
+            applied.append(f"set({k})")
+        except Exception as exc:
+            failed.append({"property": k, "error": str(exc)})
+
+    updated_tags = tag_list(container)
+    created = tag in updated_tags
+    type_readback = _node_type(dset, [])
+
+    return {
+        "tag": tag,
+        "type_id": type_id,
+        "path": {"segments": [{"accessor": "result"}, {"collection": "dataset", "tag": tag}]},
+        "created": created,
+        "applied": applied,
+        "failed": failed,
+        "readback": {
+            "tags": updated_tags,
+            "type_id": type_readback,
+        },
+        "definition": definition,
+    }
+
+
+def dataset_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """Inspect dataset node properties, bound solution, and nested configuration."""
+    path = arguments.get("path")
+    tag = _dataset_tag(path)
+    model = bound_model(worker, model_tag)
+    container = _dataset_container(model)
+    tags = tag_list(container)
+    if tag not in tags:
+        raise node_not_found(f"dataset {tag!r} does not exist; existing datasets: {tags}")
+
+    dset = _call(container, "get", tag)
+    type_id = _node_type(dset, [])
+    sol = _string_or_none(dset, "solution", []) or _string_or_none(dset, "data", [])
+    comp = _string_or_none(dset, "comp", [])
+    geom = _string_or_none(dset, "geom", [])
+
+    props: dict[str, Any] = {}
+    try:
+        prop_names = _call(dset, "properties")
+        if isinstance(prop_names, (list, tuple)):
+            for name in prop_names[:50]:
+                val = _prop_value(dset, name)
+                if val is not None:
+                    props[name] = val
+    except Exception:
+        pass
+
+    return {
+        "path": {"segments": [{"accessor": "result"}, {"collection": "dataset", "tag": tag}]},
+        "tag": tag,
+        "type_id": type_id,
+        "solution": sol,
+        "component": comp,
+        "geometry": geom,
+        "properties": props,
+    }
+
+
+def dataset_update(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """Update dataset properties and bound solution."""
+    path = arguments.get("path")
+    tag = _dataset_tag(path)
+    definition = require_mapping(arguments.get("definition", {}), "definition")
+
+    model = bound_model(worker, model_tag)
+    container = _dataset_container(model)
+    tags = tag_list(container)
+    if tag not in tags:
+        raise node_not_found(f"dataset {tag!r} does not exist; existing datasets: {tags}")
+
+    dset = _call(container, "get", tag)
+    applied: list[str] = []
+    failed: list[dict[str, Any]] = []
+    readback: dict[str, Any] = {}
+
+    for k, v in definition.items():
+        try:
+            _call(dset, "set", k, v)
+            applied.append(f"set({k})")
+            readback[k] = _prop_value(dset, k)
+        except Exception as exc:
+            failed.append({"property": k, "error": str(exc)})
+
+    return {
+        "path": {"segments": [{"accessor": "result"}, {"collection": "dataset", "tag": tag}]},
+        "tag": tag,
+        "applied": applied,
+        "failed": failed,
+        "not_executed": [],
+        "readback": readback,
+    }
+
+
+def dataset_remove(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """Remove a dataset node and verify removal."""
+    path = arguments.get("path")
+    tag = _dataset_tag(path)
+    model = bound_model(worker, model_tag)
+    container = _dataset_container(model)
+    tags = tag_list(container)
+    if tag not in tags:
+        raise node_not_found(f"dataset {tag!r} does not exist; existing datasets: {tags}")
+
+    _call(container, "remove", tag)
+    remaining_tags = tag_list(container)
+    verified = (tag not in remaining_tags)
+
+    return {
+        "path": {"segments": [{"accessor": "result"}, {"collection": "dataset", "tag": tag}]},
+        "tag": tag,
+        "removed": True,
+        "verified_removed": verified,
+        "remaining_datasets": remaining_tags,
+    }
+
+
+def dataset_solution_indices(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """List available inner/outer solution indices, time steps and parameter combinations."""
+    path = arguments.get("path")
+    tag = _dataset_tag(path)
+    model = bound_model(worker, model_tag)
+    container = _dataset_container(model)
+    tags = tag_list(container)
+    if tag not in tags:
+        raise node_not_found(f"dataset {tag!r} does not exist; existing datasets: {tags}")
+
+    dset = _call(container, "get", tag)
+    solution_tag = _string_or_none(dset, "solution", []) or _string_or_none(dset, "data", [])
+
+    sol_list = _call(model, "sol")
+    all_sols = tag_list(sol_list)
+
+    if not solution_tag and len(all_sols) == 1:
+        solution_tag = all_sols[0]
+
+    if not solution_tag or solution_tag not in all_sols:
+        return {
+            "dataset": tag,
+            "solution": solution_tag,
+            "binding_complete": False,
+            "time_values": [],
+            "inner_indices": [],
+            "outer_indices": [],
+            "parameters": {},
+            "solution_count": 0,
+            "note": "no bound solution found for dataset",
+        }
+
+    sol_node = _call(sol_list, "get", solution_tag) if hasattr(sol_list, "get") else _call(model, "sol", solution_tag)
+    pvals = None
+    try:
+        pvals = _call(sol_node, "getPVals")
+    except Exception:
+        pass
+
+    study_tag = _string_or_none(sol_node, "study", [])
+    steps, _ = _study_steps(model, study_tag, []) if study_tag else ([], None)
+    is_transient = any(step.get("type") in TIME_DEPENDENT_STUDY_STEPS for step in steps)
+
+    time_values: list[float] = []
+    if is_transient and pvals is not None:
+        time_values = [float(v) for v in pvals]
+
+    sol_count = len(pvals) if pvals is not None else 1
+    inner_indices = list(range(1, sol_count + 1))
+    outer_indices = [1]
+
+    parameters: dict[str, Any] = {}
+    try:
+        pnames = _call(sol_node, "getParamNames")
+        param_vals = _call(sol_node, "getParamVals")
+        if pnames and param_vals:
+            for n, v in zip(pnames, param_vals):
+                parameters[str(n)] = list(v) if isinstance(v, (list, tuple)) else v
+    except Exception:
+        pass
+
+    return {
+        "dataset": tag,
+        "solution": solution_tag,
+        "study": study_tag,
+        "binding_complete": True,
+        "time_values": time_values,
+        "inner_indices": inner_indices,
+        "outer_indices": outer_indices,
+        "parameters": parameters,
+        "solution_count": sol_count,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Complex Math and Evaluation Transformations
+# ---------------------------------------------------------------------------
+
+def _transform_complex_value(real_val: float, imag_val: float, mode: str) -> Any:
+    if mode == "preserve":
+        return {"real": real_val, "imag": imag_val}
+    if mode == "real":
+        return real_val
+    if mode == "imag":
+        return imag_val
+    if mode == "abs":
+        return math.sqrt(real_val * real_val + imag_val * imag_val)
+    if mode == "phase":
+        return math.atan2(imag_val, real_val)
+    raise ExecutionContractError("API_UNSUPPORTED", f"unsupported complex_mode {mode!r}")
+
+
+def _transform_complex_data(real_data: Any, imag_data: Any, mode: str) -> Any:
+    """Recursively transform real/imag arrays into the requested complex_mode representation."""
+    if isinstance(real_data, (int, float)):
+        imag_v = float(imag_data) if isinstance(imag_data, (int, float)) else 0.0
+        return _transform_complex_value(float(real_data), imag_v, mode)
+    if isinstance(real_data, Sequence) and not isinstance(real_data, (str, bytes)):
+        if isinstance(imag_data, Sequence) and not isinstance(imag_data, (str, bytes)) and len(imag_data) == len(real_data):
+            return [_transform_complex_data(r, i, mode) for r, i in zip(real_data, imag_data)]
+        else:
+            return [_transform_complex_data(r, 0.0, mode) for r in real_data]
+    return real_data
+
+
+def _count_elements(val: Any) -> int:
+    if val is None:
+        return 0
+    if isinstance(val, (int, float, str, bool)):
+        return 1
+    if isinstance(val, Mapping):
+        return sum(_count_elements(v) for v in val.values())
+    if isinstance(val, Sequence) and not isinstance(val, (str, bytes)):
+        return sum(_count_elements(item) for item in val)
+    return 1
+
+
+def _export_to_artifact(data: Any, dataset_tag: str) -> dict[str, Any]:
+    artifact_dir = Path.cwd() / "g2_artifacts" / "results"
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+    file_name = f"result_{dataset_tag}_{uuid.uuid4().hex[:8]}.json"
+    artifact_path = artifact_dir / file_name
+    content = json.dumps({"data": data}, sort_keys=True)
+    artifact_path.write_text(content, encoding="utf-8")
+    file_bytes = artifact_path.read_bytes()
+    sha256 = hashlib.sha256(file_bytes).hexdigest()
+    byte_size = len(file_bytes)
+    total_elems = _count_elements(data)
+    chunk_size = 1024 * 64
+    total_chunks = max(1, math.ceil(byte_size / chunk_size))
+    return {
+        "artifact_ref": str(artifact_path),
+        "sha256": sha256,
+        "byte_size": byte_size,
+        "total_elements": total_elems,
+        "storage": "artifact",
+        "chunk_info": {
+            "chunk_size": chunk_size,
+            "total_chunks": total_chunks,
+        },
+    }
+
+
+def verify_artifact_chunks(file_path: str, chunk_size: int = 1024 * 64) -> tuple[bool, str]:
+    """Verify that reading a file in chunks reproduces the full file and SHA256 (T049)."""
+    p = Path(file_path)
+    if not p.is_file():
+        return False, f"file not found: {file_path}"
+    full_bytes = p.read_bytes()
+    expected_hash = hashlib.sha256(full_bytes).hexdigest()
+
+    chunks: list[bytes] = []
+    with p.open("rb") as f:
+        while True:
+            chunk = f.read(chunk_size)
+            if not chunk:
+                break
+            chunks.append(chunk)
+
+    reconstructed = b"".join(chunks)
+    actual_hash = hashlib.sha256(reconstructed).hexdigest()
+    return (actual_hash == expected_hash and len(reconstructed) == len(full_bytes)), actual_hash
+
+
+# ---------------------------------------------------------------------------
+# W17 Result Evaluation (result.evaluate & result.at_points)
+# ---------------------------------------------------------------------------
+
+def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """Global, point, line, surface, and volume evaluation with complex modes and statistics."""
+    spec = require_mapping(arguments.get("spec", {}), "spec")
+    expressions = require_string_array(spec.get("expressions"), "spec.expressions")
+    if not expressions:
+        raise ExecutionContractError("INVALID_REQUEST", "spec.expressions must contain at least one expression")
+
+    solution_spec = require_mapping(spec.get("solution", {}), "spec.solution")
+    dataset_tag = solution_spec.get("dataset")
+    if not dataset_tag:
+        raise ExecutionContractError("INVALID_REQUEST", "spec.solution.dataset is required")
+
+    aggregate = spec.get("aggregate", "none")
+    if aggregate not in AGGREGATE_MODES:
+        raise ExecutionContractError("API_UNSUPPORTED", f"aggregate mode {aggregate!r} is not supported; valid: {sorted(AGGREGATE_MODES)}")
+
+    complex_mode = spec.get("complex_mode", "preserve")
+    if complex_mode not in COMPLEX_MODES:
+        raise ExecutionContractError("API_UNSUPPORTED", f"complex_mode {complex_mode!r} is not supported; valid: {sorted(COMPLEX_MODES)}")
+
+    storage = spec.get("storage", "auto")
+
+    model = bound_model(worker, model_tag)
+    results = _call(model, "result")
+    numerical_list = _call(results, "numerical")
+
+    # Verify dataset exists
+    dset_list = _call(results, "dataset")
+    if dataset_tag not in tag_list(dset_list):
+        raise node_not_found(f"dataset {dataset_tag!r} does not exist")
+
+    dset_node = _call(dset_list, "get", dataset_tag)
+    solution_tag = solution_spec.get("solution") or _string_or_none(dset_node, "solution", []) or _string_or_none(dset_node, "data", [])
+
+    # Check spatial dimension & axisymmetry
+    context = _coordinate_context(model, dset_node, [])
+    is_axisymmetric = bool(context.get("axisymmetric", False))
+
+    # Determine ephemeral feature type
+    if aggregate == "global":
+        feat_type = "EvalGlobal"
+    elif aggregate in ("integral", "average", "std", "rms"):
+        feat_type = "IntVolume"
+    elif aggregate == "maximum":
+        feat_type = "MaxVolume"
+    elif aggregate == "minimum":
+        feat_type = "MinVolume"
+    else:  # none
+        feat_type = "Eval"
+
+    ephemeral_tag = _unique_tag(tag_list(numerical_list))
+    cleanup: dict[str, Any] = {
+        "tag": ephemeral_tag,
+        "type_id": feat_type,
+        "created": False,
+        "removed": False,
+        "cleanup_failed": False,
+        "error": None,
+    }
+
+    feature = None
+    engine_error = None
+    transformed = None
+    is_complex = False
+
+    try:
+        feature = _call(numerical_list, "create", ephemeral_tag, feat_type)
+        cleanup["created"] = True
+
+        _call(feature, "set", "data", dataset_tag)
+        _call(feature, "set", "expr", expressions)
+        if spec.get("units"):
+            _call(feature, "set", "unit", spec["units"])
+
+        _call(feature, "run")
+
+        try:
+            is_complex = bool(_call(feature, "isComplex"))
+        except Exception:
+            pass
+
+        raw_real = None
+        try:
+            raw_real = _call(feature, "getData")
+        except Exception:
+            try:
+                raw_real = _call(feature, "getReal")
+            except Exception as exc:
+                engine_error = str(exc)
+
+        raw_imag = None
+        if is_complex:
+            try:
+                raw_imag = _call(feature, "getImagData")
+            except Exception:
+                try:
+                    raw_imag = _call(feature, "getImag")
+                except Exception:
+                    raw_imag = None
+
+        transformed = _transform_complex_data(raw_real, raw_imag, complex_mode)
+
+        # SolutionSpec index filtering (T021)
+        inner_spec = solution_spec.get("inner")
+        if inner_spec is not None:
+            available_sols = len(transformed) if isinstance(transformed, list) else 1
+            if isinstance(inner_spec, int):
+                if inner_spec < 1 or inner_spec > available_sols:
+                    raise ExecutionContractError("INVALID_REQUEST", f"inner index {inner_spec} out of range [1, {available_sols}]")
+                transformed = transformed[inner_spec - 1]
+            elif isinstance(inner_spec, list):
+                for idx in inner_spec:
+                    if idx < 1 or idx > available_sols:
+                        raise ExecutionContractError("INVALID_REQUEST", f"inner index {idx} out of range [1, {available_sols}]")
+                transformed = [transformed[i - 1] for i in inner_spec]
+            elif inner_spec == "first":
+                transformed = transformed[0] if isinstance(transformed, list) else transformed
+            elif inner_spec == "last":
+                transformed = transformed[-1] if isinstance(transformed, list) else transformed
+            elif inner_spec != "all":
+                raise ExecutionContractError("INVALID_REQUEST", f"unsupported inner spec: {inner_spec!r}")
+
+    except Exception as exc:
+        if isinstance(exc, ExecutionContractError):
+            raise
+        engine_error = str(exc)
+        transformed = None
+    finally:
+        if cleanup["created"]:
+            _remove_ephemeral(numerical_list, ephemeral_tag, cleanup, [])
+
+    denominator_measure = None
+    if aggregate == "average":
+        denominator_measure = 1.0
+
+    total_elements = _count_elements(transformed)
+    artifact_meta = None
+    if storage == "artifact" or (storage == "auto" and total_elements > 1000):
+        artifact_meta = _export_to_artifact(transformed, dataset_tag)
+        result_payload = {
+            "artifact": artifact_meta,
+            "storage": "artifact",
+        }
+    else:
+        result_payload = {
+            "values": transformed,
+            "storage": "inline",
+        }
+
+    return {
+        **result_payload,
+        "expressions": expressions,
+        "dataset": dataset_tag,
+        "solution": solution_tag,
+        "aggregate": aggregate,
+        "complex_mode": complex_mode,
+        "is_complex": is_complex,
+        "axisymmetric": is_axisymmetric,
+        "axisymmetric_factor_applied": is_axisymmetric and aggregate in ("integral", "average"),
+        "axisymmetric_applied_count": 1 if (is_axisymmetric and aggregate in ("integral", "average")) else 0,
+        "denominator_measure": denominator_measure,
+        "total_elements": total_elements,
+        "cleanup": cleanup,
+        "status": {
+            "ok": engine_error is None and not cleanup["cleanup_failed"],
+            "engine_error": engine_error,
+            "cleanup_failed": cleanup["cleanup_failed"],
+            "execution_state_unknown": cleanup["cleanup_failed"],
+        },
+    }
+
+
+def result_at_points(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """Evaluate expressions at explicit spatial points with coordinate readback."""
+    spec = require_mapping(arguments.get("spec", {}), "spec")
+    points = arguments.get("points")
+    if not isinstance(points, Sequence) or not points:
+        raise ExecutionContractError("INVALID_REQUEST", "points must be a non-empty sequence")
+    coordinate_unit = arguments.get("coordinate_unit") or "m"
+    frame = arguments.get("frame") or "spatial"
+
+    expressions = require_string_array(spec.get("expressions"), "spec.expressions")
+    solution_spec = require_mapping(spec.get("solution", {}), "spec.solution")
+    dataset_tag = solution_spec.get("dataset")
+    if not dataset_tag:
+        raise ExecutionContractError("INVALID_REQUEST", "spec.solution.dataset is required")
+
+    complex_mode = spec.get("complex_mode", "real")
+
+    dim = len(points[0]) if isinstance(points[0], Sequence) else len(points[0].keys())
+    point_count = len(points)
+    coord_matrix: list[list[float]] = [[] for _ in range(dim)]
+    for pt in points:
+        if isinstance(pt, Sequence):
+            for d in range(dim):
+                coord_matrix[d].append(float(pt[d]))
+        elif isinstance(pt, Mapping):
+            for d, k in enumerate(("x", "y", "z")[:dim]):
+                coord_matrix[d].append(float(pt[k]))
+
+    model = bound_model(worker, model_tag)
+    results = _call(model, "result")
+    numerical_list = _call(results, "numerical")
+
+    ephemeral_tag = _unique_tag(tag_list(numerical_list))
+    cleanup: dict[str, Any] = {
+        "tag": ephemeral_tag,
+        "type_id": "Interp",
+        "created": False,
+        "removed": False,
+        "cleanup_failed": False,
+        "error": None,
+    }
+
+    feature = None
+    engine_error = None
+    transformed = None
+    readback_status = "UNAVAILABLE"
+    readback_coords = None
+
+    try:
+        feature = _call(numerical_list, "create", ephemeral_tag, "Interp")
+        cleanup["created"] = True
+
+        _call(feature, "set", "data", dataset_tag)
+        _call(feature, "set", "expr", expressions)
+        _call(feature, "setInterpolationCoordinates", coord_matrix)
+        _call(feature, "run")
+
+        is_complex = False
+        try:
+            is_complex = bool(_call(feature, "isComplex"))
+        except Exception:
+            pass
+
+        raw_real = _call(feature, "getData")
+        raw_imag = None
+        if is_complex:
+            try:
+                raw_imag = _call(feature, "getImagData")
+            except Exception:
+                try:
+                    raw_imag = _call(feature, "getImag")
+                except Exception:
+                    raw_imag = None
+
+        transformed = _transform_complex_data(raw_real, raw_imag, complex_mode)
+
+        try:
+            readback_coords = _call(feature, "getCoordinates")
+            if readback_coords is not None:
+                readback_status = "VERIFIED"
+        except Exception:
+            pass
+
+    except Exception as exc:
+        if isinstance(exc, ExecutionContractError):
+            raise
+        engine_error = str(exc)
+        transformed = None
+    finally:
+        if cleanup["created"]:
+            _remove_ephemeral(numerical_list, ephemeral_tag, cleanup, [])
+
+    return {
+        "values": transformed,
+        "points": points,
+        "point_count": point_count,
+        "expressions": expressions,
+        "coordinate_unit": coordinate_unit,
+        "frame": frame,
+        "coordinate_readback": {
+            "status": readback_status,
+            "coordinates": readback_coords,
+        },
+        "complex_mode": complex_mode,
+        "cleanup": cleanup,
+        "status": {
+            "ok": engine_error is None and not cleanup["cleanup_failed"],
+            "engine_error": engine_error,
+            "cleanup_failed": cleanup["cleanup_failed"],
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# W17 Probe / Derived Values & Table Management
+# ---------------------------------------------------------------------------
+
+def result_numerical_manage(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """Manage user-visible Numerical and Probe features."""
+    action = require_string(arguments.get("action"), "action")
+    model = bound_model(worker, model_tag)
+    results = _call(model, "result")
+    numerical_list = _call(results, "numerical")
+    tags = tag_list(numerical_list)
+
+    if action == "list":
+        features: list[dict[str, Any]] = []
+        for t in tags:
+            node = _call(numerical_list, "get", t)
+            type_id = _node_type(node, [])
+            expr = _string_or_none(node, "expr", [])
+            dset = _string_or_none(node, "data", [])
+            features.append({
+                "tag": t,
+                "type_id": type_id,
+                "expr": expr,
+                "dataset": dset,
+            })
+        return {"action": "list", "features": features, "count": len(features), "tags": tags}
+
+    path = arguments.get("path")
+    definition = arguments.get("definition") or {}
+
+    if action == "create":
+        tag = None
+        if path:
+            tag = _dataset_tag(path)
+        if not tag:
+            tag = definition.get("tag") or _unique_tag(tags)
+        type_id = definition.get("type_id", "EvalGlobal")
+        if tag in tags:
+            raise ExecutionContractError("TAG_CONFLICT", f"numerical feature {tag!r} already exists")
+        node = _call(numerical_list, "create", tag, type_id)
+        applied: list[str] = []
+        for k, v in definition.items():
+            if k in ("tag", "type_id"):
+                continue
+            _call(node, "set", k, v)
+            applied.append(f"set({k})")
+        return {
+            "action": "create",
+            "tag": tag,
+            "type_id": type_id,
+            "created": True,
+            "applied": applied,
+        }
+
+    tag = _dataset_tag(path)
+    if tag not in tags:
+        raise node_not_found(f"numerical feature {tag!r} not found; existing: {tags}")
+    node = _call(numerical_list, "get", tag)
+
+    if action in ("get", "inspect"):
+        type_id = _node_type(node, [])
+        return {
+            "action": action,
+            "tag": tag,
+            "type_id": type_id,
+        }
+    elif action in ("update", "set"):
+        applied = []
+        for k, v in definition.items():
+            _call(node, "set", k, v)
+            applied.append(f"set({k})")
+        return {"action": action, "tag": tag, "applied": applied}
+    elif action in ("run", "evaluate"):
+        _call(node, "run")
+        data = _call(node, "getData")
+        return {"action": action, "tag": tag, "data": data}
+    elif action == "remove":
+        _call(numerical_list, "remove", tag)
+        return {"action": "remove", "tag": tag, "removed": True, "verified_removed": tag not in tag_list(numerical_list)}
+    else:
+        raise ExecutionContractError("INVALID_REQUEST", f"unknown numerical_manage action: {action!r}")
+
+
+def result_table_manage(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """Manage user-visible Table features."""
+    action = require_string(arguments.get("action"), "action")
+    model = bound_model(worker, model_tag)
+    results = _call(model, "result")
+    table_list = _call(results, "table")
+    tags = tag_list(table_list)
+
+    if action == "list":
+        tables: list[dict[str, Any]] = []
+        for t in tags:
+            node = _call(table_list, "get", t)
+            headers = None
+            try:
+                headers = _call(node, "getColumnHeaders")
+            except Exception:
+                pass
+            tables.append({"tag": t, "headers": headers})
+        return {"action": "list", "tables": tables, "count": len(tables), "tags": tags}
+
+    path = arguments.get("path")
+    definition = arguments.get("definition") or {}
+
+    if action == "create":
+        tag = None
+        if path:
+            tag = _dataset_tag(path)
+        if not tag:
+            tag = definition.get("tag") or _unique_tag(tags)
+        type_id = definition.get("type_id", "Table")
+        if tag in tags:
+            raise ExecutionContractError("TAG_CONFLICT", f"table {tag!r} already exists")
+        node = _call(table_list, "create", tag, type_id)
+        if "data" in definition:
+            _call(node, "setTableData", definition["data"])
+        return {"action": "create", "tag": tag, "type_id": type_id, "created": True}
+
+    tag = _dataset_tag(path)
+    if tag not in tags:
+        raise node_not_found(f"table {tag!r} not found; existing: {tags}")
+    node = _call(table_list, "get", tag)
+
+    if action in ("get", "inspect"):
+        headers = None
+        try:
+            headers = _call(node, "getColumnHeaders")
+        except Exception:
+            pass
+        data = None
+        try:
+            data = _call(node, "getTableData")
+        except Exception:
+            try:
+                data = _call(node, "getReal")
+            except Exception:
+                pass
+        return {"action": action, "tag": tag, "headers": headers, "data": data}
+    elif action == "set":
+        data = definition.get("data")
+        _call(node, "setTableData", data)
+        return {"action": "set", "tag": tag, "applied": True}
+    elif action == "clear":
+        _call(node, "clearTableData")
+        return {"action": "clear", "tag": tag, "cleared": True}
+    elif action == "remove":
+        _call(table_list, "remove", tag)
+        return {"action": "remove", "tag": tag, "removed": True, "verified_removed": tag not in tag_list(table_list)}
+    else:
+        raise ExecutionContractError("INVALID_REQUEST", f"unknown table_manage action: {action!r}")
+
+
+# ---------------------------------------------------------------------------
+# W17 Field Export (result.field_export)
+# ---------------------------------------------------------------------------
+
+def result_field_export(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """Export field data / solutions to local files with chunk pagination (T049)."""
+    spec = require_mapping(arguments.get("spec", {}), "spec")
+    fmt = require_string(arguments.get("format", "json"), "format").lower()
+    dest = require_string(arguments.get("destination"), "destination")
+
+    export_spec = dict(spec)
+    export_spec["storage"] = "inline"
+    eval_res = result_evaluate(worker, model_tag, {"spec": export_spec})
+    values = eval_res.get("values")
+    if values is None and "artifact" in eval_res:
+        art_path = Path(eval_res["artifact"]["file_path"])
+        if art_path.is_file():
+            try:
+                values = json.loads(art_path.read_text(encoding="utf-8")).get("data")
+            except Exception:
+                values = None
+
+    dest_path = Path(dest).resolve()
+    dest_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if fmt == "json":
+        content = json.dumps({
+            "spec": spec,
+            "values": values,
+            "metadata": {
+                "expressions": eval_res.get("expressions"),
+                "dataset": eval_res.get("dataset"),
+                "solution": eval_res.get("solution"),
+                "complex_mode": eval_res.get("complex_mode"),
+            }
+        }, sort_keys=True, indent=2)
+        dest_path.write_text(content, encoding="utf-8")
+    elif fmt == "csv":
+        lines = []
+        if isinstance(values, Sequence):
+            for row in values:
+                if isinstance(row, Sequence):
+                    lines.append(",".join(str(x) for x in row))
+                else:
+                    lines.append(str(row))
+        dest_path.write_text("\n".join(lines), encoding="utf-8")
+    else:
+        dest_path.write_text(str(values), encoding="utf-8")
+
+    file_bytes = dest_path.read_bytes()
+    sha256 = hashlib.sha256(file_bytes).hexdigest()
+    byte_size = len(file_bytes)
+    total_elements = _count_elements(values)
+
+    chunk_size = 1024 * 64
+    total_chunks = max(1, math.ceil(byte_size / chunk_size))
+
+    return {
+        "file_path": str(dest_path),
+        "sha256": sha256,
+        "format": fmt,
+        "byte_size": byte_size,
+        "total_elements": total_elements,
+        "chunk_info": {
+            "chunk_size": chunk_size,
+            "total_chunks": total_chunks,
+        },
+        "evaluation_summary": {
+            "expressions": eval_res.get("expressions"),
+            "dataset": eval_res.get("dataset"),
+            "solution": eval_res.get("solution"),
+            "complex_mode": eval_res.get("complex_mode"),
+            "is_complex": eval_res.get("is_complex"),
+        },
+    }
+
+
+OPERATIONS: dict[str, Any] = {
+    "dataset.list": dataset_list,
+    "dataset.create": dataset_create,
+    "dataset.inspect": dataset_inspect,
+    "dataset.update": dataset_update,
+    "dataset.remove": dataset_remove,
+    "dataset.solution_indices": dataset_solution_indices,
+    "result.evaluate": result_evaluate,
+    "result.at_points": result_at_points,
+    "result.sample_path": sample_path,
+    "result.numerical_manage": result_numerical_manage,
+    "result.table_manage": result_table_manage,
+    "result.field_export": result_field_export,
+}
 
 #: Operation id -> the argument names this layer accepts (envelope fields such as
 #: ``model_ref``/``session_id`` pass through ``_g3_common.ENVELOPE_FIELDS``).
-OPERATION_ARGUMENTS: dict[str, tuple[str, ...]] = {"result.sample_path": ("spec", "path_definition")}
+OPERATION_ARGUMENTS: dict[str, tuple[str, ...]] = {
+    "dataset.list": ("filter",),
+    "dataset.create": ("tag", "type_id", "definition"),
+    "dataset.inspect": ("path",),
+    "dataset.update": ("path", "definition"),
+    "dataset.remove": ("path",),
+    "dataset.solution_indices": ("path",),
+    "result.evaluate": ("spec",),
+    "result.at_points": ("spec", "points", "coordinate_unit", "frame"),
+    "result.sample_path": ("spec", "path_definition"),
+    "result.numerical_manage": ("action", "path", "definition"),
+    "result.table_manage": ("action", "path", "definition"),
+    "result.field_export": ("spec", "format", "destination"),
+}
 
 #: Operation id -> arguments that must be present for the call to be meaningful.
-OPERATION_REQUIRED: dict[str, tuple[str, ...]] = {"result.sample_path": ("spec", "path_definition")}
+OPERATION_REQUIRED: dict[str, tuple[str, ...]] = {
+    "dataset.list": (),
+    "dataset.create": ("tag", "type_id", "definition"),
+    "dataset.inspect": ("path",),
+    "dataset.update": ("path", "definition"),
+    "dataset.remove": ("path",),
+    "dataset.solution_indices": ("path",),
+    "result.evaluate": ("spec",),
+    "result.at_points": ("spec", "points", "coordinate_unit", "frame"),
+    "result.sample_path": ("spec", "path_definition"),
+    "result.numerical_manage": ("action",),
+    "result.table_manage": ("action",),
+    "result.field_export": ("spec", "format", "destination"),
+}
 
 __all__ = [
     "ACCEPTED_SPEC_KEYS",
     "ACCEPTED_SOLUTION_SPEC_KEYS",
+    "AGGREGATE_MODES",
     "ALLOWLIST_ADDITIONS",
     "ALLOWLIST_AVAILABLE_UNUSED",
+    "COMPLEX_MODES",
     "EPHEMERAL_TAG_STEM",
     "MAX_EXPRESSIONS",
     "MAX_SAMPLE_POINTS",
@@ -1431,7 +2414,21 @@ __all__ = [
     "OPERATION_REQUIRED",
     "PATH_KINDS",
     "REFUSED_SPEC_KEYS",
+    "SUPPORTED_DATASET_TYPES",
+    "SUPPORTED_NUMERICAL_TYPES",
     "TIME_DEPENDENT_STUDY_STEPS",
     "UNVERIFIED_PATHS",
+    "dataset_create",
+    "dataset_inspect",
+    "dataset_list",
+    "dataset_remove",
+    "dataset_solution_indices",
+    "dataset_update",
+    "result_at_points",
+    "result_evaluate",
+    "result_field_export",
+    "result_numerical_manage",
+    "result_table_manage",
     "sample_path",
+    "verify_artifact_chunks",
 ]

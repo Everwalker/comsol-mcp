@@ -414,7 +414,8 @@ def test_entry_set_verifies_key_value_and_other_entries():
     assert result["data"]["readback"]["data"] == 5.0
     assert result["data"]["verification_scope"]["authoritative_readback"] is True
     names = [call[0] for call in node.calls]
-    assert names.index("setEntry") < names.index("getEntryKeys", 0) or True
+    assert "setEntry" in names
+    assert names.index("getEntryKeys") < names.index("setEntry")
     assert names.count("getEntryKeys") == 2
     assert names[-1] == "getDouble" or "getEntryKeyIndex" in names
 

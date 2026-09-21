@@ -832,6 +832,8 @@ class _ScriptedCollection:
     def __call__(self, tag: str) -> Any:
         return _ScriptedDataset(self.rows[tag]) if isinstance(self.rows[tag], Mapping) else self.rows[tag]
 
+    get = __call__
+
 
 class _ScriptedParam:
     def __init__(self, script: dict[str, Any]) -> None:

@@ -1328,3 +1328,13 @@ Implementation, tests and evidence published to `Everwalker/comsol-mcp:main` as 
 - Windows x64、macOS Intel、COMSOL 6.3、GUI Desktop 交互、未授权商业模块继续保留为 UNVERIFIED。
 - 保持共享 COMSOL Server 完整（PID 5014 存活且未受中断）。
 - 不进入 W17 / G4。
+
+### G3.1 收口与 G3.2 / W17 阶段（2026-09-21）
+
+- **G3.1 完成并推送**：提交 `328202c`（complete Mac G3.1 acceptance with Chain A/B/C and reopen verification）——链 A/B/C 实机闭环 + 同 SHA 重开校验；origin/main 已同步至该提交。
+- **G3.2（依据 NEXT_GOAL.md，审查基线 `328202c`）**：完成全仓逐文件审查账本（3571 文件：3257 证据已核 / 199 静态验证 / 64 引擎语义未验证 / 9 二进制 / 10 历史证据缺陷 / 6 缺陷确认 / 1 可疑断言，见交付包 `audit/semantic_review.json`）与 F01–F07 定向修复；Gate A（A1 安全修复 / A2 变量与重开 / A3 覆盖收口）通过；W17 结果系统实现（12 个 dataset./result. 操作 + 13 个 Worker Java 方法）。账本：`evidence/phase4_2_acceptance.json`、`evidence/w17_acceptance.json`；文档：`G3_2_FINDINGS.md`、`G3_2_W17_PLAN.md`、`schemas/W17_RESULT_API.md`。
+- **G3.2 回灌提交**：13 个修改文件 + 9 个新增文件（3 个新测试套件、2 份账本、3 份文档、`DEPENDENCIES.md`）。全量软件测试在本仓库绑定源码实跑：**1616 passed / 1 skipped / 0 failed**。
+- **历史账本更正**：原 `phase4_1_acceptance.json` 中 `G3_1_MAC_EXECUTABLE_SCOPE_PASS` 与 `W13_T006=FAIL/IMPLEMENTATION_GAP` 并存（审查 F01）以新增 `phase4_2_acceptance.json` 更正；原文件字节未改。
+- **交付包**：`COMSOL_MCP_READY_328202c_DELIVERY_W17.zip`，sha256 `0f2a1414ee75e16b5c0dc47a9edd8bf1110bfc0fd524782390a4e898115343d7`（含固定 upstream、审计账本、变更补丁与真实测试记录）。
+- **资源边界**：共享 COMSOL Server（PID 5014）按 NEXT_GOAL §3 保留未动；webbridge `server.xml` 恢复至原 hash `95478d76…` 需明确授权后执行（G3 批准周期遗留项）。
+- 边界保持：Windows x64 / macOS Intel / COMSOL 6.3 / GUI / 未授权模块 = UNVERIFIED；不进入 W18。

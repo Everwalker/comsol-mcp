@@ -477,7 +477,7 @@ class _ProductEngine:
                 "readback": {"tags": [arguments.get("tag")]}}), execution, digest)
         if operation == "variable.group_create":
             component = str(arguments.get("component") or "")
-            if component not in self.components:
+            if component and component not in self.components:
                 # The refusal the M1 run recorded: correct behaviour, missing fixture.
                 payload = _envelope(
                     success=False, code="EXECUTION_STATE_UNKNOWN",
@@ -493,10 +493,14 @@ class _ProductEngine:
                                 "mutation_issued": False, "mutation_method": None}}
                 return self.stamp(payload, execution, digest)
             self.revision += 1
+            segments: list[dict[str, Any]] = []
+            if component:
+                segments.append({"collection": "component", "tag": component})
+            segments.append({"collection": "variable", "tag": arguments.get("tag")})
             return self.stamp(_envelope(success=True, data={
-                "scope": "component", "component": component, "tag": arguments.get("tag"), "created": True,
-                "path": {"segments": [{"collection": "component", "tag": component},
-                                      {"collection": "variable", "tag": arguments.get("tag")}]},
+                "scope": "component" if component else "global", "component": component or None,
+                "tag": arguments.get("tag"), "created": True,
+                "path": {"segments": segments},
                 "readback": {"tags": [arguments.get("tag")]}}), execution, digest)
         if operation == "variable.set":
             for row in arguments.get("variables") or []:
@@ -512,7 +516,7 @@ class _ProductEngine:
                 "varnames": list(names), "names": list(names)}), execution, digest)
         if operation == "evaluate_expressions":
             rows = json.loads(str(arguments.get("expressions_json") or "[]"))
-            known = {"q1": 2.0, "q2": 3.0, "1+1": 2.0}
+            known = {"q1": 2.0, "q2": 3.0, "1+1": 2.0, "g1": 10.0, "g2": 40.0}
             results = [{"name": row.get("name"), "expression": str(row.get("expression")),
                         "last_value": known.get(str(row.get("expression")))}
                        for row in rows]

@@ -397,12 +397,16 @@ class PersistentJavaWorker:
         production classpath and diagnostics are the ones actually used by the
         bound runtime.
         """
+        from ._domain_outcome import record_engine_method
+        record_engine_method("compile", source_artifact, entrypoint, command="code_compile", receiver="trusted_java")
         return self.submit("code_compile", {"source_artifact": source_artifact, "entrypoint": entrypoint},
                            request_id=request_id, rpc_timeout_s=rpc_timeout_s)
 
     def execute_java(self, model_tag: str, source_artifact: str, entrypoint: str, arguments: Mapping[str, Any], *,
                      request_id: str | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
         """Execute a previously described source against the named Worker model."""
+        from ._domain_outcome import record_engine_method
+        record_engine_method(entrypoint, model_tag, source_artifact, command="code_execute", receiver="trusted_java")
         return self.submit("code_execute", {"tag": model_tag, "source_artifact": source_artifact,
                            "entrypoint": entrypoint, "arguments": dict(arguments or {})},
                            request_id=request_id, rpc_timeout_s=rpc_timeout_s)
@@ -481,7 +485,7 @@ class RemoteJava:
         # local because ``_domain_outcome`` is a plain-python contract module
         # with no worker dependency.
         from ._domain_outcome import record_engine_method
-        record_engine_method(method)
+        record_engine_method(method, *args, command="call", receiver=self._handle)
         reply = self._worker.submit("call", {"handle": self._handle, "generation": self._generation, "method": method, "args": list(args)},
                                     request_id=request_id, rpc_timeout_s=rpc_timeout_s)
         return _decode_reply(reply, self._worker)
@@ -555,16 +559,22 @@ class RemoteClient:
         return _decode_reply(self._worker.submit("modelutil", {"method": "getComsolVersion", "args": []}, **kwargs), self._worker)
     def create(self, name: str, **kwargs: Any) -> RemoteModel:
         """Create with a generated tag; the caller's value is a display label."""
+        from ._domain_outcome import record_engine_method
         tag = str(self.uniquetag("mcp", **kwargs))
+        record_engine_method("create", tag, command="modelutil", receiver="modelutil")
         model = _as_model(_decode_reply(self._worker.submit("modelutil", {"method": "create", "args": [tag]}, **kwargs), self._worker))
         model.label(name, **kwargs)
         return model
     def load(self, path: str, tag: str | None = None, **kwargs: Any) -> RemoteModel:
+        from ._domain_outcome import record_engine_method
         tag = tag or f"mcp_{uuid.uuid4().hex[:12]}"
+        record_engine_method("load", tag, str(path), command="modelutil", receiver="modelutil")
         return _as_model(_decode_reply(self._worker.submit("modelutil", {"method": "load", "args": [tag, str(path)]}, **kwargs), self._worker))
     def remove(self, tag: str | RemoteJava, **kwargs: Any) -> Any:
+        from ._domain_outcome import record_engine_method
         if isinstance(tag, RemoteJava):
             tag = str(tag.tag(**kwargs))
+        record_engine_method("remove", str(tag), command="modelutil", receiver="modelutil")
         return _decode_reply(self._worker.submit("modelutil", {"method": "remove", "args": [tag]}, **kwargs), self._worker)
 
 

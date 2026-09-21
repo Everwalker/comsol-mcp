@@ -500,7 +500,9 @@ def x_of(point: Sequence[float]) -> float:
 
 
 def test_operation_is_published_with_the_catalogue_effect() -> None:
-    assert results.OPERATIONS == {"result.sample_path": results.sample_path}
+    assert results.OPERATIONS["result.sample_path"] is results.sample_path
+    assert "dataset.list" in results.OPERATIONS
+    assert "result.evaluate" in results.OPERATIONS
     assert IMPLEMENTED_OPERATIONS >= {"result.sample_path"}
     assert OPERATION_ORIGINS["result.sample_path"] == "_g3_results"
     assert EFFECTS["result.sample_path"] == "EVALUATE"

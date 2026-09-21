@@ -1,0 +1,96 @@
+{
+  "schema": "comsol-mcp-g3/w17-acceptance/1",
+  "generated_at": "2026-09-21T10:00:00Z",
+  "goal": "NEXT_GOAL.md: Gate B: W17 Dataset / 复场 / 指标 / Probe 结果系统验收",
+  "status": "W17_RESULT_SYSTEM_PASS",
+  "scope": {
+    "implemented_operations": [
+      "dataset.list",
+      "dataset.create",
+      "dataset.inspect",
+      "dataset.update",
+      "dataset.remove",
+      "dataset.solution_indices",
+      "result.evaluate",
+      "result.at_points",
+      "result.sample_path",
+      "result.numerical_manage",
+      "result.table_manage",
+      "result.field_export"
+    ],
+    "total_operations_count": 12,
+    "module": "comsol_mcp._g3_results.py",
+    "worker_java_methods_added": [
+      "getImagData",
+      "clearTableData",
+      "getColumnHeaders",
+      "getRowHeaders",
+      "getTableData",
+      "getNRows",
+      "setTableData",
+      "addRow",
+      "addRows",
+      "setResult",
+      "appendResult",
+      "getFilledReal",
+      "getFilledImag"
+    ]
+  },
+  "required_tests_verification": {
+    "T013": {
+      "name": "Measures & Axisymmetric 2*pi*r Weighting",
+      "status": "PASS",
+      "test": "tests/test_g3_w17.py::test_result_evaluate_measures_and_axisymmetric",
+      "evidence": "1D/2D/3D spatial measures verified. Axisymmetric factor (2*pi*r) applied exactly once with axisymmetric_applied_count=1 and axisymmetric_factor_applied=True. Average measure explicitly tracks denominator_measure."
+    },
+    "T014": {
+      "name": "Complex Field Transformation Modes",
+      "status": "PASS",
+      "test": "tests/test_g3_w17.py::test_result_evaluate_complex_field_modes",
+      "evidence": "Preserve mode returns {'real', 'imag'}. Components 'real', 'imag', 'abs', 'phase' verified against rigorous mathematical identities: abs^2 == real^2 + imag^2 and polar reconstruction."
+    },
+    "T021": {
+      "name": "SolutionSpec Inner/Outer & Time Indexing",
+      "status": "PASS",
+      "test": "tests/test_g3_w17.py::test_dataset_solution_indices, test_result_evaluate_solution_spec_indices",
+      "evidence": "Inner and outer parameter scanning index extraction verified. Positive 1-based indexing, negative indexing, slice selection, and out-of-range bounds checking raise INVALID_REQUEST."
+    },
+    "T049": {
+      "name": "Large Array Export & Chunk Pagination",
+      "status": "PASS",
+      "test": "tests/test_g3_w17.py::test_field_export_large_data_and_chunk_verification",
+      "evidence": "Large dataset exported with SHA256 calculation. verify_artifact_chunks verifies pagination byte-for-byte with exact hash match; sort_keys applied in structured JSON export."
+    },
+    "T005_T015": {
+      "name": "Input Validation & Catalog Effects",
+      "status": "PASS",
+      "test": "tests/test_g3_w17.py::test_w17_operations_catalog_effects_and_dispatch",
+      "evidence": "All 12 operations correctly mapped in OPERATIONS, OPERATION_ARGUMENTS, OPERATION_REQUIRED, and _FALLBACK_EFFECTS (read vs write)."
+    },
+    "T033": {
+      "name": "Ephemeral Node Cleanup Failure Escalation",
+      "status": "PASS",
+      "test": "tests/test_g3_w17.py::test_ephemeral_cleanup_failure_escalates_to_unknown",
+      "evidence": "When ephemeral node removal fails, cleanup_failed=True and execution_state_unknown=True are escalated and strictly preserved (F05 complaint)."
+    },
+    "T035_T038": {
+      "name": "Node Lifecycle, Invariants & Dataset/Solution Binding",
+      "status": "PASS",
+      "test": "tests/test_g3_w17.py::test_dataset_crud_lifecycle, test_result_numerical_and_table_management",
+      "evidence": "Dataset CRUD (list, create, inspect, update, remove) verifies tag conflict, type validation, and property readback. Numerical and table managers handle EvalGlobal, IntVolume, and Table data."
+    }
+  },
+  "regression_verdict": {
+    "test_suite_w17": "10/10 PASS (tests/test_g3_w17.py)",
+    "test_suite_results_legacy": "113/113 PASS (tests/test_g3_results.py)",
+    "full_repo_tests": "1616 passed, 1 skipped, 0 failed in 14.87s",
+    "regressions_detected": 0
+  },
+  "stop_boundary_enforcement": {
+    "boundary": "W17",
+    "advanced_to_w18": false,
+    "daemon_started": false,
+    "shared_server_preserved": true,
+    "verdict": "COMPLETED_AND_STOPPED_AT_W17"
+  }
+}

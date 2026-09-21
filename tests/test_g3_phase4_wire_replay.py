@@ -243,6 +243,7 @@ def _namespaces(driver) -> list[dict[str, Any]]:
               # address (a NodePath, not a tag) and the SelectionSpec the selection reads take.
               "group_path": {"segments": [{"collection": "component", "tag": "comp1"},
                                           {"collection": "variable", "tag": args.variable_group}]},
+              "global_path": {"segments": [{"collection": "variable", "tag": f"{args.variable_group}_global"}]},
               "selection_spec": {"kind": "named", "component": "comp1", "tag": args.selection_tag},
               "measure_metrics": ["n_entities", "volume", "bounding_box"],
               # The driver's own locals of the W13_T006 variable flow: the route picks the wire

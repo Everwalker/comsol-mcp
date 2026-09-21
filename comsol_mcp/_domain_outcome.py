@@ -180,46 +180,113 @@ MUTATION_METHOD_PREFIXES = (
     "detach", "enable", "disable", "split", "copy", "merge", "apply", "commit",
 )
 
-MUTATION_METHOD_NAMES = frozenset({
-    "all", "inherit", "geom", "named", "selection", "physics", "material",
-    "study", "sol", "mesh", "result", "numerical", "plot", "export", "field",
-    "prop",  # container accessors are read-only, but they are listed here so a
-             # rename of the contract cannot silently turn them into mutations
+#: Selection methods that mutate selection state
+SELECTION_MUTATION_METHODS = frozenset({
+    "all", "named", "inherit",
+})
+
+#: Overloaded methods that are getters with 0 args, setters with 1+ args
+OVERLOADED_SETTER_METHODS = frozenset({
+    "label", "active", "lengthUnit", "comments", "name", "tag",
+})
+
+#: Pure accessor / query methods that never mutate the model
+KNOWN_READ_METHODS = frozenset({
+    "tags", "uniquetag", "getComsolVersion", "getFilePath",
+    "getType", "getString", "getDouble", "getInt", "getBoolean",
+    "getStringArray", "getDoubleArray", "getIntArray",
+    "getReal", "getImag", "getComplex", "getCoordinates",
+    "getValue", "getData", "getEntryKeys", "getEntryKeyIndex", "getEntryTypes",
+    "index", "ndims", "size", "hasField", "isInheriting", "isActive", "hasProduct",
+    "param", "variable", "component", "physics", "material", "study", "sol",
+    "mesh", "result", "numerical", "plot", "export", "field", "prop", "dataset",
+    "feature", "selection", "measure", "cminpack", "batch", "func", "probe",
+    "table", "node", "get", "problems", "getNData", "getTableData",
+    "getColumnHeaders", "getRowHeaders", "getNRows", "getFilledReal",
+    "getFilledImag", "getImagData", "getPVals",
 })
 
 
-def is_mutation_method(method: str) -> bool:
-    """True when calling ``method`` can change the model.
+def is_mutation_call(method: str, args: Sequence[Any] = (), command: str = "call", receiver: Any = None) -> bool:
+    """True when invoking an engine command/method can change the model.
 
-    The classification is deliberately *prefix based and documented*: the
-    witness must never miss a mutation, because a missed mutation is what turns
-    a fail-closed ``EXECUTION_STATE_UNKNOWN`` into a false "nothing happened".
-    A read method is therefore only what no mutation prefix matches.
+    Distinguishes pure accessors from setters/mutations using method name,
+    signature/arguments, receiver context, and command type. Unknown methods,
+    trusted code execution, and unclassifiable calls default to True (fail-closed).
     """
     if not isinstance(method, str) or not method:
         return False
-    if method in MUTATION_METHOD_NAMES:
+    if command in ("code_execute", "trusted_code", "execute_java_code"):
+        return True
+    if command == "code_compile":
         return False
-    return method.startswith(MUTATION_METHOD_PREFIXES)
+    if command == "modelutil":
+        if method in ("create", "load", "remove", "clear"):
+            return True
+        if method in ("tags", "uniquetag", "getComsolVersion", "disconnect"):
+            return False
+        return True
+
+    # Check explicit mutation prefixes first
+    if method.startswith(MUTATION_METHOD_PREFIXES):
+        return True
+
+    # Selection direct mutations
+    if method in SELECTION_MUTATION_METHODS:
+        return True
+
+    # Overloaded getter/setter methods (0 args = read, 1+ args = write)
+    if method in OVERLOADED_SETTER_METHODS:
+        return len(args) > 0
+
+    # Special handling for geom:
+    # selection.geom(dim, entities) or selection.geom(dim) sets selection geometry.
+    # component.geom("geom1") or model.geom() navigates geometry.
+    if method == "geom":
+        if len(args) >= 2:
+            return True
+        if len(args) == 1 and isinstance(args[0], int):
+            return True
+        return False
+
+    # Known pure accessors and container navigators
+    if method in KNOWN_READ_METHODS:
+        return False
+
+    # Fail-closed: any unclassified or unknown method must be treated as a potential mutation
+    return True
+
+
+def is_mutation_method(method: str) -> bool:
+    """Backwards-compatible check: True when ``method`` can mutate the model."""
+    return is_mutation_call(method, args=())
 
 
 @dataclass
 class DispatchWitness:
-    """Records the engine methods issued during one management callback.
+    """Records the engine calls issued during one management callback.
 
-    ``record`` is called by the worker handle layer (``RemoteJava._call``) for
-    every method it dispatches, so the evidence is the *actual worker call*,
-    not the module's own claim about itself.
+    ``record`` is called by the worker handle layer for every method dispatched,
+    recording command, receiver, method, and arguments.
     """
 
     methods: list[str] = field(default_factory=list)
     first_mutation: str | None = None
+    dispatches: list[dict[str, Any]] = field(default_factory=list)
 
-    def record(self, method: str) -> None:
+    def record(self, method: str, *args: Any, command: str = "call", receiver: Any = None) -> None:
         if not isinstance(method, str) or not method:
             return
         self.methods.append(method)
-        if self.first_mutation is None and is_mutation_method(method):
+        is_mut = is_mutation_call(method, args=args, command=command, receiver=receiver)
+        self.dispatches.append({
+            "command": command,
+            "method": method,
+            "args_count": len(args),
+            "receiver": str(receiver) if receiver else None,
+            "is_mutation": is_mut,
+        })
+        if self.first_mutation is None and is_mut:
             self.first_mutation = method
 
     @property
@@ -236,6 +303,7 @@ class DispatchWitness:
             "mutation_method": self.first_mutation,
             "mutation_issued": self.mutation_issued,
             "methods": sorted(set(self.methods)),
+            "dispatches": self.dispatches,
         }
 
 
@@ -255,11 +323,11 @@ def witness_scope() -> Iterator[DispatchWitness]:
         _WITNESS.reset(token)
 
 
-def record_engine_method(method: str) -> None:
+def record_engine_method(method: str, *args: Any, command: str = "call", receiver: Any = None) -> None:
     """Feed one dispatched engine method into the active witness, if any."""
     witness = _WITNESS.get()
     if witness is not None:
-        witness.record(method)
+        witness.record(method, *args, command=command, receiver=receiver)
 
 
 def current_witness() -> DispatchWitness | None:
@@ -705,6 +773,102 @@ def domain_envelope(operation: str, data: Mapping[str, Any], *,
     return envelope
 
 
+def _merge_contract_envelopes(envelope: Mapping[str, Any], detail: Mapping[str, Any]) -> dict[str, Any]:
+    """Merge outer envelope and inner detail without discarding danger signals (F05)."""
+    merged: dict[str, Any] = {key: detail[key] for key in CONTRACT_KEYS if key in detail}
+    for key in CONTRACT_KEYS:
+        if key in envelope and key not in merged:
+            merged[key] = envelope[key]
+
+    # F05: Danger signals must only escalate; outer False/None cannot overwrite inner True
+    for flag in ("execution_state_unknown", "engine_state_unknown", "cleanup_failed", "partial_change"):
+        d_val = _as_bool(detail.get(flag))
+        e_val = _as_bool(envelope.get(flag))
+        if d_val is True or e_val is True:
+            merged[flag] = True
+        elif d_val is False or e_val is False:
+            if merged.get(flag) is not True:
+                merged[flag] = False
+
+    # Cleanup mapping merging
+    d_clean = detail.get("cleanup")
+    e_clean = envelope.get("cleanup")
+    clean_dict: dict[str, Any] = {}
+    if isinstance(d_clean, Mapping):
+        clean_dict.update(d_clean)
+    if isinstance(e_clean, Mapping):
+        clean_dict.update(e_clean)
+    if clean_dict:
+        if (isinstance(d_clean, Mapping) and d_clean.get("cleanup_failed") is True) or \
+           (isinstance(e_clean, Mapping) and e_clean.get("cleanup_failed") is True) or \
+           merged.get("cleanup_failed") is True:
+            clean_dict["cleanup_failed"] = True
+            merged["cleanup_failed"] = True
+        merged["cleanup"] = clean_dict
+
+    # Status merging: UNKNOWN > PARTIAL > FAILED > SUCCEEDED
+    def _status_rank(st_val: Any) -> tuple[int, str]:
+        if isinstance(st_val, Mapping):
+            token = _string(st_val.get("status")) or ("APPLIED" if st_val.get("ok") is True else "FAILED")
+            if st_val.get("execution_state_unknown") is True or token in UNKNOWN_STATUS_TOKENS:
+                return (4, "EXECUTION_STATE_UNKNOWN")
+            if st_val.get("partial_change") is True or token in PARTIAL_STATUS_TOKENS:
+                return (3, token or "PARTIAL_FAILURE")
+            if st_val.get("ok") is False or token in FAILED_STATUS_TOKENS:
+                return (2, token or "FAILED")
+            return (1, token or "APPLIED")
+        token = _string(st_val)
+        if not token:
+            return (0, "")
+        token_upper = token.upper()
+        if token_upper in UNKNOWN_STATUS_TOKENS:
+            return (4, token_upper)
+        if token_upper in PARTIAL_STATUS_TOKENS:
+            return (3, token_upper)
+        if token_upper in FAILED_STATUS_TOKENS:
+            return (2, token_upper)
+        if token_upper in SUCCEEDED_STATUS_TOKENS:
+            return (1, token_upper)
+        return (4, token)
+
+    d_rank, _ = _status_rank(detail.get("status"))
+    e_rank, _ = _status_rank(envelope.get("status"))
+    if d_rank > e_rank and d_rank >= 2:
+        merged["status"] = detail["status"]
+    elif e_rank > d_rank and e_rank >= 2:
+        merged["status"] = envelope["status"]
+    elif "status" in envelope:
+        merged["status"] = envelope["status"]
+    elif "status" in detail:
+        merged["status"] = detail["status"]
+
+    # Success / ok: False wins over True
+    d_succ = _as_bool(detail.get("success"))
+    e_succ = _as_bool(envelope.get("success"))
+    if d_succ is False or e_succ is False:
+        merged["success"] = False
+    elif d_succ is True and e_succ is True:
+        merged["success"] = True
+    elif d_succ is not None:
+        merged["success"] = d_succ
+    elif e_succ is not None:
+        merged["success"] = e_succ
+
+    # Counts: keep non-zero counts
+    for count_key in ("applied", "applied_count", "failed", "failed_count", "not_executed", "not_executed_count"):
+        d_cnt = _count(detail.get(count_key))
+        e_cnt = _count(envelope.get(count_key))
+        if d_cnt or e_cnt:
+            merged[count_key] = max(d_cnt or 0, e_cnt or 0)
+
+    # Errors: preserve error records
+    for err_key in ("error", "engine_error", "failure", "refusal"):
+        if err_key in detail and err_key not in envelope:
+            merged[err_key] = detail[err_key]
+
+    return merged
+
+
 def classify_envelope(envelope: Mapping[str, Any], *, engine_changed: bool | None = None) -> DomainOutcome:
     """Classify a callback envelope (or a domain mapping) with the shared rule.
 
@@ -715,11 +879,7 @@ def classify_envelope(envelope: Mapping[str, Any], *, engine_changed: bool | Non
     raw_detail = envelope.get("data")
     detail: Mapping[str, Any] = raw_detail if isinstance(raw_detail, Mapping) else {}
     declared_state = _string(envelope.get("domain_state"))
-    merged: dict[str, Any] = {key: detail[key] for key in CONTRACT_KEYS if key in detail}
-    merged.update({key: envelope[key] for key in CONTRACT_KEYS if key in envelope})
-    for key in ("execution_state_unknown", "partial_change", "cleanup_failed"):
-        if key in envelope:
-            merged[key] = envelope[key]
+    merged = _merge_contract_envelopes(envelope, detail)
     outcome = classify(
         str(envelope.get("operation") or detail.get("operation") or ""), merged,
         dispatch_stage=str(envelope.get("dispatch_stage") or STAGE_POST_DISPATCH),
@@ -728,7 +888,7 @@ def classify_envelope(envelope: Mapping[str, Any], *, engine_changed: bool | Non
     if declared_state not in STATES or declared_state == outcome.state:
         return outcome
     # The domain adapter's own classification always wins: it saw the raw data
-    # mapping and the mutation witness.  Only escalate (never soften) a state.
+    # mapping and the mutation witness. Only escalate (never soften) a state.
     order = {STATE_SUCCEEDED: 0, STATE_PARTIAL: 1, STATE_FAILED: 2, STATE_UNKNOWN: 3}
     if order[declared_state] <= order[outcome.state]:
         return outcome

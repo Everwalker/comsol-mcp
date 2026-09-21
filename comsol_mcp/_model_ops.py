@@ -344,7 +344,11 @@ def _dataset_inventory(model: Any) -> dict[str, Any]:
         return inventory
     inventory["readback"]["dataset_tags"] = [str(tag) for tag in list(tags)]
     for tag in inventory["readback"]["dataset_tags"]:
-        node, node_error = _engine_probe(collection, "__call__", tag)
+        node, node_error = _engine_probe(collection, "get", tag)
+        if node is None:
+            node, node_error = _engine_probe(collection, "__call__", tag)
+        if node is None and results is not None:
+            node, node_error = _engine_probe(results, "dataset", tag)
         row: dict[str, Any] = {"tag": tag, "type": None, "solution": None}
         if node is None:
             row["error"] = node_error
@@ -366,36 +370,45 @@ def _dataset_inventory(model: Any) -> dict[str, Any]:
     return inventory
 
 
-def _evaluation_binding(model: Any) -> dict[str, Any]:
-    """The dataset/solution an evaluation is bound to, read back from the engine (C04).
+def _evaluation_binding(model: Any, requested_dataset: str | None = None) -> dict[str, Any]:
+    """The dataset/solution an evaluation is bound to, read back from the engine (C04/F03).
 
     The documented default of an evaluation feature's ``data`` property is *First compatible
     dataset*; when this model publishes one, it is named explicitly so the reply can say which
     dataset/solution a value belongs to, and so a model that carries a solution is never left to
-    the engine's implicit choice.  When the engine's own dataset readback proves that the model
-    publishes no dataset at all, the feature is bound to the documented value ``none`` instead
-    (doc 4454) - the default would resolve to nothing there; :func:`_bind_evaluation_dataset`
-    performs and verifies whichever of the two states applies.
+    the engine's implicit choice. When the engine's own dataset readback proves that the model
+    publishes no dataset at all, the feature is bound to the documented value ``none`` instead.
     """
     inventory = _dataset_inventory(model)
     chosen: dict[str, Any] | None = None
     stored = set(inventory["solutions"])
-    for row in inventory["datasets"]:
-        if row.get("solution") and (not stored or row["solution"] in stored):
-            chosen = row
-            break
+
+    if requested_dataset:
+        for row in inventory["datasets"]:
+            if row.get("tag") == requested_dataset:
+                chosen = row
+                break
+
+    if chosen is None:
+        for row in inventory["datasets"]:
+            if row.get("solution") and (not stored or row["solution"] in stored):
+                chosen = row
+                break
     if chosen is None:
         for row in inventory["datasets"]:
             if row.get("solution"):
                 chosen = row
                 break
-    if chosen is None and inventory["datasets"]:
-        chosen = inventory["datasets"][0]
+
+    has_solution = bool((chosen or {}).get("solution"))
+    binding_complete = bool(chosen and has_solution)
+
     binding: dict[str, Any] = {
         "dataset": (chosen or {}).get("tag"),
         "solution": (chosen or {}).get("solution"),
         "dataset_type": (chosen or {}).get("type"),
         "inventory": inventory,
+        "binding_complete": binding_complete,
         "policy": ("the evaluation feature's documented ``data`` property: a named dataset is set and "
                    "read back when the model publishes one; when the engine's own readback proves that "
                    "the model publishes no dataset, the documented value ``none`` is set and read back "
@@ -403,6 +416,9 @@ def _evaluation_binding(model: Any) -> dict[str, Any]:
     }
     if chosen is None:
         binding["reason"] = inventory.get("reason") or "the model publishes no dataset to bind"
+    elif not has_solution and inventory["datasets"]:
+        binding["binding_error"] = f"binding incomplete: dataset {chosen.get('tag')} has no authoritative solution link"
+        binding["reason"] = "binding incomplete: dataset tag present but solution link is unresolved"
     return binding
 
 

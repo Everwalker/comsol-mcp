@@ -72,6 +72,18 @@ _FALLBACK_EFFECTS: dict[str, str] = {
     "selection.query_spatial": "EVALUATE",
     "selection.adjacency": "READ",
     "selection.validate": "EVALUATE",
+    "dataset.list": "READ",
+    "dataset.create": "WRITE",
+    "dataset.inspect": "READ",
+    "dataset.update": "WRITE",
+    "dataset.remove": "WRITE",
+    "dataset.solution_indices": "READ",
+    "result.evaluate": "EVALUATE",
+    "result.at_points": "EVALUATE",
+    "result.sample_path": "EVALUATE",
+    "result.numerical_manage": "DYNAMIC",
+    "result.table_manage": "DYNAMIC",
+    "result.field_export": "FILE_WRITE",
 }
 
 #: Effects that are not a pure model read and therefore need the isolated

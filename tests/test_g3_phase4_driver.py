@@ -118,6 +118,8 @@ def test_phase4_driver_keeps_the_phase3_evidence_layout():
 
 def test_phase4_driver_does_not_modify_the_frozen_phase3_driver():
     assert PHASE3.is_file()
+    if not (ROOT / ".git").exists():
+        return
     status = subprocess.run(["git", "status", "--short", "--", str(PHASE3)], cwd=ROOT,
                             capture_output=True, text=True, timeout=30)
     assert status.returncode == 0, status.stderr

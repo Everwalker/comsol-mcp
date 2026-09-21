@@ -1,0 +1,88 @@
+{
+  "schema": "comsol-mcp-g3/phase4_2-acceptance/1",
+  "generated_at": "2026-09-21T09:40:00Z",
+  "goal": "NEXT_GOAL.md: G3.1 证据补强与全仓复核 -> Gate A 验收与 W17 结果系统推进",
+  "status": "GATE_A_PASS_AUDIT_STRENGTHENED",
+  "audit_review_conclusion": {
+    "historical_phase4_1_assessment": "Historical phase4_1_acceptance.json claimed PASS, but semantic review identified required coverage gaps and insufficient reopen verification (F01-F06). Specifically: W13_T006 was left as IMPLEMENTATION_GAP; reopen checks relied on constant 300K/293.15K boundary values instead of non-boundary stored solution fields; DispatchWitness allowed silent mutator misclassification (F04); and envelope danger flags could be masked by outer false (F05).",
+    "gate_a_resolution_status": "All Gate A requirements (A1, A2, A3) have been formally resolved and verified with dedicated test suites and evidence.",
+    "historical_evidence_preservation": "evidence/phase4_1_acceptance.json and original run transcripts are preserved byte-for-byte without overwrite."
+  },
+  "repo": {
+    "pinned_commit": "328202cb8b30df2f0368b4bc06c70e3c91b8bce1",
+    "git_tree": "7c8735a11fdd497bbd2e32d1a3c6809945c36f4c",
+    "all_files_audited": 3571,
+    "semantic_review_ledger": "audit/semantic_review.json",
+    "findings_ledger": "docs/comsol_mcp_design_v1/G3_2_FINDINGS.md",
+    "plan_document": "docs/comsol_mcp_design_v1/G3_2_W17_PLAN.md"
+  },
+  "environment": {
+    "os": "macOS (arm64 Apple Silicon)",
+    "comsol": "COMSOL Multiphysics 6.4 (6.4.0.293) at /Applications/COMSOL64",
+    "jdk": "Amazon Corretto 11.0.31 at /Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home",
+    "python": ".venv (CPython 3.13.14)",
+    "server": {
+      "port": 56389,
+      "address": "127.0.0.1",
+      "status": "SHARED_INSTANCE_PRESERVED_UNTOUCHED"
+    }
+  },
+  "gate_a_remedies": {
+    "A1_F04_dispatch_witness": {
+      "status": "PASS",
+      "description": "Refactored is_mutation_call with signature/argument analysis; pure getters separated from mutator overloads (label, active, lengthUnit); selection mutations (all, named, inherit) strictly classified as mutators; unknown methods fail-closed as UNKNOWN/MUTATION. DispatchWitness captures command, receiver, method, args across RemoteJava, code_compile, code_execute, and modelutil.",
+      "test_suite": "tests/test_g3_gate_a1_f04_f05.py",
+      "verdict": "11/11 PASS"
+    },
+    "A1_F05_danger_signal_escalation": {
+      "status": "PASS",
+      "description": "classify_envelope and _merge_contract_envelopes strictly escalate danger booleans (execution_state_unknown, cleanup_failed, partial_change, engine_state_unknown: True > None > False). Outer False or success cannot mask inner danger. Status severity hierarchy enforced.",
+      "test_suite": "tests/test_g3_gate_a1_f04_f05.py",
+      "verdict": "11/11 PASS"
+    },
+    "A2_F03_dataset_binding_accessor": {
+      "status": "PASS",
+      "description": "Replaced __call__() probe on Java DatasetFeatureList with collection.get(tag) standard accessor. _evaluation_binding verifies solution link and sets binding_complete=False when solution association is missing.",
+      "test_suite": "tests/test_m1_product_repairs.py",
+      "verdict": "34/34 PASS"
+    },
+    "A2_F01_F06_w13_t006_variables": {
+      "status": "PASS",
+      "description": "Created both component variable group (comp1) and global variable group. Each defines two variables with inter-variable dependencies (q1=2, q2=q1*3; g1=5, g2=g1*4). Modified variables (q1=4, g1=10). Verified varnames without bogus name/expr. Evaluated global dependent expressions (g1=10.0, g2=40.0) and verified component scope separation.",
+      "test_suite": "tests/test_g3_phase4_wire_replay.py + tests/test_g3_phase4_m1_fixes.py",
+      "verdict": "33/33 PASS"
+    },
+    "A2_F02_identical_sha_reopen": {
+      "status": "PASS",
+      "description": "Chain A/B/C reopen verified against exact SHA256 stored solutions without re-solving: Chain A compares 3 non-boundary temperature points (308.15, 323.15, 338.15 K) and heat flux; Chain B verifies 3 distinct times and 3 spatial points; Chain C verifies modified continuation model settings, solver tuning, and derived values. Four negative controls verify checker sensitivity to cleared solution, corrupted values, SHA mismatch, and missing derived values.",
+      "test_suite": "tests/test_g3_gate_a2_f02_reopen.py",
+      "verdict": "7/7 PASS"
+    }
+  },
+  "required_tests_mapping": {
+    "T006": {"suite": "tests/test_g3_w13.py", "subcase": "variables", "status": "PASS"},
+    "T007": {"suite": "tests/test_g3_w15.py", "subcase": "selections", "status": "PASS"},
+    "T009": {"suite": "tests/test_g3_w14.py", "subcase": "geometry_array", "status": "PASS"},
+    "T015": {"suite": "tests/test_g3_w13.py", "subcase": "units", "status": "PASS"},
+    "T016": {"suite": "tests/test_g3_w13.py", "subcase": "interpolation", "status": "PASS"},
+    "T017": {"suite": "tests/test_g3_w15.py", "subcase": "material_properties", "status": "PASS"},
+    "T018": {"suite": "tests/test_g3_w16.py", "subcase": "mesh", "status": "PASS"},
+    "T019": {"suite": "tests/test_g3_w16.py", "subcase": "study_solver", "status": "PASS"},
+    "T020": {"suite": "tests/test_g3_w16.py", "subcase": "solver_sequence", "status": "PASS"},
+    "T034": {"suite": "tests/test_g3_w14.py", "subcase": "geometry_transforms", "status": "PASS"},
+    "T042": {"suite": "tests/test_g3_w15.py", "subcase": "materials_advanced", "status": "PASS"},
+    "T048": {"suite": "tests/test_g3_w13.py", "subcase": "selection_drift", "status": "PASS"},
+    "R01": {"suite": "tests/test_g3_r01_expression.py", "subcase": "expression_readback", "status": "PASS"},
+    "R02": {"suite": "tests/test_g3_r02_discovery.py", "subcase": "discovery", "status": "PASS"},
+    "R03": {"suite": "tests/test_g3_r03_indexed.py", "subcase": "indexed_keyed", "status": "PASS"},
+    "R04": {"suite": "tests/test_g3_r04_invariants.py", "subcase": "invariants", "status": "PASS"},
+    "R05": {"suite": "tests/test_g3_r05_store.py", "subcase": "store", "status": "PASS"},
+    "R06": {"suite": "tests/test_g3_r06_docs_query.py", "subcase": "docs_query", "status": "PASS"},
+    "T005": {"suite": "tests/test_g3_phase4_m1_fixes.py", "subcase": "guard_t005", "status": "PASS"},
+    "T010": {"suite": "tests/test_g3_phase4_m1_fixes.py", "subcase": "guard_t010", "status": "PASS"},
+    "T033": {"suite": "tests/test_m1_product_repairs.py", "subcase": "guard_t033", "status": "PASS"},
+    "T035": {"suite": "tests/test_m1_product_repairs.py", "subcase": "guard_t035", "status": "PASS"},
+    "T038": {"suite": "tests/test_g3_phase4_driver.py", "subcase": "guard_t038", "status": "PASS"}
+  },
+  "gate_a_exit_verdict": "PASS"
+}
