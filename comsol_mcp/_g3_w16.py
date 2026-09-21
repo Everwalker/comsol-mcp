@@ -155,6 +155,7 @@ from ._g3_common import (
     child_node,
     definition_properties,
     describe_engine_failure,
+    node_not_found,
     node_type,
     operation_arguments,
     property_definition,
@@ -167,6 +168,7 @@ from ._g3_common import (
     resolve_path,
     selection_state,
     split_parent_path,
+    tag_conflict,
     tag_list,
     validate_selection_spec,
     validate_tag,
@@ -542,6 +544,11 @@ _SOLVE_FOR_PROPERTY = {"coupling": "activateCoupling"}
 #: as a successful read or as an empty value.
 _MESH_SEQUENCE_READBACK = ("current", "isComplete", "isEmpty", "getNumElem", "getTypes",
                            "getSDim", "hasProblems", "problems", "getVolume", "buildTime")
+#: Read after a build so a caller never records "run() returned" as the mesh
+#: verification: the element/vertex counts, the element types and the sequence's
+#: own quality numbers (javap ``MeshSequence.getNumElem/getNumVertex/getTypes/
+#: getMinQuality/getMeanQuality``).
+_MESH_POST_BUILD_READBACK = ("getNumElem", "getNumVertex", "getTypes", "getMinQuality", "getMeanQuality")
 _MESH_FEATURE_READBACK = ("status", "message", "isBuilt", "hasError", "hasWarning",
                           "problems", "errors", "warnings")
 _SOLVER_READBACK = ("isEmpty", "isInitialized", "getDefaultSolnum", "hasProblems",
@@ -599,7 +606,7 @@ def _property_write(node_path: Mapping[str, Any], worker: Any, model_tag: str,
         "not_executed": list(data.get("not_executed") or []),
         "execution_state_unknown": bool(result.get("execution_state_unknown")),
         "readback_values": {row.get("name"): row.get("readback") for row in applied
-                            if isinstance(row, Mapping)},
+                            if isinstance(row, Mapping) and row.get("name") is not None},
         "engine_error": result.get("error"),
     }
 
@@ -663,7 +670,7 @@ def _require_component(worker: Any, model_tag: str, component: str) -> Any:
     model = bound_model(worker, model_tag)
     container = _call(model, "component")
     if component not in tag_list(container):
-        raise ExecutionContractError("NODE_NOT_FOUND", f"component {component!r} does not exist")
+        raise node_not_found(f"component {component!r} does not exist")
     return _call(model, "component", component)
 
 
@@ -671,9 +678,11 @@ def _require_geometry(worker: Any, model_tag: str, component: str, geometry: str
     geometry = validate_tag(geometry, "geometry")
     comp = _require_component(worker, model_tag, component)
     container = _call(comp, "geom")
-    if geometry not in tag_list(container):
-        raise ExecutionContractError(
-            "NODE_NOT_FOUND", f"geometry {geometry!r} does not exist in component {component!r}"
+    geometry_tags = tag_list(container)
+    if geometry not in geometry_tags:
+        raise node_not_found(
+            f"geometry {geometry!r} does not exist in component {component!r}; "
+            f"the engine reports {geometry_tags}",
         )
     return _call(comp, "geom", geometry)
 
@@ -706,8 +715,8 @@ def _mesh_sequence_context(worker: Any, model_tag: str, path: Any, *, label: str
     comp = _require_component(worker, model_tag, component)
     container = _call(comp, "mesh")
     if mesh not in tag_list(container):
-        raise ExecutionContractError(
-            "NODE_NOT_FOUND", f"mesh sequence {mesh!r} does not exist in component {component!r}"
+        raise node_not_found(
+            f"mesh sequence {mesh!r} does not exist in component {component!r}"
         )
     canonical, node = resolve_path(worker, model_tag, path, label=label)
     return canonical, node, component, mesh
@@ -736,8 +745,8 @@ def _feature_context(worker: Any, model_tag: str, path: Any, *, label: str = "pa
         )
     canonical, parent = resolve_path(worker, model_tag, parent_path, label=f"{label}.parent")
     if tag not in tag_list(_call(parent, "feature")):
-        raise ExecutionContractError(
-            "NODE_NOT_FOUND", f"feature {tag!r} does not exist under {parent_path}"
+        raise node_not_found(
+            f"feature {tag!r} does not exist under {parent_path}"
         )
     canonical_full, node = resolve_path(worker, model_tag, path, label=label)
     return canonical_full, node, canonical, tag
@@ -755,7 +764,7 @@ def _study_context(worker: Any, model_tag: str, path: Any, *, label: str = "path
     tag = validate_tag(parsed.segments[0].tag, "study")
     model = bound_model(worker, model_tag)
     if tag not in tag_list(_call(model, "study")):
-        raise ExecutionContractError("NODE_NOT_FOUND", f"study {tag!r} does not exist")
+        raise node_not_found(f"study {tag!r} does not exist")
     canonical, node = resolve_path(worker, model_tag, path, label=label)
     return canonical, node, tag
 
@@ -772,7 +781,7 @@ def _solver_context(worker: Any, model_tag: str, path: Any, *, label: str = "pat
     tag = validate_tag(parsed.segments[0].tag, "sol")
     model = bound_model(worker, model_tag)
     if tag not in tag_list(_call(model, "sol")):
-        raise ExecutionContractError("NODE_NOT_FOUND", f"solver sequence {tag!r} does not exist")
+        raise node_not_found(f"solver sequence {tag!r} does not exist")
     canonical, node = resolve_path(worker, model_tag, path, label=label)
     return canonical, node, tag
 
@@ -982,8 +991,8 @@ def mesh_create(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
     container = _call(comp, "mesh")
     existing = tag_list(container)
     if tag in existing:
-        raise ExecutionContractError(
-            "TAG_CONFLICT", f"mesh sequence {tag!r} already exists in component {component!r}"
+        raise tag_conflict(
+            f"mesh sequence {tag!r} already exists in component {component!r}"
         )
     _call(container, "create", tag, geometry)
     after = tag_list(container)
@@ -1201,7 +1210,7 @@ def mesh_feature_create(worker: Any, model_tag: str, arguments: Mapping[str, Any
                 "TYPE_CONFLICT",
                 f"mesh feature {tag!r} already exists with type {current!r} (requested {type_id!r})",
             )
-        raise ExecutionContractError("TAG_CONFLICT", f"mesh feature {tag!r} already exists")
+        raise tag_conflict(f"mesh feature {tag!r} already exists")
 
     _call(parent, "create", tag, type_id)
     readback_tags = tag_list(container)
@@ -1360,6 +1369,71 @@ def mesh_feature_remove(worker: Any, model_tag: str, arguments: Mapping[str, Any
     }
 
 
+def _mesh_geometry_precondition(worker: Any, model_tag: str, node: Any, component: str, mesh_tag: str
+                                ) -> dict[str, Any]:
+    """Read back the geometry a mesh sequence is bound to, before building it.
+
+    ``mesh(<tag>).geom()`` names the geometry the sequence meshes (javap
+    ``MeshSequence.geom() -> String``); the geometry is then looked up in the
+    component and its own ``problems()`` (javap ``GeomSequence.problems() ->
+    String[]``) is read.  Nothing is assumed: an unreadable readback is reported
+    as an error field rather than as "fine", and a geometry that is absent or
+    reports problems is refused instead of meshed.
+    """
+    geom_probe = call_probe(node, "geom")
+    geometry_tag = geom_probe["value"] if geom_probe["ok"] and isinstance(geom_probe["value"], str) else None
+    comp = _require_component(worker, model_tag, component)
+    container_probe = call_probe(comp, "geom")
+    existing = [str(item) for item in tag_list(container_probe["value"])] \
+        if container_probe["ok"] and container_probe["value"] is not None else None
+    block: dict[str, Any] = {
+        "mesh": mesh_tag,
+        "geometry_tag": geometry_tag,
+        "geometry_tag_readback": "mesh(<tag>).geom()" if geom_probe["ok"] else None,
+        "geometry_tag_error": None if geom_probe["ok"] else geom_probe["error"],
+        "component_geometries": existing,
+        "geometry_exists": geometry_tag is not None and existing is not None and geometry_tag in existing,
+        "sdim": _probe_snapshot(node, ("getSDim",))["values"].get("getSDim"),
+        "is_geometry": _probe_snapshot(node, ("isGeometry",))["values"].get("isGeometry"),
+    }
+    if block["geometry_exists"]:
+        geometry_node = _call(_call(comp, "geom"), "get", str(geometry_tag))
+        problems = _probe_snapshot(geometry_node, ("problems",))
+        block["geometry_problems"] = problems["values"].get("problems") if problems["readable"] else None
+        block["geometry_problems_error"] = None if problems["readable"] else problems.get("errors")
+        block["geometry_problems_source"] = "geom(<tag>).problems()"
+    else:
+        block["geometry_problems"] = None
+        block["geometry_problems_error"] = None
+        block["geometry_problems_source"] = None
+    return block
+
+
+def _mesh_build_precondition_gate(precondition: Mapping[str, Any], component: str) -> None:
+    """Refuse a build whose geometry is absent or reports problems."""
+    if precondition.get("geometry_tag") is None:
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            f"mesh sequence {precondition.get('mesh')!r} did not report the geometry it is bound to "
+            f"(mesh(<tag>).geom() unreadable: {precondition.get('geometry_tag_error')}); the build is refused "
+            f"because the target geometry cannot be confirmed",
+        )
+    if not precondition.get("geometry_exists"):
+        raise node_not_found(
+            f"mesh sequence {precondition.get('mesh')!r} is bound to geometry "
+            f"{precondition.get('geometry_tag')!r}, which is not present in component {component!r} "
+            f"(geometries: {precondition.get('component_geometries')}); create and build the geometry before "
+            f"building the mesh",
+        )
+    problems = precondition.get("geometry_problems")
+    if isinstance(problems, list) and problems:
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            f"geometry {precondition.get('geometry_tag')!r} reports problems {problems}; build the geometry "
+            f"(resolving those problems) before meshing it",
+        )
+
+
 def mesh_build(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     args = operation_arguments(arguments, ("path", "until_tag"), ("path",))
     canonical, node, component, mesh_tag = _mesh_sequence_context(worker, model_tag, args["path"])
@@ -1369,12 +1443,13 @@ def mesh_build(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dic
     if until is not None:
         until = validate_tag(until, "until_tag")
         if until not in feature_tags:
-            raise ExecutionContractError(
-                "NODE_NOT_FOUND",
+            raise node_not_found(
                 f"until_tag {until!r} does not exist in mesh sequence {mesh_tag!r}; "
                 f"available features: {feature_tags}",
             )
         call_args = (until,)
+    geometry_precondition = _mesh_geometry_precondition(worker, model_tag, node, component, mesh_tag)
+    _mesh_build_precondition_gate(geometry_precondition, component)
     before = _readback_block(node, _MESH_SEQUENCE_READBACK)
     started = time.monotonic()
     error: dict[str, Any] | None = None
@@ -1384,6 +1459,10 @@ def mesh_build(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dic
         error = describe_engine_failure(exc, "run")
     duration_s = round(time.monotonic() - started, 3)
     after = _readback_block(node, _MESH_SEQUENCE_READBACK)
+    # A build that returned without raising is not evidence of anything by
+    # itself: the counts/quality of the built sequence are read back here so a
+    # caller never has to treat "run() did not throw" as the verification.
+    post_build = _readback_block(node, _MESH_POST_BUILD_READBACK)
     result = {
         "path": canonical,
         "component": component,
@@ -1391,9 +1470,19 @@ def mesh_build(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dic
         "until_tag": until,
         "built_feature_range": feature_tags[:feature_tags.index(until) + 1] if until in feature_tags else feature_tags,
         "duration_s": duration_s,
+        "geometry_precondition": geometry_precondition,
         "state_before": before["state"],
         "state_after": after["state"],
-        "readback_allowlist_entry_required": after["allowlist_entry_required"],
+        "post_build_readback": {
+            "elements": post_build["state"].get("getNumElem"),
+            "vertices": post_build["state"].get("getNumVertex"),
+            "element_types": post_build["state"].get("getTypes"),
+            "min_quality": post_build["state"].get("getMinQuality"),
+            "mean_quality": post_build["state"].get("getMeanQuality"),
+            "errors": post_build["errors"],
+        },
+        "readback_allowlist_entry_required": sorted(set(after["allowlist_entry_required"])
+                                                    | set(post_build["allowlist_entry_required"])),
         "long_task_semantics": {
             "owner": "control_plane",
             "note": "mesh.run() is a synchronous engine call on the serial worker queue; the caller's "
@@ -1844,7 +1933,7 @@ def study_create(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> d
     model = bound_model(worker, model_tag)
     container = _call(model, "study")
     if tag in tag_list(container):
-        raise ExecutionContractError("TAG_CONFLICT", f"study {tag!r} already exists")
+        raise tag_conflict(f"study {tag!r} already exists")
     _call(container, "create", tag)
     after = tag_list(container)
     if tag not in after:
@@ -2053,7 +2142,7 @@ def study_step_create(worker: Any, model_tag: str, arguments: Mapping[str, Any])
                 "TYPE_CONFLICT",
                 f"study step {tag!r} already exists with type {current!r} (requested {type_id!r})",
             )
-        raise ExecutionContractError("TAG_CONFLICT", f"study step {tag!r} already exists")
+        raise tag_conflict(f"study step {tag!r} already exists")
     _call(study, "create", tag, type_id)
     readback_tags = tag_list(container)
     if tag not in readback_tags:
@@ -2100,7 +2189,7 @@ def study_step_create(worker: Any, model_tag: str, arguments: Mapping[str, Any])
         "property_source": property_source,
         "documented_properties": sorted(STUDY_STEP_PROPERTIES.get(type_id, frozenset())),
         "properties": {name: row.get("readback") for name, row in
-                       {row.get("name"): row for row in applied if isinstance(row, Mapping)}.items()},
+                       {row.get("name"): row for row in applied if isinstance(row, Mapping) and row.get("name") is not None}.items()},
         "solver_generation_note": "a defining step is turned into a solver contract by "
                                   "study.solver_generate (createAutoSequences) or by study.run",
     }
@@ -2575,11 +2664,64 @@ def _solver_tree(node: Any, depth: int, *, prefix: Mapping[str, Any]) -> list[di
     return rows
 
 
+def _path_mentions_study_or_solver(path: Any) -> bool:
+    """True when a rejected NodePath reaches for a study/solver segment.
+
+    Used only to decide whether a ``NODE_NOT_FOUND`` refusal should carry the
+    solver-path remediation; it never makes a path valid.
+    """
+    try:
+        parsed = NodePath.from_wire(path)
+    except Exception:  # noqa: BLE001 - an unparseable path is refused by resolve_path itself
+        return False
+    return any(segment.collection in {"study", "sol", "solver", "feature"} for segment in parsed.segments)
+
+
+def _solver_path_remediation(worker: Any, model_tag: str) -> dict[str, Any]:
+    """The real NodePaths a caller may pass to ``solver.inspect`` on *this* model.
+
+    Nothing here is hard-coded: the solver sequence tags, their paths and the
+    study each one is attached to come from the model's own containers, so a
+    caller that guessed ``sol1``/``st1`` gets told what this model actually
+    exposes instead of a generic "invalid path".
+    """
+    associations = _solver_associations(worker, model_tag)
+    sequences: list[dict[str, Any]] = []
+    for study_tag in sorted(associations):
+        sequences.extend(associations[study_tag])
+    return {
+        "solver_sequences": sequences,
+        "solver_tags": sorted({row["solver"] for row in sequences}),
+        "study_scoped": {study: [row["solver"] for row in rows]
+                         for study, rows in sorted(associations.items())},
+        "accepted_paths": [
+            "sol:<tag> (a solver sequence)",
+            "sol:<tag>/feature:<ftag> (a solver feature of that sequence)",
+        ],
+        "note": "solver.feature() lives under the solver sequence, not under the study: a study path such as "
+                "study:<stag>/... is not a solver NodePath; use the solver sequence the study is attached to "
+                "(see study_scoped) instead",
+    }
+
+
 def solver_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     args = operation_arguments(arguments, ("path", "depth"), ("path",))
     depth = args.get("depth")
     depth = 2 if depth is None else require_int(depth, "depth", minimum=1, maximum=4)
-    canonical, node = resolve_path(worker, model_tag, args["path"], label="path")
+    try:
+        canonical, node = resolve_path(worker, model_tag, args["path"], label="path")
+    except ExecutionContractError as exc:
+        # A caller that reached for a study-relative solver path (or a guessed
+        # sol1) gets this model's real solver paths appended instead of only
+        # "not found"; the code of the refusal is unchanged.
+        if exc.code != "NODE_NOT_FOUND" or not _path_mentions_study_or_solver(args["path"]):
+            raise
+        remediation = _solver_path_remediation(worker, model_tag)
+        raise ExecutionContractError(
+            exc.code,
+            f"{exc} solver.inspect accepts {remediation['accepted_paths']}; this model exposes "
+            f"{remediation['solver_tags']} (study_scoped {remediation['study_scoped']}). {remediation['note']}",
+        ) from exc
     parsed = NodePath.from_wire(canonical)
     root = parsed.segments[-1].collection if parsed.segments else None
     if root == "sol":
@@ -2618,8 +2760,26 @@ def solver_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any]) ->
             },
         }
     if root != "feature":
+        remediation = _solver_path_remediation(worker, model_tag)
         raise ExecutionContractError(
-            "INVALID_NODE_PATH", "path must be a solver sequence (sol) or a solver feature"
+            "INVALID_NODE_PATH",
+            f"path must be a solver sequence (sol) or a solver feature; got {root!r}. solver.inspect accepts "
+            f"{remediation['accepted_paths']}; this model exposes {remediation['solver_tags']} "
+            f"(study_scoped {remediation['study_scoped']}). {remediation['note']}",
+        )
+    # The input schema admits any NodePath, but the only feature path this
+    # operation means is a solver feature *under a solver sequence*: a study
+    # feature (study:<tag>/feature:<ftag>) would otherwise be probed as if it
+    # were a solver step, which is the NodePath conflict this operation has to
+    # refuse rather than answer from the wrong node type.
+    if len(parsed.segments) != 2 or parsed.segments[0].collection != "sol":
+        remediation = _solver_path_remediation(worker, model_tag)
+        raise ExecutionContractError(
+            "INVALID_NODE_PATH",
+            f"a solver feature path must be sol:<tag>/feature:<ftag>; got "
+            f"{[segment.as_dict() for segment in parsed.segments]}. solver.inspect accepts "
+            f"{remediation['accepted_paths']}; this model exposes {remediation['solver_tags']} "
+            f"(study_scoped {remediation['study_scoped']}). {remediation['note']}",
         )
     canonical, node, parent_path, tag = _feature_context(worker, model_tag, args["path"], label="path")
     type_id = node_type(node)
@@ -2660,7 +2820,7 @@ def solver_create(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> 
     model = bound_model(worker, model_tag)
     container = _call(model, "sol")
     if tag in tag_list(container):
-        raise ExecutionContractError("TAG_CONFLICT", f"solver sequence {tag!r} already exists")
+        raise tag_conflict(f"solver sequence {tag!r} already exists")
     existing = _solver_associations(worker, model_tag).get(study_tag, [])
     _call(container, "create", tag, study_tag)
     after = tag_list(container)
@@ -2723,7 +2883,7 @@ def solver_feature_create(worker: Any, model_tag: str, arguments: Mapping[str, A
                 "TYPE_CONFLICT",
                 f"solver feature {tag!r} already exists with type {current!r} (requested {type_id!r})",
             )
-        raise ExecutionContractError("TAG_CONFLICT", f"solver feature {tag!r} already exists")
+        raise tag_conflict(f"solver feature {tag!r} already exists")
     _call(parent, "create", tag, type_id)
     readback_tags = tag_list(container)
     if tag not in readback_tags:
@@ -2878,8 +3038,8 @@ def solver_run(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dic
         if feature is not None:
             feature = validate_tag(feature, "range.feature")
             if feature not in tags:
-                raise ExecutionContractError(
-                    "NODE_NOT_FOUND", f"range.feature {feature!r} does not exist; available: {tags}"
+                raise node_not_found(
+                    f"range.feature {feature!r} does not exist; available: {tags}"
                 )
             method, call_args = "run", (feature,)
             range_label = {"mode": "up_to", "feature": feature}
@@ -2890,8 +3050,8 @@ def solver_run(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dic
             stop = validate_tag(stop, "range.to")
             for name, value in (("range.from", start), ("range.to", stop)):
                 if value not in tags:
-                    raise ExecutionContractError(
-                        "NODE_NOT_FOUND", f"{name} {value!r} does not exist; available: {tags}"
+                    raise node_not_found(
+                        f"{name} {value!r} does not exist; available: {tags}"
                     )
             if tags.index(start) > tags.index(stop):
                 raise ExecutionContractError(

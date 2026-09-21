@@ -23,7 +23,8 @@ comsol_mcp/
   mcp_server.py            # Thin entrypoint: imports + register + main()
 ```
 
-**35 MCP tools** registered via `mcp.add_tool()` in each module's `register()` function.
+The full profile exposes **65 MCP tools**: 51 legacy names, 7 execution/control
+tools, and 7 G2 registry/fallback tools, driving 96 domain operations.
 
 ## Build and Run
 
@@ -31,7 +32,7 @@ comsol_mcp/
 pip install -e .          # install in editable mode
 pip install -e ".[dev]"   # with pytest
 python -m comsol_mcp.mcp_server   # start MCP server
-pytest                           # run tests (40 tests, all without COMSOL)
+pytest                           # run the non-COMSOL unit suite (1588 passed)
 ```
 
 ## Module Dependency Graph
@@ -56,9 +57,10 @@ No circular imports.
 
 ## Key Constraints
 
-- **Windows-only** (COMSOL is Windows)
+- **Target runtime matrix:** Windows x64, macOS Apple Silicon, and macOS Intel;
+  COMSOL 6.3 and 6.4. Current verification is limited to recorded accessible environments.
 - **Python 3.10+**
-- **35 tools** with stable surface — don't change names or signatures
+- **51 legacy tool names** retain existing arguments; 65 MCP tools published in full profile.
 - **Entrypoint backward compat**: `python -m comsol_mcp.mcp_server`, `from comsol_mcp.mcp_server import main`
 - **Visible-main lock**: After `load_visible_main_model()`, tools are guarded by identity check (tag/label/path)
 - **Global state**: All mutable state in `_server.py`, guarded by `_runtime_lock` (RLock)
@@ -94,6 +96,6 @@ These are resolved by importing the target function from the other module.
 
 ## Testing
 
-- `pytest` runs 40 tests that don't need COMSOL
-- Tests cover: sanitize_label, normalize_properties, coerce_eval, last_scalar, port_is_open, workflow_state IO, friendly_connection_error, numeric_result, resolve_path, normcase_path, tool registration, classification sets
-- Integration tests requiring a live COMSOL Server are marked `@pytest.mark.comsol_server` and skipped by default
+- `pytest` runs the non-COMSOL unit suite (1588 passed, 1 skipped)
+- Tests cover: sanitize_label, normalize_properties, coerce_eval, last_scalar, port_is_open, workflow_state IO, friendly_connection_error, numeric_result, resolve_path, normcase_path, tool registration, classification sets, G2/G3 domain outcomes, request chain, license marshalling, and replay fixtures.
+- Integration tests requiring a live COMSOL Server are marked `@pytest.mark.comsol_server` or run through acceptance drivers.

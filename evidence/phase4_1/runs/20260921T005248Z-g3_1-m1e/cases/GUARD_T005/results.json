@@ -1,0 +1,1030 @@
+{
+  "case_id": "GUARD_T005",
+  "results": [
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"additionalProperties\": false, \"properties\": {\"evaluation_policy\": {\"default\": \"ephemeral_mutation\", \"title\": \"Evaluation Policy\", \"type\": \"string\"}, \"expressions_json\": {\"default\": \"[]\", \"title\": \"Expressions Json\", \"type\": \"string\"}, \"max_result_size\": {\"default\": 0, \"title\": \"Max Result Size\", \"type\": \"integer\"}}, \"title\": \"evaluate_expressionsArguments\", \"type\": \"object\"}, \"domain\": \"legacy\", \"effect\": \"EVALUATE\", \"executable\": true, \"gate\": \"W01 compatibility mapping plus ordinary service gate\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"additionalProperties\": false, \"properties\": {\"evaluation_policy\": {\"default\": \"ephemeral_mutation\", \"title\": \"Evaluation Policy\", \"type\": \"string\"}, \"expressions_json\": {\"default\": \"[]\", \"title\": \"Expressions Json\", \"type\": \"string\"}, \"max_result_size\": {\"default\": 0, \"title\": \"Max Result Size\", \"type\": \"integer\"}}, \"title\": \"evaluate_expressionsArguments\", \"type\": \"object\"}, \"mcp_tool_name\": \"evaluate_expressions\", \"notes\": \"Hidden from a narrowed static publication profile only; callable through operation_call with this explicit mapping. Input schema is generated from the registered FastMCP function signature; unknown fields are rejected before dispatch.\", \"operation_id\": \"evaluate_expressions\", \"output_contract\": \"success/data/error/execution envelope\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"Managed compatibility route for the original MCP tool\", \"required_tests\": [\"legacy_fallback\", \"permission_gate\"], \"route\": \"legacy managed backend\", \"scope\": \"legacy managed service\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 1,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "evaluation_policy": {
+                "default": "ephemeral_mutation",
+                "title": "Evaluation Policy",
+                "type": "string"
+              },
+              "expressions_json": {
+                "default": "[]",
+                "title": "Expressions Json",
+                "type": "string"
+              },
+              "max_result_size": {
+                "default": 0,
+                "title": "Max Result Size",
+                "type": "integer"
+              }
+            },
+            "title": "evaluate_expressionsArguments",
+            "type": "object"
+          },
+          "domain": "legacy",
+          "effect": "EVALUATE",
+          "executable": true,
+          "gate": "W01 compatibility mapping plus ordinary service gate",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "evaluation_policy": {
+                "default": "ephemeral_mutation",
+                "title": "Evaluation Policy",
+                "type": "string"
+              },
+              "expressions_json": {
+                "default": "[]",
+                "title": "Expressions Json",
+                "type": "string"
+              },
+              "max_result_size": {
+                "default": 0,
+                "title": "Max Result Size",
+                "type": "integer"
+              }
+            },
+            "title": "evaluate_expressionsArguments",
+            "type": "object"
+          },
+          "mcp_tool_name": "evaluate_expressions",
+          "notes": "Hidden from a narrowed static publication profile only; callable through operation_call with this explicit mapping. Input schema is generated from the registered FastMCP function signature; unknown fields are rejected before dispatch.",
+          "operation_id": "evaluate_expressions",
+          "output_contract": "success/data/error/execution envelope",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "Managed compatibility route for the original MCP tool",
+          "required_tests": [
+            "legacy_fallback",
+            "permission_gate"
+          ],
+          "route": "legacy managed backend",
+          "scope": "legacy managed service",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"additionalProperties\": false, \"properties\": {\"evaluation_policy\": {\"default\": \"ephemeral_mutation\", \"title\": \"Evaluation Policy\", \"type\": \"string\"}, \"metrics_json\": {\"default\": \"[]\", \"title\": \"Metrics Json\", \"type\": \"string\"}}, \"title\": \"get_core_metricsArguments\", \"type\": \"object\"}, \"domain\": \"legacy\", \"effect\": \"EVALUATE\", \"executable\": true, \"gate\": \"W01 compatibility mapping plus ordinary service gate\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"additionalProperties\": false, \"properties\": {\"evaluation_policy\": {\"default\": \"ephemeral_mutation\", \"title\": \"Evaluation Policy\", \"type\": \"string\"}, \"metrics_json\": {\"default\": \"[]\", \"title\": \"Metrics Json\", \"type\": \"string\"}}, \"title\": \"get_core_metricsArguments\", \"type\": \"object\"}, \"mcp_tool_name\": \"get_core_metrics\", \"notes\": \"Hidden from a narrowed static publication profile only; callable through operation_call with this explicit mapping. Input schema is generated from the registered FastMCP function signature; unknown fields are rejected before dispatch.\", \"operation_id\": \"get_core_metrics\", \"output_contract\": \"success/data/error/execution envelope\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"Managed compatibility route for the original MCP tool\", \"required_tests\": [\"legacy_fallback\", \"permission_gate\"], \"route\": \"legacy managed backend\", \"scope\": \"legacy managed service\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 2,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "evaluation_policy": {
+                "default": "ephemeral_mutation",
+                "title": "Evaluation Policy",
+                "type": "string"
+              },
+              "metrics_json": {
+                "default": "[]",
+                "title": "Metrics Json",
+                "type": "string"
+              }
+            },
+            "title": "get_core_metricsArguments",
+            "type": "object"
+          },
+          "domain": "legacy",
+          "effect": "EVALUATE",
+          "executable": true,
+          "gate": "W01 compatibility mapping plus ordinary service gate",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "evaluation_policy": {
+                "default": "ephemeral_mutation",
+                "title": "Evaluation Policy",
+                "type": "string"
+              },
+              "metrics_json": {
+                "default": "[]",
+                "title": "Metrics Json",
+                "type": "string"
+              }
+            },
+            "title": "get_core_metricsArguments",
+            "type": "object"
+          },
+          "mcp_tool_name": "get_core_metrics",
+          "notes": "Hidden from a narrowed static publication profile only; callable through operation_call with this explicit mapping. Input schema is generated from the registered FastMCP function signature; unknown fields are rejected before dispatch.",
+          "operation_id": "get_core_metrics",
+          "output_contract": "success/data/error/execution envelope",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "Managed compatibility route for the original MCP tool",
+          "required_tests": [
+            "legacy_fallback",
+            "permission_gate"
+          ],
+          "route": "legacy managed backend",
+          "scope": "legacy managed service",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"component_details\": [{\"geometries\": [\"geom1\", \"p4geom\"], \"materials\": [\"p4mat\"], \"meshes\": [\"p4mesh\"], \"physics\": [\"ht\"], \"tag\": \"comp1\"}], \"components\": [\"comp1\"], \"datasets\": [], \"file_path\": \"\", \"label\": \"Phase4 G3 acceptance fixture\", \"parameters\": [], \"requires_model_reconciliation\": true, \"results\": [], \"solutions\": [], \"studies\": []}, \"error\": null, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": true, \"idempotency_key\": \"phase4-20260921T005248Z-g3_1-m1et005-tree-before\", \"job_id\": \"8e818204-39be-45be-bb33-442b7cb7aff5\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp10\", \"schema_version\": 1, \"server_instance_id\": \"68c904662d132147e6cb3a43828f338dce0ebc879dde239969b6d04b3e9e8c7c\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"b051f073-925a-43a1-8e91-aeb51c81a288\", \"request_hash\": \"ad77f5ef15a42fea991b9e4e89a98f116150ff8be0486cba37c86aa38c7d9f58\", \"request_id\": \"phase4-20260921T005248Z-g3_1-m1et005-tree-before\", \"revision\": 31, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "model_tree",
+      "sequence": 3,
+      "structuredContent": {
+        "data": {
+          "component_details": [
+            {
+              "geometries": [
+                "geom1",
+                "p4geom"
+              ],
+              "materials": [
+                "p4mat"
+              ],
+              "meshes": [
+                "p4mesh"
+              ],
+              "physics": [
+                "ht"
+              ],
+              "tag": "comp1"
+            }
+          ],
+          "components": [
+            "comp1"
+          ],
+          "datasets": [],
+          "file_path": "",
+          "label": "Phase4 G3 acceptance fixture",
+          "parameters": [],
+          "requires_model_reconciliation": true,
+          "results": [],
+          "solutions": [],
+          "studies": []
+        },
+        "error": null,
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": true,
+          "idempotency_key": "phase4-20260921T005248Z-g3_1-m1et005-tree-before",
+          "job_id": "8e818204-39be-45be-bb33-442b7cb7aff5",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp10",
+            "schema_version": 1,
+            "server_instance_id": "68c904662d132147e6cb3a43828f338dce0ebc879dde239969b6d04b3e9e8c7c",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "b051f073-925a-43a1-8e91-aeb51c81a288",
+          "request_hash": "ad77f5ef15a42fea991b9e4e89a98f116150ff8be0486cba37c86aa38c7d9f58",
+          "request_id": "phase4-20260921T005248Z-g3_1-m1et005-tree-before",
+          "revision": 31,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-20260921T005248Z-g3_1-m1ephase4-reconcile-model-comsol-mcp-phase4-149\", \"job_id\": \"72cf415d-5557-4fdd-a37b-f45c0abfaad8\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp10\", \"schema_version\": 1, \"server_instance_id\": \"68c904662d132147e6cb3a43828f338dce0ebc879dde239969b6d04b3e9e8c7c\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"1afd08cb-dc12-4950-a5f1-19bad35a4cbb\", \"request_hash\": \"13a34d7c4e1fe0056f4e4096de78c5d4ce9bf695d1405f709db27dbc2c84c7bb\", \"request_id\": \"phase4-20260921T005248Z-g3_1-m1ephase4-reconcile-model-comsol-mcp-phase4-149\", \"revision\": 31, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "model_inspect",
+      "sequence": 4,
+      "structuredContent": {
+        "data": {},
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-20260921T005248Z-g3_1-m1ephase4-reconcile-model-comsol-mcp-phase4-149",
+          "job_id": "72cf415d-5557-4fdd-a37b-f45c0abfaad8",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp10",
+            "schema_version": 1,
+            "server_instance_id": "68c904662d132147e6cb3a43828f338dce0ebc879dde239969b6d04b3e9e8c7c",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "1afd08cb-dc12-4950-a5f1-19bad35a4cbb",
+          "request_hash": "13a34d7c4e1fe0056f4e4096de78c5d4ce9bf695d1405f709db27dbc2c84c7bb",
+          "request_id": "phase4-20260921T005248Z-g3_1-m1ephase4-reconcile-model-comsol-mcp-phase4-149",
+          "revision": 31,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"binding\": {\"bound\": null, \"bound_verified\": null, \"dataset\": null, \"dataset_type\": null, \"policy\": \"the evaluation feature's documented ``data`` property: a named dataset is set and read back when the model publishes one, otherwise the engine's *First compatible dataset* default applies and the reply says so\", \"reason\": \"the engine lists no dataset at all for this model; a results-node evaluation has no data to read\", \"solution\": null}, \"cleanup\": {\"cleanup_failed\": false, \"created\": true, \"created_count\": 1, \"nodes\": 1, \"note\": \"every tag is a random uuid4 hex owned by this request; cleanup removes that tag only and the removal is verified against the engine's own numerical().tags() readback\", \"owner_operations\": [\"evaluate_expressions\"], \"policy\": \"ephemeral_mutation\", \"removed\": true, \"removed_count\": 1, \"unremoved_tags\": [], \"verified_removed\": true, \"verified_removed_count\": 1}, \"count\": 1, \"dataset\": null, \"dataset_inventory\": {\"datasets\": [], \"readback\": {\"dataset_tags\": [], \"solution_tags\": []}, \"reason\": \"the engine lists no dataset at all for this model; a results-node evaluation has no data to read\", \"solutions\": [], \"source\": \"model.result().dataset().tags() + dataset getType()/getString('solution'); model.sol().tags()\"}, \"datetime\": \"2026-09-21 08:52:57\", \"ephemeral_mutation\": true, \"evaluation_policy\": \"ephemeral_mutation\", \"label\": \"Phase4 G3 acceptance fixture\", \"log_path\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1e/mcp-home/logs/server.log\", \"max_result_size_ignored\": null, \"operations_path\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1e/mcp-home/logs/operations.jsonl\", \"results\": [{\"dataset\": null, \"diagnosis\": {\"attempts\": [{\"ok\": true, \"route\": \"results:EvalGlobal\", \"value_shape\": [0]}, {\"dataset\": null, \"engine_call\": \"model.param().evaluate(String)\", \"error\": null, \"evaluated_expression\": \"1+1\", \"route\": \"engine:model.param().evaluate\", \"solution\": null}], \"binding\": {\"bound\": null, \"bound_verified\": null, \"dataset\": null, \"dataset_type\": null, \"policy\": \"the evaluation feature's documented ``data`` property: a named dataset is set and read back when the model publishes one, otherwise the engine's *First compatible dataset* default applies and the reply says so\", \"reason\": \"the engine lists no dataset at all for this model; a results-node evaluation has no data to read\", \"solution\": null}, \"dataset\": null, \"dataset_inventory\": {\"datasets\": [], \"readback\": {\"dataset_tags\": [], \"solution_tags\": []}, \"reason\": \"the engine lists no dataset at all for this model; a results-node evaluation has no data to read\", \"solutions\": [], \"source\": \"model.result().dataset().tags() + dataset getType()/getString('solution'); model.sol().tags()\"}, \"engine_calls\": [\"result().numerical(<owned tag>).set('expr', ...)\", \"result().numerical(<owned tag>).run()\", \"result().numerical(<owned tag>).getReal()\"], \"evaluated_expression\": \"1+1\", \"expression_evaluator\": {\"attempts\": [{\"call\": \"evaluate\", \"expression\": \"1+1\", \"ok\": true, \"value\": 2.0}], \"dataset\": null, \"engine_call\": \"model.param().evaluate(String)\", \"evaluated_expression\": \"1+1\", \"reason\": \"the results-node route published no value; the model expression evaluator is the engine's own documented evaluator for expressions that need no solution data\", \"route\": \"engine:model.param().evaluate\", \"solution\": null}, \"expression_evaluator_attempts\": [{\"call\": \"evaluate\", \"expression\": \"1+1\", \"ok\": true, \"value\": 2.0}], \"result_source\": \"model.param().evaluate(String)\", \"route\": \"engine:model.param().evaluate\", \"shape\": [], \"solution\": null}, \"expression\": \"1+1\", \"last_value\": 2.0, \"name\": \"phase4_probe\", \"ok\": true, \"route\": \"engine:model.param().evaluate\", \"shape\": [], \"solution\": null, \"value\": 2.0}], \"server\": {\"attached_to_existing_server\": true, \"comsol_root\": \"/Applications/COMSOL64/Multiphysics\", \"current_model_label\": \"Phase4 G3 acceptance fixture\", \"current_model_origin\": \"bound-request\", \"current_model_path\": \"\", \"datetime\": \"2026-09-21 08:52:57\", \"desktop_client_role\": \"visual-client\", \"desktop_should_connect\": {\"host\": \"127.0.0.1\", \"port\": 56389}, \"last_command\": \"evaluate_expressions\", \"last_error\": \"\", \"logs_dir\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1e/mcp-home/logs\", \"mcp_home\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1e/mcp-home\", \"outputs_dir\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1e/mcp-home/outputs\", \"recommended_desktop_flow\": \"visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.\", \"server_endpoint\": \"127.0.0.1:56389\", \"server_host\": \"127.0.0.1\", \"server_port\": 56389, \"server_running\": false, \"server_started_by_mcp\": false, \"status\": \"ready\", \"timestamp\": 1789951977.11554, \"version\": \"0.1.9\", \"workflow\": {\"current_main_model_path\": \"\", \"guard_level\": \"strict\", \"main_model_label\": \"\", \"main_model_path\": \"\", \"main_model_tag\": \"\", \"mcp_client_lifecycle\": \"persistent-required\", \"mode\": \"manual\", \"model_dimension\": 0, \"notes\": \"\", \"one_shot_client_allowed\": false, \"snapshot_dir\": \"\", \"snapshot_name_template\": \"{prefix}_{label}_{timestamp}.mph\", \"snapshot_prefix\": \"\", \"snapshot_save_mode\": \"copy\", \"updated_at\": \"2026-09-21 08:52:51\", \"visible_main_locked\": false, \"workflow_stage\": \"awaiting_manual_server\"}}, \"solution\": null, \"temporary_nodes\": [{\"created\": true, \"feature_type\": \"EvalGlobal\", \"owner\": {\"operation\": \"evaluate_expressions\", \"policy\": \"ephemeral_mutation\", \"request\": {\"expressions\": 1, \"tool\": \"evaluate_expressions\"}, \"scope\": \"mcp_owned_result_numerical_node\", \"tag_allocated_from\": \"random uuid4 hex, never reused from the model\"}, \"removed\": true, \"tag\": \"mcp_eval_f6fe663af465480db8b43b6560386758\", \"tags_after\": [], \"tags_before\": [], \"verified_removed\": true}], \"timestamp\": 1789951977.115525, \"tool\": \"evaluate_expressions\"}, \"error\": null, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-20260921T005248Z-g3_1-m1euser_derived_nodes_preserved\", \"job_id\": \"c9578dec-fe2f-46e9-a053-2a2699e8efdf\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp10\", \"schema_version\": 1, \"server_instance_id\": \"68c904662d132147e6cb3a43828f338dce0ebc879dde239969b6d04b3e9e8c7c\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"a77ade48-bff5-4344-9fc3-41b4c1490824\", \"request_hash\": \"f0e2282b0f915a4e71de4bd736f3a6c5f1992f8137ddc7d1b46d706f646880a1\", \"request_id\": \"phase4-20260921T005248Z-g3_1-m1euser_derived_nodes_preserved\", \"revision\": 32, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "evaluate_expressions",
+      "sequence": 5,
+      "structuredContent": {
+        "data": {
+          "binding": {
+            "bound": null,
+            "bound_verified": null,
+            "dataset": null,
+            "dataset_type": null,
+            "policy": "the evaluation feature's documented ``data`` property: a named dataset is set and read back when the model publishes one, otherwise the engine's *First compatible dataset* default applies and the reply says so",
+            "reason": "the engine lists no dataset at all for this model; a results-node evaluation has no data to read",
+            "solution": null
+          },
+          "cleanup": {
+            "cleanup_failed": false,
+            "created": true,
+            "created_count": 1,
+            "nodes": 1,
+            "note": "every tag is a random uuid4 hex owned by this request; cleanup removes that tag only and the removal is verified against the engine's own numerical().tags() readback",
+            "owner_operations": [
+              "evaluate_expressions"
+            ],
+            "policy": "ephemeral_mutation",
+            "removed": true,
+            "removed_count": 1,
+            "unremoved_tags": [],
+            "verified_removed": true,
+            "verified_removed_count": 1
+          },
+          "count": 1,
+          "dataset": null,
+          "dataset_inventory": {
+            "datasets": [],
+            "readback": {
+              "dataset_tags": [],
+              "solution_tags": []
+            },
+            "reason": "the engine lists no dataset at all for this model; a results-node evaluation has no data to read",
+            "solutions": [],
+            "source": "model.result().dataset().tags() + dataset getType()/getString('solution'); model.sol().tags()"
+          },
+          "datetime": "2026-09-21 08:52:57",
+          "ephemeral_mutation": true,
+          "evaluation_policy": "ephemeral_mutation",
+          "label": "Phase4 G3 acceptance fixture",
+          "log_path": "$REPO/PRIVATE_REDACTED/g3_1-live-m1e/mcp-home/logs/server.log",
+          "max_result_size_ignored": null,
+          "operations_path": "$REPO/PRIVATE_REDACTED/g3_1-live-m1e/mcp-home/logs/operations.jsonl",
+          "results": [
+            {
+              "dataset": null,
+              "diagnosis": {
+                "attempts": [
+                  {
+                    "ok": true,
+                    "route": "results:EvalGlobal",
+                    "value_shape": [
+                      0
+                    ]
+                  },
+                  {
+                    "dataset": null,
+                    "engine_call": "model.param().evaluate(String)",
+                    "error": null,
+                    "evaluated_expression": "1+1",
+                    "route": "engine:model.param().evaluate",
+                    "solution": null
+                  }
+                ],
+                "binding": {
+                  "bound": null,
+                  "bound_verified": null,
+                  "dataset": null,
+                  "dataset_type": null,
+                  "policy": "the evaluation feature's documented ``data`` property: a named dataset is set and read back when the model publishes one, otherwise the engine's *First compatible dataset* default applies and the reply says so",
+                  "reason": "the engine lists no dataset at all for this model; a results-node evaluation has no data to read",
+                  "solution": null
+                },
+                "dataset": null,
+                "dataset_inventory": {
+                  "datasets": [],
+                  "readback": {
+                    "dataset_tags": [],
+                    "solution_tags": []
+                  },
+                  "reason": "the engine lists no dataset at all for this model; a results-node evaluation has no data to read",
+                  "solutions": [],
+                  "source": "model.result().dataset().tags() + dataset getType()/getString('solution'); model.sol().tags()"
+                },
+                "engine_calls": [
+                  "result().numerical(<owned tag>).set('expr', ...)",
+                  "result().numerical(<owned tag>).run()",
+                  "result().numerical(<owned tag>).getReal()"
+                ],
+                "evaluated_expression": "1+1",
+                "expression_evaluator": {
+                  "attempts": [
+                    {
+                      "call": "evaluate",
+                      "expression": "1+1",
+                      "ok": true,
+                      "value": 2.0
+                    }
+                  ],
+                  "dataset": null,
+                  "engine_call": "model.param().evaluate(String)",
+                  "evaluated_expression": "1+1",
+                  "reason": "the results-node route published no value; the model expression evaluator is the engine's own documented evaluator for expressions that need no solution data",
+                  "route": "engine:model.param().evaluate",
+                  "solution": null
+                },
+                "expression_evaluator_attempts": [
+                  {
+                    "call": "evaluate",
+                    "expression": "1+1",
+                    "ok": true,
+                    "value": 2.0
+                  }
+                ],
+                "result_source": "model.param().evaluate(String)",
+                "route": "engine:model.param().evaluate",
+                "shape": [],
+                "solution": null
+              },
+              "expression": "1+1",
+              "last_value": 2.0,
+              "name": "phase4_probe",
+              "ok": true,
+              "route": "engine:model.param().evaluate",
+              "shape": [],
+              "solution": null,
+              "value": 2.0
+            }
+          ],
+          "server": {
+            "attached_to_existing_server": true,
+            "comsol_root": "/Applications/COMSOL64/Multiphysics",
+            "current_model_label": "Phase4 G3 acceptance fixture",
+            "current_model_origin": "bound-request",
+            "current_model_path": "",
+            "datetime": "2026-09-21 08:52:57",
+            "desktop_client_role": "visual-client",
+            "desktop_should_connect": {
+              "host": "127.0.0.1",
+              "port": 56389
+            },
+            "last_command": "evaluate_expressions",
+            "last_error": "",
+            "logs_dir": "$REPO/PRIVATE_REDACTED/g3_1-live-m1e/mcp-home/logs",
+            "mcp_home": "$REPO/PRIVATE_REDACTED/g3_1-live-m1e/mcp-home",
+            "outputs_dir": "$REPO/PRIVATE_REDACTED/g3_1-live-m1e/mcp-home/outputs",
+            "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+            "server_endpoint": "127.0.0.1:56389",
+            "server_host": "127.0.0.1",
+            "server_port": 56389,
+            "server_running": false,
+            "server_started_by_mcp": false,
+            "status": "ready",
+            "timestamp": 1789951977.11554,
+            "version": "0.1.9",
+            "workflow": {
+              "current_main_model_path": "",
+              "guard_level": "strict",
+              "main_model_label": "",
+              "main_model_path": "",
+              "main_model_tag": "",
+              "mcp_client_lifecycle": "persistent-required",
+              "mode": "manual",
+              "model_dimension": 0,
+              "notes": "",
+              "one_shot_client_allowed": false,
+              "snapshot_dir": "",
+              "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+              "snapshot_prefix": "",
+              "snapshot_save_mode": "copy",
+              "updated_at": "2026-09-21 08:52:51",
+              "visible_main_locked": false,
+              "workflow_stage": "awaiting_manual_server"
+            }
+          },
+          "solution": null,
+          "temporary_nodes": [
+            {
+              "created": true,
+              "feature_type": "EvalGlobal",
+              "owner": {
+                "operation": "evaluate_expressions",
+                "policy": "ephemeral_mutation",
+                "request": {
+                  "expressions": 1,
+                  "tool": "evaluate_expressions"
+                },
+                "scope": "mcp_owned_result_numerical_node",
+                "tag_allocated_from": "random uuid4 hex, never reused from the model"
+              },
+              "removed": true,
+              "tag": "mcp_eval_f6fe663af465480db8b43b6560386758",
+              "tags_after": [],
+              "tags_before": [],
+              "verified_removed": true
+            }
+          ],
+          "timestamp": 1789951977.115525,
+          "tool": "evaluate_expressions"
+        },
+        "error": null,
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-20260921T005248Z-g3_1-m1euser_derived_nodes_preserved",
+          "job_id": "c9578dec-fe2f-46e9-a053-2a2699e8efdf",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp10",
+            "schema_version": 1,
+            "server_instance_id": "68c904662d132147e6cb3a43828f338dce0ebc879dde239969b6d04b3e9e8c7c",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "a77ade48-bff5-4344-9fc3-41b4c1490824",
+          "request_hash": "f0e2282b0f915a4e71de4bd736f3a6c5f1992f8137ddc7d1b46d706f646880a1",
+          "request_id": "phase4-20260921T005248Z-g3_1-m1euser_derived_nodes_preserved",
+          "revision": 32,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"component_details\": [{\"geometries\": [\"geom1\", \"p4geom\"], \"materials\": [\"p4mat\"], \"meshes\": [\"p4mesh\"], \"physics\": [\"ht\"], \"tag\": \"comp1\"}], \"components\": [\"comp1\"], \"datasets\": [], \"file_path\": \"\", \"label\": \"Phase4 G3 acceptance fixture\", \"parameters\": [], \"results\": [], \"solutions\": [], \"studies\": []}, \"error\": null, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-20260921T005248Z-g3_1-m1et005-tree-after\", \"job_id\": \"87978e13-e25c-4d5f-891f-e683ea2a59b4\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp10\", \"schema_version\": 1, \"server_instance_id\": \"68c904662d132147e6cb3a43828f338dce0ebc879dde239969b6d04b3e9e8c7c\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"2f32ae73-e8e8-49d5-8f5b-f5f501351ae7\", \"request_hash\": \"494067de92c36916e21d8d7449866634689b97e711e5c8f49243ff0a308f073d\", \"request_id\": \"phase4-20260921T005248Z-g3_1-m1et005-tree-after\", \"revision\": 32, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "model_tree",
+      "sequence": 6,
+      "structuredContent": {
+        "data": {
+          "component_details": [
+            {
+              "geometries": [
+                "geom1",
+                "p4geom"
+              ],
+              "materials": [
+                "p4mat"
+              ],
+              "meshes": [
+                "p4mesh"
+              ],
+              "physics": [
+                "ht"
+              ],
+              "tag": "comp1"
+            }
+          ],
+          "components": [
+            "comp1"
+          ],
+          "datasets": [],
+          "file_path": "",
+          "label": "Phase4 G3 acceptance fixture",
+          "parameters": [],
+          "results": [],
+          "solutions": [],
+          "studies": []
+        },
+        "error": null,
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-20260921T005248Z-g3_1-m1et005-tree-after",
+          "job_id": "87978e13-e25c-4d5f-891f-e683ea2a59b4",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp10",
+            "schema_version": 1,
+            "server_instance_id": "68c904662d132147e6cb3a43828f338dce0ebc879dde239969b6d04b3e9e8c7c",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "2f32ae73-e8e8-49d5-8f5b-f5f501351ae7",
+          "request_hash": "494067de92c36916e21d8d7449866634689b97e711e5c8f49243ff0a308f073d",
+          "request_id": "phase4-20260921T005248Z-g3_1-m1et005-tree-after",
+          "revision": 32,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-20260921T005248Z-g3_1-m1ephase4-reconcile-model-comsol-mcp-phase4-150\", \"job_id\": \"bac5b7c3-6688-45e2-92e6-4ba7c172806d\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp10\", \"schema_version\": 1, \"server_instance_id\": \"68c904662d132147e6cb3a43828f338dce0ebc879dde239969b6d04b3e9e8c7c\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"fe5491b0-8d53-4ded-b1d4-862c28005540\", \"request_hash\": \"37a2db654fdc302b0c5bfbac877c5654870e4b670511e44b3859bab2225166f3\", \"request_id\": \"phase4-20260921T005248Z-g3_1-m1ephase4-reconcile-model-comsol-mcp-phase4-150\", \"revision\": 32, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "model_inspect",
+      "sequence": 7,
+      "structuredContent": {
+        "data": {},
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-20260921T005248Z-g3_1-m1ephase4-reconcile-model-comsol-mcp-phase4-150",
+          "job_id": "bac5b7c3-6688-45e2-92e6-4ba7c172806d",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp10",
+            "schema_version": 1,
+            "server_instance_id": "68c904662d132147e6cb3a43828f338dce0ebc879dde239969b6d04b3e9e8c7c",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "fe5491b0-8d53-4ded-b1d4-862c28005540",
+          "request_hash": "37a2db654fdc302b0c5bfbac877c5654870e4b670511e44b3859bab2225166f3",
+          "request_id": "phase4-20260921T005248Z-g3_1-m1ephase4-reconcile-model-comsol-mcp-phase4-150",
+          "revision": 32,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"cleanup\": {\"cleanup_failed\": false, \"created\": true, \"created_count\": 2, \"nodes\": 2, \"note\": \"every tag is a random uuid4 hex owned by this request; cleanup removes that tag only and the removal is verified against the engine's own numerical().tags() readback\", \"owner_operations\": [\"evaluate_expressions\"], \"policy\": \"ephemeral_mutation\", \"removed\": true, \"removed_count\": 2, \"unremoved_tags\": [], \"verified_removed\": true, \"verified_removed_count\": 2}, \"count\": 1, \"datetime\": \"2026-09-21 08:52:57\", \"ephemeral_mutation\": true, \"evaluation_policy\": \"ephemeral_mutation\", \"execution_state_unknown\": false, \"failed_item_may_have_changed\": false, \"label\": \"Phase4 G3 acceptance fixture\", \"log_path\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1e/mcp-home/logs/server.log\", \"max_result_size_ignored\": null, \"operations_path\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1e/mcp-home/logs/operations.jsonl\", \"partial_change\": true, \"requires_model_reconciliation\": true, \"results\": [{\"diagnosis\": {\"attempts\": [{\"error\": \"{\\\"completed_at_ms\\\": \\\"1789951977164\\\", \\\"failure\\\": {\\\"code\\\": \\\"ENGINE_CALL_FAILED\\\", \\\"execution_state_unknown\\\": true, \\\"message\\\": \\\"FlException: Syntax_error_in_expression\\\", \\\"ok\\\": false}, \\\"ok\\\": false, \\\"queued_at_ms\\\": \\\"1789951977162\\\", \\\"request_id\\\": \\\"wrk-572abd4e-5c11-4156-a32a-9a8f34d21e13\\\", \\\"started_at_ms\\\": \\\"1789951977162\\\", \\\"status\\\": \\\"FAILED\\\", \\\"type\\\": \\\"call\\\"}\", \"ok\": false, \"route\": \"results:EvalGlobal\"}, {\"error\": \"{\\\"completed_at_ms\\\": \\\"1789951977173\\\", \\\"failure\\\": {\\\"code\\\": \\\"ENGINE_CALL_FAILED\\\", \\\"execution_state_unknown\\\": true, \\\"message\\\": \\\"FlException: Syntax_error_in_expression\\\", \\\"ok\\\": false}, \\\"ok\\\": false, \\\"queued_at_ms\\\": \\\"1789951977172\\\", \\\"request_id\\\": \\\"wrk-37063efa-f972-4ec0-9771-51d830c7f629\\\", \\\"started_at_ms\\\": \\\"1789951977172\\\", \\\"status\\\": \\\"FAILED\\\", \\\"type\\\": \\\"call\\\"}\", \"ok\": false, \"route\": \"results:Eval(getData)\"}]}, \"error\": \"EvalGlobal failed: {\\\"completed_at_ms\\\": \\\"1789951977164\\\", \\\"failure\\\": {\\\"code\\\": \\\"ENGINE_CALL_FAILED\\\", \\\"execution_state_unknown\\\": true, \\\"message\\\": \\\"FlException: Syntax_error_in_expression\\\", \\\"ok\\\": false}, \\\"ok\\\": false, \\\"queued_at_ms\\\": \\\"1789951977162\\\", \\\"request_id\\\": \\\"wrk-572abd4e-5c11-4156-a32a-9a8f34d21e13\\\", \\\"started_at_ms\\\": \\\"1789951977162\\\", \\\"status\\\": \\\"FAILED\\\", \\\"type\\\": \\\"call\\\"}; Eval/getData fallback failed: {\\\"completed_at_ms\\\": \\\"1789951977173\\\", \\\"failure\\\": {\\\"code\\\": \\\"ENGINE_CALL_FAILED\\\", \\\"execution_state_unknown\\\": true, \\\"message\\\": \\\"FlException: Syntax_error_in_expression\\\", \\\"ok\\\": false}, \\\"ok\\\": false, \\\"queued_at_ms\\\": \\\"1789951977172\\\", \\\"request_id\\\": \\\"wrk-37063efa-f972-4ec0-9771-51d830c7f629\\\", \\\"started_at_ms\\\": \\\"1789951977172\\\", \\\"status\\\": \\\"FAILED\\\", \\\"type\\\": \\\"call\\\"}\", \"expression\": \"1+*2\", \"name\": \"phase4_bad\", \"ok\": false}], \"safe_retry\": true, \"server\": {\"attached_to_existing_server\": true, \"comsol_root\": \"/Applications/COMSOL64/Multiphysics\", \"current_model_label\": \"Phase4 G3 acceptance fixture\", \"current_model_origin\": \"bound-request\", \"current_model_path\": \"\", \"datetime\": \"2026-09-21 08:52:57\", \"desktop_client_role\": \"visual-client\", \"desktop_should_connect\": {\"host\": \"127.0.0.1\", \"port\": 56389}, \"last_command\": \"evaluate_expressions\", \"last_error\": \"One or more expressions could not be evaluated.\", \"logs_dir\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1e/mcp-home/logs\", \"mcp_home\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1e/mcp-home\", \"outputs_dir\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1e/mcp-home/outputs\", \"recommended_desktop_flow\": \"visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.\", \"server_endpoint\": \"127.0.0.1:56389\", \"server_host\": \"127.0.0.1\", \"server_port\": 56389, \"server_running\": false, \"server_started_by_mcp\": false, \"status\": \"ready\", \"timestamp\": 1789951977.199449, \"version\": \"0.1.9\", \"workflow\": {\"current_main_model_path\": \"\", \"guard_level\": \"strict\", \"main_model_label\": \"\", \"main_model_path\": \"\", \"main_model_tag\": \"\", \"mcp_client_lifecycle\": \"persistent-required\", \"mode\": \"manual\", \"model_dimension\": 0, \"notes\": \"\", \"one_shot_client_allowed\": false, \"snapshot_dir\": \"\", \"snapshot_name_template\": \"{prefix}_{label}_{timestamp}.mph\", \"snapshot_prefix\": \"\", \"snapshot_save_mode\": \"copy\", \"updated_at\": \"2026-09-21 08:52:51\", \"visible_main_locked\": false, \"workflow_stage\": \"awaiting_manual_server\"}}, \"status\": \"partial\", \"temporary_nodes\": [{\"created\": true, \"feature_type\": \"EvalGlobal\", \"owner\": {\"operation\": \"evaluate_expressions\", \"policy\": \"ephemeral_mutation\", \"request\": {\"expressions\": 1, \"tool\": \"evaluate_expressions\"}, \"scope\": \"mcp_owned_result_numerical_node\", \"tag_allocated_from\": \"random uuid4 hex, never reused from the model\"}, \"removed\": true, \"tag\": \"mcp_eval_2bc194af62074ce29c39ef2fd6b9c930\", \"tags_after\": [], \"tags_before\": [], \"verified_removed\": true}, {\"created\": true, \"feature_type\": \"Eval\", \"owner\": {\"operation\": \"evaluate_expressions\", \"policy\": \"ephemeral_mutation\", \"request\": {\"expressions\": 1, \"tool\": \"evaluate_expressions\"}, \"scope\": \"mcp_owned_result_numerical_node\", \"tag_allocated_from\": \"random uuid4 hex, never reused from the model\"}, \"removed\": true, \"tag\": \"mcp_eval_abd8f4693a2141d29b841099078f7905\", \"tags_after\": [], \"tags_before\": [], \"verified_removed\": true}], \"timestamp\": 1789951977.1994398, \"tool\": \"evaluate_expressions\", \"verification_status\": \"NOT_APPLICABLE\", \"verified_outcome\": \"partial\"}, \"error\": \"One or more expressions could not be evaluated.\", \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": true, \"idempotency_key\": \"phase4-20260921T005248Z-g3_1-m1et005-invalid\", \"job_id\": \"ab14c172-bcee-4033-b5b7-8fdee3559199\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp10\", \"schema_version\": 1, \"server_instance_id\": \"68c904662d132147e6cb3a43828f338dce0ebc879dde239969b6d04b3e9e8c7c\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"7cbcb41a-2650-46cc-b0b2-cd4821ef3f45\", \"request_hash\": \"911e33241165fe278f9fd36298f8882ae4d840a648d690aa8740a0a6d2afabf8\", \"request_id\": \"phase4-20260921T005248Z-g3_1-m1einvalid\", \"revision\": 33, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "One or more expressions could not be evaluated.",
+      "error_message": "One or more expressions could not be evaluated.",
+      "operation": "evaluate_expressions",
+      "sequence": 8,
+      "structuredContent": {
+        "data": {
+          "cleanup": {
+            "cleanup_failed": false,
+            "created": true,
+            "created_count": 2,
+            "nodes": 2,
+            "note": "every tag is a random uuid4 hex owned by this request; cleanup removes that tag only and the removal is verified against the engine's own numerical().tags() readback",
+            "owner_operations": [
+              "evaluate_expressions"
+            ],
+            "policy": "ephemeral_mutation",
+            "removed": true,
+            "removed_count": 2,
+            "unremoved_tags": [],
+            "verified_removed": true,
+            "verified_removed_count": 2
+          },
+          "count": 1,
+          "datetime": "2026-09-21 08:52:57",
+          "ephemeral_mutation": true,
+          "evaluation_policy": "ephemeral_mutation",
+          "execution_state_unknown": false,
+          "failed_item_may_have_changed": false,
+          "label": "Phase4 G3 acceptance fixture",
+          "log_path": "$REPO/PRIVATE_REDACTED/g3_1-live-m1e/mcp-home/logs/server.log",
+          "max_result_size_ignored": null,
+          "operations_path": "$REPO/PRIVATE_REDACTED/g3_1-live-m1e/mcp-home/logs/operations.jsonl",
+          "partial_change": true,
+          "requires_model_reconciliation": true,
+          "results": [
+            {
+              "diagnosis": {
+                "attempts": [
+                  {
+                    "error": "{\"completed_at_ms\": \"1789951977164\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: Syntax_error_in_expression\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1789951977162\", \"request_id\": \"wrk-572abd4e-5c11-4156-a32a-9a8f34d21e13\", \"started_at_ms\": \"1789951977162\", \"status\": \"FAILED\", \"type\": \"call\"}",
+                    "ok": false,
+                    "route": "results:EvalGlobal"
+                  },
+                  {
+                    "error": "{\"completed_at_ms\": \"1789951977173\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: Syntax_error_in_expression\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1789951977172\", \"request_id\": \"wrk-37063efa-f972-4ec0-9771-51d830c7f629\", \"started_at_ms\": \"1789951977172\", \"status\": \"FAILED\", \"type\": \"call\"}",
+                    "ok": false,
+                    "route": "results:Eval(getData)"
+                  }
+                ]
+              },
+              "error": "EvalGlobal failed: {\"completed_at_ms\": \"1789951977164\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: Syntax_error_in_expression\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1789951977162\", \"request_id\": \"wrk-572abd4e-5c11-4156-a32a-9a8f34d21e13\", \"started_at_ms\": \"1789951977162\", \"status\": \"FAILED\", \"type\": \"call\"}; Eval/getData fallback failed: {\"completed_at_ms\": \"1789951977173\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: Syntax_error_in_expression\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1789951977172\", \"request_id\": \"wrk-37063efa-f972-4ec0-9771-51d830c7f629\", \"started_at_ms\": \"1789951977172\", \"status\": \"FAILED\", \"type\": \"call\"}",
+              "expression": "1+*2",
+              "name": "phase4_bad",
+              "ok": false
+            }
+          ],
+          "safe_retry": true,
+          "server": {
+            "attached_to_existing_server": true,
+            "comsol_root": "/Applications/COMSOL64/Multiphysics",
+            "current_model_label": "Phase4 G3 acceptance fixture",
+            "current_model_origin": "bound-request",
+            "current_model_path": "",
+            "datetime": "2026-09-21 08:52:57",
+            "desktop_client_role": "visual-client",
+            "desktop_should_connect": {
+              "host": "127.0.0.1",
+              "port": 56389
+            },
+            "last_command": "evaluate_expressions",
+            "last_error": "One or more expressions could not be evaluated.",
+            "logs_dir": "$REPO/PRIVATE_REDACTED/g3_1-live-m1e/mcp-home/logs",
+            "mcp_home": "$REPO/PRIVATE_REDACTED/g3_1-live-m1e/mcp-home",
+            "outputs_dir": "$REPO/PRIVATE_REDACTED/g3_1-live-m1e/mcp-home/outputs",
+            "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+            "server_endpoint": "127.0.0.1:56389",
+            "server_host": "127.0.0.1",
+            "server_port": 56389,
+            "server_running": false,
+            "server_started_by_mcp": false,
+            "status": "ready",
+            "timestamp": 1789951977.199449,
+            "version": "0.1.9",
+            "workflow": {
+              "current_main_model_path": "",
+              "guard_level": "strict",
+              "main_model_label": "",
+              "main_model_path": "",
+              "main_model_tag": "",
+              "mcp_client_lifecycle": "persistent-required",
+              "mode": "manual",
+              "model_dimension": 0,
+              "notes": "",
+              "one_shot_client_allowed": false,
+              "snapshot_dir": "",
+              "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+              "snapshot_prefix": "",
+              "snapshot_save_mode": "copy",
+              "updated_at": "2026-09-21 08:52:51",
+              "visible_main_locked": false,
+              "workflow_stage": "awaiting_manual_server"
+            }
+          },
+          "status": "partial",
+          "temporary_nodes": [
+            {
+              "created": true,
+              "feature_type": "EvalGlobal",
+              "owner": {
+                "operation": "evaluate_expressions",
+                "policy": "ephemeral_mutation",
+                "request": {
+                  "expressions": 1,
+                  "tool": "evaluate_expressions"
+                },
+                "scope": "mcp_owned_result_numerical_node",
+                "tag_allocated_from": "random uuid4 hex, never reused from the model"
+              },
+              "removed": true,
+              "tag": "mcp_eval_2bc194af62074ce29c39ef2fd6b9c930",
+              "tags_after": [],
+              "tags_before": [],
+              "verified_removed": true
+            },
+            {
+              "created": true,
+              "feature_type": "Eval",
+              "owner": {
+                "operation": "evaluate_expressions",
+                "policy": "ephemeral_mutation",
+                "request": {
+                  "expressions": 1,
+                  "tool": "evaluate_expressions"
+                },
+                "scope": "mcp_owned_result_numerical_node",
+                "tag_allocated_from": "random uuid4 hex, never reused from the model"
+              },
+              "removed": true,
+              "tag": "mcp_eval_abd8f4693a2141d29b841099078f7905",
+              "tags_after": [],
+              "tags_before": [],
+              "verified_removed": true
+            }
+          ],
+          "timestamp": 1789951977.1994398,
+          "tool": "evaluate_expressions",
+          "verification_status": "NOT_APPLICABLE",
+          "verified_outcome": "partial"
+        },
+        "error": "One or more expressions could not be evaluated.",
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": true,
+          "idempotency_key": "phase4-20260921T005248Z-g3_1-m1et005-invalid",
+          "job_id": "ab14c172-bcee-4033-b5b7-8fdee3559199",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp10",
+            "schema_version": 1,
+            "server_instance_id": "68c904662d132147e6cb3a43828f338dce0ebc879dde239969b6d04b3e9e8c7c",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "7cbcb41a-2650-46cc-b0b2-cd4821ef3f45",
+          "request_hash": "911e33241165fe278f9fd36298f8882ae4d840a648d690aa8740a0a6d2afabf8",
+          "request_id": "phase4-20260921T005248Z-g3_1-m1einvalid",
+          "revision": 33,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"component_details\": [{\"geometries\": [\"geom1\", \"p4geom\"], \"materials\": [\"p4mat\"], \"meshes\": [\"p4mesh\"], \"physics\": [\"ht\"], \"tag\": \"comp1\"}], \"components\": [\"comp1\"], \"datasets\": [], \"file_path\": \"\", \"label\": \"Phase4 G3 acceptance fixture\", \"parameters\": [], \"requires_model_reconciliation\": true, \"results\": [], \"solutions\": [], \"studies\": []}, \"error\": null, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": true, \"idempotency_key\": \"phase4-20260921T005248Z-g3_1-m1et005-tree-after-bad\", \"job_id\": \"8d2b3f15-9982-491c-ae1e-4852db5193c4\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp10\", \"schema_version\": 1, \"server_instance_id\": \"68c904662d132147e6cb3a43828f338dce0ebc879dde239969b6d04b3e9e8c7c\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"a7b6beda-249a-4292-aedb-3a45bdd82077\", \"request_hash\": \"25235bccf85c395edb6fcbbac87386cf8c5c3012e7b7efed220e7789af8a613e\", \"request_id\": \"phase4-20260921T005248Z-g3_1-m1et005-tree-after-bad\", \"revision\": 33, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "model_tree",
+      "sequence": 9,
+      "structuredContent": {
+        "data": {
+          "component_details": [
+            {
+              "geometries": [
+                "geom1",
+                "p4geom"
+              ],
+              "materials": [
+                "p4mat"
+              ],
+              "meshes": [
+                "p4mesh"
+              ],
+              "physics": [
+                "ht"
+              ],
+              "tag": "comp1"
+            }
+          ],
+          "components": [
+            "comp1"
+          ],
+          "datasets": [],
+          "file_path": "",
+          "label": "Phase4 G3 acceptance fixture",
+          "parameters": [],
+          "requires_model_reconciliation": true,
+          "results": [],
+          "solutions": [],
+          "studies": []
+        },
+        "error": null,
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": true,
+          "idempotency_key": "phase4-20260921T005248Z-g3_1-m1et005-tree-after-bad",
+          "job_id": "8d2b3f15-9982-491c-ae1e-4852db5193c4",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp10",
+            "schema_version": 1,
+            "server_instance_id": "68c904662d132147e6cb3a43828f338dce0ebc879dde239969b6d04b3e9e8c7c",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "a7b6beda-249a-4292-aedb-3a45bdd82077",
+          "request_hash": "25235bccf85c395edb6fcbbac87386cf8c5c3012e7b7efed220e7789af8a613e",
+          "request_id": "phase4-20260921T005248Z-g3_1-m1et005-tree-after-bad",
+          "revision": 33,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"component_details\": [{\"geometries\": [\"geom1\", \"p4geom\"], \"materials\": [\"p4mat\"], \"meshes\": [\"p4mesh\"], \"physics\": [\"ht\"], \"tag\": \"comp1\"}], \"components\": [\"comp1\"], \"datasets\": [], \"file_path\": \"\", \"label\": \"Phase4 G3 acceptance fixture\", \"parameters\": [], \"requires_model_reconciliation\": true, \"results\": [], \"solutions\": [], \"studies\": []}, \"error\": null, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": true, \"idempotency_key\": \"phase4-20260921T005248Z-g3_1-m1et005-tree-cleanup\", \"job_id\": \"600ddf27-5ac1-45cc-b48a-73840cf246d9\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp10\", \"schema_version\": 1, \"server_instance_id\": \"68c904662d132147e6cb3a43828f338dce0ebc879dde239969b6d04b3e9e8c7c\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"13cfcf7c-b739-4600-abab-576bed9a9578\", \"request_hash\": \"25235bccf85c395edb6fcbbac87386cf8c5c3012e7b7efed220e7789af8a613e\", \"request_id\": \"phase4-20260921T005248Z-g3_1-m1et005-tree-cleanup\", \"revision\": 33, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "model_tree",
+      "sequence": 10,
+      "structuredContent": {
+        "data": {
+          "component_details": [
+            {
+              "geometries": [
+                "geom1",
+                "p4geom"
+              ],
+              "materials": [
+                "p4mat"
+              ],
+              "meshes": [
+                "p4mesh"
+              ],
+              "physics": [
+                "ht"
+              ],
+              "tag": "comp1"
+            }
+          ],
+          "components": [
+            "comp1"
+          ],
+          "datasets": [],
+          "file_path": "",
+          "label": "Phase4 G3 acceptance fixture",
+          "parameters": [],
+          "requires_model_reconciliation": true,
+          "results": [],
+          "solutions": [],
+          "studies": []
+        },
+        "error": null,
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": true,
+          "idempotency_key": "phase4-20260921T005248Z-g3_1-m1et005-tree-cleanup",
+          "job_id": "600ddf27-5ac1-45cc-b48a-73840cf246d9",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp10",
+            "schema_version": 1,
+            "server_instance_id": "68c904662d132147e6cb3a43828f338dce0ebc879dde239969b6d04b3e9e8c7c",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "13cfcf7c-b739-4600-abab-576bed9a9578",
+          "request_hash": "25235bccf85c395edb6fcbbac87386cf8c5c3012e7b7efed220e7789af8a613e",
+          "request_id": "phase4-20260921T005248Z-g3_1-m1et005-tree-cleanup",
+          "revision": 33,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    }
+  ]
+}

@@ -1,0 +1,612 @@
+{
+  "assertion_count": 10,
+  "case": {
+    "acceptance": [
+      "G3 §10 T038"
+    ],
+    "assertions": {
+      "envelope_consistency": {
+        "calls": 263,
+        "mismatches": []
+      },
+      "error_propagation": {
+        "probe": {
+          "error_code": "UNSUPPORTED_OPERATION",
+          "has_structured_content": true,
+          "operation_id": null,
+          "outer_isError": true,
+          "success": false
+        },
+        "release": null,
+        "unknown_engine_state": null
+      },
+      "initialize": {
+        "caller_owned_private_home": true,
+        "capabilities": {
+          "completions": null,
+          "experimental": {},
+          "logging": null,
+          "prompts": {
+            "listChanged": false
+          },
+          "resources": {
+            "listChanged": false,
+            "subscribe": false
+          },
+          "tasks": null,
+          "tools": {
+            "listChanged": false
+          }
+        },
+        "instruction_bytes": 0,
+        "private_home": "$REPO/PRIVATE_REDACTED/g3-phase4-live5b/mcp-home",
+        "protocolVersion": "2025-11-25",
+        "server_name": "comsol-mcp-server",
+        "server_version": "1.29.1",
+        "tool_count": 65,
+        "tool_profile": "full"
+      },
+      "partial_failure": {
+        "probe": {
+          "error_code": "UNSUPPORTED_OPERATION",
+          "has_structured_content": true,
+          "operation_id": null,
+          "outer_isError": true,
+          "success": false
+        },
+        "release": null,
+        "unknown_engine_state": null
+      },
+      "registry_paging_no_duplicates": {
+        "operations": 273,
+        "pages": 3,
+        "pass": true,
+        "total_reported": 273,
+        "unique": 273
+      },
+      "stdio_isolation": {
+        "engine_log": "$REPO/evidence/phase4/runs/20260920T130620Z-g3-live/driver5b/primary.engine.log",
+        "engine_log_bytes": 42768,
+        "jsonrpc_frames_on_engine_log": 0
+      },
+      "structured_content_envelope": {
+        "legacy_calls": 3,
+        "pass": true,
+        "strict_calls": 260,
+        "strict_calls_without_structured_content": [],
+        "tool_calls": 263
+      },
+      "subcase_inventory": {
+        "levels": [
+          "protocol"
+        ],
+        "missing": [],
+        "planned": 7,
+        "recorded": 7
+      },
+      "tools_list_schemas": {
+        "pass": true,
+        "tool_count": 65,
+        "tools": [
+          "check_server_port",
+          "commit_current_main_model",
+          "configure_single_main_workflow",
+          "configure_solver",
+          "create_feature",
+          "create_physics",
+          "create_physics_feature",
+          "create_solver_config",
+          "delete_feature",
+          "ensure_component",
+          "ensure_geometry",
+          "ensure_mesh",
+          "evaluate_expressions",
+          "get_core_metrics",
+          "get_parameters",
+          "job_log",
+          "job_reconcile",
+          "job_result",
+          "job_status",
+          "list_physics",
+          "list_physics_features",
+          "list_solver_config",
+          "list_solver_features",
+          "load_current_main_model",
+          "load_visible_main_model",
+          "manage_variables",
+          "mcp_tool_audit",
+          "model_adopt",
+          "model_create",
+          "model_inspect",
+          "model_load",
+          "model_tree",
+          "operation_call",
+          "operation_describe",
+          "prune_loaded_models",
+          "registry_call",
+          "registry_describe",
+          "registry_list",
+          "registry_manifest",
+          "registry_search",
+          "remove_physics",
+          "remove_physics_feature",
+          "run_feature",
+          "run_study",
+          "run_study_async",
+          "run_study_status",
+          "run_visible_main_iteration",
+          "runtime_poc_v64",
+          "save_main_model_snapshot",
+          "save_model",
+          "server_connect",
+          "server_disconnect",
+          "server_info",
+          "server_start",
+          "session_health",
+          "set_parameters",
+          "set_physics_selection",
+          "start_visible_main_workflow",
+          "start_visible_main_workflow_async",
+          "unlock_visible_main",
+          "update_feature",
+          "update_physics_feature",
+          "verify_visible_main_session",
+          "visible_main_workflow_status",
+          "workflow_info"
+        ]
+      },
+      "unknown_job_ledger": {
+        "entries": [
+          {
+            "first_seen_at": "2026-09-20T22:53:04.996075Z",
+            "job_id": "8f540023-7edc-4fc7-91c2-57996512e985",
+            "last_error_code": null,
+            "last_message": null,
+            "last_seen_at": "2026-09-20T22:53:04.996090Z",
+            "observations": [
+              {
+                "at": "2026-09-20T22:53:04.996092Z",
+                "error_code": null,
+                "message": null,
+                "tool": "create_feature"
+              }
+            ],
+            "operation": "create_feature",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-20T22:53:05.004834Z",
+                "error_code": null,
+                "job_id": "8f540023-7edc-4fc7-91c2-57996512e985",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-a4f094ea-e711-4fd1-b9d5-b49db6e2b666",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-3ab8d7f6-7a77-46ba-bb3b-7653b2923385",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-87931215-6a2d-4e23-871a-9ee1590e1dac",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-eb527d52-d8e7-4d4d-bfa8-07ea262fe71e",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-dabfa598-bd67-4b8c-b681-1f7afea3b4b1",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-72576064-b904-4cba-925e-db90f01d35f3",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-5c72ba58-e1b2-4476-b6b0-37b4ff0a046a",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-7255d8c0-4b34-4321-85bd-a2e0323338cd",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-bf60cb43-3864-45ca-a8e0-a9a8510a63bf",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-ff6ba42f-6647-42c8-b8cf-0db95e4a83a0",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-3d34419d-9b7a-47cd-be8d-629648a1ec11",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-4083e6bb-0d76-40af-bcbf-9204ef4088f8",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-efa0f085-1e31-4203-bbd8-f9504dc35740",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-1067c123-43c5-4265-b096-627ccb0acba3",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-7cce45d8-9835-4e23-912f-131d7415914a",
+                    "source": "durable_worker_observation",
+                    "status": "FAILED"
+                  },
+                  {
+                    "request_id": "wrk-0b4ec4be-fb52-47d7-bbc3-720f737fbe11",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-935d83aa-be88-4d56-b38a-d7332a298799",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-06fb8c5e-25f6-46e9-9949-9d005e5f6fa1",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-20T22:53:05.004863Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-20T22:53:05.132511Z",
+            "job_id": "604e893a-a478-4e5e-88be-168f5d6cc0b6",
+            "last_error_code": null,
+            "last_message": null,
+            "last_seen_at": "2026-09-20T22:53:05.132557Z",
+            "observations": [
+              {
+                "at": "2026-09-20T22:53:05.132559Z",
+                "error_code": null,
+                "message": null,
+                "tool": "create_feature"
+              }
+            ],
+            "operation": "create_feature",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-20T22:53:05.141198Z",
+                "error_code": null,
+                "job_id": "604e893a-a478-4e5e-88be-168f5d6cc0b6",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-fcff13db-98c1-4e3f-9b2c-f368eb0c396c",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-59dc7a2d-cf91-4830-b787-c758c9a6f2bb",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-3adac405-fb71-4a54-84c6-073c4b6ef4af",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-e4c23dca-c150-4eeb-97e1-c2a94e054ac8",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-93e4a09b-1781-4daa-8748-e68cf57c44b1",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-63b21c72-d3ee-4c70-a837-58337232b8c5",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-6d61435d-fcdd-4c86-b866-0d8debd1a161",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-8216913e-6611-4ce4-bd53-5fa38b6a97a2",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-e66b21a6-e67a-458d-8d8d-c7c7aaae814f",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-4bc58399-45df-4dfb-92b8-b8c5412e0bd3",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-78a21a83-8294-46de-847f-b0426d1137c7",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-d222065c-2243-45ff-934c-974dbcb1f771",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-f057e29e-f52a-41aa-b411-fe942467b2bd",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-82325b56-2b31-475e-a157-45bc294479af",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-86375b8c-253a-4ad3-b51f-9daa91361283",
+                    "source": "durable_worker_observation",
+                    "status": "FAILED"
+                  },
+                  {
+                    "request_id": "wrk-6fab85b2-4570-4a54-92e2-4e5759f452b6",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-d76ff766-0c8d-4728-a413-78b1be685aa8",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-2355fe81-bee3-4ea0-af70-3bed3e1514fb",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-20T22:53:05.141227Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-20T22:53:05.255296Z",
+            "job_id": "bc7fc75a-46b5-4dd8-9744-16fff513cb10",
+            "last_error_code": null,
+            "last_message": null,
+            "last_seen_at": "2026-09-20T22:53:05.255370Z",
+            "observations": [
+              {
+                "at": "2026-09-20T22:53:05.255371Z",
+                "error_code": null,
+                "message": null,
+                "tool": "create_feature"
+              }
+            ],
+            "operation": "create_feature",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-20T22:53:05.265648Z",
+                "error_code": null,
+                "job_id": "bc7fc75a-46b5-4dd8-9744-16fff513cb10",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-3373e0d9-d4f2-4c57-aad0-a30bf20af7f1",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-31fb6808-7462-43a2-aba6-ec5e97ea4710",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-0f37d4a8-4777-4976-a023-2b463bc12ee6",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-0a7868f7-c12d-4917-bf98-683e2bd0caa7",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-552a73dc-6116-4ee4-8861-906cbd3d264e",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-9877b20a-4c2a-4f10-9a13-0895b4415d1d",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-31255d83-3a63-4964-9dc2-48d7c1d70e22",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-843fa254-95a4-425b-a73e-da022ae20bfb",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-1b941d51-8514-49c0-b709-835098526212",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-54c07dd5-7ad8-49fe-9e88-62f2dc1e52e4",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-2e6a1e73-684c-495e-8b6b-bcb9a28fb59c",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-2ae0521e-92c6-44a8-aaac-b679e8a1b189",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-3388e7b0-2c62-42a9-988d-45c3bf66e741",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-6c6adfe9-5847-4c61-a98d-28cbe57067cf",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-13e1c150-e75d-4caa-a9a5-16d51b9602ef",
+                    "source": "durable_worker_observation",
+                    "status": "FAILED"
+                  },
+                  {
+                    "request_id": "wrk-e2c93800-3b88-4112-a71e-17da59618e07",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-d3981eb8-b364-4a8b-a11a-4d2ee7133417",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-a5b67ebb-8b59-4c8b-8623-9960be741a3f",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-20T22:53:05.265675Z",
+            "status": "UNKNOWN"
+          }
+        ],
+        "gate_refusals": {
+          "by_tool": {},
+          "count": 0,
+          "first": null,
+          "last": null
+        },
+        "note": "the driver records every job id an envelope reported as UNKNOWN (no published read lists the unresolved jobs) and releases each one through the published job_reconcile read before it replays a refused call once",
+        "released_jobs": [
+          "8f540023-7edc-4fc7-91c2-57996512e985",
+          "604e893a-a478-4e5e-88be-168f5d6cc0b6",
+          "bc7fc75a-46b5-4dd8-9744-16fff513cb10"
+        ],
+        "still_blocked": [],
+        "unresolved_jobs": []
+      }
+    },
+    "case_id": "GUARD_T038",
+    "finished_at": "2026-09-20T22:53:05.665941Z",
+    "package": "GUARD",
+    "reason": null,
+    "started_at": "2026-09-20T22:53:05.338706Z",
+    "status": "PASS",
+    "subcases": {
+      "error_propagation_structured": {
+        "acceptance": "T038 structured errors",
+        "level": "protocol",
+        "observed": {
+          "error_code": "UNSUPPORTED_OPERATION",
+          "has_structured_content": true,
+          "operation_id": null,
+          "outer_isError": true,
+          "success": false
+        },
+        "status": "PASS"
+      },
+      "initialize_and_tools_list_schemas": {
+        "acceptance": "T038 tools/list schema validity",
+        "level": "protocol",
+        "status": "PASS",
+        "tool_count": 65
+      },
+      "outer_iserror_matches_success": {
+        "acceptance": "T038 isError semantics",
+        "calls": 263,
+        "level": "protocol",
+        "mismatches": [],
+        "status": "PASS"
+      },
+      "partial_failure_not_reported_as_success": {
+        "acceptance": "T038 partial failure not all-success",
+        "level": "protocol",
+        "observed": {
+          "error_code": "UNSUPPORTED_OPERATION",
+          "has_structured_content": true,
+          "operation_id": null,
+          "outer_isError": true,
+          "success": false
+        },
+        "status": "PASS"
+      },
+      "registry_paging_continuation": {
+        "acceptance": "T038 pagination",
+        "level": "protocol",
+        "operations": 273,
+        "pages": 3,
+        "status": "PASS",
+        "total_reported": 273,
+        "unique": 273
+      },
+      "stdio_log_isolation": {
+        "acceptance": "T038 stdout/stderr isolation",
+        "level": "protocol",
+        "lines": [],
+        "status": "PASS"
+      },
+      "structured_content_action_results": {
+        "acceptance": "T038 structuredContent envelope",
+        "level": "protocol",
+        "missing": [],
+        "status": "PASS",
+        "strict_calls": 260
+      }
+    }
+  },
+  "subcase_count": 7
+}

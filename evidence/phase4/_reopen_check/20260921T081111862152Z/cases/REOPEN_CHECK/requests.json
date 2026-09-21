@@ -1,0 +1,101 @@
+{
+  "case_id": "REOPEN_CHECK",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "reopen-server-connect",
+          "request_id": "connect"
+        },
+        "host": "127.0.0.1",
+        "port": 56389
+      },
+      "elapsed_s": 1.2446091249585152,
+      "operation": "server_connect",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-describe-model-load-1",
+          "request_id": "phase4-describe-model-load-1"
+        },
+        "operation_id": "model.load"
+      },
+      "elapsed_s": 0.009811165975406766,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "artifact_id": "phase4-reopen-artifact",
+        "execution": {
+          "idempotency_key": "reopen-load",
+          "request_id": "model.load"
+        },
+        "path": "evidence/phase4_1/chain_c_fixture/chain_c_user_style.mph"
+      },
+      "elapsed_s": 0.2015546669717878,
+      "operation": "model_load",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "depth": 3,
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "reopen-tree",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp_0cf68514c5d7",
+            "schema_version": 1,
+            "server_instance_id": "13d694fac0257e564ff4e341c7130a0884fe549548626ba1a946f0ec49426a80",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "reopen-tree",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        }
+      },
+      "elapsed_s": 0.046389250026550144,
+      "operation": "model_tree",
+      "outer_isError": false,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "evaluation_policy": "ephemeral_mutation",
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "reopen-values",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp_0cf68514c5d7",
+            "schema_version": 1,
+            "server_instance_id": "13d694fac0257e564ff4e341c7130a0884fe549548626ba1a946f0ec49426a80",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "reopen-values",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "expected_revision": 0,
+        "expressions_json": "[{\"name\": \"Tinit\", \"expression\": \"293.15[K]\"}]",
+        "model_ref": {
+          "generation": 1,
+          "model_tag": "mcp_0cf68514c5d7",
+          "schema_version": 1,
+          "server_instance_id": "13d694fac0257e564ff4e341c7130a0884fe549548626ba1a946f0ec49426a80",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "project_id": "comsol-mcp-phase4",
+        "session_id": "session-9f95c2e814acd5f99589961a"
+      },
+      "elapsed_s": 0.06042404199251905,
+      "operation": "evaluate_expressions",
+      "outer_isError": false,
+      "sequence": 5
+    }
+  ]
+}

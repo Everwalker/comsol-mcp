@@ -1,0 +1,68 @@
+{
+  "case_id": "REOPEN_CHECK",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "reopen-server-connect",
+          "request_id": "connect"
+        },
+        "host": "127.0.0.1",
+        "port": 56389
+      },
+      "elapsed_s": 1.2307946250075474,
+      "operation": "server_connect",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-describe-model-load-1",
+          "request_id": "phase4-describe-model-load-1"
+        },
+        "operation_id": "model.load"
+      },
+      "elapsed_s": 0.00866445800056681,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "artifact_id": "phase4-reopen-artifact",
+        "execution": {
+          "idempotency_key": "reopen-load",
+          "request_id": "model.load"
+        },
+        "path": "evidence/phase4_1/runs/20260921T042809Z-g3_1-m2a-chainA/chainA_result.mph"
+      },
+      "elapsed_s": 0.1392055000178516,
+      "operation": "model_load",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "depth": 3,
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "reopen-tree",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp_01dd1822dc8d",
+            "schema_version": 1,
+            "server_instance_id": "fd4dc3f1f64a9efc59d3fbcd8949dbe5b274c85e06e9a3adc5561d9eb92b52ce",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "reopen-tree",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        }
+      },
+      "elapsed_s": 0.03920120804104954,
+      "operation": "model_tree",
+      "outer_isError": false,
+      "sequence": 4
+    }
+  ]
+}

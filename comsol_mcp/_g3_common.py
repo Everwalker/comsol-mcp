@@ -66,6 +66,7 @@ from typing import Any, Iterable, Mapping, Sequence
 from ._g2_contract import (
     ExecutionContractError,
     NodePath,
+    PreWriteRefusal,
     resolve_node_path,
     typed_value_from_engine,
     validate_typed_value,
@@ -421,6 +422,61 @@ def require_mapping(value: Any, label: str) -> dict[str, Any]:
     if not isinstance(value, Mapping):
         raise ExecutionContractError("INVALID_REQUEST", f"{label} must be an object")
     return dict(value)
+
+
+def node_not_found(message: str, *, details: Mapping[str, Any] | None = None) -> PreWriteRefusal:
+    """A ``NODE_NOT_FOUND`` refusal that happened before the engine dispatch.
+
+    Every caller resolves a node by *reading* the engine's own container
+    (``tags()``/``hasTag()``/``get()``) and refuses when the tag it was asked
+    for is not in that list, so the refusal is raised before the operation's
+    first mutation-class engine call.  Declaring the explicit ``validation``
+    stage is what lets the managed backend publish the refusal instead of
+    flattening a correct rejection into ``EXECUTION_STATE_UNKNOWN`` (live
+    evidence: ``evidence/phase4_1/runs/20260920T235502Z-g3_1-m1`` W13_T006 --
+    a missing ``comp1`` was reported as an unresolved engine state even though
+    the witness saw no mutation call).
+
+    The refusal *semantics* are unchanged: the code stays ``NODE_NOT_FOUND``,
+    the operation still refuses, and nothing is created.  Only the stage (and
+    therefore the dispatch proof) is added.  The managed backend never trusts
+    this declaration alone -- its :class:`~comsol_mcp._domain_outcome.DispatchWitness`
+    must also have seen no mutation-class engine method during the callback,
+    otherwise the fail-closed ``EXECUTION_STATE_UNKNOWN`` is kept and the
+    contradiction is recorded as ``unproven_pre_dispatch``.
+    """
+    return PreWriteRefusal("NODE_NOT_FOUND", message, details=dict(details) if details else None)
+
+
+def tag_conflict(message: str, *, details: Mapping[str, Any] | None = None) -> PreWriteRefusal:
+    """A ``TAG_CONFLICT`` refusal raised by a read-then-refuse existence check.
+
+    Every converted caller reads the owning container's own tag list (``tags()``
+    / ``get()`` / ``getType()``) and refuses when the tag it was asked to create
+    is already in that list, so the refusal provably precedes the operation's
+    first mutation-class engine call.  Declaring the explicit ``validation``
+    stage is what lets the managed backend publish the refusal instead of
+    flattening a correct rejection into ``EXECUTION_STATE_UNKNOWN`` -- exactly
+    the mechanism of :func:`node_not_found` (live evidence:
+
+    ``evidence/phase4_1/runs/20260921T001454Z-g3_1-m1c`` W13_T015 --
+    ``definition.component_manage`` answered the *existing* ``comp1`` with
+    ``TAG_CONFLICT`` and the run recorded a first-hand unknown engine state even
+    though the refusal's own witness listed four read methods (``component``,
+    ``get``, ``getType``, ``tags``) and ``mutation_issued: false``).
+
+    The refusal *semantics* are unchanged: the code stays ``TAG_CONFLICT``, the
+    operation still refuses, and nothing is created.  Only the stage (and
+    therefore the dispatch proof) is added.  The managed backend never trusts
+    this declaration alone -- its
+    :class:`~comsol_mcp._domain_outcome.DispatchWitness` must also have seen no
+    mutation-class engine method during the callback, otherwise the fail-closed
+    ``EXECUTION_STATE_UNKNOWN`` is kept and the contradiction is recorded as
+    ``unproven_pre_dispatch``.  A site that may already have written earlier in
+    the same callback (the property-group input ``addInput`` loop in
+    ``_g3_w15``) therefore keeps its plain ``ExecutionContractError``.
+    """
+    return PreWriteRefusal("TAG_CONFLICT", message, details=dict(details) if details else None)
 
 
 # ---------------------------------------------------------------------------
@@ -853,8 +909,8 @@ def node_create(worker: Any, model_tag: str, parent_path: Any, collection: str, 
                 "TYPE_CONFLICT",
                 f"{spec['display']} {tag!r} already exists with type {current!r} (requested {type_id!r})",
             )
-        raise ExecutionContractError(
-            "TAG_CONFLICT", f"{spec['display']} {tag!r} already exists"
+        raise tag_conflict(
+            f"{spec['display']} {tag!r} already exists"
         )
 
     if spec["arity"] == 2:
@@ -900,7 +956,7 @@ def node_remove(worker: Any, model_tag: str, parent_path: Any, collection: str, 
     container = accessor_container(worker, model_tag, parent_path, collection)
     before = tag_list(container, spec)
     if tag not in before:
-        raise ExecutionContractError("NODE_NOT_FOUND", f"{spec['display']} {tag!r} does not exist")
+        raise node_not_found(f"{spec['display']} {tag!r} does not exist")
     target = child_node(worker, model_tag, parent_path, collection, tag)
     type_readback = node_type(target) if spec["type_readback"] else None
     _call(collection_list_node(container, spec), "remove", tag)
@@ -1624,6 +1680,7 @@ __all__ = [
     "selection_dimension",
     "selection_state",
     "split_parent_path",
+    "tag_conflict",
     "tag_list",
     "typed_value_from_json",
     "typed_value_from_wire",

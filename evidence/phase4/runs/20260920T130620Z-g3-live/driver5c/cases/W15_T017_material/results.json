@@ -1,0 +1,2130 @@
+{
+  "case_id": "W15_T017_material",
+  "results": [
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"component\": {\"type\": \"string\"}, \"definition\": {\"type\": \"object\"}, \"expected_revision\": {\"minimum\": 0, \"type\": \"integer\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}, \"tag\": {\"type\": \"string\"}, \"type_id\": {\"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"component\", \"tag\", \"type_id\"], \"title\": \"material.create input\", \"type\": \"object\"}, \"domain\": \"material\", \"effect\": \"WRITE\", \"executable\": true, \"gate\": \"G3\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"component\": {\"type\": \"string\"}, \"definition\": {\"type\": \"object\"}, \"expected_revision\": {\"minimum\": 0, \"type\": \"integer\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}, \"tag\": {\"type\": \"string\"}, \"type_id\": {\"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"component\", \"tag\", \"type_id\"], \"title\": \"material.create input\", \"type\": \"object\"}, \"mcp_tool_name\": \"material_create\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"material.create\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"创建材料/链接/切换结构\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\", \"readback_and_revision\", \"idempotency_and_partial_failure\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 1,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "component": {
+                "type": "string"
+              },
+              "definition": {
+                "type": "object"
+              },
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "tag": {
+                "type": "string"
+              },
+              "type_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "component",
+              "tag",
+              "type_id"
+            ],
+            "title": "material.create input",
+            "type": "object"
+          },
+          "domain": "material",
+          "effect": "WRITE",
+          "executable": true,
+          "gate": "G3",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "component": {
+                "type": "string"
+              },
+              "definition": {
+                "type": "object"
+              },
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "tag": {
+                "type": "string"
+              },
+              "type_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "component",
+              "tag",
+              "type_id"
+            ],
+            "title": "material.create input",
+            "type": "object"
+          },
+          "mcp_tool_name": "material_create",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "material.create",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "创建材料/链接/切换结构",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful",
+            "readback_and_revision",
+            "idempotency_and_partial_failure"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"expected_revision\": {\"minimum\": 0, \"type\": \"integer\"}, \"group\": {\"type\": \"string\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"properties\": {\"$ref\": \"common.schema.json#/$defs/PropertySet\"}, \"provenance\": {\"type\": \"object\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"path\", \"group\", \"properties\"], \"title\": \"material.set_properties input\", \"type\": \"object\"}, \"domain\": \"material\", \"effect\": \"WRITE\", \"executable\": true, \"gate\": \"G3\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"expected_revision\": {\"minimum\": 0, \"type\": \"integer\"}, \"group\": {\"type\": \"string\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"properties\": {\"$ref\": \"common.schema.json#/$defs/PropertySet\"}, \"provenance\": {\"type\": \"object\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"path\", \"group\", \"properties\"], \"title\": \"material.set_properties input\", \"type\": \"object\"}, \"mcp_tool_name\": \"material_set_properties\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"material.set_properties\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"按property group写标量/张量/温度函数\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\", \"readback_and_revision\", \"idempotency_and_partial_failure\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 2,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "group": {
+                "type": "string"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "properties": {
+                "$ref": "common.schema.json#/$defs/PropertySet"
+              },
+              "provenance": {
+                "type": "object"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "path",
+              "group",
+              "properties"
+            ],
+            "title": "material.set_properties input",
+            "type": "object"
+          },
+          "domain": "material",
+          "effect": "WRITE",
+          "executable": true,
+          "gate": "G3",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "group": {
+                "type": "string"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "properties": {
+                "$ref": "common.schema.json#/$defs/PropertySet"
+              },
+              "provenance": {
+                "type": "object"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "path",
+              "group",
+              "properties"
+            ],
+            "title": "material.set_properties input",
+            "type": "object"
+          },
+          "mcp_tool_name": "material_set_properties",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "material.set_properties",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "按property group写标量/张量/温度函数",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful",
+            "readback_and_revision",
+            "idempotency_and_partial_failure"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"checks\": {\"type\": \"object\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"scope\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"idempotency_key\"], \"title\": \"material.validate input\", \"type\": \"object\"}, \"domain\": \"material\", \"effect\": \"EVALUATE\", \"executable\": true, \"gate\": \"G3\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"checks\": {\"type\": \"object\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"scope\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"idempotency_key\"], \"title\": \"material.validate input\", \"type\": \"object\"}, \"mcp_tool_name\": \"material_validate\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"material.validate\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"检查已启用物理需要的已知属性规则\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 3,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "checks": {
+                "type": "object"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "scope": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "idempotency_key"
+            ],
+            "title": "material.validate input",
+            "type": "object"
+          },
+          "domain": "material",
+          "effect": "EVALUATE",
+          "executable": true,
+          "gate": "G3",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "checks": {
+                "type": "object"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "scope": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "idempotency_key"
+            ],
+            "title": "material.validate input",
+            "type": "object"
+          },
+          "mcp_tool_name": "material_validate",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "material.validate",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "检查已启用物理需要的已知属性规则",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"expected_revision\": {\"minimum\": 0, \"type\": \"integer\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"selection\": {\"$ref\": \"common.schema.json#/$defs/SelectionSpec\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"path\", \"selection\"], \"title\": \"material.selection_set input\", \"type\": \"object\"}, \"domain\": \"material\", \"effect\": \"WRITE\", \"executable\": true, \"gate\": \"G3\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"expected_revision\": {\"minimum\": 0, \"type\": \"integer\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"selection\": {\"$ref\": \"common.schema.json#/$defs/SelectionSpec\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"path\", \"selection\"], \"title\": \"material.selection_set input\", \"type\": \"object\"}, \"mcp_tool_name\": \"material_selection_set\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"material.selection_set\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"为材料绑定命名域/边界选择\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\", \"readback_and_revision\", \"idempotency_and_partial_failure\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 4,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "selection": {
+                "$ref": "common.schema.json#/$defs/SelectionSpec"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "path",
+              "selection"
+            ],
+            "title": "material.selection_set input",
+            "type": "object"
+          },
+          "domain": "material",
+          "effect": "WRITE",
+          "executable": true,
+          "gate": "G3",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "selection": {
+                "$ref": "common.schema.json#/$defs/SelectionSpec"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "path",
+              "selection"
+            ],
+            "title": "material.selection_set input",
+            "type": "object"
+          },
+          "mcp_tool_name": "material_selection_set",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "material.selection_set",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "为材料绑定命名域/边界选择",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful",
+            "readback_and_revision",
+            "idempotency_and_partial_failure"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"names\": {\"items\": {\"type\": \"string\"}, \"type\": \"array\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"path\", \"names\"], \"title\": \"node.property_get input\", \"type\": \"object\"}, \"domain\": \"node\", \"effect\": \"READ\", \"executable\": true, \"gate\": \"G2\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"names\": {\"items\": {\"type\": \"string\"}, \"type\": \"array\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"path\", \"names\"], \"title\": \"node.property_get input\", \"type\": \"object\"}, \"mcp_tool_name\": \"node_property_get\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"node.property_get\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"按类型回读一个或多个属性\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 5,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "names": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "path",
+              "names"
+            ],
+            "title": "node.property_get input",
+            "type": "object"
+          },
+          "domain": "node",
+          "effect": "READ",
+          "executable": true,
+          "gate": "G2",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "names": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "path",
+              "names"
+            ],
+            "title": "node.property_get input",
+            "type": "object"
+          },
+          "mcp_tool_name": "node_property_get",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "node.property_get",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "按类型回读一个或多个属性",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-driver5cphase4-reconcile-model-phase4-258\", \"job_id\": \"c18609ab-8a43-44ad-b847-c2fce56dd9a6\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp1\", \"schema_version\": 1, \"server_instance_id\": \"80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"c53972e4-a2e6-48a1-94ab-830a2cd6683a\", \"request_hash\": \"8d6ae0707a5a775b253017b645fd3164e3728a1c6800e4f785b436094b0329ff\", \"request_id\": \"phase4-driver5cphase4-reconcile-model-phase4-258\", \"revision\": 27, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "model_inspect",
+      "sequence": 6,
+      "structuredContent": {
+        "data": {},
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-driver5cphase4-reconcile-model-phase4-258",
+          "job_id": "c18609ab-8a43-44ad-b847-c2fce56dd9a6",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp1",
+            "schema_version": 1,
+            "server_instance_id": "80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "c53972e4-a2e6-48a1-94ab-830a2cd6683a",
+          "request_hash": "8d6ae0707a5a775b253017b645fd3164e3728a1c6800e4f785b436094b0329ff",
+          "request_id": "phase4-driver5cphase4-reconcile-model-phase4-258",
+          "revision": 27,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"properties\": [{\"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"bndType\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"String\"}, {\"getter\": \"getDouble\", \"java_signature\": \"double\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"thickness\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Double\"}, {\"allowed_values\": [\"none\", \"sys1\"], \"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"sys\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"String\"}, {\"allowed_values\": [\"middle\", \"bottom\", \"top\", \"userDef\"], \"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"middlePlane\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"String\"}, {\"getter\": \"getDouble\", \"java_signature\": \"double\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"offset\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Double\"}, {\"allowed_values\": [\"empty\", \"stack\"], \"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"hiddenCardSwitcher\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"String\"}, {\"allowed_values\": [\"none\"], \"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"stack\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"String\"}, {\"allowed_values\": [\"on\", \"off\"], \"getter\": \"getBoolean\", \"java_signature\": \"boolean\", \"kind\": \"boolean\", \"metadata_status\": \"KNOWN\", \"name\": \"stackAlign\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Boolean\"}, {\"allowed_values\": [\"on\", \"off\"], \"getter\": \"getBoolean\", \"java_signature\": \"boolean\", \"kind\": \"boolean\", \"metadata_status\": \"KNOWN\", \"name\": \"orientLine\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Boolean\"}, {\"getter\": \"getDouble\", \"java_signature\": \"double\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"orientDist\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Double\"}, {\"getter\": \"getDouble\", \"java_signature\": \"double\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"widthRatio\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Double\"}, {\"allowed_values\": [\"on\", \"off\"], \"getter\": \"getBoolean\", \"java_signature\": \"boolean\", \"kind\": \"boolean\", \"metadata_status\": \"KNOWN\", \"name\": \"showLabels\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Boolean\"}, {\"allowed_values\": [\"air\", \"aluminum\", \"aluminumanodized\", \"aluminumbrushed\", \"aluminummatte\", \"aluminumoxidized\", \"aluminumpolished\", \"brass\", \"brick\", \"bronzehammered\", \"carbonforged\", \"carpaint\", \"chrome\", \"concrete\", \"copper\", \"copperbrushed\", \"copperoxidized\", \"defaultgeometry\", \"defaultplot\", \"glass\", \"glasstinted\", \"gold\", \"iron\", \"ironrusty\", \"ironscratched\", \"lead\", \"leather\", \"magnesium\", \"magnesiumbrushed\", \"oil\", \"pcb\", \"pearl\", \"plastic\", \"plasticshiny\", \"rock\", \"rosegold\", \"rosegolddented\", \"rubber\", \"sand\", \"silicon\", \"soil\", \"steel\", \"steelanodized\", \"steelbrushed\", \"steelrusty\", \"steelscratched\", \"textile\", \"titanium\", \"titaniumbrushed\", \"tungsten\", \"uranium\", \"water\", \"wood\", \"custom\"], \"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"family\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"String\"}, {\"getter\": null, \"java_signature\": null, \"kind\": null, \"metadata_status\": \"UNKNOWN\", \"name\": \"customize\", \"shape_rank\": null, \"type_id\": \"Common\", \"value_type\": \"None\"}, {\"allowed_values\": [\"custom\", \"black\", \"blue\", \"cyan\", \"gray\", \"green\", \"magenta\", \"red\", \"white\", \"yellow\"], \"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"color\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"String\"}, {\"getter\": \"getDoubleArray\", \"java_signature\": \"double[]\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"customcolor\", \"shape_rank\": 1, \"type_id\": \"Common\", \"value_type\": \"DoubleArray\"}, {\"allowed_values\": [\"custom\", \"black\", \"blue\", \"cyan\", \"gray\", \"green\", \"magenta\", \"red\", \"white\", \"yellow\"], \"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"specular\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"String\"}, {\"getter\": \"getDoubleArray\", \"java_signature\": \"double[]\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"customspecular\", \"shape_rank\": 1, \"type_id\": \"Common\", \"value_type\": \"DoubleArray\"}, {\"allowed_values\": [\"custom\", \"black\", \"blue\", \"cyan\", \"gray\", \"green\", \"magenta\", \"red\", \"white\", \"yellow\"], \"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"diffuse\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"String\"}, {\"getter\": \"getDoubleArray\", \"java_signature\": \"double[]\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"customdiffuse\", \"shape_rank\": 1, \"type_id\": \"Common\", \"value_type\": \"DoubleArray\"}, {\"allowed_values\": [\"custom\", \"black\", \"blue\", \"cyan\", \"gray\", \"green\", \"magenta\", \"red\", \"white\", \"yellow\"], \"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"ambient\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"String\"}, {\"getter\": \"getDoubleArray\", \"java_signature\": \"double[]\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"customambient\", \"shape_rank\": 1, \"type_id\": \"Common\", \"value_type\": \"DoubleArray\"}, {\"allowed_values\": [\"on\", \"off\"], \"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"basis\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"String\"}, {\"getter\": \"getDouble\", \"java_signature\": \"double\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"scale\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Double\"}, {\"getter\": \"getDoubleArray\", \"java_signature\": \"double[]\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"origin\", \"shape_rank\": 1, \"type_id\": \"Common\", \"value_type\": \"DoubleArray\"}, {\"getter\": \"getDoubleArray\", \"java_signature\": \"double[]\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"basisx\", \"shape_rank\": 1, \"type_id\": \"Common\", \"value_type\": \"DoubleArray\"}, {\"allowed_values\": [\"on\", \"off\"], \"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"specifybasisy\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"String\"}, {\"getter\": \"getDoubleArray\", \"java_signature\": \"double[]\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"basisy\", \"shape_rank\": 1, \"type_id\": \"Common\", \"value_type\": \"DoubleArray\"}, {\"allowed_values\": [\"on\", \"off\"], \"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"noise\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"String\"}, {\"allowed_values\": [\"0\", \"1\"], \"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"normalnoisetype\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"String\"}, {\"getter\": \"getDouble\", \"java_signature\": \"double\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"noisescale\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Double\"}, {\"getter\": \"getDouble\", \"java_signature\": \"double\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"noisefreq\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Double\"}, {\"allowed_values\": [\"0\", \"1\", \"2\", \"3\", \"4\", \"5\", \"6\", \"7\", \"8\", \"9\", \"10\", \"11\", \"12\", \"13\"], \"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"normalnoisebrush\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"String\"}, {\"allowed_values\": [\"on\", \"off\"], \"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"colornoise\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"String\"}, {\"allowed_values\": [\"0\", \"1\"], \"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"colornoisetype\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"String\"}, {\"getter\": \"getDouble\", \"java_signature\": \"double\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"colornoisescale\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Double\"}, {\"getter\": \"getDouble\", \"java_signature\": \"double\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"colornoisefrequency\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Double\"}, {\"allowed_values\": [\"0\", \"1\", \"2\", \"3\", \"4\", \"5\", \"6\", \"7\", \"8\", \"9\", \"10\", \"11\", \"12\", \"13\"], \"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"colornoisebrush\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"String\"}, {\"allowed_values\": [\"custom\", \"black\", \"blue\", \"cyan\", \"gray\", \"green\", \"magenta\", \"red\", \"white\", \"yellow\"], \"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"noisecolor\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"String\"}, {\"getter\": \"getDoubleArray\", \"java_signature\": \"double[]\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"customnoisecolor\", \"shape_rank\": 1, \"type_id\": \"Common\", \"value_type\": \"DoubleArray\"}, {\"getter\": \"getDouble\", \"java_signature\": \"double\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"noisecolorblend\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Double\"}, {\"getter\": \"getDouble\", \"java_signature\": \"double\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"colornoisenormalscale\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Double\"}, {\"getter\": \"getDouble\", \"java_signature\": \"double\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"transparency\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Double\"}, {\"getter\": \"getDouble\", \"java_signature\": \"double\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"uniformblending\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Double\"}, {\"allowed_values\": [\"cooktorrance\", \"phong\", \"simple\"], \"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"lighting\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"String\"}, {\"getter\": \"getDouble\", \"java_signature\": \"double\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"fresnel\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Double\"}, {\"getter\": \"getDouble\", \"java_signature\": \"double\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"roughness\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Double\"}, {\"getter\": \"getDouble\", \"java_signature\": \"double\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"anisotropy\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Double\"}, {\"allowed_values\": [\"on\", \"off\"], \"getter\": \"getBoolean\", \"java_signature\": \"boolean\", \"kind\": \"boolean\", \"metadata_status\": \"KNOWN\", \"name\": \"flipanisotropy\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Boolean\"}, {\"getter\": \"getDoubleArray\", \"java_signature\": \"double[]\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"anisotropyaxis\", \"shape_rank\": 1, \"type_id\": \"Common\", \"value_type\": \"DoubleArray\"}, {\"getter\": \"getDouble\", \"java_signature\": \"double\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"metallic\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Double\"}, {\"getter\": \"getDouble\", \"java_signature\": \"double\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"pearl\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Double\"}, {\"getter\": \"getDouble\", \"java_signature\": \"double\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"diffusewrap\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Double\"}, {\"getter\": \"getDouble\", \"java_signature\": \"double\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"clearcoat\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Double\"}, {\"getter\": \"getDouble\", \"java_signature\": \"double\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"reflectance\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Double\"}, {\"allowed_values\": [\"on\", \"off\"], \"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"showambientscale\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"String\"}, {\"getter\": \"getDouble\", \"java_signature\": \"double\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"ambientscale\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Double\"}, {\"getter\": \"getDouble\", \"java_signature\": \"double\", \"kind\": \"float64\", \"metadata_status\": \"KNOWN\", \"name\": \"shininess\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Double\"}, {\"allowed_values\": [\"custom\", \"solid\", \"liquid\", \"gas\"], \"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"phase\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"String\"}, {\"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"orientation\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"String\"}, {\"getter\": \"getStringMatrix\", \"java_signature\": \"java.lang.String[][]\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"info\", \"shape_rank\": 2, \"type_id\": \"Common\", \"value_type\": \"StringMatrix\"}, {\"allowed_values\": [\"on\", \"off\"], \"getter\": \"getBoolean\", \"java_signature\": \"boolean\", \"kind\": \"boolean\", \"metadata_status\": \"KNOWN\", \"name\": \"updateIsValid\", \"shape_rank\": 0, \"type_id\": \"Common\", \"value_type\": \"Boolean\"}]}, \"error\": null, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-driver5cprobe-fixture-verify-257\", \"job_id\": \"f9edcc83-67ec-482f-986c-5308f56efbcb\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp1\", \"schema_version\": 1, \"server_instance_id\": \"80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"ec4dfbaf-a4c0-4f7d-981e-520123421da0\", \"request_hash\": \"e5e0d83cebe04fb50980f98019169716186d9d24578e6f7f2941745bc00d365d\", \"request_id\": \"phase4-driver5cprobe-fixture-verify\", \"revision\": 27, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_call",
+      "sequence": 7,
+      "structuredContent": {
+        "data": {
+          "properties": [
+            {
+              "getter": "getString",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "metadata_status": "KNOWN",
+              "name": "bndType",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "String"
+            },
+            {
+              "getter": "getDouble",
+              "java_signature": "double",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "thickness",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Double"
+            },
+            {
+              "allowed_values": [
+                "none",
+                "sys1"
+              ],
+              "getter": "getString",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "metadata_status": "KNOWN",
+              "name": "sys",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "String"
+            },
+            {
+              "allowed_values": [
+                "middle",
+                "bottom",
+                "top",
+                "userDef"
+              ],
+              "getter": "getString",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "metadata_status": "KNOWN",
+              "name": "middlePlane",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "String"
+            },
+            {
+              "getter": "getDouble",
+              "java_signature": "double",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "offset",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Double"
+            },
+            {
+              "allowed_values": [
+                "empty",
+                "stack"
+              ],
+              "getter": "getString",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "metadata_status": "KNOWN",
+              "name": "hiddenCardSwitcher",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "String"
+            },
+            {
+              "allowed_values": [
+                "none"
+              ],
+              "getter": "getString",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "metadata_status": "KNOWN",
+              "name": "stack",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "String"
+            },
+            {
+              "allowed_values": [
+                "on",
+                "off"
+              ],
+              "getter": "getBoolean",
+              "java_signature": "boolean",
+              "kind": "boolean",
+              "metadata_status": "KNOWN",
+              "name": "stackAlign",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Boolean"
+            },
+            {
+              "allowed_values": [
+                "on",
+                "off"
+              ],
+              "getter": "getBoolean",
+              "java_signature": "boolean",
+              "kind": "boolean",
+              "metadata_status": "KNOWN",
+              "name": "orientLine",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Boolean"
+            },
+            {
+              "getter": "getDouble",
+              "java_signature": "double",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "orientDist",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Double"
+            },
+            {
+              "getter": "getDouble",
+              "java_signature": "double",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "widthRatio",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Double"
+            },
+            {
+              "allowed_values": [
+                "on",
+                "off"
+              ],
+              "getter": "getBoolean",
+              "java_signature": "boolean",
+              "kind": "boolean",
+              "metadata_status": "KNOWN",
+              "name": "showLabels",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Boolean"
+            },
+            {
+              "allowed_values": [
+                "air",
+                "aluminum",
+                "aluminumanodized",
+                "aluminumbrushed",
+                "aluminummatte",
+                "aluminumoxidized",
+                "aluminumpolished",
+                "brass",
+                "brick",
+                "bronzehammered",
+                "carbonforged",
+                "carpaint",
+                "chrome",
+                "concrete",
+                "copper",
+                "copperbrushed",
+                "copperoxidized",
+                "defaultgeometry",
+                "defaultplot",
+                "glass",
+                "glasstinted",
+                "gold",
+                "iron",
+                "ironrusty",
+                "ironscratched",
+                "lead",
+                "leather",
+                "magnesium",
+                "magnesiumbrushed",
+                "oil",
+                "pcb",
+                "pearl",
+                "plastic",
+                "plasticshiny",
+                "rock",
+                "rosegold",
+                "rosegolddented",
+                "rubber",
+                "sand",
+                "silicon",
+                "soil",
+                "steel",
+                "steelanodized",
+                "steelbrushed",
+                "steelrusty",
+                "steelscratched",
+                "textile",
+                "titanium",
+                "titaniumbrushed",
+                "tungsten",
+                "uranium",
+                "water",
+                "wood",
+                "custom"
+              ],
+              "getter": "getString",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "metadata_status": "KNOWN",
+              "name": "family",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "String"
+            },
+            {
+              "getter": null,
+              "java_signature": null,
+              "kind": null,
+              "metadata_status": "UNKNOWN",
+              "name": "customize",
+              "shape_rank": null,
+              "type_id": "Common",
+              "value_type": "None"
+            },
+            {
+              "allowed_values": [
+                "custom",
+                "black",
+                "blue",
+                "cyan",
+                "gray",
+                "green",
+                "magenta",
+                "red",
+                "white",
+                "yellow"
+              ],
+              "getter": "getString",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "metadata_status": "KNOWN",
+              "name": "color",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "String"
+            },
+            {
+              "getter": "getDoubleArray",
+              "java_signature": "double[]",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "customcolor",
+              "shape_rank": 1,
+              "type_id": "Common",
+              "value_type": "DoubleArray"
+            },
+            {
+              "allowed_values": [
+                "custom",
+                "black",
+                "blue",
+                "cyan",
+                "gray",
+                "green",
+                "magenta",
+                "red",
+                "white",
+                "yellow"
+              ],
+              "getter": "getString",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "metadata_status": "KNOWN",
+              "name": "specular",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "String"
+            },
+            {
+              "getter": "getDoubleArray",
+              "java_signature": "double[]",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "customspecular",
+              "shape_rank": 1,
+              "type_id": "Common",
+              "value_type": "DoubleArray"
+            },
+            {
+              "allowed_values": [
+                "custom",
+                "black",
+                "blue",
+                "cyan",
+                "gray",
+                "green",
+                "magenta",
+                "red",
+                "white",
+                "yellow"
+              ],
+              "getter": "getString",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "metadata_status": "KNOWN",
+              "name": "diffuse",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "String"
+            },
+            {
+              "getter": "getDoubleArray",
+              "java_signature": "double[]",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "customdiffuse",
+              "shape_rank": 1,
+              "type_id": "Common",
+              "value_type": "DoubleArray"
+            },
+            {
+              "allowed_values": [
+                "custom",
+                "black",
+                "blue",
+                "cyan",
+                "gray",
+                "green",
+                "magenta",
+                "red",
+                "white",
+                "yellow"
+              ],
+              "getter": "getString",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "metadata_status": "KNOWN",
+              "name": "ambient",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "String"
+            },
+            {
+              "getter": "getDoubleArray",
+              "java_signature": "double[]",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "customambient",
+              "shape_rank": 1,
+              "type_id": "Common",
+              "value_type": "DoubleArray"
+            },
+            {
+              "allowed_values": [
+                "on",
+                "off"
+              ],
+              "getter": "getString",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "metadata_status": "KNOWN",
+              "name": "basis",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "String"
+            },
+            {
+              "getter": "getDouble",
+              "java_signature": "double",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "scale",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Double"
+            },
+            {
+              "getter": "getDoubleArray",
+              "java_signature": "double[]",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "origin",
+              "shape_rank": 1,
+              "type_id": "Common",
+              "value_type": "DoubleArray"
+            },
+            {
+              "getter": "getDoubleArray",
+              "java_signature": "double[]",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "basisx",
+              "shape_rank": 1,
+              "type_id": "Common",
+              "value_type": "DoubleArray"
+            },
+            {
+              "allowed_values": [
+                "on",
+                "off"
+              ],
+              "getter": "getString",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "metadata_status": "KNOWN",
+              "name": "specifybasisy",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "String"
+            },
+            {
+              "getter": "getDoubleArray",
+              "java_signature": "double[]",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "basisy",
+              "shape_rank": 1,
+              "type_id": "Common",
+              "value_type": "DoubleArray"
+            },
+            {
+              "allowed_values": [
+                "on",
+                "off"
+              ],
+              "getter": "getString",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "metadata_status": "KNOWN",
+              "name": "noise",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "String"
+            },
+            {
+              "allowed_values": [
+                "0",
+                "1"
+              ],
+              "getter": "getString",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "metadata_status": "KNOWN",
+              "name": "normalnoisetype",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "String"
+            },
+            {
+              "getter": "getDouble",
+              "java_signature": "double",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "noisescale",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Double"
+            },
+            {
+              "getter": "getDouble",
+              "java_signature": "double",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "noisefreq",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Double"
+            },
+            {
+              "allowed_values": [
+                "0",
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "7",
+                "8",
+                "9",
+                "10",
+                "11",
+                "12",
+                "13"
+              ],
+              "getter": "getString",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "metadata_status": "KNOWN",
+              "name": "normalnoisebrush",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "String"
+            },
+            {
+              "allowed_values": [
+                "on",
+                "off"
+              ],
+              "getter": "getString",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "metadata_status": "KNOWN",
+              "name": "colornoise",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "String"
+            },
+            {
+              "allowed_values": [
+                "0",
+                "1"
+              ],
+              "getter": "getString",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "metadata_status": "KNOWN",
+              "name": "colornoisetype",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "String"
+            },
+            {
+              "getter": "getDouble",
+              "java_signature": "double",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "colornoisescale",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Double"
+            },
+            {
+              "getter": "getDouble",
+              "java_signature": "double",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "colornoisefrequency",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Double"
+            },
+            {
+              "allowed_values": [
+                "0",
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "7",
+                "8",
+                "9",
+                "10",
+                "11",
+                "12",
+                "13"
+              ],
+              "getter": "getString",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "metadata_status": "KNOWN",
+              "name": "colornoisebrush",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "String"
+            },
+            {
+              "allowed_values": [
+                "custom",
+                "black",
+                "blue",
+                "cyan",
+                "gray",
+                "green",
+                "magenta",
+                "red",
+                "white",
+                "yellow"
+              ],
+              "getter": "getString",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "metadata_status": "KNOWN",
+              "name": "noisecolor",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "String"
+            },
+            {
+              "getter": "getDoubleArray",
+              "java_signature": "double[]",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "customnoisecolor",
+              "shape_rank": 1,
+              "type_id": "Common",
+              "value_type": "DoubleArray"
+            },
+            {
+              "getter": "getDouble",
+              "java_signature": "double",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "noisecolorblend",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Double"
+            },
+            {
+              "getter": "getDouble",
+              "java_signature": "double",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "colornoisenormalscale",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Double"
+            },
+            {
+              "getter": "getDouble",
+              "java_signature": "double",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "transparency",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Double"
+            },
+            {
+              "getter": "getDouble",
+              "java_signature": "double",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "uniformblending",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Double"
+            },
+            {
+              "allowed_values": [
+                "cooktorrance",
+                "phong",
+                "simple"
+              ],
+              "getter": "getString",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "metadata_status": "KNOWN",
+              "name": "lighting",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "String"
+            },
+            {
+              "getter": "getDouble",
+              "java_signature": "double",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "fresnel",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Double"
+            },
+            {
+              "getter": "getDouble",
+              "java_signature": "double",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "roughness",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Double"
+            },
+            {
+              "getter": "getDouble",
+              "java_signature": "double",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "anisotropy",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Double"
+            },
+            {
+              "allowed_values": [
+                "on",
+                "off"
+              ],
+              "getter": "getBoolean",
+              "java_signature": "boolean",
+              "kind": "boolean",
+              "metadata_status": "KNOWN",
+              "name": "flipanisotropy",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Boolean"
+            },
+            {
+              "getter": "getDoubleArray",
+              "java_signature": "double[]",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "anisotropyaxis",
+              "shape_rank": 1,
+              "type_id": "Common",
+              "value_type": "DoubleArray"
+            },
+            {
+              "getter": "getDouble",
+              "java_signature": "double",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "metallic",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Double"
+            },
+            {
+              "getter": "getDouble",
+              "java_signature": "double",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "pearl",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Double"
+            },
+            {
+              "getter": "getDouble",
+              "java_signature": "double",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "diffusewrap",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Double"
+            },
+            {
+              "getter": "getDouble",
+              "java_signature": "double",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "clearcoat",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Double"
+            },
+            {
+              "getter": "getDouble",
+              "java_signature": "double",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "reflectance",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Double"
+            },
+            {
+              "allowed_values": [
+                "on",
+                "off"
+              ],
+              "getter": "getString",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "metadata_status": "KNOWN",
+              "name": "showambientscale",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "String"
+            },
+            {
+              "getter": "getDouble",
+              "java_signature": "double",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "ambientscale",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Double"
+            },
+            {
+              "getter": "getDouble",
+              "java_signature": "double",
+              "kind": "float64",
+              "metadata_status": "KNOWN",
+              "name": "shininess",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Double"
+            },
+            {
+              "allowed_values": [
+                "custom",
+                "solid",
+                "liquid",
+                "gas"
+              ],
+              "getter": "getString",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "metadata_status": "KNOWN",
+              "name": "phase",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "String"
+            },
+            {
+              "getter": "getString",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "metadata_status": "KNOWN",
+              "name": "orientation",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "String"
+            },
+            {
+              "getter": "getStringMatrix",
+              "java_signature": "java.lang.String[][]",
+              "kind": "string",
+              "metadata_status": "KNOWN",
+              "name": "info",
+              "shape_rank": 2,
+              "type_id": "Common",
+              "value_type": "StringMatrix"
+            },
+            {
+              "allowed_values": [
+                "on",
+                "off"
+              ],
+              "getter": "getBoolean",
+              "java_signature": "boolean",
+              "kind": "boolean",
+              "metadata_status": "KNOWN",
+              "name": "updateIsValid",
+              "shape_rank": 0,
+              "type_id": "Common",
+              "value_type": "Boolean"
+            }
+          ]
+        },
+        "error": null,
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-driver5cprobe-fixture-verify-257",
+          "job_id": "f9edcc83-67ec-482f-986c-5308f56efbcb",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp1",
+            "schema_version": 1,
+            "server_instance_id": "80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "ec4dfbaf-a4c0-4f7d-981e-520123421da0",
+          "request_hash": "e5e0d83cebe04fb50980f98019169716186d9d24578e6f7f2941745bc00d365d",
+          "request_id": "phase4-driver5cprobe-fixture-verify",
+          "revision": 27,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-driver5cphase4-reconcile-model-phase4-259\", \"job_id\": \"b894f1a4-bb30-44b2-83f2-c8e86c7e30f9\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp1\", \"schema_version\": 1, \"server_instance_id\": \"80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"588ca590-5778-4b49-b5f1-43a400f73768\", \"request_hash\": \"8d6ae0707a5a775b253017b645fd3164e3728a1c6800e4f785b436094b0329ff\", \"request_id\": \"phase4-driver5cphase4-reconcile-model-phase4-259\", \"revision\": 27, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "model_inspect",
+      "sequence": 8,
+      "structuredContent": {
+        "data": {},
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-driver5cphase4-reconcile-model-phase4-259",
+          "job_id": "b894f1a4-bb30-44b2-83f2-c8e86c7e30f9",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp1",
+            "schema_version": 1,
+            "server_instance_id": "80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "588ca590-5778-4b49-b5f1-43a400f73768",
+          "request_hash": "8d6ae0707a5a775b253017b645fd3164e3728a1c6800e4f785b436094b0329ff",
+          "request_id": "phase4-driver5cphase4-reconcile-model-phase4-259",
+          "revision": 27,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"execution_state_unknown\": false, \"isolation_proof\": {\"api_probe\": {\"authenticated_api_success\": true, \"denial_evidence_source\": \"server_access_log\", \"loopback_address\": \"127.0.0.1\", \"loopback_port\": 56389, \"nonloopback_address\": \"192.168.100.152\", \"nonloopback_api_exception_http_status\": null, \"nonloopback_port\": 56389, \"observed_at\": \"2026-09-20T22:55:03Z\", \"probe_kind\": \"comsol_java_api\", \"server_access_log\": {\"entries\": [{\"http_status\": 101, \"method\": \"GET\", \"peer\": \"127.0.0.1\", \"route\": \"/webbridge/websocket\"}, {\"http_status\": 101, \"method\": \"GET\", \"peer\": \"127.0.0.1\", \"route\": \"/webbridge/websocket\"}, {\"http_status\": 403, \"method\": \"GET\", \"peer\": \"192.168.100.152\", \"route\": \"/webbridge/websocket\"}], \"finished_at\": \"2026-09-20T22:55:03Z\", \"inode\": 29149714, \"java_request_id\": \"g2-valve-nonloopback-connect\", \"offset_after\": 261, \"offset_before\": 0, \"parsed_nonloopback_entry\": {\"http_status\": 403, \"method\": \"GET\", \"peer\": \"192.168.100.152\", \"route\": \"/webbridge/websocket\"}, \"path\": \"$REPO/PRIVATE_REDACTED/g2-valve-runtime-20260920T225450573368Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-21.txt\", \"phase\": \"java_connect_only\", \"raw_probe_started_after_capture\": true, \"segment_sha256\": \"03f4cd95c7869018d66139bf0ef93dc42e150f88f34b92a9007fc7c3ccc5ee5e\", \"started_at\": \"2026-09-20T22:54:55Z\", \"status\": \"PASS\"}}, \"birth\": \"Mon Sep 21 06:54:50 2026\", \"config_inode\": 14720294, \"config_sha256\": \"1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357\", \"config_target\": \"/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml\", \"endpoint\": \"127.0.0.1:56389\", \"established_client_pids\": [71225, 71417], \"listener\": {\"endpoint\": \"*:56389\", \"local_endpoint\": \"*:56389\", \"pid\": 71225, \"raw\": \"java    71225 everwalker   59u  IPv6 0x307e9bb9f710be86      0t0  TCP *:56389 (LISTEN)\", \"remote_endpoint\": null, \"state\": \"LISTEN\"}, \"listener_binding\": \"wildcard\", \"loopback_listener\": false, \"pid\": 71225, \"proof_scope\": \"owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer\", \"receipt\": \"REDACTED\", \"verified\": true, \"worker_pid\": 71417}, \"partial_change\": false, \"status\": \"REFUSED\"}, \"error\": {\"code\": \"PROPERTY_TYPE_MISMATCH\", \"message\": \"property expects array rank 1, received 2\", \"safe_retry\": false}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-driver5ck_T_Cp_T_and_rho_expressions\", \"job_id\": \"859b92b6-066a-4adb-b057-2023294ea60a\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp1\", \"schema_version\": 1, \"server_instance_id\": \"80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"d85b4bb7-3afb-4d1c-96c1-b0b85fa47ca3\", \"request_hash\": \"73156f7c116f15fbaf4ee39a9d78cf5221301f483adca70345b990e9443072c9\", \"request_id\": \"phase4-driver5ck_T_Cp_T_and_rho_expressions\", \"revision\": 27, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "PROPERTY_TYPE_MISMATCH",
+      "error_message": "property expects array rank 1, received 2",
+      "operation": "operation_call",
+      "sequence": 9,
+      "structuredContent": {
+        "data": {
+          "execution_state_unknown": false,
+          "isolation_proof": {
+            "api_probe": {
+              "authenticated_api_success": true,
+              "denial_evidence_source": "server_access_log",
+              "loopback_address": "127.0.0.1",
+              "loopback_port": 56389,
+              "nonloopback_address": "192.168.100.152",
+              "nonloopback_api_exception_http_status": null,
+              "nonloopback_port": 56389,
+              "observed_at": "2026-09-20T22:55:03Z",
+              "probe_kind": "comsol_java_api",
+              "server_access_log": {
+                "entries": [
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 403,
+                    "method": "GET",
+                    "peer": "192.168.100.152",
+                    "route": "/webbridge/websocket"
+                  }
+                ],
+                "finished_at": "2026-09-20T22:55:03Z",
+                "inode": 29149714,
+                "java_request_id": "g2-valve-nonloopback-connect",
+                "offset_after": 261,
+                "offset_before": 0,
+                "parsed_nonloopback_entry": {
+                  "http_status": 403,
+                  "method": "GET",
+                  "peer": "192.168.100.152",
+                  "route": "/webbridge/websocket"
+                },
+                "path": "$REPO/PRIVATE_REDACTED/g2-valve-runtime-20260920T225450573368Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-21.txt",
+                "phase": "java_connect_only",
+                "raw_probe_started_after_capture": true,
+                "segment_sha256": "03f4cd95c7869018d66139bf0ef93dc42e150f88f34b92a9007fc7c3ccc5ee5e",
+                "started_at": "2026-09-20T22:54:55Z",
+                "status": "PASS"
+              }
+            },
+            "birth": "Mon Sep 21 06:54:50 2026",
+            "config_inode": 14720294,
+            "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+            "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+            "endpoint": "127.0.0.1:56389",
+            "established_client_pids": [
+              71225,
+              71417
+            ],
+            "listener": {
+              "endpoint": "*:56389",
+              "local_endpoint": "*:56389",
+              "pid": 71225,
+              "raw": "java    71225 everwalker   59u  IPv6 0x307e9bb9f710be86      0t0  TCP *:56389 (LISTEN)",
+              "remote_endpoint": null,
+              "state": "LISTEN"
+            },
+            "listener_binding": "wildcard",
+            "loopback_listener": false,
+            "pid": 71225,
+            "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+            "receipt": "REDACTED",
+            "verified": true,
+            "worker_pid": 71417
+          },
+          "partial_change": false,
+          "status": "REFUSED"
+        },
+        "error": {
+          "code": "PROPERTY_TYPE_MISMATCH",
+          "message": "property expects array rank 1, received 2",
+          "safe_retry": false
+        },
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-driver5ck_T_Cp_T_and_rho_expressions",
+          "job_id": "859b92b6-066a-4adb-b057-2023294ea60a",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp1",
+            "schema_version": 1,
+            "server_instance_id": "80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "d85b4bb7-3afb-4d1c-96c1-b0b85fa47ca3",
+          "request_hash": "73156f7c116f15fbaf4ee39a9d78cf5221301f483adca70345b990e9443072c9",
+          "request_id": "phase4-driver5ck_T_Cp_T_and_rho_expressions",
+          "revision": 27,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": false
+      },
+      "success": false
+    }
+  ]
+}

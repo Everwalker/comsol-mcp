@@ -1,0 +1,119 @@
+{
+  "case_id": "W13_T006_variables",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260920T235502Z-g3_1-m1phase4-describe-variable-group_create-2",
+          "request_id": "phase4-20260920T235502Z-g3_1-m1phase4-describe-variable-group_create-2"
+        },
+        "operation_id": "variable.group_create"
+      },
+      "elapsed_s": 0.0024992909748107195,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260920T235502Z-g3_1-m1phase4-describe-variable-set-3",
+          "request_id": "phase4-20260920T235502Z-g3_1-m1phase4-describe-variable-set-3"
+        },
+        "operation_id": "variable.set"
+      },
+      "elapsed_s": 0.00211237499024719,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260920T235502Z-g3_1-m1phase4-describe-variable-get-4",
+          "request_id": "phase4-20260920T235502Z-g3_1-m1phase4-describe-variable-get-4"
+        },
+        "operation_id": "variable.get"
+      },
+      "elapsed_s": 0.002017833001445979,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260920T235502Z-g3_1-m1phase4-describe-manage_variables-5",
+          "request_id": "phase4-20260920T235502Z-g3_1-m1phase4-describe-manage_variables-5"
+        },
+        "operation_id": "manage_variables"
+      },
+      "elapsed_s": 0.023920875042676926,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260920T235502Z-g3_1-m1phase4-describe-evaluate_expressions-6",
+          "request_id": "phase4-20260920T235502Z-g3_1-m1phase4-describe-evaluate_expressions-6"
+        },
+        "operation_id": "evaluate_expressions"
+      },
+      "elapsed_s": 0.002123249985743314,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 5
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "component": "comp1",
+          "expected_revision": 0,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp1",
+            "schema_version": 1,
+            "server_instance_id": "2cd5d40ac541ca8cfb61050c41525526edbfc4127e7d547ba47ffbdcc1f8adef",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "var1"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-20260920T235502Z-g3_1-m1variables_two_in_one_group",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp1",
+            "schema_version": 1,
+            "server_instance_id": "2cd5d40ac541ca8cfb61050c41525526edbfc4127e7d547ba47ffbdcc1f8adef",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260920T235502Z-g3_1-m1variables_two_in_one_group",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "variable.group_create"
+      },
+      "elapsed_s": 0.046124375017825514,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 6
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260920T235502Z-g3_1-m1reconcile-7222d2c4-d8e3-4ff6-8c0e-f6b3c58401af",
+          "request_id": "phase4-20260920T235502Z-g3_1-m1job_reconcile"
+        },
+        "job_id": "7222d2c4-d8e3-4ff6-8c0e-f6b3c58401af"
+      },
+      "elapsed_s": 0.0030188329983502626,
+      "operation": "job_reconcile",
+      "outer_isError": false,
+      "sequence": 7
+    }
+  ]
+}

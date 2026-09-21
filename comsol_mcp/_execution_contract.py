@@ -23,13 +23,59 @@ _RPC_WAIT_KEYS = frozenset({"rpc_timeout_s", "rpc_wait_timeout_s", "transport_ti
 class ExecutionContractError(RuntimeError):
     """A structured, non-engine error that a MCP adapter can expose safely."""
 
-    def __init__(self, code: str, message: str, *, safe_retry: bool = False) -> None:
+    def __init__(self, code: str, message: str, *, safe_retry: bool = False,
+                 details: Mapping[str, Any] | None = None,
+                 stage: str | None = None) -> None:
         super().__init__(message)
         self.code = code
         self.safe_retry = safe_retry
+        #: Optional machine-readable cause record.  It is omitted from the wire
+        #: shape unless a caller sets it, so published envelopes are unchanged.
+        self.details: dict[str, Any] = dict(details) if details else {}
+        #: Explicit dispatch stage this failure was raised in.  ``None`` means
+        #: "the raise site did not declare one", which the managed backend must
+        #: treat as fail-closed (an unknown engine state), never as a proven
+        #: pre-write refusal.  See ``comsol_mcp._domain_outcome``.
+        self.stage = stage
 
     def as_dict(self) -> dict[str, Any]:
-        return {"code": self.code, "message": str(self), "safe_retry": self.safe_retry}
+        out = {"code": self.code, "message": str(self), "safe_retry": self.safe_retry}
+        if self.stage is not None:
+            out["stage"] = self.stage
+        if self.details:
+            out["details"] = dict(self.details)
+        return out
+
+    def with_cause(self, exc: BaseException) -> "ExecutionContractError":
+        """Attach the original exception type/message so evidence keeps it."""
+        self.details = {**self.details, "cause_type": type(exc).__name__, "cause_message": str(exc)[:500]}
+        return self
+
+
+class PreWriteRefusal(ExecutionContractError):
+    """A refusal raised *before* the operation dispatched its first engine call.
+
+    The write-ticket path cannot distinguish "the callback refused the request"
+    from "the callback died with the engine state unknown" once the callback has
+    raised, so a refusal that provably happened before any engine mutation must
+    declare itself through an explicit validation stage.  The managed backend
+    still requires the dispatch witness to agree (no mutation-class engine call
+    during the callback); the class name alone is never the proof.
+    Everything else stays ``EXECUTION_STATE_UNKNOWN``: only raise this from a
+    code path that cannot have mutated the engine.
+    """
+
+    def __init__(self, code: str, message: str, *, safe_retry: bool = False,
+                 details: Mapping[str, Any] | None = None,
+                 stage: str | None = "validation") -> None:
+        super().__init__(code, message, safe_retry=safe_retry, details=details, stage=stage)
+
+
+def pre_dispatch_failure(code: str, message: str, exc: BaseException,
+                         *, safe_retry: bool = False) -> ExecutionContractError:
+    """Build a failure for an engine call that never reached the engine queue."""
+    return ExecutionContractError(code, message, safe_retry=safe_retry,
+                                  stage="validation").with_cause(exc)
 
 
 @dataclass(frozen=True, slots=True)

@@ -1,0 +1,229 @@
+{
+  "case_id": "GUARD_T005",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver5bphase4-describe-evaluate_expressions",
+          "request_id": "phase4-driver5bphase4-describe-evaluate_expressions"
+        },
+        "operation_id": "evaluate_expressions"
+      },
+      "elapsed_s": 0.002876457991078496,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver5bphase4-describe-get_core_metrics",
+          "request_id": "phase4-driver5bphase4-describe-get_core_metrics"
+        },
+        "operation_id": "get_core_metrics"
+      },
+      "elapsed_s": 0.0020463329856283963,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "depth": 2,
+        "execution": {
+          "expected_revision": 3,
+          "idempotency_key": "phase4-driver5bt005-tree-before",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp_6232ea65ddf0",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bt005-tree-before",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        }
+      },
+      "elapsed_s": 0.021693582995794713,
+      "operation": "model_tree",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 3,
+          "idempotency_key": "phase4-driver5bphase4-reconcile-model-comsol-mcp-phase4-55",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp_6232ea65ddf0",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bphase4-reconcile-model-comsol-mcp-phase4-55",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.0041571250185370445,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "evaluation_policy": "ephemeral_mutation",
+        "execution": {
+          "expected_revision": 3,
+          "idempotency_key": "phase4-driver5buser_derived_nodes_preserved",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp_6232ea65ddf0",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5buser_derived_nodes_preserved",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "expected_revision": 3,
+        "expressions_json": "[{\"name\": \"phase4_probe\", \"expression\": \"1+1\"}]",
+        "model_ref": {
+          "generation": 1,
+          "model_tag": "mcp_6232ea65ddf0",
+          "schema_version": 1,
+          "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "project_id": "comsol-mcp-phase4",
+        "session_id": "session-9f95c2e814acd5f99589961a"
+      },
+      "elapsed_s": 0.11283437500242144,
+      "operation": "evaluate_expressions",
+      "outer_isError": false,
+      "sequence": 5
+    },
+    {
+      "arguments": {
+        "depth": 2,
+        "execution": {
+          "expected_revision": 4,
+          "idempotency_key": "phase4-driver5bt005-tree-after",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp_6232ea65ddf0",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bt005-tree-after",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        }
+      },
+      "elapsed_s": 0.022730750031769276,
+      "operation": "model_tree",
+      "outer_isError": false,
+      "sequence": 6
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 4,
+          "idempotency_key": "phase4-driver5bphase4-reconcile-model-comsol-mcp-phase4-56",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp_6232ea65ddf0",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bphase4-reconcile-model-comsol-mcp-phase4-56",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.0053016250021755695,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 7
+    },
+    {
+      "arguments": {
+        "evaluation_policy": "ephemeral_mutation",
+        "execution": {
+          "expected_revision": 4,
+          "idempotency_key": "phase4-driver5bt005-invalid",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp_6232ea65ddf0",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5binvalid",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "expected_revision": 4,
+        "expressions_json": "[{\"name\": \"phase4_bad\", \"expression\": \"1+*2\"}]",
+        "model_ref": {
+          "generation": 1,
+          "model_tag": "mcp_6232ea65ddf0",
+          "schema_version": 1,
+          "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "project_id": "comsol-mcp-phase4",
+        "session_id": "session-9f95c2e814acd5f99589961a"
+      },
+      "elapsed_s": 0.057004750007763505,
+      "operation": "evaluate_expressions",
+      "outer_isError": true,
+      "sequence": 8
+    },
+    {
+      "arguments": {
+        "depth": 2,
+        "execution": {
+          "expected_revision": 4,
+          "idempotency_key": "phase4-driver5bt005-tree-after-bad",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp_6232ea65ddf0",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bt005-tree-after-bad",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        }
+      },
+      "elapsed_s": 0.020349291968159378,
+      "operation": "model_tree",
+      "outer_isError": false,
+      "sequence": 9
+    },
+    {
+      "arguments": {
+        "depth": 2,
+        "execution": {
+          "expected_revision": 4,
+          "idempotency_key": "phase4-driver5bt005-tree-cleanup",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp_6232ea65ddf0",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bt005-tree-cleanup",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        }
+      },
+      "elapsed_s": 0.017830166965723038,
+      "operation": "model_tree",
+      "outer_isError": false,
+      "sequence": 10
+    }
+  ]
+}

@@ -1,0 +1,275 @@
+{
+  "assertion_count": 11,
+  "case": {
+    "acceptance": [
+      "G3 §10 T038"
+    ],
+    "assertions": {
+      "envelope_consistency": {
+        "calls": 77,
+        "mismatches": []
+      },
+      "error_propagation": {
+        "probe": {
+          "error_code": "UNSUPPORTED_OPERATION",
+          "has_structured_content": true,
+          "job_id": null,
+          "operation_id": null,
+          "outer_isError": true,
+          "request_hash": null,
+          "success": false
+        },
+        "release": null,
+        "unknown_engine_state": null
+      },
+      "initialize": {
+        "caller_owned_private_home": false,
+        "capabilities": {
+          "completions": null,
+          "experimental": {},
+          "logging": null,
+          "prompts": {
+            "listChanged": false
+          },
+          "resources": {
+            "listChanged": false,
+            "subscribe": false
+          },
+          "tasks": null,
+          "tools": {
+            "listChanged": false
+          }
+        },
+        "instruction_bytes": 0,
+        "private_home": "$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T032906897124Z/primary/mcp-home",
+        "protocolVersion": "2025-11-25",
+        "server_name": "comsol-mcp-server",
+        "server_version": "1.30.0",
+        "tool_count": 65,
+        "tool_profile": "full"
+      },
+      "isolation": {
+        "applied": false,
+        "at": "2026-09-21T03:29:07.684966Z",
+        "attempted": false,
+        "declaration": {
+          "case_id": "GUARD_T038",
+          "mode": "shared_bound",
+          "modes": [
+            "own_model",
+            "checkpoint_restore",
+            "shared_bound"
+          ],
+          "rationale": "reads/writes the run's bound model; the run is serial"
+        },
+        "reason": "declared: this case runs against the run's bound model, strictly serially"
+      },
+      "partial_failure": {
+        "probe": {
+          "error_code": "UNSUPPORTED_OPERATION",
+          "has_structured_content": true,
+          "job_id": "b0a46fe2-be9a-47a8-9055-5ae1419f0a20",
+          "operation_id": "09acbfed-32c1-4ffd-a7ca-1d64eb1c3a33",
+          "outer_isError": true,
+          "request_hash": "b1cd8b9a2ff28a402209adea131e978752d212137f91a3c63f9d97d6830220b2",
+          "success": false
+        },
+        "release": null,
+        "unknown_engine_state": null
+      },
+      "prerequisites": {
+        "case_id": "GUARD_T038",
+        "checks": {
+          "bound_model": {
+            "applicable": false,
+            "evidence": "not applicable: the run is offline (no engine to bind a model on)",
+            "satisfied": null
+          },
+          "negative_probe": {
+            "applicable": false,
+            "evidence": "declared: the case asks for the product's own refusal",
+            "satisfied": null
+          }
+        },
+        "declared": [
+          "bound_model",
+          "negative_probe"
+        ],
+        "note": "a missing prerequisite makes this case DEPENDENCY_BLOCKED and points at the root cause; it never becomes a defect of this case",
+        "status": "SATISFIED",
+        "unknown_declarations": [],
+        "unsatisfied": []
+      },
+      "registry_paging_no_duplicates": {
+        "operations": 273,
+        "pages": 3,
+        "pass": true,
+        "total_reported": 273,
+        "unique": 273
+      },
+      "stdio_isolation": {
+        "engine_log": "$REPO/evidence/phase4/runs/20260921T032906897124Z/primary.engine.log",
+        "engine_log_bytes": 3355,
+        "jsonrpc_frames_on_engine_log": 0
+      },
+      "structured_content_envelope": {
+        "legacy_calls": 0,
+        "pass": true,
+        "strict_calls": 77,
+        "strict_calls_without_structured_content": [],
+        "tool_calls": 77
+      },
+      "subcase_inventory": {
+        "levels": [
+          "protocol"
+        ],
+        "missing": [],
+        "planned": 7,
+        "recorded": 7
+      },
+      "tools_list_schemas": {
+        "pass": true,
+        "tool_count": 65,
+        "tools": [
+          "check_server_port",
+          "commit_current_main_model",
+          "configure_single_main_workflow",
+          "configure_solver",
+          "create_feature",
+          "create_physics",
+          "create_physics_feature",
+          "create_solver_config",
+          "delete_feature",
+          "ensure_component",
+          "ensure_geometry",
+          "ensure_mesh",
+          "evaluate_expressions",
+          "get_core_metrics",
+          "get_parameters",
+          "job_log",
+          "job_reconcile",
+          "job_result",
+          "job_status",
+          "list_physics",
+          "list_physics_features",
+          "list_solver_config",
+          "list_solver_features",
+          "load_current_main_model",
+          "load_visible_main_model",
+          "manage_variables",
+          "mcp_tool_audit",
+          "model_adopt",
+          "model_create",
+          "model_inspect",
+          "model_load",
+          "model_tree",
+          "operation_call",
+          "operation_describe",
+          "prune_loaded_models",
+          "registry_call",
+          "registry_describe",
+          "registry_list",
+          "registry_manifest",
+          "registry_search",
+          "remove_physics",
+          "remove_physics_feature",
+          "run_feature",
+          "run_study",
+          "run_study_async",
+          "run_study_status",
+          "run_visible_main_iteration",
+          "runtime_poc_v64",
+          "save_main_model_snapshot",
+          "save_model",
+          "server_connect",
+          "server_disconnect",
+          "server_info",
+          "server_start",
+          "session_health",
+          "set_parameters",
+          "set_physics_selection",
+          "start_visible_main_workflow",
+          "start_visible_main_workflow_async",
+          "unlock_visible_main",
+          "update_feature",
+          "update_physics_feature",
+          "verify_visible_main_session",
+          "visible_main_workflow_status",
+          "workflow_info"
+        ]
+      }
+    },
+    "case_id": "GUARD_T038",
+    "finished_at": "2026-09-21T03:29:07.982658Z",
+    "package": "GUARD",
+    "reason": null,
+    "started_at": "2026-09-21T03:29:07.684960Z",
+    "status": "PASS",
+    "subcases": {
+      "error_propagation_structured": {
+        "acceptance": "T038 structured errors",
+        "level": "protocol",
+        "observed": {
+          "error_code": "UNSUPPORTED_OPERATION",
+          "has_structured_content": true,
+          "job_id": null,
+          "operation_id": null,
+          "outer_isError": true,
+          "request_hash": null,
+          "success": false
+        },
+        "status": "PASS"
+      },
+      "initialize_and_tools_list_schemas": {
+        "acceptance": "T038 tools/list schema validity",
+        "level": "protocol",
+        "status": "PASS",
+        "tool_count": 65
+      },
+      "outer_iserror_matches_success": {
+        "acceptance": "T038 isError semantics",
+        "calls": 77,
+        "level": "protocol",
+        "mismatches": [],
+        "status": "PASS"
+      },
+      "partial_failure_not_reported_as_success": {
+        "acceptance": "T038 partial failure not all-success",
+        "level": "protocol",
+        "observed": {
+          "error_code": "UNSUPPORTED_OPERATION",
+          "has_structured_content": true,
+          "job_id": "b0a46fe2-be9a-47a8-9055-5ae1419f0a20",
+          "operation_id": "09acbfed-32c1-4ffd-a7ca-1d64eb1c3a33",
+          "outer_isError": true,
+          "request_hash": "b1cd8b9a2ff28a402209adea131e978752d212137f91a3c63f9d97d6830220b2",
+          "success": false
+        },
+        "status": "PASS"
+      },
+      "registry_paging_continuation": {
+        "acceptance": "T038 pagination",
+        "level": "protocol",
+        "operations": 273,
+        "pages": 3,
+        "status": "PASS",
+        "total_reported": 273,
+        "unique": 273
+      },
+      "stdio_log_isolation": {
+        "acceptance": "T038 stdout/stderr isolation",
+        "level": "protocol",
+        "lines": [],
+        "status": "PASS"
+      },
+      "structured_content_action_results": {
+        "acceptance": "T038 structuredContent envelope",
+        "level": "protocol",
+        "missing": [],
+        "status": "PASS",
+        "strict_calls": 77
+      }
+    }
+  },
+  "subcase_count": 7
+}

@@ -1,0 +1,2773 @@
+{
+  "assertion_count": 8,
+  "case": {
+    "acceptance": [
+      "G3 §10 T010"
+    ],
+    "assertions": {
+      "engine_reconciliations": [
+        {
+          "at": "2026-09-20T22:55:32.294337Z",
+          "envelope_job_id": "2d1cff53-b1ee-4bf3-84b6-5bb6e6e210fd",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": true,
+          "jobs": [
+            {
+              "at": "2026-09-20T22:55:32.304233Z",
+              "error_code": null,
+              "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+              "reconciled_quiescent": false,
+              "reconciliation": [
+                {
+                  "message": "worker request status unavailable",
+                  "request_id": "wrk-0c10394c-335d-410e-8c17-cc317c93611c",
+                  "status": "UNKNOWN"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "message": "reconcile unfinished engine work before new operations",
+          "released": false,
+          "retry": "not performed: the gate was not released",
+          "still_blocked": {
+            "at": "2026-09-20T22:55:32.304500Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "2d1cff53-b1ee-4bf3-84b6-5bb6e6e210fd",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          "targets": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ],
+          "trigger": "control-gate refusal",
+          "trigger_tool": "operation_call",
+          "unresolved_before": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ]
+        },
+        {
+          "at": "2026-09-20T22:55:32.343149Z",
+          "envelope_job_id": "9baae233-8f5d-4fa6-8a2f-28e7cabb72cc",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": true,
+          "jobs": [
+            {
+              "at": "2026-09-20T22:55:32.353005Z",
+              "error_code": null,
+              "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+              "reconciled_quiescent": false,
+              "reconciliation": [
+                {
+                  "message": "worker request status unavailable",
+                  "request_id": "wrk-0c10394c-335d-410e-8c17-cc317c93611c",
+                  "status": "UNKNOWN"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "message": "reconcile unfinished engine work before new operations",
+          "released": false,
+          "retry": "not performed: the gate was not released",
+          "still_blocked": {
+            "at": "2026-09-20T22:55:32.353264Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "9baae233-8f5d-4fa6-8a2f-28e7cabb72cc",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          "targets": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ],
+          "trigger": "control-gate refusal",
+          "trigger_tool": "operation_call",
+          "unresolved_before": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ]
+        },
+        {
+          "at": "2026-09-20T22:55:32.366635Z",
+          "envelope_job_id": "2fe6c124-fc0d-4781-b7dc-d287104fc100",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": true,
+          "jobs": [
+            {
+              "at": "2026-09-20T22:55:32.374771Z",
+              "error_code": null,
+              "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+              "reconciled_quiescent": false,
+              "reconciliation": [
+                {
+                  "code": "REQUEST_NOT_FOUND",
+                  "message": "unknown request_id",
+                  "ok": false
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "message": "reconcile unfinished engine work before new operations",
+          "released": false,
+          "retry": "not performed: the gate was not released",
+          "still_blocked": {
+            "at": "2026-09-20T22:55:32.375049Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "2fe6c124-fc0d-4781-b7dc-d287104fc100",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          "targets": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ],
+          "trigger": "control-gate refusal",
+          "trigger_tool": "operation_call",
+          "unresolved_before": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ]
+        },
+        {
+          "at": "2026-09-20T22:55:32.379647Z",
+          "envelope_job_id": "1fd54bcd-fc24-40d9-91f0-d96913d89ced",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": true,
+          "jobs": [
+            {
+              "at": "2026-09-20T22:55:32.388068Z",
+              "error_code": null,
+              "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+              "reconciled_quiescent": false,
+              "reconciliation": [
+                {
+                  "code": "REQUEST_NOT_FOUND",
+                  "message": "unknown request_id",
+                  "ok": false
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "message": "reconcile unfinished engine work before new operations",
+          "released": false,
+          "retry": "not performed: the gate was not released",
+          "still_blocked": {
+            "at": "2026-09-20T22:55:32.388355Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "1fd54bcd-fc24-40d9-91f0-d96913d89ced",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          "targets": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ],
+          "trigger": "control-gate refusal",
+          "trigger_tool": "operation_call",
+          "unresolved_before": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ]
+        },
+        {
+          "at": "2026-09-20T22:55:32.392877Z",
+          "envelope_job_id": "5eb918f7-4421-4e97-9c7b-e93d0c074ca6",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": true,
+          "jobs": [
+            {
+              "at": "2026-09-20T22:55:32.402130Z",
+              "error_code": null,
+              "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+              "reconciled_quiescent": false,
+              "reconciliation": [
+                {
+                  "message": "worker request status unavailable",
+                  "request_id": "wrk-0c10394c-335d-410e-8c17-cc317c93611c",
+                  "status": "UNKNOWN"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "message": "reconcile unfinished engine work before new operations",
+          "released": false,
+          "retry": "not performed: the gate was not released",
+          "still_blocked": {
+            "at": "2026-09-20T22:55:32.402425Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "5eb918f7-4421-4e97-9c7b-e93d0c074ca6",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          "targets": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ],
+          "trigger": "control-gate refusal",
+          "trigger_tool": "operation_call",
+          "unresolved_before": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ]
+        },
+        {
+          "at": "2026-09-20T22:55:32.407595Z",
+          "envelope_job_id": "470c11d6-abcc-4c51-8f85-19620061504c",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": true,
+          "jobs": [
+            {
+              "at": "2026-09-20T22:55:32.417062Z",
+              "error_code": null,
+              "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+              "reconciled_quiescent": false,
+              "reconciliation": [
+                {
+                  "message": "worker request status unavailable",
+                  "request_id": "wrk-0c10394c-335d-410e-8c17-cc317c93611c",
+                  "status": "UNKNOWN"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "message": "reconcile unfinished engine work before new operations",
+          "released": false,
+          "retry": "not performed: the gate was not released",
+          "still_blocked": {
+            "at": "2026-09-20T22:55:32.417353Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "470c11d6-abcc-4c51-8f85-19620061504c",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          "targets": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ],
+          "trigger": "control-gate refusal",
+          "trigger_tool": "operation_call",
+          "unresolved_before": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ]
+        },
+        {
+          "at": "2026-09-20T22:55:32.422286Z",
+          "envelope_job_id": "7ae4e4e4-3bb1-463f-ac58-092d4e0f4ce0",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": true,
+          "jobs": [
+            {
+              "at": "2026-09-20T22:55:32.431753Z",
+              "error_code": null,
+              "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+              "reconciled_quiescent": false,
+              "reconciliation": [
+                {
+                  "message": "worker request status unavailable",
+                  "request_id": "wrk-0c10394c-335d-410e-8c17-cc317c93611c",
+                  "status": "UNKNOWN"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "message": "reconcile unfinished engine work before new operations",
+          "released": false,
+          "retry": "not performed: the gate was not released",
+          "still_blocked": {
+            "at": "2026-09-20T22:55:32.432093Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "7ae4e4e4-3bb1-463f-ac58-092d4e0f4ce0",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          "targets": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ],
+          "trigger": "control-gate refusal",
+          "trigger_tool": "operation_call",
+          "unresolved_before": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ]
+        },
+        {
+          "at": "2026-09-20T22:55:32.437058Z",
+          "envelope_job_id": "eac513f3-39d1-4f4b-8a12-d7ca7ba5cc8b",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": true,
+          "jobs": [
+            {
+              "at": "2026-09-20T22:55:32.446480Z",
+              "error_code": null,
+              "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+              "reconciled_quiescent": false,
+              "reconciliation": [
+                {
+                  "message": "worker request status unavailable",
+                  "request_id": "wrk-0c10394c-335d-410e-8c17-cc317c93611c",
+                  "status": "UNKNOWN"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "message": "reconcile unfinished engine work before new operations",
+          "released": false,
+          "retry": "not performed: the gate was not released",
+          "still_blocked": {
+            "at": "2026-09-20T22:55:32.446793Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "eac513f3-39d1-4f4b-8a12-d7ca7ba5cc8b",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          "targets": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ],
+          "trigger": "control-gate refusal",
+          "trigger_tool": "operation_call",
+          "unresolved_before": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ]
+        },
+        {
+          "at": "2026-09-20T22:55:32.451963Z",
+          "envelope_job_id": "e12c8988-1f3c-4954-b029-088b26cd1f0e",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": true,
+          "jobs": [
+            {
+              "at": "2026-09-20T22:55:32.461281Z",
+              "error_code": null,
+              "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+              "reconciled_quiescent": false,
+              "reconciliation": [
+                {
+                  "message": "worker request status unavailable",
+                  "request_id": "wrk-0c10394c-335d-410e-8c17-cc317c93611c",
+                  "status": "UNKNOWN"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "message": "reconcile unfinished engine work before new operations",
+          "released": false,
+          "retry": "not performed: the gate was not released",
+          "still_blocked": {
+            "at": "2026-09-20T22:55:32.461610Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "e12c8988-1f3c-4954-b029-088b26cd1f0e",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          "targets": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ],
+          "trigger": "control-gate refusal",
+          "trigger_tool": "operation_call",
+          "unresolved_before": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ]
+        },
+        {
+          "at": "2026-09-20T22:55:32.466724Z",
+          "envelope_job_id": "eb6bd8a4-3745-4e50-ae51-a2ed4555fbc2",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": true,
+          "jobs": [
+            {
+              "at": "2026-09-20T22:55:32.475613Z",
+              "error_code": null,
+              "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+              "reconciled_quiescent": false,
+              "reconciliation": [
+                {
+                  "message": "worker request status unavailable",
+                  "request_id": "wrk-0c10394c-335d-410e-8c17-cc317c93611c",
+                  "status": "UNKNOWN"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "message": "reconcile unfinished engine work before new operations",
+          "released": false,
+          "retry": "not performed: the gate was not released",
+          "still_blocked": {
+            "at": "2026-09-20T22:55:32.475926Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "eb6bd8a4-3745-4e50-ae51-a2ed4555fbc2",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          "targets": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ],
+          "trigger": "control-gate refusal",
+          "trigger_tool": "operation_call",
+          "unresolved_before": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ]
+        },
+        {
+          "at": "2026-09-20T22:55:32.481487Z",
+          "envelope_job_id": "e2f1f64e-b4d6-4301-856e-cf2360205169",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": true,
+          "jobs": [
+            {
+              "at": "2026-09-20T22:55:32.490389Z",
+              "error_code": null,
+              "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+              "reconciled_quiescent": false,
+              "reconciliation": [
+                {
+                  "message": "worker request status unavailable",
+                  "request_id": "wrk-0c10394c-335d-410e-8c17-cc317c93611c",
+                  "status": "UNKNOWN"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "message": "reconcile unfinished engine work before new operations",
+          "released": false,
+          "retry": "not performed: the gate was not released",
+          "still_blocked": {
+            "at": "2026-09-20T22:55:32.490703Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "e2f1f64e-b4d6-4301-856e-cf2360205169",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          "targets": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ],
+          "trigger": "control-gate refusal",
+          "trigger_tool": "operation_call",
+          "unresolved_before": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ]
+        },
+        {
+          "at": "2026-09-20T22:55:32.496181Z",
+          "envelope_job_id": "8b2c98fe-3e36-4129-9a5b-fd26f5f5d09e",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": true,
+          "jobs": [
+            {
+              "at": "2026-09-20T22:55:32.505407Z",
+              "error_code": null,
+              "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+              "reconciled_quiescent": false,
+              "reconciliation": [
+                {
+                  "message": "worker request status unavailable",
+                  "request_id": "wrk-0c10394c-335d-410e-8c17-cc317c93611c",
+                  "status": "UNKNOWN"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "message": "reconcile unfinished engine work before new operations",
+          "released": false,
+          "retry": "not performed: the gate was not released",
+          "still_blocked": {
+            "at": "2026-09-20T22:55:32.505730Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "8b2c98fe-3e36-4129-9a5b-fd26f5f5d09e",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          "targets": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ],
+          "trigger": "control-gate refusal",
+          "trigger_tool": "operation_call",
+          "unresolved_before": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ]
+        },
+        {
+          "at": "2026-09-20T22:55:32.512288Z",
+          "envelope_job_id": "305b929d-15b2-43cd-b02c-4beb2af1540d",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": true,
+          "jobs": [
+            {
+              "at": "2026-09-20T22:55:32.522621Z",
+              "error_code": null,
+              "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+              "reconciled_quiescent": false,
+              "reconciliation": [
+                {
+                  "message": "worker request status unavailable",
+                  "request_id": "wrk-0c10394c-335d-410e-8c17-cc317c93611c",
+                  "status": "UNKNOWN"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "message": "reconcile unfinished engine work before new operations",
+          "released": false,
+          "retry": "not performed: the gate was not released",
+          "still_blocked": {
+            "at": "2026-09-20T22:55:32.523002Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "305b929d-15b2-43cd-b02c-4beb2af1540d",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          "targets": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ],
+          "trigger": "control-gate refusal",
+          "trigger_tool": "operation_call",
+          "unresolved_before": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ]
+        },
+        {
+          "at": "2026-09-20T22:55:32.528535Z",
+          "envelope_job_id": "11a0be9e-12c8-40b9-879c-775ec95a4b2b",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": true,
+          "jobs": [
+            {
+              "at": "2026-09-20T22:55:32.537858Z",
+              "error_code": null,
+              "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+              "reconciled_quiescent": false,
+              "reconciliation": [
+                {
+                  "message": "worker request status unavailable",
+                  "request_id": "wrk-0c10394c-335d-410e-8c17-cc317c93611c",
+                  "status": "UNKNOWN"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "message": "reconcile unfinished engine work before new operations",
+          "released": false,
+          "retry": "not performed: the gate was not released",
+          "still_blocked": {
+            "at": "2026-09-20T22:55:32.538175Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "11a0be9e-12c8-40b9-879c-775ec95a4b2b",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          "targets": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ],
+          "trigger": "control-gate refusal",
+          "trigger_tool": "operation_call",
+          "unresolved_before": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ]
+        },
+        {
+          "at": "2026-09-20T22:55:32.543463Z",
+          "envelope_job_id": "4a9525da-2e30-4e94-8ec1-0c35574dfadb",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": true,
+          "jobs": [
+            {
+              "at": "2026-09-20T22:55:32.552663Z",
+              "error_code": null,
+              "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+              "reconciled_quiescent": false,
+              "reconciliation": [
+                {
+                  "message": "worker request status unavailable",
+                  "request_id": "wrk-0c10394c-335d-410e-8c17-cc317c93611c",
+                  "status": "UNKNOWN"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "message": "reconcile unfinished engine work before new operations",
+          "released": false,
+          "retry": "not performed: the gate was not released",
+          "still_blocked": {
+            "at": "2026-09-20T22:55:32.552988Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "4a9525da-2e30-4e94-8ec1-0c35574dfadb",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          "targets": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ],
+          "trigger": "control-gate refusal",
+          "trigger_tool": "operation_call",
+          "unresolved_before": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ]
+        },
+        {
+          "at": "2026-09-20T22:55:32.558162Z",
+          "envelope_job_id": "08de15c6-2ac0-4038-9b36-98afb98c4df8",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": true,
+          "jobs": [
+            {
+              "at": "2026-09-20T22:55:32.568104Z",
+              "error_code": null,
+              "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+              "reconciled_quiescent": false,
+              "reconciliation": [
+                {
+                  "message": "worker request status unavailable",
+                  "request_id": "wrk-0c10394c-335d-410e-8c17-cc317c93611c",
+                  "status": "UNKNOWN"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "message": "reconcile unfinished engine work before new operations",
+          "released": false,
+          "retry": "not performed: the gate was not released",
+          "still_blocked": {
+            "at": "2026-09-20T22:55:32.568425Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "08de15c6-2ac0-4038-9b36-98afb98c4df8",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "create_feature",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          "targets": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ],
+          "trigger": "control-gate refusal",
+          "trigger_tool": "create_feature",
+          "unresolved_before": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ]
+        },
+        {
+          "at": "2026-09-20T22:55:32.573519Z",
+          "envelope_job_id": "0c86f01f-8c8c-4b9e-9f47-7b5614f43353",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": true,
+          "jobs": [
+            {
+              "at": "2026-09-20T22:55:32.583054Z",
+              "error_code": null,
+              "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+              "reconciled_quiescent": false,
+              "reconciliation": [
+                {
+                  "message": "worker request status unavailable",
+                  "request_id": "wrk-0c10394c-335d-410e-8c17-cc317c93611c",
+                  "status": "UNKNOWN"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "message": "reconcile unfinished engine work before new operations",
+          "released": false,
+          "retry": "not performed: the gate was not released",
+          "still_blocked": {
+            "at": "2026-09-20T22:55:32.583385Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "0c86f01f-8c8c-4b9e-9f47-7b5614f43353",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "create_feature",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          "targets": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ],
+          "trigger": "control-gate refusal",
+          "trigger_tool": "create_feature",
+          "unresolved_before": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ]
+        },
+        {
+          "at": "2026-09-20T22:55:32.588412Z",
+          "envelope_job_id": "5690cd40-25f1-4623-a46a-19d749a5211a",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": true,
+          "jobs": [
+            {
+              "at": "2026-09-20T22:55:32.598292Z",
+              "error_code": null,
+              "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+              "reconciled_quiescent": false,
+              "reconciliation": [
+                {
+                  "message": "worker request status unavailable",
+                  "request_id": "wrk-0c10394c-335d-410e-8c17-cc317c93611c",
+                  "status": "UNKNOWN"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "message": "reconcile unfinished engine work before new operations",
+          "released": false,
+          "retry": "not performed: the gate was not released",
+          "still_blocked": {
+            "at": "2026-09-20T22:55:32.598624Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "5690cd40-25f1-4623-a46a-19d749a5211a",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "create_feature",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          "targets": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ],
+          "trigger": "control-gate refusal",
+          "trigger_tool": "create_feature",
+          "unresolved_before": [
+            "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+          ]
+        }
+      ],
+      "operation_availability": {
+        "create_feature": {
+          "available": true,
+          "effect": "PROJECT_WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "component",
+            "feature_type",
+            "geometry",
+            "properties_json",
+            "run_geometry",
+            "tag"
+          ],
+          "mcp_tool_name": "create_feature",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "legacy managed backend",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "node.property_set": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "path",
+            "project_id",
+            "properties",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "node_property_set",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "transaction.apply": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "actions",
+            "checkpoint_policy",
+            "expected_revision",
+            "idempotency_key",
+            "invariants",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "transaction_apply",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        }
+      },
+      "static_idempotency_contract_published": {
+        "available_operations": [
+          "node.property_set",
+          "transaction.apply"
+        ],
+        "execution_fields": [
+          "execution_timeout_s",
+          "expected_revision",
+          "idempotency_key",
+          "model_ref",
+          "queue_timeout_s",
+          "request_id",
+          "rpc_timeout_s",
+          "session_id"
+        ],
+        "input_schema_fields": [
+          "actions",
+          "checkpoint_policy",
+          "expected_revision",
+          "idempotency_key",
+          "invariants",
+          "model_ref",
+          "path",
+          "project_id",
+          "properties",
+          "request_id",
+          "session_id"
+        ],
+        "pass": true
+      },
+      "step_same_tag_different_type_rejected": {
+        "data_keys": [],
+        "elapsed_s": null,
+        "error_code": "EXECUTION_STATE_UNKNOWN",
+        "error_message": "reconcile unfinished engine work before new operations",
+        "observed": "EXECUTION_STATE_UNKNOWN",
+        "operation": "create_feature",
+        "outer_isError": true,
+        "success": false
+      },
+      "subcase_inventory": {
+        "levels": [
+          "live",
+          "static"
+        ],
+        "missing": [],
+        "planned": 5,
+        "recorded": 5
+      },
+      "t010_duplicate": {
+        "first": {
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "has_structured_content": true,
+          "operation_id": null,
+          "outer_isError": true,
+          "success": false
+        },
+        "first_created": false,
+        "second": {
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "has_structured_content": true,
+          "operation_id": null,
+          "outer_isError": true,
+          "success": false
+        },
+        "second_data_keys": [],
+        "second_error": "reconcile unfinished engine work before new operations",
+        "second_refused": true,
+        "second_reports_existing": false
+      },
+      "t010_probe_target": {
+        "candidates": 0,
+        "discovery": {
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "success": false
+        },
+        "probe_fixture": {
+          "created_candidates": 0,
+          "discovery": {
+            "count": 0,
+            "roots": {
+              "{\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"geom\", \"tag\": \"p4geom\"}, {\"collection\": \"feature\", \"tag\": \"p4blk\"}]}": {
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "success": false
+              },
+              "{\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"geom\", \"tag\": \"p4geom\"}]}": {
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "success": false
+              },
+              "{\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"material\", \"tag\": \"p4mat\"}]}": {
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "success": false
+              },
+              "{\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"mesh\", \"tag\": \"p4mesh\"}, {\"collection\": \"feature\", \"tag\": \"p4size\"}]}": {
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "success": false
+              },
+              "{\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"mesh\", \"tag\": \"p4mesh\"}]}": {
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "success": false
+              },
+              "{\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"physics\", \"tag\": \"p4ht\"}, {\"collection\": \"feature\", \"tag\": \"p4temp1\"}]}": {
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "success": false
+              },
+              "{\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"physics\", \"tag\": \"p4ht\"}]}": {
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "success": false
+              },
+              "{\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}]}": {
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "success": false
+              }
+            }
+          },
+          "fixture": {
+            "group_schema": {
+              "error_code": "IDEMPOTENCY_CONFLICT",
+              "properties": null,
+              "success": false
+            },
+            "model_ref": {
+              "generation": 1,
+              "model_tag": "mcp_6e530ea2e718",
+              "schema_version": 1,
+              "server_instance_id": "80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "nodes": {
+              "block": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "geom",
+                    "tag": "p4geom"
+                  },
+                  {
+                    "collection": "feature",
+                    "tag": "p4blk"
+                  }
+                ]
+              },
+              "component": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  }
+                ]
+              },
+              "geometry": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "geom",
+                    "tag": "p4geom"
+                  }
+                ]
+              },
+              "material": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "material",
+                    "tag": "p4mat"
+                  }
+                ]
+              },
+              "mesh": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "mesh",
+                    "tag": "p4mesh"
+                  }
+                ]
+              },
+              "mesh_size": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "mesh",
+                    "tag": "p4mesh"
+                  },
+                  {
+                    "collection": "feature",
+                    "tag": "p4size"
+                  }
+                ]
+              },
+              "physics": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "physics",
+                    "tag": "p4ht"
+                  }
+                ]
+              },
+              "temperature": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "physics",
+                    "tag": "p4ht"
+                  },
+                  {
+                    "collection": "feature",
+                    "tag": "p4temp1"
+                  }
+                ]
+              }
+            },
+            "steps": [
+              {
+                "reason": "the bound model changed since the fixture was created, so its nodes are recreated in the model this case addresses",
+                "status": "REBUILT",
+                "step": "cache_invalidated"
+              },
+              {
+                "error_code": "IDEMPOTENCY_CONFLICT",
+                "message": "idempotency key was reused with a different request body",
+                "operation": "definition.component_manage",
+                "status": "FAILED",
+                "step": "component",
+                "success": false
+              },
+              {
+                "error_code": "IDEMPOTENCY_CONFLICT",
+                "message": "idempotency key was reused with a different request body",
+                "operation": "geometry.sequence_create",
+                "status": "FAILED",
+                "step": "geometry",
+                "success": false
+              },
+              {
+                "error_code": "IDEMPOTENCY_CONFLICT",
+                "message": "idempotency key was reused with a different request body",
+                "operation": "geometry.feature_create",
+                "status": "FAILED",
+                "step": "block",
+                "success": false
+              },
+              {
+                "error_code": "IDEMPOTENCY_CONFLICT",
+                "message": "idempotency key was reused with a different request body",
+                "operation": "mesh.create",
+                "status": "FAILED",
+                "step": "mesh",
+                "success": false
+              },
+              {
+                "error_code": "IDEMPOTENCY_CONFLICT",
+                "message": "idempotency key was reused with a different request body",
+                "operation": "mesh.feature_create",
+                "status": "FAILED",
+                "step": "mesh_size",
+                "success": false
+              },
+              {
+                "error_code": "IDEMPOTENCY_CONFLICT",
+                "message": "idempotency key was reused with a different request body",
+                "operation": "physics.create",
+                "status": "FAILED",
+                "step": "physics",
+                "success": false
+              },
+              {
+                "error_code": "IDEMPOTENCY_CONFLICT",
+                "message": "idempotency key was reused with a different request body",
+                "operation": "physics.feature_create",
+                "status": "FAILED",
+                "step": "temperature",
+                "success": false
+              },
+              {
+                "error_code": "IDEMPOTENCY_CONFLICT",
+                "message": "idempotency key was reused with a different request body",
+                "operation": "material.create",
+                "status": "FAILED",
+                "step": "material",
+                "success": false
+              },
+              {
+                "error_code": "IDEMPOTENCY_CONFLICT",
+                "operation": "node.property_schema",
+                "status": "FAILED",
+                "step": "material_group_schema"
+              }
+            ]
+          },
+          "group_schema": {
+            "error_code": "IDEMPOTENCY_CONFLICT",
+            "properties": null,
+            "success": false
+          },
+          "material_group_candidates": 0,
+          "owned_candidates": 0,
+          "owned_nodes": [
+            {
+              "error_code": "EXECUTION_STATE_UNKNOWN",
+              "known": [],
+              "node": "block",
+              "path": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "geom",
+                    "tag": "p4geom"
+                  },
+                  {
+                    "collection": "feature",
+                    "tag": "p4blk"
+                  }
+                ]
+              },
+              "properties": 0,
+              "success": false
+            },
+            {
+              "error_code": "EXECUTION_STATE_UNKNOWN",
+              "known": [],
+              "node": "mesh_size",
+              "path": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "mesh",
+                    "tag": "p4mesh"
+                  },
+                  {
+                    "collection": "feature",
+                    "tag": "p4size"
+                  }
+                ]
+              },
+              "properties": 0,
+              "success": false
+            },
+            {
+              "error_code": "EXECUTION_STATE_UNKNOWN",
+              "known": [],
+              "node": "temperature",
+              "path": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "physics",
+                    "tag": "p4ht"
+                  },
+                  {
+                    "collection": "feature",
+                    "tag": "p4temp1"
+                  }
+                ]
+              },
+              "properties": 0,
+              "success": false
+            },
+            {
+              "error_code": "EXECUTION_STATE_UNKNOWN",
+              "known": [],
+              "node": "physics",
+              "path": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "physics",
+                    "tag": "p4ht"
+                  }
+                ]
+              },
+              "properties": 0,
+              "success": false
+            },
+            {
+              "error_code": "EXECUTION_STATE_UNKNOWN",
+              "known": [],
+              "node": "material",
+              "path": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "material",
+                    "tag": "p4mat"
+                  }
+                ]
+              },
+              "properties": 0,
+              "success": false
+            },
+            {
+              "error_code": "EXECUTION_STATE_UNKNOWN",
+              "known": [],
+              "node": "geometry",
+              "path": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "geom",
+                    "tag": "p4geom"
+                  }
+                ]
+              },
+              "properties": 0,
+              "success": false
+            }
+          ],
+          "status": "EMPTY"
+        },
+        "target": null
+      },
+      "unknown_job_ledger": {
+        "entries": [
+          {
+            "first_seen_at": "2026-09-20T22:55:18.251911Z",
+            "job_id": "98f1caa6-9318-4120-8466-1718f1e0a27b",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "legacy callback raised after write dispatch",
+            "last_seen_at": "2026-09-20T22:55:18.251931Z",
+            "observations": [
+              {
+                "at": "2026-09-20T22:55:18.251933Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "legacy callback raised after write dispatch",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-20T22:55:18.257324Z",
+                "error_code": null,
+                "job_id": "98f1caa6-9318-4120-8466-1718f1e0a27b",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-02ce7b11-daa6-466b-bec6-27d792d7c43b",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-5918b46c-a30f-449f-8ba0-417fcfc6824e",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-470e37fc-6897-4634-9025-c4c6ad6a1649",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-1d299591-80ce-4114-bb5f-93ffbee1f096",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-beca64f7-c264-4447-a615-79fbf5ef24b8",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-048988b6-4161-4280-9bc5-e48afd159645",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-eea84847-8db8-4f43-8948-2d96affbd2a8",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-5f850e97-148a-4eb6-9b24-75986ac811fe",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-20T22:55:18.257343Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-20T22:55:18.352993Z",
+            "job_id": "280c8c75-1611-4563-9f84-b5a1812d26e9",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "legacy callback raised after write dispatch",
+            "last_seen_at": "2026-09-20T22:55:18.353025Z",
+            "observations": [
+              {
+                "at": "2026-09-20T22:55:18.353027Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "legacy callback raised after write dispatch",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-20T22:55:18.358159Z",
+                "error_code": null,
+                "job_id": "280c8c75-1611-4563-9f84-b5a1812d26e9",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-b66fd75d-015c-40db-9df5-95a2e07fd4bd",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-24756cdf-1057-4adb-937f-1c710dd6848f",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-5d90b8f1-3aff-455f-9fa8-cca93ba29f95",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-32d62a09-5c06-445f-8f99-2fd6561f83f2",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-34c544bf-ef32-42d5-8066-71e5ab53bdde",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-110e4f76-003c-4224-b686-b8079062b0cc",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-96929673-cb53-4ed5-b345-0292af83bd8d",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-07ccb613-b609-4ec3-a60d-ffa434ab19f5",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-20T22:55:18.358179Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-20T22:55:20.174629Z",
+            "job_id": "c507c1b0-cb20-46d6-abdd-78e1173941cd",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "setIndex was dispatched but the call failed: ExecutionContractError",
+            "last_seen_at": "2026-09-20T22:55:20.174689Z",
+            "observations": [
+              {
+                "at": "2026-09-20T22:55:20.174691Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "setIndex was dispatched but the call failed: ExecutionContractError",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-20T22:55:20.184118Z",
+                "error_code": null,
+                "job_id": "c507c1b0-cb20-46d6-abdd-78e1173941cd",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-cbad0e93-318c-428c-bae3-dcc3e9168ef5",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-dc91070f-bc35-4c75-9193-a48ce1f690ee",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-a6ee9f89-410f-420d-b9fc-8f6480b82179",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-22bd603c-2e67-4607-8ccc-31ee15c512a5",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-9c58b640-c4a2-4cd4-b0f0-55d94bfbff1f",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-63a99d52-73a1-47e2-9c04-e46cd6e894bf",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-3f7d3af2-0fb8-4490-88e2-75be618d839c",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-266c8ea0-2bdf-42be-be08-776597bf97c8",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-dec0b540-d421-458f-ba7e-7333fbd1d02c",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-e8da9dd8-aec7-48b3-b1ef-0db73fa05a4c",
+                    "source": "durable_worker_observation",
+                    "status": "FAILED"
+                  },
+                  {
+                    "request_id": "wrk-4a3e77a7-e9a5-491d-90c5-2dcdf45b3817",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-20T22:55:20.184143Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-20T22:55:20.256060Z",
+            "job_id": "c940c5ef-1004-4842-b18e-ef57b2928cea",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "legacy callback raised after write dispatch",
+            "last_seen_at": "2026-09-20T22:55:20.256137Z",
+            "observations": [
+              {
+                "at": "2026-09-20T22:55:20.256139Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "legacy callback raised after write dispatch",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-20T22:55:20.262584Z",
+                "error_code": null,
+                "job_id": "c940c5ef-1004-4842-b18e-ef57b2928cea",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-1073a0d8-d236-409e-857e-d1294d43d4ab",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-18a284ec-dbdd-4763-b6a9-4a239623230f",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-47945549-8314-4e83-8e9d-8c3da931eb53",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-c0f596f8-9d9d-4207-9353-5f7a01f717b1",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-b6f66a75-b4da-40a4-8057-c1c074a830d9",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-0f994c01-0262-43f7-b6e0-573269cfef2a",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-f758dbc3-1a17-4d96-aa45-e2c4d97f28ec",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-22a8a01d-53ff-455c-bb6a-ceeafa6ca1fe",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-d1647977-1223-47bb-9df7-dfdc821eeb57",
+                    "source": "durable_worker_observation",
+                    "status": "FAILED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-20T22:55:20.262606Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-20T22:55:20.329544Z",
+            "job_id": "e619cd27-0e1a-4153-b7a9-011104165624",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "legacy callback raised after write dispatch",
+            "last_seen_at": "2026-09-20T22:55:20.329642Z",
+            "observations": [
+              {
+                "at": "2026-09-20T22:55:20.329644Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "legacy callback raised after write dispatch",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-20T22:55:20.335654Z",
+                "error_code": null,
+                "job_id": "e619cd27-0e1a-4153-b7a9-011104165624",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-57da40e4-a84a-4d33-b7e6-d5379d381025",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-e22ec233-b31d-4203-834a-64173b425bcc",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-9c91e9de-d126-457e-ab6d-992bb2d4f2b4",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-48fcb5ed-0b32-49c6-b272-5fa88d375f07",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-10795829-cc6e-45f4-bbf3-938bee2aec46",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-67d64e19-99c2-4bf8-9264-6ddf1b9bdfb6",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-eaab8ddf-46c4-4742-ac66-c070dbf013ed",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-ce956b6a-768f-48a2-af98-098f8a972a01",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-cc69c1b4-ba2b-42b6-8d34-8a8e7100de17",
+                    "source": "durable_worker_observation",
+                    "status": "FAILED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-20T22:55:20.335675Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-20T22:55:20.429866Z",
+            "job_id": "38fdd74d-bed8-42cc-a138-8b6476dd6419",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "legacy callback raised after write dispatch",
+            "last_seen_at": "2026-09-20T22:55:20.429981Z",
+            "observations": [
+              {
+                "at": "2026-09-20T22:55:20.429983Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "legacy callback raised after write dispatch",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-20T22:55:20.436095Z",
+                "error_code": null,
+                "job_id": "38fdd74d-bed8-42cc-a138-8b6476dd6419",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-1578e3b3-11dd-4b95-be61-7441b84ce608",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-dd711728-2ded-4d6e-bf20-63e427de2765",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-04ab3a11-ad5f-4182-b234-e7f090e98540",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-d98f88de-4bf1-42a0-a002-6ae2ec578eae",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-b66866ee-edef-463f-abd7-1c84630c2a0c",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-15e5300f-8a6d-4eeb-baff-5c3aea9acef4",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-ffb0f10a-a51a-4fcf-b5b5-c70a22b9b8ef",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-04388cd7-6b1b-4a79-943b-5977a6efc8fc",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-71ff436f-d7bc-4b1e-bc64-a99da2a7ec19",
+                    "source": "durable_worker_observation",
+                    "status": "FAILED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-20T22:55:20.436115Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-20T22:55:22.920377Z",
+            "job_id": "a79f3310-4416-4db8-8099-7f7269611f02",
+            "last_error_code": null,
+            "last_message": null,
+            "last_seen_at": "2026-09-20T22:55:22.920516Z",
+            "observations": [
+              {
+                "at": "2026-09-20T22:55:22.920518Z",
+                "error_code": null,
+                "message": null,
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-20T22:55:22.930816Z",
+                "error_code": null,
+                "job_id": "a79f3310-4416-4db8-8099-7f7269611f02",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-33a9e322-ef8c-4e3d-aaff-78a94466bbc5",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-ca325bbb-c64d-4c03-b850-68706beecf4d",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-0ea17b79-1c1d-403b-8fd5-3c3f06cc9041",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-e56bfca3-976a-4b9e-a4f4-1199d5f7b5a9",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-f34f7948-0d1f-499a-9c26-4e39c52d4767",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-30c1d324-3eda-429a-ae25-76865208effb",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-37513135-c1f0-4887-b78c-59db31801deb",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-961b478b-24fc-4448-88fb-664a22156afc",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-f6cfdc74-36aa-49c9-bdce-abfbb4c9472c",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-f83bcc71-cb90-4c2d-866c-d58169cfa303",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-d51c494d-993f-4de3-bfd8-f5120e62660d",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-f8e24f47-836d-441d-886b-46f76ac5f70c",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-452cc711-0781-4529-85b4-6e3d37bd74c2",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-2819c750-fdee-4d5c-81dc-9c7bc83edc93",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-12cbff0d-14c8-44be-9f3d-cfb0eb68e116",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-67d25501-13a2-435d-a6aa-0711e8df4501",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-9fdfab2b-e275-43c7-ac00-05f8bc7d99a3",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-a4b2b332-72d8-4a7f-a55d-f2f7e1106d62",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-d04a1ee6-59e9-41a9-bc09-7b5e5a6cee8d",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-53bc402d-2fb6-403a-906c-654d00de4e6b",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-d49c6eab-da2a-493e-9cce-5b1f54304835",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-46affaec-7064-40b4-9716-3eb3fd40917e",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-6dd3ed59-6c0e-4f38-9d69-4fc284c4ee59",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-2fe0b6c5-6d24-4175-8fb2-285a6e9ebe5d",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-5f859d7e-0282-4bae-9551-01102e707c8a",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-a70e7c75-c105-4473-9a0c-de64c8a55fce",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-d6b42d43-8b12-402b-9cc2-a5a53997d75b",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-686fe206-081e-4073-a8a7-be38eb36f27e",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-74ca6757-c892-495f-b6f9-0392286dfa4b",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-99c8009d-369d-4df5-8833-90666611693c",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-477c5ef1-769a-468a-9eaa-8f349c41ad26",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-9c6505c1-a14d-42b0-a56c-b9562fe979f1",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-20T22:55:22.930860Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-20T22:55:25.717489Z",
+            "job_id": "89e6a314-a6ee-4e54-aa24-da82a33e4677",
+            "last_error_code": null,
+            "last_message": null,
+            "last_seen_at": "2026-09-20T22:55:25.717666Z",
+            "observations": [
+              {
+                "at": "2026-09-20T22:55:25.717668Z",
+                "error_code": null,
+                "message": null,
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-20T22:55:25.728056Z",
+                "error_code": null,
+                "job_id": "89e6a314-a6ee-4e54-aa24-da82a33e4677",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-baa68b40-80ac-4f9e-af35-15601b2ba2be",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-1c912ce7-8e16-4f21-90e0-0ffef4544205",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-95add002-d2c8-4326-8899-8c0d9c6dfdd8",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-7444d4c3-71d3-48a1-846b-533e0817b422",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-232866e0-ec84-4966-8a60-c2b40fb98753",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-f2503e0e-0ef5-476f-9bdf-671489903775",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-a94d648c-4e0c-4f79-97ee-4f8c2be8d0dd",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-ecf9d2e8-ddd3-4f5f-9224-5ebb3986c46c",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-ad91ef5c-7833-4d4b-a6ca-0209f09240bd",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-7c1d5c94-2c1f-4ab3-a010-99053b60ca83",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-ad006823-aa2c-4258-b2f4-aec3ad68c828",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-da7af15d-bf48-4a28-a4b3-1369ab755b35",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-89566ade-6947-4fb1-8b82-5c3a58127e03",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-0925815f-3d48-434a-ac99-f8ed559bd1fc",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-22d4639c-d320-4b64-99db-aae85e252b7f",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-073005d4-c998-4ce4-a72b-e41f5aab9d93",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-2998c9cc-e5a3-4a98-87ad-fa3763ee796d",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-763efc7f-3db3-4000-901a-4ffb92b145d4",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-e4b59a4b-32fe-4cde-96e4-ee54f07db1d6",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-e3a80c54-5f57-4f7a-a16f-bdaaf610547d",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-34966184-cb73-407b-a6b7-3e51121431bd",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-bee4dd5d-9a63-4d66-bc61-53734a9f7af3",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-02881b58-7c12-4b59-8e92-73557b2e0be7",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-34846b9c-2365-4977-b24b-50d8345b51ef",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-ab3c5c29-9264-4ad5-bdd2-045eef0536b5",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-308f098f-5f84-4d92-bd65-2d1eabf5adf3",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-81815c68-bf23-4e80-83dc-66c06e5b3c80",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-ddf1a612-0777-4003-93a2-534322c70ac3",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-f1fcc763-6740-45eb-a419-db8e61f7bec5",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-f98fd750-69b3-459e-b583-0d58def1e0a3",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-7c7d8de7-300f-4dfe-907b-fb2fa5b967a8",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-160e0bcd-0e3d-4be3-9e7a-6fb066f58a0c",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-20T22:55:25.728097Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-20T22:55:32.230770Z",
+            "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "backend execution failed; inspect worker evidence",
+            "last_seen_at": "2026-09-20T22:55:32.230988Z",
+            "observations": [
+              {
+                "at": "2026-09-20T22:55:32.230990Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "backend execution failed; inspect worker evidence",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": false,
+            "release_attempts": [
+              {
+                "at": "2026-09-20T22:55:32.490389Z",
+                "error_code": null,
+                "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+                "reconciled_quiescent": false,
+                "reconciliation": [
+                  {
+                    "message": "worker request status unavailable",
+                    "request_id": "wrk-0c10394c-335d-410e-8c17-cc317c93611c",
+                    "status": "UNKNOWN"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              },
+              {
+                "at": "2026-09-20T22:55:32.505407Z",
+                "error_code": null,
+                "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+                "reconciled_quiescent": false,
+                "reconciliation": [
+                  {
+                    "message": "worker request status unavailable",
+                    "request_id": "wrk-0c10394c-335d-410e-8c17-cc317c93611c",
+                    "status": "UNKNOWN"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              },
+              {
+                "at": "2026-09-20T22:55:32.522621Z",
+                "error_code": null,
+                "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+                "reconciled_quiescent": false,
+                "reconciliation": [
+                  {
+                    "message": "worker request status unavailable",
+                    "request_id": "wrk-0c10394c-335d-410e-8c17-cc317c93611c",
+                    "status": "UNKNOWN"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              },
+              {
+                "at": "2026-09-20T22:55:32.537858Z",
+                "error_code": null,
+                "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+                "reconciled_quiescent": false,
+                "reconciliation": [
+                  {
+                    "message": "worker request status unavailable",
+                    "request_id": "wrk-0c10394c-335d-410e-8c17-cc317c93611c",
+                    "status": "UNKNOWN"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              },
+              {
+                "at": "2026-09-20T22:55:32.552663Z",
+                "error_code": null,
+                "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+                "reconciled_quiescent": false,
+                "reconciliation": [
+                  {
+                    "message": "worker request status unavailable",
+                    "request_id": "wrk-0c10394c-335d-410e-8c17-cc317c93611c",
+                    "status": "UNKNOWN"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              },
+              {
+                "at": "2026-09-20T22:55:32.568104Z",
+                "error_code": null,
+                "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+                "reconciled_quiescent": false,
+                "reconciliation": [
+                  {
+                    "message": "worker request status unavailable",
+                    "request_id": "wrk-0c10394c-335d-410e-8c17-cc317c93611c",
+                    "status": "UNKNOWN"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              },
+              {
+                "at": "2026-09-20T22:55:32.583054Z",
+                "error_code": null,
+                "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+                "reconciled_quiescent": false,
+                "reconciliation": [
+                  {
+                    "message": "worker request status unavailable",
+                    "request_id": "wrk-0c10394c-335d-410e-8c17-cc317c93611c",
+                    "status": "UNKNOWN"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              },
+              {
+                "at": "2026-09-20T22:55:32.598292Z",
+                "error_code": null,
+                "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+                "reconciled_quiescent": false,
+                "reconciliation": [
+                  {
+                    "message": "worker request status unavailable",
+                    "request_id": "wrk-0c10394c-335d-410e-8c17-cc317c93611c",
+                    "status": "UNKNOWN"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": false,
+            "status": "UNKNOWN"
+          }
+        ],
+        "gate_refusals": {
+          "by_tool": {
+            "create_feature": 3,
+            "operation_call": 16
+          },
+          "count": 19,
+          "first": {
+            "at": "2026-09-20T22:55:32.247095Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "job_id": "ef0e28df-c2cd-4960-99b3-4c4d84615d6a",
+            "message": "reconcile unfinished engine work before new operations",
+            "tool": "operation_call"
+          },
+          "last": {
+            "at": "2026-09-20T22:55:32.588103Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "job_id": "5690cd40-25f1-4623-a46a-19d749a5211a",
+            "message": "reconcile unfinished engine work before new operations",
+            "tool": "create_feature"
+          }
+        },
+        "note": "the driver records every job id an envelope reported as UNKNOWN (no published read lists the unresolved jobs) and releases each one through the published job_reconcile read before it replays a refused call once",
+        "released_jobs": [
+          "98f1caa6-9318-4120-8466-1718f1e0a27b",
+          "280c8c75-1611-4563-9f84-b5a1812d26e9",
+          "c507c1b0-cb20-46d6-abdd-78e1173941cd",
+          "c940c5ef-1004-4842-b18e-ef57b2928cea",
+          "e619cd27-0e1a-4153-b7a9-011104165624",
+          "38fdd74d-bed8-42cc-a138-8b6476dd6419",
+          "a79f3310-4416-4db8-8099-7f7269611f02",
+          "89e6a314-a6ee-4e54-aa24-da82a33e4677"
+        ],
+        "still_blocked": [
+          {
+            "at": "2026-09-20T22:55:32.257230Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "ef0e28df-c2cd-4960-99b3-4c4d84615d6a",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          {
+            "at": "2026-09-20T22:55:32.304500Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "2d1cff53-b1ee-4bf3-84b6-5bb6e6e210fd",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          {
+            "at": "2026-09-20T22:55:32.353264Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "9baae233-8f5d-4fa6-8a2f-28e7cabb72cc",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          {
+            "at": "2026-09-20T22:55:32.375049Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "2fe6c124-fc0d-4781-b7dc-d287104fc100",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          {
+            "at": "2026-09-20T22:55:32.388355Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "1fd54bcd-fc24-40d9-91f0-d96913d89ced",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          {
+            "at": "2026-09-20T22:55:32.402425Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "5eb918f7-4421-4e97-9c7b-e93d0c074ca6",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          {
+            "at": "2026-09-20T22:55:32.417353Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "470c11d6-abcc-4c51-8f85-19620061504c",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          {
+            "at": "2026-09-20T22:55:32.432093Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "7ae4e4e4-3bb1-463f-ac58-092d4e0f4ce0",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          {
+            "at": "2026-09-20T22:55:32.446793Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "eac513f3-39d1-4f4b-8a12-d7ca7ba5cc8b",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          {
+            "at": "2026-09-20T22:55:32.461610Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "e12c8988-1f3c-4954-b029-088b26cd1f0e",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          {
+            "at": "2026-09-20T22:55:32.475926Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "eb6bd8a4-3745-4e50-ae51-a2ed4555fbc2",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          {
+            "at": "2026-09-20T22:55:32.490703Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "e2f1f64e-b4d6-4301-856e-cf2360205169",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          {
+            "at": "2026-09-20T22:55:32.505730Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "8b2c98fe-3e36-4129-9a5b-fd26f5f5d09e",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          {
+            "at": "2026-09-20T22:55:32.523002Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "305b929d-15b2-43cd-b02c-4beb2af1540d",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          {
+            "at": "2026-09-20T22:55:32.538175Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "11a0be9e-12c8-40b9-879c-775ec95a4b2b",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          {
+            "at": "2026-09-20T22:55:32.552988Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "4a9525da-2e30-4e94-8ec1-0c35574dfadb",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "operation_call",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          {
+            "at": "2026-09-20T22:55:32.568425Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "08de15c6-2ac0-4038-9b36-98afb98c4df8",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "create_feature",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          {
+            "at": "2026-09-20T22:55:32.583385Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "0c86f01f-8c8c-4b9e-9f47-7b5614f43353",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "create_feature",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          },
+          {
+            "at": "2026-09-20T22:55:32.598624Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "gate": true,
+            "job_id": "5690cd40-25f1-4623-a46a-19d749a5211a",
+            "message": "reconcile unfinished engine work before new operations",
+            "phase": "release-failed",
+            "tool": "create_feature",
+            "unreleased_jobs": [
+              "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+            ]
+          }
+        ],
+        "unresolved_jobs": [
+          "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0"
+        ]
+      }
+    },
+    "case_id": "GUARD_T010",
+    "finished_at": "2026-09-20T22:55:32.598960Z",
+    "package": "GUARD",
+    "reason": null,
+    "started_at": "2026-09-20T22:55:32.274257Z",
+    "status": "NOT_RUN",
+    "subcases": {
+      "repeated_key_not_reexecuted": {
+        "acceptance": "T010 repeated idempotency key",
+        "level": "live",
+        "reason": "no scalar property could be discovered or created for the idempotency probe",
+        "status": "NOT_RUN"
+      },
+      "request_hash_conflict_rejected": {
+        "acceptance": "T010 request hash conflict",
+        "level": "live",
+        "reason": "no scalar property could be discovered or created for the idempotency probe",
+        "status": "NOT_RUN"
+      },
+      "same_tag_different_type_rejected": {
+        "acceptance": "T010 same tag different type",
+        "level": "live",
+        "observed": {
+          "observed": "EXECUTION_STATE_UNKNOWN"
+        },
+        "status": "PASS"
+      },
+      "same_tag_same_type_duplicate_rejected_or_idempotent": {
+        "acceptance": "T010 same tag/type duplicate",
+        "level": "live",
+        "observed": {
+          "first": {
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "has_structured_content": true,
+            "operation_id": null,
+            "outer_isError": true,
+            "success": false
+          },
+          "first_created": false,
+          "second": {
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "has_structured_content": true,
+            "operation_id": null,
+            "outer_isError": true,
+            "success": false
+          },
+          "second_data_keys": [],
+          "second_error": "reconcile unfinished engine work before new operations",
+          "second_refused": true,
+          "second_reports_existing": false
+        },
+        "status": "PASS"
+      },
+      "static_idempotency_contract_published": {
+        "acceptance": "T010 idempotency contract",
+        "level": "static",
+        "status": "PASS"
+      }
+    }
+  },
+  "subcase_count": 5
+}

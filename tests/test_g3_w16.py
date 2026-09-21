@@ -1631,3 +1631,86 @@ def test_solver_run_reports_the_readback_only_when_readable() -> None:
     assert result["status"] == "DISPATCHED_UNVERIFIED"
     assert result["execution_state_unknown"] is True
     assert "isEmpty" in result["readback_allowlist_entry_required"]
+
+
+# ---------------------------------------------------------------------------
+# C06: solver NodePath conflicts and the mesh build preconditions
+# ---------------------------------------------------------------------------
+
+
+def test_solver_inspect_refusal_names_the_models_real_solver_paths() -> None:
+    """A guessed solver tag is refused with this model's actual solver tags.
+
+    The operation never assumes ``sol1``/``st1``: the refusal carries the solver
+    sequences the model really exposes and the study each one is attached to, so
+    a caller can correct the path from the readback instead of guessing again.
+    """
+    model = build_model()
+    error = expect_error("NODE_NOT_FOUND", call, "solver.inspect", model,
+                         {"path": {"segments": [{"collection": "component", "tag": "comp1"},
+                                                {"collection": "study", "tag": "std1"},
+                                                {"collection": "sol", "tag": "sol9"}]}})
+    message = str(error)
+    assert "sol:<tag>" in message
+    assert "['sol1', 'sol2']" in message
+    assert "study_scoped" in message and "'std1': ['sol1']" in message
+    assert "study:<stag>" in message
+
+
+def test_solver_inspect_refuses_a_study_feature_path_as_a_solver_feature() -> None:
+    """A study feature path is not read as if it were a solver step.
+
+    The input schema admits any NodePath, so the operation has to refuse the
+    shape it does not mean instead of answering from a study node.
+    """
+    model = build_model()
+    error = expect_error("INVALID_NODE_PATH", call, "solver.inspect", model,
+                         {"path": {"segments": [{"collection": "study", "tag": "std1"},
+                                                {"collection": "feature", "tag": "stat"}]}})
+    message = str(error)
+    assert "sol:<tag>/feature:<ftag>" in message
+    assert "['sol1', 'sol2']" in message
+
+
+def test_solver_inspect_remediation_reaches_a_study_relative_solver_path() -> None:
+    """A study-relative solver path gets this model's real solver paths appended."""
+    model = build_model()
+    error = expect_error("NODE_NOT_FOUND", call, "solver.inspect", model,
+                         {"path": {"segments": [{"collection": "component", "tag": "comp1"},
+                                                {"collection": "study", "tag": "std1"},
+                                                {"collection": "feature", "tag": "stat"}]}})
+    assert "'std1': ['sol1']" in str(error)
+
+
+def test_mesh_build_reads_back_the_geometry_it_is_bound_to() -> None:
+    """The build records the geometry binding and the post-build counts/quality."""
+    model = build_model()
+    model.collections["component"].items["comp1"].collections["geom"].items["geom1"].state["problems"] = []
+    result = call("mesh.build", model, {"path": MESH_PATH})
+    assert result["status"] == "APPLIED"
+    precondition = result["geometry_precondition"]
+    assert precondition["geometry_tag"] == "geom1"
+    assert precondition["geometry_exists"] is True
+    assert precondition["geometry_problems"] == []
+    assert precondition["geometry_problems_source"] == "geom(<tag>).problems()"
+    post = result["post_build_readback"]
+    assert post["elements"] is not None and post["vertices"] is not None
+    assert post["min_quality"] is not None and post["mean_quality"] is not None
+
+
+def test_mesh_build_refuses_a_geometry_that_is_not_present() -> None:
+    """A sequence bound to a geometry the component does not have is refused."""
+    model = build_model()
+    model.collections["component"].items["comp1"].collections["mesh"].items["mesh1"].state["geom"] = "geom2"
+    error = expect_error("NODE_NOT_FOUND", call, "mesh.build", model, {"path": MESH_PATH})
+    assert "geom2" in str(error) and "create and build the geometry" in str(error)
+
+
+def test_mesh_build_refuses_a_geometry_that_reports_problems() -> None:
+    """A geometry that reports problems is not meshed as if it were fine."""
+    model = build_model()
+    model.collections["component"].items["comp1"].collections["geom"].items["geom1"].state["problems"] = [
+        "Geometry could not be built: feature v1 is not supported",
+    ]
+    error = expect_error("EXECUTION_STATE_UNKNOWN", call, "mesh.build", model, {"path": MESH_PATH})
+    assert "is not supported" in str(error)

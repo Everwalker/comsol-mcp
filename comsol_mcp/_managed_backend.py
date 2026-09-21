@@ -11,7 +11,14 @@ import tempfile
 import time
 from typing import Any, Mapping
 
-from ._execution_contract import ExecutionContractError, SessionLedger, model_ref_from_mapping, canonical_project_path
+from ._execution_contract import (
+    ExecutionContractError,
+    LEGACY_TOOL_EFFECTS,
+    PreWriteRefusal,
+    SessionLedger,
+    model_ref_from_mapping,
+    canonical_project_path,
+)
 from ._execution_service import ExecutionService
 from ._runtime_state import save_runtime_state, restore_runtime_state
 from ._g2_docs import OfflineDocsIndex
@@ -44,6 +51,11 @@ _G3_EFFECT_MAP: dict[str, str] = {
 }
 
 
+#: Operations whose subject is the live runtime, not a model.  They are routed
+#: without a model_ref and without an expected_revision (C05).
+RUNTIME_SCOPED_OPERATIONS = frozenset({"runtime.capabilities", "runtime.license_inspect"})
+
+
 def _g3_operations() -> frozenset[str]:
     """G3 operation ids published by the domain modules (empty when absent)."""
     try:
@@ -51,6 +63,37 @@ def _g3_operations() -> frozenset[str]:
     except Exception:
         return frozenset()
     return g3_operations
+
+
+def _refusal_envelope(operation: str, exc: ExecutionContractError, witness: Any, *, effect: str) -> dict[str, Any]:
+    """Envelope for a refusal that provably happened before any mutation.
+
+    ``exc.stage`` is the explicit stage the raise site declared; the witness
+    proves no mutation-class engine method was issued during the callback.  Both
+    facts are published so a later reader never has to trust the exception class
+    name: the evidence is in the envelope.
+    """
+    from ._domain_outcome import STAGE_VALIDATION, domain_envelope
+    refusal = {
+        "code": exc.code,
+        "message": str(exc),
+        "safe_retry": exc.safe_retry,
+        "stage": exc.stage or STAGE_VALIDATION,
+    }
+    if exc.details:
+        refusal["details"] = dict(exc.details)
+    data = {
+        "status": "REFUSED",
+        "refused": True,
+        "operation": operation,
+        "refusal": refusal,
+        "dispatch_stage": exc.stage or STAGE_VALIDATION,
+        "witness": witness.as_dict(),
+    }
+    envelope = domain_envelope(operation, data, dispatch_stage=STAGE_VALIDATION, witness=witness)
+    envelope["error"] = refusal
+    envelope["effect"] = effect
+    return envelope
 
 
 # This is deliberately capability metadata rather than a promise of engine CAS.
@@ -310,6 +353,12 @@ class ManagedBackend:
                          "code.inspect_run", "code_inspect_run",
                          "transaction_preview", "transaction.preview", "checkpoint.list", "checkpoint.inspect", "checkpoint.diff"}:
             return self._invoke_g2_control(operation, arguments, execution, operation_id)
+        if operation in RUNTIME_SCOPED_OPERATIONS:
+            # C05: a runtime capability/licence question is a property of the
+            # runtime, not of a model.  It is routed without a model_ref and
+            # without an expected_revision (an unbound call must succeed), and a
+            # model_ref that *is* supplied is used for the inventory read only.
+            return self._invoke_runtime_scoped(operation, arguments, execution, operation_id)
         if is_implemented(operation) and operation not in {"registry.list", "registry.describe", "registry.search", "registry.manifest", "registry.call"}:
             # G2 actions may be reached directly or through the public
             # operation_call/registry_call fallback.  Bind the persistent
@@ -579,6 +628,66 @@ class ManagedBackend:
         runtime = self.worker.runtime_metadata() if self.worker is not None else {}
         return verify_owned_server(receipt, endpoint=self.endpoint_key, worker_pid=runtime.get("pid"))
 
+    def _invoke_runtime_scoped(self, operation, arguments, execution, operation_id):
+        """Route a runtime-scoped G3 operation without a model or a revision (C05).
+
+        ``runtime.capabilities`` and ``runtime.license_inspect`` answer a question
+        about the live runtime, so requiring a bound model (and a revision for it)
+        would refuse a request the product can serve: an unbound call must reach
+        the probe.  When the caller *does* bind a model, the model feeds the
+        inventory read only - the licence answer never depends on it, and no write
+        ticket, revision or dirty flag is involved because the catalogue effect of
+        both operations is a read.
+        """
+        from ._g3_ops import DISPATCH, EFFECTS
+
+        if self.service is None or self.worker is None:
+            raise ExecutionContractError(
+                "ENGINE_UNRESPONSIVE", "a connected persistent Worker is required for a runtime probe"
+            )
+        function = DISPATCH.get(operation)
+        if function is None:
+            raise ExecutionContractError("UNSUPPORTED_OPERATION", f"G3 operation is not executable: {operation}")
+        effect = str(EFFECTS.get(operation, "")).upper()
+        if effect not in {"READ", ""}:
+            raise ExecutionContractError(
+                "PERMISSION_DENIED",
+                f"{operation} is published as a {effect or 'unknown'} effect and is not runtime-scoped",
+            )
+        session = execution.get("session_id") or arguments.get("session_id")
+        if session is not None and session != self.service.ledger.session_id:
+            raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "session mismatch")
+        if execution.get("expected_revision") is not None or arguments.get("expected_revision") is not None:
+            # A runtime probe must not participate in the model revision protocol:
+            # accepting a revision here would imply the answer depends on it.
+            raise ExecutionContractError(
+                "INVALID_REQUEST", "a runtime-scoped operation must not carry expected_revision"
+            )
+        ref = None
+        ref_mapping = execution.get("model_ref") or arguments.get("model_ref")
+        if isinstance(ref_mapping, Mapping):
+            ref = model_ref_from_mapping(dict(ref_mapping))
+            self.service.ledger._state_for(ref)  # reject a stale ref before any engine call
+        body = self._g2_body(arguments)
+        if ref is not None:
+            body["model_ref"] = ref.as_dict()
+        model_tag = ref.model_tag if ref is not None else ""
+        callback = lambda _args: self._dispatch_with_witness(
+            operation, lambda: function(self.worker, model_tag, dict(body)), effect="inspect",
+        )
+        result = self.service.execute_legacy(
+            self._g2_alias(operation), callback, body, model_ref=ref,
+            request_id=execution.get("request_id"), session_id=session, effect="inspect",
+        )
+        result.setdefault("data", {})["model_binding"] = {
+            "bound": ref is not None,
+            "model_tag": model_tag or None,
+            "revision_required": False,
+            "reason": "a runtime capability answer does not depend on a model revision",
+        }
+        self.persist()
+        return result
+
     def _invoke_g2_model(self, operation, arguments, execution, operation_id, event_callback):
         if self.service is None or self.worker is None:
             raise ExecutionContractError("ENGINE_UNRESPONSIVE", "a connected persistent Worker is required")
@@ -645,17 +754,115 @@ class ManagedBackend:
             return self.service.execute_legacy(alias, callback, body, model_ref=ref,
                 expected_revision=execution.get("expected_revision", arguments.get("expected_revision")),
                 request_id=execution.get("request_id"), session_id=session, effect="evaluate")
-        callback = lambda _args: self._run_g2_action(operation, ref.model_tag, body, operation_id, model_revision=bound_revision)
+        callback = self._g2_callback(operation, ref, body, operation_id, bound_revision)
         result = self.service.execute_legacy(alias, callback, body, model_ref=ref,
-            expected_revision=execution.get("expected_revision", arguments.get("expected_revision")),
-            request_id=execution.get("request_id"), session_id=session, effect={
-                "node.property_set": "project_write", "node.property_index_set": "project_write", "node.property_entry_set": "project_write",
-                "node.property_schema": "inspect", "node.property_get": "inspect", "node.inspect": "inspect", "node.children": "inspect", "node.find": "inspect",
-                "code.execute_java": "trusted_code",
-            }.get(operation, "compute" if operation.startswith("transaction.") else "inspect"))
+                expected_revision=execution.get("expected_revision", arguments.get("expected_revision")),
+                request_id=execution.get("request_id"), session_id=session, effect={
+                    "node.property_set": "project_write", "node.property_index_set": "project_write", "node.property_entry_set": "project_write",
+                    "node.property_schema": "inspect", "node.property_get": "inspect", "node.inspect": "inspect", "node.children": "inspect", "node.find": "inspect",
+                    "code.execute_java": "trusted_code",
+                }.get(operation, "compute" if operation.startswith("transaction.") else "inspect"))
         if isolation is not None:
             result.setdefault("data", {})["isolation_proof"] = isolation
         return result
+
+    def _g2_callback(self, operation: str, ref, body: dict[str, Any], operation_id: str, bound_revision: int):
+        """Wrap one G2 action so a *proven* pre-write refusal keeps its own code.
+
+        The property/index/entry setters raise ``PreWriteRefusal`` only before
+        their first engine mutation; they convert every post-dispatch failure
+        into their own result data.  Reporting that refusal with its published
+        code is what keeps a correct rejection from being flattened into
+        ``EXECUTION_STATE_UNKNOWN`` — an unknown job poisons the control gate for
+        every later operation.
+
+        The proof is never the exception class name alone: the refusal must
+        declare the explicit ``validation`` stage *and* the dispatch witness must
+        have seen no mutation-class engine method during this callback.  Any
+        other exception keeps the conservative fail-closed classification.
+        """
+
+        def callback(_args: dict[str, Any]) -> dict[str, Any]:
+            return self._dispatch_with_witness(
+                operation,
+                lambda: self._run_g2_action(operation, ref.model_tag, body, operation_id,
+                                            model_revision=bound_revision),
+                effect=LEGACY_TOOL_EFFECTS.get(operation, "project_write"),
+            )
+
+        return callback
+
+    @staticmethod
+    def _dispatch_with_witness(operation: str, call, *, effect: str) -> dict[str, Any]:
+        """Run one domain/G2 action inside the dispatch witness and classify it.
+
+        A domain function either returns its ``data`` mapping (success or a
+        post-dispatch outcome the mapping itself declares) or raises.  The raise
+        is only treated as a pre-write refusal when both proofs hold:
+
+        * the raise declared the explicit validation stage
+          (``ExecutionContractError.stage == "validation"``), and
+        * the witness saw no mutation-class engine call during the callback.
+
+        Everything else is re-raised so the shared write-ticket path records the
+        fail-closed ``EXECUTION_STATE_UNKNOWN`` (the callback may have changed the
+        engine before it died).
+        """
+        from ._domain_outcome import classify_envelope, domain_envelope, witness_scope
+        with witness_scope() as witness:
+            try:
+                data = call()
+            except (PreWriteRefusal, ExecutionContractError) as exc:
+                if exc.stage == "validation" and not witness.mutation_issued:
+                    # Both proofs hold: an explicit validation stage and a
+                    # witness that saw no mutation-class engine call.
+                    return _refusal_envelope(operation, exc, witness, effect=effect)
+                # A raise that cannot prove "nothing was dispatched" must keep
+                # the fail-closed state, with the cause preserved for evidence.
+                unproven = exc.stage == "validation"
+                details = {
+                    **exc.details,
+                    "dispatch_stage": "post_dispatch",
+                    "witness": witness.as_dict(),
+                    "unproven_pre_dispatch": unproven,
+                    "cause_code": exc.code,
+                    "cause_message": str(exc),
+                }
+                if exc.code == "EXECUTION_STATE_UNKNOWN":
+                    exc.details = details
+                    raise
+                reason = ("the callback declared the validation stage but had already issued an "
+                          "engine mutation" if unproven else "the callback did not declare a "
+                          "pre-dispatch stage")
+                raise ExecutionContractError(
+                    "EXECUTION_STATE_UNKNOWN",
+                    f"{operation} failed with {exc.code} ({exc}); {reason}, so the engine state "
+                    "cannot be shown to be unchanged",
+                    stage="post_dispatch", details=details,
+                ) from exc
+            if not isinstance(data, Mapping):
+                raise ExecutionContractError(
+                    "EXECUTION_STATE_UNKNOWN",
+                    f"{operation} returned {type(data).__name__} instead of a data mapping",
+                    stage="post_dispatch",
+                )
+            if isinstance(data.get("success"), bool):
+                # The G2 property/transaction actions own their own envelope
+                # (a boolean ``success`` is the wire contract of that layer), so
+                # it is classified and normalised, never re-wrapped.
+                envelope = dict(data)
+                outcome = classify_envelope(envelope)
+                envelope.update(outcome.envelope_fields())
+                envelope.setdefault("data", {})
+                envelope["operation"] = operation
+                envelope["effect"] = effect
+                envelope["domain_outcome"] = outcome.as_dict()
+                return envelope
+            envelope = domain_envelope(operation, data, witness=witness)
+            envelope["effect"] = effect
+            return envelope
+
+        raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "the dispatch witness scope did not close")
 
     def _invoke_g3_model(self, operation, ref, body, execution, operation_id, session):
         """Dispatch a G3 (W13-W16) domain operation through the shared write-ticket service.
@@ -682,19 +889,13 @@ class ManagedBackend:
         alias = self._g2_alias(operation)
 
         def callback(_args: dict[str, Any]) -> dict[str, Any]:
-            try:
-                data = function(self.worker, ref.model_tag, dict(body))
-            except ExecutionContractError as exc:
-                # Pre-write refusal: no engine dispatch happened, so keep the
-                # operation's own code and mark the ticket failed/unchanged.
-                return {"success": False, "data": {"status": "REFUSED"}, "error": exc.as_dict()}
-            if not isinstance(data, Mapping):
-                raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", f"G3 operation {operation} returned no data mapping")
-            return {"success": True, "data": dict(data)}
+            return self._dispatch_with_witness(
+                operation, lambda: function(self.worker, ref.model_tag, dict(body)), effect=effect,
+            )
 
         result = self.service.execute_legacy(alias, callback, body, model_ref=ref,
-            expected_revision=execution.get("expected_revision", body.get("expected_revision")),
-            request_id=execution.get("request_id"), session_id=session, effect=effect)
+                expected_revision=execution.get("expected_revision", body.get("expected_revision")),
+                request_id=execution.get("request_id"), session_id=session, effect=effect)
         if isolation is not None:
             result.setdefault("data", {})["isolation_proof"] = isolation
         return result

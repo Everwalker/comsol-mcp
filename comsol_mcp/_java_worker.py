@@ -475,6 +475,13 @@ class RemoteJava:
     def _call(self, method: str, *args: Any, request_id: str | None = None, rpc_timeout_s: float | None = None) -> Any:
         if self._generation != self._worker.generation:
             raise JavaWorkerError("STALE_WORKER_HANDLE")
+        # C01 dispatch witness: record the method actually dispatched to the
+        # worker so the managed backend can prove whether a mutation-class call
+        # was issued, instead of trusting an exception class name.  The import is
+        # local because ``_domain_outcome`` is a plain-python contract module
+        # with no worker dependency.
+        from ._domain_outcome import record_engine_method
+        record_engine_method(method)
         reply = self._worker.submit("call", {"handle": self._handle, "generation": self._generation, "method": method, "args": list(args)},
                                     request_id=request_id, rpc_timeout_s=rpc_timeout_s)
         return _decode_reply(reply, self._worker)

@@ -1,0 +1,2798 @@
+{
+  "constraints": {
+    "chain_c_requires": {
+      "step_tag": "time",
+      "study_tag": "std1"
+    },
+    "satisfied": true,
+    "step_tag": "time",
+    "study_tag": "std1"
+  },
+  "continuation_command": "tools/phase4_run_mcp.py --live --chain-c-model evidence/phase4_1/chain_c_fixture/chain_c_user_style.mph --only W16_T019_chainC_continue --run-dir <run-dir>",
+  "derived_values": {
+    "blocker": {
+      "blockers": [
+        {
+          "kind": "operation_not_described",
+          "observed": null,
+          "operation": "code.execute_java"
+        },
+        {
+          "kind": "result_operations_not_implemented",
+          "operations": {
+            "result.numerical_manage": "UNKNOWN",
+            "result.table_manage": "UNKNOWN"
+          }
+        }
+      ],
+      "entrypoint": "Phase4ChainCResultNodes#run",
+      "kind": "result_nodes_unavailable",
+      "minimum_unblock": [
+        "enable trusted code before the daemon starts: COMSOL_MCP_TRUSTED_CODE=1 (the session then reports trusted_code.enabled=true)",
+        "implement the published result operations ['result.numerical_manage', 'result.table_manage'] so a non-code route also exists; checking whether a route exists is `operation_describe`"
+      ],
+      "reason": "the result nodes (Derived Values + Table + association) need the trusted-code route operation_call -> code.execute_java, which this deployment blocks: operation_not_described=; result_operations_not_implemented={'result.numerical_manage': 'UNKNOWN', 'result.table_manage': 'UNKNOWN'}",
+      "route": "operation_call -> code.execute_java",
+      "source_artifact": "tools/java/Phase4ChainCResultNodes.java",
+      "step": "result_nodes"
+    },
+    "created": false,
+    "mode": "externally_blocked",
+    "model_nodes_visited": 500,
+    "numerical_nodes_observed": [],
+    "published_tool_count": 65,
+    "published_trusted_code_tool": null,
+    "requested": true,
+    "route": {
+      "available": false,
+      "blockers": [
+        {
+          "kind": "operation_not_described",
+          "observed": null,
+          "operation": "code.execute_java"
+        },
+        {
+          "kind": "result_operations_not_implemented",
+          "operations": {
+            "result.numerical_manage": "UNKNOWN",
+            "result.table_manage": "UNKNOWN"
+          }
+        }
+      ],
+      "describe_status": null,
+      "described": {
+        "catalog_input_schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "additionalProperties": false,
+          "properties": {
+            "arguments": {
+              "type": "object"
+            },
+            "entrypoint": {
+              "type": "string"
+            },
+            "expected_revision": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "idempotency_key": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "invariants": {
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "mode": {
+              "type": "string"
+            },
+            "model_ref": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "project_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "session_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "source_artifact": {
+              "type": "string"
+            },
+            "timeout_s": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "source_artifact",
+            "entrypoint",
+            "arguments",
+            "mode"
+          ],
+          "title": "code.execute_java input",
+          "type": "object"
+        },
+        "domain": "code",
+        "effect": "TRUSTED_CODE",
+        "executable": true,
+        "gate": "G2",
+        "implementation_status": "SUPPORTED_UNVERIFIED",
+        "input_schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "additionalProperties": false,
+          "properties": {
+            "arguments": {
+              "type": "object"
+            },
+            "entrypoint": {
+              "type": "string"
+            },
+            "expected_revision": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "idempotency_key": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "invariants": {
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "mode": {
+              "type": "string"
+            },
+            "model_ref": {
+              "additionalProperties": false,
+              "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+              "properties": {
+                "generation": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "model_tag": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "schema_version": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "server_instance_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "session_id": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "schema_version",
+                "session_id",
+                "server_instance_id",
+                "model_tag",
+                "generation"
+              ],
+              "type": "object"
+            },
+            "project_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "session_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "source_artifact": {
+              "type": "string"
+            },
+            "timeout_s": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "source_artifact",
+            "entrypoint",
+            "arguments",
+            "mode"
+          ],
+          "title": "code.execute_java input",
+          "type": "object"
+        },
+        "mcp_tool_name": "code_execute_java",
+        "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+        "operation_id": "code.execute_java",
+        "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+        "output_schema": {
+          "additionalProperties": true,
+          "properties": {
+            "data": {
+              "type": "object"
+            },
+            "error": {
+              "type": [
+                "object",
+                "string",
+                "null"
+              ]
+            },
+            "execution": {
+              "type": "object"
+            },
+            "success": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "success",
+            "data"
+          ],
+          "type": "object"
+        },
+        "purpose": "在注入的目标Model上执行已授权代码",
+        "required_tests": [
+          "schema_valid",
+          "normal_path",
+          "failure_is_truthful",
+          "readback_and_revision",
+          "idempotency_and_partial_failure"
+        ],
+        "route": "bound Java worker / public COMSOL API",
+        "scope": "model",
+        "wire_compatibility": {
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+          "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+          "result_fields": [
+            "success",
+            "data",
+            "error",
+            "execution"
+          ],
+          "transport": "MCP structuredContent plus text mirror; isError equals not success"
+        }
+      },
+      "entrypoint": "Phase4ChainCResultNodes#run",
+      "operation": "code.execute_java",
+      "profile": "full",
+      "result_operations": {
+        "result.numerical_manage": "UNKNOWN",
+        "result.table_manage": "UNKNOWN"
+      },
+      "route": "operation_call -> code.execute_java",
+      "source_artifact": "tools/java/Phase4ChainCResultNodes.java",
+      "tool_count": 65,
+      "tool_published": false,
+      "trusted_code_config": "COMSOL_MCP_TRUSTED_CODE",
+      "trusted_code_enabled": true
+    }
+  },
+  "environment": {
+    "comsol_lifecycle": "not managed by this script (no COMSOL start/stop)",
+    "comsol_root": "/Applications/COMSOL64/Multiphysics",
+    "elapsed_s": 15.654,
+    "host": "127.0.0.1",
+    "isolation_receipt_present": true,
+    "jdk11": "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home",
+    "output": "evidence/phase4_1/chain_c_fixture/chain_c_user_style.mph",
+    "port": 56389,
+    "prefs": "$HOME/Desktop/comsol-mcp-project/PRIVATE_REDACTED/g2-valve-runtime-20260920T235437288577Z/prefs",
+    "private_home": null,
+    "python": "$REPO/.venv/bin/python",
+    "run_dir": "evidence/phase4_1/chain_c_fixture",
+    "self_test": {
+      "initial_temperature_absent_candidates": [
+        "T0"
+      ],
+      "initial_temperature_property": "Tinit",
+      "initial_temperature_source_property": "Tinit_src",
+      "material_node_publishes_no_property_group_names": true,
+      "mesh_size_feature": "size",
+      "mesh_size_selection_rule": "documented_tag",
+      "missing_plan_steps": [],
+      "ok": true,
+      "plan_steps": 27,
+      "recorded_metadata_source": "evidence/phase4/runs/20260920T130620Z-g3-live/chain_c_fixture_v11/transcript.json",
+      "result_route_available_on_a_blocked_deployment": false,
+      "result_route_available_when_unblocked": true,
+      "result_route_blocker_kinds": [
+        "permission_not_enabled",
+        "result_operations_not_implemented"
+      ]
+    },
+    "started_at": "2026-09-21T08:09:16Z",
+    "tool_count": 65,
+    "tool_profile": "full"
+  },
+  "exit_code": 1,
+  "external_blockers": [
+    {
+      "blockers": [
+        {
+          "kind": "operation_not_described",
+          "observed": null,
+          "operation": "code.execute_java"
+        },
+        {
+          "kind": "result_operations_not_implemented",
+          "operations": {
+            "result.numerical_manage": "UNKNOWN",
+            "result.table_manage": "UNKNOWN"
+          }
+        }
+      ],
+      "entrypoint": "Phase4ChainCResultNodes#run",
+      "kind": "result_nodes_unavailable",
+      "minimum_unblock": [
+        "enable trusted code before the daemon starts: COMSOL_MCP_TRUSTED_CODE=1 (the session then reports trusted_code.enabled=true)",
+        "implement the published result operations ['result.numerical_manage', 'result.table_manage'] so a non-code route also exists; checking whether a route exists is `operation_describe`"
+      ],
+      "reason": "the result nodes (Derived Values + Table + association) need the trusted-code route operation_call -> code.execute_java, which this deployment blocks: operation_not_described=; result_operations_not_implemented={'result.numerical_manage': 'UNKNOWN', 'result.table_manage': 'UNKNOWN'}",
+      "route": "operation_call -> code.execute_java",
+      "source_artifact": "tools/java/Phase4ChainCResultNodes.java",
+      "step": "result_nodes"
+    }
+  ],
+  "generated_at": "2026-09-21T08:09:32Z",
+  "initial_values": {
+    "absent": [
+      "T0"
+    ],
+    "attempted": true,
+    "candidates": [
+      "Tinit",
+      "T0"
+    ],
+    "feature": "init1",
+    "metadata": {
+      "getter": "getString",
+      "java_signature": "java.lang.String",
+      "kind": "string",
+      "metadata_status": "KNOWN",
+      "name": "Tinit",
+      "shape_rank": 0,
+      "type_id": "init",
+      "value_type": "String"
+    },
+    "path": {
+      "segments": [
+        {
+          "collection": "component",
+          "tag": "comp1"
+        },
+        {
+          "collection": "physics",
+          "tag": "ht"
+        },
+        {
+          "collection": "feature",
+          "tag": "init1"
+        }
+      ]
+    },
+    "property": "Tinit",
+    "published": [
+      "StudyStep",
+      "Tinit",
+      "Tinit_resistive",
+      "Tinit_resistive_src",
+      "Tinit_src",
+      "pairContrib",
+      "showPhysicsSymbols"
+    ],
+    "source_metadata": {
+      "allowed_values": [
+        "userdef"
+      ],
+      "getter": "getString",
+      "java_signature": "java.lang.String",
+      "kind": "string",
+      "metadata_status": "KNOWN",
+      "name": "Tinit_src",
+      "shape_rank": 0,
+      "type_id": "init",
+      "value_type": "String"
+    },
+    "source_property": "Tinit_src",
+    "written": true,
+    "written_properties": [
+      "Tinit",
+      "Tinit_src"
+    ]
+  },
+  "kind": "phase4-chain-c-user-style-fixture",
+  "label": "G3 chain C user-style continuation model",
+  "manual_solver_edit": {
+    "applied": true,
+    "attempted": true,
+    "attempts": [
+      {
+        "engine_metadata": {
+          "getter": "getDouble",
+          "java_signature": "double",
+          "kind": "float64",
+          "metadata_status": "KNOWN",
+          "name": "rtol",
+          "shape_rank": 0,
+          "type_id": "Time",
+          "value_type": "Double"
+        },
+        "error_code": null,
+        "feature_type": "Time",
+        "path": {
+          "segments": [
+            {
+              "collection": "sol",
+              "tag": "sol1"
+            },
+            {
+              "collection": "feature",
+              "tag": "t1"
+            }
+          ]
+        },
+        "property": "rtol",
+        "readback": {
+          "path": {
+            "segments": [
+              {
+                "collection": "sol",
+                "tag": "sol1"
+              },
+              {
+                "collection": "feature",
+                "tag": "t1"
+              }
+            ]
+          },
+          "properties": [
+            {
+              "name": "rtol",
+              "value": {
+                "data": 1e-05,
+                "java_signature": "double",
+                "kind": "float64",
+                "shape": []
+              }
+            }
+          ]
+        },
+        "requested": 1e-05,
+        "status": "APPLIED",
+        "tag": "t1"
+      }
+    ],
+    "candidates": [
+      {
+        "feature_type": "Time",
+        "property": "rtol",
+        "value": 1e-05
+      },
+      {
+        "feature_type": "Stationary",
+        "property": "stol",
+        "value": 1e-06
+      },
+      {
+        "feature_type": "FullyCoupled",
+        "property": "maxiter",
+        "value": 50
+      },
+      {
+        "feature_type": "Direct",
+        "property": "linsolver",
+        "value": "pardiso"
+      }
+    ],
+    "feature_type": "Time",
+    "observed_features": [
+      {
+        "tag": "st1",
+        "type_id": "StudyStep"
+      },
+      {
+        "tag": "v1",
+        "type_id": "Variables"
+      },
+      {
+        "tag": "comp1_T",
+        "type_id": "Field"
+      },
+      {
+        "tag": "comp1_T2",
+        "type_id": "Field"
+      },
+      {
+        "tag": "t1",
+        "type_id": "Time"
+      },
+      {
+        "tag": "dDef",
+        "type_id": "Direct"
+      },
+      {
+        "tag": "aDef",
+        "type_id": "Advanced"
+      },
+      {
+        "tag": "se1",
+        "type_id": "Segregated"
+      },
+      {
+        "tag": "ss1",
+        "type_id": "SegregatedStep"
+      },
+      {
+        "tag": "ss2",
+        "type_id": "SegregatedStep"
+      },
+      {
+        "tag": "ll1",
+        "type_id": "LowerLimit"
+      },
+      {
+        "tag": "d1",
+        "type_id": "Direct"
+      },
+      {
+        "tag": "d2",
+        "type_id": "Direct"
+      },
+      {
+        "tag": "i1",
+        "type_id": "Iterative"
+      },
+      {
+        "tag": "ilDef",
+        "type_id": "IncompleteLU"
+      },
+      {
+        "tag": "mg1",
+        "type_id": "Multigrid"
+      },
+      {
+        "tag": "pr",
+        "type_id": "PreSmoother"
+      },
+      {
+        "tag": "po",
+        "type_id": "PostSmoother"
+      },
+      {
+        "tag": "cs",
+        "type_id": "CoarseSolver"
+      },
+      {
+        "tag": "i2",
+        "type_id": "Iterative"
+      },
+      {
+        "tag": "ilDef",
+        "type_id": "IncompleteLU"
+      },
+      {
+        "tag": "mg1",
+        "type_id": "Multigrid"
+      },
+      {
+        "tag": "pr",
+        "type_id": "PreSmoother"
+      },
+      {
+        "tag": "po",
+        "type_id": "PostSmoother"
+      },
+      {
+        "tag": "cs",
+        "type_id": "CoarseSolver"
+      }
+    ],
+    "path": {
+      "segments": [
+        {
+          "collection": "sol",
+          "tag": "sol1"
+        },
+        {
+          "collection": "feature",
+          "tag": "t1"
+        }
+      ]
+    },
+    "property": "rtol",
+    "solver": "sol1",
+    "tag": "t1",
+    "value": 1e-05
+  },
+  "mesh_size": {
+    "current_feature": "size",
+    "matches": [
+      "size"
+    ],
+    "observed": [
+      {
+        "tag": "size",
+        "type_id": "MeshSizeDefault"
+      }
+    ],
+    "rule": "documented_tag",
+    "tag": "size",
+    "type_id": "MeshSizeDefault"
+  },
+  "model_ref": {
+    "generation": 1,
+    "model_tag": "mcp59",
+    "schema_version": 1,
+    "server_instance_id": "4bef620ed6b6bbc732dcd3c36130b597e5b42d315bc7aa74da1484a30ce03081",
+    "session_id": "session-9f95c2e814acd5f99589961a"
+  },
+  "model_revision": 30,
+  "mph": {
+    "bytes": 6415970,
+    "exists": true,
+    "path": "evidence/phase4_1/chain_c_fixture/chain_c_user_style.mph",
+    "sha256": "b497a6257cefe120db4a717f7e105f9052ff0ec8c89fc6ad6409bedb8cf0e043"
+  },
+  "ops_used": [
+    "code execution",
+    "definition.component_manage",
+    "geometry.build",
+    "geometry.feature_create",
+    "geometry.feature_update",
+    "geometry.sequence_create",
+    "material.create",
+    "material.list",
+    "material.selection_set",
+    "material.set_properties",
+    "mesh.build",
+    "mesh.create",
+    "mesh.feature_update",
+    "mesh.inspect",
+    "mesh.statistics",
+    "model.save",
+    "model_create",
+    "node.property_get",
+    "physics.create",
+    "physics.feature_create",
+    "physics.feature_update",
+    "physics.list",
+    "server_connect",
+    "solver.feature_update",
+    "solver.inspect",
+    "solver.list",
+    "study.create",
+    "study.inspect",
+    "study.physics_activation",
+    "study.run",
+    "study.solver_generate",
+    "study.step_create",
+    "study.step_update"
+  ],
+  "reopen_command": "tools/phase4_run_mcp.py --reopen-check evidence/phase4_1/chain_c_fixture/chain_c_user_style.mph",
+  "result_nodes": {
+    "blocker": {
+      "blockers": [
+        {
+          "kind": "operation_not_described",
+          "observed": null,
+          "operation": "code.execute_java"
+        },
+        {
+          "kind": "result_operations_not_implemented",
+          "operations": {
+            "result.numerical_manage": "UNKNOWN",
+            "result.table_manage": "UNKNOWN"
+          }
+        }
+      ],
+      "entrypoint": "Phase4ChainCResultNodes#run",
+      "kind": "result_nodes_unavailable",
+      "minimum_unblock": [
+        "enable trusted code before the daemon starts: COMSOL_MCP_TRUSTED_CODE=1 (the session then reports trusted_code.enabled=true)",
+        "implement the published result operations ['result.numerical_manage', 'result.table_manage'] so a non-code route also exists; checking whether a route exists is `operation_describe`"
+      ],
+      "reason": "the result nodes (Derived Values + Table + association) need the trusted-code route operation_call -> code.execute_java, which this deployment blocks: operation_not_described=; result_operations_not_implemented={'result.numerical_manage': 'UNKNOWN', 'result.table_manage': 'UNKNOWN'}",
+      "route": "operation_call -> code.execute_java",
+      "source_artifact": "tools/java/Phase4ChainCResultNodes.java",
+      "step": "result_nodes"
+    },
+    "created": false,
+    "mode": "externally_blocked",
+    "model_nodes_visited": 500,
+    "numerical_nodes_observed": [],
+    "published_tool_count": 65,
+    "published_trusted_code_tool": null,
+    "requested": true,
+    "route": {
+      "available": false,
+      "blockers": [
+        {
+          "kind": "operation_not_described",
+          "observed": null,
+          "operation": "code.execute_java"
+        },
+        {
+          "kind": "result_operations_not_implemented",
+          "operations": {
+            "result.numerical_manage": "UNKNOWN",
+            "result.table_manage": "UNKNOWN"
+          }
+        }
+      ],
+      "describe_status": null,
+      "described": {
+        "catalog_input_schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "additionalProperties": false,
+          "properties": {
+            "arguments": {
+              "type": "object"
+            },
+            "entrypoint": {
+              "type": "string"
+            },
+            "expected_revision": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "idempotency_key": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "invariants": {
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "mode": {
+              "type": "string"
+            },
+            "model_ref": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "project_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "session_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "source_artifact": {
+              "type": "string"
+            },
+            "timeout_s": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "source_artifact",
+            "entrypoint",
+            "arguments",
+            "mode"
+          ],
+          "title": "code.execute_java input",
+          "type": "object"
+        },
+        "domain": "code",
+        "effect": "TRUSTED_CODE",
+        "executable": true,
+        "gate": "G2",
+        "implementation_status": "SUPPORTED_UNVERIFIED",
+        "input_schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "additionalProperties": false,
+          "properties": {
+            "arguments": {
+              "type": "object"
+            },
+            "entrypoint": {
+              "type": "string"
+            },
+            "expected_revision": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "idempotency_key": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "invariants": {
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "mode": {
+              "type": "string"
+            },
+            "model_ref": {
+              "additionalProperties": false,
+              "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+              "properties": {
+                "generation": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "model_tag": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "schema_version": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "server_instance_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "session_id": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "schema_version",
+                "session_id",
+                "server_instance_id",
+                "model_tag",
+                "generation"
+              ],
+              "type": "object"
+            },
+            "project_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "session_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "source_artifact": {
+              "type": "string"
+            },
+            "timeout_s": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "source_artifact",
+            "entrypoint",
+            "arguments",
+            "mode"
+          ],
+          "title": "code.execute_java input",
+          "type": "object"
+        },
+        "mcp_tool_name": "code_execute_java",
+        "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+        "operation_id": "code.execute_java",
+        "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+        "output_schema": {
+          "additionalProperties": true,
+          "properties": {
+            "data": {
+              "type": "object"
+            },
+            "error": {
+              "type": [
+                "object",
+                "string",
+                "null"
+              ]
+            },
+            "execution": {
+              "type": "object"
+            },
+            "success": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "success",
+            "data"
+          ],
+          "type": "object"
+        },
+        "purpose": "在注入的目标Model上执行已授权代码",
+        "required_tests": [
+          "schema_valid",
+          "normal_path",
+          "failure_is_truthful",
+          "readback_and_revision",
+          "idempotency_and_partial_failure"
+        ],
+        "route": "bound Java worker / public COMSOL API",
+        "scope": "model",
+        "wire_compatibility": {
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+          "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+          "result_fields": [
+            "success",
+            "data",
+            "error",
+            "execution"
+          ],
+          "transport": "MCP structuredContent plus text mirror; isError equals not success"
+        }
+      },
+      "entrypoint": "Phase4ChainCResultNodes#run",
+      "operation": "code.execute_java",
+      "profile": "full",
+      "result_operations": {
+        "result.numerical_manage": "UNKNOWN",
+        "result.table_manage": "UNKNOWN"
+      },
+      "route": "operation_call -> code.execute_java",
+      "source_artifact": "tools/java/Phase4ChainCResultNodes.java",
+      "tool_count": 65,
+      "tool_published": false,
+      "trusted_code_config": "COMSOL_MCP_TRUSTED_CODE",
+      "trusted_code_enabled": true
+    }
+  },
+  "routing": {
+    "result_nodes": {
+      "available": false,
+      "blockers": [
+        {
+          "kind": "operation_not_described",
+          "observed": null,
+          "operation": "code.execute_java"
+        },
+        {
+          "kind": "result_operations_not_implemented",
+          "operations": {
+            "result.numerical_manage": "UNKNOWN",
+            "result.table_manage": "UNKNOWN"
+          }
+        }
+      ],
+      "describe_status": null,
+      "described": {
+        "catalog_input_schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "additionalProperties": false,
+          "properties": {
+            "arguments": {
+              "type": "object"
+            },
+            "entrypoint": {
+              "type": "string"
+            },
+            "expected_revision": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "idempotency_key": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "invariants": {
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "mode": {
+              "type": "string"
+            },
+            "model_ref": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "project_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "session_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "source_artifact": {
+              "type": "string"
+            },
+            "timeout_s": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "source_artifact",
+            "entrypoint",
+            "arguments",
+            "mode"
+          ],
+          "title": "code.execute_java input",
+          "type": "object"
+        },
+        "domain": "code",
+        "effect": "TRUSTED_CODE",
+        "executable": true,
+        "gate": "G2",
+        "implementation_status": "SUPPORTED_UNVERIFIED",
+        "input_schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "additionalProperties": false,
+          "properties": {
+            "arguments": {
+              "type": "object"
+            },
+            "entrypoint": {
+              "type": "string"
+            },
+            "expected_revision": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "idempotency_key": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "invariants": {
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "mode": {
+              "type": "string"
+            },
+            "model_ref": {
+              "additionalProperties": false,
+              "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+              "properties": {
+                "generation": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "model_tag": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "schema_version": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "server_instance_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "session_id": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "schema_version",
+                "session_id",
+                "server_instance_id",
+                "model_tag",
+                "generation"
+              ],
+              "type": "object"
+            },
+            "project_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "session_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "source_artifact": {
+              "type": "string"
+            },
+            "timeout_s": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "project_id",
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "source_artifact",
+            "entrypoint",
+            "arguments",
+            "mode"
+          ],
+          "title": "code.execute_java input",
+          "type": "object"
+        },
+        "mcp_tool_name": "code_execute_java",
+        "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+        "operation_id": "code.execute_java",
+        "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+        "output_schema": {
+          "additionalProperties": true,
+          "properties": {
+            "data": {
+              "type": "object"
+            },
+            "error": {
+              "type": [
+                "object",
+                "string",
+                "null"
+              ]
+            },
+            "execution": {
+              "type": "object"
+            },
+            "success": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "success",
+            "data"
+          ],
+          "type": "object"
+        },
+        "purpose": "在注入的目标Model上执行已授权代码",
+        "required_tests": [
+          "schema_valid",
+          "normal_path",
+          "failure_is_truthful",
+          "readback_and_revision",
+          "idempotency_and_partial_failure"
+        ],
+        "route": "bound Java worker / public COMSOL API",
+        "scope": "model",
+        "wire_compatibility": {
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+          "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+          "result_fields": [
+            "success",
+            "data",
+            "error",
+            "execution"
+          ],
+          "transport": "MCP structuredContent plus text mirror; isError equals not success"
+        }
+      },
+      "entrypoint": "Phase4ChainCResultNodes#run",
+      "operation": "code.execute_java",
+      "profile": "full",
+      "result_operations": {
+        "result.numerical_manage": "UNKNOWN",
+        "result.table_manage": "UNKNOWN"
+      },
+      "route": "operation_call -> code.execute_java",
+      "source_artifact": "tools/java/Phase4ChainCResultNodes.java",
+      "tool_count": 65,
+      "tool_published": false,
+      "trusted_code_config": "COMSOL_MCP_TRUSTED_CODE",
+      "trusted_code_enabled": true
+    },
+    "session": {
+      "session_id": "session-9f95c2e814acd5f99589961a",
+      "tool_profile": "full",
+      "trusted_code": {
+        "config": "COMSOL_MCP_TRUSTED_CODE",
+        "enabled": true,
+        "os_sandbox": false
+      },
+      "trusted_code_enabled": true
+    }
+  },
+  "session": {
+    "has_legacy_model_create": true,
+    "has_operation_call": true,
+    "initialize": {
+      "caller_owned_private_home": false,
+      "capabilities": {
+        "completions": null,
+        "experimental": {},
+        "logging": null,
+        "prompts": {
+          "listChanged": false
+        },
+        "resources": {
+          "listChanged": false,
+          "subscribe": false
+        },
+        "tasks": null,
+        "tools": {
+          "listChanged": false
+        }
+      },
+      "instruction_bytes": 0,
+      "private_home": "$REPO/PRIVATE_REDACTED/phase4-acceptance/chain_c_fixture/primary/mcp-home",
+      "protocolVersion": "2025-11-25",
+      "server_name": "comsol-mcp-server",
+      "server_version": "1.30.0",
+      "tool_count": 65,
+      "tool_profile": "full"
+    },
+    "isolation_receipt_present": true,
+    "tool_count": 65
+  },
+  "sibling_geometry": {
+    "applied": true,
+    "attempted": true,
+    "created": true,
+    "error_code": null,
+    "path": {
+      "segments": [
+        {
+          "collection": "component",
+          "tag": "comp1"
+        },
+        {
+          "collection": "geom",
+          "tag": "geom2"
+        }
+      ]
+    },
+    "tag": "geom2"
+  },
+  "sources": [
+    {
+      "exists": true,
+      "path": "$REPO/tools/phase4_run_mcp.py",
+      "sha256": "99e47d52b176d72952d62062af5959d4bf10f23dae8c3906b23f58ba7e601d90",
+      "size": 706853
+    },
+    {
+      "exists": true,
+      "path": "$REPO/tools/phase4_chain_c_fixture.py",
+      "sha256": "c65fa921931a0b4d82dfa25c565474ccc78f3fb22b21a137e79d0a56e6a92410",
+      "size": 135081
+    },
+    {
+      "exists": true,
+      "path": "$REPO/tools/java/Phase4ChainCResultNodes.java",
+      "sha256": "195054021a239c076a073c2cf1d94e26b6d19dab2f04bd2fc59a8a4cc25161c9",
+      "size": 13224
+    }
+  ],
+  "startup_error": null,
+  "steps": [
+    {
+      "error_code": null,
+      "notes": "engine connection established before the build steps",
+      "operation": "server_connect",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "server_connect",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "execution": {
+        "error_code": null,
+        "has_structured_content": true,
+        "job_id": "6f769419-4782-4510-975b-1d2fe9f5159a",
+        "operation_id": "6581ba35-6980-4e1f-b480-52b17d627824",
+        "outer_isError": false,
+        "request_hash": "38d6d70e46b585e9410b3918650108f73df3b9c85f3e8bea8ebd2ccc02b15418",
+        "success": true
+      },
+      "model_ref": {
+        "generation": 1,
+        "model_tag": "mcp59",
+        "schema_version": 1,
+        "server_instance_id": "4bef620ed6b6bbc732dcd3c36130b597e5b42d315bc7aa74da1484a30ce03081",
+        "session_id": "session-9f95c2e814acd5f99589961a"
+      },
+      "notes": "legacy published route: the strict model.create operation is not implemented",
+      "operation": "model_create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "model_create",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "definition.component_manage",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "component_create",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "geometry.sequence_create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "geometry_create",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "geometry.feature_create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "geometry_block",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": "size/pos typed from the Block node's own property metadata",
+      "operation": "geometry.feature_update",
+      "outer_isError": false,
+      "readback": {
+        "path": {
+          "segments": [
+            {
+              "collection": "component",
+              "tag": "comp1"
+            },
+            {
+              "collection": "geom",
+              "tag": "geom1"
+            },
+            {
+              "collection": "feature",
+              "tag": "blk1"
+            }
+          ]
+        },
+        "properties": [
+          {
+            "name": "size",
+            "value": {
+              "data": [
+                0.03,
+                0.02,
+                0.01
+              ],
+              "java_signature": "double[]",
+              "kind": "float64",
+              "shape": [
+                3
+              ]
+            }
+          },
+          {
+            "name": "pos",
+            "value": {
+              "data": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "java_signature": "double[]",
+              "kind": "float64",
+              "shape": [
+                3
+              ]
+            }
+          }
+        ]
+      },
+      "refused": [],
+      "request_arguments": [
+        "path",
+        "properties"
+      ],
+      "status": "APPLIED",
+      "step": "geometry_block",
+      "success": true,
+      "written": {
+        "pos": {
+          "engine_kind": "float64",
+          "engine_shape_rank": 1,
+          "engine_value_type": "DoubleArray",
+          "requested": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "value_source": "engine_metadata"
+        },
+        "size": {
+          "engine_kind": "float64",
+          "engine_shape_rank": 1,
+          "engine_value_type": "DoubleArray",
+          "requested": [
+            0.03,
+            0.02,
+            0.01
+          ],
+          "value_source": "engine_metadata"
+        }
+      }
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "geometry.build",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "geometry_build",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "material.create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "material_target",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": "group 'def'; expression text is written verbatim",
+      "operation": "material.set_properties",
+      "outer_isError": false,
+      "readback": {
+        "path": {
+          "segments": [
+            {
+              "collection": "component",
+              "tag": "comp1"
+            },
+            {
+              "collection": "material",
+              "tag": "mat1"
+            },
+            {
+              "collection": "propertyGroup",
+              "tag": "def"
+            }
+          ]
+        },
+        "properties": [
+          {
+            "name": "thermalconductivity",
+            "value": {
+              "data": [
+                "0.45[W/(m*K)]"
+              ],
+              "java_signature": "java.lang.String[]",
+              "kind": "string",
+              "shape": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "density",
+            "value": {
+              "data": "2200[kg/m^3]",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "shape": []
+            }
+          },
+          {
+            "name": "heatcapacity",
+            "value": {
+              "data": "880[J/(kg*K)]",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "shape": []
+            }
+          }
+        ]
+      },
+      "refused": [],
+      "request_arguments": [
+        "group",
+        "path",
+        "properties"
+      ],
+      "status": "APPLIED",
+      "step": "material_target",
+      "success": true,
+      "written": {
+        "density": {
+          "documented": {
+            "kind": "string",
+            "shape_rank": 0
+          },
+          "engine_kind": null,
+          "engine_shape_rank": null,
+          "engine_value_type": null,
+          "requested": "2200[kg/m^3]",
+          "value_source": "documented_table"
+        },
+        "heatcapacity": {
+          "documented": {
+            "kind": "string",
+            "shape_rank": 0
+          },
+          "engine_kind": null,
+          "engine_shape_rank": null,
+          "engine_value_type": null,
+          "requested": "880[J/(kg*K)]",
+          "value_source": "documented_table"
+        },
+        "thermalconductivity": {
+          "documented": {
+            "kind": "string",
+            "shape_rank": 2
+          },
+          "engine_kind": null,
+          "engine_shape_rank": null,
+          "engine_value_type": null,
+          "requested": [
+            [
+              "0.45[W/(m*K)]",
+              "0",
+              "0"
+            ],
+            [
+              "0",
+              "0.45[W/(m*K)]",
+              "0"
+            ],
+            [
+              "0",
+              "0",
+              "0.45[W/(m*K)]"
+            ]
+          ],
+          "value_source": "documented_table"
+        }
+      }
+    },
+    {
+      "error_code": null,
+      "notes": "explicit domain binding: domain 1",
+      "operation": "material.selection_set",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "material_target",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "material.create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "material_unrelated",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": "deliberately unused material: a non-target node that must survive",
+      "operation": "material.set_properties",
+      "outer_isError": false,
+      "readback": {
+        "path": {
+          "segments": [
+            {
+              "collection": "component",
+              "tag": "comp1"
+            },
+            {
+              "collection": "material",
+              "tag": "mat2"
+            },
+            {
+              "collection": "propertyGroup",
+              "tag": "def"
+            }
+          ]
+        },
+        "properties": [
+          {
+            "name": "thermalconductivity",
+            "value": {
+              "data": [
+                "1[W/(m*K)]"
+              ],
+              "java_signature": "java.lang.String[]",
+              "kind": "string",
+              "shape": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "density",
+            "value": {
+              "data": "1000[kg/m^3]",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "shape": []
+            }
+          },
+          {
+            "name": "heatcapacity",
+            "value": {
+              "data": "1000[J/(kg*K)]",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "shape": []
+            }
+          }
+        ]
+      },
+      "refused": [],
+      "request_arguments": [
+        "group",
+        "path",
+        "properties"
+      ],
+      "status": "APPLIED",
+      "step": "material_unrelated",
+      "success": true,
+      "written": {
+        "density": {
+          "documented": {
+            "kind": "string",
+            "shape_rank": 0
+          },
+          "engine_kind": null,
+          "engine_shape_rank": null,
+          "engine_value_type": null,
+          "requested": "1000[kg/m^3]",
+          "value_source": "documented_table"
+        },
+        "heatcapacity": {
+          "documented": {
+            "kind": "string",
+            "shape_rank": 0
+          },
+          "engine_kind": null,
+          "engine_shape_rank": null,
+          "engine_value_type": null,
+          "requested": "1000[J/(kg*K)]",
+          "value_source": "documented_table"
+        },
+        "thermalconductivity": {
+          "documented": {
+            "kind": "string",
+            "shape_rank": 2
+          },
+          "engine_kind": null,
+          "engine_shape_rank": null,
+          "engine_value_type": null,
+          "requested": [
+            [
+              "1[W/(m*K)]",
+              "0",
+              "0"
+            ],
+            [
+              "0",
+              "1[W/(m*K)]",
+              "0"
+            ],
+            [
+              "0",
+              "0",
+              "1[W/(m*K)]"
+            ]
+          ],
+          "value_source": "documented_table"
+        }
+      }
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "physics.create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "physics_create",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": "user initial temperature on feature 'init1' via its own property 'Tinit'",
+      "operation": "physics.feature_update",
+      "outer_isError": false,
+      "readback": {
+        "path": {
+          "segments": [
+            {
+              "collection": "component",
+              "tag": "comp1"
+            },
+            {
+              "collection": "physics",
+              "tag": "ht"
+            },
+            {
+              "collection": "feature",
+              "tag": "init1"
+            }
+          ]
+        },
+        "properties": [
+          {
+            "name": "Tinit",
+            "value": {
+              "data": "293.15",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "shape": []
+            }
+          },
+          {
+            "name": "Tinit_src",
+            "value": {
+              "data": "userdef",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "shape": []
+            }
+          }
+        ]
+      },
+      "refused": [],
+      "request_arguments": [
+        "path",
+        "properties"
+      ],
+      "status": "APPLIED",
+      "step": "physics_initial_values",
+      "success": true,
+      "written": {
+        "Tinit": {
+          "engine_kind": "string",
+          "engine_shape_rank": 0,
+          "engine_value_type": "String",
+          "requested": "293.15",
+          "value_source": "engine_metadata"
+        },
+        "Tinit_src": {
+          "engine_kind": "string",
+          "engine_shape_rank": 0,
+          "engine_value_type": "String",
+          "requested": "userdef",
+          "value_source": "engine_metadata"
+        }
+      }
+    },
+    {
+      "error_code": null,
+      "notes": "verified heat-transfer boundary token TemperatureBoundary",
+      "operation": "physics.feature_create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "physics_temperature_boundary",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": "user boundary temperature",
+      "operation": "physics.feature_update",
+      "outer_isError": false,
+      "readback": {
+        "path": {
+          "segments": [
+            {
+              "collection": "component",
+              "tag": "comp1"
+            },
+            {
+              "collection": "physics",
+              "tag": "ht"
+            },
+            {
+              "collection": "feature",
+              "tag": "temp1"
+            }
+          ]
+        },
+        "properties": [
+          {
+            "name": "T0",
+            "value": {
+              "data": "353.15",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "shape": []
+            }
+          }
+        ]
+      },
+      "refused": [],
+      "request_arguments": [
+        "path",
+        "properties"
+      ],
+      "status": "APPLIED",
+      "step": "physics_temperature_boundary",
+      "success": true,
+      "written": {
+        "T0": {
+          "engine_kind": "string",
+          "engine_shape_rank": 0,
+          "engine_value_type": "String",
+          "requested": "353.15",
+          "value_source": "engine_metadata"
+        }
+      }
+    },
+    {
+      "error_code": null,
+      "notes": "second user boundary condition (non-target node)",
+      "operation": "physics.feature_create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "physics_heat_flux",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": "unrelated interface: switched off inside the study step, and must survive the continuation",
+      "operation": "physics.create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "physics_unrelated",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "geometry.sequence_create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "sibling_geometry",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": "sibling geometry carries its own user block",
+      "operation": "geometry.feature_create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "sibling_geometry",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": "a deliberately different size from the target geometry: the continuation must not touch it",
+      "operation": "geometry.feature_update",
+      "outer_isError": false,
+      "readback": {
+        "path": {
+          "segments": [
+            {
+              "collection": "component",
+              "tag": "comp1"
+            },
+            {
+              "collection": "geom",
+              "tag": "geom2"
+            },
+            {
+              "collection": "feature",
+              "tag": "blk1"
+            }
+          ]
+        },
+        "properties": [
+          {
+            "name": "size",
+            "value": {
+              "data": [
+                0.015,
+                0.01,
+                0.005
+              ],
+              "java_signature": "double[]",
+              "kind": "float64",
+              "shape": [
+                3
+              ]
+            }
+          },
+          {
+            "name": "pos",
+            "value": {
+              "data": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "java_signature": "double[]",
+              "kind": "float64",
+              "shape": [
+                3
+              ]
+            }
+          }
+        ]
+      },
+      "refused": [],
+      "request_arguments": [
+        "path",
+        "properties"
+      ],
+      "status": "APPLIED",
+      "step": "sibling_geometry",
+      "success": true,
+      "written": {
+        "pos": {
+          "engine_kind": "float64",
+          "engine_shape_rank": 1,
+          "engine_value_type": "DoubleArray",
+          "requested": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "value_source": "engine_metadata"
+        },
+        "size": {
+          "engine_kind": "float64",
+          "engine_shape_rank": 1,
+          "engine_value_type": "DoubleArray",
+          "requested": [
+            0.015,
+            0.01,
+            0.005
+          ],
+          "value_source": "engine_metadata"
+        }
+      }
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "geometry.build",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "sibling_geometry",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "mesh.create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "mesh_create",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "features": [
+        {
+          "tag": "size",
+          "type_id": "MeshSizeDefault"
+        }
+      ],
+      "notes": null,
+      "operation": "mesh.inspect",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "mesh_create",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": "user mesh size (hauto=4) selected by documented_tag from tag='size' type_id='MeshSizeDefault'",
+      "operation": "mesh.feature_update",
+      "outer_isError": false,
+      "readback": {
+        "path": {
+          "segments": [
+            {
+              "collection": "component",
+              "tag": "comp1"
+            },
+            {
+              "collection": "mesh",
+              "tag": "mesh1"
+            },
+            {
+              "collection": "feature",
+              "tag": "size"
+            }
+          ]
+        },
+        "properties": [
+          {
+            "name": "hauto",
+            "value": {
+              "data": 4.0,
+              "java_signature": "double",
+              "kind": "float64",
+              "shape": []
+            }
+          }
+        ]
+      },
+      "refused": [],
+      "request_arguments": [
+        "path",
+        "properties"
+      ],
+      "status": "APPLIED",
+      "step": "mesh_size",
+      "success": true,
+      "written": {
+        "hauto": {
+          "engine_kind": "float64",
+          "engine_shape_rank": 0,
+          "engine_value_type": "Double",
+          "requested": 4.0,
+          "value_source": "engine_metadata"
+        }
+      }
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "mesh.build",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "mesh_build",
+      "success": true
+    },
+    {
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "notes": null,
+      "operation": "mesh.statistics",
+      "outer_isError": true,
+      "statistics": {
+        "status": "UNKNOWN"
+      },
+      "status": "FAILED",
+      "step": "mesh_build",
+      "success": false
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "study.create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "study_create",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": "documented create string for Time Dependent is 'Transient'",
+      "operation": "study.step_create",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "study_step_transient",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": "user time list, typed from the step's own property metadata",
+      "operation": "study.step_update",
+      "outer_isError": false,
+      "readback": {
+        "path": {
+          "segments": [
+            {
+              "collection": "study",
+              "tag": "std1"
+            },
+            {
+              "collection": "feature",
+              "tag": "time"
+            }
+          ]
+        },
+        "properties": [
+          {
+            "name": "tlist",
+            "value": {
+              "data": [
+                0.0,
+                0.5,
+                1.0,
+                2.0,
+                5.0
+              ],
+              "java_signature": "double[]",
+              "kind": "float64",
+              "shape": [
+                5
+              ]
+            }
+          }
+        ]
+      },
+      "refused": [],
+      "request_arguments": [
+        "path",
+        "properties"
+      ],
+      "status": "APPLIED",
+      "step": "study_step_tlist",
+      "success": true,
+      "written": {
+        "tlist": {
+          "engine_kind": "float64",
+          "engine_shape_rank": 1,
+          "engine_value_type": "DoubleArray",
+          "requested": [
+            0.0,
+            0.5,
+            1.0,
+            2.0,
+            5.0
+          ],
+          "value_source": "engine_metadata"
+        }
+      }
+    },
+    {
+      "error_code": "ENGINE_CALL_FAILED",
+      "notes": "the unrelated interface 'ht2' is switched off in the transient step",
+      "operation": "study.physics_activation",
+      "outer_isError": true,
+      "status": "FAILED",
+      "step": "study_physics_activation",
+      "success": false
+    },
+    {
+      "created": [
+        "sol1"
+      ],
+      "error_code": null,
+      "notes": "createAutoSequences('sol'): the sequence must be preserved, not regenerated",
+      "operation": "study.solver_generate",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "study_solver_generate",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "solver.list",
+      "outer_isError": false,
+      "solvers": [
+        {
+          "feature_count": 3,
+          "solver": "sol1",
+          "study": "std1"
+        }
+      ],
+      "status": "APPLIED",
+      "step": "solver_inspect",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "features": [
+        {
+          "tag": "st1",
+          "type_id": "StudyStep"
+        },
+        {
+          "tag": "v1",
+          "type_id": "Variables"
+        },
+        {
+          "tag": "comp1_T",
+          "type_id": "Field"
+        },
+        {
+          "tag": "comp1_T2",
+          "type_id": "Field"
+        },
+        {
+          "tag": "t1",
+          "type_id": "Time"
+        },
+        {
+          "tag": "dDef",
+          "type_id": "Direct"
+        },
+        {
+          "tag": "aDef",
+          "type_id": "Advanced"
+        },
+        {
+          "tag": "se1",
+          "type_id": "Segregated"
+        },
+        {
+          "tag": "ss1",
+          "type_id": "SegregatedStep"
+        },
+        {
+          "tag": "ss2",
+          "type_id": "SegregatedStep"
+        },
+        {
+          "tag": "ll1",
+          "type_id": "LowerLimit"
+        },
+        {
+          "tag": "d1",
+          "type_id": "Direct"
+        },
+        {
+          "tag": "d2",
+          "type_id": "Direct"
+        },
+        {
+          "tag": "i1",
+          "type_id": "Iterative"
+        },
+        {
+          "tag": "ilDef",
+          "type_id": "IncompleteLU"
+        },
+        {
+          "tag": "mg1",
+          "type_id": "Multigrid"
+        },
+        {
+          "tag": "pr",
+          "type_id": "PreSmoother"
+        },
+        {
+          "tag": "po",
+          "type_id": "PostSmoother"
+        },
+        {
+          "tag": "cs",
+          "type_id": "CoarseSolver"
+        },
+        {
+          "tag": "i2",
+          "type_id": "Iterative"
+        },
+        {
+          "tag": "ilDef",
+          "type_id": "IncompleteLU"
+        },
+        {
+          "tag": "mg1",
+          "type_id": "Multigrid"
+        },
+        {
+          "tag": "pr",
+          "type_id": "PreSmoother"
+        },
+        {
+          "tag": "po",
+          "type_id": "PostSmoother"
+        },
+        {
+          "tag": "cs",
+          "type_id": "CoarseSolver"
+        }
+      ],
+      "notes": null,
+      "operation": "solver.inspect",
+      "outer_isError": false,
+      "solver": "sol1",
+      "status": "APPLIED",
+      "step": "solver_inspect",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": "hand-edited Time feature 't1': rtol=1e-05",
+      "operation": "solver.feature_update",
+      "outer_isError": false,
+      "path": {
+        "segments": [
+          {
+            "collection": "sol",
+            "tag": "sol1"
+          },
+          {
+            "collection": "feature",
+            "tag": "t1"
+          }
+        ]
+      },
+      "property": "rtol",
+      "readback": {
+        "path": {
+          "segments": [
+            {
+              "collection": "sol",
+              "tag": "sol1"
+            },
+            {
+              "collection": "feature",
+              "tag": "t1"
+            }
+          ]
+        },
+        "properties": [
+          {
+            "name": "rtol",
+            "value": {
+              "data": 1e-05,
+              "java_signature": "double",
+              "kind": "float64",
+              "shape": []
+            }
+          }
+        ]
+      },
+      "status": "APPLIED",
+      "step": "manual_solver_edit",
+      "success": true,
+      "value": 1e-05
+    },
+    {
+      "computation": {
+        "getLastComputationDate": 1789978170270,
+        "getLastComputationTime": 2922,
+        "getLastComputationVersion": "COMSOL 6.4.0.293"
+      },
+      "error_code": null,
+      "notes": null,
+      "operation": "study.run",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "study_run",
+      "success": true
+    },
+    {
+      "blockers": [
+        {
+          "kind": "operation_not_described",
+          "observed": null,
+          "operation": "code.execute_java"
+        },
+        {
+          "kind": "result_operations_not_implemented",
+          "operations": {
+            "result.numerical_manage": "UNKNOWN",
+            "result.table_manage": "UNKNOWN"
+          }
+        }
+      ],
+      "error_code": null,
+      "notes": "the result nodes (Derived Values + Table + association) need the trusted-code route operation_call -> code.execute_java, which this deployment blocks: operation_not_described=; result_operations_not_implemented={'result.numerical_manage': 'UNKNOWN', 'result.table_manage': 'UNKNOWN'}; no Derived Values node is claimed",
+      "numerical_nodes_observed": [],
+      "operation": "code execution",
+      "outer_isError": null,
+      "source_artifact": "tools/java/Phase4ChainCResultNodes.java",
+      "status": "EXTERNALLY_BLOCKED",
+      "step": "result_nodes",
+      "success": false
+    },
+    {
+      "bytes": 6415970,
+      "error_code": null,
+      "notes": null,
+      "operation": "model.save",
+      "outer_isError": false,
+      "path": "evidence/phase4_1/chain_c_fixture/chain_c_user_style.mph",
+      "sha256": "b497a6257cefe120db4a717f7e105f9052ff0ec8c89fc6ad6409bedb8cf0e043",
+      "status": "APPLIED",
+      "step": "model_save",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "study.inspect",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "verify",
+      "success": true,
+      "target_step_present": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "node.property_get",
+      "outer_isError": false,
+      "property": "tlist",
+      "status": "APPLIED",
+      "step": "verify",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "solver.list",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "verify",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "physics.list",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "verify",
+      "success": true
+    },
+    {
+      "error_code": null,
+      "notes": null,
+      "operation": "material.list",
+      "outer_isError": false,
+      "status": "APPLIED",
+      "step": "verify",
+      "success": true
+    }
+  ],
+  "tlist": {
+    "engine_metadata": {
+      "getter": "getDoubleArray",
+      "java_signature": "double[]",
+      "kind": "float64",
+      "metadata_status": "KNOWN",
+      "name": "tlist",
+      "shape_rank": 1,
+      "type_id": "Transient",
+      "value_type": "DoubleArray"
+    },
+    "requested": [
+      0.0,
+      0.5,
+      1.0,
+      2.0,
+      5.0
+    ],
+    "write": {
+      "error_code": null,
+      "notes": "user time list, typed from the step's own property metadata",
+      "operation": "study.step_update",
+      "outer_isError": false,
+      "readback": {
+        "path": {
+          "segments": [
+            {
+              "collection": "study",
+              "tag": "std1"
+            },
+            {
+              "collection": "feature",
+              "tag": "time"
+            }
+          ]
+        },
+        "properties": [
+          {
+            "name": "tlist",
+            "value": {
+              "data": [
+                0.0,
+                0.5,
+                1.0,
+                2.0,
+                5.0
+              ],
+              "java_signature": "double[]",
+              "kind": "float64",
+              "shape": [
+                5
+              ]
+            }
+          }
+        ]
+      },
+      "refused": [],
+      "request_arguments": [
+        "path",
+        "properties"
+      ],
+      "status": "APPLIED",
+      "step": "study_step_tlist",
+      "success": true,
+      "written": {
+        "tlist": {
+          "engine_kind": "float64",
+          "engine_shape_rank": 1,
+          "engine_value_type": "DoubleArray",
+          "requested": [
+            0.0,
+            0.5,
+            1.0,
+            2.0,
+            5.0
+          ],
+          "value_source": "engine_metadata"
+        }
+      }
+    }
+  },
+  "unverified": [
+    "the .mph is written and hashed, but the fixture does not reopen it: use tools/phase4_run_mcp.py --reopen-check to verify loadability in a fresh child",
+    "the result nodes (Derived Values + Table + data association) are created only through the trusted-code route code.execute_java; when COMSOL_MCP_TRUSTED_CODE is not enabled the step is recorded as EXTERNALLY_BLOCKED (exit code 4) and the model has no Derived Values node",
+    "if a result node *is* created, its presence is read back from the engine but the node is not evaluated: the fixture never claims a number",
+    "the chain C case itself addresses the continuation target as [{study,std1},{step,time}] with a row-list `properties`; the published operation layer rejects both forms (INVALID_NODE_PATH: unsupported path collection 'step'; INVALID_REQUEST: properties must be an object). The target this fixture prepares is writable with the verified shape -- [{study,std1},{feature,time}] plus a name->value mapping -- as replayed offline against the repository's fake node tree (tests/test_g3_chain_c_fixture.py::test_chain_c_fixture_tlist_write_works_on_the_repo_fake_tree)."
+  ],
+  "verification": {
+    "materials": {
+      "collection": "material",
+      "component": "comp1",
+      "errors": [],
+      "material_count": 2,
+      "materials": [
+        {
+          "dimension": 3,
+          "entities": [
+            1
+          ],
+          "entities_error": null,
+          "geometry": "geom1",
+          "is_inheriting": false,
+          "label": "材料 1",
+          "material_type": "solid",
+          "named": "",
+          "named_error": null,
+          "property_groups": [
+            "def"
+          ],
+          "read_status": "OK",
+          "selection": "material.selection()",
+          "selection_error": null,
+          "tag": "mat1",
+          "type_id": "Common"
+        },
+        {
+          "dimension": 3,
+          "entities": [],
+          "entities_error": null,
+          "geometry": "geom1",
+          "is_inheriting": false,
+          "label": "材料 2",
+          "material_type": "solid",
+          "named": "",
+          "named_error": null,
+          "property_groups": [
+            "def"
+          ],
+          "read_status": "OK",
+          "selection": "material.selection()",
+          "selection_error": null,
+          "tag": "mat2",
+          "type_id": "Common"
+        }
+      ],
+      "path": {
+        "segments": [
+          {
+            "collection": "component",
+            "tag": "comp1"
+          }
+        ]
+      },
+      "scope": "component",
+      "tag_source": "component('comp1').material().tags()"
+    },
+    "physics": {
+      "component": "comp1",
+      "geometry_source": "physics(<tag>).geom()",
+      "interface_count": 2,
+      "interfaces": [
+        {
+          "component": "comp1",
+          "feature_tags": [
+            "solid1",
+            "init1",
+            "ins1",
+            "idi1",
+            "ltneb1",
+            "os1",
+            "cib1",
+            "dcont1",
+            "temp1",
+            "hf1"
+          ],
+          "geometry": "geom1",
+          "selection": {
+            "dimension": null,
+            "entities": null,
+            "entities_error": {
+              "allowlist_entry_required": null,
+              "code": "ENGINE_CALL_FAILED",
+              "message": "COMSOL entities probe failed: JavaWorkerError"
+            },
+            "geometry": "geom1",
+            "is_inheriting": null,
+            "named": null,
+            "named_error": {
+              "allowlist_entry_required": null,
+              "code": "ENGINE_CALL_FAILED",
+              "message": "COMSOL named probe failed: JavaWorkerError"
+            }
+          },
+          "tag": "ht",
+          "type_id": "HeatTransfer"
+        },
+        {
+          "component": "comp1",
+          "feature_tags": [
+            "solid1",
+            "init1",
+            "ins1",
+            "idi1",
+            "ltneb1",
+            "os1",
+            "cib1",
+            "dcont1"
+          ],
+          "geometry": "geom1",
+          "selection": {
+            "dimension": null,
+            "entities": null,
+            "entities_error": {
+              "allowlist_entry_required": null,
+              "code": "ENGINE_CALL_FAILED",
+              "message": "COMSOL entities probe failed: JavaWorkerError"
+            },
+            "geometry": "geom1",
+            "is_inheriting": null,
+            "named": null,
+            "named_error": {
+              "allowlist_entry_required": null,
+              "code": "ENGINE_CALL_FAILED",
+              "message": "COMSOL named probe failed: JavaWorkerError"
+            }
+          },
+          "tag": "ht2",
+          "type_id": "HeatTransfer"
+        }
+      ],
+      "multiphysics_couplings": [],
+      "multiphysics_couplings_by_scope": [
+        {
+          "error": null,
+          "scope": "component",
+          "tags": []
+        },
+        {
+          "error": null,
+          "scope": "model",
+          "tags": []
+        }
+      ],
+      "multiphysics_scopes": "component(<tag>).multiphysics() plus the model-global model.multiphysics(); the per-scope tag lists never overwrite one another",
+      "path": {
+        "segments": [
+          {
+            "collection": "component",
+            "tag": "comp1"
+          }
+        ]
+      },
+      "scope": "component",
+      "tag_source": "component('comp1').physics().tags()",
+      "type_source": "physics(<tag>).getType()"
+    },
+    "solvers": [
+      {
+        "feature_count": 3,
+        "solver": "sol1",
+        "study": "std1"
+      }
+    ],
+    "study": {
+      "steps": [
+        {
+          "tag": "time",
+          "type_id": "Transient"
+        }
+      ],
+      "success": true,
+      "tag": "std1",
+      "target_step_present": true
+    },
+    "tlist": {
+      "path": {
+        "segments": [
+          {
+            "collection": "study",
+            "tag": "std1"
+          },
+          {
+            "collection": "feature",
+            "tag": "time"
+          }
+        ]
+      },
+      "properties": [
+        {
+          "name": "tlist",
+          "value": {
+            "data": [
+              0.0,
+              0.5,
+              1.0,
+              2.0,
+              5.0
+            ],
+            "java_signature": "double[]",
+            "kind": "float64",
+            "shape": [
+              5
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "warnings": [
+    "result nodes: the result nodes (Derived Values + Table + association) need the trusted-code route operation_call -> code.execute_java, which this deployment blocks: operation_not_described=; result_operations_not_implemented={'result.numerical_manage': 'UNKNOWN', 'result.table_manage': 'UNKNOWN'}"
+  ]
+}

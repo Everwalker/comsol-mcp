@@ -1,0 +1,219 @@
+{
+  "alpha_m2_s": 1e-05,
+  "analytic_model": "transient 1D conduction with T(x,0)=T0+dT*sin(pi*x/L) and both ends held at T0: T(x,t) = T0 + dT*sin(pi*x/L)*exp(-alpha*(pi/L)^2*t); the slab is insulated elsewhere",
+  "benchmark_spec": {
+    "alpha_m2_s": 1e-05,
+    "chain": "B",
+    "cp_j_kgk": 1000.0,
+    "delta_t_k": 20.0,
+    "error_definition": "max over the registered time points of |T_engine(x,t) - T_analytic(x,t)| / dT, T(x,t) = T0 + dT*sin(pi*x/L)*exp(-alpha*(pi/L)^2*t), alpha = k/(rho*Cp)",
+    "error_limit": 0.001,
+    "expected_model_values": [
+      {
+        "expression": "10[W/(m*K)]",
+        "item": "thermalconductivity",
+        "unit": "W/(m*K)",
+        "value": 10.0
+      },
+      {
+        "expression": "1000[kg/m^3]",
+        "item": "density",
+        "unit": "kg/m^3",
+        "value": 1000.0
+      },
+      {
+        "expression": "1000[J/(kg*K)]",
+        "item": "heatcapacity",
+        "unit": "J/(kg*K)",
+        "value": 1000.0
+      },
+      {
+        "expression": null,
+        "item": "length_m",
+        "unit": "m",
+        "value": 0.01
+      },
+      {
+        "expression": null,
+        "item": "width_m",
+        "unit": "m",
+        "value": 0.01
+      },
+      {
+        "expression": null,
+        "item": "height_m",
+        "unit": "m",
+        "value": 0.005
+      },
+      {
+        "expression": "300[K]",
+        "item": "initial_value",
+        "unit": "K",
+        "value": 300.0
+      },
+      {
+        "expression": null,
+        "item": "time_points",
+        "unit": "s",
+        "value": [
+          0.0,
+          0.5,
+          1.0,
+          2.0,
+          4.0
+        ]
+      }
+    ],
+    "height_m": 0.005,
+    "hot_k": null,
+    "k_w_mk": 10.0,
+    "length_m": 0.01,
+    "rho_kg_m3": 1000.0,
+    "sample_count": 21,
+    "sanity_checks": [
+      {
+        "check": "unit:k_w_mk",
+        "ok": true,
+        "unit": "W/(m*K)",
+        "value": 10.0,
+        "why": "a positive finite quantity in the registered unit"
+      },
+      {
+        "check": "unit:rho_kg_m3",
+        "ok": true,
+        "unit": "kg/m^3",
+        "value": 1000.0,
+        "why": "a positive finite quantity in the registered unit"
+      },
+      {
+        "check": "unit:cp_j_kgk",
+        "ok": true,
+        "unit": "J/(kg*K)",
+        "value": 1000.0,
+        "why": "a positive finite quantity in the registered unit"
+      },
+      {
+        "check": "unit:length_m",
+        "ok": true,
+        "unit": "m",
+        "value": 0.01,
+        "why": "a positive finite quantity in the registered unit"
+      },
+      {
+        "check": "unit:t0_k",
+        "ok": true,
+        "unit": "K",
+        "value": 300.0,
+        "why": "a positive finite quantity in the registered unit"
+      },
+      {
+        "check": "diffusivity",
+        "ok": true,
+        "unit": "m^2/s",
+        "value": 1e-05,
+        "why": "alpha = k/(rho*Cp) is the only diffusivity the analytic model uses"
+      },
+      {
+        "check": "decay_rate",
+        "ok": true,
+        "unit": "1/s",
+        "value": 0.9869604401089359,
+        "why": "alpha*(pi/L)^2: the transient factor must decay, not grow"
+      },
+      {
+        "check": "transient_initial_profile",
+        "ok": true,
+        "unit": "K",
+        "value": [
+          300.0,
+          303.12868930080464,
+          306.180339887499
+        ],
+        "why": "T(x,0) = T0 + dT*sin(pi*x/L): the initial perturbation is the registered one"
+      },
+      {
+        "check": "transient_boundaries_hold",
+        "ok": true,
+        "unit": "K",
+        "value": [
+          300.0,
+          300.0
+        ],
+        "why": "both ends sit at T0 for every registered time (the sine vanishes there)"
+      },
+      {
+        "check": "transient_decays_to_initial",
+        "ok": true,
+        "unit": "K",
+        "value": 300.0,
+        "why": "as t grows the perturbation must vanish, leaving T0"
+      },
+      {
+        "check": "sine_perturbation_shape",
+        "ok": true,
+        "unit": "K",
+        "value": 314.14213562373095,
+        "why": "the spatial shape is the registered sin(pi*x/L), not a fitted curve"
+      }
+    ],
+    "sides": "insulated on the four lateral faces",
+    "source": "G3.1 §8.1 pre-registered benchmark specification",
+    "t0_k": 300.0,
+    "time_points_s": [
+      0.0,
+      0.5,
+      1.0,
+      2.0,
+      4.0
+    ],
+    "width_m": 0.01
+  },
+  "config": {
+    "chain": "B",
+    "cp_j_kgk": 1000.0,
+    "delta_t_k": 20.0,
+    "height_m": 0.005,
+    "k_w_mk": 10.0,
+    "length_m": 0.01,
+    "normalized_error_limit": 0.001,
+    "rho_kg_m3": 1000.0,
+    "sample_count": 21,
+    "t0_k": 300.0,
+    "time_points_s": [
+      0.0,
+      0.5,
+      1.0,
+      2.0,
+      4.0
+    ],
+    "width_m": 0.01
+  },
+  "decay_factors": [
+    {
+      "factor": 1.0,
+      "t_s": 0.0
+    },
+    {
+      "factor": 0.6104980252657971,
+      "t_s": 0.5
+    },
+    {
+      "factor": 0.3727078388534379,
+      "t_s": 1.0
+    },
+    {
+      "factor": 0.13891113314280024,
+      "t_s": 2.0
+    },
+    {
+      "factor": 0.019296302911016774,
+      "t_s": 4.0
+    }
+  ],
+  "error_definition": "max over the registered time points of |T_engine(x,t) - T_analytic(x,t)| / dT, T(x,t) = T0 + dT*sin(pi*x/L)*exp(-alpha*(pi/L)^2*t), alpha = k/(rho*Cp)",
+  "length_m": 0.01,
+  "normalized_error_limit": 0.001,
+  "relative_error_limit": 0.001,
+  "t0_k": 300.0,
+  "temperature_difference_k": 20.0
+}

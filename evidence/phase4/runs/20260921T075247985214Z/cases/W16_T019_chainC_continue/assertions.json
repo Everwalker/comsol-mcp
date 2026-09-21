@@ -1,0 +1,125 @@
+{
+  "assertion_count": 5,
+  "case": {
+    "acceptance": [
+      "G3 §8 chain C"
+    ],
+    "assertions": {
+      "dependency_blocked": {
+        "missing": [
+          "predecessor:W16_T019_chainA_steady"
+        ],
+        "note": "downstream subcases list NOT_RUN against this root cause instead of becoming independent defects"
+      },
+      "first_cause": {
+        "case_id": "W16_T019_chainC_continue",
+        "class": "DEPENDENCY_BLOCKED",
+        "error_code": "DEPENDENCY_BLOCKED",
+        "reason": "the case's declared prerequisite(s) are not established: predecessor:W16_T019_chainA_steady (W16_T019_chainA_steady finished NOT_RUN)",
+        "source": "declared"
+      },
+      "isolation": {
+        "applied": false,
+        "at": "2026-09-21T07:52:48.539651Z",
+        "attempted": false,
+        "declaration": {
+          "case_id": "W16_T019_chainC_continue",
+          "mode": "checkpoint_restore",
+          "modes": [
+            "own_model",
+            "checkpoint_restore",
+            "shared_bound"
+          ],
+          "rationale": "the user-style fixture is restored from a verified checkpoint, never edited in place"
+        },
+        "reason": "not attempted: the run is offline (no engine to create or restore a model on)"
+      },
+      "prerequisites": {
+        "case_id": "W16_T019_chainC_continue",
+        "checks": {
+          "bound_model": {
+            "applicable": false,
+            "evidence": "not applicable: the run is offline (no engine to bind a model on)",
+            "satisfied": null
+          },
+          "predecessor:W16_T019_chainA_steady": {
+            "applicable": true,
+            "evidence": "W16_T019_chainA_steady finished NOT_RUN",
+            "satisfied": false
+          }
+        },
+        "declared": [
+          "bound_model",
+          "predecessor:W16_T019_chainA_steady"
+        ],
+        "note": "a missing prerequisite makes this case DEPENDENCY_BLOCKED and points at the root cause; it never becomes a defect of this case",
+        "status": "UNSATISFIED",
+        "unknown_declarations": [],
+        "unsatisfied": [
+          "predecessor:W16_T019_chainA_steady"
+        ]
+      },
+      "subcase_inventory": {
+        "levels": [
+          "fixture",
+          "live",
+          "static"
+        ],
+        "missing": [],
+        "planned": 7,
+        "recorded": 7
+      }
+    },
+    "case_id": "W16_T019_chainC_continue",
+    "finished_at": "2026-09-21T07:52:48.539678Z",
+    "package": "W16",
+    "reason": "the case's declared prerequisite(s) are not established: predecessor:W16_T019_chainA_steady (W16_T019_chainA_steady finished NOT_RUN)",
+    "started_at": "2026-09-21T07:52:48.539639Z",
+    "status": "BLOCKED",
+    "subcases": {
+      "derived_values_and_data_association_preserved": {
+        "acceptance": "T019 chain C derived values/associations",
+        "level": "live",
+        "reason": "dependency not established: predecessor:W16_T019_chainA_steady",
+        "status": "NOT_RUN"
+      },
+      "manual_solver_preserved": {
+        "acceptance": "T019 chain C manual solver preserved",
+        "level": "live",
+        "reason": "dependency not established: predecessor:W16_T019_chainA_steady",
+        "status": "NOT_RUN"
+      },
+      "non_target_nodes_preserved": {
+        "acceptance": "T019 chain C non-target nodes preserved",
+        "level": "live",
+        "reason": "dependency not established: predecessor:W16_T019_chainA_steady",
+        "status": "NOT_RUN"
+      },
+      "solve_after_continuation": {
+        "acceptance": "T019 chain C solve after continuation",
+        "level": "live",
+        "reason": "dependency not established: predecessor:W16_T019_chainA_steady",
+        "status": "NOT_RUN"
+      },
+      "static_chain_c_ops_availability": {
+        "acceptance": "T019 chain C continuation",
+        "level": "static",
+        "reason": "dependency not established: predecessor:W16_T019_chainA_steady",
+        "status": "NOT_RUN"
+      },
+      "target_only_modified": {
+        "acceptance": "T019 chain C target-only modification",
+        "level": "live",
+        "reason": "dependency not established: predecessor:W16_T019_chainA_steady",
+        "status": "NOT_RUN"
+      },
+      "user_style_model_available": {
+        "acceptance": "T019 chain C user-style model input",
+        "level": "fixture",
+        "reason": "dependency not established: predecessor:W16_T019_chainA_steady",
+        "status": "NOT_RUN"
+      }
+    }
+  },
+  "subcase_count": 7
+}

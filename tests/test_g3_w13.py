@@ -2066,3 +2066,94 @@ def test_a_structurally_broken_row_never_reaches_the_writer() -> None:
         "definition": {"properties": [{"name": "expr"}]}})
     created = model.collections["func"].items.get("an4")
     assert created is not None and not created.values, "no property value may be written from a broken PropertySet"
+
+
+# ---------------------------------------------------------------------------
+# function definition field alignment (C06 / W13_T016)
+# ---------------------------------------------------------------------------
+
+
+class TestFunctionDefinitionFieldAlignment:
+    """The GUI-label spelling of an interpolation setting is a translated key.
+
+    driver5c W13_T016 sent ``{"interpolation": "linear", "extrapolation":
+    "none", "data_unit": "W/m^2"}``; the local COMSOL 6.4 corpus documents
+    those settings under the API property names ``interp``, ``extrap`` and
+    ``fununit`` (Programming Reference interpolation properties table, p.113),
+    and ``02_ACTION_CATALOG.json`` does not name any definition field at all
+    (``definition`` is a bare object).  The product side therefore translates
+    the documented GUI labels to the documented property names and reports the
+    translation instead of writing an unverified property name.
+    """
+
+    DRIVER_DEFINITION = {"interpolation": "linear", "extrapolation": "none", "data_unit": "W/m^2"}
+
+    def test_gui_labels_are_translated_to_the_documented_properties(self):
+        model, _ = function_model()
+        result = w13.function_create(worker_for(model), "Model", {
+            "tag": "int1", "type_id": "Interpolation", "definition": dict(self.DRIVER_DEFINITION)})
+        assert result["status"] == "APPLIED", result["failed"]
+        node = model.collections["func"].items["int1"]
+        assert node.values["interp"] == "linear"
+        assert node.values["extrap"] == "none"
+        assert node.values["fununit"] == "W/m^2"
+        assert not any(name in node.values for name in ("interpolation", "extrapolation", "data_unit"))
+        assert result["definition_keys"] == sorted(self.DRIVER_DEFINITION)
+        assert {row["given"] for row in result["definition_key_translations"]} == set(self.DRIVER_DEFINITION)
+        assert {row["property"] for row in result["definition_key_translations"]} == {"interp", "extrap", "fununit"}
+        assert "Programming Reference 6.4" in result["definition_key_translations"][0]["basis"]
+
+    def test_the_nested_properties_wrapper_is_translated_too(self):
+        model, _ = function_model()
+        result = w13.function_create(worker_for(model), "Model", {
+            "tag": "int1", "type_id": "Interpolation",
+            "definition": {"properties": {"extrapolation": "const", "fununit": "Pa"}}})
+        assert result["status"] == "APPLIED", result["failed"]
+        node = model.collections["func"].items["int1"]
+        assert node.values["extrap"] == "const" and node.values["fununit"] == "Pa"
+
+    def test_both_spellings_of_one_setting_are_refused(self):
+        model, _ = function_model()
+        error = expect_error("INVALID_REQUEST", w13.function_create, worker_for(model), "Model", {
+            "tag": "int1", "type_id": "Interpolation",
+            "definition": {"interp": "linear", "interpolation": "neighbor"}})
+        assert "twice" in str(error)
+
+    def test_an_uncited_field_is_still_refused_before_the_write(self):
+        model, _ = function_model()
+        expect_error("INVALID_REQUEST", w13.function_create, worker_for(model), "Model", {
+            "tag": "int1", "type_id": "Interpolation", "definition": {"data_units": "W/m^2"}})
+
+    def test_update_translates_the_same_labels(self):
+        node = function_node(values={"funcname": "f"}, value_types=dict(INTERPOLATION_META),
+                             allowed=dict(INTERPOLATION_ALLOWED))
+        model, _ = function_model({"int1": node})
+        result = w13.function_update(worker_for(model), "Model", {
+            "path": {"segments": [{"collection": "func", "tag": "int1"}]},
+            "definition": dict(self.DRIVER_DEFINITION)})
+        assert result["status"] == "APPLIED", result["failed"]
+        assert node.values["interp"] == "linear"
+        assert result["definition_key_translations"]
+
+    def test_inspect_reports_the_documented_label_view(self):
+        node = function_node(values={"funcname": "f", "interp": "linear", "extrap": "none",
+                                     "fununit": "W/m^2"},
+                             value_types=dict(INTERPOLATION_META), allowed=dict(INTERPOLATION_ALLOWED))
+        model, _ = function_model({"int1": node})
+        result = w13.function_inspect(worker_for(model), "Model", {
+            "path": {"segments": [{"collection": "func", "tag": "int1"}]}})
+        assert result["interpolation"] == "linear"
+        assert result["extrapolation"] == "none"
+        assert result["data_unit"] == "W/m^2"
+        assert result["settings"]["interpolation"]["property"] == "interp"
+        assert "Programming Reference 6.4" in result["settings"]["interpolation"]["basis"]
+        assert result["properties"]["interp"]["value"] == "linear"
+
+    def test_inspect_keeps_the_label_keys_present_when_a_value_is_unreadable(self):
+        node = function_node(values={"funcname": "f"}, value_types=dict(INTERPOLATION_META),
+                             allowed=dict(INTERPOLATION_ALLOWED))
+        model, _ = function_model({"int1": node})
+        result = w13.function_inspect(worker_for(model), "Model", {
+            "path": {"segments": [{"collection": "func", "tag": "int1"}]}})
+        assert "extrapolation" in result and result["extrapolation"] is None
+        assert result["settings"]["extrapolation"]["property"] == "extrap"

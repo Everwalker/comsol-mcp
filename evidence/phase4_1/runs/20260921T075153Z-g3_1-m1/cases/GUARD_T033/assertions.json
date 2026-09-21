@@ -1,0 +1,1578 @@
+{
+  "assertion_count": 13,
+  "case": {
+    "acceptance": [
+      "G3 §10 T033"
+    ],
+    "assertions": {
+      "isolation": {
+        "applied": true,
+        "at": "2026-09-21T07:52:01.013449Z",
+        "attempted": true,
+        "declaration": {
+          "case_id": "GUARD_T033",
+          "mode": "own_model",
+          "modes": [
+            "own_model",
+            "checkpoint_restore",
+            "shared_bound"
+          ],
+          "rationale": "the evaluation-policy probes need a clean, validly bound model that no earlier refusal has dirtied"
+        },
+        "error_code": null,
+        "model_label": "GUARD_T033 (Phase4 G3 acceptance fixture) isolation model",
+        "model_ref": {
+          "error_code": null,
+          "has_structured_content": true,
+          "job_id": "3b2290e2-b7cc-4458-ad04-f27b8511903b",
+          "operation_id": "f186b1d0-b126-4ea8-893c-db383771d0ee",
+          "outer_isError": false,
+          "request_hash": "badeec17718a24f54588a319ae965831f9e9e41b0499dc9d9ae807a1c54ab87f",
+          "success": true
+        },
+        "route": "model.create",
+        "shared_model_restored": {
+          "note": "the case ran on its own model; the run's shared binding is restored for the cases that follow",
+          "ref": {
+            "generation": 1,
+            "model_tag": "mcp43",
+            "schema_version": 1,
+            "server_instance_id": "740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "revision": 32
+        },
+        "success": true
+      },
+      "operation_availability": {
+        "evaluate_expressions": {
+          "available": true,
+          "effect": "EVALUATE",
+          "error_code": null,
+          "evaluation_policy": {
+            "default": "ephemeral_mutation",
+            "title": "Evaluation Policy",
+            "type": "string"
+          },
+          "evaluation_policy_note": "read from the operation's own input schema (the published declaration of the field)",
+          "evaluation_policy_source": "input_schema.properties.evaluation_policy",
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "evaluation_policy": {
+                "default": "ephemeral_mutation",
+                "title": "Evaluation Policy",
+                "type": "string"
+              },
+              "expressions_json": {
+                "default": "[]",
+                "title": "Expressions Json",
+                "type": "string"
+              },
+              "max_result_size": {
+                "default": 0,
+                "title": "Max Result Size",
+                "type": "integer"
+              }
+            },
+            "title": "evaluate_expressionsArguments",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "evaluation_policy",
+            "expressions_json",
+            "max_result_size"
+          ],
+          "mcp_tool_name": "evaluate_expressions",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "legacy managed backend",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        }
+      },
+      "prerequisites": {
+        "case_id": "GUARD_T033",
+        "checks": {
+          "bound_model": {
+            "applicable": true,
+            "evidence": "a model_ref is bound",
+            "satisfied": true
+          },
+          "isolated_model": {
+            "applicable": true,
+            "evidence": "the case's declared isolation (own_model) was applied",
+            "satisfied": true
+          },
+          "negative_probe": {
+            "applicable": false,
+            "evidence": "declared: the case asks for the product's own refusal",
+            "satisfied": null
+          },
+          "observed_revision": {
+            "applicable": true,
+            "evidence": "the bound model's revision was read back (0)",
+            "satisfied": true
+          }
+        },
+        "declared": [
+          "bound_model",
+          "observed_revision",
+          "negative_probe",
+          "isolated_model"
+        ],
+        "note": "a missing prerequisite makes this case DEPENDENCY_BLOCKED and points at the root cause; it never becomes a defect of this case",
+        "status": "SATISFIED",
+        "unknown_declarations": [],
+        "unsatisfied": []
+      },
+      "static_evaluation_policy_documented": {
+        "evaluation_policy": {
+          "default": "ephemeral_mutation",
+          "title": "Evaluation Policy",
+          "type": "string"
+        },
+        "evaluation_policy_note": "read from the operation's own input schema (the published declaration of the field)",
+        "evaluation_policy_source": "input_schema.properties.evaluation_policy",
+        "implementation_status": "SUPPORTED_UNVERIFIED",
+        "input_schema_properties": [
+          "evaluation_policy",
+          "expressions_json",
+          "max_result_size"
+        ],
+        "pass": true,
+        "remediation": null
+      },
+      "static_evaluation_policy_source_recorded": {
+        "evaluation_policy_source": "input_schema.properties.evaluation_policy",
+        "note": "read from the operation's own input schema (the published declaration of the field)",
+        "pass": true
+      },
+      "subcase_inventory": {
+        "levels": [
+          "live",
+          "static"
+        ],
+        "missing": [],
+        "planned": 6,
+        "recorded": 6
+      },
+      "t033_ephemeral": {
+        "first": {
+          "error_code": null,
+          "has_structured_content": true,
+          "job_id": "ef689730-8e8d-4aff-a27d-18f42b4cddf3",
+          "operation_id": "54328ae3-dd27-4eba-ad80-76907cdb8f3d",
+          "outer_isError": false,
+          "request_hash": "e0d14eb9a826824fe722a43dc3840440df36cc8fd3f8ae52e1d016897d247bcc",
+          "success": true
+        },
+        "release": {
+          "gate": null,
+          "released": true,
+          "retry": "not performed: this call's own identity is unchanged",
+          "still_blocked": null,
+          "targets": [
+            "815de89a-e3cc-4662-a0f8-616a16d24c73"
+          ],
+          "trigger": "an unfinished job must be resolved through its own published query before any new logical request is dispatched"
+        },
+        "second": {
+          "error_code": null,
+          "has_structured_content": true,
+          "job_id": "572784d4-cc7c-4c4d-bbdf-769716f70db8",
+          "operation_id": "90620252-985b-4102-a29a-deceb1738cb9",
+          "outer_isError": false,
+          "request_hash": "bcce0069c85ed111fd460e62013c368b5eb124b3af9009dd85d0f20f37eb3f3c",
+          "success": true
+        },
+        "unknown_engine_state": null
+      },
+      "t033_expression_kinds": [
+        {
+          "dataset": null,
+          "dispatch_stage": {
+            "available": true,
+            "nothing_executed": false,
+            "request_id": "phase4-20260921T075153Z-g3_1-m1t033-constant",
+            "rows": [],
+            "stage": null
+          },
+          "error_code": null,
+          "error_message": null,
+          "expression": "3*3",
+          "kind": "constant",
+          "name": "phase4_constant",
+          "reported_keys": [
+            "binding",
+            "cleanup",
+            "count",
+            "dataset",
+            "dataset_inventory",
+            "datetime",
+            "ephemeral_mutation",
+            "evaluation_policy",
+            "label",
+            "log_path",
+            "max_result_size_ignored",
+            "operations_path",
+            "results",
+            "server",
+            "solution",
+            "temporary_nodes",
+            "timestamp",
+            "tool"
+          ],
+          "routing": "routed through the engine's own expression parser with the bound model's context; the driver never computes the value itself",
+          "shape": [],
+          "solution": null,
+          "success": true,
+          "unknown_engine_state": null,
+          "value": 9.0,
+          "verdict": "value_recorded"
+        },
+        {
+          "expression": "k_w_mk/T0_k",
+          "kind": "model_expression",
+          "name": "phase4_model_expression",
+          "reason": "routing condition not established: model_parameters",
+          "routing": "resolved against the bound model's own parameters/expressions",
+          "verdict": "NOT_RUN"
+        },
+        {
+          "expression": "T",
+          "kind": "solved_field",
+          "name": "phase4_solved_field",
+          "reason": "routing condition not established: solved_solution",
+          "routing": "read on a *stored* solution/dataset: the study's requested tlist is not a stored time, so the dataset/solution and the stored times are recorded with the value",
+          "verdict": "NOT_RUN"
+        },
+        {
+          "dataset": null,
+          "dispatch_stage": {
+            "available": true,
+            "nothing_executed": false,
+            "request_id": "phase4-20260921T075153Z-g3_1-m1t033-illegal_expression",
+            "rows": [],
+            "stage": null
+          },
+          "error_code": "One or more expressions could not be evaluated.",
+          "error_message": "One or more expressions could not be evaluated.",
+          "expression": "sin(",
+          "kind": "illegal_expression",
+          "name": "phase4_illegal",
+          "reported_keys": [
+            "cleanup",
+            "count",
+            "datetime",
+            "ephemeral_mutation",
+            "evaluation_policy",
+            "execution_state_unknown",
+            "failed_item_may_have_changed",
+            "label",
+            "log_path",
+            "max_result_size_ignored",
+            "operations_path",
+            "partial_change",
+            "requires_model_reconciliation",
+            "results",
+            "safe_retry",
+            "server",
+            "status",
+            "temporary_nodes",
+            "timestamp",
+            "tool",
+            "verification_status",
+            "verified_outcome"
+          ],
+          "routing": "must be refused by the engine's parser; a successful value would itself be the defect",
+          "shape": null,
+          "solution": null,
+          "success": false,
+          "unknown_engine_state": null,
+          "value": null,
+          "verdict": "refused"
+        }
+      ],
+      "t033_parameter_discovery": {
+        "complete": true,
+        "count": 1,
+        "errors": [],
+        "rpc_calls": null,
+        "status": "SUCCEEDED",
+        "truncated": false,
+        "visited": 1
+      },
+      "t033_parameter_probe": [],
+      "t033_pure": {
+        "dispatch_stage": {
+          "available": true,
+          "nothing_executed": false,
+          "request_id": "phase4-20260921T075153Z-g3_1-m1pure",
+          "rows": [],
+          "stage": null
+        },
+        "error_code": "pure_read evaluation is unavailable: this backend requires temporary numerical nodes; use ephemeral_mutation or an isolated model copy.",
+        "has_structured_content": true,
+        "job_id": "e3a92914-413f-4981-9965-ba52d0da1b87",
+        "note": "a pure_read verdict is this line's evidence only when it *is* the policy refusal (or a success that echoes the non-mutating policy); any other error is recorded as not-a-policy-refusal",
+        "operation_id": "ab6ffd02-d9b9-4319-94a6-2104f56e06a4",
+        "outer_isError": true,
+        "policy_echo": false,
+        "policy_refusal": true,
+        "policy_refusal_basis": [
+          "PURE_READ"
+        ],
+        "request_hash": "18d7e68102ac631cc6a8d51c39781d0cff369e16bb9ac27c55776b83e4f777f9",
+        "success": false,
+        "unknown_engine_state": null
+      },
+      "t033_temporary_nodes": {
+        "ephemeral_mutation": true,
+        "evaluation_policy": "ephemeral_mutation",
+        "reported_keys": [
+          "binding",
+          "cleanup",
+          "count",
+          "dataset",
+          "dataset_inventory",
+          "datetime",
+          "ephemeral_mutation",
+          "evaluation_policy",
+          "label",
+          "log_path",
+          "max_result_size_ignored",
+          "operations_path",
+          "results",
+          "server",
+          "solution",
+          "temporary_nodes",
+          "timestamp",
+          "tool"
+        ],
+        "temporary_nodes": [
+          {
+            "created": true,
+            "feature_type": "EvalGlobal",
+            "owner": {
+              "operation": "evaluate_expressions",
+              "policy": "ephemeral_mutation",
+              "request": {
+                "expressions": 1,
+                "tool": "evaluate_expressions"
+              },
+              "scope": "mcp_owned_result_numerical_node",
+              "tag_allocated_from": "random uuid4 hex, never reused from the model"
+            },
+            "removed": true,
+            "tag": "mcp_eval_583ebd675c1e43009bf53f169f98bf15",
+            "tags_after": [],
+            "tags_before": [],
+            "verified_removed": true
+          }
+        ],
+        "unknown_engine_state": null
+      },
+      "unknown_job_ledger": {
+        "entries": [
+          {
+            "first_seen_at": "2026-09-21T07:51:57.887783Z",
+            "job_id": "f85fb6be-f960-472b-91ff-ddc9de52138c",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "the operation left an unresolved engine state",
+            "last_seen_at": "2026-09-21T07:51:57.887795Z",
+            "observations": [
+              {
+                "at": "2026-09-21T07:51:57.887796Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "the operation left an unresolved engine state",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-21T07:51:57.930749Z",
+                "error_code": null,
+                "job_id": "f85fb6be-f960-472b-91ff-ddc9de52138c",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-3a984c60-4a4c-4c59-b399-545514f80042",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-df121f5a-8e10-4239-a4b5-81712869b88e",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-809154f4-323e-49f6-af97-8df86d265079",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              },
+              {
+                "at": "2026-09-21T07:51:57.973316Z",
+                "error_code": null,
+                "job_id": "f85fb6be-f960-472b-91ff-ddc9de52138c",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-3a984c60-4a4c-4c59-b399-545514f80042",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-df121f5a-8e10-4239-a4b5-81712869b88e",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-809154f4-323e-49f6-af97-8df86d265079",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-21T07:51:57.973328Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-21T07:51:58.912285Z",
+            "job_id": "be191612-1642-4350-a7e3-9ad50cc3ff9e",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "the operation left an unresolved engine state",
+            "last_seen_at": "2026-09-21T07:51:58.912320Z",
+            "observations": [
+              {
+                "at": "2026-09-21T07:51:58.912322Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "the operation left an unresolved engine state",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-21T07:51:58.962309Z",
+                "error_code": null,
+                "job_id": "be191612-1642-4350-a7e3-9ad50cc3ff9e",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-047e4acc-066b-4cdb-85ae-0477d29740fa",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-f6692cca-a29f-45f5-b41e-9077f9ce3753",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-93d7c2aa-af71-4996-9c2d-95a239692b4e",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-97b84136-28a7-4091-91f2-99ccb76ad7c5",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              },
+              {
+                "at": "2026-09-21T07:51:59.012123Z",
+                "error_code": null,
+                "job_id": "be191612-1642-4350-a7e3-9ad50cc3ff9e",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-047e4acc-066b-4cdb-85ae-0477d29740fa",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-f6692cca-a29f-45f5-b41e-9077f9ce3753",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-93d7c2aa-af71-4996-9c2d-95a239692b4e",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-97b84136-28a7-4091-91f2-99ccb76ad7c5",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-21T07:51:59.012135Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-21T07:51:59.050643Z",
+            "job_id": "8bc49bba-9a3b-4b9f-bc5e-98e9347268ba",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "the operation left an unresolved engine state",
+            "last_seen_at": "2026-09-21T07:51:59.050690Z",
+            "observations": [
+              {
+                "at": "2026-09-21T07:51:59.050691Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "the operation left an unresolved engine state",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-21T07:51:59.056430Z",
+                "error_code": null,
+                "job_id": "8bc49bba-9a3b-4b9f-bc5e-98e9347268ba",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-44335bf6-c870-4f31-a700-912974c7271d",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-569ef6c5-13ab-4183-ac8d-0d996fb58501",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-e1ba7871-ef50-40b7-8148-82230ffdc8e3",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-b5169cae-c7c9-4af6-a547-91a32809c7c2",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-2fb76f5d-d467-41b5-9eb0-09c775398b5e",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              },
+              {
+                "at": "2026-09-21T07:51:59.061983Z",
+                "error_code": null,
+                "job_id": "8bc49bba-9a3b-4b9f-bc5e-98e9347268ba",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-44335bf6-c870-4f31-a700-912974c7271d",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-569ef6c5-13ab-4183-ac8d-0d996fb58501",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-e1ba7871-ef50-40b7-8148-82230ffdc8e3",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-b5169cae-c7c9-4af6-a547-91a32809c7c2",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-2fb76f5d-d467-41b5-9eb0-09c775398b5e",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-21T07:51:59.061992Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-21T07:51:59.085572Z",
+            "job_id": "c8865b35-cfcc-4630-9476-2affc77ed14a",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "the operation left an unresolved engine state",
+            "last_seen_at": "2026-09-21T07:51:59.085641Z",
+            "observations": [
+              {
+                "at": "2026-09-21T07:51:59.085643Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "the operation left an unresolved engine state",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-21T07:51:59.090054Z",
+                "error_code": null,
+                "job_id": "c8865b35-cfcc-4630-9476-2affc77ed14a",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-01516535-de4e-4992-adc7-108f0629955f",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-7efad6b8-ede8-43fc-8e70-f87a3f7c63ed",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-fe406421-4254-4f14-943d-66dd75c39993",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-60635095-bbe9-40ed-92fe-21b07e888703",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-44d417e1-bde4-4151-926a-e8a444293ba1",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-03aa57ef-1883-4d69-83a5-57386049ea5d",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              },
+              {
+                "at": "2026-09-21T07:51:59.094342Z",
+                "error_code": null,
+                "job_id": "c8865b35-cfcc-4630-9476-2affc77ed14a",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-01516535-de4e-4992-adc7-108f0629955f",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-7efad6b8-ede8-43fc-8e70-f87a3f7c63ed",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-fe406421-4254-4f14-943d-66dd75c39993",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-60635095-bbe9-40ed-92fe-21b07e888703",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-44d417e1-bde4-4151-926a-e8a444293ba1",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-03aa57ef-1883-4d69-83a5-57386049ea5d",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-21T07:51:59.094355Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-21T07:51:59.135125Z",
+            "job_id": "c0224f26-9088-4439-81f0-1bd0d2f7d2e1",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "the operation left an unresolved engine state",
+            "last_seen_at": "2026-09-21T07:51:59.135217Z",
+            "observations": [
+              {
+                "at": "2026-09-21T07:51:59.135218Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "the operation left an unresolved engine state",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-21T07:51:59.140964Z",
+                "error_code": null,
+                "job_id": "c0224f26-9088-4439-81f0-1bd0d2f7d2e1",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-6829914b-8f1b-4a87-b3de-2274021623a8",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-4f02be2d-1d58-46fc-b8a2-fb4c25f7ee23",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-8ad3864b-9c88-4127-a289-a5bb9e0f109e",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-edc0adda-a12d-4a28-82e5-be4991bd4d01",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-ba65f390-0dd2-42f5-9b40-ccd6325196a7",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              },
+              {
+                "at": "2026-09-21T07:51:59.146287Z",
+                "error_code": null,
+                "job_id": "c0224f26-9088-4439-81f0-1bd0d2f7d2e1",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-6829914b-8f1b-4a87-b3de-2274021623a8",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-4f02be2d-1d58-46fc-b8a2-fb4c25f7ee23",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-8ad3864b-9c88-4127-a289-a5bb9e0f109e",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-edc0adda-a12d-4a28-82e5-be4991bd4d01",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-ba65f390-0dd2-42f5-9b40-ccd6325196a7",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-21T07:51:59.146297Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-21T07:51:59.272320Z",
+            "job_id": "815de89a-e3cc-4662-a0f8-616a16d24c73",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "the operation left an unresolved engine state",
+            "last_seen_at": "2026-09-21T07:51:59.272451Z",
+            "observations": [
+              {
+                "at": "2026-09-21T07:51:59.272468Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "the operation left an unresolved engine state",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-21T07:51:59.278819Z",
+                "error_code": null,
+                "job_id": "815de89a-e3cc-4662-a0f8-616a16d24c73",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-c21d43f1-c443-4360-aeaa-5eafeb88edb1",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-9cac95a5-21ca-4cc7-ada9-f1d44c964ea3",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-dfecacd8-bf23-4e14-8584-a0c3664e0693",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-3b8e7059-9107-4935-b9e6-812c9237377c",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-edd341e5-8aac-45f3-9fc6-860bd22d6840",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              },
+              {
+                "at": "2026-09-21T07:51:59.284707Z",
+                "error_code": null,
+                "job_id": "815de89a-e3cc-4662-a0f8-616a16d24c73",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-c21d43f1-c443-4360-aeaa-5eafeb88edb1",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-9cac95a5-21ca-4cc7-ada9-f1d44c964ea3",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-dfecacd8-bf23-4e14-8584-a0c3664e0693",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-3b8e7059-9107-4935-b9e6-812c9237377c",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-edd341e5-8aac-45f3-9fc6-860bd22d6840",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-21T07:51:59.284719Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-21T07:52:00.462303Z",
+            "job_id": "d384f808-5e68-4bd2-965d-968e195307e7",
+            "last_error_code": null,
+            "last_message": null,
+            "last_seen_at": "2026-09-21T07:52:00.462448Z",
+            "observations": [
+              {
+                "at": "2026-09-21T07:52:00.462449Z",
+                "error_code": null,
+                "message": null,
+                "tool": "create_feature"
+              }
+            ],
+            "operation": "create_feature",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-21T07:52:00.468069Z",
+                "error_code": null,
+                "job_id": "d384f808-5e68-4bd2-965d-968e195307e7",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-45705009-46fa-43e9-88df-9c2d01151c11",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-d71401c1-2890-4502-8773-f351a7d65acd",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-d63fe88f-e012-464a-bcc2-22d9f3904904",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-41b008d9-4d0c-48f5-9b4b-1360e7a86b8e",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-fc2033d3-ab30-4c40-a97d-77b3377a0fda",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-fa5902b9-dcfb-4150-8d15-39179d789c05",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-4922a2dc-3257-4f83-8d86-8b72ef3d160d",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-844e8fd1-5d23-43fc-ac5d-4d32b5b5bcc8",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-a87fcffa-b3cf-4eb0-98f8-f269e6405012",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-7ec5113f-77d6-40cf-87cb-ebabdd1d0dc6",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-a8355584-d837-4c8a-9ab0-cbb4f2a1eb27",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-c4b00dcb-965b-458d-9456-a4bc28b78350",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-b5cfe058-dc5f-4464-a44b-648b183067b8",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-eceb815f-90a0-48cf-8064-520bb7f11005",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-c225576c-464f-48ac-8f6b-022773aa15c6",
+                    "source": "durable_worker_observation",
+                    "status": "FAILED"
+                  },
+                  {
+                    "request_id": "wrk-e3d0d0f5-3f5c-4ff3-bc5b-47fbe9a6d752",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-0d13fe0b-fb70-45ed-8fec-8e0f150cc374",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-f3d14e7b-56ae-419f-9c67-7c497fa5ce36",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-996e7592-b8b8-41bd-b461-3f688c94db2a",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-84394bf6-74d7-4b8e-a03e-25322eef530f",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-21T07:52:00.468094Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-21T07:52:00.508725Z",
+            "job_id": "13abaff9-5d98-416b-8497-0e6231ece650",
+            "last_error_code": null,
+            "last_message": null,
+            "last_seen_at": "2026-09-21T07:52:00.508926Z",
+            "observations": [
+              {
+                "at": "2026-09-21T07:52:00.508928Z",
+                "error_code": null,
+                "message": null,
+                "tool": "create_feature"
+              }
+            ],
+            "operation": "create_feature",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-21T07:52:00.514710Z",
+                "error_code": null,
+                "job_id": "13abaff9-5d98-416b-8497-0e6231ece650",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-0cb48526-3062-45f3-be0a-7b3232bb07f9",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-36581808-37ad-47ce-b04c-ec12cc93198c",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-f1b671a1-f340-4d73-8fb8-9d7d52b8048b",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-fda88d28-d5b4-41b1-9f2c-a9691886ecfb",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-1b46ffe8-4d09-4dbb-a79c-b6c5e31a04f7",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-c56b4df2-673f-4807-88ac-893211b2d33e",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-283a163c-c2a5-48cc-a07f-677fc2656b4a",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-4262f1ee-43cf-4ce6-aca3-29d6aa4c60a0",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-80e3afc3-5ba7-4e55-899e-0fcbd25d5d69",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-370d56f2-112b-47e3-8bd6-b07dfff31bbd",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-9efafac5-86df-4515-b123-2ffbe3f08802",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-9651168b-6fd4-4198-90d5-b64cd9203c3c",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-e059526e-875f-4b78-864d-4836ceee7fc2",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-9bb601a0-5a45-4e22-be3d-8aa42be263b2",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-3895efd6-5a4a-47bb-83fb-b2537f37fd10",
+                    "source": "durable_worker_observation",
+                    "status": "FAILED"
+                  },
+                  {
+                    "request_id": "wrk-8bf4dd61-0f02-4c02-a6c3-31ba7d65c304",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-00209885-1a58-4b53-bcfd-1be4ec541872",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-1ece9d3f-8e33-4a5e-be86-4caa38544cde",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-147cf029-4100-4694-a74a-06b699e5553a",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-f7c2851c-c5f5-4967-b8a4-f92f70826b0c",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-21T07:52:00.514734Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-21T07:52:00.554055Z",
+            "job_id": "3fec563b-e884-452b-80b5-4834efd9e067",
+            "last_error_code": null,
+            "last_message": null,
+            "last_seen_at": "2026-09-21T07:52:00.554248Z",
+            "observations": [
+              {
+                "at": "2026-09-21T07:52:00.554249Z",
+                "error_code": null,
+                "message": null,
+                "tool": "create_feature"
+              }
+            ],
+            "operation": "create_feature",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-21T07:52:00.560064Z",
+                "error_code": null,
+                "job_id": "3fec563b-e884-452b-80b5-4834efd9e067",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-c6c64dbf-3190-4ebc-91f9-6b7e265c596e",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-63f53aef-8183-4a86-aa33-94ca311b6551",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-9754362c-779c-46ed-b4c7-cb2a0087e21a",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-e4dfda89-f9b9-49df-9905-6838565499ea",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-1ce28a20-40fd-408d-a8b5-df1056cfa29d",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-1569b39b-e2f6-4e4f-9d1a-468537e57438",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-5499a9da-83b0-4c85-b057-3d91b73233cb",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-de587014-cd94-42d9-9c1e-4239ecb0bd4c",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-08052099-85a1-4b1c-b2d0-1df29a52bcbf",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-fb4c3dd5-9dc5-453b-a409-f105c2d5b106",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-d2b8666b-c2d9-436b-9cd7-3951253dc923",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-f0188ddc-a9a2-461d-9260-9784ba7c3998",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-40c41f67-6b6a-475d-975d-fc2c7f595be7",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-06d68481-51ef-4c25-a589-e266d4740a54",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-264d18ec-cc9b-4a3a-9c80-77449f2ecc11",
+                    "source": "durable_worker_observation",
+                    "status": "FAILED"
+                  },
+                  {
+                    "request_id": "wrk-456130d2-a30c-4038-b5e1-11d3d8051c9b",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-5aa6297e-d5da-4bc0-828b-e7be41c64bcb",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-03e33616-3c3e-4ae6-a11a-d43e00c7c40f",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-71fbcf98-2b4e-41ce-8323-b3dff4cd4cae",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-aff1e4d1-a753-4116-acfd-7926d5cb66d0",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-21T07:52:00.560090Z",
+            "status": "UNKNOWN"
+          }
+        ],
+        "gate_refusals": {
+          "by_tool": {},
+          "count": 0,
+          "first": null,
+          "last": null
+        },
+        "note": "the driver records every job id an envelope reported as UNKNOWN (no published read lists the unresolved jobs) and releases each one through the published job_reconcile read before it replays a refused call once",
+        "released_jobs": [
+          "f85fb6be-f960-472b-91ff-ddc9de52138c",
+          "be191612-1642-4350-a7e3-9ad50cc3ff9e",
+          "8bc49bba-9a3b-4b9f-bc5e-98e9347268ba",
+          "c8865b35-cfcc-4630-9476-2affc77ed14a",
+          "c0224f26-9088-4439-81f0-1bd0d2f7d2e1",
+          "815de89a-e3cc-4662-a0f8-616a16d24c73",
+          "d384f808-5e68-4bd2-965d-968e195307e7",
+          "13abaff9-5d98-416b-8497-0e6231ece650",
+          "3fec563b-e884-452b-80b5-4834efd9e067"
+        ],
+        "still_blocked": [
+          {
+            "at": "2026-09-21T07:51:58.066710Z",
+            "error_code": "TAG_CONFLICT",
+            "gate": false,
+            "job_id": "ca10df49-d6ae-4dc5-8585-f1ba1f907222",
+            "message": "component 'comp1' already exists",
+            "phase": "revision-replay-refused",
+            "tool": "operation_call",
+            "unreleased_jobs": []
+          }
+        ],
+        "unresolved_jobs": []
+      }
+    },
+    "case_id": "GUARD_T033",
+    "finished_at": "2026-09-21T07:52:01.287033Z",
+    "package": "GUARD",
+    "reason": null,
+    "started_at": "2026-09-21T07:52:01.013434Z",
+    "status": "PASS",
+    "subcases": {
+      "ephemeral_mutation_recorded_and_serial": {
+        "acceptance": "T033 ephemeral mutation recorded/serial",
+        "level": "live",
+        "status": "PASS"
+      },
+      "evaluation_expression_kinds_routed": {
+        "acceptance": "T033 constant/model/field/illegal expressions",
+        "level": "live",
+        "observed": [
+          {
+            "dataset": null,
+            "dispatch_stage": {
+              "available": true,
+              "nothing_executed": false,
+              "request_id": "phase4-20260921T075153Z-g3_1-m1t033-constant",
+              "rows": [],
+              "stage": null
+            },
+            "error_code": null,
+            "error_message": null,
+            "expression": "3*3",
+            "kind": "constant",
+            "name": "phase4_constant",
+            "reported_keys": [
+              "binding",
+              "cleanup",
+              "count",
+              "dataset",
+              "dataset_inventory",
+              "datetime",
+              "ephemeral_mutation",
+              "evaluation_policy",
+              "label",
+              "log_path",
+              "max_result_size_ignored",
+              "operations_path",
+              "results",
+              "server",
+              "solution",
+              "temporary_nodes",
+              "timestamp",
+              "tool"
+            ],
+            "routing": "routed through the engine's own expression parser with the bound model's context; the driver never computes the value itself",
+            "shape": [],
+            "solution": null,
+            "success": true,
+            "unknown_engine_state": null,
+            "value": 9.0,
+            "verdict": "value_recorded"
+          },
+          {
+            "expression": "k_w_mk/T0_k",
+            "kind": "model_expression",
+            "name": "phase4_model_expression",
+            "reason": "routing condition not established: model_parameters",
+            "routing": "resolved against the bound model's own parameters/expressions",
+            "verdict": "NOT_RUN"
+          },
+          {
+            "expression": "T",
+            "kind": "solved_field",
+            "name": "phase4_solved_field",
+            "reason": "routing condition not established: solved_solution",
+            "routing": "read on a *stored* solution/dataset: the study's requested tlist is not a stored time, so the dataset/solution and the stored times are recorded with the value",
+            "verdict": "NOT_RUN"
+          },
+          {
+            "dataset": null,
+            "dispatch_stage": {
+              "available": true,
+              "nothing_executed": false,
+              "request_id": "phase4-20260921T075153Z-g3_1-m1t033-illegal_expression",
+              "rows": [],
+              "stage": null
+            },
+            "error_code": "One or more expressions could not be evaluated.",
+            "error_message": "One or more expressions could not be evaluated.",
+            "expression": "sin(",
+            "kind": "illegal_expression",
+            "name": "phase4_illegal",
+            "reported_keys": [
+              "cleanup",
+              "count",
+              "datetime",
+              "ephemeral_mutation",
+              "evaluation_policy",
+              "execution_state_unknown",
+              "failed_item_may_have_changed",
+              "label",
+              "log_path",
+              "max_result_size_ignored",
+              "operations_path",
+              "partial_change",
+              "requires_model_reconciliation",
+              "results",
+              "safe_retry",
+              "server",
+              "status",
+              "temporary_nodes",
+              "timestamp",
+              "tool",
+              "verification_status",
+              "verified_outcome"
+            ],
+            "routing": "must be refused by the engine's parser; a successful value would itself be the defect",
+            "shape": null,
+            "solution": null,
+            "success": false,
+            "unknown_engine_state": null,
+            "value": null,
+            "verdict": "refused"
+          }
+        ],
+        "reason": "some kinds were not routed on this model; their routing conditions are recorded per kind and none was silently treated as a value",
+        "status": "PASS"
+      },
+      "only_own_temporary_nodes_cleaned": {
+        "acceptance": "T033 only own nodes cleaned",
+        "level": "live",
+        "observed": {
+          "ephemeral_mutation": true,
+          "evaluation_policy": "ephemeral_mutation",
+          "reported_keys": [
+            "binding",
+            "cleanup",
+            "count",
+            "dataset",
+            "dataset_inventory",
+            "datetime",
+            "ephemeral_mutation",
+            "evaluation_policy",
+            "label",
+            "log_path",
+            "max_result_size_ignored",
+            "operations_path",
+            "results",
+            "server",
+            "solution",
+            "temporary_nodes",
+            "timestamp",
+            "tool"
+          ],
+          "temporary_nodes": [
+            {
+              "created": true,
+              "feature_type": "EvalGlobal",
+              "owner": {
+                "operation": "evaluate_expressions",
+                "policy": "ephemeral_mutation",
+                "request": {
+                  "expressions": 1,
+                  "tool": "evaluate_expressions"
+                },
+                "scope": "mcp_owned_result_numerical_node",
+                "tag_allocated_from": "random uuid4 hex, never reused from the model"
+              },
+              "removed": true,
+              "tag": "mcp_eval_583ebd675c1e43009bf53f169f98bf15",
+              "tags_after": [],
+              "tags_before": [],
+              "verified_removed": true
+            }
+          ],
+          "unknown_engine_state": null
+        },
+        "status": "PASS"
+      },
+      "pure_read_rejects_or_isolates": {
+        "acceptance": "T033 pure_read behaviour",
+        "dispatch_stage": {
+          "available": true,
+          "nothing_executed": false,
+          "request_id": "phase4-20260921T075153Z-g3_1-m1pure",
+          "rows": [],
+          "stage": null
+        },
+        "level": "live",
+        "policy_echo": false,
+        "policy_refusal": true,
+        "status": "PASS"
+      },
+      "static_evaluation_policy_documented": {
+        "acceptance": "T033 evaluation policy contract",
+        "evaluation_policy_source": "input_schema.properties.evaluation_policy",
+        "level": "static",
+        "status": "PASS"
+      },
+      "static_evaluation_policy_source_recorded": {
+        "acceptance": "T033 policy read path",
+        "evaluation_policy_source": "input_schema.properties.evaluation_policy",
+        "level": "static",
+        "status": "PASS"
+      }
+    }
+  },
+  "subcase_count": 6
+}

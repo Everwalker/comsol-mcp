@@ -1,0 +1,377 @@
+{
+  "assertion_count": 5,
+  "case": {
+    "acceptance": [
+      "G3 §7 W15.T042"
+    ],
+    "assertions": {
+      "isolation": {
+        "applied": false,
+        "at": "2026-09-21T07:51:27.296306Z",
+        "attempted": false,
+        "declaration": {
+          "case_id": "W15_T042_license",
+          "mode": "shared_bound",
+          "modes": [
+            "own_model",
+            "checkpoint_restore",
+            "shared_bound"
+          ],
+          "rationale": "reads/writes the run's bound model; the run is serial"
+        },
+        "reason": "declared: this case runs against the run's bound model, strictly serially"
+      },
+      "operation_availability": {
+        "node.property_get": {
+          "available": true,
+          "effect": "READ",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "names": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "path",
+              "names"
+            ],
+            "title": "node.property_get input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "model_ref",
+            "names",
+            "path",
+            "project_id",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "node_property_get",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "runtime.capabilities": {
+          "available": true,
+          "effect": "READ",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "refresh": {
+                "type": "boolean"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "runtime_id": {
+                "type": "string"
+              }
+            },
+            "required": [],
+            "title": "runtime.capabilities input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "refresh",
+            "request_id",
+            "runtime_id"
+          ],
+          "mcp_tool_name": "runtime_capabilities",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "control plane",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "runtime.license_inspect": {
+          "available": true,
+          "effect": "READ",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "products": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "runtime_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "runtime_id"
+            ],
+            "title": "runtime.license_inspect input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "products",
+            "request_id",
+            "runtime_id"
+          ],
+          "mcp_tool_name": "runtime_license_inspect",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "control plane",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        }
+      },
+      "prerequisites": {
+        "case_id": "W15_T042_license",
+        "checks": {
+          "bound_model": {
+            "applicable": false,
+            "evidence": "not applicable: the run is offline (no engine to bind a model on)",
+            "satisfied": null
+          },
+          "runtime": {
+            "applicable": false,
+            "evidence": "not applicable: the run is offline",
+            "satisfied": null
+          }
+        },
+        "declared": [
+          "bound_model",
+          "runtime"
+        ],
+        "note": "a missing prerequisite makes this case DEPENDENCY_BLOCKED and points at the root cause; it never becomes a defect of this case",
+        "status": "SATISFIED",
+        "unknown_declarations": [],
+        "unsatisfied": []
+      },
+      "static_license_ops_executable": {
+        "operations": [
+          "runtime.license_inspect",
+          "runtime.capabilities"
+        ],
+        "pass": true
+      },
+      "subcase_inventory": {
+        "levels": [
+          "live",
+          "static"
+        ],
+        "missing": [],
+        "planned": 5,
+        "recorded": 5
+      }
+    },
+    "case_id": "W15_T042_license",
+    "finished_at": "2026-09-21T07:51:27.303164Z",
+    "package": "W15",
+    "reason": null,
+    "started_at": "2026-09-21T07:51:27.296300Z",
+    "status": "NOT_RUN",
+    "subcases": {
+      "authorized_product_usable": {
+        "acceptance": "T042 authorized product works",
+        "level": "live",
+        "reason": "offline run: --live was not supplied",
+        "status": "NOT_RUN"
+      },
+      "license_inspect_records_has_product": {
+        "acceptance": "T042 hasProduct evidence",
+        "level": "live",
+        "reason": "offline run: --live was not supplied",
+        "status": "NOT_RUN"
+      },
+      "missing_product_blocks_with_blocked_license": {
+        "acceptance": "T042 BLOCKED_LICENSE not fake success",
+        "level": "live",
+        "reason": "offline run: --live was not supplied",
+        "status": "NOT_RUN"
+      },
+      "probe_does_not_occupy_license": {
+        "acceptance": "T042 probe does not consume a seat",
+        "level": "live",
+        "reason": "offline run: --live was not supplied",
+        "status": "NOT_RUN"
+      },
+      "static_license_ops_availability": {
+        "acceptance": "T042 license probe",
+        "level": "static",
+        "status": "PASS"
+      }
+    }
+  },
+  "subcase_count": 5
+}

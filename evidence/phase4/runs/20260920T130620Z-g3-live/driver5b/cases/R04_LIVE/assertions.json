@@ -1,0 +1,421 @@
+{
+  "assertion_count": 10,
+  "case": {
+    "acceptance": [
+      "G3 §7 R04"
+    ],
+    "assertions": {
+      "operation_availability": {
+        "transaction.apply": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "actions",
+            "checkpoint_policy",
+            "expected_revision",
+            "idempotency_key",
+            "invariants",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "transaction_apply",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "transaction.preview": {
+          "available": true,
+          "effect": "READ",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "actions",
+            "invariants",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "transaction_preview",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "transaction.verify": {
+          "available": true,
+          "effect": "EVALUATE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "checks",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "session_id",
+            "transaction_id"
+          ],
+          "mcp_tool_name": "transaction_verify",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        }
+      },
+      "r04_invariant_violation": {
+        "applied": null,
+        "checkpoint_id": null,
+        "error_code": "ISOLATION_PROOF_REQUIRED",
+        "execution_state_unknown": null,
+        "execution_status": null,
+        "failing_required_checks": [],
+        "invariants": null,
+        "partial_change": null,
+        "success": false,
+        "verification_reason": null,
+        "verification_status": null
+      },
+      "r04_probe_action": {
+        "attempts": [
+          {
+            "count": null,
+            "error_code": "NODE_NOT_FOUND",
+            "path": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                }
+              ]
+            },
+            "status": null,
+            "success": false,
+            "target": "probe_fixture.component"
+          },
+          {
+            "count": null,
+            "error_code": null,
+            "path": {
+              "segments": []
+            },
+            "status": null,
+            "success": true,
+            "target": "model_root"
+          }
+        ],
+        "selected": "model_root"
+      },
+      "r04_root_node_read": {
+        "error_code": "API_UNSUPPORTED",
+        "error_message": "the selected node does not expose properties()",
+        "outer_isError": true,
+        "success": false,
+        "unknown_escalation": null
+      },
+      "r04_stale_revision": {
+        "bound_revision": 0,
+        "error_code": "ISOLATION_PROOF_REQUIRED",
+        "error_message": "remote_addr_valve receipt has no API probe",
+        "precondition": null,
+        "reconcile": "withheld: this is a deliberate stale-revision probe",
+        "release_reads": [],
+        "sent_expected_revision": 0,
+        "success": false
+      },
+      "r04_status_split": {
+        "error_code": "ISOLATION_PROOF_REQUIRED",
+        "execution_status": null,
+        "reconciliations": [],
+        "release_reads": [],
+        "success": false,
+        "verification_status": null
+      },
+      "r04_unsupported_invariant_preview": {
+        "accepted_rejection_codes": [
+          "INVALID_INVARIANT",
+          "INVALID_REQUEST",
+          "INVARIANT_UNSUPPORTED",
+          "PROPERTY_TYPE_MISMATCH",
+          "UNSUPPORTED_OPERATION"
+        ],
+        "malformed": {
+          "error_code": "INVALID_INVARIANT",
+          "has_structured_content": true,
+          "operation_id": null,
+          "outer_isError": true,
+          "success": false
+        },
+        "malformed_error": "invariant 0: invariant type is required",
+        "per_probe": {
+          "malformed": "PASS",
+          "unsupported": "PASS"
+        },
+        "release": {
+          "malformed": null,
+          "unsupported": null
+        },
+        "unknown_engine_state": {
+          "malformed": null,
+          "unsupported": null
+        },
+        "unsupported": {
+          "error_code": "INVARIANT_UNSUPPORTED",
+          "has_structured_content": true,
+          "operation_id": null,
+          "outer_isError": true,
+          "success": false
+        },
+        "unsupported_error": "invariant 0: unsupported invariant type 'phase4.unsupported_invariant'; supported: node_exists, node_type, property_equals, property_tolerance, selection_dimension, selection_non_empty",
+        "verdict": "PASS"
+      },
+      "static_transaction_ops_executable": {
+        "operations": [
+          "transaction.preview",
+          "transaction.apply",
+          "transaction.verify"
+        ],
+        "pass": true
+      },
+      "subcase_inventory": {
+        "levels": [
+          "live",
+          "protocol",
+          "static"
+        ],
+        "missing": [],
+        "planned": 8,
+        "recorded": 9
+      },
+      "unsupported_invariant_rejected_pre_write": {
+        "engine_called": null,
+        "error_code": "INVALID_INVARIANT",
+        "pass": true
+      }
+    },
+    "case_id": "R04_LIVE",
+    "finished_at": "2026-09-20T22:52:55.417209Z",
+    "package": "R",
+    "reason": null,
+    "started_at": "2026-09-20T22:52:55.314786Z",
+    "status": "BLOCKED",
+    "subcases": {
+      "checkpoint_recovery_after_failed_invariant": {
+        "acceptance": "G3 R04 checkpoint after failed invariant",
+        "level": "live",
+        "reason": "checkpoint creation unavailable: ISOLATION_PROOF_REQUIRED",
+        "status": "BLOCKED"
+      },
+      "cross_model_transaction_record_rejected": {
+        "acceptance": "G3 R04 cross-model record binding",
+        "level": "live",
+        "reason": "no transaction_id was returned to re-verify",
+        "status": "NOT_RUN"
+      },
+      "invariant_violation_not_reported_as_pass": {
+        "acceptance": "G3 R04 required failure is not PASS",
+        "level": "live",
+        "observed": {
+          "applied": null,
+          "checkpoint_id": null,
+          "error_code": "ISOLATION_PROOF_REQUIRED",
+          "execution_state_unknown": null,
+          "execution_status": null,
+          "failing_required_checks": [],
+          "invariants": null,
+          "partial_change": null,
+          "success": false,
+          "verification_reason": null,
+          "verification_status": null
+        },
+        "reason": "the transaction was refused with ISOLATION_PROOF_REQUIRED",
+        "status": "BLOCKED"
+      },
+      "recorded_pass_with_changed_live_property": {
+        "acceptance": "G3 R04 record passes but live property differs",
+        "level": "live",
+        "reason": "no transaction_id was returned to re-verify",
+        "status": "NOT_RUN"
+      },
+      "root_node_read_refusal_is_structured": {
+        "level": "protocol",
+        "observed": {
+          "error_code": "API_UNSUPPORTED",
+          "error_message": "the selected node does not expose properties()",
+          "outer_isError": true,
+          "success": false,
+          "unknown_escalation": null
+        },
+        "status": "PASS"
+      },
+      "stale_revision_rejected": {
+        "acceptance": "G3 R04 stale revision",
+        "level": "live",
+        "reason": "a stale expected_revision was not rejected: ISOLATION_PROOF_REQUIRED",
+        "status": "BLOCKED"
+      },
+      "static_transaction_ops_executable": {
+        "acceptance": "G3 R04 executable invariants",
+        "level": "static",
+        "status": "PASS"
+      },
+      "static_unsupported_invariant_rejected_pre_write": {
+        "acceptance": "G3 R04 unsupported/malformed invariant rejected before write",
+        "level": "protocol",
+        "observed": {
+          "accepted_rejection_codes": [
+            "INVALID_INVARIANT",
+            "INVALID_REQUEST",
+            "INVARIANT_UNSUPPORTED",
+            "PROPERTY_TYPE_MISMATCH",
+            "UNSUPPORTED_OPERATION"
+          ],
+          "malformed": {
+            "error_code": "INVALID_INVARIANT",
+            "has_structured_content": true,
+            "operation_id": null,
+            "outer_isError": true,
+            "success": false
+          },
+          "malformed_error": "invariant 0: invariant type is required",
+          "per_probe": {
+            "malformed": "PASS",
+            "unsupported": "PASS"
+          },
+          "release": {
+            "malformed": null,
+            "unsupported": null
+          },
+          "unknown_engine_state": {
+            "malformed": null,
+            "unsupported": null
+          },
+          "unsupported": {
+            "error_code": "INVARIANT_UNSUPPORTED",
+            "has_structured_content": true,
+            "operation_id": null,
+            "outer_isError": true,
+            "success": false
+          },
+          "unsupported_error": "invariant 0: unsupported invariant type 'phase4.unsupported_invariant'; supported: node_exists, node_type, property_equals, property_tolerance, selection_dimension, selection_non_empty",
+          "verdict": "PASS"
+        },
+        "status": "PASS"
+      },
+      "verified_transaction_status_split": {
+        "acceptance": "G3 R04 execution vs verification status",
+        "level": "live",
+        "reason": "a satisfied transaction did not report execution and verification status separately: ISOLATION_PROOF_REQUIRED",
+        "status": "BLOCKED"
+      }
+    }
+  },
+  "subcase_count": 9
+}

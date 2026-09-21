@@ -1,0 +1,903 @@
+{
+  "assertion_count": 5,
+  "case": {
+    "acceptance": [
+      "G3 §7 W15.T007"
+    ],
+    "assertions": {
+      "operation_availability": {
+        "node.property_get": {
+          "available": true,
+          "effect": "READ",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "model_ref",
+            "names",
+            "path",
+            "project_id",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "node_property_get",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "physics.feature_create": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "entity_dimension",
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "parent",
+            "project_id",
+            "properties",
+            "request_id",
+            "session_id",
+            "tag",
+            "type_id"
+          ],
+          "mcp_tool_name": "physics_feature_create",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "physics.feature_update": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "path",
+            "project_id",
+            "properties",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "physics_feature_update",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "physics.inspect": {
+          "available": true,
+          "effect": "READ",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "depth",
+            "model_ref",
+            "path",
+            "project_id",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "physics_inspect",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "physics.selection_set": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "path",
+            "project_id",
+            "request_id",
+            "selection",
+            "session_id"
+          ],
+          "mcp_tool_name": "physics_selection_set",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "selection.create": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "component",
+            "definition",
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "session_id",
+            "tag",
+            "type_id"
+          ],
+          "mcp_tool_name": "selection_create",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        }
+      },
+      "static_physics_selection_ops_executable": {
+        "operations": [
+          "physics.selection_set",
+          "physics.feature_create",
+          "physics.feature_update",
+          "selection.create",
+          "node.property_get"
+        ],
+        "pass": true
+      },
+      "step_physics_level_selection_set": {
+        "data_keys": [
+          "execution_state_unknown",
+          "isolation_proof",
+          "partial_change",
+          "status"
+        ],
+        "elapsed_s": null,
+        "error_code": "NODE_NOT_FOUND",
+        "error_message": "could not resolve node path segment physics:ht",
+        "operation": "physics.selection_set",
+        "outer_isError": true,
+        "success": false
+      },
+      "subcase_inventory": {
+        "levels": [
+          "live",
+          "static"
+        ],
+        "missing": [],
+        "planned": 6,
+        "recorded": 6
+      },
+      "unknown_job_ledger": {
+        "entries": [
+          {
+            "first_seen_at": "2026-09-20T22:55:18.251911Z",
+            "job_id": "98f1caa6-9318-4120-8466-1718f1e0a27b",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "legacy callback raised after write dispatch",
+            "last_seen_at": "2026-09-20T22:55:18.251931Z",
+            "observations": [
+              {
+                "at": "2026-09-20T22:55:18.251933Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "legacy callback raised after write dispatch",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-20T22:55:18.257324Z",
+                "error_code": null,
+                "job_id": "98f1caa6-9318-4120-8466-1718f1e0a27b",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-02ce7b11-daa6-466b-bec6-27d792d7c43b",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-5918b46c-a30f-449f-8ba0-417fcfc6824e",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-470e37fc-6897-4634-9025-c4c6ad6a1649",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-1d299591-80ce-4114-bb5f-93ffbee1f096",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-beca64f7-c264-4447-a615-79fbf5ef24b8",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-048988b6-4161-4280-9bc5-e48afd159645",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-eea84847-8db8-4f43-8948-2d96affbd2a8",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-5f850e97-148a-4eb6-9b24-75986ac811fe",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-20T22:55:18.257343Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-20T22:55:18.352993Z",
+            "job_id": "280c8c75-1611-4563-9f84-b5a1812d26e9",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "legacy callback raised after write dispatch",
+            "last_seen_at": "2026-09-20T22:55:18.353025Z",
+            "observations": [
+              {
+                "at": "2026-09-20T22:55:18.353027Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "legacy callback raised after write dispatch",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-20T22:55:18.358159Z",
+                "error_code": null,
+                "job_id": "280c8c75-1611-4563-9f84-b5a1812d26e9",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-b66fd75d-015c-40db-9df5-95a2e07fd4bd",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-24756cdf-1057-4adb-937f-1c710dd6848f",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-5d90b8f1-3aff-455f-9fa8-cca93ba29f95",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-32d62a09-5c06-445f-8f99-2fd6561f83f2",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-34c544bf-ef32-42d5-8066-71e5ab53bdde",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-110e4f76-003c-4224-b686-b8079062b0cc",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-96929673-cb53-4ed5-b345-0292af83bd8d",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-07ccb613-b609-4ec3-a60d-ffa434ab19f5",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-20T22:55:18.358179Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-20T22:55:20.174629Z",
+            "job_id": "c507c1b0-cb20-46d6-abdd-78e1173941cd",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "setIndex was dispatched but the call failed: ExecutionContractError",
+            "last_seen_at": "2026-09-20T22:55:20.174689Z",
+            "observations": [
+              {
+                "at": "2026-09-20T22:55:20.174691Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "setIndex was dispatched but the call failed: ExecutionContractError",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-20T22:55:20.184118Z",
+                "error_code": null,
+                "job_id": "c507c1b0-cb20-46d6-abdd-78e1173941cd",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-cbad0e93-318c-428c-bae3-dcc3e9168ef5",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-dc91070f-bc35-4c75-9193-a48ce1f690ee",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-a6ee9f89-410f-420d-b9fc-8f6480b82179",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-22bd603c-2e67-4607-8ccc-31ee15c512a5",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-9c58b640-c4a2-4cd4-b0f0-55d94bfbff1f",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-63a99d52-73a1-47e2-9c04-e46cd6e894bf",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-3f7d3af2-0fb8-4490-88e2-75be618d839c",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-266c8ea0-2bdf-42be-be08-776597bf97c8",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-dec0b540-d421-458f-ba7e-7333fbd1d02c",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-e8da9dd8-aec7-48b3-b1ef-0db73fa05a4c",
+                    "source": "durable_worker_observation",
+                    "status": "FAILED"
+                  },
+                  {
+                    "request_id": "wrk-4a3e77a7-e9a5-491d-90c5-2dcdf45b3817",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-20T22:55:20.184143Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-20T22:55:20.256060Z",
+            "job_id": "c940c5ef-1004-4842-b18e-ef57b2928cea",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "legacy callback raised after write dispatch",
+            "last_seen_at": "2026-09-20T22:55:20.256137Z",
+            "observations": [
+              {
+                "at": "2026-09-20T22:55:20.256139Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "legacy callback raised after write dispatch",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-20T22:55:20.262584Z",
+                "error_code": null,
+                "job_id": "c940c5ef-1004-4842-b18e-ef57b2928cea",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-1073a0d8-d236-409e-857e-d1294d43d4ab",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-18a284ec-dbdd-4763-b6a9-4a239623230f",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-47945549-8314-4e83-8e9d-8c3da931eb53",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-c0f596f8-9d9d-4207-9353-5f7a01f717b1",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-b6f66a75-b4da-40a4-8057-c1c074a830d9",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-0f994c01-0262-43f7-b6e0-573269cfef2a",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-f758dbc3-1a17-4d96-aa45-e2c4d97f28ec",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-22a8a01d-53ff-455c-bb6a-ceeafa6ca1fe",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-d1647977-1223-47bb-9df7-dfdc821eeb57",
+                    "source": "durable_worker_observation",
+                    "status": "FAILED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-20T22:55:20.262606Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-20T22:55:20.329544Z",
+            "job_id": "e619cd27-0e1a-4153-b7a9-011104165624",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "legacy callback raised after write dispatch",
+            "last_seen_at": "2026-09-20T22:55:20.329642Z",
+            "observations": [
+              {
+                "at": "2026-09-20T22:55:20.329644Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "legacy callback raised after write dispatch",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-20T22:55:20.335654Z",
+                "error_code": null,
+                "job_id": "e619cd27-0e1a-4153-b7a9-011104165624",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-57da40e4-a84a-4d33-b7e6-d5379d381025",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-e22ec233-b31d-4203-834a-64173b425bcc",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-9c91e9de-d126-457e-ab6d-992bb2d4f2b4",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-48fcb5ed-0b32-49c6-b272-5fa88d375f07",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-10795829-cc6e-45f4-bbf3-938bee2aec46",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-67d64e19-99c2-4bf8-9264-6ddf1b9bdfb6",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-eaab8ddf-46c4-4742-ac66-c070dbf013ed",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-ce956b6a-768f-48a2-af98-098f8a972a01",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-cc69c1b4-ba2b-42b6-8d34-8a8e7100de17",
+                    "source": "durable_worker_observation",
+                    "status": "FAILED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-20T22:55:20.335675Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-20T22:55:20.429866Z",
+            "job_id": "38fdd74d-bed8-42cc-a138-8b6476dd6419",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "legacy callback raised after write dispatch",
+            "last_seen_at": "2026-09-20T22:55:20.429981Z",
+            "observations": [
+              {
+                "at": "2026-09-20T22:55:20.429983Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "legacy callback raised after write dispatch",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-20T22:55:20.436095Z",
+                "error_code": null,
+                "job_id": "38fdd74d-bed8-42cc-a138-8b6476dd6419",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-1578e3b3-11dd-4b95-be61-7441b84ce608",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-dd711728-2ded-4d6e-bf20-63e427de2765",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-04ab3a11-ad5f-4182-b234-e7f090e98540",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-d98f88de-4bf1-42a0-a002-6ae2ec578eae",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-b66866ee-edef-463f-abd7-1c84630c2a0c",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-15e5300f-8a6d-4eeb-baff-5c3aea9acef4",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-ffb0f10a-a51a-4fcf-b5b5-c70a22b9b8ef",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-04388cd7-6b1b-4a79-943b-5977a6efc8fc",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-71ff436f-d7bc-4b1e-bc64-a99da2a7ec19",
+                    "source": "durable_worker_observation",
+                    "status": "FAILED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-20T22:55:20.436115Z",
+            "status": "UNKNOWN"
+          }
+        ],
+        "gate_refusals": {
+          "by_tool": {},
+          "count": 0,
+          "first": null,
+          "last": null
+        },
+        "note": "the driver records every job id an envelope reported as UNKNOWN (no published read lists the unresolved jobs) and releases each one through the published job_reconcile read before it replays a refused call once",
+        "released_jobs": [
+          "98f1caa6-9318-4120-8466-1718f1e0a27b",
+          "280c8c75-1611-4563-9f84-b5a1812d26e9",
+          "c507c1b0-cb20-46d6-abdd-78e1173941cd",
+          "c940c5ef-1004-4842-b18e-ef57b2928cea",
+          "e619cd27-0e1a-4153-b7a9-011104165624",
+          "38fdd74d-bed8-42cc-a138-8b6476dd6419"
+        ],
+        "still_blocked": [],
+        "unresolved_jobs": []
+      }
+    },
+    "case_id": "W15_T007_selections",
+    "finished_at": "2026-09-20T22:55:21.794629Z",
+    "package": "W15",
+    "reason": null,
+    "started_at": "2026-09-20T22:55:21.730062Z",
+    "status": "FAIL",
+    "subcases": {
+      "feature_level_selection_set": {
+        "acceptance": "T007 feature-level selection",
+        "level": "live",
+        "reason": "prerequisite subcase physics_level_selection_set did not pass",
+        "status": "NOT_RUN"
+      },
+      "inherited_selection_not_writable": {
+        "acceptance": "T007 inherited selection fails accurately",
+        "level": "live",
+        "reason": "prerequisite subcase feature_level_selection_set did not pass",
+        "status": "NOT_RUN"
+      },
+      "named_selection_binding_readback": {
+        "acceptance": "T007 named selection binding",
+        "level": "live",
+        "reason": "prerequisite subcase feature_level_selection_set did not pass",
+        "status": "NOT_RUN"
+      },
+      "no_invalid_parent_feature_coupling": {
+        "acceptance": "T007 no phys.feature(phys_tag) misuse",
+        "level": "live",
+        "reason": "prerequisite subcase named_selection_binding_readback did not pass",
+        "status": "NOT_RUN"
+      },
+      "physics_level_selection_set": {
+        "acceptance": "T007 physics-level selection",
+        "level": "live",
+        "reason": "physics.selection_set returned could not resolve node path segment physics:ht",
+        "status": "FAIL"
+      },
+      "static_physics_selection_ops_availability": {
+        "acceptance": "T007 selection levels",
+        "level": "static",
+        "status": "PASS"
+      }
+    }
+  },
+  "subcase_count": 6
+}

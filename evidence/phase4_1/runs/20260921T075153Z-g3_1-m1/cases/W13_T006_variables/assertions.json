@@ -1,0 +1,873 @@
+{
+  "assertion_count": 10,
+  "case": {
+    "acceptance": [
+      "G3 §7 W13.T006"
+    ],
+    "assertions": {
+      "isolation": {
+        "applied": false,
+        "at": "2026-09-21T07:51:55.261318Z",
+        "attempted": false,
+        "declaration": {
+          "case_id": "W13_T006_variables",
+          "mode": "shared_bound",
+          "modes": [
+            "own_model",
+            "checkpoint_restore",
+            "shared_bound"
+          ],
+          "rationale": "reads/writes the run's bound model; the run is serial"
+        },
+        "reason": "declared: this case runs against the run's bound model, strictly serially"
+      },
+      "operation_availability": {
+        "evaluate_expressions": {
+          "available": true,
+          "effect": "EVALUATE",
+          "error_code": null,
+          "evaluation_policy": {
+            "default": "ephemeral_mutation",
+            "title": "Evaluation Policy",
+            "type": "string"
+          },
+          "evaluation_policy_note": "read from the operation's own input schema (the published declaration of the field)",
+          "evaluation_policy_source": "input_schema.properties.evaluation_policy",
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "evaluation_policy": {
+                "default": "ephemeral_mutation",
+                "title": "Evaluation Policy",
+                "type": "string"
+              },
+              "expressions_json": {
+                "default": "[]",
+                "title": "Expressions Json",
+                "type": "string"
+              },
+              "max_result_size": {
+                "default": 0,
+                "title": "Max Result Size",
+                "type": "integer"
+              }
+            },
+            "title": "evaluate_expressionsArguments",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "evaluation_policy",
+            "expressions_json",
+            "max_result_size"
+          ],
+          "mcp_tool_name": "evaluate_expressions",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "legacy managed backend",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "manage_variables": {
+          "available": true,
+          "effect": "PROJECT_WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "title": "Action",
+                "type": "string"
+              },
+              "component": {
+                "default": "",
+                "title": "Component",
+                "type": "string"
+              },
+              "expression": {
+                "default": "",
+                "title": "Expression",
+                "type": "string"
+              },
+              "name": {
+                "default": "",
+                "title": "Name",
+                "type": "string"
+              },
+              "tag": {
+                "default": "",
+                "title": "Tag",
+                "type": "string"
+              }
+            },
+            "required": [
+              "action"
+            ],
+            "title": "manage_variablesArguments",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "action",
+            "component",
+            "expression",
+            "name",
+            "tag"
+          ],
+          "mcp_tool_name": "manage_variables",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "legacy managed backend",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "variable.get": {
+          "available": true,
+          "effect": "READ",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "group": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "names": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "group"
+            ],
+            "title": "variable.get input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "group",
+            "model_ref",
+            "names",
+            "project_id",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "variable_get",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "variable.group_create": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "component": {
+                "type": "string"
+              },
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "selection": {
+                "$ref": "common.schema.json#/$defs/SelectionSpec"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "tag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "tag"
+            ],
+            "title": "variable.group_create input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "component",
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "selection",
+            "session_id",
+            "tag"
+          ],
+          "mcp_tool_name": "variable_group_create",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "variable.set": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "group": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "variables": {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "group",
+              "variables"
+            ],
+            "title": "variable.set input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "expected_revision",
+            "group",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "session_id",
+            "variables"
+          ],
+          "mcp_tool_name": "variable_set",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        }
+      },
+      "prerequisites": {
+        "case_id": "W13_T006_variables",
+        "checks": {
+          "bound_model": {
+            "applicable": true,
+            "evidence": "a model_ref is bound",
+            "satisfied": true
+          },
+          "observed_revision": {
+            "applicable": true,
+            "evidence": "the bound model's revision was read back (0)",
+            "satisfied": true
+          },
+          "own_geometry": {
+            "applicable": false,
+            "evidence": "declared: the case builds its own component/geometry before using it",
+            "satisfied": null
+          }
+        },
+        "declared": [
+          "bound_model",
+          "observed_revision",
+          "own_geometry"
+        ],
+        "established": {
+          "adopted": false,
+          "component": "comp1",
+          "component_tags": [
+            "comp1"
+          ],
+          "created": true,
+          "prefix": "w13-t006",
+          "reason": "the component 'comp1' was created and read back from the component list",
+          "root_cause": null,
+          "status": "SATISFIED",
+          "steps": [
+            {
+              "error_code": null,
+              "identity": {
+                "error_code": null,
+                "has_structured_content": true,
+                "job_id": "04585f03-659a-4a04-8501-dd8ea0b81554",
+                "operation_id": "83d69797-fd3e-4cc3-a505-5402f843018a",
+                "outer_isError": false,
+                "request_hash": "21866cad77b83fe72024839d8513010557fb3492f1d17caae25bd19a578d8fbe",
+                "success": true
+              },
+              "message": null,
+              "operation": "definition.component_manage",
+              "status": "APPLIED",
+              "step": "w13-t006-component-list"
+            },
+            {
+              "error_code": null,
+              "identity": {
+                "error_code": null,
+                "has_structured_content": true,
+                "job_id": "bfe123be-3da6-4a45-9608-927fe6bd8e18",
+                "operation_id": "7566afda-8fed-42ce-a3ba-b76eb86dcccd",
+                "outer_isError": false,
+                "request_hash": "514f97e1cd227fa894e0f7a690d58a0cfdd42f86e82cdf6fa409515b29af03fe",
+                "success": true
+              },
+              "message": null,
+              "operation": "definition.component_manage",
+              "status": "APPLIED",
+              "step": "w13-t006-component"
+            },
+            {
+              "error_code": null,
+              "identity": {
+                "error_code": null,
+                "has_structured_content": true,
+                "job_id": "323fdf1b-8800-48e4-9e2d-22ce4263b897",
+                "operation_id": "67546ad1-7e27-4523-8f1d-0a077b42cbbb",
+                "outer_isError": false,
+                "request_hash": "389f56137b9d133cbda298919a3ce5d90f34c2c236f1f7e5e124cf29fa5f7050",
+                "success": true
+              },
+              "message": null,
+              "operation": "definition.component_manage",
+              "status": "APPLIED",
+              "step": "w13-t006-component-list-verify"
+            }
+          ],
+          "verified": true
+        },
+        "note": "a missing prerequisite makes this case DEPENDENCY_BLOCKED and points at the root cause; it never becomes a defect of this case",
+        "status": "SATISFIED",
+        "unknown_declarations": [],
+        "unsatisfied": []
+      },
+      "static_legacy_variable_route_executable": {
+        "operations": [
+          "manage_variables",
+          "evaluate_expressions"
+        ],
+        "pass": true
+      },
+      "static_variable_ops_executable": {
+        "operations": [
+          "variable.group_create",
+          "variable.set",
+          "variable.get"
+        ],
+        "pass": true
+      },
+      "step_expression_evaluates_after_modification": {
+        "data_keys": [
+          "binding",
+          "cleanup",
+          "count",
+          "dataset",
+          "dataset_inventory",
+          "datetime",
+          "ephemeral_mutation",
+          "evaluation_policy",
+          "execution_state_unknown",
+          "failed_item_may_have_changed",
+          "label",
+          "log_path",
+          "max_result_size_ignored",
+          "operations_path",
+          "partial_change",
+          "requires_model_reconciliation",
+          "results",
+          "safe_retry",
+          "server",
+          "solution",
+          "status",
+          "temporary_nodes",
+          "timestamp",
+          "tool",
+          "verification_status",
+          "verified_outcome"
+        ],
+        "elapsed_s": null,
+        "error_code": "One or more expressions could not be evaluated.",
+        "error_message": "One or more expressions could not be evaluated.",
+        "operation": "evaluate_expressions",
+        "outer_isError": true,
+        "success": false
+      },
+      "step_no_bogus_name_expr_variables": {
+        "data_keys": [
+          "component",
+          "count",
+          "model",
+          "path",
+          "scope",
+          "scope_name",
+          "selection",
+          "variables",
+          "varnames"
+        ],
+        "elapsed_s": null,
+        "error_code": null,
+        "error_message": null,
+        "operation": "variable.get",
+        "outer_isError": false,
+        "success": true
+      },
+      "step_variables_two_in_one_group": {
+        "data_keys": [
+          "cleanup_failed",
+          "collection",
+          "component",
+          "created",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "group",
+          "isolation_proof",
+          "parent_path",
+          "partial_change",
+          "path",
+          "readback",
+          "scope",
+          "selection",
+          "tag",
+          "type_id",
+          "type_readback",
+          "verification_status"
+        ],
+        "elapsed_s": null,
+        "error_code": null,
+        "error_message": null,
+        "operation": "variable.group_create",
+        "outer_isError": false,
+        "success": true
+      },
+      "step_varnames_contains_modified_variable": {
+        "data_keys": [
+          "applied",
+          "applied_count",
+          "cleanup_failed",
+          "component",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "failed",
+          "failed_count",
+          "isolation_proof",
+          "not_executed",
+          "not_executed_count",
+          "ok",
+          "partial_change",
+          "path",
+          "scope",
+          "status",
+          "varnames",
+          "verification_status"
+        ],
+        "elapsed_s": null,
+        "error_code": null,
+        "error_message": null,
+        "operation": "variable.set",
+        "outer_isError": false,
+        "success": true
+      },
+      "subcase_inventory": {
+        "levels": [
+          "live",
+          "static"
+        ],
+        "missing": [],
+        "planned": 7,
+        "recorded": 7
+      }
+    },
+    "case_id": "W13_T006_variables",
+    "finished_at": "2026-09-21T07:51:55.877883Z",
+    "package": "W13",
+    "reason": null,
+    "started_at": "2026-09-21T07:51:55.261306Z",
+    "status": "FAIL",
+    "subcases": {
+      "component_and_global_scope": {
+        "acceptance": "W13 global and component scopes",
+        "level": "live",
+        "reason": "the component variable evaluation did not pass; the global-scope probe was not attempted",
+        "status": "NOT_RUN"
+      },
+      "expression_evaluates_after_modification": {
+        "acceptance": "T006 expression still evaluates",
+        "level": "live",
+        "reason": "expression evaluation returned One or more expressions could not be evaluated.",
+        "status": "FAIL"
+      },
+      "no_bogus_name_expr_variables": {
+        "acceptance": "T006 no fake name/expr variables",
+        "level": "live",
+        "status": "PASS"
+      },
+      "static_legacy_variable_route_available": {
+        "acceptance": "T006 evaluation route",
+        "level": "static",
+        "status": "PASS"
+      },
+      "static_variable_ops_availability": {
+        "acceptance": "W13 variable group add/update",
+        "level": "static",
+        "status": "PASS"
+      },
+      "variables_two_in_one_group": {
+        "acceptance": "T006 two variables in one group",
+        "level": "live",
+        "status": "PASS"
+      },
+      "varnames_contains_modified_variable": {
+        "acceptance": "T006 varnames contains the changed variable",
+        "level": "live",
+        "status": "PASS"
+      }
+    }
+  },
+  "subcase_count": 7
+}

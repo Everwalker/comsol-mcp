@@ -13,7 +13,24 @@ from ._execution_contract import (
     SessionLedger,
     canonical_project_path,
     permission_for_legacy_tool,
+    pre_dispatch_failure,
 )
+from ._domain_outcome import (
+    classify_envelope,
+    final_state,
+)
+
+
+def _outcome_error(data: Mapping[str, Any], outcome: Any = None) -> dict[str, Any] | None:
+    """The error object for a non-success envelope that carried no ``error``.
+
+    Callers of a G3 domain operation receive the published error code of the
+    classified outcome instead of a bare ``success: false``.
+    """
+    record = outcome if outcome is not None else classify_envelope(data)
+    if getattr(record, "success", False):
+        return None
+    return record.error_envelope()
 
 
 class SnapshotAdapter(Protocol):
@@ -99,18 +116,35 @@ class ExecutionService:
                 "model_create", "model_load", "server_connect", "server_disconnect", "server_start",
                 "load_visible_main_model", "load_current_main_model", "start_visible_main_workflow",
                 "configure_single_main_workflow", "check_server_port", "workflow_info", "mcp_tool_audit",
+                # C05: a runtime-scoped capability/licence question is answered by
+                # the session's runtime, so an unbound call is a valid request and
+                # must reach the probe instead of being refused for having no model.
+                "runtime_capabilities", "runtime_license_inspect",
             }:
                 raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "a selected model_ref is required")
             if expected_revision is not None:
                 raise ExecutionContractError("INVALID_REQUEST", "unbound session operation cannot carry expected_revision")
             data = self._decode_callback(callback(args))
+            # The fallback entry uses the same final judgement as every other
+            # entry point: a refusal or an unresolved state is never success.
+            state, _changed = final_state(data)
             return {
-                "success": bool(data.get("success", True)), "data": data.get("data", data),
-                "error": data.get("error"),
+                "success": state == "succeeded", "data": data.get("data", data),
+                "error": data.get("error") or _outcome_error(data),
                 "execution": {"session_id": self.ledger.session_id, "model_ref": None, "revision": None},
             }
 
-        snapshot = self._snapshot(model_ref.model_tag)
+        try:
+            snapshot = self._snapshot(model_ref.model_tag)
+        except ExecutionContractError:
+            raise
+        except Exception as exc:
+            # The callback was never dispatched, so no engine mutation can have
+            # happened: this is a retryable transport failure, not an unknown
+            # engine state that must block every later operation.
+            raise pre_dispatch_failure(
+                "ENGINE_UNRESPONSIVE", "the pre-dispatch engine snapshot did not answer", exc, safe_retry=True
+            ) from exc
         self.ledger.observe_engine_state(
             model_ref,
             external_event_counter=snapshot["external_event_counter"],
@@ -118,7 +152,15 @@ class ExecutionService:
         )
         if permission == "inspect":
             data = self._decode_callback(callback(args))
-            return {"success": bool(data.get("success", True)), "data": data.get("data", data), "error": data.get("error"), **self._metadata(model_ref)}
+            # The shared rule applies to read-effect operations too: an
+            # operation that reports an unresolved engine state, an unverified
+            # cleanup or an unclean failure must not be published as a success
+            # just because its catalogue effect is a read.
+            outcome = final_state(data)
+            if outcome[0] != "succeeded":
+                self._freeze_after_unknown_read(model_ref, data)
+            return {"success": outcome[0] == "succeeded", "data": data.get("data", data),
+                    "error": data.get("error") or _outcome_error(data), **self._metadata(model_ref)}
 
         ticket = self.ledger.begin_write(
             tool_name, args, model_ref, expected_revision,
@@ -133,44 +175,72 @@ class ExecutionService:
             data = self._decode_callback(callback(args))
         except Exception as exc:
             # A legacy callback cannot prove it made no engine-side mutation.
+            # Keep the fail-closed unknown state, but never swallow the original
+            # exception: its type, code and details are the only evidence of what
+            # the callback actually hit, and that evidence has to survive into
+            # the job record.
             self.ledger.finish(ticket, outcome="unknown", changed=True)
-            raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "legacy callback raised after write dispatch") from exc
+            if isinstance(exc, ExecutionContractError) and exc.code == "EXECUTION_STATE_UNKNOWN":
+                # Already the fail-closed state, carrying its own evidence
+                # (dispatch stage, witness, cause).
+                raise
+            original_details = getattr(exc, "details", None)
+            details: dict[str, Any] = {"cause_type": type(exc).__name__, "cause_message": str(exc)}
+            if isinstance(exc, ExecutionContractError):
+                # A structured cause keeps its code/stage (and any evidence the
+                # raise site attached) inside the fail-closed envelope.
+                details["cause_code"] = exc.code
+                details["cause_stage"] = exc.stage
+                if isinstance(original_details, Mapping):
+                    details.update(original_details)
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN", "legacy callback raised after write dispatch",
+                stage="post_dispatch", details=details,
+            ).with_cause(exc) from exc
         try:
             after = self._snapshot(model_ref.model_tag)
         except Exception as exc:
             self.ledger.finish(ticket, outcome="unknown", changed=True)
-            raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "post-execution snapshot is unavailable") from exc
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN", "post-execution snapshot is unavailable"
+            ).with_cause(exc) from exc
         self.ledger.observe_engine_state(
             model_ref,
             external_event_counter=after["external_event_counter"], fingerprint=after["fingerprint"],
         )
-        claimed_success = bool(data.get("success", True))
-        detail = data.get("data") if isinstance(data.get("data"), Mapping) else {}
-        signals = {name: bool(data.get(name) or detail.get(name)) for name in ("partial_change", "failed_item_may_have_changed", "cleanup_failed", "engine_state_unknown", "execution_state_unknown", "applied")}
-        engine_executed = bool(data.get("execution_success") or detail.get("execution_success"))
-        changed_engine = after["fingerprint"] != snapshot["fingerprint"] or after["external_event_counter"] != snapshot["external_event_counter"]
-        if claimed_success:
-            outcome, changed = "succeeded", True
-        elif signals["engine_state_unknown"] or signals["execution_state_unknown"] or signals["cleanup_failed"]:
-            outcome, changed = "unknown", True
-        elif any(signals.values()) or str(data.get("status", "")).lower() == "partial" or engine_executed or changed_engine:
-            outcome, changed = "partial", True
-        else:
-            outcome, changed = "failed", False
+        # C01: one final judgement for every entry point (Java controlled
+        # execution, legacy tools, G2 property operations, G3 domain operations
+        # and the fallback).  A dangerous signal (unknown engine state, failed
+        # cleanup) always beats a surface success, and the mismatch between the
+        # pre/post fingerprints is itself evidence of a change.
+        changed_engine = (after["fingerprint"] != snapshot["fingerprint"]
+                          or after["external_event_counter"] != snapshot["external_event_counter"])
+        outcome, changed = final_state(data, engine_changed=changed_engine)
         result = self.ledger.finish(ticket, outcome=outcome, changed=changed, fingerprint=after["fingerprint"])
         self._emit("finished", model_ref, operation_id=ticket.operation_id)
+        outcome_record = classify_envelope(data, engine_changed=changed_engine)
         if result["outcome"] != "succeeded":
-            data = {**data, "success": False, "partial_change": result["partial_change"], "execution_state_unknown": result["execution_state_unknown"]}
+            data = {**data, "success": False, "partial_change": result["partial_change"],
+                    "execution_state_unknown": result["execution_state_unknown"],
+                    "verified_outcome": outcome_record.state,
+                    "verification_status": outcome_record.verification_status}
         envelope = self._metadata(model_ref)
         envelope["execution"].update({
             "request_id": ticket.request_id,
             "operation_id": ticket.operation_id,
             "request_hash": ticket.request_hash,
         })
-        preserved = dict(detail)
+        preserved_detail = data.get("data")
+        preserved = dict(preserved_detail) if isinstance(preserved_detail, Mapping) else {}
         for name, value in data.items():
-            if name not in {"success", "data", "error"}: preserved[name] = value
-        return {"success": bool(data.get("success", True)) and result["outcome"] == "succeeded", "data": preserved, "error": data.get("error"), **envelope}
+            if name not in {"success", "data", "error"}:
+                preserved[name] = value
+        return {
+            "success": result["outcome"] == "succeeded",
+            "data": preserved,
+            "error": data.get("error") or _outcome_error(data, outcome_record),
+            **envelope,
+        }
 
     @staticmethod
     def _decode_callback(value: Any) -> dict[str, Any]:
@@ -182,6 +252,28 @@ class ExecutionService:
         if not isinstance(value, Mapping) or not isinstance(value.get("success"), bool):
             raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "legacy callback returned no boolean success envelope")
         return dict(value)
+
+    def _freeze_after_unknown_read(self, model_ref: ModelRef, data: Mapping[str, Any]) -> None:
+        """Freeze dependent writes after a read-effect operation with a bad outcome.
+
+        A read-effect operation carries no write ticket, but its outcome can
+        still be an unresolved engine state (an ephemeral node it could not
+        remove, an engine answer it could not interpret).  Recording the dirty
+        state is what stops a later write from building on an unverified model.
+        """
+        record = classify_envelope(data)
+        if record.state == "succeeded":
+            return
+        if record.state not in {"unknown", "partial"}:
+            return
+        try:
+            state = self.ledger._state_for(model_ref)
+            state.dirty = True
+            state.fingerprint = None
+        except ExecutionContractError:
+            # The caller already holds a non-success result; a bookkeeping
+            # failure must not replace it with a second error.
+            pass
 
     def _snapshot(self, model_tag: str) -> dict[str, Any]:
         raw = dict(self.adapter.model_snapshot(model_tag))

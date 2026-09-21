@@ -133,7 +133,15 @@ class ControlDaemon:
                 result.setdefault("data", {})["requires_model_reconciliation"] = True
         except ExecutionContractError as exc:
             result = self._exception(exc)
-            status = "UNKNOWN" if exc.code in {"EXECUTION_STATE_UNKNOWN", "ENGINE_UNRESPONSIVE"} else "FAILED"
+            if exc.code == "EXECUTION_STATE_UNKNOWN":
+                status = "UNKNOWN"
+            elif exc.code == "ENGINE_UNRESPONSIVE":
+                # A transport failure before the callback was dispatched leaves no
+                # engine work to reconcile: report it as a retryable failure
+                # instead of an unknown job that blocks every later operation.
+                status = "FAILED" if exc.safe_retry else "UNKNOWN"
+            else:
+                status = "FAILED"
         except Exception as exc:
             self._log_exception()
             result = self._error("EXECUTION_STATE_UNKNOWN", "backend execution failed; inspect worker evidence", type=type(exc).__name__)

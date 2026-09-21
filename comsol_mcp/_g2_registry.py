@@ -279,6 +279,27 @@ _WIRE_COMPATIBILITY: dict[str, Any] = {
 }
 
 
+#: The action vocabulary ``definition.component_manage`` enforces itself (its
+#: own final ``INVALID_REQUEST`` lists exactly these).  The design catalogue
+#: declares ``tag`` in its unconditional ``required`` list, but the operation
+#: addresses a tag only for the actions that *name* one component: ``list``
+#: enumerates ``model.component()`` and the executable adapter refuses a tag for
+#: it ("action 'list' does not accept a tag", Programming Reference
+#: ``model.component()`` / javap ``ComponentList``).  The per-action truth is
+#: published below and enforced by ``_validate_operation_shape`` before
+#: dispatch, so a correct ``{"action": "list"}`` body is not refused for the
+#: argument the operation itself forbids (live evidence:
+#: ``evidence/phase4_1/runs/20260921T001454Z-g3_1-m1c`` W13_T006 -- the driver's
+#: component-list read was answered ``INVALID_REQUEST: missing required
+#: operation arguments: tag``, which blocked the case's prerequisite chain).
+COMPONENT_MANAGE_ACTIONS: tuple[str, ...] = ("create", "inspect", "list", "remove", "copy")
+#: The subset of that vocabulary whose call addresses an existing/new component
+#: by tag and therefore requires one.
+COMPONENT_MANAGE_TAGGED_ACTIONS: tuple[str, ...] = tuple(
+    action for action in COMPONENT_MANAGE_ACTIONS if action != "list"
+)
+
+
 def _effective_input_schema(catalog_schema: Mapping[str, Any], operation_id: str = "") -> dict[str, Any]:
     """Make the published schema describe the actual MCP compatibility wire."""
     # The catalog contains JSON-compatible values.  A JSON round trip gives
@@ -321,6 +342,24 @@ def _effective_input_schema(catalog_schema: Mapping[str, Any], operation_id: str
         })
     if operation_id == "node.find":
         properties.setdefault("cursor", {"type": "string", "description": "Continuation cursor returned by a truncated search."})
+    if operation_id == "definition.component_manage":
+        # The catalogue's flat ``required`` list names ``tag`` unconditionally;
+        # the operation's own per-action contract does not (see
+        # COMPONENT_MANAGE_ACTIONS).  Publish the conditional rule -- required
+        # for every action that names a component, forbidden for ``list`` -- so
+        # a client reading the schema is told the truth, and enforce it in
+        # ``_validate_operation_shape`` for the calls that reach dispatch.
+        required = effective.get("required")
+        if isinstance(required, list):
+            effective["required"] = [name for name in required if name != "tag"]
+        effective["allOf"] = [
+            {"if": {"properties": {"action": {"const": "list"}}, "required": ["action"]},
+             "then": {"not": {"required": ["tag"]}},
+             "else": {
+                 "properties": {"action": {"enum": list(COMPONENT_MANAGE_TAGGED_ACTIONS)}},
+                 "required": ["tag"],
+             }},
+        ]
     return effective
 
 
@@ -640,6 +679,27 @@ def _validate_operation_shape(operation_id: str, arguments: Mapping[str, Any]) -
         sources = arguments.get("sources")
         if not isinstance(sources, list) or not sources or not all(isinstance(item, str) and item for item in sources):
             raise ExecutionContractError("INVALID_REQUEST", "sources must be a non-empty array of paths")
+    elif operation_id == "definition.component_manage":
+        # The catalogue requires ``tag`` for every action; the operation itself
+        # requires it for the actions that name a component and *refuses* it for
+        # ``list`` (which enumerates ``model.component()``).  Enforcing the real
+        # per-action rule here keeps the coarse form's strictness -- a create
+        # without a tag is still refused before dispatch -- without demanding an
+        # argument the operation forbids.
+        action = arguments.get("action")
+        if not isinstance(action, str) or action not in COMPONENT_MANAGE_ACTIONS:
+            raise ExecutionContractError(
+                "INVALID_REQUEST",
+                f"action must be one of {'/'.join(COMPONENT_MANAGE_ACTIONS)}")
+        if action == "list":
+            if arguments.get("tag") is not None:
+                raise ExecutionContractError(
+                    "INVALID_REQUEST", "action 'list' does not accept a tag")
+        elif not isinstance(arguments.get("tag"), str) or not arguments["tag"]:
+            raise ExecutionContractError(
+                "INVALID_REQUEST",
+                f"tag is required for action {action!r} (only 'list' enumerates the component container "
+                "without naming one)")
     if operation_id in {"node.children", "node.find"}:
         budget = arguments.get("budget")
         if budget is not None:

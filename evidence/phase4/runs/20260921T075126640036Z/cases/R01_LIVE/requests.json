@@ -1,0 +1,89 @@
+{
+  "case_id": "R01_LIVE",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T075126640036Zphase4-describe-node-property_schema-1",
+          "request_id": "phase4-20260921T075126640036Zphase4-describe-node-property_schema-1"
+        },
+        "operation_id": "node.property_schema"
+      },
+      "elapsed_s": 0.23069654201390222,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T075126640036Zphase4-describe-node-property_get-2",
+          "request_id": "phase4-20260921T075126640036Zphase4-describe-node-property_get-2"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.0021508330246433616,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T075126640036Zphase4-describe-node-property_set-3",
+          "request_id": "phase4-20260921T075126640036Zphase4-describe-node-property_set-3"
+        },
+        "operation_id": "node.property_set"
+      },
+      "elapsed_s": 0.001912957988679409,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T075126640036Zphase4-describe-transaction-preview-4",
+          "request_id": "phase4-20260921T075126640036Zphase4-describe-transaction-preview-4"
+        },
+        "operation_id": "transaction.preview"
+      },
+      "elapsed_s": 0.0017822919762693346,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "actions": [
+            {
+              "arguments": {
+                "path": {
+                  "segments": []
+                },
+                "properties": [
+                  {
+                    "name": "phase4_probe_missing_value"
+                  }
+                ]
+              },
+              "operation_id": "node.property_set"
+            }
+          ],
+          "invariants": [],
+          "project_id": "comsol-mcp-phase4"
+        },
+        "execution": {
+          "idempotency_key": "phase4-20260921T075126640036Zr01-static-malformed",
+          "request_id": "phase4-20260921T075126640036Zr01-static-malformed"
+        },
+        "operation_id": "transaction.preview"
+      },
+      "elapsed_s": 0.0023682499886490405,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 5
+    }
+  ]
+}

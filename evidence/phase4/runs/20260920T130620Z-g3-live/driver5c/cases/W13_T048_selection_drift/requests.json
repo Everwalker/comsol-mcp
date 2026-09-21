@@ -1,0 +1,125 @@
+{
+  "case_id": "W13_T048_selection_drift",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver5cphase4-describe-selection-create",
+          "request_id": "phase4-driver5cphase4-describe-selection-create"
+        },
+        "operation_id": "selection.create"
+      },
+      "elapsed_s": 0.0024312500027008355,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver5cphase4-describe-selection-measure",
+          "request_id": "phase4-driver5cphase4-describe-selection-measure"
+        },
+        "operation_id": "selection.measure"
+      },
+      "elapsed_s": 0.0020530420006252825,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver5cphase4-describe-selection-validate",
+          "request_id": "phase4-driver5cphase4-describe-selection-validate"
+        },
+        "operation_id": "selection.validate"
+      },
+      "elapsed_s": 0.0019831249956041574,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver5cphase4-describe-physics-selection_set",
+          "request_id": "phase4-driver5cphase4-describe-physics-selection_set"
+        },
+        "operation_id": "physics.selection_set"
+      },
+      "elapsed_s": 0.001942999952007085,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 26,
+          "idempotency_key": "phase4-driver5cphase4-reconcile-model-phase4-250",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp1",
+            "schema_version": 1,
+            "server_instance_id": "80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5cphase4-reconcile-model-phase4-250",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.005052708031143993,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 5
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "component": "comp1",
+          "definition": {
+            "box": {
+              "x": [
+                "0",
+                "0.001"
+              ]
+            },
+            "entity_dimension": 3
+          },
+          "expected_revision": 26,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp1",
+            "schema_version": 1,
+            "server_instance_id": "80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "sel1",
+          "type_id": "Box"
+        },
+        "execution": {
+          "expected_revision": 26,
+          "idempotency_key": "phase4-driver5cnamed_selection_created_and_bound",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp1",
+            "schema_version": 1,
+            "server_instance_id": "80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5cnamed_selection_created_and_bound",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "selection.create"
+      },
+      "elapsed_s": 0.03930916701210663,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 6
+    }
+  ]
+}

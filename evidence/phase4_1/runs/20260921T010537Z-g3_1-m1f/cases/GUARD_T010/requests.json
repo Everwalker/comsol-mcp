@@ -1,0 +1,4360 @@
+{
+  "case_id": "GUARD_T010",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-describe-node-property_set-39",
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-describe-node-property_set-39"
+        },
+        "operation_id": "node.property_set"
+      },
+      "elapsed_s": 0.002867082948796451,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-describe-transaction-apply-40",
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-describe-transaction-apply-40"
+        },
+        "operation_id": "transaction.apply"
+      },
+      "elapsed_s": 0.0024138339795172215,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-describe-create_feature-41",
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-describe-create_feature-41"
+        },
+        "operation_id": "create_feature"
+      },
+      "elapsed_s": 0.0022228750167414546,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 15,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-43",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-43",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004647416993975639,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 15,
+          "limit": 200,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "query": {},
+          "root": {
+            "segments": []
+          },
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 15,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-find-42",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-find-42",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.find"
+      },
+      "elapsed_s": 0.01332312502199784,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 5
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1freconcile-3fb16f16-adf1-4fc9-b871-0da3404324ed",
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fjob_reconcile"
+        },
+        "job_id": "3fb16f16-adf1-4fc9-b871-0da3404324ed"
+      },
+      "elapsed_s": 0.002843957976438105,
+      "operation": "job_reconcile",
+      "outer_isError": false,
+      "sequence": 6
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1freconcile-3fb16f16-adf1-4fc9-b871-0da3404324ed",
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fjob_reconcile"
+        },
+        "job_id": "3fb16f16-adf1-4fc9-b871-0da3404324ed"
+      },
+      "elapsed_s": 0.002288290997967124,
+      "operation": "job_reconcile",
+      "outer_isError": false,
+      "sequence": 7
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 15,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-45",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-45",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004859541018959135,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 8
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "action": "create",
+          "expected_revision": 15,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "comp1"
+        },
+        "execution": {
+          "expected_revision": 15,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fprobe-component-44",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fprobe-component",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "definition.component_manage"
+      },
+      "elapsed_s": 0.04143970797304064,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 9
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 15,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-46",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-46",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004782333038747311,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 10
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "action": "create",
+          "expected_revision": 16,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "comp1"
+        },
+        "execution": {
+          "expected_revision": 16,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fprobe-component-44-revision-retry",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fprobe-component-revision-retry",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "definition.component_manage"
+      },
+      "elapsed_s": 0.03838700003689155,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 11
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "component": "comp1",
+          "dimension": 3,
+          "expected_revision": 16,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "p4geom"
+        },
+        "execution": {
+          "expected_revision": 16,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fprobe-geometry-47",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fprobe-geometry",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "geometry.sequence_create"
+      },
+      "elapsed_s": 0.1810057500260882,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 12
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 17,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "parent": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "geom",
+                "tag": "p4geom"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "properties": [
+            {
+              "name": "size",
+              "value": {
+                "data": [
+                  0.001,
+                  0.001,
+                  0.001
+                ],
+                "kind": "float64",
+                "shape": [
+                  3
+                ]
+              }
+            },
+            {
+              "name": "pos",
+              "value": {
+                "data": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "kind": "float64",
+                "shape": [
+                  3
+                ]
+              }
+            }
+          ],
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "p4blk",
+          "type_id": "Block"
+        },
+        "execution": {
+          "expected_revision": 17,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fprobe-block-48",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fprobe-block",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "geometry.feature_create"
+      },
+      "elapsed_s": 0.0710895829834044,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 13
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "component": "comp1",
+          "expected_revision": 18,
+          "geometry": "p4geom",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "p4mesh"
+        },
+        "execution": {
+          "expected_revision": 18,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fprobe-mesh-49",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fprobe-mesh",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "mesh.create"
+      },
+      "elapsed_s": 0.06916058401111513,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 14
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 19,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "parent": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "mesh",
+                "tag": "p4mesh"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "properties": [
+            {
+              "name": "hauto",
+              "value": {
+                "data": 4,
+                "kind": "int32",
+                "shape": []
+              }
+            }
+          ],
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "p4size",
+          "type_id": "Size"
+        },
+        "execution": {
+          "expected_revision": 19,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fprobe-mesh_size-50",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fprobe-mesh_size",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "mesh.feature_create"
+      },
+      "elapsed_s": 0.050885540957096964,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 15
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 20,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-52",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-52",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.005555125011596829,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 16
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "component": "comp1",
+          "expected_revision": 20,
+          "geometry": "p4geom",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "p4ht",
+          "type_id": "HeatTransfer"
+        },
+        "execution": {
+          "expected_revision": 20,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fprobe-physics-51",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fprobe-physics",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "physics.create"
+      },
+      "elapsed_s": 0.04449620796367526,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 17
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 20,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-54",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-54",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004773291992023587,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 18
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "entity_dimension": 2,
+          "expected_revision": 20,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "parent": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "physics",
+                "tag": "p4ht"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "properties": [
+            {
+              "name": "T0",
+              "value": {
+                "data": "300[K]",
+                "kind": "expression",
+                "shape": []
+              }
+            }
+          ],
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "p4temp1",
+          "type_id": "TemperatureBoundary"
+        },
+        "execution": {
+          "expected_revision": 20,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fprobe-temperature-53",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fprobe-temperature",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "physics.feature_create"
+      },
+      "elapsed_s": 0.03946058399742469,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 19
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 20,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-56",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-56",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004535457992460579,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 20
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "component": "comp1",
+          "definition": {
+            "properties": [
+              {
+                "name": "thermalconductivity",
+                "value": {
+                  "data": [
+                    [
+                      "10[W/(m*K)]",
+                      "0",
+                      "0"
+                    ],
+                    [
+                      "0",
+                      "10[W/(m*K)]",
+                      "0"
+                    ],
+                    [
+                      "0",
+                      "0",
+                      "10[W/(m*K)]"
+                    ]
+                  ],
+                  "kind": "expression",
+                  "shape": [
+                    3,
+                    3
+                  ],
+                  "unit": "W/(m*K)"
+                }
+              },
+              {
+                "name": "density",
+                "value": {
+                  "data": "1000[kg/m^3]",
+                  "kind": "expression",
+                  "shape": []
+                }
+              },
+              {
+                "name": "heatcapacity",
+                "value": {
+                  "data": "100[J/(kg*K)]",
+                  "kind": "expression",
+                  "shape": []
+                }
+              }
+            ]
+          },
+          "expected_revision": 20,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "p4mat",
+          "type_id": "Common"
+        },
+        "execution": {
+          "expected_revision": 20,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fprobe-material-55",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fprobe-material",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "material.create"
+      },
+      "elapsed_s": 0.07552029198268428,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 21
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 21,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-58",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-58",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.005204542016144842,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 22
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 21,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "material",
+                "tag": "p4mat"
+              },
+              {
+                "collection": "propertyGroup",
+                "tag": "def"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 21,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fprobe-group-schema-57",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fprobe-group-schema",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_schema"
+      },
+      "elapsed_s": 0.012809915991965681,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 23
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 21,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-60",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-60",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004609708033967763,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 24
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 21,
+          "limit": 200,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "query": {},
+          "root": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              }
+            ]
+          },
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 21,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-find-59",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-find-59",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.find"
+      },
+      "elapsed_s": 0.013487291987985373,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 25
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1freconcile-1605d67a-be85-4502-aaf7-0c2d4cb9d3d6",
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fjob_reconcile"
+        },
+        "job_id": "1605d67a-be85-4502-aaf7-0c2d4cb9d3d6"
+      },
+      "elapsed_s": 0.002981041034217924,
+      "operation": "job_reconcile",
+      "outer_isError": false,
+      "sequence": 26
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1freconcile-1605d67a-be85-4502-aaf7-0c2d4cb9d3d6",
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fjob_reconcile"
+        },
+        "job_id": "1605d67a-be85-4502-aaf7-0c2d4cb9d3d6"
+      },
+      "elapsed_s": 0.0024993750266730785,
+      "operation": "job_reconcile",
+      "outer_isError": false,
+      "sequence": 27
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 21,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-62",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-62",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.0050116669735871255,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 28
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 21,
+          "limit": 200,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "query": {},
+          "root": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "geom",
+                "tag": "p4geom"
+              }
+            ]
+          },
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 21,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-find-61",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-find-61",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.find"
+      },
+      "elapsed_s": 0.011596124968491495,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 29
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1freconcile-ad2b79e3-8077-4430-85a0-f6ea3777829f",
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fjob_reconcile"
+        },
+        "job_id": "ad2b79e3-8077-4430-85a0-f6ea3777829f"
+      },
+      "elapsed_s": 0.002948625013232231,
+      "operation": "job_reconcile",
+      "outer_isError": false,
+      "sequence": 30
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1freconcile-ad2b79e3-8077-4430-85a0-f6ea3777829f",
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fjob_reconcile"
+        },
+        "job_id": "ad2b79e3-8077-4430-85a0-f6ea3777829f"
+      },
+      "elapsed_s": 0.0026171249919570982,
+      "operation": "job_reconcile",
+      "outer_isError": false,
+      "sequence": 31
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 22,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-64",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-64",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004680540994741023,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 32
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 22,
+          "limit": 200,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "query": {},
+          "root": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "geom",
+                "tag": "p4geom"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4blk"
+              }
+            ]
+          },
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 22,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-find-63",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-find-63",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.find"
+      },
+      "elapsed_s": 0.012202417012304068,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 33
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1freconcile-a3776e08-8aa5-48c5-ac66-4bf251ffe750",
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fjob_reconcile"
+        },
+        "job_id": "a3776e08-8aa5-48c5-ac66-4bf251ffe750"
+      },
+      "elapsed_s": 0.002897083992138505,
+      "operation": "job_reconcile",
+      "outer_isError": false,
+      "sequence": 34
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1freconcile-a3776e08-8aa5-48c5-ac66-4bf251ffe750",
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fjob_reconcile"
+        },
+        "job_id": "a3776e08-8aa5-48c5-ac66-4bf251ffe750"
+      },
+      "elapsed_s": 0.0026855830219574273,
+      "operation": "job_reconcile",
+      "outer_isError": false,
+      "sequence": 35
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 23,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-66",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-66",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004771583015099168,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 36
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 23,
+          "limit": 200,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "query": {},
+          "root": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "mesh",
+                "tag": "p4mesh"
+              }
+            ]
+          },
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 23,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-find-65",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-find-65",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.find"
+      },
+      "elapsed_s": 0.009623583988286555,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 37
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1freconcile-f9605f43-ba97-4000-9d0a-59ca6e2d5097",
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fjob_reconcile"
+        },
+        "job_id": "f9605f43-ba97-4000-9d0a-59ca6e2d5097"
+      },
+      "elapsed_s": 0.0028687090380117297,
+      "operation": "job_reconcile",
+      "outer_isError": false,
+      "sequence": 38
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1freconcile-f9605f43-ba97-4000-9d0a-59ca6e2d5097",
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fjob_reconcile"
+        },
+        "job_id": "f9605f43-ba97-4000-9d0a-59ca6e2d5097"
+      },
+      "elapsed_s": 0.0025044590001925826,
+      "operation": "job_reconcile",
+      "outer_isError": false,
+      "sequence": 39
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 24,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-68",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-68",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004547124961391091,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 40
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 24,
+          "limit": 200,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "query": {},
+          "root": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "mesh",
+                "tag": "p4mesh"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4size"
+              }
+            ]
+          },
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 24,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-find-67",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-find-67",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.find"
+      },
+      "elapsed_s": 0.013704582990612835,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 41
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1freconcile-54dfb86a-aef9-430c-b607-ace25865d902",
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fjob_reconcile"
+        },
+        "job_id": "54dfb86a-aef9-430c-b607-ace25865d902"
+      },
+      "elapsed_s": 0.00306041695876047,
+      "operation": "job_reconcile",
+      "outer_isError": false,
+      "sequence": 42
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1freconcile-54dfb86a-aef9-430c-b607-ace25865d902",
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fjob_reconcile"
+        },
+        "job_id": "54dfb86a-aef9-430c-b607-ace25865d902"
+      },
+      "elapsed_s": 0.002802999981213361,
+      "operation": "job_reconcile",
+      "outer_isError": false,
+      "sequence": 43
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 25,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-70",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-70",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004899707972072065,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 44
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 25,
+          "limit": 200,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "query": {},
+          "root": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "physics",
+                "tag": "p4ht"
+              }
+            ]
+          },
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 25,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-find-69",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-find-69",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.find"
+      },
+      "elapsed_s": 0.008786999969743192,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 45
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 26,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-72",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-72",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.005008541978895664,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 46
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 26,
+          "limit": 200,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "query": {},
+          "root": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "physics",
+                "tag": "p4ht"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4temp1"
+              }
+            ]
+          },
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 26,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-find-71",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-find-71",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.find"
+      },
+      "elapsed_s": 0.008622125023975968,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 47
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 26,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-74",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-74",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004731208027806133,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 48
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 26,
+          "limit": 200,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "query": {},
+          "root": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "material",
+                "tag": "p4mat"
+              }
+            ]
+          },
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 26,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-find-73",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-find-73",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.find"
+      },
+      "elapsed_s": 0.012492708046920598,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 49
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1freconcile-c76b02fb-cad2-4c7d-bdac-148460506384",
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fjob_reconcile"
+        },
+        "job_id": "c76b02fb-cad2-4c7d-bdac-148460506384"
+      },
+      "elapsed_s": 0.0028631669702008367,
+      "operation": "job_reconcile",
+      "outer_isError": false,
+      "sequence": 50
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1freconcile-c76b02fb-cad2-4c7d-bdac-148460506384",
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fjob_reconcile"
+        },
+        "job_id": "c76b02fb-cad2-4c7d-bdac-148460506384"
+      },
+      "elapsed_s": 0.002441624994389713,
+      "operation": "job_reconcile",
+      "outer_isError": false,
+      "sequence": 51
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 26,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-76",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-76",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004480124975088984,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 52
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 26,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "geom",
+                "tag": "p4geom"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4blk"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 26,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fprobe-node-schema-block-75",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fprobe-node-schema-block",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_schema"
+      },
+      "elapsed_s": 0.09157945797778666,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 53
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-78",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-78",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004142666002735496,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 54
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "type"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "geom",
+                "tag": "p4geom"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4blk"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-77",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-77",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.007690416008699685,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 55
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-80",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-80",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.003926584031432867,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 56
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "definedby"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "geom",
+                "tag": "p4geom"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4blk"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-79",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-79",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.007358875009231269,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 57
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-82",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-82",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.0037789170164614916,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 58
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "orientdef"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "geom",
+                "tag": "p4geom"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4blk"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-81",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-81",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.007234499964397401,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 59
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-84",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-84",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004965542000718415,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 60
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "lx"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "geom",
+                "tag": "p4geom"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4blk"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-83",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-83",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.009194666985422373,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 61
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-86",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-86",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004936040961183608,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 62
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "ly"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "geom",
+                "tag": "p4geom"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4blk"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-85",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-85",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.012362124980427325,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 63
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-88",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-88",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.0047043749946169555,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 64
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "lz"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "geom",
+                "tag": "p4geom"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4blk"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-87",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-87",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.008452832989860326,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 65
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-90",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-90",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.00435845903120935,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 66
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "size"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "geom",
+                "tag": "p4geom"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4blk"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-89",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-89",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.008090417017228901,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 67
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-92",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-92",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.005300707998685539,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 68
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "base"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "geom",
+                "tag": "p4geom"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4blk"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-91",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-91",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.007985540956724435,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 69
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-94",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-94",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.003833291004411876,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 70
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "mesh",
+                "tag": "p4mesh"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4size"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fprobe-node-schema-mesh_size-93",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fprobe-node-schema-mesh_size",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_schema"
+      },
+      "elapsed_s": 0.020532666996587068,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 71
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-96",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-96",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004659041995182633,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 72
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "table"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "mesh",
+                "tag": "p4mesh"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4size"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-95",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-95",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.007692416023928672,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 73
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-98",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-98",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.00433108297875151,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 74
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "hmax"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "mesh",
+                "tag": "p4mesh"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4size"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-97",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-97",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.008866249991115183,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 75
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-100",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-100",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004192667023744434,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 76
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "hmin"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "mesh",
+                "tag": "p4mesh"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4size"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-99",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-99",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.0087047090055421,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 77
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-102",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-102",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004443416022695601,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 78
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "hcurve"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "mesh",
+                "tag": "p4mesh"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4size"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-101",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-101",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.008221374999266118,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 79
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-104",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-104",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.0044061660300940275,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 80
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "hnarrow"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "mesh",
+                "tag": "p4mesh"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4size"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-103",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-103",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.007990416954271495,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 81
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-106",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-106",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.0047144590062089264,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 82
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "hgrad"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "mesh",
+                "tag": "p4mesh"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4size"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-105",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-105",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.0076674160081893206,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 83
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-108",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-108",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004600084037519991,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 84
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "hauto"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "mesh",
+                "tag": "p4mesh"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4size"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-107",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-107",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.008201417047530413,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 85
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-110",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-110",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004010792006738484,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 86
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "custom"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "mesh",
+                "tag": "p4mesh"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4size"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-109",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-109",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.009309083980042487,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 87
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-112",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-112",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.006071291049011052,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 88
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "physics",
+                "tag": "p4ht"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4temp1"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fprobe-node-schema-temperature-111",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fprobe-node-schema-temperature",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_schema"
+      },
+      "elapsed_s": 0.008457333024125546,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 89
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-114",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-114",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004203916003461927,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 90
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "physics",
+                "tag": "p4ht"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fprobe-node-schema-physics-113",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fprobe-node-schema-physics",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_schema"
+      },
+      "elapsed_s": 0.006923584034666419,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 91
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-116",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-116",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004289083008188754,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 92
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "material",
+                "tag": "p4mat"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fprobe-node-schema-material-115",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fprobe-node-schema-material",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_schema"
+      },
+      "elapsed_s": 0.07063770800596103,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 93
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-118",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-118",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004414917028043419,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 94
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "bndType"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "material",
+                "tag": "p4mat"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-117",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-117",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.007035207992885262,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 95
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-120",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-120",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004404667008202523,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 96
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "thickness"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "material",
+                "tag": "p4mat"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-119",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-119",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.025451332970988005,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 97
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-122",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-122",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.005383500014431775,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 98
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "sys"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "material",
+                "tag": "p4mat"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-121",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-121",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.008509624982252717,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 99
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-124",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-124",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004991291963960975,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 100
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "middlePlane"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "material",
+                "tag": "p4mat"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-123",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-123",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.00828574999468401,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 101
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-126",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-126",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004711459041573107,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 102
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "offset"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "material",
+                "tag": "p4mat"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-125",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-125",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.008340958040207624,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 103
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-128",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-128",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004613667028024793,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 104
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "hiddenCardSwitcher"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "material",
+                "tag": "p4mat"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-127",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-127",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.008226041973102838,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 105
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-130",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-130",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004593499994371086,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 106
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "stack"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "material",
+                "tag": "p4mat"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-129",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-129",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.007555917021818459,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 107
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-132",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-132",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.00479074998293072,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 108
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "orientDist"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "material",
+                "tag": "p4mat"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-131",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-131",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.007639624993316829,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 109
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-134",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-134",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004969708970747888,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 110
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "geom",
+                "tag": "p4geom"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fprobe-node-schema-geometry-133",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fprobe-node-schema-geometry",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_schema"
+      },
+      "elapsed_s": 0.006639958010055125,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 111
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-136",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-136",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.009196375031024218,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 112
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "thermalconductivity"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "material",
+                "tag": "p4mat"
+              },
+              {
+                "collection": "propertyGroup",
+                "tag": "def"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-135",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-135",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.008040709013585001,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 113
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-138",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-138",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.0044716669945046306,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 114
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "density"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "material",
+                "tag": "p4mat"
+              },
+              {
+                "collection": "propertyGroup",
+                "tag": "def"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-137",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-137",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.008577874978072941,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 115
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-140",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-140",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.003945957985706627,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 116
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "names": [
+            "heatcapacity"
+          ],
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "material",
+                "tag": "p4mat"
+              },
+              {
+                "collection": "propertyGroup",
+                "tag": "def"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-139",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-property-get-139",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.007879875018261373,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 117
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-142",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-142",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.0043431249796412885,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 118
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "material",
+                "tag": "p4mat"
+              },
+              {
+                "collection": "propertyGroup",
+                "tag": "def"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "properties": [
+            {
+              "name": "density",
+              "value": {
+                "data": "1000[kg/m^3]",
+                "java_signature": "java.lang.String",
+                "kind": "string",
+                "shape": []
+              }
+            }
+          ],
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fguard-t010-repeat-141",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1frepeat",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_set"
+      },
+      "elapsed_s": 0.039652999956160784,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 119
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "material",
+                "tag": "p4mat"
+              },
+              {
+                "collection": "propertyGroup",
+                "tag": "def"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "properties": [
+            {
+              "name": "density",
+              "value": {
+                "data": "1000[kg/m^3]",
+                "java_signature": "java.lang.String",
+                "kind": "string",
+                "shape": []
+              }
+            }
+          ],
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fguard-t010-repeat-141",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1frepeat",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_set"
+      },
+      "elapsed_s": 0.0032957090297713876,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 120
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-143",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-phase4-143",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004234333988279104,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 121
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 27,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "material",
+                "tag": "p4mat"
+              },
+              {
+                "collection": "propertyGroup",
+                "tag": "def"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "properties": [
+            {
+              "name": "density",
+              "value": {
+                "data": "1000[kg/m^3]",
+                "java_signature": "java.lang.String",
+                "kind": "string",
+                "shape": []
+              }
+            }
+          ],
+          "provenance": {
+            "phase4_conflict_probe": true
+          },
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 27,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fguard-t010-repeat-141",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1frepeat",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_set"
+      },
+      "elapsed_s": 0.002253166981972754,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 122
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 28,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-comsol-mcp-phase4-144",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-comsol-mcp-phase4-144",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.0038937500212341547,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 123
+    },
+    {
+      "arguments": {
+        "component": "comp1",
+        "execution": {
+          "expected_revision": 28,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fguard-t010-duplicate-first",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1ft010-duplicate-first",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "expected_revision": 28,
+        "feature_type": "Rectangle",
+        "geometry": "geom1",
+        "model_ref": {
+          "generation": 1,
+          "model_tag": "mcp13",
+          "schema_version": 1,
+          "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "project_id": "comsol-mcp-phase4",
+        "properties_json": "{\"size\": [\"0.001\", \"0.001\"]}",
+        "run_geometry": false,
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "tag": "phase4_dup_probe"
+      },
+      "elapsed_s": 0.11127408395987004,
+      "operation": "create_feature",
+      "outer_isError": true,
+      "sequence": 124
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1freconcile-ac0588f9-e2ec-4a36-b9b4-51e61736b88b",
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fjob_reconcile"
+        },
+        "job_id": "ac0588f9-e2ec-4a36-b9b4-51e61736b88b"
+      },
+      "elapsed_s": 0.00346866698237136,
+      "operation": "job_reconcile",
+      "outer_isError": false,
+      "sequence": 125
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 29,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-comsol-mcp-phase4-145",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-comsol-mcp-phase4-145",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.004659416968934238,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 126
+    },
+    {
+      "arguments": {
+        "component": "comp1",
+        "execution": {
+          "expected_revision": 29,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fguard-t010-duplicate-second",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1ft010-duplicate-second",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "expected_revision": 29,
+        "feature_type": "Rectangle",
+        "geometry": "geom1",
+        "model_ref": {
+          "generation": 1,
+          "model_tag": "mcp13",
+          "schema_version": 1,
+          "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "project_id": "comsol-mcp-phase4",
+        "properties_json": "{\"size\": [\"0.001\", \"0.001\"]}",
+        "run_geometry": false,
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "tag": "phase4_dup_probe"
+      },
+      "elapsed_s": 0.12621895800111815,
+      "operation": "create_feature",
+      "outer_isError": true,
+      "sequence": 127
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1freconcile-e08a3c17-3b11-4ab2-adac-a560e451b1eb",
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fjob_reconcile"
+        },
+        "job_id": "e08a3c17-3b11-4ab2-adac-a560e451b1eb"
+      },
+      "elapsed_s": 0.0038610000046901405,
+      "operation": "job_reconcile",
+      "outer_isError": false,
+      "sequence": 128
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 30,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-comsol-mcp-phase4-146",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fphase4-reconcile-model-comsol-mcp-phase4-146",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.005134291015565395,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 129
+    },
+    {
+      "arguments": {
+        "component": "comp1",
+        "execution": {
+          "expected_revision": 30,
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1fsame_tag_different_type_rejected",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp13",
+            "schema_version": 1,
+            "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fsame_tag_different_type_rejected",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "expected_revision": 30,
+        "feature_type": "Circle",
+        "geometry": "geom1",
+        "model_ref": {
+          "generation": 1,
+          "model_tag": "mcp13",
+          "schema_version": 1,
+          "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "project_id": "comsol-mcp-phase4",
+        "properties_json": "{\"r\": \"0.001\"}",
+        "run_geometry": false,
+        "session_id": "session-9f95c2e814acd5f99589961a",
+        "tag": "phase4_dup_probe"
+      },
+      "elapsed_s": 0.11059091700008139,
+      "operation": "create_feature",
+      "outer_isError": true,
+      "sequence": 130
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T010537Z-g3_1-m1freconcile-8561b4a2-d66d-4c99-b2c8-534dbb7fa998",
+          "request_id": "phase4-20260921T010537Z-g3_1-m1fjob_reconcile"
+        },
+        "job_id": "8561b4a2-d66d-4c99-b2c8-534dbb7fa998"
+      },
+      "elapsed_s": 0.0033625829964876175,
+      "operation": "job_reconcile",
+      "outer_isError": false,
+      "sequence": 131
+    }
+  ]
+}

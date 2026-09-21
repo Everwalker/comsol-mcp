@@ -878,9 +878,17 @@ def test_transient_rows_span_every_stored_solution_and_carry_the_time_column() -
     assert len(rows) == 15  # 3 stored solutions x 5 path points
     assert data["time_steps"] == 3
     assert data["time_values"] == [0.0, 0.5, 1.0]
-    assert set(rows[0]) == {"x", "y", "z", "solnum", "time", "T", "t"}
-    assert rows[0]["time"] == rows[0]["t"] == 0.0
-    assert rows[5]["time"] == rows[5]["t"] == 0.5
+    assert set(rows[0]) == {"x", "y", "z", "solnum", "time", "T"}
+    assert rows[0]["time"] == 0.0
+    assert rows[5]["time"] == 0.5
+    # C07a: the case-ambiguous 't' alias is gone; the column contract is the
+    # published, order-independent way to resolve keys.
+    roles = data["roles"]
+    assert roles["time"] == "time"
+    assert roles["solution_index"] == "solnum"
+    assert roles["expressions"] == {"T": "T"}
+    assert any(column["name"] == "time" and column["role"] == "time" for column in data["columns"])
+    assert any(column["name"] == "T" and column["role"] == "expression" for column in data["columns"])
     assert [row["solnum"] for row in rows] == [1] * 5 + [2] * 5 + [3] * 5
     assert data["units"]["time"] == "s"
     assert data["solution_axis"]["time_dependent"] is True
@@ -1205,6 +1213,317 @@ def test_every_engine_method_the_adapter_calls_is_on_the_worker_allow_list() -> 
     called -= {"_read"}
     unexpected = sorted(name for name in called if name not in allowed)
     assert unexpected == [], f"engine methods outside the worker allow-list: {unexpected}"
+
+
+@contextmanager
+def install_coordinate_readback(matrix: Any) -> Any:
+    """Publish ``getCoordinates()`` on the ephemeral Interp for one test.
+
+    The method is *added* for the duration of the block, exactly like the
+    engine would publish it once the worker allow-list carries it: with no
+    method at all the adapter reports ``UNAVAILABLE`` (the real state of the
+    Java worker, see ``ALLOWLIST_ADDITIONS``), so the tests cannot fake
+    availability by a base-class stub that returns ``None``.
+    """
+    original = FInterp.__dict__.get("getCoordinates", None)
+    absent = object()
+    sentinel = absent if original is None else original
+
+    def getCoordinates(self: FInterp) -> Any:
+        self._guard("getCoordinates", ())
+        return matrix
+
+    FInterp.getCoordinates = getCoordinates  # type: ignore[attr-defined]
+    try:
+        yield
+    finally:
+        if sentinel is absent:
+            del FInterp.getCoordinates  # type: ignore[attr-defined]
+        else:
+            FInterp.getCoordinates = sentinel  # type: ignore[attr-defined]
+
+
+def path_matrix(start: Sequence[float], end: Sequence[float], samples: int) -> list[list[float]]:
+    """``[coordinate][point]`` for the evenly spaced path the adapter requests."""
+    points = [[value + (end[axis] - value) * index / (samples - 1) for axis, value in enumerate(start)]
+              for index in range(samples)]
+    return [[point[axis] for point in points] for axis in range(len(start))]
+
+
+def test_the_time_column_alias_t_is_refused_while_T_stays_legal() -> None:
+    """``T`` and the removed ``t`` alias differ only in case; only ``T`` is an expression."""
+    tree, profile = transient_tree()
+    with install_values(tree_values(tree, profile)):
+        data = call_sample(tree, samples=3)
+    assert "T" in data["samples"][0]
+    assert "t" not in data["samples"][0] and "time" in data["samples"][0]
+    assert data["roles"]["time"] == "time"
+    with pytest.raises(ExecutionContractError) as info:
+        call_sample(tree, arguments(expressions=["t"], samples=3))
+    assert info.value.code == "INVALID_REQUEST"
+
+
+@pytest.mark.parametrize("expression", ["X", "Y", "Z", "Solnum", "Time", "TIME", " TIME "])
+def test_case_variants_of_published_columns_are_refused_before_the_write(expression: str) -> None:
+    """A case-insensitive reader would pick whichever key came first in the JSON object."""
+    tree, profile = steady_tree()
+    with install_values(tree_values(tree, profile)):
+        with pytest.raises(ExecutionContractError) as info:
+            call_sample(tree, arguments(expressions=[expression], samples=3))
+    assert info.value.code == "INVALID_REQUEST"
+    assert tree.numerical.calls == [], "the refusal must happen before the ephemeral write"
+
+
+def test_published_row_keys_are_pairwise_distinct_under_case_folding() -> None:
+    """The order-independence invariant: no two keys of a row fold to the same string."""
+    tree, profile = transient_tree()
+    with install_values(tree_values(tree, profile)):
+        data = call_sample(tree, samples=3)
+    for row in data["samples"]:
+        assert len({key.lower() for key in row}) == len(row), row
+    assert [column["name"] for column in data["columns"]] == ["x", "y", "z", "solnum", "time", "T"]
+    assert [column["role"] for column in data["columns"]] == ["coordinate", "coordinate", "coordinate",
+                                                             "solution_index", "time", "expression"]
+
+
+@pytest.mark.parametrize("reorder", [
+    lambda row: dict(row),
+    lambda row: dict(reversed(list(row.items()))),
+    lambda row: dict(sorted(row.items())),
+])
+def test_columns_and_roles_locate_T_t_and_time_under_any_row_key_order(reorder: Any) -> None:
+    """Row order is not part of the contract: the column map is."""
+    tree, profile = transient_tree()
+    with install_values(tree_values(tree, profile)):
+        data = call_sample(tree, samples=3)
+    roles = data["roles"]
+    columns = {column["role"]: column["name"] for column in data["columns"]}
+    rows = [reorder(row) for row in data["samples"]]
+    assert roles["time"] == columns["time"] == "time"
+    assert roles["expressions"]["T"] == columns["expression"] == "T"
+    assert [row[roles["time"]] for row in rows] == [0.0] * 3 + [0.5] * 3 + [1.0] * 3
+    assert [row[roles["expressions"]["T"]] for row in rows] == pytest.approx(
+        [profile("T", 0, x, time_value) for time_value in (0.0, 0.5, 1.0) for x in (0.0, 0.005, 0.01)])
+
+
+def test_sort_keys_serialisation_keeps_every_column_resolvable() -> None:
+    """``json.dumps(..., sort_keys=True)`` must not change what any column means."""
+    tree, profile = transient_tree()
+    with install_values(tree_values(tree, profile)):
+        data = call_sample(tree, spec={"units": ["K"]}, samples=3)
+    before = {key: [row[key] for row in data["samples"]] for key in data["samples"][0]}
+    payload = json.loads(json.dumps(data, sort_keys=True))
+    assert sorted(payload["samples"][0]) == sorted(before), "the key set survived the round trip"
+    for row in payload["samples"]:
+        assert list(row) == sorted(row), "sort_keys really reordered the object"
+        for key, series in before.items():
+            assert row[key] == before[key][payload["samples"].index(row)]
+    # The consumer resolves through the column contract, not through key order.
+    roles = payload["roles"]
+    assert [row[roles["time"]] for row in payload["samples"]] == [0.0] * 3 + [0.5] * 3 + [1.0] * 3
+    assert payload["units"]["time"] == "s" and payload["units"]["T"] == "K"
+
+
+def test_the_driver_resolves_a_sort_keys_payload_through_the_column_contract() -> None:
+    """The real consumer keeps working after a ``sort_keys`` re-serialisation.
+
+    The driver's ``_sample_series()`` resolves a row key case-insensitively, so a
+    candidate set that folds two published keys together (``"t"`` would match the
+    expression ``"T"``) is inherently order-dependent.  That is exactly why the
+    adapter publishes **one** time key (``time``) and refuses case-only
+    collisions: with unambiguous candidate names the driver works under any key
+    order, which is what this test pins.
+    """
+    driver = driver_module()
+    tree, profile = transient_tree()
+    with install_values(tree_values(tree, profile)):
+        data = call_sample(tree, samples=3)
+    payload = json.loads(json.dumps(data, sort_keys=True))
+    rows = driver._extract_samples(envelope(payload))
+    assert driver._sample_series(rows, ("time", "time [s]")) == [0.0] * 3 + [0.5] * 3 + [1.0] * 3
+    assert driver._sample_series(rows, ("T", "T_k")) == pytest.approx(
+        [profile("T", 0, x, time_value) for time_value in (0.0, 0.5, 1.0) for x in (0.0, 0.005, 0.01)])
+    assert driver._sample_series(rows, ("x", "x_m")) == pytest.approx([0.0, 0.005, 0.01] * 3)
+    # The removed alias is what makes the table order-dependent for that reader:
+    # after a sorted round trip "T" comes before "time", so a "t" candidate
+    # resolves the temperature series as if it were the time axis.
+    assert driver._sample_series(rows, ("t",)) == [row["T"] for row in payload["samples"]]
+    assert list(payload["samples"][0])[0] == "T", "the sorted payload really puts T first"
+
+
+def test_coordinate_readback_unavailable_is_reported_with_the_missing_allowlist_entry() -> None:
+    """The Java worker does not publish ``getCoordinates()``: that is ``UNAVAILABLE``, not a pass."""
+    tree, profile = steady_tree()
+    with install_values(tree_values(tree, profile)):
+        data = call_sample(tree, samples=3)
+    readback = data["coordinate_readback"]
+    assert readback["status"] == "UNAVAILABLE"
+    assert readback["attempted"] is True
+    assert readback["coordinates"] is None and readback["max_deviation"] is None
+    assert readback["allowlist_entry_required"] == "getCoordinates"
+    assert readback["method"] == "result.numerical(<tag>).getCoordinates()"
+    assert readback["reason"], "the refusal reason is recorded, never hidden"
+    assert readback["error_code"] == "ENGINE_CALL_FAILED"
+    assert data["verification_status"] == "NOT_RUN"
+    assert data["verification"]["axis"] == "coordinate_readback"
+    assert data["verification"]["detail"] == readback
+    assert data["status"]["readback_match"] is None
+    assert data["status"]["status"] == "APPLIED", "the sample read itself succeeded"
+    assert any(item["method"] == "getCoordinates" for item in data["read_errors"])
+    assert "getCoordinates" not in data["allowlist_additions"]
+    assert data["coordinate_source"].startswith("the requested path_definition points")
+
+
+def test_a_worker_allowlist_refusal_of_get_coordinates_names_the_missing_entry() -> None:
+    """A ``METHOD_REJECTED`` refusal is what the live worker answers: name the entry."""
+    tree, profile = steady_tree()
+
+    @contextmanager
+    def refusing() -> Any:
+        def getCoordinates(self: FInterp) -> Any:
+            self._guard("getCoordinates", ())
+            raise _refusal()
+        FInterp.getCoordinates = getCoordinates  # type: ignore[attr-defined]
+        try:
+            yield
+        finally:
+            del FInterp.getCoordinates  # type: ignore[attr-defined]
+
+    with refusing():
+        with install_values(tree_values(tree, profile)):
+            data = call_sample(tree, samples=3)
+    assert data["coordinate_readback"]["status"] == "UNAVAILABLE"
+    assert data["coordinate_readback"]["error_code"] == "METHOD_REJECTED"
+    assert data["coordinate_readback"]["allowlist_entry_required"] == "getCoordinates"
+    assert data["allowlist_entry_required"] == ["getCoordinates"]
+    assert tuple(data["read_errors"][-1][name] for name in ("method", "code", "allowlist_entry_required")) == \
+        ("getCoordinates", "METHOD_REJECTED", "getCoordinates")
+    assert data["verification_status"] == "NOT_RUN"
+    assert data["status"]["ok"] is True
+    assert tree.numerical.items == {}, "the ephemeral node is still removed"
+
+
+def test_coordinate_readback_verified_marks_the_verification_passed() -> None:
+    tree, profile = steady_tree()
+    matrix = path_matrix((0.0, 0.005, 0.0025), (0.01, 0.005, 0.0025), 3)
+    with install_coordinate_readback(matrix):
+        with install_values(tree_values(tree, profile)):
+            data = call_sample(tree, samples=3)
+    readback = data["coordinate_readback"]
+    assert readback["status"] == "VERIFIED"
+    assert readback["coordinates"] == matrix
+    assert readback["max_deviation"] == 0.0
+    assert readback["allowlist_entry_required"] is None
+    assert readback["reason"] is None
+    assert data["verification_status"] == "PASSED"
+    assert data["status"]["readback_match"] is True
+    assert data["status"]["ok"] is True
+    assert "result.numerical.getCoordinates(verified)" in data["status"]["applied"]
+    assert data["status"]["failed"] == []
+
+
+def test_coordinate_readback_mismatch_fails_verification_and_stays_in_status_failed() -> None:
+    """The engine's own coordinates disagree: a failed *verification*, not a silent difference."""
+    tree, profile = steady_tree()
+    matrix = path_matrix((0.0, 0.005, 0.0025), (0.01, 0.005, 0.0025), 3)
+    shifted = [[matrix[0][0] + 1e-3] + matrix[0][1:], matrix[1], matrix[2]]
+    with install_coordinate_readback(shifted):
+        with install_values(tree_values(tree, profile)):
+            data = call_sample(tree, samples=3)
+    readback = data["coordinate_readback"]
+    assert readback["status"] == "MISMATCH"
+    assert readback["max_deviation"] == pytest.approx(1e-3)
+    assert readback["reason"] and "differs from the requested path points" in readback["reason"]
+    assert readback["allowlist_entry_required"] is None
+    assert data["verification_status"] == "FAILED"
+    assert data["status"]["ok"] is False
+    assert data["status"]["readback_match"] is False
+    assert data["status"]["status"] == "PARTIAL_FAILURE"
+    assert data["status"]["partial_change"] is True
+    codes = [item["code"] for item in data["status"]["failed"]]
+    assert "VERIFICATION_FAILED" in codes
+    assert data["samples"], "the samples are still published next to the failed verification"
+    assert data["status"]["engine_error"] is None, "the samples were read; only the verification failed"
+    assert data["ephemeral_feature"]["property_readback"]["data"] == "dset1"
+
+
+def test_coordinate_readback_with_the_wrong_shape_is_a_mismatch_with_its_own_code() -> None:
+    tree, profile = steady_tree()
+    with install_coordinate_readback([[0.0, 0.005], [0.005, 0.005], [0.0025, 0.0025]]):
+        with install_values(tree_values(tree, profile)):
+            data = call_sample(tree, samples=3)
+    assert data["coordinate_readback"]["status"] == "MISMATCH"
+    assert data["coordinate_readback"]["error_code"] == "EXECUTION_STATE_UNKNOWN"
+    assert "coordinates for 3 path points" in data["coordinate_readback"]["reason"]
+    assert data["verification_status"] == "FAILED"
+
+
+def test_binding_block_binds_dataset_solution_geometry_and_the_stored_solution_axis() -> None:
+    """The sampling must be attributable: dataset, solution, component, geometry and times."""
+    tree, profile = transient_tree()
+    with install_values(tree_values(tree, profile)):
+        data = call_sample(tree, spec={"units": ["K"]}, samples=5)
+    assert data["binding"] == {
+        "dataset": "dset1",
+        "solution": "sol1",
+        "component": "comp1",
+        "geometry": "geom1",
+        "length_unit": "m",
+        "space_dimension": 3,
+        "content_context": "dataset.comp/dataset.geom",
+        "stored_solutions": 3,
+        "time_axis": {"time_dependent": True, "status": "verified", "source": "numerical_feature.t",
+                      "unit": "s", "values": [0.0, 0.5, 1.0]},
+        "revision_required": False,
+    }
+    assert data["binding"]["time_axis"]["values"] == data["time_values"]
+    assert data["points"]["count"] == 5 and data["points"]["dimension"] == 3
+    assert data["points"]["coordinate_unit"] == "m" and data["points"]["space_dimension"] == 3
+
+
+def test_binding_records_the_content_context_that_resolved_component_and_geometry() -> None:
+    tree = build_tree(dataset_props={"comp": None, "geom": None})
+    with install_values(tree_values(tree)):
+        data = call_sample(tree, samples=3)
+    assert data["binding"]["component"] == "comp1" and data["binding"]["geometry"] == "geom1"
+    assert data["binding"]["content_context"] == "single component/geometry of the model"
+    tree, profile = transient_tree(feature_times=None, solver_values=None)
+    with install_values(tree_values(tree, profile)):
+        declared = call_sample(tree, samples=3)
+    assert declared["binding"]["time_axis"]["status"] == "declared"
+    assert declared["binding"]["time_axis"]["source"] == "study_step.tlist"
+    assert declared["binding"]["stored_solutions"] == 3
+
+
+def test_unit_readback_names_every_unit_source_and_never_converts() -> None:
+    tree, profile = transient_tree()
+    with install_values(tree_values(tree, profile)):
+        data = call_sample(tree, spec={"units": ["K"]}, samples=3)
+    assert data["unit_readback"] == {
+        "expression_units": {"T": "K"},
+        "coordinate_unit": "m",
+        "time_unit": "s",
+        "source": "model.result().numerical(<tag>).getStringArray(\"unit\") and GeomSequence.lengthUnit()",
+    }
+    assert data["units"] == {"x": "m", "y": "m", "z": "m", "T": "K", "solnum": "one-based index", "time": "s"}
+    assert data["expression_units"] == {"T": "K"}
+    assert [column["unit"] for column in data["columns"]] == ["m", "m", "m", "one-based index", "s", "K"]
+
+
+def test_unit_readback_reports_an_unknown_expression_unit_as_null_instead_of_guessing() -> None:
+    tree, profile = steady_tree()
+    with install_values(tree_values(tree, profile)):
+        data = call_sample(tree, samples=3)
+    assert data["unit_readback"]["expression_units"] == {"T": None}
+    # The time unit is the *study step's* declared unit (``tunit``); no time
+    # column is published for a steady dataset, so the unit is reported without
+    # being attached to a column and no time value is invented.
+    assert data["unit_readback"]["time_unit"] == "s"
+    assert data["time_values"] is None and data["time_steps"] is None
+    assert "time" not in data["units"] and all("time" not in row for row in data["samples"])
+    assert data["units"]["solnum"] == "one-based index"
+    assert [column["unit"] for column in data["columns"] if column["name"] == "T"] == [None]
+    assert [column["name"] for column in data["columns"]] == ["x", "y", "z", "solnum", "T"]
 
 
 def test_the_reported_allowlist_additions_are_really_missing() -> None:

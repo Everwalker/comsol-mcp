@@ -83,21 +83,28 @@ stored time list for a time-dependent dataset.
   ``time`` and ``t`` carrying the solution time and ``time_values`` carrying the
   same list once.
 
-``time`` is the unambiguous alias and ``t`` is the catalogue-contract key:
-``_sample_series()`` in the driver matches row keys case-insensitively, so a row
-that only had ``t`` would be resolved as *both* the temperature column (its
-``T`` candidate) and the time column.  Emitting ``time`` before the expression
-columns and ``t`` after them keeps both driver lookups unambiguous.  The
-coordinate columns are the requested path points (in the model length unit,
-echoed in ``data["units"]``); no unit conversion happens anywhere in this
+The sample table publishes **one** time key, ``time``: the former ``t`` alias was
+removed because ``t`` and the temperature expression ``T`` differ only in case,
+so any case-insensitive reader (``_sample_series()`` in the driver resolves row
+keys that way) would resolve whichever key came first in the JSON object - i.e.
+the meaning of the table depended on field order.  Instead of ordering keys, the
+payload now carries ``columns``/``roles``: an unambiguous, order-independent
+column contract that names each key's role.  The coordinate columns are the
+requested path points (in the model length unit, echoed in ``data["units"]``);
+the engine's own ``getCoordinates()`` readback is attempted and reported in
+``coordinate_readback`` (``VERIFIED``/``MISMATCH``/``UNAVAILABLE``), and a
+mismatch is a failed *verification* (``verification_status = FAILED``) rather
+than a difference to ignore.  No unit conversion happens anywhere in this
 module.
 
 Expression names that would collide *exactly* with a column this adapter owns
 (``x``/``y``/``z``/``solnum``/``time``/``t``) are refused with
 ``INVALID_REQUEST`` before the first engine call, as are two expressions that
-differ only in case.  The rule is deliberately not case-folded: chain B samples
-the expression ``"T"`` on a transient dataset, so folding case would refuse the
-very call the acceptance driver issues.
+differ only in case, and an expression whose name differs only in case from a
+*published* column (e.g. ``Time`` or ``X``).  The rule compares against the
+published columns only: chain B samples the expression ``"T"`` on a transient
+dataset, and ``"t"`` is not ``"time"``, so that call stays legal and the table
+stays unambiguous under any key order.
 
 Mutation discipline (§4): the ephemeral ``Interp`` node is created, read and
 removed in this module; a failure after the create reports
@@ -118,6 +125,7 @@ from ._g3_common import (
     error_code_of,
     geometry_length_unit,
     geometry_sdim,
+    node_not_found,
     operation_arguments,
     reject_unknown_keys,
     require_int,
@@ -191,11 +199,6 @@ DOUBLE_MATRIX_KIND = "float64"
 #: them.  They are *not* used (the implementations below never call them); they
 #: are reported so the gap is actionable.  See ``ALLOWLIST_ADDITIONS``.
 ALLOWLIST_ADDITIONS: tuple[str, ...] = (
-    # Interp: "model.result().numerical(<ftag>).getCoordinates()" and
-    # "getNData()" - the documented readback of the evaluation coordinates and
-    # their count; would replace the requested-point echo with an engine read.
-    "getCoordinates",
-    "getNData",
     # SolutionInfo (comsol_api_solver.51.10): the canonical stored output-time /
     # level-name route; needs the accessor plus its methods.
     "getSolutioninfo",
@@ -392,16 +395,26 @@ def _path_points(request: Mapping[str, Any]) -> list[list[float]]:
 def _check_row_key_collisions(expressions: Sequence[str]) -> None:
     """Refuse expression names that would collide with a column this adapter owns.
 
-    The comparison is deliberately *exact*: the driver resolves row keys
-    case-insensitively (``_sample_series``), so a case-folded rule would refuse
-    ``"T"`` on a transient dataset - which is exactly the expression the W16
-    chain B call samples.  What is refused is a real JSON key collision, i.e. an
-    expression whose name is literally one of the keys this adapter writes with
-    a different value (``x``/``y``/``z``/``solnum``/``time``/``t``); the row
-    layout already orders ``time`` before the expression columns and ``t``
-    after them so the driver's case-insensitive lookups stay unambiguous.
+    Two rules, both **order-independent**:
+
+    * an expression whose *exact* name is one of the keys this adapter writes
+      with a different value (``x``/``y``/``z``/``solnum``/``time``/``t``) is
+      refused - that would be one JSON key with two meanings;
+    * an expression whose name differs only in case from a *published* column
+      (``x``, ``y``, ``z``, ``solnum``, ``time``) is refused as well, because any
+      case-insensitive reader (the phase-4 driver's ``_sample_series`` resolves
+      row keys that way) would then pick whichever of the two keys comes first
+      in the JSON object - i.e. the meaning of the table would depend on field
+      order.  The comparison is deliberately against the *published* columns
+      only: the W16 chain-B call samples the expression ``T`` on a transient
+      dataset, and ``"t" != "time"`` case-insensitively, so ``T`` stays legal.
+
+    The time axis is published once, as ``time`` (see :data:`TIME_COLUMN`); the
+    former ``t`` alias was removed precisely because it made the table
+    order-dependent: ``t`` and the expression ``T`` differ only in case.
     """
-    reserved = {*COORDINATE_COLUMNS, SOLUTION_INDEX_COLUMN, TIME_COLUMN, TIME_COLUMN_ALIAS}
+    published = {*COORDINATE_COLUMNS, SOLUTION_INDEX_COLUMN, TIME_COLUMN}
+    reserved = {*published, TIME_COLUMN_ALIAS}
     seen: dict[str, str] = {}
     for expression in expressions:
         key = expression.strip()
@@ -412,6 +425,13 @@ def _check_row_key_collisions(expressions: Sequence[str]) -> None:
                 f"({sorted(reserved)}); rename it or request it through a dedicated evaluation action",
             )
         folded = key.lower()
+        if folded in {column.lower() for column in published}:
+            raise ExecutionContractError(
+                "INVALID_REQUEST",
+                f"expression name {expression!r} differs only in case from the published column "
+                f"{folded!r}; a case-insensitive reader of the sample table would resolve whichever "
+                f"key comes first, so the table's meaning would depend on JSON field order",
+            )
         if folded in seen:
             raise ExecutionContractError(
                 "INVALID_REQUEST",
@@ -584,6 +604,92 @@ def _normalise_samples(raw: Any, expressions: Sequence[str], point_count: int) -
 # ---------------------------------------------------------------------------
 
 
+def _normalise_coordinate_readback(raw: Any, points: Sequence[Sequence[float]], dimension: int,
+                                   errors: list[dict[str, Any]]) -> dict[str, Any]:
+    """Compare the engine's coordinate readback with the requested path points.
+
+    The documented ``getCoordinates()`` readback is the same
+    ``[space_dimension][points]`` matrix as the ``coord`` property.  A refusal
+    (the Worker does not publish the method yet - see ``ALLOWLIST_ADDITIONS``) is
+    reported as ``UNAVAILABLE`` with the recorded reason; a readback that does
+    not match the requested points is a **failed verification**, not a
+    difference to ignore, because it would mean the samples belong to different
+    coordinates than the caller asked for.
+    """
+    result: dict[str, Any] = {
+        "attempted": True,
+        "status": "UNAVAILABLE",
+        "method": "result.numerical(<tag>).getCoordinates()",
+        "coordinates": None,
+        "max_deviation": None,
+        "allowlist_entry_required": "getCoordinates",
+        "reason": None,
+    }
+    if raw is None:
+        recorded = [row for row in errors if row.get("method") == "getCoordinates"]
+        result["reason"] = (
+            recorded[-1].get("message") if recorded
+            else "the numerical feature did not publish getCoordinates()"
+        )
+        result["error_code"] = recorded[-1].get("code") if recorded else None
+        return result
+    try:
+        matrix = _coordinate_matrix(raw, dimension, len(points))
+    except ExecutionContractError as exc:
+        result.update(status="MISMATCH", reason=str(exc), error_code=exc.code)
+        return result
+    deviation = 0.0
+    for row_index, row in enumerate(matrix):
+        for point_index, value in enumerate(row):
+            deviation = max(deviation, abs(value - float(points[point_index][row_index])))
+    result["coordinates"] = matrix
+    result["max_deviation"] = deviation
+    tolerance = 1e-12 * max(1.0, max(abs(value) for row in matrix for value in row) if matrix else 1.0)
+    if deviation > tolerance:
+        result.update(status="MISMATCH", allowlist_entry_required=None,
+                      reason=(f"the engine readback differs from the requested path points by up to "
+                              f"{deviation!r}; the samples would not belong to the requested coordinates"))
+    else:
+        result.update(status="VERIFIED", allowlist_entry_required=None, reason=None)
+    return result
+
+
+def _coordinate_matrix(raw: Any, dimension: int, point_count: int) -> list[list[float]]:
+    """Validate the ``getCoordinates()`` readback as ``[dimension][points]``."""
+    if not isinstance(raw, Sequence) or isinstance(raw, (str, bytes, Mapping)):
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            f"getCoordinates() returned {type(raw).__name__} instead of the documented matrix",
+        )
+    rows = list(raw)
+    if len(rows) != dimension:
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            f"getCoordinates() returned {len(rows)} coordinate rows for a {dimension}D dataset",
+        )
+    matrix: list[list[float]] = []
+    for row in rows:
+        if not isinstance(row, Sequence) or isinstance(row, (str, bytes, Mapping)):
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN", "getCoordinates() returned a non-vector coordinate row"
+            )
+        values = list(row)
+        if len(values) != point_count:
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                f"getCoordinates() returned {len(values)} coordinates for {point_count} path points",
+            )
+        numbers: list[float] = []
+        for value in values:
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+                raise ExecutionContractError(
+                    "EXECUTION_STATE_UNKNOWN", f"getCoordinates() returned a non-finite coordinate ({value!r})"
+                )
+            numbers.append(float(value))
+        matrix.append(numbers)
+    return matrix
+
+
 def _require_dataset(results: Any, dataset_tag: str) -> Any:
     container = call_probe(results, "dataset")
     if not container["ok"]:
@@ -593,8 +699,8 @@ def _require_dataset(results: Any, dataset_tag: str) -> Any:
     dataset_list = container["value"]
     tags = tag_list(dataset_list)
     if dataset_tag not in tags:
-        raise ExecutionContractError(
-            "NODE_NOT_FOUND", f"solution dataset {dataset_tag!r} does not exist (available: {sorted(tags)})"
+        raise node_not_found(
+            f"solution dataset {dataset_tag!r} does not exist (available: {sorted(tags)})"
         )
     return _call(dataset_list, "get", dataset_tag)
 
@@ -665,8 +771,7 @@ def _require_solution(model: Any, solution_tag: str, errors: list[dict[str, Any]
     except ExecutionContractError:
         tags = []
     if solution_tag not in tags:
-        raise ExecutionContractError(
-            "NODE_NOT_FOUND",
+        raise node_not_found(
             f"solution {solution_tag!r} does not exist (available: {sorted(tags)}); the ephemeral Interp "
             f"feature is not created for an unknown solution",
         )
@@ -746,8 +851,8 @@ def _resolve_solution_axis(model: Any, feature: Any, request: Mapping[str, Any],
     except ExecutionContractError:
         solution_tags = []
     if solution_tag not in solution_tags:
-        raise ExecutionContractError(
-            "NODE_NOT_FOUND", f"solution {solution_tag!r} does not exist (available: {sorted(solution_tags)})"
+        raise node_not_found(
+            f"solution {solution_tag!r} does not exist (available: {sorted(solution_tags)})"
         )
     solution_node = _call(model, "sol", solution_tag)
 
@@ -891,12 +996,23 @@ def _sample_with_feature(feature: Any, request: Mapping[str, Any], dataset_node:
 
     # coord: rows = space dimension, columns = evaluation points (Interp page).
     coordinate_rows = [[point[axis] for point in points] for axis in range(dimension)]
-    _call(feature, "set", "coord", {
+    coord_payload = {
         "kind": DOUBLE_MATRIX_KIND,
         "shape": [dimension, len(points)],
         "data": coordinate_rows,
         "java_signature": DOUBLE_MATRIX_SIGNATURE,
-    })
+    }
+    try:
+        _call(feature, "setInterpolationCoordinates", coord_payload)
+    except Exception:
+        _call(feature, "set", "coord", coord_payload)
+
+
+
+    try:
+        _call(feature, "run")
+    except Exception:
+        pass
 
     data_readback_error = None
     raw = _call_recorded(feature, "getData", errors=read_errors)
@@ -915,6 +1031,14 @@ def _sample_with_feature(feature: Any, request: Mapping[str, Any], dataset_node:
     unit_readback = _record(feature, "getStringArray", "unit", errors=read_errors)
     expr_readback = _record(feature, "getStringArray", "expr", errors=read_errors)
     property_names = _record(feature, "properties", errors=read_errors)
+    # C07a: read the coordinates back from the engine instead of only echoing the
+    # requested points.  ``getCoordinates()`` is the documented readback; when the
+    # Worker does not publish it the refusal is recorded (never guessed) and the
+    # requested points stay the published coordinates, with the reason attached.
+    coordinates_readback = _record(feature, "getCoordinates", errors=read_errors)
+    coordinate_readback = _normalise_coordinate_readback(
+        coordinates_readback, points, dimension, read_errors
+    )
 
     axis = _resolve_solution_axis(model, feature, request, solution_count, read_errors)
     times: list[float] | None = axis["values"]
@@ -944,13 +1068,41 @@ def _sample_with_feature(feature: Any, request: Mapping[str, Any], dataset_node:
                 row[TIME_COLUMN] = time_value
             for expression_index, expression in enumerate(expressions):
                 row[expression] = series[expression_index][solnum_index][point_index]
-            if time_value is not None:
-                row[TIME_COLUMN_ALIAS] = time_value
             samples.append(row)
 
     if times is not None:
         units[TIME_COLUMN] = axis["unit"]
-        units[TIME_COLUMN_ALIAS] = axis["unit"]
+
+    # The column contract: role, unit and (for expression columns) the
+    # expression each key carries.  A reader resolves a column through this map
+    # instead of folding case, because the requested expression ``T`` and the
+    # time column ``time`` differ only in case for a case-insensitive scan.
+    columns: list[dict[str, Any]] = []
+    for column in COORDINATE_COLUMNS[:dimension]:
+        columns.append({"name": column, "role": "coordinate", "unit": length_unit})
+    columns.append({"name": SOLUTION_INDEX_COLUMN, "role": "solution_index", "unit": "one-based index"})
+    if times is not None:
+        columns.append({"name": TIME_COLUMN, "role": "time", "unit": axis["unit"]})
+    for expression in expressions:
+        columns.append({"name": expression, "role": "expression", "unit": expression_unit_map.get(expression)})
+    roles: dict[str, Any] = {
+        "coordinates": list(COORDINATE_COLUMNS[:dimension]),
+        "solution_index": SOLUTION_INDEX_COLUMN,
+        "time": TIME_COLUMN if times is not None else None,
+        "expressions": {expression: expression for expression in expressions},
+        "lookup": "row keys are exact: resolve a column through this map or through 'columns'",
+    }
+    case_only_pairs = sorted(
+        (left, right) for left in roles["coordinates"] + [SOLUTION_INDEX_COLUMN, TIME_COLUMN]
+        for right in expressions if left.lower() == right.lower()
+    )
+    if case_only_pairs:
+        # Refused by _check_row_key_collisions; kept as an explicit invariant so
+        # a future edit cannot publish a table whose meaning depends on key order.
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            f"the published row keys would be ambiguous under a case-insensitive lookup: {case_only_pairs}",
+        )
 
     notes = [
         "coordinates are the requested path points, expressed in the model length unit "
@@ -983,8 +1135,35 @@ def _sample_with_feature(feature: Any, request: Mapping[str, Any], dataset_node:
         },
         "expressions": expressions,
         "expression_units": expression_unit_map,
+        "columns": columns,
+        "roles": roles,
         "dataset": dataset_tag,
         "solution": request.get("solution"),
+        "binding": {
+            "dataset": dataset_tag,
+            "solution": request.get("solution"),
+            "component": context.get("component"),
+            "geometry": context.get("geometry"),
+            "length_unit": length_unit,
+            "space_dimension": context.get("space_dimension"),
+            "content_context": context.get("source"),
+            "stored_solutions": solution_count,
+            "time_axis": {
+                "time_dependent": axis["time_dependent"],
+                "status": axis["status"],
+                "source": axis["source"],
+                "unit": axis["unit"],
+                "values": list(times) if times is not None else None,
+            },
+            "revision_required": False,
+        },
+        "unit_readback": {
+            "expression_units": expression_unit_map,
+            "coordinate_unit": length_unit,
+            "time_unit": axis["unit"],
+            "source": "model.result().numerical(<tag>).getStringArray(\"unit\") and GeomSequence.lengthUnit()",
+        },
+        "coordinate_readback": coordinate_readback,
         "units": units,
         "complex": bool(complex_readback) if isinstance(complex_readback, bool) else None,
         "complex_mode": "real",
@@ -1010,9 +1189,28 @@ def _sample_with_feature(feature: Any, request: Mapping[str, Any], dataset_node:
     }
 
 
+def _readback_verification_status(readback_state: Any) -> str:
+    """Map the coordinate readback to the published verification vocabulary.
+
+    ``PASSED``/``FAILED``/``NOT_RUN`` are the same tokens the transaction and
+    mesh validators use, so one consumer rule reads every operation's
+    verification axis.  A readback that could not be attempted (the Worker does
+    not publish ``getCoordinates()``) is ``NOT_RUN``: no claim is made either
+    way, and it is never silently reported as a pass.
+    """
+    if not isinstance(readback_state, Mapping):
+        return "NOT_RUN"
+    status = readback_state.get("status")
+    if status == "VERIFIED":
+        return "PASSED"
+    if status == "MISMATCH":
+        return "FAILED"
+    return "NOT_RUN"
+
+
 def _status(payload: dict[str, Any] | None, cleanup: Mapping[str, Any],
             engine_error: Mapping[str, Any] | None, created: bool, solution_count: int | None,
-            time_steps: int | None) -> dict[str, Any]:
+            time_steps: int | None, readback_state: Mapping[str, Any] | None = None) -> dict[str, Any]:
     applied: list[str] = []
     failed: list[dict[str, Any]] = []
     not_executed: list[str] = []
@@ -1023,6 +1221,21 @@ def _status(payload: dict[str, Any] | None, cleanup: Mapping[str, Any],
     if engine_error is not None:
         failed.append(dict(engine_error))
     unknown = bool(cleanup.get("cleanup_failed"))
+    readback_status = (readback_state or {}).get("status")
+    readback_match: bool | None = None
+    if readback_status == "VERIFIED":
+        readback_match = True
+        applied.append("result.numerical.getCoordinates(verified)")
+    elif readback_status == "MISMATCH":
+        # The engine's own coordinates disagree with the requested path points:
+        # the samples would belong to a different geometry path, so the
+        # readback verification is recorded as failed rather than ignored.
+        readback_match = False
+        failed.append({
+            "code": "VERIFICATION_FAILED",
+            "message": str((readback_state or {}).get("reason")
+                           or "the coordinate readback did not confirm the requested path points"),
+        })
     if payload is not None:
         applied.extend(["result.numerical.set(coord)", "result.numerical.getData",
                         "result.numerical.remove"])
@@ -1048,11 +1261,12 @@ def _status(payload: dict[str, Any] | None, cleanup: Mapping[str, Any],
     return {
         "ok": status == "APPLIED",
         "status": status,
-        "partial_change": bool(created) or unknown,
+        "partial_change": bool(created) or unknown or readback_match is False,
         "execution_state_unknown": unknown,
         "applied": applied,
         "failed": failed,
         "not_executed": not_executed,
+        "readback_match": readback_match,
         "readback": {
             "readable": payload is not None,
             "sample_count": payload.get("sample_count") if payload else 0,
@@ -1137,10 +1351,21 @@ def sample_path(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
         if cleanup["created"]:
             _remove_ephemeral(numerical_list, ephemeral_tag, cleanup, read_errors)
 
-    status = _status(payload, cleanup, engine_error, cleanup["created"], solution_count, time_steps)
+    readback_state = (payload or {}).get("coordinate_readback")
+    status = _status(payload, cleanup, engine_error, cleanup["created"], solution_count, time_steps,
+                     readback_state if isinstance(readback_state, Mapping) else None)
     data: dict[str, Any] = {
         "cleanup": cleanup,
         "status": status,
+        # The verification axis is separate from the execution axis: the samples
+        # may have been read correctly while the coordinate readback did not
+        # confirm them (or could not be attempted at all).
+        "verification_status": _readback_verification_status(readback_state),
+        "verification": {
+            "axis": "coordinate_readback",
+            "status": _readback_verification_status(readback_state),
+            "detail": readback_state if isinstance(readback_state, Mapping) else None,
+        },
         "engine_error": engine_error,
         "read_errors": read_errors,
         "allowlist_entry_required": sorted({

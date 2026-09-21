@@ -1,0 +1,134 @@
+{
+  "case_id": "W15_T007_selections",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver5bphase4-describe-physics-selection_set",
+          "request_id": "phase4-driver5bphase4-describe-physics-selection_set"
+        },
+        "operation_id": "physics.selection_set"
+      },
+      "elapsed_s": 0.002485583012457937,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver5bphase4-describe-physics-feature_update",
+          "request_id": "phase4-driver5bphase4-describe-physics-feature_update"
+        },
+        "operation_id": "physics.feature_update"
+      },
+      "elapsed_s": 0.001978041953407228,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver5bphase4-describe-physics-inspect",
+          "request_id": "phase4-driver5bphase4-describe-physics-inspect"
+        },
+        "operation_id": "physics.inspect"
+      },
+      "elapsed_s": 0.002978582982905209,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver5bphase4-describe-physics-feature_create",
+          "request_id": "phase4-driver5bphase4-describe-physics-feature_create"
+        },
+        "operation_id": "physics.feature_create"
+      },
+      "elapsed_s": 0.0021759159862995148,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver5bphase4-describe-selection-create",
+          "request_id": "phase4-driver5bphase4-describe-selection-create"
+        },
+        "operation_id": "selection.create"
+      },
+      "elapsed_s": 0.0020728340023197234,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 5
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver5bphase4-describe-node-property_get",
+          "request_id": "phase4-driver5bphase4-describe-node-property_get"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.0019033330027014017,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 6
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 1,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "physics",
+                "tag": "ht"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "selection": {
+            "component": "comp1",
+            "kind": "named",
+            "tag": "sel1"
+          },
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 1,
+          "idempotency_key": "phase4-driver5bphysics_level_selection_set",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bphysics_level_selection_set",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "physics.selection_set"
+      },
+      "elapsed_s": 0.010634083999320865,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 7
+    }
+  ]
+}

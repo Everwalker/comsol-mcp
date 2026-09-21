@@ -1,0 +1,666 @@
+{
+  "case_id": "REOPEN_CHECK",
+  "results": [
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"backend execution failed; inspect worker evidence\", \"safe_retry\": false, \"type\": \"JavaWorkerError\"}, \"execution\": {\"idempotency_key\": \"reopen-server-connect\", \"job_id\": \"2fa06644-b69d-4b17-8979-234beb461e5d\", \"operation_id\": \"bc328b46-758c-4777-a8dc-b04059d9b376\", \"request_hash\": \"20434ae4dd627770beb405fd0d041b124684c76ca1ecae27139b6567ddf81d2c\", \"request_id\": \"connect\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "backend execution failed; inspect worker evidence",
+      "operation": "server_connect",
+      "sequence": 1,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "backend execution failed; inspect worker evidence",
+          "safe_retry": false,
+          "type": "JavaWorkerError"
+        },
+        "execution": {
+          "idempotency_key": "reopen-server-connect",
+          "job_id": "2fa06644-b69d-4b17-8979-234beb461e5d",
+          "operation_id": "bc328b46-758c-4777-a8dc-b04059d9b376",
+          "request_hash": "20434ae4dd627770beb405fd0d041b124684c76ca1ecae27139b6567ddf81d2c",
+          "request_id": "connect"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"created_at\": \"2026-09-21 07:34:56\", \"effective_timeouts\": {\"execution_timeout_s\": null, \"no_progress_warning_s\": null, \"queue_timeout_s\": null, \"rpc_timeout_s\": 30.0}, \"finished_at\": null, \"job_id\": \"2fa06644-b69d-4b17-8979-234beb461e5d\", \"metadata\": {\"arguments\": {\"host\": \"127.0.0.1\", \"model_name\": \"\", \"port\": 56389, \"timeout_seconds\": 30.0}, \"callback_completion_unknown\": true, \"engine_started_at\": 1789976096.0811672, \"execution\": {\"idempotency_key\": \"reopen-server-connect\", \"request_id\": \"connect\"}, \"finished_observed_at\": 1789976096.7022452, \"operation\": \"server_connect\", \"queue_wait_s\": 4.962499951943755e-05, \"reconciled_quiescent\": true, \"reconciliation\": [{\"request_id\": \"wrk-c17fa491-78a2-4cf6-a2e6-faf6efe8900a\", \"source\": \"durable_worker_observation\", \"status\": \"FAILED\"}], \"replay_performed\": false}, \"operation\": {\"created_at\": \"2026-09-21 07:34:56\", \"effective_timeouts\": {\"execution_timeout_s\": null, \"no_progress_warning_s\": null, \"queue_timeout_s\": null, \"rpc_timeout_s\": 30.0}, \"finished_at\": null, \"idempotency_key\": \"reopen-server-connect\", \"metadata\": {\"arguments\": {\"host\": \"127.0.0.1\", \"model_name\": \"\", \"port\": 56389, \"timeout_seconds\": 30.0}, \"execution\": {\"idempotency_key\": \"reopen-server-connect\", \"request_id\": \"connect\"}, \"operation\": \"server_connect\"}, \"operation\": \"server_connect\", \"operation_id\": \"bc328b46-758c-4777-a8dc-b04059d9b376\", \"request_hash\": \"20434ae4dd627770beb405fd0d041b124684c76ca1ecae27139b6567ddf81d2c\", \"request_id\": \"connect\", \"result\": {\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"backend execution failed; inspect worker evidence\", \"safe_retry\": false, \"type\": \"JavaWorkerError\"}, \"execution\": {\"idempotency_key\": \"reopen-server-connect\", \"job_id\": \"2fa06644-b69d-4b17-8979-234beb461e5d\", \"operation_id\": \"bc328b46-758c-4777-a8dc-b04059d9b376\", \"request_hash\": \"20434ae4dd627770beb405fd0d041b124684c76ca1ecae27139b6567ddf81d2c\", \"request_id\": \"connect\"}, \"success\": false}, \"started_at\": \"2026-09-21 07:34:56\", \"status\": \"UNKNOWN\"}, \"operation_id\": \"bc328b46-758c-4777-a8dc-b04059d9b376\", \"result\": {\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"backend execution failed; inspect worker evidence\", \"safe_retry\": false, \"type\": \"JavaWorkerError\"}, \"execution\": {\"idempotency_key\": \"reopen-server-connect\", \"job_id\": \"2fa06644-b69d-4b17-8979-234beb461e5d\", \"operation_id\": \"bc328b46-758c-4777-a8dc-b04059d9b376\", \"request_hash\": \"20434ae4dd627770beb405fd0d041b124684c76ca1ecae27139b6567ddf81d2c\", \"request_id\": \"connect\"}, \"success\": false}, \"started_at\": \"2026-09-21 07:34:56\", \"status\": \"UNKNOWN\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "job_reconcile",
+      "sequence": 2,
+      "structuredContent": {
+        "data": {
+          "created_at": "2026-09-21 07:34:56",
+          "effective_timeouts": {
+            "execution_timeout_s": null,
+            "no_progress_warning_s": null,
+            "queue_timeout_s": null,
+            "rpc_timeout_s": 30.0
+          },
+          "finished_at": null,
+          "job_id": "2fa06644-b69d-4b17-8979-234beb461e5d",
+          "metadata": {
+            "arguments": {
+              "host": "127.0.0.1",
+              "model_name": "",
+              "port": 56389,
+              "timeout_seconds": 30.0
+            },
+            "callback_completion_unknown": true,
+            "engine_started_at": 1789976096.0811672,
+            "execution": {
+              "idempotency_key": "reopen-server-connect",
+              "request_id": "connect"
+            },
+            "finished_observed_at": 1789976096.7022452,
+            "operation": "server_connect",
+            "queue_wait_s": 4.962499951943755e-05,
+            "reconciled_quiescent": true,
+            "reconciliation": [
+              {
+                "request_id": "wrk-c17fa491-78a2-4cf6-a2e6-faf6efe8900a",
+                "source": "durable_worker_observation",
+                "status": "FAILED"
+              }
+            ],
+            "replay_performed": false
+          },
+          "operation": {
+            "created_at": "2026-09-21 07:34:56",
+            "effective_timeouts": {
+              "execution_timeout_s": null,
+              "no_progress_warning_s": null,
+              "queue_timeout_s": null,
+              "rpc_timeout_s": 30.0
+            },
+            "finished_at": null,
+            "idempotency_key": "reopen-server-connect",
+            "metadata": {
+              "arguments": {
+                "host": "127.0.0.1",
+                "model_name": "",
+                "port": 56389,
+                "timeout_seconds": 30.0
+              },
+              "execution": {
+                "idempotency_key": "reopen-server-connect",
+                "request_id": "connect"
+              },
+              "operation": "server_connect"
+            },
+            "operation": "server_connect",
+            "operation_id": "bc328b46-758c-4777-a8dc-b04059d9b376",
+            "request_hash": "20434ae4dd627770beb405fd0d041b124684c76ca1ecae27139b6567ddf81d2c",
+            "request_id": "connect",
+            "result": {
+              "data": {},
+              "error": {
+                "code": "EXECUTION_STATE_UNKNOWN",
+                "message": "backend execution failed; inspect worker evidence",
+                "safe_retry": false,
+                "type": "JavaWorkerError"
+              },
+              "execution": {
+                "idempotency_key": "reopen-server-connect",
+                "job_id": "2fa06644-b69d-4b17-8979-234beb461e5d",
+                "operation_id": "bc328b46-758c-4777-a8dc-b04059d9b376",
+                "request_hash": "20434ae4dd627770beb405fd0d041b124684c76ca1ecae27139b6567ddf81d2c",
+                "request_id": "connect"
+              },
+              "success": false
+            },
+            "started_at": "2026-09-21 07:34:56",
+            "status": "UNKNOWN"
+          },
+          "operation_id": "bc328b46-758c-4777-a8dc-b04059d9b376",
+          "result": {
+            "data": {},
+            "error": {
+              "code": "EXECUTION_STATE_UNKNOWN",
+              "message": "backend execution failed; inspect worker evidence",
+              "safe_retry": false,
+              "type": "JavaWorkerError"
+            },
+            "execution": {
+              "idempotency_key": "reopen-server-connect",
+              "job_id": "2fa06644-b69d-4b17-8979-234beb461e5d",
+              "operation_id": "bc328b46-758c-4777-a8dc-b04059d9b376",
+              "request_hash": "20434ae4dd627770beb405fd0d041b124684c76ca1ecae27139b6567ddf81d2c",
+              "request_id": "connect"
+            },
+            "success": false
+          },
+          "started_at": "2026-09-21 07:34:56",
+          "status": "UNKNOWN"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"artifact_id\": {\"type\": \"string\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"path_policy\": {\"type\": \"object\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"type\": \"string\"}}, \"required\": [\"project_id\", \"idempotency_key\", \"session_id\", \"artifact_id\"], \"title\": \"model.load input\", \"type\": \"object\"}, \"domain\": \"model\", \"effect\": \"WRITE\", \"executable\": false, \"gate\": \"G0\", \"implementation_status\": \"PROPOSED_NOT_IMPLEMENTED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"artifact_id\": {\"type\": \"string\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"path_policy\": {\"type\": \"object\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"type\": \"string\"}}, \"required\": [\"project_id\", \"idempotency_key\", \"session_id\", \"artifact_id\"], \"title\": \"model.load input\", \"type\": \"object\"}, \"mcp_tool_name\": \"model_load\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"model.load\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"加载文件，默认不清理其他模型\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\"], \"route\": \"control plane\", \"scope\": \"project\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 3,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "artifact_id": {
+                "type": "string"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "path_policy": {
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "idempotency_key",
+              "session_id",
+              "artifact_id"
+            ],
+            "title": "model.load input",
+            "type": "object"
+          },
+          "domain": "model",
+          "effect": "WRITE",
+          "executable": false,
+          "gate": "G0",
+          "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "artifact_id": {
+                "type": "string"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "path_policy": {
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "idempotency_key",
+              "session_id",
+              "artifact_id"
+            ],
+            "title": "model.load input",
+            "type": "object"
+          },
+          "mcp_tool_name": "model_load",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "model.load",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "加载文件，默认不清理其他模型",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful"
+          ],
+          "route": "control plane",
+          "scope": "project",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"ENGINE_UNRESPONSIVE\", \"message\": \"connect to a server first\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"reopen-load\", \"job_id\": \"510430dd-79d4-4be3-97cf-9b98dfbf7950\", \"operation_id\": \"e2ff23af-eeda-4e6e-a10b-ae317b44f7f3\", \"request_hash\": \"e25ea0143323d7c464ea8d17a4f729ecf63d0defd0eebf647cc5e2cade62434b\", \"request_id\": \"model.load\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "ENGINE_UNRESPONSIVE",
+      "error_message": "connect to a server first",
+      "operation": "model_load",
+      "sequence": 4,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "ENGINE_UNRESPONSIVE",
+          "message": "connect to a server first",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "reopen-load",
+          "job_id": "510430dd-79d4-4be3-97cf-9b98dfbf7950",
+          "operation_id": "e2ff23af-eeda-4e6e-a10b-ae317b44f7f3",
+          "request_hash": "e25ea0143323d7c464ea8d17a4f729ecf63d0defd0eebf647cc5e2cade62434b",
+          "request_id": "model.load"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"created_at\": \"2026-09-21 07:34:56\", \"effective_timeouts\": {\"execution_timeout_s\": null, \"no_progress_warning_s\": null, \"queue_timeout_s\": null, \"rpc_timeout_s\": 30.0}, \"finished_at\": null, \"job_id\": \"510430dd-79d4-4be3-97cf-9b98dfbf7950\", \"metadata\": {\"arguments\": {\"path\": \"evidence/phase4_1/runs/20260921T042809Z-g3_1-m2a-chainA/chainA_result.mph\"}, \"callback_completion_unknown\": true, \"engine_started_at\": 1789976096.715818, \"execution\": {\"idempotency_key\": \"reopen-load\", \"request_id\": \"model.load\"}, \"finished_observed_at\": 1789976096.7160802, \"operation\": \"model_load\", \"queue_wait_s\": 2.9540969990193844e-05, \"reconciled_quiescent\": false, \"reconciliation\": [], \"replay_performed\": false}, \"operation\": {\"created_at\": \"2026-09-21 07:34:56\", \"effective_timeouts\": {\"execution_timeout_s\": null, \"no_progress_warning_s\": null, \"queue_timeout_s\": null, \"rpc_timeout_s\": 30.0}, \"finished_at\": null, \"idempotency_key\": \"reopen-load\", \"metadata\": {\"arguments\": {\"path\": \"evidence/phase4_1/runs/20260921T042809Z-g3_1-m2a-chainA/chainA_result.mph\"}, \"execution\": {\"idempotency_key\": \"reopen-load\", \"request_id\": \"model.load\"}, \"operation\": \"model_load\"}, \"operation\": \"model_load\", \"operation_id\": \"e2ff23af-eeda-4e6e-a10b-ae317b44f7f3\", \"request_hash\": \"e25ea0143323d7c464ea8d17a4f729ecf63d0defd0eebf647cc5e2cade62434b\", \"request_id\": \"model.load\", \"result\": {\"data\": {}, \"error\": {\"code\": \"ENGINE_UNRESPONSIVE\", \"message\": \"connect to a server first\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"reopen-load\", \"job_id\": \"510430dd-79d4-4be3-97cf-9b98dfbf7950\", \"operation_id\": \"e2ff23af-eeda-4e6e-a10b-ae317b44f7f3\", \"request_hash\": \"e25ea0143323d7c464ea8d17a4f729ecf63d0defd0eebf647cc5e2cade62434b\", \"request_id\": \"model.load\"}, \"success\": false}, \"started_at\": \"2026-09-21 07:34:56\", \"status\": \"UNKNOWN\"}, \"operation_id\": \"e2ff23af-eeda-4e6e-a10b-ae317b44f7f3\", \"result\": {\"data\": {}, \"error\": {\"code\": \"ENGINE_UNRESPONSIVE\", \"message\": \"connect to a server first\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"reopen-load\", \"job_id\": \"510430dd-79d4-4be3-97cf-9b98dfbf7950\", \"operation_id\": \"e2ff23af-eeda-4e6e-a10b-ae317b44f7f3\", \"request_hash\": \"e25ea0143323d7c464ea8d17a4f729ecf63d0defd0eebf647cc5e2cade62434b\", \"request_id\": \"model.load\"}, \"success\": false}, \"started_at\": \"2026-09-21 07:34:56\", \"status\": \"UNKNOWN\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "job_reconcile",
+      "sequence": 5,
+      "structuredContent": {
+        "data": {
+          "created_at": "2026-09-21 07:34:56",
+          "effective_timeouts": {
+            "execution_timeout_s": null,
+            "no_progress_warning_s": null,
+            "queue_timeout_s": null,
+            "rpc_timeout_s": 30.0
+          },
+          "finished_at": null,
+          "job_id": "510430dd-79d4-4be3-97cf-9b98dfbf7950",
+          "metadata": {
+            "arguments": {
+              "path": "evidence/phase4_1/runs/20260921T042809Z-g3_1-m2a-chainA/chainA_result.mph"
+            },
+            "callback_completion_unknown": true,
+            "engine_started_at": 1789976096.715818,
+            "execution": {
+              "idempotency_key": "reopen-load",
+              "request_id": "model.load"
+            },
+            "finished_observed_at": 1789976096.7160802,
+            "operation": "model_load",
+            "queue_wait_s": 2.9540969990193844e-05,
+            "reconciled_quiescent": false,
+            "reconciliation": [],
+            "replay_performed": false
+          },
+          "operation": {
+            "created_at": "2026-09-21 07:34:56",
+            "effective_timeouts": {
+              "execution_timeout_s": null,
+              "no_progress_warning_s": null,
+              "queue_timeout_s": null,
+              "rpc_timeout_s": 30.0
+            },
+            "finished_at": null,
+            "idempotency_key": "reopen-load",
+            "metadata": {
+              "arguments": {
+                "path": "evidence/phase4_1/runs/20260921T042809Z-g3_1-m2a-chainA/chainA_result.mph"
+              },
+              "execution": {
+                "idempotency_key": "reopen-load",
+                "request_id": "model.load"
+              },
+              "operation": "model_load"
+            },
+            "operation": "model_load",
+            "operation_id": "e2ff23af-eeda-4e6e-a10b-ae317b44f7f3",
+            "request_hash": "e25ea0143323d7c464ea8d17a4f729ecf63d0defd0eebf647cc5e2cade62434b",
+            "request_id": "model.load",
+            "result": {
+              "data": {},
+              "error": {
+                "code": "ENGINE_UNRESPONSIVE",
+                "message": "connect to a server first",
+                "safe_retry": false
+              },
+              "execution": {
+                "idempotency_key": "reopen-load",
+                "job_id": "510430dd-79d4-4be3-97cf-9b98dfbf7950",
+                "operation_id": "e2ff23af-eeda-4e6e-a10b-ae317b44f7f3",
+                "request_hash": "e25ea0143323d7c464ea8d17a4f729ecf63d0defd0eebf647cc5e2cade62434b",
+                "request_id": "model.load"
+              },
+              "success": false
+            },
+            "started_at": "2026-09-21 07:34:56",
+            "status": "UNKNOWN"
+          },
+          "operation_id": "e2ff23af-eeda-4e6e-a10b-ae317b44f7f3",
+          "result": {
+            "data": {},
+            "error": {
+              "code": "ENGINE_UNRESPONSIVE",
+              "message": "connect to a server first",
+              "safe_retry": false
+            },
+            "execution": {
+              "idempotency_key": "reopen-load",
+              "job_id": "510430dd-79d4-4be3-97cf-9b98dfbf7950",
+              "operation_id": "e2ff23af-eeda-4e6e-a10b-ae317b44f7f3",
+              "request_hash": "e25ea0143323d7c464ea8d17a4f729ecf63d0defd0eebf647cc5e2cade62434b",
+              "request_id": "model.load"
+            },
+            "success": false
+          },
+          "started_at": "2026-09-21 07:34:56",
+          "status": "UNKNOWN"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"created_at\": \"2026-09-21 07:34:56\", \"effective_timeouts\": {\"execution_timeout_s\": null, \"no_progress_warning_s\": null, \"queue_timeout_s\": null, \"rpc_timeout_s\": 30.0}, \"finished_at\": null, \"job_id\": \"510430dd-79d4-4be3-97cf-9b98dfbf7950\", \"metadata\": {\"arguments\": {\"path\": \"evidence/phase4_1/runs/20260921T042809Z-g3_1-m2a-chainA/chainA_result.mph\"}, \"callback_completion_unknown\": true, \"engine_started_at\": 1789976096.715818, \"execution\": {\"idempotency_key\": \"reopen-load\", \"request_id\": \"model.load\"}, \"finished_observed_at\": 1789976096.7160802, \"operation\": \"model_load\", \"queue_wait_s\": 2.9540969990193844e-05, \"reconciled_quiescent\": false, \"reconciliation\": [], \"replay_performed\": false}, \"operation\": {\"created_at\": \"2026-09-21 07:34:56\", \"effective_timeouts\": {\"execution_timeout_s\": null, \"no_progress_warning_s\": null, \"queue_timeout_s\": null, \"rpc_timeout_s\": 30.0}, \"finished_at\": null, \"idempotency_key\": \"reopen-load\", \"metadata\": {\"arguments\": {\"path\": \"evidence/phase4_1/runs/20260921T042809Z-g3_1-m2a-chainA/chainA_result.mph\"}, \"execution\": {\"idempotency_key\": \"reopen-load\", \"request_id\": \"model.load\"}, \"operation\": \"model_load\"}, \"operation\": \"model_load\", \"operation_id\": \"e2ff23af-eeda-4e6e-a10b-ae317b44f7f3\", \"request_hash\": \"e25ea0143323d7c464ea8d17a4f729ecf63d0defd0eebf647cc5e2cade62434b\", \"request_id\": \"model.load\", \"result\": {\"data\": {}, \"error\": {\"code\": \"ENGINE_UNRESPONSIVE\", \"message\": \"connect to a server first\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"reopen-load\", \"job_id\": \"510430dd-79d4-4be3-97cf-9b98dfbf7950\", \"operation_id\": \"e2ff23af-eeda-4e6e-a10b-ae317b44f7f3\", \"request_hash\": \"e25ea0143323d7c464ea8d17a4f729ecf63d0defd0eebf647cc5e2cade62434b\", \"request_id\": \"model.load\"}, \"success\": false}, \"started_at\": \"2026-09-21 07:34:56\", \"status\": \"UNKNOWN\"}, \"operation_id\": \"e2ff23af-eeda-4e6e-a10b-ae317b44f7f3\", \"result\": {\"data\": {}, \"error\": {\"code\": \"ENGINE_UNRESPONSIVE\", \"message\": \"connect to a server first\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"reopen-load\", \"job_id\": \"510430dd-79d4-4be3-97cf-9b98dfbf7950\", \"operation_id\": \"e2ff23af-eeda-4e6e-a10b-ae317b44f7f3\", \"request_hash\": \"e25ea0143323d7c464ea8d17a4f729ecf63d0defd0eebf647cc5e2cade62434b\", \"request_id\": \"model.load\"}, \"success\": false}, \"started_at\": \"2026-09-21 07:34:56\", \"status\": \"UNKNOWN\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "job_status",
+      "sequence": 6,
+      "structuredContent": {
+        "data": {
+          "created_at": "2026-09-21 07:34:56",
+          "effective_timeouts": {
+            "execution_timeout_s": null,
+            "no_progress_warning_s": null,
+            "queue_timeout_s": null,
+            "rpc_timeout_s": 30.0
+          },
+          "finished_at": null,
+          "job_id": "510430dd-79d4-4be3-97cf-9b98dfbf7950",
+          "metadata": {
+            "arguments": {
+              "path": "evidence/phase4_1/runs/20260921T042809Z-g3_1-m2a-chainA/chainA_result.mph"
+            },
+            "callback_completion_unknown": true,
+            "engine_started_at": 1789976096.715818,
+            "execution": {
+              "idempotency_key": "reopen-load",
+              "request_id": "model.load"
+            },
+            "finished_observed_at": 1789976096.7160802,
+            "operation": "model_load",
+            "queue_wait_s": 2.9540969990193844e-05,
+            "reconciled_quiescent": false,
+            "reconciliation": [],
+            "replay_performed": false
+          },
+          "operation": {
+            "created_at": "2026-09-21 07:34:56",
+            "effective_timeouts": {
+              "execution_timeout_s": null,
+              "no_progress_warning_s": null,
+              "queue_timeout_s": null,
+              "rpc_timeout_s": 30.0
+            },
+            "finished_at": null,
+            "idempotency_key": "reopen-load",
+            "metadata": {
+              "arguments": {
+                "path": "evidence/phase4_1/runs/20260921T042809Z-g3_1-m2a-chainA/chainA_result.mph"
+              },
+              "execution": {
+                "idempotency_key": "reopen-load",
+                "request_id": "model.load"
+              },
+              "operation": "model_load"
+            },
+            "operation": "model_load",
+            "operation_id": "e2ff23af-eeda-4e6e-a10b-ae317b44f7f3",
+            "request_hash": "e25ea0143323d7c464ea8d17a4f729ecf63d0defd0eebf647cc5e2cade62434b",
+            "request_id": "model.load",
+            "result": {
+              "data": {},
+              "error": {
+                "code": "ENGINE_UNRESPONSIVE",
+                "message": "connect to a server first",
+                "safe_retry": false
+              },
+              "execution": {
+                "idempotency_key": "reopen-load",
+                "job_id": "510430dd-79d4-4be3-97cf-9b98dfbf7950",
+                "operation_id": "e2ff23af-eeda-4e6e-a10b-ae317b44f7f3",
+                "request_hash": "e25ea0143323d7c464ea8d17a4f729ecf63d0defd0eebf647cc5e2cade62434b",
+                "request_id": "model.load"
+              },
+              "success": false
+            },
+            "started_at": "2026-09-21 07:34:56",
+            "status": "UNKNOWN"
+          },
+          "operation_id": "e2ff23af-eeda-4e6e-a10b-ae317b44f7f3",
+          "result": {
+            "data": {},
+            "error": {
+              "code": "ENGINE_UNRESPONSIVE",
+              "message": "connect to a server first",
+              "safe_retry": false
+            },
+            "execution": {
+              "idempotency_key": "reopen-load",
+              "job_id": "510430dd-79d4-4be3-97cf-9b98dfbf7950",
+              "operation_id": "e2ff23af-eeda-4e6e-a10b-ae317b44f7f3",
+              "request_hash": "e25ea0143323d7c464ea8d17a4f729ecf63d0defd0eebf647cc5e2cade62434b",
+              "request_id": "model.load"
+            },
+            "success": false
+          },
+          "started_at": "2026-09-21 07:34:56",
+          "status": "UNKNOWN"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"created_at\": \"2026-09-21 07:34:56\", \"effective_timeouts\": {\"execution_timeout_s\": null, \"no_progress_warning_s\": null, \"queue_timeout_s\": null, \"rpc_timeout_s\": 30.0}, \"finished_at\": null, \"job_id\": \"510430dd-79d4-4be3-97cf-9b98dfbf7950\", \"metadata\": {\"arguments\": {\"path\": \"evidence/phase4_1/runs/20260921T042809Z-g3_1-m2a-chainA/chainA_result.mph\"}, \"callback_completion_unknown\": true, \"engine_started_at\": 1789976096.715818, \"execution\": {\"idempotency_key\": \"reopen-load\", \"request_id\": \"model.load\"}, \"finished_observed_at\": 1789976096.7160802, \"operation\": \"model_load\", \"queue_wait_s\": 2.9540969990193844e-05, \"reconciled_quiescent\": false, \"reconciliation\": [], \"replay_performed\": false}, \"operation\": {\"created_at\": \"2026-09-21 07:34:56\", \"effective_timeouts\": {\"execution_timeout_s\": null, \"no_progress_warning_s\": null, \"queue_timeout_s\": null, \"rpc_timeout_s\": 30.0}, \"finished_at\": null, \"idempotency_key\": \"reopen-load\", \"metadata\": {\"arguments\": {\"path\": \"evidence/phase4_1/runs/20260921T042809Z-g3_1-m2a-chainA/chainA_result.mph\"}, \"execution\": {\"idempotency_key\": \"reopen-load\", \"request_id\": \"model.load\"}, \"operation\": \"model_load\"}, \"operation\": \"model_load\", \"operation_id\": \"e2ff23af-eeda-4e6e-a10b-ae317b44f7f3\", \"request_hash\": \"e25ea0143323d7c464ea8d17a4f729ecf63d0defd0eebf647cc5e2cade62434b\", \"request_id\": \"model.load\", \"result\": {\"data\": {}, \"error\": {\"code\": \"ENGINE_UNRESPONSIVE\", \"message\": \"connect to a server first\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"reopen-load\", \"job_id\": \"510430dd-79d4-4be3-97cf-9b98dfbf7950\", \"operation_id\": \"e2ff23af-eeda-4e6e-a10b-ae317b44f7f3\", \"request_hash\": \"e25ea0143323d7c464ea8d17a4f729ecf63d0defd0eebf647cc5e2cade62434b\", \"request_id\": \"model.load\"}, \"success\": false}, \"started_at\": \"2026-09-21 07:34:56\", \"status\": \"UNKNOWN\"}, \"operation_id\": \"e2ff23af-eeda-4e6e-a10b-ae317b44f7f3\", \"result\": {\"data\": {}, \"error\": {\"code\": \"ENGINE_UNRESPONSIVE\", \"message\": \"connect to a server first\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"reopen-load\", \"job_id\": \"510430dd-79d4-4be3-97cf-9b98dfbf7950\", \"operation_id\": \"e2ff23af-eeda-4e6e-a10b-ae317b44f7f3\", \"request_hash\": \"e25ea0143323d7c464ea8d17a4f729ecf63d0defd0eebf647cc5e2cade62434b\", \"request_id\": \"model.load\"}, \"success\": false}, \"started_at\": \"2026-09-21 07:34:56\", \"status\": \"UNKNOWN\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "job_result",
+      "sequence": 7,
+      "structuredContent": {
+        "data": {
+          "created_at": "2026-09-21 07:34:56",
+          "effective_timeouts": {
+            "execution_timeout_s": null,
+            "no_progress_warning_s": null,
+            "queue_timeout_s": null,
+            "rpc_timeout_s": 30.0
+          },
+          "finished_at": null,
+          "job_id": "510430dd-79d4-4be3-97cf-9b98dfbf7950",
+          "metadata": {
+            "arguments": {
+              "path": "evidence/phase4_1/runs/20260921T042809Z-g3_1-m2a-chainA/chainA_result.mph"
+            },
+            "callback_completion_unknown": true,
+            "engine_started_at": 1789976096.715818,
+            "execution": {
+              "idempotency_key": "reopen-load",
+              "request_id": "model.load"
+            },
+            "finished_observed_at": 1789976096.7160802,
+            "operation": "model_load",
+            "queue_wait_s": 2.9540969990193844e-05,
+            "reconciled_quiescent": false,
+            "reconciliation": [],
+            "replay_performed": false
+          },
+          "operation": {
+            "created_at": "2026-09-21 07:34:56",
+            "effective_timeouts": {
+              "execution_timeout_s": null,
+              "no_progress_warning_s": null,
+              "queue_timeout_s": null,
+              "rpc_timeout_s": 30.0
+            },
+            "finished_at": null,
+            "idempotency_key": "reopen-load",
+            "metadata": {
+              "arguments": {
+                "path": "evidence/phase4_1/runs/20260921T042809Z-g3_1-m2a-chainA/chainA_result.mph"
+              },
+              "execution": {
+                "idempotency_key": "reopen-load",
+                "request_id": "model.load"
+              },
+              "operation": "model_load"
+            },
+            "operation": "model_load",
+            "operation_id": "e2ff23af-eeda-4e6e-a10b-ae317b44f7f3",
+            "request_hash": "e25ea0143323d7c464ea8d17a4f729ecf63d0defd0eebf647cc5e2cade62434b",
+            "request_id": "model.load",
+            "result": {
+              "data": {},
+              "error": {
+                "code": "ENGINE_UNRESPONSIVE",
+                "message": "connect to a server first",
+                "safe_retry": false
+              },
+              "execution": {
+                "idempotency_key": "reopen-load",
+                "job_id": "510430dd-79d4-4be3-97cf-9b98dfbf7950",
+                "operation_id": "e2ff23af-eeda-4e6e-a10b-ae317b44f7f3",
+                "request_hash": "e25ea0143323d7c464ea8d17a4f729ecf63d0defd0eebf647cc5e2cade62434b",
+                "request_id": "model.load"
+              },
+              "success": false
+            },
+            "started_at": "2026-09-21 07:34:56",
+            "status": "UNKNOWN"
+          },
+          "operation_id": "e2ff23af-eeda-4e6e-a10b-ae317b44f7f3",
+          "result": {
+            "data": {},
+            "error": {
+              "code": "ENGINE_UNRESPONSIVE",
+              "message": "connect to a server first",
+              "safe_retry": false
+            },
+            "execution": {
+              "idempotency_key": "reopen-load",
+              "job_id": "510430dd-79d4-4be3-97cf-9b98dfbf7950",
+              "operation_id": "e2ff23af-eeda-4e6e-a10b-ae317b44f7f3",
+              "request_hash": "e25ea0143323d7c464ea8d17a4f729ecf63d0defd0eebf647cc5e2cade62434b",
+              "request_id": "model.load"
+            },
+            "success": false
+          },
+          "started_at": "2026-09-21 07:34:56",
+          "status": "UNKNOWN"
+        },
+        "success": false
+      },
+      "success": false
+    }
+  ]
+}

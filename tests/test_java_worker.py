@@ -487,3 +487,139 @@ def test_two_workers_cannot_own_the_same_global_endpoint_lock(tmp_path):
         assert rejected["failure"]["code"] == "ENGINE_BUSY"
     finally:
         second.close(); first.close()
+
+
+# ---------------------------------------------------------------------------
+# Allow-list consistency (C06): every engine method the G3 modules dispatch is
+# in the worker's verified sets, and the model-util set stays minimal.
+# ---------------------------------------------------------------------------
+
+WORKER_SOURCE = Path(java_worker.__file__).resolve().parent / "worker_java" / "PersistentComsolWorker.java"
+
+#: Names that would give a caller a global, cross-model side effect.  They must
+#: never appear in MODEL_UTIL (the ModelUtil surface the worker exposes).
+DANGEROUS_GLOBAL_METHODS = frozenset(
+    {"clearAll", "shutdown", "quit", "exit", "stop", "disconnect", "restart", "killAll", "deleteAll"}
+)
+
+#: ``clearAll`` is the one reviewed non-global exception in METHODS: the product
+#: only calls it on a *container* (a physics/mesh feature list) and re-reads the
+#: container afterwards, and it is not a Model/ModelUtil method.
+REVIEWED_CONTAINER_SCOPED = frozenset({"clearAll"})
+
+#: Dispatched names that the installed API does not declare at all, so the probe
+#: can only ever report "no such method".  They are kept out of the allow-list
+#: test with their evidence instead of widening the worker surface (a whitelist
+#: entry would have to be invented).
+KNOWN_NON_API_PROBES = {
+    # ``_g3_w14.py`` probes ``node.identifier()`` on a component node; javap of
+    # apiplugins/com.comsol.api_1.0.0.jar shows neither ModelEntity nor
+    # ComponentEntity declares identifier() (reported as a product-side gap).
+    "identifier": "javap com.comsol.model.ModelEntity / ComponentEntity: no identifier() in 6.4.0.293",
+}
+
+#: Dispatched names that *are* real API methods but must stay out of the Java
+#: allow-list until another module's refusal table is repaired.  ``objects``/
+#: ``object`` exist on GeomObjectSelection (javap) and ``_g3_common`` probes
+#: them, while ``_g3_w14.WORKER_UNAVAILABLE_METHODS`` still declares them
+#: unavailable and its consistency test forbids the overlap -- so the selection
+#: kinds needing them remain explicitly unusable instead of being half-enabled.
+WITHHELD_PENDING_TABLE_REPAIR = {
+    "objects": "GeomObjectSelection.objects(); blocked by _g3_w14.WORKER_UNAVAILABLE_METHODS",
+    "object": "GeomObjectSelection.object(String[,int]); blocked by _g3_w14.WORKER_UNAVAILABLE_METHODS",
+}
+
+
+def _allowlist_block(name: str) -> set[str]:
+    source = WORKER_SOURCE.read_text()
+    start = source.index(f"{name} = new HashSet")
+    end = source.index("));", start)
+    import re as _re
+
+    return set(_re.findall(r'"([A-Za-z_][A-Za-z0-9_]*)"', source[start:end]))
+
+
+def _dispatched_engine_methods() -> dict[str, set[str]]:
+    """Every engine method name the G3 modules pass to the worker.
+
+    The worker rejects an unlisted name with ``METHOD_REJECTED`` before the
+    engine sees it, so a dispatched-but-unlisted name is a silent functional
+    hole (exactly how ``mesh.statistics`` lost its element counts in the
+    recorded W16_T018 run).  This mirrors the worker's own dispatch surface:
+    ``_call``/``call_probe`` (single method) and ``_probe_snapshot`` (a tuple of
+    method names).
+    """
+    import re as _re
+
+    package = Path(java_worker.__file__).resolve().parent
+    patterns = (
+        _re.compile(r'_call\(\s*[A-Za-z_][\w\.\[\]]*\s*,\s*"([A-Za-z_]\w*)"'),
+        _re.compile(r'call_probe\(\s*[A-Za-z_][\w\.\[\]]*\s*,\s*"([A-Za-z_]\w*)"'),
+    )
+    snapshot = _re.compile(r'_probe_snapshot\(\s*[\w\.\[\]]+\s*,\s*\(([^)]*)\)')
+    found: dict[str, set[str]] = {}
+    for path in sorted(package.glob("_g3_*.py")):
+        for index, line in enumerate(path.read_text().splitlines(), 1):
+            names: set[str] = set()
+            for pattern in patterns:
+                names |= set(pattern.findall(line))
+            for group in snapshot.findall(line):
+                names |= set(_re.findall(r'"([A-Za-z_]\w*)"', group))
+            for name in names:
+                found.setdefault(name, set()).add(f"{path.name}:{index}")
+    return found
+
+
+class TestWorkerAllowlist:
+    def test_every_dispatched_engine_method_is_allowlisted(self):
+        methods = _allowlist_block("METHODS")
+        model_util = _allowlist_block("MODEL_UTIL")
+        dispatched = _dispatched_engine_methods()
+        missing = {name: sorted(where)[:3] for name, where in dispatched.items()
+                   if name not in methods | model_util
+                   and name not in KNOWN_NON_API_PROBES
+                   and name not in WITHHELD_PENDING_TABLE_REPAIR}
+        assert not missing, (
+            "these engine methods are dispatched by the G3 modules but the worker allow-list would reject "
+            f"them with METHOD_REJECTED: {missing}"
+        )
+        # Both exception lists stay closed and evidence-backed: a new unlisted
+        # dispatch has to be resolved by the allow-list, never by adding it here.
+        assert set(KNOWN_NON_API_PROBES) <= set(dispatched)
+        assert set(WITHHELD_PENDING_TABLE_REPAIR) <= set(dispatched)
+
+    def test_the_c06_merge_entries_are_present_with_their_api_evidence(self):
+        methods = _allowlist_block("METHODS")
+        assert {"stat", "isGeometry"} <= methods
+        source = WORKER_SOURCE.read_text()
+        # The version boundary of the merge: the javap evidence and the jar hash
+        # of the API the entries were verified against stay next to the entries.
+        assert "MeshSequence.stat() -> com.comsol.model.MeshStatistics" in source
+        assert "9bdc47a9e320be57" in source
+        assert "MeshSequence.isGeometry() -> boolean" in source
+
+    def test_the_withheld_selection_accessors_stay_coupled_to_the_w14_table(self):
+        """``objects``/``object`` are now allow-listed and removed from W14 unavailable.
+
+        They exist on GeomObjectSelection (javap) and were added to the Java
+        allow-list so ``resolve_selection_entities`` can call them on live
+        selections.  The W14 WORKER_UNAVAILABLE_METHODS table was updated in
+        tandem (R-15 closure).
+        """
+        from comsol_mcp import _g3_w14 as w14
+
+        methods = _allowlist_block("METHODS")
+        assert {"objects", "object"} <= methods
+        assert not ({"objects", "object"} & set(w14.WORKER_UNAVAILABLE_METHODS))
+
+    def test_model_util_stays_minimal_and_has_no_dangerous_global(self):
+        model_util = _allowlist_block("MODEL_UTIL")
+        assert model_util == {
+            "create", "load", "model", "remove", "tags", "uniquetag", "modelsUsedByOtherClients",
+            "getComsolVersion", "hasProduct",
+        }
+        assert not (model_util & DANGEROUS_GLOBAL_METHODS)
+
+    def test_the_node_allowlist_only_carries_the_reviewed_container_scoped_names(self):
+        methods = _allowlist_block("METHODS")
+        assert methods & DANGEROUS_GLOBAL_METHODS == set(REVIEWED_CONTAINER_SCOPED)

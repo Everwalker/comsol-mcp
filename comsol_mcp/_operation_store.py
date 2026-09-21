@@ -24,6 +24,19 @@ class IdempotencyConflict(RuntimeError):
     pass
 
 
+def _dumps_canonical(value: Any) -> str:
+    try:
+        return json.dumps(value, sort_keys=True)
+    except TypeError:
+        def _sanitize(item: Any) -> Any:
+            if isinstance(item, dict):
+                return {str(k) if k is not None else "null": _sanitize(v) for k, v in item.items()}
+            if isinstance(item, (list, tuple)):
+                return [_sanitize(x) for x in item]
+            return item
+        return json.dumps(_sanitize(value), sort_keys=True)
+
+
 class OperationStore:
     def __init__(self, path: str | Path):
         self.path = Path(path)
@@ -159,7 +172,7 @@ class OperationStore:
                     "CASE WHEN ? IN ('SUCCEEDED','FAILED','CANCELLED','EXPIRED','LOST') "
                     "THEN COALESCE(finished_at,CURRENT_TIMESTAMP) ELSE finished_at END "
                     "WHERE operation_id=?",
-                    (status, json.dumps(result, sort_keys=True), status, operation_id),
+                    (status, _dumps_canonical(result), status, operation_id),
                 )
                 job = self.db.execute(
                     "UPDATE jobs SET status=?,finished_at="
@@ -202,7 +215,7 @@ class OperationStore:
                         "started_at=CASE WHEN ? IN ('STARTING','RUNNING') THEN COALESCE(started_at,CURRENT_TIMESTAMP) ELSE started_at END,"
                         "finished_at=CASE WHEN ? IN ('SUCCEEDED','FAILED','CANCELLED','EXPIRED','LOST') "
                         "THEN COALESCE(finished_at,CURRENT_TIMESTAMP) ELSE finished_at END WHERE job_id=?",
-                        (status, json.dumps(merged, sort_keys=True), status, status, job_id),
+                        (status, _dumps_canonical(merged), status, status, job_id),
                     )
                     self.db.execute(
                         "UPDATE operations SET status=?,"

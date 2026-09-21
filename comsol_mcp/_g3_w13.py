@@ -98,6 +98,7 @@ path must be supplied in ``layout``).
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any, Callable, Mapping, Sequence
 
 from ._g2_contract import ExecutionContractError, typed_value_from_engine
@@ -139,6 +140,7 @@ from ._g3_common import (
     geometry_sdim,
     measure_selection,
     node_create,
+    node_not_found,
     node_remove,
     node_type,
     operation_arguments,
@@ -157,6 +159,7 @@ from ._g3_common import (
     resolve_selection_entities,
     selection_state,
     split_parent_path,
+    tag_conflict,
     tag_list,
     validate_selection_spec,
     validate_tag,
@@ -217,7 +220,7 @@ def _property_write(node_path: Mapping[str, Any], worker: Any, model_tag: str,
         "failed": list(data.get("failed") or []),
         "not_executed": list(data.get("not_executed") or []),
         "execution_state_unknown": bool(result.get("execution_state_unknown")),
-        "readback_values": {row.get("name"): row.get("readback") for row in applied if isinstance(row, Mapping)},
+        "readback_values": {row.get("name"): row.get("readback") for row in applied if isinstance(row, Mapping) and row.get("name") is not None},
         "engine_error": result.get("error"),
     }
 
@@ -233,7 +236,7 @@ def _require_component(worker: Any, model_tag: str, component: str) -> Any:
     if probe["ok"]:
         tags = [str(item) for item in (tag_list(probe["value"]) if probe["value"] is not None else [])]
         if component not in tags:
-            raise ExecutionContractError("NODE_NOT_FOUND", f"component {component!r} does not exist")
+            raise node_not_found(f"component {component!r} does not exist")
     return _call(model, "component", component)
 
 
@@ -244,8 +247,8 @@ def _require_geometry(worker: Any, model_tag: str, component: str, geometry: str
     if probe["ok"] and probe["value"] is not None:
         tags = [str(item) for item in tag_list(probe["value"])]
         if geometry not in tags:
-            raise ExecutionContractError(
-                "NODE_NOT_FOUND", f"geometry {geometry!r} does not exist in component {component!r}"
+            raise node_not_found(
+                f"geometry {geometry!r} does not exist in component {component!r}; the engine reports {tags}"
             )
     return _call(comp, "geom", geometry)
 
@@ -286,7 +289,7 @@ def parameter_list(worker: Any, model_tag: str, arguments: Mapping[str, Any]) ->
         group_probe_error = group_probe["error"]
     if requested is not None:
         if requested not in [item for item in groups if item is not None]:
-            raise ExecutionContractError("NODE_NOT_FOUND", f"parameter group {requested!r} does not exist")
+            raise node_not_found(f"parameter group {requested!r} does not exist")
         groups = [requested]
     rows = []
     total = 0
@@ -398,7 +401,7 @@ def parameter_set(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> 
                 "before it could create a group by accident",
             )
         if requested_group not in tag_list(container, spec):
-            raise ExecutionContractError("NODE_NOT_FOUND", f"parameter group {requested_group!r} does not exist")
+            raise node_not_found(f"parameter group {requested_group!r} does not exist")
         target = _call(container, "group", requested_group)
     else:
         target = container
@@ -495,7 +498,7 @@ def parameter_remove(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
                 "the connected worker refused 'group' (allow-list entry required)",
             )
         if requested_group not in tag_list(container, spec):
-            raise ExecutionContractError("NODE_NOT_FOUND", f"parameter group {requested_group!r} does not exist")
+            raise node_not_found(f"parameter group {requested_group!r} does not exist")
         target = _call(container, "group", requested_group)
     else:
         target = container
@@ -573,7 +576,7 @@ def parameter_group_manage(worker: Any, model_tag: str, arguments: Mapping[str, 
         if old not in names:
             raise ExecutionContractError("NAME_NOT_FOUND", f"parameter {old!r} does not exist")
         if new in names:
-            raise ExecutionContractError("TAG_CONFLICT", f"parameter {new!r} already exists")
+            raise tag_conflict(f"parameter {new!r} already exists")
         _call(container, "rename", old, new)
         after = expression_names(container)
         if new not in after or old in after:
@@ -600,7 +603,7 @@ def parameter_group_manage(worker: Any, model_tag: str, arguments: Mapping[str, 
             )
         group_tags = tag_list(container, spec)
         if tag not in group_tags:
-            raise ExecutionContractError("NODE_NOT_FOUND", f"parameter group {tag!r} does not exist")
+            raise node_not_found(f"parameter group {tag!r} does not exist")
         before = {group: set(expression_names(_call(container, "group", group))) for group in group_tags}
         missing = [name for name in names if not any(name in group for group in before.values())]
         if missing:
@@ -906,8 +909,8 @@ def _function_scope(worker: Any, model_tag: str, arguments: Mapping[str, Any]
     path, node = resolve_path(worker, model_tag, scope, label="scope")
     probe = call_probe(node, "func")
     if not probe["ok"]:
-        raise ExecutionContractError(
-            "NODE_NOT_FOUND", f"scope {scope!r} does not expose func(): {probe['error']}"
+        raise node_not_found(
+            f"scope {scope!r} does not expose func(): {probe['error']}"
         )
     return path, probe["value"], path["segments"][0].get("tag") if path["segments"] else "global"
 
@@ -930,6 +933,109 @@ def function_list(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> 
     return {"scope": scope, "functions": rows, "count": len(rows)}
 
 
+#: GUI-label -> documented API property name for a function *definition* object.
+#:
+#: The COMSOL GUI shows these settings under the labels used on the left; the
+#: API property names are the ones the local 6.4 corpus documents, so a caller
+#: spelling a documented GUI label is translated to the documented property
+#: instead of being refused as an unknown key.  Only labels with a citation are
+#: listed; a name that is neither a documented property nor a cited label is
+#: still refused before the write.
+#:
+#: Sources (Programming Reference 6.4, "interpolation properties" table, p.113;
+#: the same names are used by the XML file format's ``<interp>``/``<extrap>``/
+#: ``<fununit>``/``<argunit>`` elements and by the Application Programming Guide
+#: ``interp``/``extrap`` examples):
+#:
+#: * ``interpolation`` -> ``interp`` (the interpolation method row)
+#: * ``extrapolation`` -> ``extrap`` (the extrapolation method row)
+#: * ``data_unit`` / ``function_unit`` -> ``fununit`` (the function value unit)
+#: * ``argument_unit`` -> ``argunit``
+#: * ``number_of_arguments`` / ``num_args`` -> ``nargs``
+FUNCTION_DEFINITION_ALIASES: dict[str, dict[str, str]] = {
+    "Interpolation": {
+        "interpolation": "interp",
+        "interpolation_method": "interp",
+        "extrapolation": "extrap",
+        "extrapolation_method": "extrap",
+        "data_unit": "fununit",
+        "function_unit": "fununit",
+        "argument_unit": "argunit",
+        "number_of_arguments": "nargs",
+        "num_args": "nargs",
+    },
+    "Analytic": {
+        "extrapolation": "periodic",
+        "data_unit": "fununit",
+        "function_unit": "fununit",
+        "argument_unit": "argunit",
+        "expression": "expr",
+        "number_of_arguments": "nargs",
+        "num_args": "nargs",
+    },
+}
+
+#: Which documented-label view ``function.inspect`` reports next to the raw
+#: property names (label -> documented property).
+FUNCTION_SETTING_VIEWS: dict[str, str] = {
+    "interpolation": "interp",
+    "extrapolation": "extrap",
+    "data_unit": "fununit",
+}
+
+
+def _translate_function_definition_keys(definition: Mapping[str, Any], type_id: str,
+                                        allowed: Iterable[str]) -> dict[str, Any]:
+    """Rename cited GUI labels to their documented API property names.
+
+    A translation is only performed when the target is in the documented table
+    for this function type; when both spellings are present the request is
+    refused (a silent overwrite could change which value is written).  The
+    caller-side record of what was translated is reported by the operations
+    through ``_function_definition_translations``.
+    """
+    aliases = FUNCTION_DEFINITION_ALIASES.get(type_id, {})
+    translated: dict[str, Any] = {}
+    for name, value in definition.items():
+        target = aliases.get(name)
+        if target is None or name in allowed:
+            translated[name] = value
+            continue
+        if target not in allowed:
+            # The alias table has no verified target for this type: keep the
+            # original name so the documented-table refusal still fires instead
+            # of writing an unverified property.
+            translated[name] = value
+            continue
+        if target in definition or target in translated:
+            raise ExecutionContractError(
+                "INVALID_REQUEST",
+                f"definition gives {target!r} twice: the documented property name and its GUI label {name!r} "
+                f"were both supplied",
+            )
+        translated[target] = value
+    return translated
+
+
+def _function_definition_translations(definition: Mapping[str, Any], type_id: str) -> list[dict[str, str]]:
+    """The translations ``_translate_function_definition_keys`` would apply."""
+    aliases = FUNCTION_DEFINITION_ALIASES.get(type_id, {})
+    allowed = FUNCTION_TYPE_PROPERTIES.get(type_id, None)
+    if allowed is None:
+        return []
+    records: list[dict[str, str]] = []
+    for name in definition:
+        target = aliases.get(name)
+        if target is not None and name not in allowed and target in allowed:
+            records.append({
+                "given": name,
+                "property": target,
+                "basis": "Programming Reference 6.4 interpolation/analytic properties table (the GUI label "
+                         "and the API property name refer to the same setting)",
+            })
+    return records
+
+
 def _function_definition_payload(definition: Mapping[str, Any], type_id: str, node: Any) -> list[dict[str, Any]]:
     """Split a definition object into flat properties plus an optional wrapper."""
     allowed = FUNCTION_TYPE_PROPERTIES.get(type_id, None)
@@ -949,6 +1055,8 @@ def _function_definition_payload(definition: Mapping[str, Any], type_id: str, no
             f"the documented property table for function type {type_id!r} was not available offline; "
             f"{sorted(flat)} is refused before the write instead of being guessed",
         )
+    if allowed is not None:
+        flat = _translate_function_definition_keys(flat, type_id, allowed)
     return definition_properties(node, flat, allowed, label="definition")
 
 
@@ -982,6 +1090,7 @@ def function_create(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
         "not_executed": write["not_executed"],
         "properties": write["readback_values"],
         "definition_keys": sorted(definition),
+        "definition_key_translations": _function_definition_translations(definition, type_id),
         "notes": [
             "function property values are typed from the engine's own getValueType metadata; "
             "units are set as text and never converted",
@@ -998,12 +1107,25 @@ def _function_inspect_payload(node: Any, type_id: str | None) -> dict[str, Any]:
         return {
             "properties": {},
             "property_metadata": {},
+            "settings": {label: None for label in FUNCTION_SETTING_VIEWS},
             "type_properties_verified": False,
             "note": None if type_id else "the node type could not be read",
         }
     values = property_read_rows(node, sorted(allowed))
     return {
         "properties": values,
+        # The documented-label view of the same settings, so a caller can assert
+        # "interpolation / extrapolation / data unit" without knowing that the
+        # API property names are ``interp`` / ``extrap`` / ``fununit``.
+        "settings": {
+            label: {
+                "property": property_name,
+                "value": (values.get(property_name) or {}).get("value"),
+                "error": (values.get(property_name) or {}).get("error"),
+                "basis": "Programming Reference 6.4 interpolation properties table",
+            }
+            for label, property_name in FUNCTION_SETTING_VIEWS.items()
+        },
         "property_metadata": {
             name: {"kind": row.get("kind"), "shape_rank": row.get("shape_rank"),
                    "value_type": row.get("value_type"), "allowed_values": row.get("allowed_values")}
@@ -1025,12 +1147,26 @@ def function_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
     type_id = node_type(node)
     names = call_probe(node, "functionNames")
     payload = _function_inspect_payload(node, type_id)
+    settings = payload.get("settings") if isinstance(payload.get("settings"), Mapping) else {}
+
+    def setting_value(label: str) -> Any:
+        row = settings.get(label) if isinstance(settings, Mapping) else None
+        return row.get("value") if isinstance(row, Mapping) else None
+
     return {
         "path": path,
         "type_id": type_id,
         "function_names": list(names["value"]) if names["ok"] and isinstance(names["value"], (list, tuple)) else None,
         "function_names_error": None if names["ok"] else names["error"],
         "label": call_probe(node, "label")["value"] if call_probe(node, "label")["ok"] else None,
+        # Documented-label view of the settings, at the top level so a caller can
+        # assert the interpolation/extrapolation/data-unit settings directly; the
+        # API property names (interp/extrap/fununit) stay in ``properties``.
+        "interpolation": setting_value("interpolation"),
+        "extrapolation": setting_value("extrapolation"),
+        "data_unit": setting_value("data_unit"),
+        "settings_view_note": "the documented API property names are interp/extrap/fununit; these top-level "
+                              "keys are the same values under their documented GUI labels",
         **payload,
     }
 
@@ -1057,6 +1193,7 @@ def function_update(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
         "not_executed": write["not_executed"],
         "properties": write["readback_values"],
         "function_names": list(names["value"]) if names["ok"] and isinstance(names["value"], (list, tuple)) else None,
+        "definition_key_translations": _function_definition_translations(definition, type_id),
     }
     result.update(_status(write["applied"], write["failed"], write["not_executed"],
                           write["execution_state_unknown"]))
@@ -1310,15 +1447,58 @@ def _selection_property_allowance(type_id: str) -> frozenset[str]:
     return frozenset(SELECTION_COMMON_PROPERTIES)
 
 
+def _region_group_properties(definition: Mapping[str, Any], type_id: str) -> dict[str, Any]:
+    """Translate a documented spatial-region group into selection properties.
+
+    selection.query.spatial documents a region as {kind: box, xmin: ...}; the same
+    group is accepted here nested under its kind so a caller can describe a Box
+    selection without spelling the limit names.  Only the group that belongs to
+    this selection type and only its documented property names are accepted:
+    anything else stays a refusal.
+    """
+    out: dict[str, Any] = {}
+    for kind, spec in _SPATIAL_QUERY_SPECS.items():
+        group = definition.get(kind)
+        if group is None:
+            continue
+        selection_type = spec["selection_type"]
+        if selection_type != type_id:
+            raise ExecutionContractError(
+                "INVALID_REQUEST",
+                f"definition.{kind} describes a {selection_type} selection, not {type_id}",
+            )
+        if not isinstance(group, Mapping):
+            raise ExecutionContractError("INVALID_REQUEST", f"definition.{kind} must be an object")
+        allowed = set(SELECTION_REGION_PROPERTIES.get(selection_type, frozenset()))
+        unknown = sorted(set(group) - allowed)
+        if unknown:
+            raise ExecutionContractError(
+                "INVALID_REQUEST",
+                f"definition.{kind} has fields that are not documented {selection_type} properties: {unknown}",
+            )
+        if not group:
+            raise ExecutionContractError(
+                "INVALID_REQUEST",
+                f"definition.{kind} must name at least one {selection_type} property",
+            )
+        for name, value in group.items():
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise ExecutionContractError("INVALID_REQUEST", f"definition.{kind}.{name} must be a number")
+            out[name] = value
+    return out
+
+
 def _split_selection_definition(definition: Mapping[str, Any], type_id: str) -> dict[str, Any]:
     """Validate a selection definition against the type's documented vocabulary."""
-    unknown = sorted(set(definition) - _SELECTION_DEFINITION_KEYS - _selection_property_allowance(type_id))
+    unknown = sorted(set(definition) - _SELECTION_DEFINITION_KEYS - _selection_property_allowance(type_id)
+                     - set(_SPATIAL_QUERY_SPECS))
     if unknown:
         raise ExecutionContractError(
             "INVALID_REQUEST",
             f"definition has fields that are neither assignment fields nor documented {type_id} properties: "
             f"{unknown}",
         )
+    region_properties = _region_group_properties(definition, type_id)
     out: dict[str, Any] = {}
     if definition.get("label") is not None:
         out["label"] = require_string(definition["label"], "definition.label", max_length=200)
@@ -1373,6 +1553,10 @@ def _split_selection_definition(definition: Mapping[str, Any], type_id: str) -> 
     if duplicates:
         raise ExecutionContractError("INVALID_REQUEST", f"selection properties are given twice: {duplicates}")
     properties.update(flat)
+    duplicates = sorted(set(region_properties) & set(properties))
+    if duplicates:
+        raise ExecutionContractError("INVALID_REQUEST", f"selection properties are given twice: {duplicates}")
+    properties.update(region_properties)
     if properties:
         out["properties"] = properties
     if "condition" in properties and properties["condition"] not in SPATIAL_CONDITIONS:
@@ -1505,7 +1689,7 @@ def selection_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any])
     container = _call(comp, "selection")
     probe = call_probe(container, "tags")
     if probe["ok"] and tag not in [str(item) for item in probe["value"]]:
-        raise ExecutionContractError("NODE_NOT_FOUND", f"selection {tag!r} does not exist in {component!r}")
+        raise node_not_found(f"selection {tag!r} does not exist in {component!r}")
     node = child_node(worker, model_tag, _component_path(component), "selection", tag)
     type_id = node_type(node)
     entities_probe = call_probe(node, "entities")
@@ -1547,7 +1731,7 @@ def selection_update(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
     container = _call(comp, "selection")
     tag_probe = call_probe(container, "tags")
     if tag_probe["ok"] and tag not in [str(item) for item in tag_probe["value"]]:
-        raise ExecutionContractError("NODE_NOT_FOUND", f"selection {tag!r} does not exist in {component!r}")
+        raise node_not_found(f"selection {tag!r} does not exist in {component!r}")
     node = child_node(worker, model_tag, _component_path(component), "selection", tag)
     type_id = node_type(node)
     if type_id is None:
@@ -1836,8 +2020,8 @@ def selection_query_spatial(worker: Any, model_tag: str, arguments: Mapping[str,
             temp_tag = candidate
             break
     if temp_tag is None:
-        raise ExecutionContractError(
-            "TAG_CONFLICT", "no unused temporary query-selection tag is available; refusing to reuse one"
+        raise tag_conflict(
+            "no unused temporary query-selection tag is available; refusing to reuse one"
         )
     node_path = path_with_segment(_component_path(component), "selection", temp_tag)
     _call(container, "create", temp_tag, selection_type)

@@ -139,6 +139,7 @@ from ._g3_common import (
     definition_properties,
     measure_selection,
     node_type,
+    node_not_found,
     operation_arguments,
     property_definition,
     property_read_rows,
@@ -150,6 +151,7 @@ from ._g3_common import (
     require_string,
     require_string_array,
     resolve_path,
+    tag_conflict,
     tag_list,
     validate_tag,
 )
@@ -471,7 +473,7 @@ WORKER_UNAVAILABLE_METHODS = frozenset(
     {
         "axisymmetric", "isAxisymmetric", "angularUnit", "isBuilt",
         "status", "message", "errors",
-        "warnings", "object", "objects", "obj", "objectNames", "coord",
+        "warnings", "obj", "objectNames", "coord",
         "isLinear", "isOrthonormal", "masterSystem", "source", "destination",
         "pairName", "swap", "hasAutoSelection", "manualSelection",
         "searchMethod", "searchDist", "copy", "duplicate",
@@ -552,7 +554,7 @@ def _property_write(node_path: Mapping[str, Any], worker: Any, model_tag: str,
         "failed": list(data.get("failed") or []),
         "not_executed": list(data.get("not_executed") or []),
         "execution_state_unknown": bool(result.get("execution_state_unknown")),
-        "readback_values": {row.get("name"): row.get("readback") for row in applied if isinstance(row, Mapping)},
+        "readback_values": {row.get("name"): row.get("readback") for row in applied if isinstance(row, Mapping) and row.get("name") is not None},
         "engine_error": result.get("error"),
     }
 
@@ -603,7 +605,7 @@ def _require_component(worker: Any, model_tag: str, component: str) -> Any:
     if probe["ok"] and probe["value"] is not None:
         tags = tag_list(probe["value"])
         if component not in tags:
-            raise ExecutionContractError("NODE_NOT_FOUND", f"component {component!r} does not exist")
+            raise node_not_found(f"component {component!r} does not exist")
     return _call(model, "component", component)
 
 
@@ -682,7 +684,7 @@ def _feature_type(sequence: Any, tag: str) -> str | None:
 
 def _require_feature(sequence: Any, tag: str, *, label: str = "feature") -> Any:
     if tag not in _feature_tags(sequence):
-        raise ExecutionContractError("NODE_NOT_FOUND", f"{label} {tag!r} does not exist in this geometry sequence")
+        raise node_not_found(f"{label} {tag!r} does not exist in this geometry sequence")
     return _feature_node(sequence, tag)
 
 
@@ -736,7 +738,7 @@ def _feature_create_node(worker: Any, model_tag: str, sequence_path: Mapping[str
                 "TYPE_CONFLICT",
                 f"geometry feature {tag!r} already exists with type {current!r} (requested {type_id!r})",
             )
-        raise ExecutionContractError("TAG_CONFLICT", f"geometry feature {tag!r} already exists")
+        raise tag_conflict(f"geometry feature {tag!r} already exists")
     _call(_feature_collection(sequence), "create", tag, type_id)
     after = _feature_tags(sequence)
     if tag not in after:
@@ -993,8 +995,7 @@ def geometry_sequence_create(worker: Any, model_tag: str, arguments: Mapping[str
         existing = tag_list(container["value"])
         if tag in existing:
             current = _node_kind(_call(comp, "geom", tag))
-            raise ExecutionContractError(
-                "TAG_CONFLICT",
+            raise tag_conflict(
                 f"geometry {tag!r} already exists in component {component!r} (type {current!r})",
             )
     _call(_call(comp, "geom"), "create", tag, dimension)
@@ -1226,7 +1227,7 @@ def geometry_feature_remove(worker: Any, model_tag: str, arguments: Mapping[str,
     sequence = resolve_path(worker, model_tag, sequence_path, label="path")[1]
     before = _feature_tags(sequence)
     if tag not in before:
-        raise ExecutionContractError("NODE_NOT_FOUND", f"geometry feature {tag!r} does not exist")
+        raise node_not_found(f"geometry feature {tag!r} does not exist")
     type_readback = _node_kind(node)
     _call(_feature_collection(sequence), "remove", tag)
     after = _feature_tags(sequence)
@@ -1991,7 +1992,7 @@ def _definition_create(worker: Any, model_tag: str, component: str, collection: 
                 "TYPE_CONFLICT",
                 f"{display} {tag!r} already exists with type {current!r} (requested {type_id!r})",
             )
-        raise ExecutionContractError("TAG_CONFLICT", f"{display} {tag!r} already exists")
+        raise tag_conflict(f"{display} {tag!r} already exists")
     if types is not None:
         if type_id is None:
             raise ExecutionContractError("INVALID_REQUEST", f"{display} requires a type_id string")
@@ -2048,7 +2049,7 @@ def _definition_remove(worker: Any, model_tag: str, component: str, collection: 
     container = _definition_list(worker, model_tag, component, collection)
     before = _definition_tags(container)
     if tag not in before:
-        raise ExecutionContractError("NODE_NOT_FOUND", f"{display} {tag!r} does not exist")
+        raise node_not_found(f"{display} {tag!r} does not exist")
     node = _call(container, "get", tag)
     type_readback = _node_kind(node)
     _call(container, "remove", tag)
@@ -2224,8 +2225,9 @@ def definition_coordinate_manage(worker: Any, model_tag: str, arguments: Mapping
         comp = _require_component(worker, model_tag, component)
         geom_list = call_probe(comp, "geom")
         if geom_list["ok"] and geometry not in tag_list(geom_list["value"]):
-            raise ExecutionContractError(
-                "NODE_NOT_FOUND", f"geometry {geometry!r} does not exist in component {component!r}"
+            raise node_not_found(
+                f"geometry {geometry!r} does not exist in component {component!r}; "
+                f"the engine reports {tag_list(geom_list['value'])}",
             )
         created = _definition_create(
             worker, model_tag, component, "coordSystem", tag, COORDINATE_SYSTEM_TYPE_IDS, type_id,

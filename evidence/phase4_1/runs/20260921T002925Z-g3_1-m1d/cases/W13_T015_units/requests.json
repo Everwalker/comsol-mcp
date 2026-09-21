@@ -1,0 +1,522 @@
+{
+  "case_id": "W13_T015_units",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T002925Z-g3_1-m1dphase4-describe-physics-create-10",
+          "request_id": "phase4-20260921T002925Z-g3_1-m1dphase4-describe-physics-create-10"
+        },
+        "operation_id": "physics.create"
+      },
+      "elapsed_s": 0.002823124988935888,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T002925Z-g3_1-m1dphase4-describe-physics-feature_create-11",
+          "request_id": "phase4-20260921T002925Z-g3_1-m1dphase4-describe-physics-feature_create-11"
+        },
+        "operation_id": "physics.feature_create"
+      },
+      "elapsed_s": 0.0022708330070599914,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T002925Z-g3_1-m1dphase4-describe-physics-feature_update-12",
+          "request_id": "phase4-20260921T002925Z-g3_1-m1dphase4-describe-physics-feature_update-12"
+        },
+        "operation_id": "physics.feature_update"
+      },
+      "elapsed_s": 0.001919790985994041,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T002925Z-g3_1-m1dphase4-describe-physics-validate-13",
+          "request_id": "phase4-20260921T002925Z-g3_1-m1dphase4-describe-physics-validate-13"
+        },
+        "operation_id": "physics.validate"
+      },
+      "elapsed_s": 0.0019511660211719573,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "action": "list",
+          "expected_revision": 6,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp7",
+            "schema_version": 1,
+            "server_instance_id": "3010232e618371a630660c74ebc835d85c6091b579f113245032a8d0ed4debe7",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 6,
+          "idempotency_key": "phase4-20260921T002925Z-g3_1-m1dphase4-t015-component-list-14",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp7",
+            "schema_version": 1,
+            "server_instance_id": "3010232e618371a630660c74ebc835d85c6091b579f113245032a8d0ed4debe7",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T002925Z-g3_1-m1dt015-component-list",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "definition.component_manage"
+      },
+      "elapsed_s": 0.04543712502345443,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 5
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "component": "comp1",
+          "dimension": 3,
+          "expected_revision": 7,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp7",
+            "schema_version": 1,
+            "server_instance_id": "3010232e618371a630660c74ebc835d85c6091b579f113245032a8d0ed4debe7",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "geom1"
+        },
+        "execution": {
+          "expected_revision": 7,
+          "idempotency_key": "phase4-20260921T002925Z-g3_1-m1dphase4-t015-geometry-15",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp7",
+            "schema_version": 1,
+            "server_instance_id": "3010232e618371a630660c74ebc835d85c6091b579f113245032a8d0ed4debe7",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T002925Z-g3_1-m1dt015-geometry",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "geometry.sequence_create"
+      },
+      "elapsed_s": 0.09638408402679488,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 6
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 8,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp7",
+            "schema_version": 1,
+            "server_instance_id": "3010232e618371a630660c74ebc835d85c6091b579f113245032a8d0ed4debe7",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "parent": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "geom",
+                "tag": "geom1"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "properties": [
+            {
+              "name": "size",
+              "value": {
+                "data": [
+                  0.001,
+                  0.001,
+                  0.001
+                ],
+                "kind": "float64",
+                "shape": [
+                  3
+                ]
+              }
+            },
+            {
+              "name": "pos",
+              "value": {
+                "data": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "kind": "float64",
+                "shape": [
+                  3
+                ]
+              }
+            }
+          ],
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "t015_blk",
+          "type_id": "Block"
+        },
+        "execution": {
+          "expected_revision": 8,
+          "idempotency_key": "phase4-20260921T002925Z-g3_1-m1dphase4-t015-block-16",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp7",
+            "schema_version": 1,
+            "server_instance_id": "3010232e618371a630660c74ebc835d85c6091b579f113245032a8d0ed4debe7",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T002925Z-g3_1-m1dt015-block",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "geometry.feature_create"
+      },
+      "elapsed_s": 0.10393541597295552,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 7
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 9,
+          "geometry": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "geom",
+                "tag": "geom1"
+              }
+            ]
+          },
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp7",
+            "schema_version": 1,
+            "server_instance_id": "3010232e618371a630660c74ebc835d85c6091b579f113245032a8d0ed4debe7",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 9,
+          "idempotency_key": "phase4-20260921T002925Z-g3_1-m1dphase4-t015-build-17",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp7",
+            "schema_version": 1,
+            "server_instance_id": "3010232e618371a630660c74ebc835d85c6091b579f113245032a8d0ed4debe7",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T002925Z-g3_1-m1dt015-build",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "geometry.build"
+      },
+      "elapsed_s": 0.07817908300785348,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 8
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "component": "comp1",
+          "expected_revision": 10,
+          "geometry": "geom1",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp7",
+            "schema_version": 1,
+            "server_instance_id": "3010232e618371a630660c74ebc835d85c6091b579f113245032a8d0ed4debe7",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "ht",
+          "type_id": "HeatTransfer"
+        },
+        "execution": {
+          "expected_revision": 10,
+          "idempotency_key": "phase4-20260921T002925Z-g3_1-m1dsurface_source_W_per_m2",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp7",
+            "schema_version": 1,
+            "server_instance_id": "3010232e618371a630660c74ebc835d85c6091b579f113245032a8d0ed4debe7",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T002925Z-g3_1-m1dsurface_source_W_per_m2",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "physics.create"
+      },
+      "elapsed_s": 0.42181495897239074,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 9
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "entity_dimension": 3,
+          "expected_revision": 11,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp7",
+            "schema_version": 1,
+            "server_instance_id": "3010232e618371a630660c74ebc835d85c6091b579f113245032a8d0ed4debe7",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "parent": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "physics",
+                "tag": "ht"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "properties": [
+            {
+              "name": "Q0",
+              "value": {
+                "data": "1e5[W/m^3]",
+                "kind": "expression",
+                "shape": []
+              }
+            }
+          ],
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "hs1",
+          "type_id": "HeatSource"
+        },
+        "execution": {
+          "expected_revision": 11,
+          "idempotency_key": "phase4-20260921T002925Z-g3_1-m1dvolume_source_W_per_m3",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp7",
+            "schema_version": 1,
+            "server_instance_id": "3010232e618371a630660c74ebc835d85c6091b579f113245032a8d0ed4debe7",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T002925Z-g3_1-m1dvolume_source_W_per_m3",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "physics.feature_create"
+      },
+      "elapsed_s": 0.08683550002751872,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 10
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 12,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp7",
+            "schema_version": 1,
+            "server_instance_id": "3010232e618371a630660c74ebc835d85c6091b579f113245032a8d0ed4debe7",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "physics",
+                "tag": "ht"
+              },
+              {
+                "collection": "feature",
+                "tag": "hs1"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "properties": [
+            {
+              "name": "Q0",
+              "value": {
+                "data": "1e2[W/m^3]",
+                "kind": "expression",
+                "shape": [],
+                "unit": "W/m^3"
+              }
+            }
+          ],
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 12,
+          "idempotency_key": "phase4-20260921T002925Z-g3_1-m1dcoordinate_unit_m_and_mm",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp7",
+            "schema_version": 1,
+            "server_instance_id": "3010232e618371a630660c74ebc835d85c6091b579f113245032a8d0ed4debe7",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T002925Z-g3_1-m1dcoordinate_unit_m_and_mm",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "physics.feature_update"
+      },
+      "elapsed_s": 0.06276775000151247,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 11
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 13,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp7",
+            "schema_version": 1,
+            "server_instance_id": "3010232e618371a630660c74ebc835d85c6091b579f113245032a8d0ed4debe7",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "physics",
+                "tag": "ht"
+              },
+              {
+                "collection": "feature",
+                "tag": "hs1"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "properties": [
+            {
+              "name": "Q0",
+              "value": {
+                "data": "1e5[W/m^2]",
+                "kind": "expression",
+                "shape": []
+              }
+            }
+          ],
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 13,
+          "idempotency_key": "phase4-20260921T002925Z-g3_1-m1dwrong_unit_warns_or_fails",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp7",
+            "schema_version": 1,
+            "server_instance_id": "3010232e618371a630660c74ebc835d85c6091b579f113245032a8d0ed4debe7",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T002925Z-g3_1-m1dwrong_unit_warns_or_fails",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "physics.feature_update"
+      },
+      "elapsed_s": 0.04616016702493653,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 12
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "checks": [
+            {
+              "kind": "conservation_total_power"
+            }
+          ],
+          "expected_revision": 13,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp7",
+            "schema_version": 1,
+            "server_instance_id": "3010232e618371a630660c74ebc835d85c6091b579f113245032a8d0ed4debe7",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "scope": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "physics",
+                "tag": "ht"
+              }
+            ]
+          },
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 13,
+          "idempotency_key": "phase4-20260921T002925Z-g3_1-m1dno_implicit_thickness_or_absorptivity",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp7",
+            "schema_version": 1,
+            "server_instance_id": "3010232e618371a630660c74ebc835d85c6091b579f113245032a8d0ed4debe7",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T002925Z-g3_1-m1dno_implicit_thickness_or_absorptivity",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "physics.validate"
+      },
+      "elapsed_s": 0.003364665957633406,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 13
+    }
+  ]
+}

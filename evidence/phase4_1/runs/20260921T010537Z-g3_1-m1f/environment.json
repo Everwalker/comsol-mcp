@@ -1,0 +1,127 @@
+{
+  "case_order": [
+    "R01_LIVE",
+    "R03_LIVE",
+    "R04_LIVE",
+    "R_READBACK",
+    "W13_T006_variables",
+    "W13_T015_units",
+    "W13_T048_selection_drift",
+    "W13_T016_2D_data",
+    "W14_T009_geometry_edit",
+    "W14_T034_local_paths",
+    "W15_T007_selections",
+    "W15_T017_material",
+    "W15_T042_license",
+    "W16_T018_mesh",
+    "W16_T019_chainA_steady",
+    "W16_T019_chainB_transient",
+    "W16_T019_chainC_continue",
+    "W16_T020_solver",
+    "GUARD_T010",
+    "GUARD_T035",
+    "GUARD_T038",
+    "GUARD_T005",
+    "GUARD_T033"
+  ],
+  "comsol": {
+    "host": "127.0.0.1",
+    "isolation_receipt_present": true,
+    "jdk11": "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home",
+    "port": 56389,
+    "prefs": "$REPO/PRIVATE_REDACTED/g2-valve-runtime-20260920T235437288577Z/prefs",
+    "private_home": "$REPO/PRIVATE_REDACTED/g3_1-live-m1f/mcp-home",
+    "project_id": "comsol-mcp-phase4",
+    "root": "/Applications/COMSOL64/Multiphysics",
+    "runtime_id": "COMSOL-6.4",
+    "tool_profile": "full",
+    "trusted_code_requested": false
+  },
+  "comsol_environment_keys_present": [
+    "COMSOL_JAVA_HOME",
+    "COMSOL_MCP_ISOLATION_RECEIPT",
+    "COMSOL_PREFS_DIR",
+    "COMSOL_ROOT"
+  ],
+  "driver": "tools/phase4_run_mcp.py",
+  "generated_at": "2026-09-21T01:05:39.370816Z",
+  "git": {
+    "changed_paths": "comsol_mcp/_control_daemon.py\ncomsol_mcp/_execution_contract.py\ncomsol_mcp/_execution_service.py\ncomsol_mcp/_g2_contract.py\ncomsol_mcp/_g2_engine.py\ncomsol_mcp/_g2_registry.py\ncomsol_mcp/_g3_common.py\ncomsol_mcp/_g3_results.py\ncomsol_mcp/_g3_runtime.py\ncomsol_mcp/_g3_w13.py\ncomsol_mcp/_g3_w14.py\ncomsol_mcp/_g3_w15.py\ncomsol_mcp/_g3_w16.py\ncomsol_mcp/_java_worker.py\ncomsol_mcp/_managed_backend.py\ncomsol_mcp/_model_ops.py\ncomsol_mcp/_tools_params.py\ncomsol_mcp/worker_java/PersistentComsolWorker.java\ntests/test_g3_chain_c_fixture.py\ntests/test_g3_phase4_reconcile_and_probes.py\ntests/test_g3_phase4_wire_replay.py\ntests/test_g3_results.py\ntests/test_g3_runtime.py\ntests/test_g3_w13.py\ntests/test_g3_w15.py\ntests/test_g3_w16.py\ntests/test_java_worker.py\ntests/test_phase2_legacy_control_flow.py\ntools/phase4_chain_c_fixture.py\ntools/phase4_run_mcp.py",
+    "head": "999174f3a62a6d5689ad4b86315adb6c89dbe56b",
+    "status": "M comsol_mcp/_control_daemon.py\n M comsol_mcp/_execution_contract.py\n M comsol_mcp/_execution_service.py\n M comsol_mcp/_g2_contract.py\n M comsol_mcp/_g2_engine.py\n M comsol_mcp/_g2_registry.py\n M comsol_mcp/_g3_common.py\n M comsol_mcp/_g3_results.py\n M comsol_mcp/_g3_runtime.py\n M comsol_mcp/_g3_w13.py\n M comsol_mcp/_g3_w14.py\n M comsol_mcp/_g3_w15.py\n M comsol_mcp/_g3_w16.py\n M comsol_mcp/_java_worker.py\n M comsol_mcp/_managed_backend.py\n M comsol_mcp/_model_ops.py\n M comsol_mcp/_tools_params.py\n M comsol_mcp/worker_java/PersistentComsolWorker.java\n M tests/test_g3_chain_c_fixture.py\n M tests/test_g3_phase4_reconcile_and_probes.py\n M tests/test_g3_phase4_wire_replay.py\n M tests/test_g3_results.py\n M tests/test_g3_runtime.py\n M tests/test_g3_w13.py\n M tests/test_g3_w15.py\n M tests/test_g3_w16.py\n M tests/test_java_worker.py\n M tests/test_phase2_legacy_control_flow.py\n M tools/phase4_chain_c_fixture.py\n M tools/phase4_run_mcp.py\n?? comsol_mcp/_domain_outcome.py\n?? comsol_mcp/_g3_units.py\n?? docs/comsol_mcp_design_v1/G3_1_EXECUTION_PLAN.md\n?? docs/comsol_mcp_design_v1/G3_1_ROOT_CAUSES.md\n?? docs/comsol_mcp_design_v1/NEXT_GOAL_MAC_G3_1.md\n?? evidence/phase3/mac_owned_runtime/g2-valve-runtime-20260920T225128833460Z.json\n?? evidence/phase3/mac_owned_runtime/g2-valve-runtime-20260920T225450573368Z.json\n?? evidence/phase3/mac_owned_runtime/g2-valve-runtime-20260920T235406278682Z.json\n?? evidence/phase3/mac_owned_runtime/g2-valve-runtime-20260920T235437288577Z.json\n?? evidence/phase4/_driver_offline_check/20260920T115647Z/credentials_COMSOL_6.4.md\n?? evidence/phase4/_driver_offline_check/20260920T120336Z/credentials_COMSOL_6.4.md\n?? evidence/phase4/_driver_offline_check/20260920T120431Z/credentials_COMSOL_6.4.md\n?? evidence/phase4/_driver_offline_check/20260920T120500Z/credentials_COMSOL_6.4.md\n?? evidence/phase4/_driver_offline_check/20260920T120618Z/credentials_COMSOL_6.4.md\n?? evidence/phase4/_driver_offline_check/20260920T120634Z/credentials_COMSOL_6.4.md\n?? evidence/phase4/_driver_offline_check/20260920T130323Z/credentials_COMSOL_6.4.md\n?? evidence/phase4/_guards/p4-final/credentials_COMSOL_6.4.md\n?? evidence/phase4/_guards/p4-offline-1/credentials_COMSOL_6.4.md\n?? evidence/phase4/_guards/p4-offline-2/credentials_COMSOL_6.4.md\n?? evidence/phase4/_guards/p4-offline-all/credentials_COMSOL_6.4.md\n?? evidence/phase4/_guards/p4-offline-gatefix/credentials_COMSOL_6.4.md\n?? evidence/phase4/_guards/p4_replay6b/credentials_COMSOL_6.4.md\n?? evidence/phase4/_guards/phase4-precheck/credentials_COMSOL_6.4.md\n?? evidence/phase4/runs/20260920T130620Z-g3-live/driver/credentials_COMSOL_6.4.md\n?? evidence/phase4/runs/20260920T130620Z-g3-live/driver2/credentials_COMSOL_6.4.md\n?? evidence/phase4/runs/20260920T130620Z-g3-live/driver3/credentials_COMSOL_6.4.md\n?? evidence/phase4/runs/20260920T130620Z-g3-live/driver4/credentials_COMSOL_6.4.md\n?? evidence/phase4/runs/20260920T130620Z-g3-live/driver5/\n?? evidence/phase4/runs/20260920T130620Z-g3-live/driver5b/\n?? evidence/phase4/runs/20260920T130620Z-g3-live/driver5c/\n?? evidence/phase4_1/\n?? tests/test_g3_c05_license_marshalling.py\n?? tests/test_g3_domain_outcome.py\n?? tests/test_g3_phase4_eu_refusal.py\n?? tests/test_g3_phase4_isolation_and_causes.py\n?? tests/test_g3_phase4_m1_fixes.py\n?? tests/test_g3_phase4_old_run_replay.py\n?? tests/test_g3_phase4_policy_readback.py\n?? tests/test_g3_phase4_request_chain.py\n?? tests/test_m1_product_repairs.py\n?? tools/java/Phase4ChainCResultNodes.java\n?? tools/java/Phase4MissingDependency.java"
+  },
+  "mode": "live",
+  "python": "$HOME/Documents/Codex/2026-09-05/https-github-com-wjc9011-comsol-multiphysics/comsol-mcp-server/.venv/bin/python",
+  "run_dir": "$REPO/evidence/phase4_1/runs/20260921T010537Z-g3_1-m1f",
+  "selected_cases": [
+    "W13_T006_variables",
+    "W13_T015_units",
+    "R04_LIVE",
+    "GUARD_T010",
+    "GUARD_T005",
+    "GUARD_T033"
+  ],
+  "server_command": "$HOME/Documents/Codex/2026-09-05/https-github-com-wjc9011-comsol-multiphysics/comsol-mcp-server/.venv/bin/python -m comsol_mcp.mcp_server",
+  "slice": {
+    "live": true,
+    "note": "a slice is a documented run plan, not a weakened acceptance: every selected case still records its own subcases at their declared evidence level, and a stage subset never turns an unselected case into a pass",
+    "only": [],
+    "selected": [
+      "W13_T006_variables",
+      "W13_T015_units",
+      "R04_LIVE",
+      "GUARD_T010",
+      "GUARD_T005",
+      "GUARD_T033"
+    ],
+    "stage": "M1",
+    "stages": {
+      "M0": [
+        "R01_LIVE",
+        "R03_LIVE",
+        "R_READBACK",
+        "W13_T048_selection_drift",
+        "W13_T016_2D_data",
+        "W14_T009_geometry_edit",
+        "W14_T034_local_paths",
+        "W15_T007_selections",
+        "W15_T017_material",
+        "W15_T042_license",
+        "W16_T018_mesh",
+        "W16_T019_chainC_continue",
+        "W16_T020_solver",
+        "GUARD_T035",
+        "GUARD_T038"
+      ],
+      "M1": [
+        "W13_T006_variables",
+        "W13_T015_units",
+        "R04_LIVE",
+        "GUARD_T010",
+        "GUARD_T005",
+        "GUARD_T033"
+      ],
+      "M2": [
+        "W16_T019_chainA_steady",
+        "W16_T019_chainB_transient"
+      ],
+      "M3": [
+        "R01_LIVE",
+        "R03_LIVE",
+        "R_READBACK",
+        "W13_T048_selection_drift",
+        "W13_T016_2D_data",
+        "W14_T009_geometry_edit",
+        "W14_T034_local_paths",
+        "W15_T007_selections",
+        "W15_T017_material",
+        "W15_T042_license",
+        "W16_T018_mesh",
+        "W16_T019_chainC_continue",
+        "W16_T020_solver",
+        "GUARD_T035",
+        "GUARD_T038"
+      ]
+    }
+  }
+}

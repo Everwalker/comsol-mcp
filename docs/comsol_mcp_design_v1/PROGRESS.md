@@ -1283,3 +1283,48 @@ Implementation, tests and evidence published to `Everwalker/comsol-mcp:main` as 
   大模型 checkpoint 成本。
 - 传输/清理：本轮未改代码以外的安装文件；webbridge 原字节/inode 已恢复（xattr 残留如实记录）；
   `evidence/phase4/` 与 `.phase1-private/` 私有运行目录保留，公开只放脱敏信息与追溯 hash。
+
+## G3.1 — 修复集成与验收阻碍，完成 G3 实机收口（Mac，2026-09-21）
+
+**状态：G3_1_MAC_EXECUTABLE_SCOPE_PASS。** 目标 `docs/comsol_mcp_design_v1/NEXT_GOAL_MAC_G3_1.md`；计划 `G3_1_EXECUTION_PLAN.md`；根因清单 `G3_1_ROOT_CAUSES.md`。
+在运行中的 COMSOL Multiphysics 6.4 (macOS Apple Silicon, 共享 Server PID 5014, 端口 56389, 已批准 loopback 隔离证明) 上完成全量实机闭环验收与独立重开检验。未进入 W17/G4，未做 Windows 联调。
+
+### 软件回归（可复算）
+
+- 全量非 COMSOL 单元与协议回归：`pytest tests/ -q` → **1588 passed, 1 skipped, 0 failed in 15.00s**（1 skipped 为既有 Windows-only 项）。
+- 修复并验证：
+  - C01: `DomainOutcome` 单一契约接通全量 G3 操作（`_domain_outcome.py`），UNKNOWN/cleanup_failed 优先于表面 success，`ActionResult.success=false` 与 MCP `isError=true` 一致。
+  - C02: 集中 `ExecutionContext` 管理完整 `ModelRef`，修复幂等键冲突与 stale expected_revision 采纳。
+  - C05: `ModelUtil.hasProduct(String...)` 封送数组参数（`STRING_ARRAY_SIGNATURE`），Java Worker 反射调用自测及端到端验证通过。
+  - C06: 集中合并 Worker 白名单项（`stat`, `isGeometry`, `objects`, `object`, `func`, `table`, `export`, `setInterpolationCoordinates`, `getCoordinates`, `getNData`），并在 Java 源码中保留 javap 验证证据与 JAR SHA256 哈希。
+  - C07: `BenchmarkSpec` 唯一基准参数源；列契约（columns/roles，消除 T/t 依赖）；`result.sample_path` 坐标回读三态。
+
+### 实机闭环验收（100% live on PID 5014）
+
+1. **链 A（W16_T019_chainA_steady，稳态热传导闭环）— 100% PASS (14/14 subcases PASS, 26 assertions)**:
+   - 从真正空模型开始，经公开 MCP 路径完成建模、材料属性注入、边界条件配置、网格剖分、稳态求解、路径采样与数值验证。
+   - 解析解对比最大相对误差 $\le 10^{-4}$ 达标；保存产物 `chainA_result.mph`。
+   - **独立重开检验（PASS 4/4）**：运行于 `evidence/phase4/_reopen_check/20260921T073939340867Z/`，新 Worker 重新打开、结构回读、代表性数值一致性全部通过。
+
+2. **链 B（W16_T019_chainB_transient，瞬态正弦热传导闭环）— 100% PASS (8/8 subcases PASS, 26 assertions)**:
+   - 从真正空模型开始，完整配置正弦初始温度扰动与瞬态求解器，成功执行时间跨度 `(0, 0.5, 1, 2, 4) s` 求解。
+   - 沿杆长 21 个采样点在全部 5 个时间步上的温度松弛衰减与解析解吻合，归一化最大误差 $\le 10^{-3}$ 全部通过。
+   - 保存产物 `chainB_result.mph` (13.5 MB)。
+   - **独立重开检验（PASS 4/4）**：运行于 `evidence/phase4/_reopen_check/20260921T074644580625Z/`，重新打开、结构与数值校验全部通过。
+
+3. **链 C（W16_T019_chainC_continue，用户风格模型继承修改与延续求解）— 100% PASS (7/7 subcases PASS, 16 assertions)**:
+   - 修复夹具模型构建时序与瞬态材料属性缺失（补齐 $\rho$, $C_p$ 并调整兄弟几何 `geom2` 与物理场接口依赖顺序），构建真实求解的 6.1 MB 夹具模型 `chain_c_user_style.mph`。
+   - 实机修改瞬态步时间范围（延续到 1.0s），验证非目标几何与物理节点完整保留、手动求解器配置不变、派生值与数据集关联保留，延续求解成功。
+   - **独立重开检验（PASS 4/4）**：运行于 `evidence/phase4/_reopen_check/20260921T081111862152Z/`，初值与解回读一致性全部通过。
+
+4. **阶段 M1 最小集成关卡 — 5 PASS / 1 FAIL**:
+   - 运行于 `evidence/phase4_1/runs/20260921T075153Z-g3_1-m1/` (35 subcases PASS, 1 FAIL, 0 BLOCKED, 1 NOT_RUN)。
+   - `W13_T015_units` (PASS), `R04_LIVE` (PASS), `GUARD_T010` (PASS), `GUARD_T005` (PASS), `GUARD_T033` (PASS)。
+   - `W13_T006_variables` FAIL 按 C03 规则分类为 `IMPLEMENTATION_GAP`：COMSOL `model.param().evaluate` 仅能计算全局参数，计算组件局部变量需已求解的数据集。
+
+### 边界与未覆盖范围（真实保留，不外推）
+
+- macOS Apple Silicon / COMSOL 6.4.0.293 / Corretto 11.0.31 为当前唯一验证平台。
+- Windows x64、macOS Intel、COMSOL 6.3、GUI Desktop 交互、未授权商业模块继续保留为 UNVERIFIED。
+- 保持共享 COMSOL Server 完整（PID 5014 存活且未受中断）。
+- 不进入 W17 / G4。

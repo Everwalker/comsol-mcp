@@ -2532,3 +2532,308 @@ class TestCrossCutting:
             data = w15.OPERATIONS[operation_id](worker_for(model), "Model", payload)
             assert "success" not in data
             assert "ok" not in data or isinstance(data.get("ok"), bool)
+
+
+# ---------------------------------------------------------------------------
+# material.set_properties -- tensor storage adapter (six values are not read
+# back; the ordered nine-tuple is; and a PBE-style periodic report is not a
+# reason to skip the solver's convergence contract)
+# ---------------------------------------------------------------------------
+
+
+def rank1_def_group(**kwargs: Any) -> FPropertyGroup:
+    """A ``def`` group whose thermal conductivity is a rank-1 ``StringArray``.
+
+    The bound 6.4.0.293 build on this Mac publishes exactly that storage shape
+    (driver5c chain A: ``getValueType(thermalconductivity)`` answers a rank-1
+    array while the documented semantic shape is a 3x3 ``StringMatrix``), so the
+    adapter is exercised against the recorded live shape rather than only
+    against the documented one.
+    """
+    base = def_group(value_types={"thermalconductivity": "StringArray"},
+                     arrays={"thermalconductivity": ["44.5[W/(m*K)]"]})
+    return base
+
+
+class TestMaterialTensorAdapter:
+    ANISOTROPIC: list[list[str]] = [
+        ["1[W/(m*K)]", "0.5[W/(m*K)]", "0"],
+        ["0.5[W/(m*K)]", "2[W/(m*K)]", "0"],
+        ["0", "0", "3[W/(m*K)]"],
+    ]
+
+    def _write(self, group: FPropertyGroup, value: Any, *, name: str = "thermalconductivity") -> dict[str, Any]:
+        component = FComponent(materials={"mat1": material_node(groups={"def": group})}, physics={})
+        model = build_model(component=component)
+        self.model = model
+        self.group = group
+        return w15.material_set_properties(worker_for(model), "Model", {
+            "path": MATERIAL_PATH, "group": "def", "properties": {name: value},
+        })
+
+    @staticmethod
+    def _set_data(group: FPropertyGroup, name: str = "thermalconductivity") -> Any:
+        """The *data* the worker hands the setter (the wire envelope is unwrapped)."""
+        sets = [args for method, args in group.calls if method == "set" and args and args[0] == name]
+        assert len(sets) == 1, group.calls
+        return unwrap_typed(sets[0][1])
+
+    def test_rank1_isotropic_tensor_is_stored_in_the_documented_canonical_form(self):
+        """A nine-entry isotropic tensor is stored as the documented one-entry form.
+
+        The pre-adapter code sent nine entries into a rank-1 property, which the
+        recorded live build refuses ("property expects array rank 1, received
+        2"), or -- when it is accepted -- reads back collapsed to one entry.
+        The adapter emits the canonical form documented by the Application
+        Programming Guide instead of relying on that collapse.
+        """
+        group = rank1_def_group()
+        result = self._write(group, [["10[W/(m*K)]", "0", "0"],
+                                     ["0", "10[W/(m*K)]", "0"],
+                                     ["0", "0", "10[W/(m*K)]"]])
+        assert result["status"] == "APPLIED", result["failed"]
+        assert self._set_data(group) == ["10[W/(m*K)]"]
+        record = result["tensor_adapter"][0]
+        assert record["storage_form"] == "isotropic_vector"
+        assert record["storage_shape"] == [1]
+        assert record["semantic_shape"] == [3, 3]
+        assert record["symmetric"] is True
+        assert record["positive_definite"] is True
+        assert record["readback_check"]["equivalent"] is True
+        assert "Programming Reference 6.4 p.152" in record["sources"]["column_wise_readback"]
+        assert "Model XML-File Format" in record["sources"]["tensor_vector_convention"]
+        assert "a9c03166" in record["sources"]["tensor_vector_convention"]
+
+    def test_rank1_anisotropic_off_diagonals_survive_in_row_major_order(self):
+        """A non-zero off-diagonal tensor keeps every entry, in the written order.
+
+        The evidence for the index arrangement is the emitted list itself plus
+        the tensor-level readback check: the adapter must not transpose k12/k21
+        while converting, and it must not drop the off-diagonals.
+        """
+        group = rank1_def_group()
+        result = self._write(group, self.ANISOTROPIC)
+        assert result["status"] == "APPLIED", result["failed"]
+        assert self._set_data(group) == [entry for row in self.ANISOTROPIC for entry in row]
+        record = result["tensor_adapter"][0]
+        assert record["storage_form"] == "full_vector"
+        assert record["storage_shape"] == [9]
+        assert record["off_diagonals_present"] is True
+        assert record["semantic_data"] == self.ANISOTROPIC
+        readback = record["readback_check"]
+        assert readback["equivalent"] is True
+        assert readback["returned_form"] == "full_vector"
+        assert readback["off_diagonals_preserved"] is True
+        # A column-wise flat readback of the same symmetric tensor is the same
+        # nine-tuple, which is exactly why the adapter may use the flat form.
+        assert readback["returned_tensor"] == self.ANISOTROPIC
+
+    def test_rank1_diagonal_tensor_is_stored_as_the_documented_three_entry_form(self):
+        group = rank1_def_group()
+        result = self._write(group, [["0.2[W/(m*K)]", "0", "0"],
+                                     ["0", "44.5[W/(m*K)]", "0"],
+                                     ["0", "0", "44.5[W/(m*K)]"]])
+        assert result["status"] == "APPLIED", result["failed"]
+        assert self._set_data(group) == ["0.2[W/(m*K)]", "44.5[W/(m*K)]", "44.5[W/(m*K)]"]
+        assert result["tensor_adapter"][0]["storage_form"] == "diagonal_vector"
+
+    def test_rank1_refuses_a_non_symmetric_tensor_before_any_write(self):
+        """A non-symmetric tensor is refused instead of being written in a guessed order.
+
+        The flat readback order is documented as column-wise; writing a
+        non-symmetric tensor as a flat vector therefore cannot be verified
+        offline, and a silent transpose would be worse than a refusal.
+        """
+        group = rank1_def_group()
+        asymmetric = [["1[W/(m*K)]", "2[W/(m*K)]", "0"],
+                      ["0.1[W/(m*K)]", "2[W/(m*K)]", "0"],
+                      ["0", "0", "3[W/(m*K)]"]]
+        error = expect_error("PROPERTY_TENSOR_NOT_SYMMETRIC", w15.material_set_properties,
+                             worker_for(build_model(component=FComponent(
+                                 materials={"mat1": material_node(groups={"def": group})}, physics={}))),
+                             "Model", {"path": MATERIAL_PATH, "group": "def",
+                                       "properties": {"thermalconductivity": asymmetric}})
+        assert "column-wise" in str(error)
+        assert [args for method, args in group.calls if method == "set"] == []
+
+    def test_rank1_refuses_the_six_entry_compact_form(self):
+        """Length six is documented as symmetric but its order is not documented here."""
+        group = rank1_def_group()
+        error = expect_error("PROPERTY_TENSOR_ORDER_UNVERIFIED", w15.material_set_properties,
+                             worker_for(build_model(component=FComponent(
+                                 materials={"mat1": material_node(groups={"def": group})}, physics={}))),
+                             "Model", {"path": MATERIAL_PATH, "group": "def",
+                                       "properties": {"thermalconductivity": ["1", "0", "0", "2", "0", "3"]}})
+        assert "nine entries in row-major order" in str(error)
+        assert [args for method, args in group.calls if method == "set"] == []
+
+    def test_rank2_storage_keeps_the_semantic_matrix(self):
+        """The documented ``StringMatrix`` storage still receives the full matrix."""
+        group = def_group(value_types={"thermalconductivity": "StringMatrix"},
+                          matrices={"thermalconductivity": self.ANISOTROPIC})
+        result = self._write(group, self.ANISOTROPIC)
+        assert result["status"] == "APPLIED", result["failed"]
+        assert self._set_data(group) == self.ANISOTROPIC
+        record = result["tensor_adapter"][0]
+        assert record["storage_form"] == "matrix"
+        assert record["storage_shape"] == [3, 3]
+        assert record["storage_rank"] == 2
+        assert record["engine_rank_source"] == "getValueType metadata"
+
+    def test_a_lost_readback_is_reported_as_a_tensor_mismatch(self):
+        """A readback that cannot carry the requested tensor is never accepted.
+
+        The tensor check is evidence on top of the frozen G2 text readback: it
+        names *what* was lost (here the diagonal) instead of only "text differs".
+        """
+        group = rank1_def_group()
+        group.readback_overrides["thermalconductivity"] = ["1[W/(m*K)]"]
+        result = self._write(group, [["1[W/(m*K)]", "0", "0"],
+                                     ["0", "2[W/(m*K)]", "0"],
+                                     ["0", "0", "3[W/(m*K)]"]])
+        assert result["status"] == "EXECUTION_STATE_UNKNOWN"
+        record = result["tensor_adapter"][0]
+        assert record["readback_check"]["equivalent"] is False
+        assert record["readback_check"]["returned_form"] == "isotropic_vector"
+
+    def test_constraints_are_declared_without_inventing_a_physics_gate(self):
+        """Declared constraints are reported; the product layer adds no gate of its own.
+
+        §7 of the goal requires the constraints to be *declared* per the physics
+        model in use, and the adapter declares symmetry and positive
+        definiteness with the evaluated evidence.  A symmetric but
+        non-positive-definite tensor is still dispatched -- refusing it would be
+        a physics judgement this layer has no citation for -- and the record
+        says so.
+        """
+        group = rank1_def_group()
+        result = self._write(group, [["-1[W/(m*K)]", "0", "0"],
+                                     ["0", "1[W/(m*K)]", "0"],
+                                     ["0", "0", "1[W/(m*K)]"]])
+        assert result["status"] == "APPLIED", result["failed"]
+        record = result["tensor_adapter"][0]
+        assert record["declared_constraints"] == ["symmetric", "positive_definite"]
+        assert record["positive_definite"] is False
+        assert record["symmetric"] is True
+        assert record["definiteness_check"] == "Sylvester leading principal minors"
+        assert [args for method, args in group.calls if method == "set"]
+
+    def test_an_expression_typed_value_is_accepted_and_converted(self):
+        """The typed-value alias ``expression`` reaches the adapter's storage form.
+
+        ``validate_typed_value`` accepts ``expression`` where the engine
+        publishes ``string``; the adapter must keep that tolerance or a
+        previously valid caller payload would start failing.
+        """
+        group = rank1_def_group()
+        result = self._write(group, {"kind": "expression", "shape": [3, 3], "data": self.ANISOTROPIC})
+        assert result["status"] == "APPLIED", result["failed"]
+        assert self._set_data(group) == [entry for row in self.ANISOTROPIC for entry in row]
+        record = result["tensor_adapter"][0]
+        assert record["input_shape_declared"] == [3, 3]
+        assert record["input_form"] == "matrix"
+
+    def test_material_create_definition_path_reports_the_adapter_record(self):
+        group = rank1_def_group()
+        component = FComponent(
+            materials={"mat1": material_node()}, physics={},
+            material_factory=lambda tag, type_id: material_node(tag=tag, groups={"def": group}),
+        )
+        model = build_model(component=component)
+        result = w15.material_create(worker_for(model), "Model", {
+            "component": "comp1", "tag": "mat2", "type_id": "Common",
+            "definition": {"group": "def", "properties": {"thermalconductivity": self.ANISOTROPIC}},
+        })
+        assert result["status"] == "APPLIED", result["failed"]
+        applied = [row for row in result["applied"] if row["action"] == "set_properties"][0]
+        assert applied["tensor_adapter"][0]["storage_form"] == "full_vector"
+        assert self._set_data(group) == [entry for row in self.ANISOTROPIC for entry in row]
+
+
+# ---------------------------------------------------------------------------
+# Default-feature inventory (C06: ins1 / documented defaults are never guessed)
+# ---------------------------------------------------------------------------
+
+
+class TestDefaultFeatureInventory:
+    """``physics.inspect`` inventories documented defaults read-only.
+
+    LiveLink for MATLAB User Guide 6.4 p.124 documents the default features of
+    the Heat Transfer in Solids interface as solid1, init1, ins1, idi1, os1 and
+    cib1.  The product has to *report* which of them the node actually carries
+    instead of assuming ``ins1`` is there (or writable), and a caller that needs
+    a missing boundary condition has to create it rather than skip it.
+    """
+
+    DOCUMENTED = ("solid1", "init1", "ins1", "idi1", "os1", "cib1")
+
+    def _inspect(self, features: Mapping[str, FFeature]) -> dict[str, Any]:
+        interface = physics_node(tag="ht", type_id="HeatTransferInSolids", features=dict(features))
+        component = FComponent(materials={}, physics={"ht": interface})
+        model = build_model(component=component)
+        return w15.physics_inspect(worker_for(model), "Model", {"path": PHYSICS_PATH})
+
+    def test_documented_defaults_are_classified_from_the_readback(self):
+        features = {tag: FFeature(tag=tag, type_id="Solid" if tag == "solid1" else "Default")
+                    for tag in self.DOCUMENTED}
+        result = self._inspect(features)
+        inventory = result["default_feature_inventory"]
+        assert inventory["documented"] is True
+        assert inventory["observed_documented_defaults"] == list(self.DOCUMENTED)
+        assert inventory["missing_documented_defaults"] == []
+        assert inventory["observed_types"]["solid1"] == "Solid"
+        assert "LiveLink for MATLAB User Guide 6.4 p.124" in inventory["source"]
+        solid = [row for row in inventory["documented_defaults"] if row["tag"] == "solid1"][0]
+        assert solid["reuse"] == "addressed_by_observed_tag"
+
+    def test_a_missing_ins1_is_reported_and_never_assumed(self):
+        result = self._inspect({"solid1": FFeature(tag="solid1", type_id="Solid")})
+        inventory = result["default_feature_inventory"]
+        assert inventory["missing_documented_defaults"] == ["init1", "ins1", "idi1", "os1", "cib1"]
+        absent = [row for row in inventory["documented_defaults"] if row["tag"] == "ins1"][0]
+        assert absent["observed"] is False
+        assert absent["reuse"] == "absent_create_explicitly_if_needed"
+        assert "never lets a missing boundary condition be skipped silently" in inventory["reuse_policy"]
+        # The interface was only read: no feature was created while inspecting.
+        interface_features = result["children"]
+        assert interface_features
+
+    def test_solid1_role_is_verified_against_the_documented_type(self):
+        result = self._inspect({"solid1": FFeature(tag="solid1", type_id="HeatFluxBoundary")})
+        row = [row for row in result["default_feature_inventory"]["observed_features"]
+               if row["tag"] == "solid1"][0]
+        assert row["expected_type_id"] == "Solid"
+        assert row["type_matches_documented_role"] is False
+        assert row["classification"] == "documented_default"
+
+    def test_an_undocumented_feature_is_not_called_a_default(self):
+        result = self._inspect({"solid1": FFeature(tag="solid1", type_id="Solid"),
+                                "hf1": FFeature(tag="hf1", type_id="HeatFluxBoundary")})
+        inventory = result["default_feature_inventory"]
+        row = [row for row in inventory["observed_features"] if row["tag"] == "hf1"][0]
+        assert row["classification"] == "undocumented"
+        assert "hf1" not in inventory["observed_documented_defaults"]
+
+    def test_an_unknown_interface_type_reports_no_documented_defaults(self):
+        interface = physics_node(tag="ht", type_id="SomeUnknownPhysics", features={})
+        component = FComponent(materials={}, physics={"ht": interface})
+        model = build_model(component=component)
+        result = w15.physics_inspect(worker_for(model), "Model", {"path": PHYSICS_PATH})
+        inventory = result["default_feature_inventory"]
+        assert inventory["documented"] is False
+        assert inventory["documented_defaults"] == []
+        assert inventory["missing_documented_defaults"] == []
+        assert inventory["reuse_policy"]
+
+    def test_the_inventory_does_not_write(self):
+        features = {tag: FFeature(tag=tag, type_id="Default") for tag in self.DOCUMENTED}
+        interface = physics_node(tag="ht", type_id="HeatTransferInSolids", features=features)
+        component = FComponent(materials={}, physics={"ht": interface})
+        model = build_model(component=component)
+        before = set(features)
+        w15.physics_inspect(worker_for(model), "Model", {"path": PHYSICS_PATH})
+        for tag, node in features.items():
+            writes = [call for call in node.calls if call[0] in {"set", "setIndex"}]
+            assert writes == [], (tag, writes)
+        assert set(features) == before
+        assert [call for call in interface.feature_list.calls if call[0] == "create"] == []

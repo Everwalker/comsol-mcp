@@ -157,7 +157,7 @@ class FakeWorker:
         if method == "getComsolVersion":
             return {"ok": True, "status": "SUCCEEDED", "result": self.version}
         if method == "hasProduct":
-            return {"ok": True, "status": "SUCCEEDED", "result": self._has_product(args[0] if args else "")}
+            return {"ok": True, "status": "SUCCEEDED", "result": self._has_product(_product_argument(args))}
         return {"ok": True, "status": "SUCCEEDED", "result": None}
 
     def _has_product(self, product: str) -> Any:
@@ -185,6 +185,24 @@ class FakeWorker:
 
 def model_for(*, used_products: Any = ("ACDC",), error: str | None = None) -> FakeModel:
     return FakeModel(used_products=used_products, error=error)
+
+
+def _product_argument(args: list[Any]) -> Any:
+    """Read the product from the ``String[]`` argument the product sends (C05).
+
+    The control plane packs ``hasProduct`` as one declared ``java.lang.String[]``
+    value, so a fake Worker reads the array contents - and refuses (like the real
+    marshaller would) anything that is not a declared string array.
+    """
+    if not args:
+        return ""
+    value = args[0]
+    if isinstance(value, Mapping) and value.get("java_signature") == runtime.STRING_ARRAY_SIGNATURE:
+        data = value.get("data")
+        if isinstance(data, list) and len(data) == 1:
+            return data[0]
+        return data
+    raise TypeError(f"hasProduct needs a declared String[] argument, got {type(value).__name__}")
 
 
 def worker_for(model: FakeModel | None = None, *, model_tag: str = "mod1", **kwargs: Any) -> FakeWorker:

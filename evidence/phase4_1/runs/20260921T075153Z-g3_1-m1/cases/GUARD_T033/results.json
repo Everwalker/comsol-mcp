@@ -1,0 +1,1999 @@
+{
+  "case_id": "GUARD_T033",
+  "results": [
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"additionalProperties\": false, \"properties\": {\"evaluation_policy\": {\"default\": \"ephemeral_mutation\", \"title\": \"Evaluation Policy\", \"type\": \"string\"}, \"expressions_json\": {\"default\": \"[]\", \"title\": \"Expressions Json\", \"type\": \"string\"}, \"max_result_size\": {\"default\": 0, \"title\": \"Max Result Size\", \"type\": \"integer\"}}, \"title\": \"evaluate_expressionsArguments\", \"type\": \"object\"}, \"domain\": \"legacy\", \"effect\": \"EVALUATE\", \"executable\": true, \"gate\": \"W01 compatibility mapping plus ordinary service gate\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"additionalProperties\": false, \"properties\": {\"evaluation_policy\": {\"default\": \"ephemeral_mutation\", \"title\": \"Evaluation Policy\", \"type\": \"string\"}, \"expressions_json\": {\"default\": \"[]\", \"title\": \"Expressions Json\", \"type\": \"string\"}, \"max_result_size\": {\"default\": 0, \"title\": \"Max Result Size\", \"type\": \"integer\"}}, \"title\": \"evaluate_expressionsArguments\", \"type\": \"object\"}, \"mcp_tool_name\": \"evaluate_expressions\", \"notes\": \"Hidden from a narrowed static publication profile only; callable through operation_call with this explicit mapping. Input schema is generated from the registered FastMCP function signature; unknown fields are rejected before dispatch.\", \"operation_id\": \"evaluate_expressions\", \"output_contract\": \"success/data/error/execution envelope\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"Managed compatibility route for the original MCP tool\", \"required_tests\": [\"legacy_fallback\", \"permission_gate\"], \"route\": \"legacy managed backend\", \"scope\": \"legacy managed service\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 1,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "evaluation_policy": {
+                "default": "ephemeral_mutation",
+                "title": "Evaluation Policy",
+                "type": "string"
+              },
+              "expressions_json": {
+                "default": "[]",
+                "title": "Expressions Json",
+                "type": "string"
+              },
+              "max_result_size": {
+                "default": 0,
+                "title": "Max Result Size",
+                "type": "integer"
+              }
+            },
+            "title": "evaluate_expressionsArguments",
+            "type": "object"
+          },
+          "domain": "legacy",
+          "effect": "EVALUATE",
+          "executable": true,
+          "gate": "W01 compatibility mapping plus ordinary service gate",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "evaluation_policy": {
+                "default": "ephemeral_mutation",
+                "title": "Evaluation Policy",
+                "type": "string"
+              },
+              "expressions_json": {
+                "default": "[]",
+                "title": "Expressions Json",
+                "type": "string"
+              },
+              "max_result_size": {
+                "default": 0,
+                "title": "Max Result Size",
+                "type": "integer"
+              }
+            },
+            "title": "evaluate_expressionsArguments",
+            "type": "object"
+          },
+          "mcp_tool_name": "evaluate_expressions",
+          "notes": "Hidden from a narrowed static publication profile only; callable through operation_call with this explicit mapping. Input schema is generated from the registered FastMCP function signature; unknown fields are rejected before dispatch.",
+          "operation_id": "evaluate_expressions",
+          "output_contract": "success/data/error/execution envelope",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "Managed compatibility route for the original MCP tool",
+          "required_tests": [
+            "legacy_fallback",
+            "permission_gate"
+          ],
+          "route": "legacy managed backend",
+          "scope": "legacy managed service",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-comsol-mcp-phase4-172\", \"job_id\": \"fc86dcf5-4a86-483d-8b74-39976e8b057f\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp45\", \"schema_version\": 1, \"server_instance_id\": \"740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"6ef1b11c-6c5c-4a60-bef2-bd9dfcc3926e\", \"request_hash\": \"985588144b0449af91b92be5925d339173a68da9181fe12f884e9a98d6958614\", \"request_id\": \"phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-comsol-mcp-phase4-172\", \"revision\": 0, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "model_inspect",
+      "sequence": 2,
+      "structuredContent": {
+        "data": {},
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-comsol-mcp-phase4-172",
+          "job_id": "fc86dcf5-4a86-483d-8b74-39976e8b057f",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp45",
+            "schema_version": 1,
+            "server_instance_id": "740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "6ef1b11c-6c5c-4a60-bef2-bd9dfcc3926e",
+          "request_hash": "985588144b0449af91b92be5925d339173a68da9181fe12f884e9a98d6958614",
+          "request_id": "phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-comsol-mcp-phase4-172",
+          "revision": 0,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"datetime\": \"2026-09-21 15:52:01\", \"execution_state_unknown\": false, \"log_path\": \"$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs/server.log\", \"operations_path\": \"$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs/operations.jsonl\", \"partial_change\": false, \"server\": {\"attached_to_existing_server\": true, \"comsol_root\": \"/Applications/COMSOL64/Multiphysics\", \"current_model_label\": \"GUARD_T033 (Phase4 G3 acceptance fixture) isolation model\", \"current_model_origin\": \"bound-request\", \"current_model_path\": \"\", \"datetime\": \"2026-09-21 15:52:01\", \"desktop_client_role\": \"visual-client\", \"desktop_should_connect\": {\"host\": \"127.0.0.1\", \"port\": 56389}, \"last_command\": \"evaluate_expressions\", \"last_error\": \"pure_read evaluation is unavailable: this backend requires temporary numerical nodes; use ephemeral_mutation or an isolated model copy.\", \"logs_dir\": \"$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs\", \"mcp_home\": \"$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home\", \"outputs_dir\": \"$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/outputs\", \"recommended_desktop_flow\": \"visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.\", \"server_endpoint\": \"127.0.0.1:56389\", \"server_host\": \"127.0.0.1\", \"server_port\": 56389, \"server_running\": false, \"server_started_by_mcp\": false, \"status\": \"ready\", \"timestamp\": 1789977121.0638232, \"version\": \"0.1.9\", \"workflow\": {\"current_main_model_path\": \"\", \"guard_level\": \"strict\", \"main_model_label\": \"\", \"main_model_path\": \"\", \"main_model_tag\": \"\", \"mcp_client_lifecycle\": \"persistent-required\", \"mode\": \"manual\", \"model_dimension\": 0, \"notes\": \"\", \"one_shot_client_allowed\": false, \"snapshot_dir\": \"\", \"snapshot_name_template\": \"{prefix}_{label}_{timestamp}.mph\", \"snapshot_prefix\": \"\", \"snapshot_save_mode\": \"copy\", \"updated_at\": \"2026-09-21 15:51:53\", \"visible_main_locked\": false, \"workflow_stage\": \"awaiting_manual_server\"}}, \"timestamp\": 1789977121.063818, \"tool\": \"evaluate_expressions\", \"verification_status\": \"NOT_APPLICABLE\", \"verified_outcome\": \"failed\"}, \"error\": \"pure_read evaluation is unavailable: this backend requires temporary numerical nodes; use ephemeral_mutation or an isolated model copy.\", \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-20260921T075153Z-g3_1-m1t033-pure\", \"job_id\": \"e3a92914-413f-4981-9965-ba52d0da1b87\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp45\", \"schema_version\": 1, \"server_instance_id\": \"740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"ab6ffd02-d9b9-4319-94a6-2104f56e06a4\", \"request_hash\": \"18d7e68102ac631cc6a8d51c39781d0cff369e16bb9ac27c55776b83e4f777f9\", \"request_id\": \"phase4-20260921T075153Z-g3_1-m1pure\", \"revision\": 0, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "pure_read evaluation is unavailable: this backend requires temporary numerical nodes; use ephemeral_mutation or an isolated model copy.",
+      "error_message": "pure_read evaluation is unavailable: this backend requires temporary numerical nodes; use ephemeral_mutation or an isolated model copy.",
+      "operation": "evaluate_expressions",
+      "sequence": 3,
+      "structuredContent": {
+        "data": {
+          "datetime": "2026-09-21 15:52:01",
+          "execution_state_unknown": false,
+          "log_path": "$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs/server.log",
+          "operations_path": "$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs/operations.jsonl",
+          "partial_change": false,
+          "server": {
+            "attached_to_existing_server": true,
+            "comsol_root": "/Applications/COMSOL64/Multiphysics",
+            "current_model_label": "GUARD_T033 (Phase4 G3 acceptance fixture) isolation model",
+            "current_model_origin": "bound-request",
+            "current_model_path": "",
+            "datetime": "2026-09-21 15:52:01",
+            "desktop_client_role": "visual-client",
+            "desktop_should_connect": {
+              "host": "127.0.0.1",
+              "port": 56389
+            },
+            "last_command": "evaluate_expressions",
+            "last_error": "pure_read evaluation is unavailable: this backend requires temporary numerical nodes; use ephemeral_mutation or an isolated model copy.",
+            "logs_dir": "$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs",
+            "mcp_home": "$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home",
+            "outputs_dir": "$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/outputs",
+            "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+            "server_endpoint": "127.0.0.1:56389",
+            "server_host": "127.0.0.1",
+            "server_port": 56389,
+            "server_running": false,
+            "server_started_by_mcp": false,
+            "status": "ready",
+            "timestamp": 1789977121.0638232,
+            "version": "0.1.9",
+            "workflow": {
+              "current_main_model_path": "",
+              "guard_level": "strict",
+              "main_model_label": "",
+              "main_model_path": "",
+              "main_model_tag": "",
+              "mcp_client_lifecycle": "persistent-required",
+              "mode": "manual",
+              "model_dimension": 0,
+              "notes": "",
+              "one_shot_client_allowed": false,
+              "snapshot_dir": "",
+              "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+              "snapshot_prefix": "",
+              "snapshot_save_mode": "copy",
+              "updated_at": "2026-09-21 15:51:53",
+              "visible_main_locked": false,
+              "workflow_stage": "awaiting_manual_server"
+            }
+          },
+          "timestamp": 1789977121.063818,
+          "tool": "evaluate_expressions",
+          "verification_status": "NOT_APPLICABLE",
+          "verified_outcome": "failed"
+        },
+        "error": "pure_read evaluation is unavailable: this backend requires temporary numerical nodes; use ephemeral_mutation or an isolated model copy.",
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-20260921T075153Z-g3_1-m1t033-pure",
+          "job_id": "e3a92914-413f-4981-9965-ba52d0da1b87",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp45",
+            "schema_version": 1,
+            "server_instance_id": "740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "ab6ffd02-d9b9-4319-94a6-2104f56e06a4",
+          "request_hash": "18d7e68102ac631cc6a8d51c39781d0cff369e16bb9ac27c55776b83e4f777f9",
+          "request_id": "phase4-20260921T075153Z-g3_1-m1pure",
+          "revision": 0,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-comsol-mcp-phase4-173\", \"job_id\": \"a5afca11-526f-4880-a9c8-a0e5a6e265d0\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp45\", \"schema_version\": 1, \"server_instance_id\": \"740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"9ea4edf9-12fa-434e-a18d-4b9a6018e80a\", \"request_hash\": \"985588144b0449af91b92be5925d339173a68da9181fe12f884e9a98d6958614\", \"request_id\": \"phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-comsol-mcp-phase4-173\", \"revision\": 0, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "model_inspect",
+      "sequence": 4,
+      "structuredContent": {
+        "data": {},
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-comsol-mcp-phase4-173",
+          "job_id": "a5afca11-526f-4880-a9c8-a0e5a6e265d0",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp45",
+            "schema_version": 1,
+            "server_instance_id": "740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "9ea4edf9-12fa-434e-a18d-4b9a6018e80a",
+          "request_hash": "985588144b0449af91b92be5925d339173a68da9181fe12f884e9a98d6958614",
+          "request_id": "phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-comsol-mcp-phase4-173",
+          "revision": 0,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"binding\": {\"allowed_values\": [\"none\"], \"allowed_values_error\": null, \"allowed_values_include_none\": true, \"bind_error\": null, \"bound\": \"none\", \"bound_verified\": true, \"data_citation\": [{\"chunk_id\": 17235, \"claim\": \"an evaluation feature's ``data`` property takes ``none | parent | dataset name`` and defaults to *First compatible dataset*; ``none`` is the documented value for an evaluation that refers to no dataset\", \"doc_id\": \"4454\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.051.html\", \"sha256\": \"17429de155e56bb06014875e959117db215db23bb12baf7bb95daffa7e77d445\", \"title\": \"COMSOL 6.4 - EvalGlobal\"}, {\"chunk_id\": 17261, \"claim\": \"the API-only ``Global`` numerical feature publishes the same ``data`` values (``none | parent | dataset name``, default *First compatible dataset*)\", \"doc_id\": \"4469\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.066.html\", \"sha256\": \"4365366d59e13e3d52a13995a3c219065673d88d4ccf5150413e400331926d77\", \"title\": \"COMSOL 6.4 - Global (Numerical)\"}, {\"chunk_id\": 17232, \"claim\": \"the ``Eval`` feature publishes the same ``none`` value for ``data`` (``none | dataset name``)\", \"doc_id\": \"4452\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.049.html\", \"sha256\": \"0b8b0aa399980893752fbe8f8b7d5085f81204f037f9cdcab9ac4f12da6db3ec\", \"title\": \"COMSOL 6.4 - Eval\"}, {\"chunk_id\": 16690, \"claim\": \"``String[] getAllowedPropertyValues(String name)`` returns the allowed values of a named property when it is a finite set, so the engine itself can be asked which ``data`` values are legal on this build\", \"doc_id\": \"4080\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_general.47.09.html\", \"sha256\": \"36e103782ccbc0c0306644743cbd480542379dd20bd36220db5db78f2133c151\", \"title\": \"COMSOL 6.4 - Methods Associated to Set, SetIndex, and the Various Get Methods\"}, {\"claim\": \"a shipped application example selects ``None`` in a results node's *Dataset* list - used there to evaluate expressions that the selected dataset cannot resolve\", \"doc_id\": \"17625\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.models.mbd.double_pendulum/models.mbd.double_pendulum.pdf\", \"sha256\": \"01bbc440e99422fc85ad47e79cfe119f0ab620d8e0bf74035f0730b591ffbd25\", \"title\": \"COMSOL 6.4 model example - Double-Pendulum Dynamics\"}], \"data_mode\": \"none\", \"data_property\": {\"allowed_values\": [\"none\"], \"allowed_values_error\": null, \"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"data\", \"shape_rank\": 0, \"type_id\": \"EvalGlobal\", \"value_type\": \"String\"}, \"dataset\": null, \"dataset_type\": null, \"policy\": \"the evaluation feature's documented ``data`` property: a named dataset is set and read back when the model publishes one; when the engine's own readback proves that the model publishes no dataset, the documented value ``none`` is set and read back instead of leaving the *First compatible dataset* default in place\", \"reason\": \"the engine lists no dataset at all for this model; a results-node evaluation has no data to read\", \"solution\": null}, \"cleanup\": {\"cleanup_failed\": false, \"created\": true, \"created_count\": 1, \"nodes\": 1, \"note\": \"every tag is a random uuid4 hex owned by this request; cleanup removes that tag only and the removal is verified against the engine's own numerical().tags() readback\", \"owner_operations\": [\"evaluate_expressions\"], \"policy\": \"ephemeral_mutation\", \"removed\": true, \"removed_count\": 1, \"unremoved_tags\": [], \"verified_removed\": true, \"verified_removed_count\": 1}, \"count\": 1, \"dataset\": null, \"dataset_inventory\": {\"datasets\": [], \"readback\": {\"dataset_tags\": [], \"solution_tags\": []}, \"reason\": \"the engine lists no dataset at all for this model; a results-node evaluation has no data to read\", \"solutions\": [], \"source\": \"model.result().dataset().tags() + dataset getType()/getString('solution'); model.sol().tags()\"}, \"datetime\": \"2026-09-21 15:52:01\", \"ephemeral_mutation\": true, \"evaluation_policy\": \"ephemeral_mutation\", \"label\": \"GUARD_T033 (Phase4 G3 acceptance fixture) isolation model\", \"log_path\": \"$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs/server.log\", \"max_result_size_ignored\": null, \"operations_path\": \"$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs/operations.jsonl\", \"results\": [{\"data_mode\": \"none\", \"dataset\": null, \"diagnosis\": {\"attempts\": [{\"data\": \"none\", \"ok\": true, \"route\": \"results:EvalGlobal\", \"value_shape\": [0]}, {\"dataset\": null, \"engine_call\": \"model.param().evaluate(String)\", \"error\": null, \"evaluated_expression\": \"3*3\", \"route\": \"engine:model.param().evaluate\", \"solution\": null}], \"binding\": {\"allowed_values\": [\"none\"], \"allowed_values_error\": null, \"allowed_values_include_none\": true, \"bind_error\": null, \"bound\": \"none\", \"bound_verified\": true, \"data_citation\": [{\"chunk_id\": 17235, \"claim\": \"an evaluation feature's ``data`` property takes ``none | parent | dataset name`` and defaults to *First compatible dataset*; ``none`` is the documented value for an evaluation that refers to no dataset\", \"doc_id\": \"4454\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.051.html\", \"sha256\": \"17429de155e56bb06014875e959117db215db23bb12baf7bb95daffa7e77d445\", \"title\": \"COMSOL 6.4 - EvalGlobal\"}, {\"chunk_id\": 17261, \"claim\": \"the API-only ``Global`` numerical feature publishes the same ``data`` values (``none | parent | dataset name``, default *First compatible dataset*)\", \"doc_id\": \"4469\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.066.html\", \"sha256\": \"4365366d59e13e3d52a13995a3c219065673d88d4ccf5150413e400331926d77\", \"title\": \"COMSOL 6.4 - Global (Numerical)\"}, {\"chunk_id\": 17232, \"claim\": \"the ``Eval`` feature publishes the same ``none`` value for ``data`` (``none | dataset name``)\", \"doc_id\": \"4452\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.049.html\", \"sha256\": \"0b8b0aa399980893752fbe8f8b7d5085f81204f037f9cdcab9ac4f12da6db3ec\", \"title\": \"COMSOL 6.4 - Eval\"}, {\"chunk_id\": 16690, \"claim\": \"``String[] getAllowedPropertyValues(String name)`` returns the allowed values of a named property when it is a finite set, so the engine itself can be asked which ``data`` values are legal on this build\", \"doc_id\": \"4080\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_general.47.09.html\", \"sha256\": \"36e103782ccbc0c0306644743cbd480542379dd20bd36220db5db78f2133c151\", \"title\": \"COMSOL 6.4 - Methods Associated to Set, SetIndex, and the Various Get Methods\"}, {\"claim\": \"a shipped application example selects ``None`` in a results node's *Dataset* list - used there to evaluate expressions that the selected dataset cannot resolve\", \"doc_id\": \"17625\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.models.mbd.double_pendulum/models.mbd.double_pendulum.pdf\", \"sha256\": \"01bbc440e99422fc85ad47e79cfe119f0ab620d8e0bf74035f0730b591ffbd25\", \"title\": \"COMSOL 6.4 model example - Double-Pendulum Dynamics\"}], \"data_mode\": \"none\", \"data_property\": {\"allowed_values\": [\"none\"], \"allowed_values_error\": null, \"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"data\", \"shape_rank\": 0, \"type_id\": \"EvalGlobal\", \"value_type\": \"String\"}, \"dataset\": null, \"dataset_type\": null, \"policy\": \"the evaluation feature's documented ``data`` property: a named dataset is set and read back when the model publishes one; when the engine's own readback proves that the model publishes no dataset, the documented value ``none`` is set and read back instead of leaving the *First compatible dataset* default in place\", \"reason\": \"the engine lists no dataset at all for this model; a results-node evaluation has no data to read\", \"solution\": null}, \"data_mode\": \"none\", \"dataset\": null, \"dataset_inventory\": {\"datasets\": [], \"readback\": {\"dataset_tags\": [], \"solution_tags\": []}, \"reason\": \"the engine lists no dataset at all for this model; a results-node evaluation has no data to read\", \"solutions\": [], \"source\": \"model.result().dataset().tags() + dataset getType()/getString('solution'); model.sol().tags()\"}, \"engine_calls\": [\"result().numerical(<owned tag>).set('expr', ...)\", \"result().numerical(<owned tag>).set('data', 'none')\", \"result().numerical(<owned tag>).run()\", \"result().numerical(<owned tag>).getReal()\"], \"evaluated_expression\": \"3*3\", \"expression_evaluator\": {\"attempts\": [{\"call\": \"evaluate\", \"expression\": \"3*3\", \"ok\": true, \"value\": 9.0}], \"dataset\": null, \"engine_call\": \"model.param().evaluate(String)\", \"evaluated_expression\": \"3*3\", \"reason\": \"the results-node route published no value; the model expression evaluator is the engine's own documented evaluator for the expressions that need no solution data, and it resolves the *global* model parameters (doc 4121)\", \"route\": \"engine:model.param().evaluate\", \"scope\": {\"citations\": [{\"chunk_id\": 9676, \"claim\": \"``model.param()`` is a collection of *global* model parameters and ``model.param().evaluate(<param>)`` evaluates the value of the parameter; a component variable is not a parameter of that collection\", \"doc_id\": \"4121\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_general.47.50.html\", \"sha256\": \"6af88c1366f47cb021e76d1dad4ae72ff407adfac74b9e91180912060f57e99a\", \"title\": \"COMSOL 6.4 - model.param() and model.result().param()\"}, {\"chunk_id\": 16481, \"claim\": \"the Application Programming Guide's *Accessing a Global Parameter* section evaluates a global parameter with ``model.param().evaluate(\\\"L\\\")``; variables are a separate collection, accessed through ``model.variable(<tag>)``\", \"doc_id\": \"3961\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/application_programming_guide.15.21.html\", \"sha256\": \"b1c830ce7d4511c3a28a19a1ae041e4e737242fbc414f9bd6a062421b9412b11\", \"title\": \"COMSOL 6.4 - Parameters and Variables\"}], \"evaluator\": \"model.param() - the collection of *global* model parameters; model.param().evaluate(<param>) evaluates the value of the parameter\", \"expression_is_global_parameter\": false, \"global_parameters\": [], \"global_parameters_error\": null, \"note\": \"a component variable is not a parameter of this collection: the documented accessor for variables is model.variable(<tag>), and this leg is therefore tried only *after* the data-independent results route (data='none')\", \"resolves\": \"global model parameters (and expressions over them) only\"}, \"solution\": null}, \"expression_evaluator_attempts\": [{\"call\": \"evaluate\", \"expression\": \"3*3\", \"ok\": true, \"value\": 9.0}], \"result_source\": \"model.param().evaluate(String)\", \"route\": \"engine:model.param().evaluate\", \"shape\": [], \"solution\": null}, \"expression\": \"3*3\", \"last_value\": 9.0, \"name\": \"phase4_ephemeral\", \"ok\": true, \"route\": \"engine:model.param().evaluate\", \"shape\": [], \"solution\": null, \"value\": 9.0}], \"server\": {\"attached_to_existing_server\": true, \"comsol_root\": \"/Applications/COMSOL64/Multiphysics\", \"current_model_label\": \"GUARD_T033 (Phase4 G3 acceptance fixture) isolation model\", \"current_model_origin\": \"bound-request\", \"current_model_path\": \"\", \"datetime\": \"2026-09-21 15:52:01\", \"desktop_client_role\": \"visual-client\", \"desktop_should_connect\": {\"host\": \"127.0.0.1\", \"port\": 56389}, \"last_command\": \"evaluate_expressions\", \"last_error\": \"\", \"logs_dir\": \"$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs\", \"mcp_home\": \"$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home\", \"outputs_dir\": \"$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/outputs\", \"recommended_desktop_flow\": \"visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.\", \"server_endpoint\": \"127.0.0.1:56389\", \"server_host\": \"127.0.0.1\", \"server_port\": 56389, \"server_running\": false, \"server_started_by_mcp\": false, \"status\": \"ready\", \"timestamp\": 1789977121.1134038, \"version\": \"0.1.9\", \"workflow\": {\"current_main_model_path\": \"\", \"guard_level\": \"strict\", \"main_model_label\": \"\", \"main_model_path\": \"\", \"main_model_tag\": \"\", \"mcp_client_lifecycle\": \"persistent-required\", \"mode\": \"manual\", \"model_dimension\": 0, \"notes\": \"\", \"one_shot_client_allowed\": false, \"snapshot_dir\": \"\", \"snapshot_name_template\": \"{prefix}_{label}_{timestamp}.mph\", \"snapshot_prefix\": \"\", \"snapshot_save_mode\": \"copy\", \"updated_at\": \"2026-09-21 15:51:53\", \"visible_main_locked\": false, \"workflow_stage\": \"awaiting_manual_server\"}}, \"solution\": null, \"temporary_nodes\": [{\"created\": true, \"feature_type\": \"EvalGlobal\", \"owner\": {\"operation\": \"evaluate_expressions\", \"policy\": \"ephemeral_mutation\", \"request\": {\"expressions\": 1, \"tool\": \"evaluate_expressions\"}, \"scope\": \"mcp_owned_result_numerical_node\", \"tag_allocated_from\": \"random uuid4 hex, never reused from the model\"}, \"removed\": true, \"tag\": \"mcp_eval_28dc90e7f9c24283b78fbe40985c02d0\", \"tags_after\": [], \"tags_before\": [], \"verified_removed\": true}], \"timestamp\": 1789977121.113389, \"tool\": \"evaluate_expressions\"}, \"error\": null, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-20260921T075153Z-g3_1-m1t033-ephemeral\", \"job_id\": \"ef689730-8e8d-4aff-a27d-18f42b4cddf3\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp45\", \"schema_version\": 1, \"server_instance_id\": \"740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"54328ae3-dd27-4eba-ad80-76907cdb8f3d\", \"request_hash\": \"e0d14eb9a826824fe722a43dc3840440df36cc8fd3f8ae52e1d016897d247bcc\", \"request_id\": \"phase4-20260921T075153Z-g3_1-m1ephemeral\", \"revision\": 1, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "evaluate_expressions",
+      "sequence": 5,
+      "structuredContent": {
+        "data": {
+          "binding": {
+            "allowed_values": [
+              "none"
+            ],
+            "allowed_values_error": null,
+            "allowed_values_include_none": true,
+            "bind_error": null,
+            "bound": "none",
+            "bound_verified": true,
+            "data_citation": [
+              {
+                "chunk_id": 17235,
+                "claim": "an evaluation feature's ``data`` property takes ``none | parent | dataset name`` and defaults to *First compatible dataset*; ``none`` is the documented value for an evaluation that refers to no dataset",
+                "doc_id": "4454",
+                "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.051.html",
+                "sha256": "17429de155e56bb06014875e959117db215db23bb12baf7bb95daffa7e77d445",
+                "title": "COMSOL 6.4 - EvalGlobal"
+              },
+              {
+                "chunk_id": 17261,
+                "claim": "the API-only ``Global`` numerical feature publishes the same ``data`` values (``none | parent | dataset name``, default *First compatible dataset*)",
+                "doc_id": "4469",
+                "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.066.html",
+                "sha256": "4365366d59e13e3d52a13995a3c219065673d88d4ccf5150413e400331926d77",
+                "title": "COMSOL 6.4 - Global (Numerical)"
+              },
+              {
+                "chunk_id": 17232,
+                "claim": "the ``Eval`` feature publishes the same ``none`` value for ``data`` (``none | dataset name``)",
+                "doc_id": "4452",
+                "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.049.html",
+                "sha256": "0b8b0aa399980893752fbe8f8b7d5085f81204f037f9cdcab9ac4f12da6db3ec",
+                "title": "COMSOL 6.4 - Eval"
+              },
+              {
+                "chunk_id": 16690,
+                "claim": "``String[] getAllowedPropertyValues(String name)`` returns the allowed values of a named property when it is a finite set, so the engine itself can be asked which ``data`` values are legal on this build",
+                "doc_id": "4080",
+                "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_general.47.09.html",
+                "sha256": "36e103782ccbc0c0306644743cbd480542379dd20bd36220db5db78f2133c151",
+                "title": "COMSOL 6.4 - Methods Associated to Set, SetIndex, and the Various Get Methods"
+              },
+              {
+                "claim": "a shipped application example selects ``None`` in a results node's *Dataset* list - used there to evaluate expressions that the selected dataset cannot resolve",
+                "doc_id": "17625",
+                "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.models.mbd.double_pendulum/models.mbd.double_pendulum.pdf",
+                "sha256": "01bbc440e99422fc85ad47e79cfe119f0ab620d8e0bf74035f0730b591ffbd25",
+                "title": "COMSOL 6.4 model example - Double-Pendulum Dynamics"
+              }
+            ],
+            "data_mode": "none",
+            "data_property": {
+              "allowed_values": [
+                "none"
+              ],
+              "allowed_values_error": null,
+              "getter": "getString",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "metadata_status": "KNOWN",
+              "name": "data",
+              "shape_rank": 0,
+              "type_id": "EvalGlobal",
+              "value_type": "String"
+            },
+            "dataset": null,
+            "dataset_type": null,
+            "policy": "the evaluation feature's documented ``data`` property: a named dataset is set and read back when the model publishes one; when the engine's own readback proves that the model publishes no dataset, the documented value ``none`` is set and read back instead of leaving the *First compatible dataset* default in place",
+            "reason": "the engine lists no dataset at all for this model; a results-node evaluation has no data to read",
+            "solution": null
+          },
+          "cleanup": {
+            "cleanup_failed": false,
+            "created": true,
+            "created_count": 1,
+            "nodes": 1,
+            "note": "every tag is a random uuid4 hex owned by this request; cleanup removes that tag only and the removal is verified against the engine's own numerical().tags() readback",
+            "owner_operations": [
+              "evaluate_expressions"
+            ],
+            "policy": "ephemeral_mutation",
+            "removed": true,
+            "removed_count": 1,
+            "unremoved_tags": [],
+            "verified_removed": true,
+            "verified_removed_count": 1
+          },
+          "count": 1,
+          "dataset": null,
+          "dataset_inventory": {
+            "datasets": [],
+            "readback": {
+              "dataset_tags": [],
+              "solution_tags": []
+            },
+            "reason": "the engine lists no dataset at all for this model; a results-node evaluation has no data to read",
+            "solutions": [],
+            "source": "model.result().dataset().tags() + dataset getType()/getString('solution'); model.sol().tags()"
+          },
+          "datetime": "2026-09-21 15:52:01",
+          "ephemeral_mutation": true,
+          "evaluation_policy": "ephemeral_mutation",
+          "label": "GUARD_T033 (Phase4 G3 acceptance fixture) isolation model",
+          "log_path": "$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs/server.log",
+          "max_result_size_ignored": null,
+          "operations_path": "$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs/operations.jsonl",
+          "results": [
+            {
+              "data_mode": "none",
+              "dataset": null,
+              "diagnosis": {
+                "attempts": [
+                  {
+                    "data": "none",
+                    "ok": true,
+                    "route": "results:EvalGlobal",
+                    "value_shape": [
+                      0
+                    ]
+                  },
+                  {
+                    "dataset": null,
+                    "engine_call": "model.param().evaluate(String)",
+                    "error": null,
+                    "evaluated_expression": "3*3",
+                    "route": "engine:model.param().evaluate",
+                    "solution": null
+                  }
+                ],
+                "binding": {
+                  "allowed_values": [
+                    "none"
+                  ],
+                  "allowed_values_error": null,
+                  "allowed_values_include_none": true,
+                  "bind_error": null,
+                  "bound": "none",
+                  "bound_verified": true,
+                  "data_citation": [
+                    {
+                      "chunk_id": 17235,
+                      "claim": "an evaluation feature's ``data`` property takes ``none | parent | dataset name`` and defaults to *First compatible dataset*; ``none`` is the documented value for an evaluation that refers to no dataset",
+                      "doc_id": "4454",
+                      "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.051.html",
+                      "sha256": "17429de155e56bb06014875e959117db215db23bb12baf7bb95daffa7e77d445",
+                      "title": "COMSOL 6.4 - EvalGlobal"
+                    },
+                    {
+                      "chunk_id": 17261,
+                      "claim": "the API-only ``Global`` numerical feature publishes the same ``data`` values (``none | parent | dataset name``, default *First compatible dataset*)",
+                      "doc_id": "4469",
+                      "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.066.html",
+                      "sha256": "4365366d59e13e3d52a13995a3c219065673d88d4ccf5150413e400331926d77",
+                      "title": "COMSOL 6.4 - Global (Numerical)"
+                    },
+                    {
+                      "chunk_id": 17232,
+                      "claim": "the ``Eval`` feature publishes the same ``none`` value for ``data`` (``none | dataset name``)",
+                      "doc_id": "4452",
+                      "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.049.html",
+                      "sha256": "0b8b0aa399980893752fbe8f8b7d5085f81204f037f9cdcab9ac4f12da6db3ec",
+                      "title": "COMSOL 6.4 - Eval"
+                    },
+                    {
+                      "chunk_id": 16690,
+                      "claim": "``String[] getAllowedPropertyValues(String name)`` returns the allowed values of a named property when it is a finite set, so the engine itself can be asked which ``data`` values are legal on this build",
+                      "doc_id": "4080",
+                      "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_general.47.09.html",
+                      "sha256": "36e103782ccbc0c0306644743cbd480542379dd20bd36220db5db78f2133c151",
+                      "title": "COMSOL 6.4 - Methods Associated to Set, SetIndex, and the Various Get Methods"
+                    },
+                    {
+                      "claim": "a shipped application example selects ``None`` in a results node's *Dataset* list - used there to evaluate expressions that the selected dataset cannot resolve",
+                      "doc_id": "17625",
+                      "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.models.mbd.double_pendulum/models.mbd.double_pendulum.pdf",
+                      "sha256": "01bbc440e99422fc85ad47e79cfe119f0ab620d8e0bf74035f0730b591ffbd25",
+                      "title": "COMSOL 6.4 model example - Double-Pendulum Dynamics"
+                    }
+                  ],
+                  "data_mode": "none",
+                  "data_property": {
+                    "allowed_values": [
+                      "none"
+                    ],
+                    "allowed_values_error": null,
+                    "getter": "getString",
+                    "java_signature": "java.lang.String",
+                    "kind": "string",
+                    "metadata_status": "KNOWN",
+                    "name": "data",
+                    "shape_rank": 0,
+                    "type_id": "EvalGlobal",
+                    "value_type": "String"
+                  },
+                  "dataset": null,
+                  "dataset_type": null,
+                  "policy": "the evaluation feature's documented ``data`` property: a named dataset is set and read back when the model publishes one; when the engine's own readback proves that the model publishes no dataset, the documented value ``none`` is set and read back instead of leaving the *First compatible dataset* default in place",
+                  "reason": "the engine lists no dataset at all for this model; a results-node evaluation has no data to read",
+                  "solution": null
+                },
+                "data_mode": "none",
+                "dataset": null,
+                "dataset_inventory": {
+                  "datasets": [],
+                  "readback": {
+                    "dataset_tags": [],
+                    "solution_tags": []
+                  },
+                  "reason": "the engine lists no dataset at all for this model; a results-node evaluation has no data to read",
+                  "solutions": [],
+                  "source": "model.result().dataset().tags() + dataset getType()/getString('solution'); model.sol().tags()"
+                },
+                "engine_calls": [
+                  "result().numerical(<owned tag>).set('expr', ...)",
+                  "result().numerical(<owned tag>).set('data', 'none')",
+                  "result().numerical(<owned tag>).run()",
+                  "result().numerical(<owned tag>).getReal()"
+                ],
+                "evaluated_expression": "3*3",
+                "expression_evaluator": {
+                  "attempts": [
+                    {
+                      "call": "evaluate",
+                      "expression": "3*3",
+                      "ok": true,
+                      "value": 9.0
+                    }
+                  ],
+                  "dataset": null,
+                  "engine_call": "model.param().evaluate(String)",
+                  "evaluated_expression": "3*3",
+                  "reason": "the results-node route published no value; the model expression evaluator is the engine's own documented evaluator for the expressions that need no solution data, and it resolves the *global* model parameters (doc 4121)",
+                  "route": "engine:model.param().evaluate",
+                  "scope": {
+                    "citations": [
+                      {
+                        "chunk_id": 9676,
+                        "claim": "``model.param()`` is a collection of *global* model parameters and ``model.param().evaluate(<param>)`` evaluates the value of the parameter; a component variable is not a parameter of that collection",
+                        "doc_id": "4121",
+                        "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_general.47.50.html",
+                        "sha256": "6af88c1366f47cb021e76d1dad4ae72ff407adfac74b9e91180912060f57e99a",
+                        "title": "COMSOL 6.4 - model.param() and model.result().param()"
+                      },
+                      {
+                        "chunk_id": 16481,
+                        "claim": "the Application Programming Guide's *Accessing a Global Parameter* section evaluates a global parameter with ``model.param().evaluate(\"L\")``; variables are a separate collection, accessed through ``model.variable(<tag>)``",
+                        "doc_id": "3961",
+                        "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/application_programming_guide.15.21.html",
+                        "sha256": "b1c830ce7d4511c3a28a19a1ae041e4e737242fbc414f9bd6a062421b9412b11",
+                        "title": "COMSOL 6.4 - Parameters and Variables"
+                      }
+                    ],
+                    "evaluator": "model.param() - the collection of *global* model parameters; model.param().evaluate(<param>) evaluates the value of the parameter",
+                    "expression_is_global_parameter": false,
+                    "global_parameters": [],
+                    "global_parameters_error": null,
+                    "note": "a component variable is not a parameter of this collection: the documented accessor for variables is model.variable(<tag>), and this leg is therefore tried only *after* the data-independent results route (data='none')",
+                    "resolves": "global model parameters (and expressions over them) only"
+                  },
+                  "solution": null
+                },
+                "expression_evaluator_attempts": [
+                  {
+                    "call": "evaluate",
+                    "expression": "3*3",
+                    "ok": true,
+                    "value": 9.0
+                  }
+                ],
+                "result_source": "model.param().evaluate(String)",
+                "route": "engine:model.param().evaluate",
+                "shape": [],
+                "solution": null
+              },
+              "expression": "3*3",
+              "last_value": 9.0,
+              "name": "phase4_ephemeral",
+              "ok": true,
+              "route": "engine:model.param().evaluate",
+              "shape": [],
+              "solution": null,
+              "value": 9.0
+            }
+          ],
+          "server": {
+            "attached_to_existing_server": true,
+            "comsol_root": "/Applications/COMSOL64/Multiphysics",
+            "current_model_label": "GUARD_T033 (Phase4 G3 acceptance fixture) isolation model",
+            "current_model_origin": "bound-request",
+            "current_model_path": "",
+            "datetime": "2026-09-21 15:52:01",
+            "desktop_client_role": "visual-client",
+            "desktop_should_connect": {
+              "host": "127.0.0.1",
+              "port": 56389
+            },
+            "last_command": "evaluate_expressions",
+            "last_error": "",
+            "logs_dir": "$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs",
+            "mcp_home": "$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home",
+            "outputs_dir": "$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/outputs",
+            "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+            "server_endpoint": "127.0.0.1:56389",
+            "server_host": "127.0.0.1",
+            "server_port": 56389,
+            "server_running": false,
+            "server_started_by_mcp": false,
+            "status": "ready",
+            "timestamp": 1789977121.1134038,
+            "version": "0.1.9",
+            "workflow": {
+              "current_main_model_path": "",
+              "guard_level": "strict",
+              "main_model_label": "",
+              "main_model_path": "",
+              "main_model_tag": "",
+              "mcp_client_lifecycle": "persistent-required",
+              "mode": "manual",
+              "model_dimension": 0,
+              "notes": "",
+              "one_shot_client_allowed": false,
+              "snapshot_dir": "",
+              "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+              "snapshot_prefix": "",
+              "snapshot_save_mode": "copy",
+              "updated_at": "2026-09-21 15:51:53",
+              "visible_main_locked": false,
+              "workflow_stage": "awaiting_manual_server"
+            }
+          },
+          "solution": null,
+          "temporary_nodes": [
+            {
+              "created": true,
+              "feature_type": "EvalGlobal",
+              "owner": {
+                "operation": "evaluate_expressions",
+                "policy": "ephemeral_mutation",
+                "request": {
+                  "expressions": 1,
+                  "tool": "evaluate_expressions"
+                },
+                "scope": "mcp_owned_result_numerical_node",
+                "tag_allocated_from": "random uuid4 hex, never reused from the model"
+              },
+              "removed": true,
+              "tag": "mcp_eval_28dc90e7f9c24283b78fbe40985c02d0",
+              "tags_after": [],
+              "tags_before": [],
+              "verified_removed": true
+            }
+          ],
+          "timestamp": 1789977121.113389,
+          "tool": "evaluate_expressions"
+        },
+        "error": null,
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-20260921T075153Z-g3_1-m1t033-ephemeral",
+          "job_id": "ef689730-8e8d-4aff-a27d-18f42b4cddf3",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp45",
+            "schema_version": 1,
+            "server_instance_id": "740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "54328ae3-dd27-4eba-ad80-76907cdb8f3d",
+          "request_hash": "e0d14eb9a826824fe722a43dc3840440df36cc8fd3f8ae52e1d016897d247bcc",
+          "request_id": "phase4-20260921T075153Z-g3_1-m1ephemeral",
+          "revision": 1,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-comsol-mcp-phase4-174\", \"job_id\": \"0a92ecc2-8a1c-4a6e-a39b-e5a133d62514\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp45\", \"schema_version\": 1, \"server_instance_id\": \"740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"101062ed-e739-472b-97fa-9659acca7a4f\", \"request_hash\": \"e365f4b42e1e6f1927e5e49b7ce1f547b8155a568691b7034db0f39778013775\", \"request_id\": \"phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-comsol-mcp-phase4-174\", \"revision\": 1, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "model_inspect",
+      "sequence": 6,
+      "structuredContent": {
+        "data": {},
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-comsol-mcp-phase4-174",
+          "job_id": "0a92ecc2-8a1c-4a6e-a39b-e5a133d62514",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp45",
+            "schema_version": 1,
+            "server_instance_id": "740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "101062ed-e739-472b-97fa-9659acca7a4f",
+          "request_hash": "e365f4b42e1e6f1927e5e49b7ce1f547b8155a568691b7034db0f39778013775",
+          "request_id": "phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-comsol-mcp-phase4-174",
+          "revision": 1,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"binding\": {\"allowed_values\": [\"none\"], \"allowed_values_error\": null, \"allowed_values_include_none\": true, \"bind_error\": null, \"bound\": \"none\", \"bound_verified\": true, \"data_citation\": [{\"chunk_id\": 17235, \"claim\": \"an evaluation feature's ``data`` property takes ``none | parent | dataset name`` and defaults to *First compatible dataset*; ``none`` is the documented value for an evaluation that refers to no dataset\", \"doc_id\": \"4454\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.051.html\", \"sha256\": \"17429de155e56bb06014875e959117db215db23bb12baf7bb95daffa7e77d445\", \"title\": \"COMSOL 6.4 - EvalGlobal\"}, {\"chunk_id\": 17261, \"claim\": \"the API-only ``Global`` numerical feature publishes the same ``data`` values (``none | parent | dataset name``, default *First compatible dataset*)\", \"doc_id\": \"4469\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.066.html\", \"sha256\": \"4365366d59e13e3d52a13995a3c219065673d88d4ccf5150413e400331926d77\", \"title\": \"COMSOL 6.4 - Global (Numerical)\"}, {\"chunk_id\": 17232, \"claim\": \"the ``Eval`` feature publishes the same ``none`` value for ``data`` (``none | dataset name``)\", \"doc_id\": \"4452\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.049.html\", \"sha256\": \"0b8b0aa399980893752fbe8f8b7d5085f81204f037f9cdcab9ac4f12da6db3ec\", \"title\": \"COMSOL 6.4 - Eval\"}, {\"chunk_id\": 16690, \"claim\": \"``String[] getAllowedPropertyValues(String name)`` returns the allowed values of a named property when it is a finite set, so the engine itself can be asked which ``data`` values are legal on this build\", \"doc_id\": \"4080\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_general.47.09.html\", \"sha256\": \"36e103782ccbc0c0306644743cbd480542379dd20bd36220db5db78f2133c151\", \"title\": \"COMSOL 6.4 - Methods Associated to Set, SetIndex, and the Various Get Methods\"}, {\"claim\": \"a shipped application example selects ``None`` in a results node's *Dataset* list - used there to evaluate expressions that the selected dataset cannot resolve\", \"doc_id\": \"17625\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.models.mbd.double_pendulum/models.mbd.double_pendulum.pdf\", \"sha256\": \"01bbc440e99422fc85ad47e79cfe119f0ab620d8e0bf74035f0730b591ffbd25\", \"title\": \"COMSOL 6.4 model example - Double-Pendulum Dynamics\"}], \"data_mode\": \"none\", \"data_property\": {\"allowed_values\": [\"none\"], \"allowed_values_error\": null, \"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"data\", \"shape_rank\": 0, \"type_id\": \"EvalGlobal\", \"value_type\": \"String\"}, \"dataset\": null, \"dataset_type\": null, \"policy\": \"the evaluation feature's documented ``data`` property: a named dataset is set and read back when the model publishes one; when the engine's own readback proves that the model publishes no dataset, the documented value ``none`` is set and read back instead of leaving the *First compatible dataset* default in place\", \"reason\": \"the engine lists no dataset at all for this model; a results-node evaluation has no data to read\", \"solution\": null}, \"cleanup\": {\"cleanup_failed\": false, \"created\": true, \"created_count\": 1, \"nodes\": 1, \"note\": \"every tag is a random uuid4 hex owned by this request; cleanup removes that tag only and the removal is verified against the engine's own numerical().tags() readback\", \"owner_operations\": [\"evaluate_expressions\"], \"policy\": \"ephemeral_mutation\", \"removed\": true, \"removed_count\": 1, \"unremoved_tags\": [], \"verified_removed\": true, \"verified_removed_count\": 1}, \"count\": 1, \"dataset\": null, \"dataset_inventory\": {\"datasets\": [], \"readback\": {\"dataset_tags\": [], \"solution_tags\": []}, \"reason\": \"the engine lists no dataset at all for this model; a results-node evaluation has no data to read\", \"solutions\": [], \"source\": \"model.result().dataset().tags() + dataset getType()/getString('solution'); model.sol().tags()\"}, \"datetime\": \"2026-09-21 15:52:01\", \"ephemeral_mutation\": true, \"evaluation_policy\": \"ephemeral_mutation\", \"label\": \"GUARD_T033 (Phase4 G3 acceptance fixture) isolation model\", \"log_path\": \"$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs/server.log\", \"max_result_size_ignored\": null, \"operations_path\": \"$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs/operations.jsonl\", \"results\": [{\"data_mode\": \"none\", \"dataset\": null, \"diagnosis\": {\"attempts\": [{\"data\": \"none\", \"ok\": true, \"route\": \"results:EvalGlobal\", \"value_shape\": [0]}, {\"dataset\": null, \"engine_call\": \"model.param().evaluate(String)\", \"error\": null, \"evaluated_expression\": \"3*3\", \"route\": \"engine:model.param().evaluate\", \"solution\": null}], \"binding\": {\"allowed_values\": [\"none\"], \"allowed_values_error\": null, \"allowed_values_include_none\": true, \"bind_error\": null, \"bound\": \"none\", \"bound_verified\": true, \"data_citation\": [{\"chunk_id\": 17235, \"claim\": \"an evaluation feature's ``data`` property takes ``none | parent | dataset name`` and defaults to *First compatible dataset*; ``none`` is the documented value for an evaluation that refers to no dataset\", \"doc_id\": \"4454\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.051.html\", \"sha256\": \"17429de155e56bb06014875e959117db215db23bb12baf7bb95daffa7e77d445\", \"title\": \"COMSOL 6.4 - EvalGlobal\"}, {\"chunk_id\": 17261, \"claim\": \"the API-only ``Global`` numerical feature publishes the same ``data`` values (``none | parent | dataset name``, default *First compatible dataset*)\", \"doc_id\": \"4469\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.066.html\", \"sha256\": \"4365366d59e13e3d52a13995a3c219065673d88d4ccf5150413e400331926d77\", \"title\": \"COMSOL 6.4 - Global (Numerical)\"}, {\"chunk_id\": 17232, \"claim\": \"the ``Eval`` feature publishes the same ``none`` value for ``data`` (``none | dataset name``)\", \"doc_id\": \"4452\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.049.html\", \"sha256\": \"0b8b0aa399980893752fbe8f8b7d5085f81204f037f9cdcab9ac4f12da6db3ec\", \"title\": \"COMSOL 6.4 - Eval\"}, {\"chunk_id\": 16690, \"claim\": \"``String[] getAllowedPropertyValues(String name)`` returns the allowed values of a named property when it is a finite set, so the engine itself can be asked which ``data`` values are legal on this build\", \"doc_id\": \"4080\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_general.47.09.html\", \"sha256\": \"36e103782ccbc0c0306644743cbd480542379dd20bd36220db5db78f2133c151\", \"title\": \"COMSOL 6.4 - Methods Associated to Set, SetIndex, and the Various Get Methods\"}, {\"claim\": \"a shipped application example selects ``None`` in a results node's *Dataset* list - used there to evaluate expressions that the selected dataset cannot resolve\", \"doc_id\": \"17625\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.models.mbd.double_pendulum/models.mbd.double_pendulum.pdf\", \"sha256\": \"01bbc440e99422fc85ad47e79cfe119f0ab620d8e0bf74035f0730b591ffbd25\", \"title\": \"COMSOL 6.4 model example - Double-Pendulum Dynamics\"}], \"data_mode\": \"none\", \"data_property\": {\"allowed_values\": [\"none\"], \"allowed_values_error\": null, \"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"data\", \"shape_rank\": 0, \"type_id\": \"EvalGlobal\", \"value_type\": \"String\"}, \"dataset\": null, \"dataset_type\": null, \"policy\": \"the evaluation feature's documented ``data`` property: a named dataset is set and read back when the model publishes one; when the engine's own readback proves that the model publishes no dataset, the documented value ``none`` is set and read back instead of leaving the *First compatible dataset* default in place\", \"reason\": \"the engine lists no dataset at all for this model; a results-node evaluation has no data to read\", \"solution\": null}, \"data_mode\": \"none\", \"dataset\": null, \"dataset_inventory\": {\"datasets\": [], \"readback\": {\"dataset_tags\": [], \"solution_tags\": []}, \"reason\": \"the engine lists no dataset at all for this model; a results-node evaluation has no data to read\", \"solutions\": [], \"source\": \"model.result().dataset().tags() + dataset getType()/getString('solution'); model.sol().tags()\"}, \"engine_calls\": [\"result().numerical(<owned tag>).set('expr', ...)\", \"result().numerical(<owned tag>).set('data', 'none')\", \"result().numerical(<owned tag>).run()\", \"result().numerical(<owned tag>).getReal()\"], \"evaluated_expression\": \"3*3\", \"expression_evaluator\": {\"attempts\": [{\"call\": \"evaluate\", \"expression\": \"3*3\", \"ok\": true, \"value\": 9.0}], \"dataset\": null, \"engine_call\": \"model.param().evaluate(String)\", \"evaluated_expression\": \"3*3\", \"reason\": \"the results-node route published no value; the model expression evaluator is the engine's own documented evaluator for the expressions that need no solution data, and it resolves the *global* model parameters (doc 4121)\", \"route\": \"engine:model.param().evaluate\", \"scope\": {\"citations\": [{\"chunk_id\": 9676, \"claim\": \"``model.param()`` is a collection of *global* model parameters and ``model.param().evaluate(<param>)`` evaluates the value of the parameter; a component variable is not a parameter of that collection\", \"doc_id\": \"4121\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_general.47.50.html\", \"sha256\": \"6af88c1366f47cb021e76d1dad4ae72ff407adfac74b9e91180912060f57e99a\", \"title\": \"COMSOL 6.4 - model.param() and model.result().param()\"}, {\"chunk_id\": 16481, \"claim\": \"the Application Programming Guide's *Accessing a Global Parameter* section evaluates a global parameter with ``model.param().evaluate(\\\"L\\\")``; variables are a separate collection, accessed through ``model.variable(<tag>)``\", \"doc_id\": \"3961\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/application_programming_guide.15.21.html\", \"sha256\": \"b1c830ce7d4511c3a28a19a1ae041e4e737242fbc414f9bd6a062421b9412b11\", \"title\": \"COMSOL 6.4 - Parameters and Variables\"}], \"evaluator\": \"model.param() - the collection of *global* model parameters; model.param().evaluate(<param>) evaluates the value of the parameter\", \"expression_is_global_parameter\": false, \"global_parameters\": [], \"global_parameters_error\": null, \"note\": \"a component variable is not a parameter of this collection: the documented accessor for variables is model.variable(<tag>), and this leg is therefore tried only *after* the data-independent results route (data='none')\", \"resolves\": \"global model parameters (and expressions over them) only\"}, \"solution\": null}, \"expression_evaluator_attempts\": [{\"call\": \"evaluate\", \"expression\": \"3*3\", \"ok\": true, \"value\": 9.0}], \"result_source\": \"model.param().evaluate(String)\", \"route\": \"engine:model.param().evaluate\", \"shape\": [], \"solution\": null}, \"expression\": \"3*3\", \"last_value\": 9.0, \"name\": \"phase4_ephemeral\", \"ok\": true, \"route\": \"engine:model.param().evaluate\", \"shape\": [], \"solution\": null, \"value\": 9.0}], \"server\": {\"attached_to_existing_server\": true, \"comsol_root\": \"/Applications/COMSOL64/Multiphysics\", \"current_model_label\": \"GUARD_T033 (Phase4 G3 acceptance fixture) isolation model\", \"current_model_origin\": \"bound-request\", \"current_model_path\": \"\", \"datetime\": \"2026-09-21 15:52:01\", \"desktop_client_role\": \"visual-client\", \"desktop_should_connect\": {\"host\": \"127.0.0.1\", \"port\": 56389}, \"last_command\": \"evaluate_expressions\", \"last_error\": \"\", \"logs_dir\": \"$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs\", \"mcp_home\": \"$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home\", \"outputs_dir\": \"$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/outputs\", \"recommended_desktop_flow\": \"visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.\", \"server_endpoint\": \"127.0.0.1:56389\", \"server_host\": \"127.0.0.1\", \"server_port\": 56389, \"server_running\": false, \"server_started_by_mcp\": false, \"status\": \"ready\", \"timestamp\": 1789977121.153878, \"version\": \"0.1.9\", \"workflow\": {\"current_main_model_path\": \"\", \"guard_level\": \"strict\", \"main_model_label\": \"\", \"main_model_path\": \"\", \"main_model_tag\": \"\", \"mcp_client_lifecycle\": \"persistent-required\", \"mode\": \"manual\", \"model_dimension\": 0, \"notes\": \"\", \"one_shot_client_allowed\": false, \"snapshot_dir\": \"\", \"snapshot_name_template\": \"{prefix}_{label}_{timestamp}.mph\", \"snapshot_prefix\": \"\", \"snapshot_save_mode\": \"copy\", \"updated_at\": \"2026-09-21 15:51:53\", \"visible_main_locked\": false, \"workflow_stage\": \"awaiting_manual_server\"}}, \"solution\": null, \"temporary_nodes\": [{\"created\": true, \"feature_type\": \"EvalGlobal\", \"owner\": {\"operation\": \"evaluate_expressions\", \"policy\": \"ephemeral_mutation\", \"request\": {\"expressions\": 1, \"tool\": \"evaluate_expressions\"}, \"scope\": \"mcp_owned_result_numerical_node\", \"tag_allocated_from\": \"random uuid4 hex, never reused from the model\"}, \"removed\": true, \"tag\": \"mcp_eval_583ebd675c1e43009bf53f169f98bf15\", \"tags_after\": [], \"tags_before\": [], \"verified_removed\": true}], \"timestamp\": 1789977121.153863, \"tool\": \"evaluate_expressions\"}, \"error\": null, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-20260921T075153Z-g3_1-m1t033-ephemeral-serial\", \"job_id\": \"572784d4-cc7c-4c4d-bbdf-769716f70db8\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp45\", \"schema_version\": 1, \"server_instance_id\": \"740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"90620252-985b-4102-a29a-deceb1738cb9\", \"request_hash\": \"bcce0069c85ed111fd460e62013c368b5eb124b3af9009dd85d0f20f37eb3f3c\", \"request_id\": \"phase4-20260921T075153Z-g3_1-m1ephemeral\", \"revision\": 2, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "evaluate_expressions",
+      "sequence": 7,
+      "structuredContent": {
+        "data": {
+          "binding": {
+            "allowed_values": [
+              "none"
+            ],
+            "allowed_values_error": null,
+            "allowed_values_include_none": true,
+            "bind_error": null,
+            "bound": "none",
+            "bound_verified": true,
+            "data_citation": [
+              {
+                "chunk_id": 17235,
+                "claim": "an evaluation feature's ``data`` property takes ``none | parent | dataset name`` and defaults to *First compatible dataset*; ``none`` is the documented value for an evaluation that refers to no dataset",
+                "doc_id": "4454",
+                "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.051.html",
+                "sha256": "17429de155e56bb06014875e959117db215db23bb12baf7bb95daffa7e77d445",
+                "title": "COMSOL 6.4 - EvalGlobal"
+              },
+              {
+                "chunk_id": 17261,
+                "claim": "the API-only ``Global`` numerical feature publishes the same ``data`` values (``none | parent | dataset name``, default *First compatible dataset*)",
+                "doc_id": "4469",
+                "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.066.html",
+                "sha256": "4365366d59e13e3d52a13995a3c219065673d88d4ccf5150413e400331926d77",
+                "title": "COMSOL 6.4 - Global (Numerical)"
+              },
+              {
+                "chunk_id": 17232,
+                "claim": "the ``Eval`` feature publishes the same ``none`` value for ``data`` (``none | dataset name``)",
+                "doc_id": "4452",
+                "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.049.html",
+                "sha256": "0b8b0aa399980893752fbe8f8b7d5085f81204f037f9cdcab9ac4f12da6db3ec",
+                "title": "COMSOL 6.4 - Eval"
+              },
+              {
+                "chunk_id": 16690,
+                "claim": "``String[] getAllowedPropertyValues(String name)`` returns the allowed values of a named property when it is a finite set, so the engine itself can be asked which ``data`` values are legal on this build",
+                "doc_id": "4080",
+                "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_general.47.09.html",
+                "sha256": "36e103782ccbc0c0306644743cbd480542379dd20bd36220db5db78f2133c151",
+                "title": "COMSOL 6.4 - Methods Associated to Set, SetIndex, and the Various Get Methods"
+              },
+              {
+                "claim": "a shipped application example selects ``None`` in a results node's *Dataset* list - used there to evaluate expressions that the selected dataset cannot resolve",
+                "doc_id": "17625",
+                "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.models.mbd.double_pendulum/models.mbd.double_pendulum.pdf",
+                "sha256": "01bbc440e99422fc85ad47e79cfe119f0ab620d8e0bf74035f0730b591ffbd25",
+                "title": "COMSOL 6.4 model example - Double-Pendulum Dynamics"
+              }
+            ],
+            "data_mode": "none",
+            "data_property": {
+              "allowed_values": [
+                "none"
+              ],
+              "allowed_values_error": null,
+              "getter": "getString",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "metadata_status": "KNOWN",
+              "name": "data",
+              "shape_rank": 0,
+              "type_id": "EvalGlobal",
+              "value_type": "String"
+            },
+            "dataset": null,
+            "dataset_type": null,
+            "policy": "the evaluation feature's documented ``data`` property: a named dataset is set and read back when the model publishes one; when the engine's own readback proves that the model publishes no dataset, the documented value ``none`` is set and read back instead of leaving the *First compatible dataset* default in place",
+            "reason": "the engine lists no dataset at all for this model; a results-node evaluation has no data to read",
+            "solution": null
+          },
+          "cleanup": {
+            "cleanup_failed": false,
+            "created": true,
+            "created_count": 1,
+            "nodes": 1,
+            "note": "every tag is a random uuid4 hex owned by this request; cleanup removes that tag only and the removal is verified against the engine's own numerical().tags() readback",
+            "owner_operations": [
+              "evaluate_expressions"
+            ],
+            "policy": "ephemeral_mutation",
+            "removed": true,
+            "removed_count": 1,
+            "unremoved_tags": [],
+            "verified_removed": true,
+            "verified_removed_count": 1
+          },
+          "count": 1,
+          "dataset": null,
+          "dataset_inventory": {
+            "datasets": [],
+            "readback": {
+              "dataset_tags": [],
+              "solution_tags": []
+            },
+            "reason": "the engine lists no dataset at all for this model; a results-node evaluation has no data to read",
+            "solutions": [],
+            "source": "model.result().dataset().tags() + dataset getType()/getString('solution'); model.sol().tags()"
+          },
+          "datetime": "2026-09-21 15:52:01",
+          "ephemeral_mutation": true,
+          "evaluation_policy": "ephemeral_mutation",
+          "label": "GUARD_T033 (Phase4 G3 acceptance fixture) isolation model",
+          "log_path": "$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs/server.log",
+          "max_result_size_ignored": null,
+          "operations_path": "$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs/operations.jsonl",
+          "results": [
+            {
+              "data_mode": "none",
+              "dataset": null,
+              "diagnosis": {
+                "attempts": [
+                  {
+                    "data": "none",
+                    "ok": true,
+                    "route": "results:EvalGlobal",
+                    "value_shape": [
+                      0
+                    ]
+                  },
+                  {
+                    "dataset": null,
+                    "engine_call": "model.param().evaluate(String)",
+                    "error": null,
+                    "evaluated_expression": "3*3",
+                    "route": "engine:model.param().evaluate",
+                    "solution": null
+                  }
+                ],
+                "binding": {
+                  "allowed_values": [
+                    "none"
+                  ],
+                  "allowed_values_error": null,
+                  "allowed_values_include_none": true,
+                  "bind_error": null,
+                  "bound": "none",
+                  "bound_verified": true,
+                  "data_citation": [
+                    {
+                      "chunk_id": 17235,
+                      "claim": "an evaluation feature's ``data`` property takes ``none | parent | dataset name`` and defaults to *First compatible dataset*; ``none`` is the documented value for an evaluation that refers to no dataset",
+                      "doc_id": "4454",
+                      "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.051.html",
+                      "sha256": "17429de155e56bb06014875e959117db215db23bb12baf7bb95daffa7e77d445",
+                      "title": "COMSOL 6.4 - EvalGlobal"
+                    },
+                    {
+                      "chunk_id": 17261,
+                      "claim": "the API-only ``Global`` numerical feature publishes the same ``data`` values (``none | parent | dataset name``, default *First compatible dataset*)",
+                      "doc_id": "4469",
+                      "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.066.html",
+                      "sha256": "4365366d59e13e3d52a13995a3c219065673d88d4ccf5150413e400331926d77",
+                      "title": "COMSOL 6.4 - Global (Numerical)"
+                    },
+                    {
+                      "chunk_id": 17232,
+                      "claim": "the ``Eval`` feature publishes the same ``none`` value for ``data`` (``none | dataset name``)",
+                      "doc_id": "4452",
+                      "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.049.html",
+                      "sha256": "0b8b0aa399980893752fbe8f8b7d5085f81204f037f9cdcab9ac4f12da6db3ec",
+                      "title": "COMSOL 6.4 - Eval"
+                    },
+                    {
+                      "chunk_id": 16690,
+                      "claim": "``String[] getAllowedPropertyValues(String name)`` returns the allowed values of a named property when it is a finite set, so the engine itself can be asked which ``data`` values are legal on this build",
+                      "doc_id": "4080",
+                      "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_general.47.09.html",
+                      "sha256": "36e103782ccbc0c0306644743cbd480542379dd20bd36220db5db78f2133c151",
+                      "title": "COMSOL 6.4 - Methods Associated to Set, SetIndex, and the Various Get Methods"
+                    },
+                    {
+                      "claim": "a shipped application example selects ``None`` in a results node's *Dataset* list - used there to evaluate expressions that the selected dataset cannot resolve",
+                      "doc_id": "17625",
+                      "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.models.mbd.double_pendulum/models.mbd.double_pendulum.pdf",
+                      "sha256": "01bbc440e99422fc85ad47e79cfe119f0ab620d8e0bf74035f0730b591ffbd25",
+                      "title": "COMSOL 6.4 model example - Double-Pendulum Dynamics"
+                    }
+                  ],
+                  "data_mode": "none",
+                  "data_property": {
+                    "allowed_values": [
+                      "none"
+                    ],
+                    "allowed_values_error": null,
+                    "getter": "getString",
+                    "java_signature": "java.lang.String",
+                    "kind": "string",
+                    "metadata_status": "KNOWN",
+                    "name": "data",
+                    "shape_rank": 0,
+                    "type_id": "EvalGlobal",
+                    "value_type": "String"
+                  },
+                  "dataset": null,
+                  "dataset_type": null,
+                  "policy": "the evaluation feature's documented ``data`` property: a named dataset is set and read back when the model publishes one; when the engine's own readback proves that the model publishes no dataset, the documented value ``none`` is set and read back instead of leaving the *First compatible dataset* default in place",
+                  "reason": "the engine lists no dataset at all for this model; a results-node evaluation has no data to read",
+                  "solution": null
+                },
+                "data_mode": "none",
+                "dataset": null,
+                "dataset_inventory": {
+                  "datasets": [],
+                  "readback": {
+                    "dataset_tags": [],
+                    "solution_tags": []
+                  },
+                  "reason": "the engine lists no dataset at all for this model; a results-node evaluation has no data to read",
+                  "solutions": [],
+                  "source": "model.result().dataset().tags() + dataset getType()/getString('solution'); model.sol().tags()"
+                },
+                "engine_calls": [
+                  "result().numerical(<owned tag>).set('expr', ...)",
+                  "result().numerical(<owned tag>).set('data', 'none')",
+                  "result().numerical(<owned tag>).run()",
+                  "result().numerical(<owned tag>).getReal()"
+                ],
+                "evaluated_expression": "3*3",
+                "expression_evaluator": {
+                  "attempts": [
+                    {
+                      "call": "evaluate",
+                      "expression": "3*3",
+                      "ok": true,
+                      "value": 9.0
+                    }
+                  ],
+                  "dataset": null,
+                  "engine_call": "model.param().evaluate(String)",
+                  "evaluated_expression": "3*3",
+                  "reason": "the results-node route published no value; the model expression evaluator is the engine's own documented evaluator for the expressions that need no solution data, and it resolves the *global* model parameters (doc 4121)",
+                  "route": "engine:model.param().evaluate",
+                  "scope": {
+                    "citations": [
+                      {
+                        "chunk_id": 9676,
+                        "claim": "``model.param()`` is a collection of *global* model parameters and ``model.param().evaluate(<param>)`` evaluates the value of the parameter; a component variable is not a parameter of that collection",
+                        "doc_id": "4121",
+                        "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_general.47.50.html",
+                        "sha256": "6af88c1366f47cb021e76d1dad4ae72ff407adfac74b9e91180912060f57e99a",
+                        "title": "COMSOL 6.4 - model.param() and model.result().param()"
+                      },
+                      {
+                        "chunk_id": 16481,
+                        "claim": "the Application Programming Guide's *Accessing a Global Parameter* section evaluates a global parameter with ``model.param().evaluate(\"L\")``; variables are a separate collection, accessed through ``model.variable(<tag>)``",
+                        "doc_id": "3961",
+                        "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/application_programming_guide.15.21.html",
+                        "sha256": "b1c830ce7d4511c3a28a19a1ae041e4e737242fbc414f9bd6a062421b9412b11",
+                        "title": "COMSOL 6.4 - Parameters and Variables"
+                      }
+                    ],
+                    "evaluator": "model.param() - the collection of *global* model parameters; model.param().evaluate(<param>) evaluates the value of the parameter",
+                    "expression_is_global_parameter": false,
+                    "global_parameters": [],
+                    "global_parameters_error": null,
+                    "note": "a component variable is not a parameter of this collection: the documented accessor for variables is model.variable(<tag>), and this leg is therefore tried only *after* the data-independent results route (data='none')",
+                    "resolves": "global model parameters (and expressions over them) only"
+                  },
+                  "solution": null
+                },
+                "expression_evaluator_attempts": [
+                  {
+                    "call": "evaluate",
+                    "expression": "3*3",
+                    "ok": true,
+                    "value": 9.0
+                  }
+                ],
+                "result_source": "model.param().evaluate(String)",
+                "route": "engine:model.param().evaluate",
+                "shape": [],
+                "solution": null
+              },
+              "expression": "3*3",
+              "last_value": 9.0,
+              "name": "phase4_ephemeral",
+              "ok": true,
+              "route": "engine:model.param().evaluate",
+              "shape": [],
+              "solution": null,
+              "value": 9.0
+            }
+          ],
+          "server": {
+            "attached_to_existing_server": true,
+            "comsol_root": "/Applications/COMSOL64/Multiphysics",
+            "current_model_label": "GUARD_T033 (Phase4 G3 acceptance fixture) isolation model",
+            "current_model_origin": "bound-request",
+            "current_model_path": "",
+            "datetime": "2026-09-21 15:52:01",
+            "desktop_client_role": "visual-client",
+            "desktop_should_connect": {
+              "host": "127.0.0.1",
+              "port": 56389
+            },
+            "last_command": "evaluate_expressions",
+            "last_error": "",
+            "logs_dir": "$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs",
+            "mcp_home": "$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home",
+            "outputs_dir": "$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/outputs",
+            "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+            "server_endpoint": "127.0.0.1:56389",
+            "server_host": "127.0.0.1",
+            "server_port": 56389,
+            "server_running": false,
+            "server_started_by_mcp": false,
+            "status": "ready",
+            "timestamp": 1789977121.153878,
+            "version": "0.1.9",
+            "workflow": {
+              "current_main_model_path": "",
+              "guard_level": "strict",
+              "main_model_label": "",
+              "main_model_path": "",
+              "main_model_tag": "",
+              "mcp_client_lifecycle": "persistent-required",
+              "mode": "manual",
+              "model_dimension": 0,
+              "notes": "",
+              "one_shot_client_allowed": false,
+              "snapshot_dir": "",
+              "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+              "snapshot_prefix": "",
+              "snapshot_save_mode": "copy",
+              "updated_at": "2026-09-21 15:51:53",
+              "visible_main_locked": false,
+              "workflow_stage": "awaiting_manual_server"
+            }
+          },
+          "solution": null,
+          "temporary_nodes": [
+            {
+              "created": true,
+              "feature_type": "EvalGlobal",
+              "owner": {
+                "operation": "evaluate_expressions",
+                "policy": "ephemeral_mutation",
+                "request": {
+                  "expressions": 1,
+                  "tool": "evaluate_expressions"
+                },
+                "scope": "mcp_owned_result_numerical_node",
+                "tag_allocated_from": "random uuid4 hex, never reused from the model"
+              },
+              "removed": true,
+              "tag": "mcp_eval_583ebd675c1e43009bf53f169f98bf15",
+              "tags_after": [],
+              "tags_before": [],
+              "verified_removed": true
+            }
+          ],
+          "timestamp": 1789977121.153863,
+          "tool": "evaluate_expressions"
+        },
+        "error": null,
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-20260921T075153Z-g3_1-m1t033-ephemeral-serial",
+          "job_id": "572784d4-cc7c-4c4d-bbdf-769716f70db8",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp45",
+            "schema_version": 1,
+            "server_instance_id": "740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "90620252-985b-4102-a29a-deceb1738cb9",
+          "request_hash": "bcce0069c85ed111fd460e62013c368b5eb124b3af9009dd85d0f20f37eb3f3c",
+          "request_id": "phase4-20260921T075153Z-g3_1-m1ephemeral",
+          "revision": 2,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-phase4-176\", \"job_id\": \"83a7ae02-c7c0-4c8b-96a6-4c7ccdcf5632\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp45\", \"schema_version\": 1, \"server_instance_id\": \"740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"17c54336-58cd-4528-8997-830d85315cd8\", \"request_hash\": \"e517a32df700df1db8889b96ca4c971a22dbc52f67420305c9fdeef09a8b840f\", \"request_id\": \"phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-phase4-176\", \"revision\": 2, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "model_inspect",
+      "sequence": 8,
+      "structuredContent": {
+        "data": {},
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-phase4-176",
+          "job_id": "83a7ae02-c7c0-4c8b-96a6-4c7ccdcf5632",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp45",
+            "schema_version": 1,
+            "server_instance_id": "740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "17c54336-58cd-4528-8997-830d85315cd8",
+          "request_hash": "e517a32df700df1db8889b96ca4c971a22dbc52f67420305c9fdeef09a8b840f",
+          "request_id": "phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-phase4-176",
+          "revision": 2,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"budget\": {\"max_nodes\": 2000, \"max_rpc\": 5000, \"max_seconds\": 20.0}, \"complete\": true, \"count\": 1, \"errors\": [], \"incomplete\": false, \"next_cursor\": null, \"results\": [{\"label\": \"GUARD_T033 (Phase4 G3 acceptance fixture) isolation model\", \"path\": {\"segments\": []}, \"tag\": \"mcp45\", \"type_id\": null}], \"status\": \"SUCCEEDED\", \"truncated\": false, \"truncated_reason\": null, \"visited\": 1}, \"error\": null, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-20260921T075153Z-g3_1-m1phase4-find-175\", \"job_id\": \"4fae325f-f24b-4dfa-b0ce-9e3adfaecd5f\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp45\", \"schema_version\": 1, \"server_instance_id\": \"740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"04652858-99fe-454b-bacf-f5180406649d\", \"request_hash\": \"86617527317d2f81b39b99217ec5d346f273b7a950dec8d40c9c61207df7a44c\", \"request_id\": \"phase4-20260921T075153Z-g3_1-m1phase4-find-175\", \"revision\": 2, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_call",
+      "sequence": 9,
+      "structuredContent": {
+        "data": {
+          "budget": {
+            "max_nodes": 2000,
+            "max_rpc": 5000,
+            "max_seconds": 20.0
+          },
+          "complete": true,
+          "count": 1,
+          "errors": [],
+          "incomplete": false,
+          "next_cursor": null,
+          "results": [
+            {
+              "label": "GUARD_T033 (Phase4 G3 acceptance fixture) isolation model",
+              "path": {
+                "segments": []
+              },
+              "tag": "mcp45",
+              "type_id": null
+            }
+          ],
+          "status": "SUCCEEDED",
+          "truncated": false,
+          "truncated_reason": null,
+          "visited": 1
+        },
+        "error": null,
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-20260921T075153Z-g3_1-m1phase4-find-175",
+          "job_id": "4fae325f-f24b-4dfa-b0ce-9e3adfaecd5f",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp45",
+            "schema_version": 1,
+            "server_instance_id": "740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "04652858-99fe-454b-bacf-f5180406649d",
+          "request_hash": "86617527317d2f81b39b99217ec5d346f273b7a950dec8d40c9c61207df7a44c",
+          "request_id": "phase4-20260921T075153Z-g3_1-m1phase4-find-175",
+          "revision": 2,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-phase4-178\", \"job_id\": \"c7eb271f-97b7-4e23-aaab-b928b31792c2\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp45\", \"schema_version\": 1, \"server_instance_id\": \"740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"a3ff9e35-f561-4921-b810-c21b8384c105\", \"request_hash\": \"e517a32df700df1db8889b96ca4c971a22dbc52f67420305c9fdeef09a8b840f\", \"request_id\": \"phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-phase4-178\", \"revision\": 2, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "model_inspect",
+      "sequence": 10,
+      "structuredContent": {
+        "data": {},
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-phase4-178",
+          "job_id": "c7eb271f-97b7-4e23-aaab-b928b31792c2",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp45",
+            "schema_version": 1,
+            "server_instance_id": "740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "a3ff9e35-f561-4921-b810-c21b8384c105",
+          "request_hash": "e517a32df700df1db8889b96ca4c971a22dbc52f67420305c9fdeef09a8b840f",
+          "request_id": "phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-phase4-178",
+          "revision": 2,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"dispatch_stage\": \"validation\", \"operation\": \"node.property_schema\", \"refusal\": {\"code\": \"API_UNSUPPORTED\", \"message\": \"the selected node does not expose properties()\", \"safe_retry\": false, \"stage\": \"validation\"}, \"refused\": true, \"status\": \"REFUSED\", \"witness\": {\"engine_calls\": 1, \"methods\": [\"properties\"], \"mutation_issued\": false, \"mutation_method\": null}}, \"error\": {\"code\": \"API_UNSUPPORTED\", \"message\": \"the selected node does not expose properties()\", \"safe_retry\": false, \"stage\": \"validation\"}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-20260921T075153Z-g3_1-m1phase4-schema-177\", \"job_id\": \"cdc387d1-04fe-490e-b296-36359041a346\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp45\", \"schema_version\": 1, \"server_instance_id\": \"740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"c749b582-683d-4299-87b9-0d1558e82743\", \"request_hash\": \"0f39cf055fea6773531bd0469ac8362cf9fd6e10f70f873cad822ae661ad1090\", \"request_id\": \"phase4-20260921T075153Z-g3_1-m1phase4-schema-177\", \"revision\": 2, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "API_UNSUPPORTED",
+      "error_message": "the selected node does not expose properties()",
+      "operation": "operation_call",
+      "sequence": 11,
+      "structuredContent": {
+        "data": {
+          "dispatch_stage": "validation",
+          "operation": "node.property_schema",
+          "refusal": {
+            "code": "API_UNSUPPORTED",
+            "message": "the selected node does not expose properties()",
+            "safe_retry": false,
+            "stage": "validation"
+          },
+          "refused": true,
+          "status": "REFUSED",
+          "witness": {
+            "engine_calls": 1,
+            "methods": [
+              "properties"
+            ],
+            "mutation_issued": false,
+            "mutation_method": null
+          }
+        },
+        "error": {
+          "code": "API_UNSUPPORTED",
+          "message": "the selected node does not expose properties()",
+          "safe_retry": false,
+          "stage": "validation"
+        },
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-20260921T075153Z-g3_1-m1phase4-schema-177",
+          "job_id": "cdc387d1-04fe-490e-b296-36359041a346",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp45",
+            "schema_version": 1,
+            "server_instance_id": "740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "c749b582-683d-4299-87b9-0d1558e82743",
+          "request_hash": "0f39cf055fea6773531bd0469ac8362cf9fd6e10f70f873cad822ae661ad1090",
+          "request_id": "phase4-20260921T075153Z-g3_1-m1phase4-schema-177",
+          "revision": 2,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-comsol-mcp-phase4-179\", \"job_id\": \"40f54fb0-f782-4cca-8152-574f73c213be\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp45\", \"schema_version\": 1, \"server_instance_id\": \"740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"59f18547-9c41-4305-9c29-d7ce6fc2db80\", \"request_hash\": \"e517a32df700df1db8889b96ca4c971a22dbc52f67420305c9fdeef09a8b840f\", \"request_id\": \"phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-comsol-mcp-phase4-179\", \"revision\": 2, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "model_inspect",
+      "sequence": 12,
+      "structuredContent": {
+        "data": {},
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-comsol-mcp-phase4-179",
+          "job_id": "40f54fb0-f782-4cca-8152-574f73c213be",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp45",
+            "schema_version": 1,
+            "server_instance_id": "740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "59f18547-9c41-4305-9c29-d7ce6fc2db80",
+          "request_hash": "e517a32df700df1db8889b96ca4c971a22dbc52f67420305c9fdeef09a8b840f",
+          "request_id": "phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-comsol-mcp-phase4-179",
+          "revision": 2,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"binding\": {\"allowed_values\": [\"none\"], \"allowed_values_error\": null, \"allowed_values_include_none\": true, \"bind_error\": null, \"bound\": \"none\", \"bound_verified\": true, \"data_citation\": [{\"chunk_id\": 17235, \"claim\": \"an evaluation feature's ``data`` property takes ``none | parent | dataset name`` and defaults to *First compatible dataset*; ``none`` is the documented value for an evaluation that refers to no dataset\", \"doc_id\": \"4454\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.051.html\", \"sha256\": \"17429de155e56bb06014875e959117db215db23bb12baf7bb95daffa7e77d445\", \"title\": \"COMSOL 6.4 - EvalGlobal\"}, {\"chunk_id\": 17261, \"claim\": \"the API-only ``Global`` numerical feature publishes the same ``data`` values (``none | parent | dataset name``, default *First compatible dataset*)\", \"doc_id\": \"4469\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.066.html\", \"sha256\": \"4365366d59e13e3d52a13995a3c219065673d88d4ccf5150413e400331926d77\", \"title\": \"COMSOL 6.4 - Global (Numerical)\"}, {\"chunk_id\": 17232, \"claim\": \"the ``Eval`` feature publishes the same ``none`` value for ``data`` (``none | dataset name``)\", \"doc_id\": \"4452\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.049.html\", \"sha256\": \"0b8b0aa399980893752fbe8f8b7d5085f81204f037f9cdcab9ac4f12da6db3ec\", \"title\": \"COMSOL 6.4 - Eval\"}, {\"chunk_id\": 16690, \"claim\": \"``String[] getAllowedPropertyValues(String name)`` returns the allowed values of a named property when it is a finite set, so the engine itself can be asked which ``data`` values are legal on this build\", \"doc_id\": \"4080\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_general.47.09.html\", \"sha256\": \"36e103782ccbc0c0306644743cbd480542379dd20bd36220db5db78f2133c151\", \"title\": \"COMSOL 6.4 - Methods Associated to Set, SetIndex, and the Various Get Methods\"}, {\"claim\": \"a shipped application example selects ``None`` in a results node's *Dataset* list - used there to evaluate expressions that the selected dataset cannot resolve\", \"doc_id\": \"17625\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.models.mbd.double_pendulum/models.mbd.double_pendulum.pdf\", \"sha256\": \"01bbc440e99422fc85ad47e79cfe119f0ab620d8e0bf74035f0730b591ffbd25\", \"title\": \"COMSOL 6.4 model example - Double-Pendulum Dynamics\"}], \"data_mode\": \"none\", \"data_property\": {\"allowed_values\": [\"none\"], \"allowed_values_error\": null, \"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"data\", \"shape_rank\": 0, \"type_id\": \"EvalGlobal\", \"value_type\": \"String\"}, \"dataset\": null, \"dataset_type\": null, \"policy\": \"the evaluation feature's documented ``data`` property: a named dataset is set and read back when the model publishes one; when the engine's own readback proves that the model publishes no dataset, the documented value ``none`` is set and read back instead of leaving the *First compatible dataset* default in place\", \"reason\": \"the engine lists no dataset at all for this model; a results-node evaluation has no data to read\", \"solution\": null}, \"cleanup\": {\"cleanup_failed\": false, \"created\": true, \"created_count\": 1, \"nodes\": 1, \"note\": \"every tag is a random uuid4 hex owned by this request; cleanup removes that tag only and the removal is verified against the engine's own numerical().tags() readback\", \"owner_operations\": [\"evaluate_expressions\"], \"policy\": \"ephemeral_mutation\", \"removed\": true, \"removed_count\": 1, \"unremoved_tags\": [], \"verified_removed\": true, \"verified_removed_count\": 1}, \"count\": 1, \"dataset\": null, \"dataset_inventory\": {\"datasets\": [], \"readback\": {\"dataset_tags\": [], \"solution_tags\": []}, \"reason\": \"the engine lists no dataset at all for this model; a results-node evaluation has no data to read\", \"solutions\": [], \"source\": \"model.result().dataset().tags() + dataset getType()/getString('solution'); model.sol().tags()\"}, \"datetime\": \"2026-09-21 15:52:01\", \"ephemeral_mutation\": true, \"evaluation_policy\": \"ephemeral_mutation\", \"label\": \"GUARD_T033 (Phase4 G3 acceptance fixture) isolation model\", \"log_path\": \"$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs/server.log\", \"max_result_size_ignored\": null, \"operations_path\": \"$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs/operations.jsonl\", \"results\": [{\"data_mode\": \"none\", \"dataset\": null, \"diagnosis\": {\"attempts\": [{\"data\": \"none\", \"ok\": true, \"route\": \"results:EvalGlobal\", \"value_shape\": [0]}, {\"dataset\": null, \"engine_call\": \"model.param().evaluate(String)\", \"error\": null, \"evaluated_expression\": \"3*3\", \"route\": \"engine:model.param().evaluate\", \"solution\": null}], \"binding\": {\"allowed_values\": [\"none\"], \"allowed_values_error\": null, \"allowed_values_include_none\": true, \"bind_error\": null, \"bound\": \"none\", \"bound_verified\": true, \"data_citation\": [{\"chunk_id\": 17235, \"claim\": \"an evaluation feature's ``data`` property takes ``none | parent | dataset name`` and defaults to *First compatible dataset*; ``none`` is the documented value for an evaluation that refers to no dataset\", \"doc_id\": \"4454\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.051.html\", \"sha256\": \"17429de155e56bb06014875e959117db215db23bb12baf7bb95daffa7e77d445\", \"title\": \"COMSOL 6.4 - EvalGlobal\"}, {\"chunk_id\": 17261, \"claim\": \"the API-only ``Global`` numerical feature publishes the same ``data`` values (``none | parent | dataset name``, default *First compatible dataset*)\", \"doc_id\": \"4469\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.066.html\", \"sha256\": \"4365366d59e13e3d52a13995a3c219065673d88d4ccf5150413e400331926d77\", \"title\": \"COMSOL 6.4 - Global (Numerical)\"}, {\"chunk_id\": 17232, \"claim\": \"the ``Eval`` feature publishes the same ``none`` value for ``data`` (``none | dataset name``)\", \"doc_id\": \"4452\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.049.html\", \"sha256\": \"0b8b0aa399980893752fbe8f8b7d5085f81204f037f9cdcab9ac4f12da6db3ec\", \"title\": \"COMSOL 6.4 - Eval\"}, {\"chunk_id\": 16690, \"claim\": \"``String[] getAllowedPropertyValues(String name)`` returns the allowed values of a named property when it is a finite set, so the engine itself can be asked which ``data`` values are legal on this build\", \"doc_id\": \"4080\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_general.47.09.html\", \"sha256\": \"36e103782ccbc0c0306644743cbd480542379dd20bd36220db5db78f2133c151\", \"title\": \"COMSOL 6.4 - Methods Associated to Set, SetIndex, and the Various Get Methods\"}, {\"claim\": \"a shipped application example selects ``None`` in a results node's *Dataset* list - used there to evaluate expressions that the selected dataset cannot resolve\", \"doc_id\": \"17625\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.models.mbd.double_pendulum/models.mbd.double_pendulum.pdf\", \"sha256\": \"01bbc440e99422fc85ad47e79cfe119f0ab620d8e0bf74035f0730b591ffbd25\", \"title\": \"COMSOL 6.4 model example - Double-Pendulum Dynamics\"}], \"data_mode\": \"none\", \"data_property\": {\"allowed_values\": [\"none\"], \"allowed_values_error\": null, \"getter\": \"getString\", \"java_signature\": \"java.lang.String\", \"kind\": \"string\", \"metadata_status\": \"KNOWN\", \"name\": \"data\", \"shape_rank\": 0, \"type_id\": \"EvalGlobal\", \"value_type\": \"String\"}, \"dataset\": null, \"dataset_type\": null, \"policy\": \"the evaluation feature's documented ``data`` property: a named dataset is set and read back when the model publishes one; when the engine's own readback proves that the model publishes no dataset, the documented value ``none`` is set and read back instead of leaving the *First compatible dataset* default in place\", \"reason\": \"the engine lists no dataset at all for this model; a results-node evaluation has no data to read\", \"solution\": null}, \"data_mode\": \"none\", \"dataset\": null, \"dataset_inventory\": {\"datasets\": [], \"readback\": {\"dataset_tags\": [], \"solution_tags\": []}, \"reason\": \"the engine lists no dataset at all for this model; a results-node evaluation has no data to read\", \"solutions\": [], \"source\": \"model.result().dataset().tags() + dataset getType()/getString('solution'); model.sol().tags()\"}, \"engine_calls\": [\"result().numerical(<owned tag>).set('expr', ...)\", \"result().numerical(<owned tag>).set('data', 'none')\", \"result().numerical(<owned tag>).run()\", \"result().numerical(<owned tag>).getReal()\"], \"evaluated_expression\": \"3*3\", \"expression_evaluator\": {\"attempts\": [{\"call\": \"evaluate\", \"expression\": \"3*3\", \"ok\": true, \"value\": 9.0}], \"dataset\": null, \"engine_call\": \"model.param().evaluate(String)\", \"evaluated_expression\": \"3*3\", \"reason\": \"the results-node route published no value; the model expression evaluator is the engine's own documented evaluator for the expressions that need no solution data, and it resolves the *global* model parameters (doc 4121)\", \"route\": \"engine:model.param().evaluate\", \"scope\": {\"citations\": [{\"chunk_id\": 9676, \"claim\": \"``model.param()`` is a collection of *global* model parameters and ``model.param().evaluate(<param>)`` evaluates the value of the parameter; a component variable is not a parameter of that collection\", \"doc_id\": \"4121\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_general.47.50.html\", \"sha256\": \"6af88c1366f47cb021e76d1dad4ae72ff407adfac74b9e91180912060f57e99a\", \"title\": \"COMSOL 6.4 - model.param() and model.result().param()\"}, {\"chunk_id\": 16481, \"claim\": \"the Application Programming Guide's *Accessing a Global Parameter* section evaluates a global parameter with ``model.param().evaluate(\\\"L\\\")``; variables are a separate collection, accessed through ``model.variable(<tag>)``\", \"doc_id\": \"3961\", \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/application_programming_guide.15.21.html\", \"sha256\": \"b1c830ce7d4511c3a28a19a1ae041e4e737242fbc414f9bd6a062421b9412b11\", \"title\": \"COMSOL 6.4 - Parameters and Variables\"}], \"evaluator\": \"model.param() - the collection of *global* model parameters; model.param().evaluate(<param>) evaluates the value of the parameter\", \"expression_is_global_parameter\": false, \"global_parameters\": [], \"global_parameters_error\": null, \"note\": \"a component variable is not a parameter of this collection: the documented accessor for variables is model.variable(<tag>), and this leg is therefore tried only *after* the data-independent results route (data='none')\", \"resolves\": \"global model parameters (and expressions over them) only\"}, \"solution\": null}, \"expression_evaluator_attempts\": [{\"call\": \"evaluate\", \"expression\": \"3*3\", \"ok\": true, \"value\": 9.0}], \"result_source\": \"model.param().evaluate(String)\", \"route\": \"engine:model.param().evaluate\", \"shape\": [], \"solution\": null}, \"expression\": \"3*3\", \"last_value\": 9.0, \"name\": \"phase4_constant\", \"ok\": true, \"route\": \"engine:model.param().evaluate\", \"shape\": [], \"solution\": null, \"value\": 9.0}], \"server\": {\"attached_to_existing_server\": true, \"comsol_root\": \"/Applications/COMSOL64/Multiphysics\", \"current_model_label\": \"GUARD_T033 (Phase4 G3 acceptance fixture) isolation model\", \"current_model_origin\": \"bound-request\", \"current_model_path\": \"\", \"datetime\": \"2026-09-21 15:52:01\", \"desktop_client_role\": \"visual-client\", \"desktop_should_connect\": {\"host\": \"127.0.0.1\", \"port\": 56389}, \"last_command\": \"evaluate_expressions\", \"last_error\": \"\", \"logs_dir\": \"$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs\", \"mcp_home\": \"$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home\", \"outputs_dir\": \"$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/outputs\", \"recommended_desktop_flow\": \"visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.\", \"server_endpoint\": \"127.0.0.1:56389\", \"server_host\": \"127.0.0.1\", \"server_port\": 56389, \"server_running\": false, \"server_started_by_mcp\": false, \"status\": \"ready\", \"timestamp\": 1789977121.2384121, \"version\": \"0.1.9\", \"workflow\": {\"current_main_model_path\": \"\", \"guard_level\": \"strict\", \"main_model_label\": \"\", \"main_model_path\": \"\", \"main_model_tag\": \"\", \"mcp_client_lifecycle\": \"persistent-required\", \"mode\": \"manual\", \"model_dimension\": 0, \"notes\": \"\", \"one_shot_client_allowed\": false, \"snapshot_dir\": \"\", \"snapshot_name_template\": \"{prefix}_{label}_{timestamp}.mph\", \"snapshot_prefix\": \"\", \"snapshot_save_mode\": \"copy\", \"updated_at\": \"2026-09-21 15:51:53\", \"visible_main_locked\": false, \"workflow_stage\": \"awaiting_manual_server\"}}, \"solution\": null, \"temporary_nodes\": [{\"created\": true, \"feature_type\": \"EvalGlobal\", \"owner\": {\"operation\": \"evaluate_expressions\", \"policy\": \"ephemeral_mutation\", \"request\": {\"expressions\": 1, \"tool\": \"evaluate_expressions\"}, \"scope\": \"mcp_owned_result_numerical_node\", \"tag_allocated_from\": \"random uuid4 hex, never reused from the model\"}, \"removed\": true, \"tag\": \"mcp_eval_1a22688f31d84d7e8199de390c653b07\", \"tags_after\": [], \"tags_before\": [], \"verified_removed\": true}], \"timestamp\": 1789977121.238396, \"tool\": \"evaluate_expressions\"}, \"error\": null, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-20260921T075153Z-g3_1-m1t033-constant\", \"job_id\": \"fdc7cb70-cfb2-4325-b7d2-e8ba07165bf6\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp45\", \"schema_version\": 1, \"server_instance_id\": \"740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"ba78944b-107a-43b2-ac4e-40d35aa3884f\", \"request_hash\": \"d5c72225bbd8110df20e89f7f8970262e319dda94e31ebdb23eb0c6d23e8da50\", \"request_id\": \"phase4-20260921T075153Z-g3_1-m1t033-constant\", \"revision\": 3, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "evaluate_expressions",
+      "sequence": 13,
+      "structuredContent": {
+        "data": {
+          "binding": {
+            "allowed_values": [
+              "none"
+            ],
+            "allowed_values_error": null,
+            "allowed_values_include_none": true,
+            "bind_error": null,
+            "bound": "none",
+            "bound_verified": true,
+            "data_citation": [
+              {
+                "chunk_id": 17235,
+                "claim": "an evaluation feature's ``data`` property takes ``none | parent | dataset name`` and defaults to *First compatible dataset*; ``none`` is the documented value for an evaluation that refers to no dataset",
+                "doc_id": "4454",
+                "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.051.html",
+                "sha256": "17429de155e56bb06014875e959117db215db23bb12baf7bb95daffa7e77d445",
+                "title": "COMSOL 6.4 - EvalGlobal"
+              },
+              {
+                "chunk_id": 17261,
+                "claim": "the API-only ``Global`` numerical feature publishes the same ``data`` values (``none | parent | dataset name``, default *First compatible dataset*)",
+                "doc_id": "4469",
+                "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.066.html",
+                "sha256": "4365366d59e13e3d52a13995a3c219065673d88d4ccf5150413e400331926d77",
+                "title": "COMSOL 6.4 - Global (Numerical)"
+              },
+              {
+                "chunk_id": 17232,
+                "claim": "the ``Eval`` feature publishes the same ``none`` value for ``data`` (``none | dataset name``)",
+                "doc_id": "4452",
+                "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.049.html",
+                "sha256": "0b8b0aa399980893752fbe8f8b7d5085f81204f037f9cdcab9ac4f12da6db3ec",
+                "title": "COMSOL 6.4 - Eval"
+              },
+              {
+                "chunk_id": 16690,
+                "claim": "``String[] getAllowedPropertyValues(String name)`` returns the allowed values of a named property when it is a finite set, so the engine itself can be asked which ``data`` values are legal on this build",
+                "doc_id": "4080",
+                "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_general.47.09.html",
+                "sha256": "36e103782ccbc0c0306644743cbd480542379dd20bd36220db5db78f2133c151",
+                "title": "COMSOL 6.4 - Methods Associated to Set, SetIndex, and the Various Get Methods"
+              },
+              {
+                "claim": "a shipped application example selects ``None`` in a results node's *Dataset* list - used there to evaluate expressions that the selected dataset cannot resolve",
+                "doc_id": "17625",
+                "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.models.mbd.double_pendulum/models.mbd.double_pendulum.pdf",
+                "sha256": "01bbc440e99422fc85ad47e79cfe119f0ab620d8e0bf74035f0730b591ffbd25",
+                "title": "COMSOL 6.4 model example - Double-Pendulum Dynamics"
+              }
+            ],
+            "data_mode": "none",
+            "data_property": {
+              "allowed_values": [
+                "none"
+              ],
+              "allowed_values_error": null,
+              "getter": "getString",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "metadata_status": "KNOWN",
+              "name": "data",
+              "shape_rank": 0,
+              "type_id": "EvalGlobal",
+              "value_type": "String"
+            },
+            "dataset": null,
+            "dataset_type": null,
+            "policy": "the evaluation feature's documented ``data`` property: a named dataset is set and read back when the model publishes one; when the engine's own readback proves that the model publishes no dataset, the documented value ``none`` is set and read back instead of leaving the *First compatible dataset* default in place",
+            "reason": "the engine lists no dataset at all for this model; a results-node evaluation has no data to read",
+            "solution": null
+          },
+          "cleanup": {
+            "cleanup_failed": false,
+            "created": true,
+            "created_count": 1,
+            "nodes": 1,
+            "note": "every tag is a random uuid4 hex owned by this request; cleanup removes that tag only and the removal is verified against the engine's own numerical().tags() readback",
+            "owner_operations": [
+              "evaluate_expressions"
+            ],
+            "policy": "ephemeral_mutation",
+            "removed": true,
+            "removed_count": 1,
+            "unremoved_tags": [],
+            "verified_removed": true,
+            "verified_removed_count": 1
+          },
+          "count": 1,
+          "dataset": null,
+          "dataset_inventory": {
+            "datasets": [],
+            "readback": {
+              "dataset_tags": [],
+              "solution_tags": []
+            },
+            "reason": "the engine lists no dataset at all for this model; a results-node evaluation has no data to read",
+            "solutions": [],
+            "source": "model.result().dataset().tags() + dataset getType()/getString('solution'); model.sol().tags()"
+          },
+          "datetime": "2026-09-21 15:52:01",
+          "ephemeral_mutation": true,
+          "evaluation_policy": "ephemeral_mutation",
+          "label": "GUARD_T033 (Phase4 G3 acceptance fixture) isolation model",
+          "log_path": "$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs/server.log",
+          "max_result_size_ignored": null,
+          "operations_path": "$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs/operations.jsonl",
+          "results": [
+            {
+              "data_mode": "none",
+              "dataset": null,
+              "diagnosis": {
+                "attempts": [
+                  {
+                    "data": "none",
+                    "ok": true,
+                    "route": "results:EvalGlobal",
+                    "value_shape": [
+                      0
+                    ]
+                  },
+                  {
+                    "dataset": null,
+                    "engine_call": "model.param().evaluate(String)",
+                    "error": null,
+                    "evaluated_expression": "3*3",
+                    "route": "engine:model.param().evaluate",
+                    "solution": null
+                  }
+                ],
+                "binding": {
+                  "allowed_values": [
+                    "none"
+                  ],
+                  "allowed_values_error": null,
+                  "allowed_values_include_none": true,
+                  "bind_error": null,
+                  "bound": "none",
+                  "bound_verified": true,
+                  "data_citation": [
+                    {
+                      "chunk_id": 17235,
+                      "claim": "an evaluation feature's ``data`` property takes ``none | parent | dataset name`` and defaults to *First compatible dataset*; ``none`` is the documented value for an evaluation that refers to no dataset",
+                      "doc_id": "4454",
+                      "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.051.html",
+                      "sha256": "17429de155e56bb06014875e959117db215db23bb12baf7bb95daffa7e77d445",
+                      "title": "COMSOL 6.4 - EvalGlobal"
+                    },
+                    {
+                      "chunk_id": 17261,
+                      "claim": "the API-only ``Global`` numerical feature publishes the same ``data`` values (``none | parent | dataset name``, default *First compatible dataset*)",
+                      "doc_id": "4469",
+                      "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.066.html",
+                      "sha256": "4365366d59e13e3d52a13995a3c219065673d88d4ccf5150413e400331926d77",
+                      "title": "COMSOL 6.4 - Global (Numerical)"
+                    },
+                    {
+                      "chunk_id": 17232,
+                      "claim": "the ``Eval`` feature publishes the same ``none`` value for ``data`` (``none | dataset name``)",
+                      "doc_id": "4452",
+                      "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.049.html",
+                      "sha256": "0b8b0aa399980893752fbe8f8b7d5085f81204f037f9cdcab9ac4f12da6db3ec",
+                      "title": "COMSOL 6.4 - Eval"
+                    },
+                    {
+                      "chunk_id": 16690,
+                      "claim": "``String[] getAllowedPropertyValues(String name)`` returns the allowed values of a named property when it is a finite set, so the engine itself can be asked which ``data`` values are legal on this build",
+                      "doc_id": "4080",
+                      "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_general.47.09.html",
+                      "sha256": "36e103782ccbc0c0306644743cbd480542379dd20bd36220db5db78f2133c151",
+                      "title": "COMSOL 6.4 - Methods Associated to Set, SetIndex, and the Various Get Methods"
+                    },
+                    {
+                      "claim": "a shipped application example selects ``None`` in a results node's *Dataset* list - used there to evaluate expressions that the selected dataset cannot resolve",
+                      "doc_id": "17625",
+                      "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.models.mbd.double_pendulum/models.mbd.double_pendulum.pdf",
+                      "sha256": "01bbc440e99422fc85ad47e79cfe119f0ab620d8e0bf74035f0730b591ffbd25",
+                      "title": "COMSOL 6.4 model example - Double-Pendulum Dynamics"
+                    }
+                  ],
+                  "data_mode": "none",
+                  "data_property": {
+                    "allowed_values": [
+                      "none"
+                    ],
+                    "allowed_values_error": null,
+                    "getter": "getString",
+                    "java_signature": "java.lang.String",
+                    "kind": "string",
+                    "metadata_status": "KNOWN",
+                    "name": "data",
+                    "shape_rank": 0,
+                    "type_id": "EvalGlobal",
+                    "value_type": "String"
+                  },
+                  "dataset": null,
+                  "dataset_type": null,
+                  "policy": "the evaluation feature's documented ``data`` property: a named dataset is set and read back when the model publishes one; when the engine's own readback proves that the model publishes no dataset, the documented value ``none`` is set and read back instead of leaving the *First compatible dataset* default in place",
+                  "reason": "the engine lists no dataset at all for this model; a results-node evaluation has no data to read",
+                  "solution": null
+                },
+                "data_mode": "none",
+                "dataset": null,
+                "dataset_inventory": {
+                  "datasets": [],
+                  "readback": {
+                    "dataset_tags": [],
+                    "solution_tags": []
+                  },
+                  "reason": "the engine lists no dataset at all for this model; a results-node evaluation has no data to read",
+                  "solutions": [],
+                  "source": "model.result().dataset().tags() + dataset getType()/getString('solution'); model.sol().tags()"
+                },
+                "engine_calls": [
+                  "result().numerical(<owned tag>).set('expr', ...)",
+                  "result().numerical(<owned tag>).set('data', 'none')",
+                  "result().numerical(<owned tag>).run()",
+                  "result().numerical(<owned tag>).getReal()"
+                ],
+                "evaluated_expression": "3*3",
+                "expression_evaluator": {
+                  "attempts": [
+                    {
+                      "call": "evaluate",
+                      "expression": "3*3",
+                      "ok": true,
+                      "value": 9.0
+                    }
+                  ],
+                  "dataset": null,
+                  "engine_call": "model.param().evaluate(String)",
+                  "evaluated_expression": "3*3",
+                  "reason": "the results-node route published no value; the model expression evaluator is the engine's own documented evaluator for the expressions that need no solution data, and it resolves the *global* model parameters (doc 4121)",
+                  "route": "engine:model.param().evaluate",
+                  "scope": {
+                    "citations": [
+                      {
+                        "chunk_id": 9676,
+                        "claim": "``model.param()`` is a collection of *global* model parameters and ``model.param().evaluate(<param>)`` evaluates the value of the parameter; a component variable is not a parameter of that collection",
+                        "doc_id": "4121",
+                        "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_general.47.50.html",
+                        "sha256": "6af88c1366f47cb021e76d1dad4ae72ff407adfac74b9e91180912060f57e99a",
+                        "title": "COMSOL 6.4 - model.param() and model.result().param()"
+                      },
+                      {
+                        "chunk_id": 16481,
+                        "claim": "the Application Programming Guide's *Accessing a Global Parameter* section evaluates a global parameter with ``model.param().evaluate(\"L\")``; variables are a separate collection, accessed through ``model.variable(<tag>)``",
+                        "doc_id": "3961",
+                        "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/application_programming_guide.15.21.html",
+                        "sha256": "b1c830ce7d4511c3a28a19a1ae041e4e737242fbc414f9bd6a062421b9412b11",
+                        "title": "COMSOL 6.4 - Parameters and Variables"
+                      }
+                    ],
+                    "evaluator": "model.param() - the collection of *global* model parameters; model.param().evaluate(<param>) evaluates the value of the parameter",
+                    "expression_is_global_parameter": false,
+                    "global_parameters": [],
+                    "global_parameters_error": null,
+                    "note": "a component variable is not a parameter of this collection: the documented accessor for variables is model.variable(<tag>), and this leg is therefore tried only *after* the data-independent results route (data='none')",
+                    "resolves": "global model parameters (and expressions over them) only"
+                  },
+                  "solution": null
+                },
+                "expression_evaluator_attempts": [
+                  {
+                    "call": "evaluate",
+                    "expression": "3*3",
+                    "ok": true,
+                    "value": 9.0
+                  }
+                ],
+                "result_source": "model.param().evaluate(String)",
+                "route": "engine:model.param().evaluate",
+                "shape": [],
+                "solution": null
+              },
+              "expression": "3*3",
+              "last_value": 9.0,
+              "name": "phase4_constant",
+              "ok": true,
+              "route": "engine:model.param().evaluate",
+              "shape": [],
+              "solution": null,
+              "value": 9.0
+            }
+          ],
+          "server": {
+            "attached_to_existing_server": true,
+            "comsol_root": "/Applications/COMSOL64/Multiphysics",
+            "current_model_label": "GUARD_T033 (Phase4 G3 acceptance fixture) isolation model",
+            "current_model_origin": "bound-request",
+            "current_model_path": "",
+            "datetime": "2026-09-21 15:52:01",
+            "desktop_client_role": "visual-client",
+            "desktop_should_connect": {
+              "host": "127.0.0.1",
+              "port": 56389
+            },
+            "last_command": "evaluate_expressions",
+            "last_error": "",
+            "logs_dir": "$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs",
+            "mcp_home": "$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home",
+            "outputs_dir": "$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/outputs",
+            "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+            "server_endpoint": "127.0.0.1:56389",
+            "server_host": "127.0.0.1",
+            "server_port": 56389,
+            "server_running": false,
+            "server_started_by_mcp": false,
+            "status": "ready",
+            "timestamp": 1789977121.2384121,
+            "version": "0.1.9",
+            "workflow": {
+              "current_main_model_path": "",
+              "guard_level": "strict",
+              "main_model_label": "",
+              "main_model_path": "",
+              "main_model_tag": "",
+              "mcp_client_lifecycle": "persistent-required",
+              "mode": "manual",
+              "model_dimension": 0,
+              "notes": "",
+              "one_shot_client_allowed": false,
+              "snapshot_dir": "",
+              "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+              "snapshot_prefix": "",
+              "snapshot_save_mode": "copy",
+              "updated_at": "2026-09-21 15:51:53",
+              "visible_main_locked": false,
+              "workflow_stage": "awaiting_manual_server"
+            }
+          },
+          "solution": null,
+          "temporary_nodes": [
+            {
+              "created": true,
+              "feature_type": "EvalGlobal",
+              "owner": {
+                "operation": "evaluate_expressions",
+                "policy": "ephemeral_mutation",
+                "request": {
+                  "expressions": 1,
+                  "tool": "evaluate_expressions"
+                },
+                "scope": "mcp_owned_result_numerical_node",
+                "tag_allocated_from": "random uuid4 hex, never reused from the model"
+              },
+              "removed": true,
+              "tag": "mcp_eval_1a22688f31d84d7e8199de390c653b07",
+              "tags_after": [],
+              "tags_before": [],
+              "verified_removed": true
+            }
+          ],
+          "timestamp": 1789977121.238396,
+          "tool": "evaluate_expressions"
+        },
+        "error": null,
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-20260921T075153Z-g3_1-m1t033-constant",
+          "job_id": "fdc7cb70-cfb2-4325-b7d2-e8ba07165bf6",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp45",
+            "schema_version": 1,
+            "server_instance_id": "740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "ba78944b-107a-43b2-ac4e-40d35aa3884f",
+          "request_hash": "d5c72225bbd8110df20e89f7f8970262e319dda94e31ebdb23eb0c6d23e8da50",
+          "request_id": "phase4-20260921T075153Z-g3_1-m1t033-constant",
+          "revision": 3,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-comsol-mcp-phase4-180\", \"job_id\": \"3a811b4f-69a9-43f7-9683-6c0490b5d7d0\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp45\", \"schema_version\": 1, \"server_instance_id\": \"740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"78007d6f-3c4d-411b-bc54-d3efe8ea28dd\", \"request_hash\": \"3ad1b8ed16d77b8ba2c3bf9717c1807d25150cb4fbbcb40cbf15cd19a9d5b9c4\", \"request_id\": \"phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-comsol-mcp-phase4-180\", \"revision\": 3, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "model_inspect",
+      "sequence": 14,
+      "structuredContent": {
+        "data": {},
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-comsol-mcp-phase4-180",
+          "job_id": "3a811b4f-69a9-43f7-9683-6c0490b5d7d0",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp45",
+            "schema_version": 1,
+            "server_instance_id": "740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "78007d6f-3c4d-411b-bc54-d3efe8ea28dd",
+          "request_hash": "3ad1b8ed16d77b8ba2c3bf9717c1807d25150cb4fbbcb40cbf15cd19a9d5b9c4",
+          "request_id": "phase4-20260921T075153Z-g3_1-m1phase4-reconcile-model-comsol-mcp-phase4-180",
+          "revision": 3,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"cleanup\": {\"cleanup_failed\": false, \"created\": true, \"created_count\": 2, \"nodes\": 2, \"note\": \"every tag is a random uuid4 hex owned by this request; cleanup removes that tag only and the removal is verified against the engine's own numerical().tags() readback\", \"owner_operations\": [\"evaluate_expressions\"], \"policy\": \"ephemeral_mutation\", \"removed\": true, \"removed_count\": 2, \"unremoved_tags\": [], \"verified_removed\": true, \"verified_removed_count\": 2}, \"count\": 1, \"datetime\": \"2026-09-21 15:52:01\", \"ephemeral_mutation\": true, \"evaluation_policy\": \"ephemeral_mutation\", \"execution_state_unknown\": false, \"failed_item_may_have_changed\": false, \"label\": \"GUARD_T033 (Phase4 G3 acceptance fixture) isolation model\", \"log_path\": \"$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs/server.log\", \"max_result_size_ignored\": null, \"operations_path\": \"$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs/operations.jsonl\", \"partial_change\": true, \"requires_model_reconciliation\": true, \"results\": [{\"diagnosis\": {\"attempts\": [{\"data\": null, \"error\": \"{\\\"completed_at_ms\\\": \\\"1789977121268\\\", \\\"failure\\\": {\\\"code\\\": \\\"ENGINE_CALL_FAILED\\\", \\\"execution_state_unknown\\\": true, \\\"message\\\": \\\"FlException: Syntax_error_in_expression\\\", \\\"ok\\\": false}, \\\"ok\\\": false, \\\"queued_at_ms\\\": \\\"1789977121266\\\", \\\"request_id\\\": \\\"wrk-f39727a4-31ec-4b42-98fe-896bfa5aa198\\\", \\\"started_at_ms\\\": \\\"1789977121266\\\", \\\"status\\\": \\\"FAILED\\\", \\\"type\\\": \\\"call\\\"}\", \"ok\": false, \"route\": \"results:EvalGlobal\"}, {\"error\": \"{\\\"completed_at_ms\\\": \\\"1789977121277\\\", \\\"failure\\\": {\\\"code\\\": \\\"ENGINE_CALL_FAILED\\\", \\\"execution_state_unknown\\\": true, \\\"message\\\": \\\"FlException: Syntax_error_in_expression\\\", \\\"ok\\\": false}, \\\"ok\\\": false, \\\"queued_at_ms\\\": \\\"1789977121276\\\", \\\"request_id\\\": \\\"wrk-b723fbc7-ee0c-46eb-afca-04177098e62c\\\", \\\"started_at_ms\\\": \\\"1789977121276\\\", \\\"status\\\": \\\"FAILED\\\", \\\"type\\\": \\\"call\\\"}\", \"ok\": false, \"route\": \"results:Eval(getData)\"}]}, \"error\": \"EvalGlobal failed: {\\\"completed_at_ms\\\": \\\"1789977121268\\\", \\\"failure\\\": {\\\"code\\\": \\\"ENGINE_CALL_FAILED\\\", \\\"execution_state_unknown\\\": true, \\\"message\\\": \\\"FlException: Syntax_error_in_expression\\\", \\\"ok\\\": false}, \\\"ok\\\": false, \\\"queued_at_ms\\\": \\\"1789977121266\\\", \\\"request_id\\\": \\\"wrk-f39727a4-31ec-4b42-98fe-896bfa5aa198\\\", \\\"started_at_ms\\\": \\\"1789977121266\\\", \\\"status\\\": \\\"FAILED\\\", \\\"type\\\": \\\"call\\\"}; Eval/getData fallback failed: {\\\"completed_at_ms\\\": \\\"1789977121277\\\", \\\"failure\\\": {\\\"code\\\": \\\"ENGINE_CALL_FAILED\\\", \\\"execution_state_unknown\\\": true, \\\"message\\\": \\\"FlException: Syntax_error_in_expression\\\", \\\"ok\\\": false}, \\\"ok\\\": false, \\\"queued_at_ms\\\": \\\"1789977121276\\\", \\\"request_id\\\": \\\"wrk-b723fbc7-ee0c-46eb-afca-04177098e62c\\\", \\\"started_at_ms\\\": \\\"1789977121276\\\", \\\"status\\\": \\\"FAILED\\\", \\\"type\\\": \\\"call\\\"}\", \"expression\": \"sin(\", \"name\": \"phase4_illegal\", \"ok\": false}], \"safe_retry\": true, \"server\": {\"attached_to_existing_server\": true, \"comsol_root\": \"/Applications/COMSOL64/Multiphysics\", \"current_model_label\": \"GUARD_T033 (Phase4 G3 acceptance fixture) isolation model\", \"current_model_origin\": \"bound-request\", \"current_model_path\": \"\", \"datetime\": \"2026-09-21 15:52:01\", \"desktop_client_role\": \"visual-client\", \"desktop_should_connect\": {\"host\": \"127.0.0.1\", \"port\": 56389}, \"last_command\": \"evaluate_expressions\", \"last_error\": \"One or more expressions could not be evaluated.\", \"logs_dir\": \"$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs\", \"mcp_home\": \"$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home\", \"outputs_dir\": \"$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/outputs\", \"recommended_desktop_flow\": \"visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.\", \"server_endpoint\": \"127.0.0.1:56389\", \"server_host\": \"127.0.0.1\", \"server_port\": 56389, \"server_running\": false, \"server_started_by_mcp\": false, \"status\": \"ready\", \"timestamp\": 1789977121.280127, \"version\": \"0.1.9\", \"workflow\": {\"current_main_model_path\": \"\", \"guard_level\": \"strict\", \"main_model_label\": \"\", \"main_model_path\": \"\", \"main_model_tag\": \"\", \"mcp_client_lifecycle\": \"persistent-required\", \"mode\": \"manual\", \"model_dimension\": 0, \"notes\": \"\", \"one_shot_client_allowed\": false, \"snapshot_dir\": \"\", \"snapshot_name_template\": \"{prefix}_{label}_{timestamp}.mph\", \"snapshot_prefix\": \"\", \"snapshot_save_mode\": \"copy\", \"updated_at\": \"2026-09-21 15:51:53\", \"visible_main_locked\": false, \"workflow_stage\": \"awaiting_manual_server\"}}, \"status\": \"partial\", \"temporary_nodes\": [{\"created\": true, \"feature_type\": \"EvalGlobal\", \"owner\": {\"operation\": \"evaluate_expressions\", \"policy\": \"ephemeral_mutation\", \"request\": {\"expressions\": 1, \"tool\": \"evaluate_expressions\"}, \"scope\": \"mcp_owned_result_numerical_node\", \"tag_allocated_from\": \"random uuid4 hex, never reused from the model\"}, \"removed\": true, \"tag\": \"mcp_eval_f5cb204032734704bf0ea4aa3a963975\", \"tags_after\": [], \"tags_before\": [], \"verified_removed\": true}, {\"created\": true, \"feature_type\": \"Eval\", \"owner\": {\"operation\": \"evaluate_expressions\", \"policy\": \"ephemeral_mutation\", \"request\": {\"expressions\": 1, \"tool\": \"evaluate_expressions\"}, \"scope\": \"mcp_owned_result_numerical_node\", \"tag_allocated_from\": \"random uuid4 hex, never reused from the model\"}, \"removed\": true, \"tag\": \"mcp_eval_5240dc2803c14a73b176ecfd3c13cdfd\", \"tags_after\": [], \"tags_before\": [], \"verified_removed\": true}], \"timestamp\": 1789977121.280113, \"tool\": \"evaluate_expressions\", \"verification_status\": \"NOT_APPLICABLE\", \"verified_outcome\": \"partial\"}, \"error\": \"One or more expressions could not be evaluated.\", \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": true, \"idempotency_key\": \"phase4-20260921T075153Z-g3_1-m1t033-illegal_expression\", \"job_id\": \"6e4c4349-fccd-484b-a29f-76dc39664275\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp45\", \"schema_version\": 1, \"server_instance_id\": \"740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"00914ee1-edbc-490e-868c-56d11f3402cb\", \"request_hash\": \"18d8ee8efc3c3a56cef705009b0c51a99cfac23c0cef3bd14d7819fdfbc89904\", \"request_id\": \"phase4-20260921T075153Z-g3_1-m1t033-illegal_expression\", \"revision\": 4, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "One or more expressions could not be evaluated.",
+      "error_message": "One or more expressions could not be evaluated.",
+      "operation": "evaluate_expressions",
+      "sequence": 15,
+      "structuredContent": {
+        "data": {
+          "cleanup": {
+            "cleanup_failed": false,
+            "created": true,
+            "created_count": 2,
+            "nodes": 2,
+            "note": "every tag is a random uuid4 hex owned by this request; cleanup removes that tag only and the removal is verified against the engine's own numerical().tags() readback",
+            "owner_operations": [
+              "evaluate_expressions"
+            ],
+            "policy": "ephemeral_mutation",
+            "removed": true,
+            "removed_count": 2,
+            "unremoved_tags": [],
+            "verified_removed": true,
+            "verified_removed_count": 2
+          },
+          "count": 1,
+          "datetime": "2026-09-21 15:52:01",
+          "ephemeral_mutation": true,
+          "evaluation_policy": "ephemeral_mutation",
+          "execution_state_unknown": false,
+          "failed_item_may_have_changed": false,
+          "label": "GUARD_T033 (Phase4 G3 acceptance fixture) isolation model",
+          "log_path": "$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs/server.log",
+          "max_result_size_ignored": null,
+          "operations_path": "$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs/operations.jsonl",
+          "partial_change": true,
+          "requires_model_reconciliation": true,
+          "results": [
+            {
+              "diagnosis": {
+                "attempts": [
+                  {
+                    "data": null,
+                    "error": "{\"completed_at_ms\": \"1789977121268\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: Syntax_error_in_expression\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1789977121266\", \"request_id\": \"wrk-f39727a4-31ec-4b42-98fe-896bfa5aa198\", \"started_at_ms\": \"1789977121266\", \"status\": \"FAILED\", \"type\": \"call\"}",
+                    "ok": false,
+                    "route": "results:EvalGlobal"
+                  },
+                  {
+                    "error": "{\"completed_at_ms\": \"1789977121277\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: Syntax_error_in_expression\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1789977121276\", \"request_id\": \"wrk-b723fbc7-ee0c-46eb-afca-04177098e62c\", \"started_at_ms\": \"1789977121276\", \"status\": \"FAILED\", \"type\": \"call\"}",
+                    "ok": false,
+                    "route": "results:Eval(getData)"
+                  }
+                ]
+              },
+              "error": "EvalGlobal failed: {\"completed_at_ms\": \"1789977121268\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: Syntax_error_in_expression\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1789977121266\", \"request_id\": \"wrk-f39727a4-31ec-4b42-98fe-896bfa5aa198\", \"started_at_ms\": \"1789977121266\", \"status\": \"FAILED\", \"type\": \"call\"}; Eval/getData fallback failed: {\"completed_at_ms\": \"1789977121277\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: Syntax_error_in_expression\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1789977121276\", \"request_id\": \"wrk-b723fbc7-ee0c-46eb-afca-04177098e62c\", \"started_at_ms\": \"1789977121276\", \"status\": \"FAILED\", \"type\": \"call\"}",
+              "expression": "sin(",
+              "name": "phase4_illegal",
+              "ok": false
+            }
+          ],
+          "safe_retry": true,
+          "server": {
+            "attached_to_existing_server": true,
+            "comsol_root": "/Applications/COMSOL64/Multiphysics",
+            "current_model_label": "GUARD_T033 (Phase4 G3 acceptance fixture) isolation model",
+            "current_model_origin": "bound-request",
+            "current_model_path": "",
+            "datetime": "2026-09-21 15:52:01",
+            "desktop_client_role": "visual-client",
+            "desktop_should_connect": {
+              "host": "127.0.0.1",
+              "port": 56389
+            },
+            "last_command": "evaluate_expressions",
+            "last_error": "One or more expressions could not be evaluated.",
+            "logs_dir": "$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/logs",
+            "mcp_home": "$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home",
+            "outputs_dir": "$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T075153Z-g3_1-m1/primary/mcp-home/outputs",
+            "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+            "server_endpoint": "127.0.0.1:56389",
+            "server_host": "127.0.0.1",
+            "server_port": 56389,
+            "server_running": false,
+            "server_started_by_mcp": false,
+            "status": "ready",
+            "timestamp": 1789977121.280127,
+            "version": "0.1.9",
+            "workflow": {
+              "current_main_model_path": "",
+              "guard_level": "strict",
+              "main_model_label": "",
+              "main_model_path": "",
+              "main_model_tag": "",
+              "mcp_client_lifecycle": "persistent-required",
+              "mode": "manual",
+              "model_dimension": 0,
+              "notes": "",
+              "one_shot_client_allowed": false,
+              "snapshot_dir": "",
+              "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+              "snapshot_prefix": "",
+              "snapshot_save_mode": "copy",
+              "updated_at": "2026-09-21 15:51:53",
+              "visible_main_locked": false,
+              "workflow_stage": "awaiting_manual_server"
+            }
+          },
+          "status": "partial",
+          "temporary_nodes": [
+            {
+              "created": true,
+              "feature_type": "EvalGlobal",
+              "owner": {
+                "operation": "evaluate_expressions",
+                "policy": "ephemeral_mutation",
+                "request": {
+                  "expressions": 1,
+                  "tool": "evaluate_expressions"
+                },
+                "scope": "mcp_owned_result_numerical_node",
+                "tag_allocated_from": "random uuid4 hex, never reused from the model"
+              },
+              "removed": true,
+              "tag": "mcp_eval_f5cb204032734704bf0ea4aa3a963975",
+              "tags_after": [],
+              "tags_before": [],
+              "verified_removed": true
+            },
+            {
+              "created": true,
+              "feature_type": "Eval",
+              "owner": {
+                "operation": "evaluate_expressions",
+                "policy": "ephemeral_mutation",
+                "request": {
+                  "expressions": 1,
+                  "tool": "evaluate_expressions"
+                },
+                "scope": "mcp_owned_result_numerical_node",
+                "tag_allocated_from": "random uuid4 hex, never reused from the model"
+              },
+              "removed": true,
+              "tag": "mcp_eval_5240dc2803c14a73b176ecfd3c13cdfd",
+              "tags_after": [],
+              "tags_before": [],
+              "verified_removed": true
+            }
+          ],
+          "timestamp": 1789977121.280113,
+          "tool": "evaluate_expressions",
+          "verification_status": "NOT_APPLICABLE",
+          "verified_outcome": "partial"
+        },
+        "error": "One or more expressions could not be evaluated.",
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": true,
+          "idempotency_key": "phase4-20260921T075153Z-g3_1-m1t033-illegal_expression",
+          "job_id": "6e4c4349-fccd-484b-a29f-76dc39664275",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp45",
+            "schema_version": 1,
+            "server_instance_id": "740f9a6f3e8e39864ad3af5b183d31d9867db030126afca92cc7861e6e6eccfc",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "00914ee1-edbc-490e-868c-56d11f3402cb",
+          "request_hash": "18d8ee8efc3c3a56cef705009b0c51a99cfac23c0cef3bd14d7819fdfbc89904",
+          "request_id": "phase4-20260921T075153Z-g3_1-m1t033-illegal_expression",
+          "revision": 4,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": false
+      },
+      "success": false
+    }
+  ]
+}

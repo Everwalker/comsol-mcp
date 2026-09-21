@@ -1,0 +1,687 @@
+{
+  "case_id": "W15_T042_license",
+  "results": [
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"products\": {\"items\": {\"type\": \"string\"}, \"type\": \"array\"}, \"request_id\": {\"type\": \"string\"}, \"runtime_id\": {\"type\": \"string\"}}, \"required\": [\"runtime_id\"], \"title\": \"runtime.license_inspect input\", \"type\": \"object\"}, \"domain\": \"runtime\", \"effect\": \"READ\", \"executable\": true, \"gate\": \"G0\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"products\": {\"items\": {\"type\": \"string\"}, \"type\": \"array\"}, \"request_id\": {\"type\": \"string\"}, \"runtime_id\": {\"type\": \"string\"}}, \"required\": [\"runtime_id\"], \"title\": \"runtime.license_inspect input\", \"type\": \"object\"}, \"mcp_tool_name\": \"runtime_license_inspect\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"runtime.license_inspect\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"检查许可允许的产品，不静默占用许可\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\"], \"route\": \"control plane\", \"scope\": \"control\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 1,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "products": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "runtime_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "runtime_id"
+            ],
+            "title": "runtime.license_inspect input",
+            "type": "object"
+          },
+          "domain": "runtime",
+          "effect": "READ",
+          "executable": true,
+          "gate": "G0",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "products": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "runtime_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "runtime_id"
+            ],
+            "title": "runtime.license_inspect input",
+            "type": "object"
+          },
+          "mcp_tool_name": "runtime_license_inspect",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "runtime.license_inspect",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "检查许可允许的产品，不静默占用许可",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful"
+          ],
+          "route": "control plane",
+          "scope": "control",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"refresh\": {\"type\": \"boolean\"}, \"request_id\": {\"type\": \"string\"}, \"runtime_id\": {\"type\": \"string\"}}, \"required\": [], \"title\": \"runtime.capabilities input\", \"type\": \"object\"}, \"domain\": \"runtime\", \"effect\": \"READ\", \"executable\": true, \"gate\": \"G0\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"refresh\": {\"type\": \"boolean\"}, \"request_id\": {\"type\": \"string\"}, \"runtime_id\": {\"type\": \"string\"}}, \"required\": [], \"title\": \"runtime.capabilities input\", \"type\": \"object\"}, \"mcp_tool_name\": \"runtime_capabilities\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"runtime.capabilities\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"读取能力状态、限制与实测证据\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\"], \"route\": \"control plane\", \"scope\": \"control\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 2,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "refresh": {
+                "type": "boolean"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "runtime_id": {
+                "type": "string"
+              }
+            },
+            "required": [],
+            "title": "runtime.capabilities input",
+            "type": "object"
+          },
+          "domain": "runtime",
+          "effect": "READ",
+          "executable": true,
+          "gate": "G0",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "refresh": {
+                "type": "boolean"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "runtime_id": {
+                "type": "string"
+              }
+            },
+            "required": [],
+            "title": "runtime.capabilities input",
+            "type": "object"
+          },
+          "mcp_tool_name": "runtime_capabilities",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "runtime.capabilities",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "读取能力状态、限制与实测证据",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful"
+          ],
+          "route": "control plane",
+          "scope": "control",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"names\": {\"items\": {\"type\": \"string\"}, \"type\": \"array\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"path\", \"names\"], \"title\": \"node.property_get input\", \"type\": \"object\"}, \"domain\": \"node\", \"effect\": \"READ\", \"executable\": true, \"gate\": \"G2\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"names\": {\"items\": {\"type\": \"string\"}, \"type\": \"array\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"path\", \"names\"], \"title\": \"node.property_get input\", \"type\": \"object\"}, \"mcp_tool_name\": \"node_property_get\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"node.property_get\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"按类型回读一个或多个属性\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 3,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "names": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "path",
+              "names"
+            ],
+            "title": "node.property_get input",
+            "type": "object"
+          },
+          "domain": "node",
+          "effect": "READ",
+          "executable": true,
+          "gate": "G2",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "names": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "path",
+              "names"
+            ],
+            "title": "node.property_get input",
+            "type": "object"
+          },
+          "mcp_tool_name": "node_property_get",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "node.property_get",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "按类型回读一个或多个属性",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-driver5cphase4-reconcile-model-phase4-260\", \"job_id\": \"f202e492-62d0-4ff4-b1c3-14dd07aa091b\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp1\", \"schema_version\": 1, \"server_instance_id\": \"80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"497b5d65-9142-4a59-a6f9-2ab9ac472f3f\", \"request_hash\": \"8d6ae0707a5a775b253017b645fd3164e3728a1c6800e4f785b436094b0329ff\", \"request_id\": \"phase4-driver5cphase4-reconcile-model-phase4-260\", \"revision\": 27, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "model_inspect",
+      "sequence": 4,
+      "structuredContent": {
+        "data": {},
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-driver5cphase4-reconcile-model-phase4-260",
+          "job_id": "f202e492-62d0-4ff4-b1c3-14dd07aa091b",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp1",
+            "schema_version": 1,
+            "server_instance_id": "80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "497b5d65-9142-4a59-a6f9-2ab9ac472f3f",
+          "request_hash": "8d6ae0707a5a775b253017b645fd3164e3728a1c6800e4f785b436094b0329ff",
+          "request_id": "phase4-driver5cphase4-reconcile-model-phase4-260",
+          "revision": 27,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"status\": \"REFUSED\"}, \"error\": {\"code\": \"BLOCKED_LICENSE\", \"message\": \"no non-checkout license answer was available for 1 of 1 requested product(s): HeatTransfer (probe ModelUtil.hasProduct refused with ENGINE_CALL_FAILED: NoSuchMethodException: no permitted public overload for hasProduct/1). No seat was requested and no hasProduct value is reported for an unresolved product\", \"safe_retry\": false}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-driver5clicense_inspect_records_has_product\", \"job_id\": \"e617d75b-79ff-442e-8eb9-78e650b28e2b\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp1\", \"schema_version\": 1, \"server_instance_id\": \"80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"a3a6af8e-9ee8-47bd-ab72-f1a6dee33895\", \"request_hash\": \"3862583d33401eee551aa65cc359aff5c0ed715f70a912d7e0e69a999194ae24\", \"request_id\": \"phase4-driver5clicense_inspect_records_has_product\", \"revision\": 27, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "BLOCKED_LICENSE",
+      "error_message": "no non-checkout license answer was available for 1 of 1 requested product(s): HeatTransfer (probe ModelUtil.hasProduct refused with ENGINE_CALL_FAILED: NoSuchMethodException: no permitted public overload for hasProduct/1). No seat was requested and no hasProduct value is reported for an unresolved product",
+      "operation": "operation_call",
+      "sequence": 5,
+      "structuredContent": {
+        "data": {
+          "status": "REFUSED"
+        },
+        "error": {
+          "code": "BLOCKED_LICENSE",
+          "message": "no non-checkout license answer was available for 1 of 1 requested product(s): HeatTransfer (probe ModelUtil.hasProduct refused with ENGINE_CALL_FAILED: NoSuchMethodException: no permitted public overload for hasProduct/1). No seat was requested and no hasProduct value is reported for an unresolved product",
+          "safe_retry": false
+        },
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-driver5clicense_inspect_records_has_product",
+          "job_id": "e617d75b-79ff-442e-8eb9-78e650b28e2b",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp1",
+            "schema_version": 1,
+            "server_instance_id": "80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "a3a6af8e-9ee8-47bd-ab72-f1a6dee33895",
+          "request_hash": "3862583d33401eee551aa65cc359aff5c0ed715f70a912d7e0e69a999194ae24",
+          "request_id": "phase4-driver5clicense_inspect_records_has_product",
+          "revision": 27,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-driver5cphase4-reconcile-model-phase4-261\", \"job_id\": \"c2a0a524-2612-4687-9b0b-7ff81b98059d\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp1\", \"schema_version\": 1, \"server_instance_id\": \"80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"149f5e19-ae28-45b9-86ca-8afbfd8e83a0\", \"request_hash\": \"8d6ae0707a5a775b253017b645fd3164e3728a1c6800e4f785b436094b0329ff\", \"request_id\": \"phase4-driver5cphase4-reconcile-model-phase4-261\", \"revision\": 27, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "model_inspect",
+      "sequence": 6,
+      "structuredContent": {
+        "data": {},
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-driver5cphase4-reconcile-model-phase4-261",
+          "job_id": "c2a0a524-2612-4687-9b0b-7ff81b98059d",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp1",
+            "schema_version": 1,
+            "server_instance_id": "80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "149f5e19-ae28-45b9-86ca-8afbfd8e83a0",
+          "request_hash": "8d6ae0707a5a775b253017b645fd3164e3728a1c6800e4f785b436094b0329ff",
+          "request_id": "phase4-driver5cphase4-reconcile-model-phase4-261",
+          "revision": 27,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"status\": \"REFUSED\"}, \"error\": {\"code\": \"BLOCKED_LICENSE\", \"message\": \"no non-checkout license answer was available for 1 of 1 requested product(s): HeatTransfer (probe ModelUtil.hasProduct refused with ENGINE_CALL_FAILED: NoSuchMethodException: no permitted public overload for hasProduct/1). No seat was requested and no hasProduct value is reported for an unresolved product\", \"safe_retry\": false}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-driver5ct042-inspect\", \"job_id\": \"798a51bc-327a-402d-acb5-f91c13414ffa\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp1\", \"schema_version\": 1, \"server_instance_id\": \"80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"4e502b1a-8a9f-40b0-991f-a4dc922d88df\", \"request_hash\": \"3862583d33401eee551aa65cc359aff5c0ed715f70a912d7e0e69a999194ae24\", \"request_id\": \"phase4-driver5cinspect\", \"revision\": 27, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "BLOCKED_LICENSE",
+      "error_message": "no non-checkout license answer was available for 1 of 1 requested product(s): HeatTransfer (probe ModelUtil.hasProduct refused with ENGINE_CALL_FAILED: NoSuchMethodException: no permitted public overload for hasProduct/1). No seat was requested and no hasProduct value is reported for an unresolved product",
+      "operation": "operation_call",
+      "sequence": 7,
+      "structuredContent": {
+        "data": {
+          "status": "REFUSED"
+        },
+        "error": {
+          "code": "BLOCKED_LICENSE",
+          "message": "no non-checkout license answer was available for 1 of 1 requested product(s): HeatTransfer (probe ModelUtil.hasProduct refused with ENGINE_CALL_FAILED: NoSuchMethodException: no permitted public overload for hasProduct/1). No seat was requested and no hasProduct value is reported for an unresolved product",
+          "safe_retry": false
+        },
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-driver5ct042-inspect",
+          "job_id": "798a51bc-327a-402d-acb5-f91c13414ffa",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp1",
+            "schema_version": 1,
+            "server_instance_id": "80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "4e502b1a-8a9f-40b0-991f-a4dc922d88df",
+          "request_hash": "3862583d33401eee551aa65cc359aff5c0ed715f70a912d7e0e69a999194ae24",
+          "request_id": "phase4-driver5cinspect",
+          "revision": 27,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-driver5cphase4-reconcile-model-phase4-262\", \"job_id\": \"ec95eac9-fb24-4ae6-8c0e-8bc7b8fe6fc4\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp1\", \"schema_version\": 1, \"server_instance_id\": \"80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"d4fd3630-4d57-4656-91dd-836d6fa240ad\", \"request_hash\": \"8d6ae0707a5a775b253017b645fd3164e3728a1c6800e4f785b436094b0329ff\", \"request_id\": \"phase4-driver5cphase4-reconcile-model-phase4-262\", \"revision\": 27, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "model_inspect",
+      "sequence": 8,
+      "structuredContent": {
+        "data": {},
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-driver5cphase4-reconcile-model-phase4-262",
+          "job_id": "ec95eac9-fb24-4ae6-8c0e-8bc7b8fe6fc4",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp1",
+            "schema_version": 1,
+            "server_instance_id": "80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "d4fd3630-4d57-4656-91dd-836d6fa240ad",
+          "request_hash": "8d6ae0707a5a775b253017b645fd3164e3728a1c6800e4f785b436094b0329ff",
+          "request_id": "phase4-driver5cphase4-reconcile-model-phase4-262",
+          "revision": 27,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"API_UNSUPPORTED\", \"message\": \"authoritative value metadata is unavailable for property 'geometry'\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver5cauthorized_product_usable\", \"job_id\": \"19cd15d0-b025-42d6-a179-fa75c05b98a1\", \"operation_id\": \"f5f4aaba-061c-4a10-9c89-e4292eb37685\", \"request_hash\": \"b5e2b2c158c150b9339535ea2a438cd0924f954cb783317e64515fa4c5378520\", \"request_id\": \"phase4-driver5cauthorized_product_usable\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "API_UNSUPPORTED",
+      "error_message": "authoritative value metadata is unavailable for property 'geometry'",
+      "operation": "operation_call",
+      "sequence": 9,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "API_UNSUPPORTED",
+          "message": "authoritative value metadata is unavailable for property 'geometry'",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5cauthorized_product_usable",
+          "job_id": "19cd15d0-b025-42d6-a179-fa75c05b98a1",
+          "operation_id": "f5f4aaba-061c-4a10-9c89-e4292eb37685",
+          "request_hash": "b5e2b2c158c150b9339535ea2a438cd0924f954cb783317e64515fa4c5378520",
+          "request_id": "phase4-driver5cauthorized_product_usable"
+        },
+        "success": false
+      },
+      "success": false
+    }
+  ]
+}

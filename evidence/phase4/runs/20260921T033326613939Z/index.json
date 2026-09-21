@@ -1,0 +1,679 @@
+{
+  "case_status_counts": {
+    "BLOCKED": 0,
+    "FAIL": 0,
+    "NOT_RUN": 0,
+    "PASS": 1
+  },
+  "cases": [
+    {
+      "acceptance": [
+        "G3 §10 T038"
+      ],
+      "assertion_count": 11,
+      "assertions": {
+        "envelope_consistency": {
+          "calls": 8,
+          "mismatches": []
+        },
+        "error_propagation": {
+          "probe": {
+            "error_code": "UNSUPPORTED_OPERATION",
+            "has_structured_content": true,
+            "job_id": null,
+            "operation_id": null,
+            "outer_isError": true,
+            "request_hash": null,
+            "success": false
+          },
+          "release": null,
+          "unknown_engine_state": null
+        },
+        "initialize": {
+          "caller_owned_private_home": true,
+          "capabilities": {
+            "completions": null,
+            "experimental": {},
+            "logging": null,
+            "prompts": {
+              "listChanged": false
+            },
+            "resources": {
+              "listChanged": false,
+              "subscribe": false
+            },
+            "tasks": null,
+            "tools": {
+              "listChanged": false
+            }
+          },
+          "instruction_bytes": 0,
+          "private_home": "$HOME/Desktop/comsol-mcp-project/PRIVATE_REDACTED/g3_1-live-m1f/mcp-home",
+          "protocolVersion": "2025-11-25",
+          "server_name": "comsol-mcp-server",
+          "server_version": "1.30.0",
+          "tool_count": 65,
+          "tool_profile": "full"
+        },
+        "isolation": {
+          "applied": false,
+          "at": "2026-09-21T03:33:27.023538Z",
+          "attempted": false,
+          "declaration": {
+            "case_id": "GUARD_T038",
+            "mode": "shared_bound",
+            "modes": [
+              "own_model",
+              "checkpoint_restore",
+              "shared_bound"
+            ],
+            "rationale": "reads/writes the run's bound model; the run is serial"
+          },
+          "reason": "declared: this case runs against the run's bound model, strictly serially"
+        },
+        "partial_failure": {
+          "probe": {
+            "error_code": "UNSUPPORTED_OPERATION",
+            "has_structured_content": true,
+            "job_id": "3f31c1e9-58c2-4dbe-84ac-aeae8e7f2e97",
+            "operation_id": "cd7eb05e-2ae2-4b2b-9528-aa78d736c386",
+            "outer_isError": true,
+            "request_hash": "b1cd8b9a2ff28a402209adea131e978752d212137f91a3c63f9d97d6830220b2",
+            "success": false
+          },
+          "release": null,
+          "unknown_engine_state": null
+        },
+        "prerequisites": {
+          "case_id": "GUARD_T038",
+          "checks": {
+            "bound_model": {
+              "applicable": true,
+              "evidence": "a model_ref is bound",
+              "satisfied": true
+            },
+            "negative_probe": {
+              "applicable": false,
+              "evidence": "declared: the case asks for the product's own refusal",
+              "satisfied": null
+            }
+          },
+          "declared": [
+            "bound_model",
+            "negative_probe"
+          ],
+          "note": "a missing prerequisite makes this case DEPENDENCY_BLOCKED and points at the root cause; it never becomes a defect of this case",
+          "status": "SATISFIED",
+          "unknown_declarations": [],
+          "unsatisfied": []
+        },
+        "registry_paging_no_duplicates": {
+          "operations": 273,
+          "pages": 3,
+          "pass": true,
+          "total_reported": 273,
+          "unique": 273
+        },
+        "stdio_isolation": {
+          "engine_log": "$REPO/evidence/phase4/runs/20260921T033326613939Z/primary.engine.log",
+          "engine_log_bytes": 388,
+          "jsonrpc_frames_on_engine_log": 0
+        },
+        "structured_content_envelope": {
+          "legacy_calls": 0,
+          "pass": true,
+          "strict_calls": 8,
+          "strict_calls_without_structured_content": [],
+          "tool_calls": 8
+        },
+        "subcase_inventory": {
+          "levels": [
+            "protocol"
+          ],
+          "missing": [],
+          "planned": 7,
+          "recorded": 7
+        },
+        "tools_list_schemas": {
+          "pass": true,
+          "tool_count": 65,
+          "tools": [
+            "check_server_port",
+            "commit_current_main_model",
+            "configure_single_main_workflow",
+            "configure_solver",
+            "create_feature",
+            "create_physics",
+            "create_physics_feature",
+            "create_solver_config",
+            "delete_feature",
+            "ensure_component",
+            "ensure_geometry",
+            "ensure_mesh",
+            "evaluate_expressions",
+            "get_core_metrics",
+            "get_parameters",
+            "job_log",
+            "job_reconcile",
+            "job_result",
+            "job_status",
+            "list_physics",
+            "list_physics_features",
+            "list_solver_config",
+            "list_solver_features",
+            "load_current_main_model",
+            "load_visible_main_model",
+            "manage_variables",
+            "mcp_tool_audit",
+            "model_adopt",
+            "model_create",
+            "model_inspect",
+            "model_load",
+            "model_tree",
+            "operation_call",
+            "operation_describe",
+            "prune_loaded_models",
+            "registry_call",
+            "registry_describe",
+            "registry_list",
+            "registry_manifest",
+            "registry_search",
+            "remove_physics",
+            "remove_physics_feature",
+            "run_feature",
+            "run_study",
+            "run_study_async",
+            "run_study_status",
+            "run_visible_main_iteration",
+            "runtime_poc_v64",
+            "save_main_model_snapshot",
+            "save_model",
+            "server_connect",
+            "server_disconnect",
+            "server_info",
+            "server_start",
+            "session_health",
+            "set_parameters",
+            "set_physics_selection",
+            "start_visible_main_workflow",
+            "start_visible_main_workflow_async",
+            "unlock_visible_main",
+            "update_feature",
+            "update_physics_feature",
+            "verify_visible_main_session",
+            "visible_main_workflow_status",
+            "workflow_info"
+          ]
+        }
+      },
+      "case_id": "GUARD_T038",
+      "finished_at": "2026-09-21T03:33:27.327305Z",
+      "package": "GUARD",
+      "reason": null,
+      "started_at": "2026-09-21T03:33:27.023527Z",
+      "status": "PASS",
+      "subcase_count": 7,
+      "subcases": {
+        "error_propagation_structured": {
+          "acceptance": "T038 structured errors",
+          "level": "protocol",
+          "observed": {
+            "error_code": "UNSUPPORTED_OPERATION",
+            "has_structured_content": true,
+            "job_id": null,
+            "operation_id": null,
+            "outer_isError": true,
+            "request_hash": null,
+            "success": false
+          },
+          "status": "PASS"
+        },
+        "initialize_and_tools_list_schemas": {
+          "acceptance": "T038 tools/list schema validity",
+          "level": "protocol",
+          "status": "PASS",
+          "tool_count": 65
+        },
+        "outer_iserror_matches_success": {
+          "acceptance": "T038 isError semantics",
+          "calls": 8,
+          "level": "protocol",
+          "mismatches": [],
+          "status": "PASS"
+        },
+        "partial_failure_not_reported_as_success": {
+          "acceptance": "T038 partial failure not all-success",
+          "level": "protocol",
+          "observed": {
+            "error_code": "UNSUPPORTED_OPERATION",
+            "has_structured_content": true,
+            "job_id": "3f31c1e9-58c2-4dbe-84ac-aeae8e7f2e97",
+            "operation_id": "cd7eb05e-2ae2-4b2b-9528-aa78d736c386",
+            "outer_isError": true,
+            "request_hash": "b1cd8b9a2ff28a402209adea131e978752d212137f91a3c63f9d97d6830220b2",
+            "success": false
+          },
+          "status": "PASS"
+        },
+        "registry_paging_continuation": {
+          "acceptance": "T038 pagination",
+          "level": "protocol",
+          "operations": 273,
+          "pages": 3,
+          "status": "PASS",
+          "total_reported": 273,
+          "unique": 273
+        },
+        "stdio_log_isolation": {
+          "acceptance": "T038 stdout/stderr isolation",
+          "level": "protocol",
+          "lines": [],
+          "status": "PASS"
+        },
+        "structured_content_action_results": {
+          "acceptance": "T038 structuredContent envelope",
+          "level": "protocol",
+          "missing": [],
+          "status": "PASS",
+          "strict_calls": 8
+        }
+      }
+    }
+  ],
+  "engine_reconciliations": [],
+  "execution_context": {
+    "active_models": {
+      "session-9f95c2e814acd5f99589961a|ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652|mcp16": "session-9f95c2e814acd5f99589961a|ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652|mcp16|1"
+    },
+    "auxiliary_rejections": [
+      "ambiguous_envelope",
+      "explicit_key_reuse"
+    ],
+    "dispatches": [],
+    "generation_replacements": [],
+    "model_states": [
+      {
+        "dirty": false,
+        "dirty_tool": "model_create",
+        "invalidated": false,
+        "last_at": "2026-09-21T03:33:27.023496Z",
+        "last_tool": "model_create",
+        "observations": 1,
+        "ref": {
+          "generation": 1,
+          "model_tag": "mcp16",
+          "schema_version": 1,
+          "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "revision": 0,
+        "revision_tool": "model_create",
+        "token": "REDACTED"
+      }
+    ],
+    "negative_probes": [],
+    "note": "one execution context for the whole run: revisions and dirty flags are keyed by the full ModelRef (session/server epoch/tag/generation), every logical request carries its own run/case/step/sequence key, and every refusal is classified as stale_expected / external_observation / unknown_job / generation_mismatch",
+    "observations": [
+      {
+        "adopted": false,
+        "at": "2026-09-21T03:33:26.891294Z",
+        "dirty": null,
+        "error_code": null,
+        "job_id": "3d87511f-7bda-4658-a0ad-c30643670e77",
+        "model_ref": null,
+        "revision": null,
+        "source": {
+          "data": "structuredContent.data",
+          "execution": "structuredContent.execution",
+          "job_id": "execution.job_id",
+          "success": "structuredContent.success"
+        },
+        "success": true,
+        "tool": "server_connect"
+      },
+      {
+        "adopted": false,
+        "at": "2026-09-21T03:33:26.894724Z",
+        "dirty": null,
+        "error_code": null,
+        "job_id": null,
+        "model_ref": null,
+        "revision": null,
+        "source": {
+          "data": "structuredContent.data",
+          "success": "structuredContent.success"
+        },
+        "success": true,
+        "tool": "operation_describe"
+      },
+      {
+        "adopted": true,
+        "at": "2026-09-21T03:33:27.023463Z",
+        "dirty": false,
+        "error_code": null,
+        "job_id": "1072ebcd-c09d-4aa6-87e9-dec0ec723efa",
+        "model_ref": {
+          "generation": 1,
+          "model_tag": "mcp16",
+          "schema_version": 1,
+          "server_instance_id": "ee0beb5e566f7c417e18eace2928454e10bd1e8ade77b8972f18888691df8652",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "revision": 0,
+        "source": {
+          "data": "structuredContent.data",
+          "execution": "structuredContent.execution",
+          "job_id": "execution.job_id",
+          "success": "structuredContent.success"
+        },
+        "success": true,
+        "token": "REDACTED",
+        "tool": "model_create"
+      },
+      {
+        "adopted": false,
+        "at": "2026-09-21T03:33:27.025714Z",
+        "dirty": null,
+        "error_code": "UNSUPPORTED_OPERATION",
+        "job_id": null,
+        "model_ref": null,
+        "revision": null,
+        "source": {
+          "data": "structuredContent.data",
+          "error": "structuredContent.error",
+          "success": "structuredContent.success"
+        },
+        "success": false,
+        "tool": "operation_describe"
+      },
+      {
+        "adopted": false,
+        "at": "2026-09-21T03:33:27.130611Z",
+        "dirty": null,
+        "error_code": null,
+        "job_id": null,
+        "model_ref": null,
+        "revision": null,
+        "source": {
+          "data": "structuredContent.data",
+          "success": "structuredContent.success"
+        },
+        "success": true,
+        "tool": "registry_list"
+      },
+      {
+        "adopted": false,
+        "at": "2026-09-21T03:33:27.244142Z",
+        "dirty": null,
+        "error_code": null,
+        "job_id": null,
+        "model_ref": null,
+        "revision": null,
+        "source": {
+          "data": "structuredContent.data",
+          "success": "structuredContent.success"
+        },
+        "success": true,
+        "tool": "registry_list"
+      },
+      {
+        "adopted": false,
+        "at": "2026-09-21T03:33:27.318871Z",
+        "dirty": null,
+        "error_code": null,
+        "job_id": null,
+        "model_ref": null,
+        "revision": null,
+        "source": {
+          "data": "structuredContent.data",
+          "success": "structuredContent.success"
+        },
+        "success": true,
+        "tool": "registry_list"
+      },
+      {
+        "adopted": false,
+        "at": "2026-09-21T03:33:27.327128Z",
+        "dirty": null,
+        "error_code": "UNSUPPORTED_OPERATION",
+        "job_id": "3f31c1e9-58c2-4dbe-84ac-aeae8e7f2e97",
+        "model_ref": null,
+        "revision": null,
+        "source": {
+          "data": "structuredContent.data",
+          "error": "structuredContent.error",
+          "execution": "structuredContent.execution",
+          "job_id": "execution.job_id",
+          "success": "structuredContent.success"
+        },
+        "success": false,
+        "tool": "operation_call"
+      }
+    ],
+    "reader_errors": 0,
+    "rejection_counts": {
+      "ambiguous_envelope": 0,
+      "explicit_key_reuse": 0,
+      "external_observation": 0,
+      "generation_mismatch": 0,
+      "stale_expected": 0,
+      "unknown_job": 0
+    },
+    "rejection_reasons": [
+      "stale_expected",
+      "external_observation",
+      "unknown_job",
+      "generation_mismatch"
+    ],
+    "rejections": [],
+    "replans": [],
+    "replays": [],
+    "request_count": 0,
+    "requests": [],
+    "run": "20260921T033326613939Z",
+    "unfinished_entries": [],
+    "unfinished_jobs": []
+  },
+  "first_cause": {
+    "classes": [
+      "DEPENDENCY_BLOCKED",
+      "HARNESS_FAILURE",
+      "IMPLEMENTATION_GAP",
+      "EXTERNAL_BLOCKER"
+    ],
+    "counts": {
+      "DEPENDENCY_BLOCKED": 0,
+      "EXTERNAL_BLOCKER": 0,
+      "HARNESS_FAILURE": 0,
+      "IMPLEMENTATION_GAP": 0
+    },
+    "note": "each case contributes at most one first cause; downstream subcases list DEPENDENCY_BLOCKED against it instead of becoming pseudo-independent defects",
+    "per_case": {}
+  },
+  "generated_at": "2026-09-21T03:33:27.839750Z",
+  "leak_scan": {
+    "credential_fixture_hits": [],
+    "credential_hits": [],
+    "credential_leak_hits": [],
+    "excluded_fixtures": [],
+    "private_home_scanned": "$HOME/Desktop/comsol-mcp-project/PRIVATE_REDACTED/g3_1-live-m1f/mcp-home",
+    "private_path_hits": [],
+    "runtime_state_hits": [],
+    "scanned_files": 8
+  },
+  "model_bind": {
+    "model_create_probe": {
+      "available": false,
+      "effect": "WRITE",
+      "error_code": null,
+      "evaluation_policy": null,
+      "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+      "evaluation_policy_source": null,
+      "executable": false,
+      "execution_fields": [
+        "session_id",
+        "model_ref",
+        "expected_revision",
+        "idempotency_key",
+        "request_id",
+        "rpc_timeout_s",
+        "queue_timeout_s",
+        "execution_timeout_s"
+      ],
+      "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "dimension": {
+            "type": "integer"
+          },
+          "idempotency_key": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "project_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "idempotency_key",
+          "session_id",
+          "label"
+        ],
+        "title": "model.create input",
+        "type": "object"
+      },
+      "input_schema_properties": [
+        "dimension",
+        "idempotency_key",
+        "label",
+        "project_id",
+        "request_id",
+        "session_id"
+      ],
+      "mcp_tool_name": "model_create",
+      "output_contract": true,
+      "probe_unreadable": null,
+      "remediation": null,
+      "required_products": null,
+      "route": "control plane",
+      "schema_is_object": true,
+      "wire_compatibility": {
+        "execution_fields": [
+          "session_id",
+          "model_ref",
+          "expected_revision",
+          "idempotency_key",
+          "request_id",
+          "rpc_timeout_s",
+          "queue_timeout_s",
+          "execution_timeout_s"
+        ],
+        "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+        "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+        "result_fields": [
+          "success",
+          "data",
+          "error",
+          "execution"
+        ],
+        "transport": "MCP structuredContent plus text mirror; isError equals not success"
+      }
+    },
+    "model_label": "Phase4 G3 acceptance fixture",
+    "model_origin": "created"
+  },
+  "run_dir": "$REPO/evidence/phase4/runs/20260921T033326613939Z",
+  "slice": {
+    "live": true,
+    "note": "a slice is a documented run plan, not a weakened acceptance: every selected case still records its own subcases at their declared evidence level, and a stage subset never turns an unselected case into a pass",
+    "only": [
+      "GUARD_T038"
+    ],
+    "selected": [
+      "GUARD_T038"
+    ],
+    "stage": null,
+    "stages": {
+      "M0": [
+        "R01_LIVE",
+        "R03_LIVE",
+        "R_READBACK",
+        "W13_T048_selection_drift",
+        "W13_T016_2D_data",
+        "W14_T009_geometry_edit",
+        "W14_T034_local_paths",
+        "W15_T007_selections",
+        "W15_T017_material",
+        "W15_T042_license",
+        "W16_T018_mesh",
+        "W16_T019_chainC_continue",
+        "W16_T020_solver",
+        "GUARD_T035",
+        "GUARD_T038"
+      ],
+      "M1": [
+        "W13_T006_variables",
+        "W13_T015_units",
+        "R04_LIVE",
+        "GUARD_T010",
+        "GUARD_T005",
+        "GUARD_T033"
+      ],
+      "M2": [
+        "W16_T019_chainA_steady",
+        "W16_T019_chainB_transient"
+      ],
+      "M3": [
+        "R01_LIVE",
+        "R03_LIVE",
+        "R_READBACK",
+        "W13_T048_selection_drift",
+        "W13_T016_2D_data",
+        "W14_T009_geometry_edit",
+        "W14_T034_local_paths",
+        "W15_T007_selections",
+        "W15_T017_material",
+        "W15_T042_license",
+        "W16_T018_mesh",
+        "W16_T019_chainC_continue",
+        "W16_T020_solver",
+        "GUARD_T035",
+        "GUARD_T038"
+      ]
+    }
+  },
+  "startup_error": null,
+  "subcase_status_counts": {
+    "PASS": 7
+  },
+  "totals": {
+    "assertions": 11,
+    "subcases": 7
+  },
+  "unknown_job_ledger": {
+    "entries": [],
+    "gate_refusals": {
+      "by_tool": {},
+      "count": 0,
+      "first": null,
+      "last": null
+    },
+    "note": "the driver records every job id an envelope reported as UNKNOWN (no published read lists the unresolved jobs) and releases each one through the published job_reconcile read before it replays a refused call once",
+    "released_jobs": [],
+    "still_blocked": [],
+    "unresolved_jobs": []
+  }
+}

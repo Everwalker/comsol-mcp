@@ -1,0 +1,132 @@
+{
+  "assertion_count": 5,
+  "case": {
+    "acceptance": [
+      "G3 §7 W13.T006"
+    ],
+    "assertions": {
+      "dependency_blocked": {
+        "missing": [
+          "bound_model",
+          "observed_revision"
+        ],
+        "note": "downstream subcases list NOT_RUN against this root cause instead of becoming independent defects"
+      },
+      "first_cause": {
+        "case_id": "W13_T006_variables",
+        "class": "DEPENDENCY_BLOCKED",
+        "error_code": "DEPENDENCY_BLOCKED",
+        "reason": "the case's declared prerequisite(s) are not established: bound_model, observed_revision (no model_ref is bound: every live step of this case depends on one; the bound model's revision was never read back)",
+        "source": "declared"
+      },
+      "isolation": {
+        "applied": false,
+        "at": "2026-09-21T03:32:33.012011Z",
+        "attempted": false,
+        "declaration": {
+          "case_id": "W13_T006_variables",
+          "mode": "shared_bound",
+          "modes": [
+            "own_model",
+            "checkpoint_restore",
+            "shared_bound"
+          ],
+          "rationale": "reads/writes the run's bound model; the run is serial"
+        },
+        "reason": "declared: this case runs against the run's bound model, strictly serially"
+      },
+      "prerequisites": {
+        "case_id": "W13_T006_variables",
+        "checks": {
+          "bound_model": {
+            "applicable": true,
+            "evidence": "no model_ref is bound: every live step of this case depends on one",
+            "satisfied": false
+          },
+          "observed_revision": {
+            "applicable": true,
+            "evidence": "the bound model's revision was never read back",
+            "satisfied": false
+          },
+          "own_geometry": {
+            "applicable": false,
+            "evidence": "declared: the case builds its own component/geometry before using it",
+            "satisfied": null
+          }
+        },
+        "declared": [
+          "bound_model",
+          "observed_revision",
+          "own_geometry"
+        ],
+        "note": "a missing prerequisite makes this case DEPENDENCY_BLOCKED and points at the root cause; it never becomes a defect of this case",
+        "status": "UNSATISFIED",
+        "unknown_declarations": [],
+        "unsatisfied": [
+          "bound_model",
+          "observed_revision"
+        ]
+      },
+      "subcase_inventory": {
+        "levels": [
+          "live",
+          "static"
+        ],
+        "missing": [],
+        "planned": 7,
+        "recorded": 7
+      }
+    },
+    "case_id": "W13_T006_variables",
+    "finished_at": "2026-09-21T03:32:33.012062Z",
+    "package": "W13",
+    "reason": "the case's declared prerequisite(s) are not established: bound_model, observed_revision (no model_ref is bound: every live step of this case depends on one; the bound model's revision was never read back)",
+    "started_at": "2026-09-21T03:32:33.012001Z",
+    "status": "BLOCKED",
+    "subcases": {
+      "component_and_global_scope": {
+        "acceptance": "W13 global and component scopes",
+        "level": "live",
+        "reason": "dependency not established: bound_model, observed_revision",
+        "status": "NOT_RUN"
+      },
+      "expression_evaluates_after_modification": {
+        "acceptance": "T006 expression still evaluates",
+        "level": "live",
+        "reason": "dependency not established: bound_model, observed_revision",
+        "status": "NOT_RUN"
+      },
+      "no_bogus_name_expr_variables": {
+        "acceptance": "T006 no fake name/expr variables",
+        "level": "live",
+        "reason": "dependency not established: bound_model, observed_revision",
+        "status": "NOT_RUN"
+      },
+      "static_legacy_variable_route_available": {
+        "acceptance": "T006 evaluation route",
+        "level": "static",
+        "reason": "dependency not established: bound_model, observed_revision",
+        "status": "NOT_RUN"
+      },
+      "static_variable_ops_availability": {
+        "acceptance": "W13 variable group add/update",
+        "level": "static",
+        "reason": "dependency not established: bound_model, observed_revision",
+        "status": "NOT_RUN"
+      },
+      "variables_two_in_one_group": {
+        "acceptance": "T006 two variables in one group",
+        "level": "live",
+        "reason": "dependency not established: bound_model, observed_revision",
+        "status": "NOT_RUN"
+      },
+      "varnames_contains_modified_variable": {
+        "acceptance": "T006 varnames contains the changed variable",
+        "level": "live",
+        "reason": "dependency not established: bound_model, observed_revision",
+        "status": "NOT_RUN"
+      }
+    }
+  },
+  "subcase_count": 7
+}

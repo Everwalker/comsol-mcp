@@ -1,0 +1,618 @@
+{
+  "assertion_count": 5,
+  "case": {
+    "acceptance": [
+      "G3 §7 W15.T017"
+    ],
+    "assertions": {
+      "operation_availability": {
+        "material.create": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "component",
+            "definition",
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "session_id",
+            "tag",
+            "type_id"
+          ],
+          "mcp_tool_name": "material_create",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "material.selection_set": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "path",
+            "project_id",
+            "request_id",
+            "selection",
+            "session_id"
+          ],
+          "mcp_tool_name": "material_selection_set",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "material.set_properties": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "expected_revision",
+            "group",
+            "idempotency_key",
+            "model_ref",
+            "path",
+            "project_id",
+            "properties",
+            "provenance",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "material_set_properties",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "material.validate": {
+          "available": true,
+          "effect": "EVALUATE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "checks",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "scope",
+            "session_id"
+          ],
+          "mcp_tool_name": "material_validate",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "node.property_get": {
+          "available": true,
+          "effect": "READ",
+          "error_code": null,
+          "evaluation_policy": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema_properties": [
+            "model_ref",
+            "names",
+            "path",
+            "project_id",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "node_property_get",
+          "output_contract": true,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        }
+      },
+      "static_material_ops_executable": {
+        "operations": [
+          "material.create",
+          "material.set_properties",
+          "material.selection_set",
+          "material.validate",
+          "node.property_get"
+        ],
+        "pass": true
+      },
+      "step_k_T_Cp_T_and_rho_expressions": {
+        "applied": null,
+        "comparisons": {
+          "density": {
+            "metadata_status": null,
+            "readback": null,
+            "readback_match": null,
+            "value_type": null
+          },
+          "heatcapacity": {
+            "metadata_status": null,
+            "readback": null,
+            "readback_match": null,
+            "value_type": null
+          },
+          "thermalconductivity": {
+            "metadata_status": null,
+            "readback": null,
+            "readback_match": null,
+            "value_type": null
+          }
+        },
+        "data_keys": [],
+        "elapsed_s": null,
+        "error_code": "ISOLATION_PROOF_REQUIRED",
+        "error_message": "remote_addr_valve receipt has no API probe",
+        "operation": "material.set_properties",
+        "outer_isError": true,
+        "success": false
+      },
+      "subcase_inventory": {
+        "levels": [
+          "live",
+          "static"
+        ],
+        "missing": [],
+        "planned": 5,
+        "recorded": 5
+      },
+      "t017_target": {
+        "group_schema": {
+          "error_code": "IDEMPOTENCY_CONFLICT",
+          "properties": null,
+          "success": false
+        },
+        "material_path": {
+          "segments": [
+            {
+              "collection": "component",
+              "tag": "comp1"
+            },
+            {
+              "collection": "material",
+              "tag": "mat1"
+            }
+          ]
+        },
+        "material_ready": false,
+        "probe_fixture": {
+          "group_schema": {
+            "error_code": "IDEMPOTENCY_CONFLICT",
+            "properties": null,
+            "success": false
+          },
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "nodes": {
+            "block": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                },
+                {
+                  "collection": "geom",
+                  "tag": "p4geom"
+                },
+                {
+                  "collection": "feature",
+                  "tag": "p4blk"
+                }
+              ]
+            },
+            "component": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                }
+              ]
+            },
+            "geometry": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                },
+                {
+                  "collection": "geom",
+                  "tag": "p4geom"
+                }
+              ]
+            },
+            "material": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                },
+                {
+                  "collection": "material",
+                  "tag": "p4mat"
+                }
+              ]
+            },
+            "mesh": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                },
+                {
+                  "collection": "mesh",
+                  "tag": "p4mesh"
+                }
+              ]
+            },
+            "mesh_size": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                },
+                {
+                  "collection": "mesh",
+                  "tag": "p4mesh"
+                },
+                {
+                  "collection": "feature",
+                  "tag": "p4size"
+                }
+              ]
+            },
+            "physics": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                },
+                {
+                  "collection": "physics",
+                  "tag": "p4ht"
+                }
+              ]
+            },
+            "temperature": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                },
+                {
+                  "collection": "physics",
+                  "tag": "p4ht"
+                },
+                {
+                  "collection": "feature",
+                  "tag": "p4temp1"
+                }
+              ]
+            }
+          },
+          "steps": [
+            {
+              "error_code": "NODE_NOT_FOUND",
+              "operation": "node.property_schema",
+              "reason": "the fixture's own material node is not readable in the bound model, so the fixture is recreated",
+              "status": "REBUILT",
+              "step": "cache_invalidated"
+            },
+            {
+              "error_code": "IDEMPOTENCY_CONFLICT",
+              "message": "idempotency key was reused with a different request body",
+              "operation": "definition.component_manage",
+              "status": "FAILED",
+              "step": "component",
+              "success": false
+            },
+            {
+              "error_code": "IDEMPOTENCY_CONFLICT",
+              "message": "idempotency key was reused with a different request body",
+              "operation": "geometry.sequence_create",
+              "status": "FAILED",
+              "step": "geometry",
+              "success": false
+            },
+            {
+              "error_code": "IDEMPOTENCY_CONFLICT",
+              "message": "idempotency key was reused with a different request body",
+              "operation": "geometry.feature_create",
+              "status": "FAILED",
+              "step": "block",
+              "success": false
+            },
+            {
+              "error_code": "IDEMPOTENCY_CONFLICT",
+              "message": "idempotency key was reused with a different request body",
+              "operation": "mesh.create",
+              "status": "FAILED",
+              "step": "mesh",
+              "success": false
+            },
+            {
+              "error_code": "IDEMPOTENCY_CONFLICT",
+              "message": "idempotency key was reused with a different request body",
+              "operation": "mesh.feature_create",
+              "status": "FAILED",
+              "step": "mesh_size",
+              "success": false
+            },
+            {
+              "error_code": "IDEMPOTENCY_CONFLICT",
+              "message": "idempotency key was reused with a different request body",
+              "operation": "physics.create",
+              "status": "FAILED",
+              "step": "physics",
+              "success": false
+            },
+            {
+              "error_code": "IDEMPOTENCY_CONFLICT",
+              "message": "idempotency key was reused with a different request body",
+              "operation": "physics.feature_create",
+              "status": "FAILED",
+              "step": "temperature",
+              "success": false
+            },
+            {
+              "error_code": "IDEMPOTENCY_CONFLICT",
+              "message": "idempotency key was reused with a different request body",
+              "operation": "material.create",
+              "status": "FAILED",
+              "step": "material",
+              "success": false
+            },
+            {
+              "error_code": "IDEMPOTENCY_CONFLICT",
+              "operation": "node.property_schema",
+              "status": "FAILED",
+              "step": "material_group_schema"
+            }
+          ]
+        }
+      }
+    },
+    "case_id": "W15_T017_material",
+    "finished_at": "2026-09-20T22:52:55.904973Z",
+    "package": "W15",
+    "reason": null,
+    "started_at": "2026-09-20T22:52:55.843860Z",
+    "status": "BLOCKED",
+    "subcases": {
+      "anisotropic_tensor_and_coordinate_system": {
+        "acceptance": "T017 anisotropic tensor and frame",
+        "level": "live",
+        "reason": "prerequisite subcase k_T_Cp_T_and_rho_expressions did not pass",
+        "status": "NOT_RUN"
+      },
+      "k_T_Cp_T_and_rho_expressions": {
+        "acceptance": "T017 k(T)/Cp(T)/rho",
+        "level": "live",
+        "observed": {
+          "applied": null,
+          "comparisons": {
+            "density": {
+              "metadata_status": null,
+              "readback": null,
+              "readback_match": null,
+              "value_type": null
+            },
+            "heatcapacity": {
+              "metadata_status": null,
+              "readback": null,
+              "readback_match": null,
+              "value_type": null
+            },
+            "thermalconductivity": {
+              "metadata_status": null,
+              "readback": null,
+              "readback_match": null,
+              "value_type": null
+            }
+          },
+          "error_code": "ISOLATION_PROOF_REQUIRED"
+        },
+        "reason": "the material property write was refused: ISOLATION_PROOF_REQUIRED",
+        "status": "BLOCKED"
+      },
+      "material_readback_after_update": {
+        "acceptance": "T017 material readback",
+        "level": "live",
+        "reason": "prerequisite subcase k_T_Cp_T_and_rho_expressions did not pass",
+        "status": "NOT_RUN"
+      },
+      "missing_required_property_preflight_error": {
+        "acceptance": "T017 missing required property preflight",
+        "level": "live",
+        "reason": "prerequisite subcase anisotropic_tensor_and_coordinate_system did not pass",
+        "status": "NOT_RUN"
+      },
+      "static_material_ops_availability": {
+        "acceptance": "T017 material actions",
+        "level": "static",
+        "status": "PASS"
+      }
+    }
+  },
+  "subcase_count": 5
+}

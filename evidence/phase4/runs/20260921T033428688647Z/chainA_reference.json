@@ -1,0 +1,279 @@
+{
+  "analytic_model": "steady 1D conduction in a slab insulated on four sides: T(x) = T0 + (T1-T0)*x/L",
+  "benchmark_spec": {
+    "alpha_m2_s": 1e-05,
+    "chain": "A",
+    "cp_j_kgk": 1000.0,
+    "delta_t_k": null,
+    "error_definition": "max |T_engine(x) - T_analytic(x)| / (T1 - T0) over the pre-registered sample line, T(x) = T0 + (T1-T0)*x/L",
+    "error_limit": 0.0001,
+    "expected_model_values": [
+      {
+        "expression": "10[W/(m*K)]",
+        "item": "thermalconductivity",
+        "unit": "W/(m*K)",
+        "value": 10.0
+      },
+      {
+        "expression": "1000[kg/m^3]",
+        "item": "density",
+        "unit": "kg/m^3",
+        "value": 1000.0
+      },
+      {
+        "expression": "1000[J/(kg*K)]",
+        "item": "heatcapacity",
+        "unit": "J/(kg*K)",
+        "value": 1000.0
+      },
+      {
+        "expression": null,
+        "item": "length_m",
+        "unit": "m",
+        "value": 0.01
+      },
+      {
+        "expression": null,
+        "item": "width_m",
+        "unit": "m",
+        "value": 0.01
+      },
+      {
+        "expression": null,
+        "item": "height_m",
+        "unit": "m",
+        "value": 0.005
+      },
+      {
+        "expression": "300[K]",
+        "item": "initial_value",
+        "unit": "K",
+        "value": 300.0
+      },
+      {
+        "expression": "400[K]",
+        "item": "hot_boundary",
+        "unit": "K",
+        "value": 400.0
+      }
+    ],
+    "height_m": 0.005,
+    "hot_k": 400.0,
+    "k_w_mk": 10.0,
+    "length_m": 0.01,
+    "rho_kg_m3": 1000.0,
+    "sample_count": 21,
+    "sanity_checks": [
+      {
+        "check": "unit:k_w_mk",
+        "ok": true,
+        "unit": "W/(m*K)",
+        "value": 10.0,
+        "why": "a positive finite quantity in the registered unit"
+      },
+      {
+        "check": "unit:rho_kg_m3",
+        "ok": true,
+        "unit": "kg/m^3",
+        "value": 1000.0,
+        "why": "a positive finite quantity in the registered unit"
+      },
+      {
+        "check": "unit:cp_j_kgk",
+        "ok": true,
+        "unit": "J/(kg*K)",
+        "value": 1000.0,
+        "why": "a positive finite quantity in the registered unit"
+      },
+      {
+        "check": "unit:length_m",
+        "ok": true,
+        "unit": "m",
+        "value": 0.01,
+        "why": "a positive finite quantity in the registered unit"
+      },
+      {
+        "check": "unit:t0_k",
+        "ok": true,
+        "unit": "K",
+        "value": 300.0,
+        "why": "a positive finite quantity in the registered unit"
+      },
+      {
+        "check": "diffusivity",
+        "ok": true,
+        "unit": "m^2/s",
+        "value": 1e-05,
+        "why": "alpha = k/(rho*Cp) is the only diffusivity the analytic model uses"
+      },
+      {
+        "check": "decay_rate",
+        "ok": true,
+        "unit": "1/s",
+        "value": 0.9869604401089359,
+        "why": "alpha*(pi/L)^2: the transient factor must decay, not grow"
+      },
+      {
+        "check": "steady_profile_endpoints",
+        "ok": true,
+        "unit": "K",
+        "value": [
+          300.0,
+          400.0
+        ],
+        "why": "T(0)=T0 and T(L)=Thot for the registered boundary values"
+      },
+      {
+        "check": "steady_profile_monotone",
+        "ok": true,
+        "unit": "K",
+        "value": [
+          300.0,
+          305.0,
+          310.0
+        ],
+        "why": "a linear driven profile cannot decrease along the driving direction"
+      },
+      {
+        "check": "flux_times_area",
+        "ok": true,
+        "unit": "W",
+        "value": 5.0,
+        "why": "the total power is the flux through the *actual* end-face area"
+      }
+    ],
+    "sides": "insulated on the four lateral faces",
+    "source": "G3.1 §8.1 pre-registered benchmark specification",
+    "t0_k": 300.0,
+    "time_points_s": [],
+    "width_m": 0.01
+  },
+  "config": {
+    "chain": "A",
+    "cp_j_kgk": 1000.0,
+    "height_m": 0.005,
+    "k_w_mk": 10.0,
+    "length_m": 0.01,
+    "relative_error_limit": 0.0001,
+    "rho_kg_m3": 1000.0,
+    "sample_count": 21,
+    "t0_k": 300.0,
+    "t1_k": 400.0,
+    "width_m": 0.01
+  },
+  "cross_section_area_m2": 5e-05,
+  "error_definition": "max |T_engine(x) - T_analytic(x)| / (T1 - T0) over the pre-registered sample line, T(x) = T0 + (T1-T0)*x/L",
+  "heat_flux_w_m2": 100000.0,
+  "length_m": 0.01,
+  "power_w": 5.0,
+  "relative_error_limit": 0.0001,
+  "samples": [
+    {
+      "T_analytic_k": 300.0,
+      "x_m": 0.0,
+      "x_mm": 0.0
+    },
+    {
+      "T_analytic_k": 305.0,
+      "x_m": 0.0005,
+      "x_mm": 0.5
+    },
+    {
+      "T_analytic_k": 310.0,
+      "x_m": 0.001,
+      "x_mm": 1.0
+    },
+    {
+      "T_analytic_k": 315.0,
+      "x_m": 0.0015,
+      "x_mm": 1.5
+    },
+    {
+      "T_analytic_k": 320.0,
+      "x_m": 0.002,
+      "x_mm": 2.0
+    },
+    {
+      "T_analytic_k": 325.0,
+      "x_m": 0.0025,
+      "x_mm": 2.5
+    },
+    {
+      "T_analytic_k": 330.0,
+      "x_m": 0.003,
+      "x_mm": 3.0
+    },
+    {
+      "T_analytic_k": 335.0,
+      "x_m": 0.0035000000000000005,
+      "x_mm": 3.5000000000000004
+    },
+    {
+      "T_analytic_k": 340.0,
+      "x_m": 0.004,
+      "x_mm": 4.0
+    },
+    {
+      "T_analytic_k": 345.0,
+      "x_m": 0.0045,
+      "x_mm": 4.5
+    },
+    {
+      "T_analytic_k": 350.0,
+      "x_m": 0.005,
+      "x_mm": 5.0
+    },
+    {
+      "T_analytic_k": 355.0,
+      "x_m": 0.0055,
+      "x_mm": 5.5
+    },
+    {
+      "T_analytic_k": 360.0,
+      "x_m": 0.006,
+      "x_mm": 6.0
+    },
+    {
+      "T_analytic_k": 365.0,
+      "x_m": 0.006500000000000001,
+      "x_mm": 6.500000000000001
+    },
+    {
+      "T_analytic_k": 370.0,
+      "x_m": 0.007000000000000001,
+      "x_mm": 7.000000000000001
+    },
+    {
+      "T_analytic_k": 375.0,
+      "x_m": 0.0075,
+      "x_mm": 7.5
+    },
+    {
+      "T_analytic_k": 380.0,
+      "x_m": 0.008,
+      "x_mm": 8.0
+    },
+    {
+      "T_analytic_k": 385.0,
+      "x_m": 0.0085,
+      "x_mm": 8.5
+    },
+    {
+      "T_analytic_k": 390.0,
+      "x_m": 0.009,
+      "x_mm": 9.0
+    },
+    {
+      "T_analytic_k": 395.0,
+      "x_m": 0.0095,
+      "x_mm": 9.5
+    },
+    {
+      "T_analytic_k": 400.0,
+      "x_m": 0.01,
+      "x_mm": 10.0
+    }
+  ],
+  "t0_k": 300.0,
+  "temperature_difference_k": 100.0
+}

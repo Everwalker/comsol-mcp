@@ -952,9 +952,11 @@ class _GatedEvaluationEngine:
 
     def __init__(self):
         self.calls = 0
+        self.operations: list[str] = []
 
     async def action(self, operation, arguments, **kwargs):  # noqa: ANN001
         self.calls += 1
+        self.operations.append(operation)
         return _gate_refusal(operation, f"job-refused-{self.calls}")
 
 
@@ -972,7 +974,14 @@ def test_guard_t033_live_subcases_are_blocked_when_the_gate_refuses(driver):
     assert statuses["only_own_temporary_nodes_cleaned"] == "BLOCKED"
     assert statuses["static_evaluation_policy_documented"] == "BLOCKED"
     assert "unknown engine state" in case.subcases["ephemeral_mutation_recorded_and_serial"]["reason"]
-    assert client.calls == 3
+    # C04: the expression kinds are pre-registered and each is called at most once; the two kinds
+    # whose routing condition a gate-refused discovery cannot establish stay NOT_RUN instead of
+    # being sent as guesses.  Exactly one evaluation per routed kind, never a retry.
+    assert client.operations.count("evaluate_expressions") == 5
+    kinds = {row["kind"]: row["verdict"] for row in case.assertions["t033_expression_kinds"]}
+    assert kinds["constant"] == "UNKNOWN" and kinds["illegal_expression"] == "UNKNOWN"
+    assert kinds["model_expression"] == "NOT_RUN" and kinds["solved_field"] == "NOT_RUN"
+    assert statuses["evaluation_expression_kinds_routed"] == "BLOCKED"
     assert case.status == "BLOCKED"
 
 

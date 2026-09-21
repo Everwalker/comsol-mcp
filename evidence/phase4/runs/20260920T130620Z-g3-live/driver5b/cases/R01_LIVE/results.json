@@ -1,0 +1,1634 @@
+{
+  "case_id": "R01_LIVE",
+  "results": [
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"name\": {\"type\": \"string\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"path\"], \"title\": \"node.property_schema input\", \"type\": \"object\"}, \"domain\": \"node\", \"effect\": \"READ\", \"executable\": true, \"gate\": \"G2\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"name\": {\"type\": \"string\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"path\"], \"title\": \"node.property_schema input\", \"type\": \"object\"}, \"mcp_tool_name\": \"node_property_schema\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"node.property_schema\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"取得属性类型、枚举、索引信息\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 1,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "path"
+            ],
+            "title": "node.property_schema input",
+            "type": "object"
+          },
+          "domain": "node",
+          "effect": "READ",
+          "executable": true,
+          "gate": "G2",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "name": {
+                "type": "string"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "path"
+            ],
+            "title": "node.property_schema input",
+            "type": "object"
+          },
+          "mcp_tool_name": "node_property_schema",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "node.property_schema",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "取得属性类型、枚举、索引信息",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"names\": {\"items\": {\"type\": \"string\"}, \"type\": \"array\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"path\", \"names\"], \"title\": \"node.property_get input\", \"type\": \"object\"}, \"domain\": \"node\", \"effect\": \"READ\", \"executable\": true, \"gate\": \"G2\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"names\": {\"items\": {\"type\": \"string\"}, \"type\": \"array\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"path\", \"names\"], \"title\": \"node.property_get input\", \"type\": \"object\"}, \"mcp_tool_name\": \"node_property_get\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"node.property_get\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"按类型回读一个或多个属性\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 2,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "names": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "path",
+              "names"
+            ],
+            "title": "node.property_get input",
+            "type": "object"
+          },
+          "domain": "node",
+          "effect": "READ",
+          "executable": true,
+          "gate": "G2",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "names": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "path",
+              "names"
+            ],
+            "title": "node.property_get input",
+            "type": "object"
+          },
+          "mcp_tool_name": "node_property_get",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "node.property_get",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "按类型回读一个或多个属性",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"expected_revision\": {\"minimum\": 0, \"type\": \"integer\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"properties\": {\"$ref\": \"common.schema.json#/$defs/PropertySet\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"path\", \"properties\"], \"title\": \"node.property_set input\", \"type\": \"object\"}, \"domain\": \"node\", \"effect\": \"WRITE\", \"executable\": true, \"gate\": \"G2\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"expected_revision\": {\"minimum\": 0, \"type\": \"integer\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"properties\": {\"$ref\": \"common.schema.json#/$defs/PropertySet\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"path\", \"properties\"], \"title\": \"node.property_set input\", \"type\": \"object\"}, \"mcp_tool_name\": \"node_property_set\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"node.property_set\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"设置带类型的标量/向量/矩阵并回读\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\", \"readback_and_revision\", \"idempotency_and_partial_failure\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 3,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "properties": {
+                "$ref": "common.schema.json#/$defs/PropertySet"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "path",
+              "properties"
+            ],
+            "title": "node.property_set input",
+            "type": "object"
+          },
+          "domain": "node",
+          "effect": "WRITE",
+          "executable": true,
+          "gate": "G2",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "properties": {
+                "$ref": "common.schema.json#/$defs/PropertySet"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "path",
+              "properties"
+            ],
+            "title": "node.property_set input",
+            "type": "object"
+          },
+          "mcp_tool_name": "node_property_set",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "node.property_set",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "设置带类型的标量/向量/矩阵并回读",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful",
+            "readback_and_revision",
+            "idempotency_and_partial_failure"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"actions\": {\"items\": {\"type\": \"object\"}, \"type\": \"array\"}, \"invariants\": {\"items\": {\"type\": \"object\"}, \"type\": \"array\"}, \"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"actions\"], \"title\": \"transaction.preview input\", \"type\": \"object\"}, \"domain\": \"transaction\", \"effect\": \"READ\", \"executable\": true, \"gate\": \"G2\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"actions\": {\"items\": {\"type\": \"object\"}, \"type\": \"array\"}, \"invariants\": {\"items\": {\"type\": \"object\"}, \"type\": \"array\"}, \"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"actions\"], \"title\": \"transaction.preview input\", \"type\": \"object\"}, \"mcp_tool_name\": \"transaction_preview\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"transaction.preview\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"仅静态检查计划、权限、依赖与预算\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 4,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "actions": {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "invariants": {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "actions"
+            ],
+            "title": "transaction.preview input",
+            "type": "object"
+          },
+          "domain": "transaction",
+          "effect": "READ",
+          "executable": true,
+          "gate": "G2",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "actions": {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "invariants": {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "actions"
+            ],
+            "title": "transaction.preview input",
+            "type": "object"
+          },
+          "mcp_tool_name": "transaction_preview",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "transaction.preview",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "仅静态检查计划、权限、依赖与预算",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"PROPERTY_TYPE_MISMATCH\", \"message\": \"typed value must be an object\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver5br01-static-malformed\", \"job_id\": \"d00a187c-602d-4896-ab4c-62d20bed9936\", \"operation_id\": \"107322bc-3ae1-4424-a2db-8474eb27094d\", \"request_hash\": \"c13070dc7c0ea1aa824bac81a50b0c54538b349803059d9bf5cf3edc882e4351\", \"request_id\": \"phase4-driver5br01-static-malformed\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "PROPERTY_TYPE_MISMATCH",
+      "error_message": "typed value must be an object",
+      "operation": "operation_call",
+      "sequence": 5,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "PROPERTY_TYPE_MISMATCH",
+          "message": "typed value must be an object",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5br01-static-malformed",
+          "job_id": "d00a187c-602d-4896-ab4c-62d20bed9936",
+          "operation_id": "107322bc-3ae1-4424-a2db-8474eb27094d",
+          "request_hash": "c13070dc7c0ea1aa824bac81a50b0c54538b349803059d9bf5cf3edc882e4351",
+          "request_id": "phase4-driver5br01-static-malformed"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"budget\": {\"max_nodes\": 2000, \"max_rpc\": 5000, \"max_seconds\": 20.0}, \"complete\": false, \"count\": 1, \"errors\": [{\"code\": \"METHOD_NOT_ALLOWED\", \"collection\": \"table\", \"message\": \"accessor is not in the worker allowlist\"}, {\"code\": \"METHOD_NOT_ALLOWED\", \"collection\": \"export\", \"message\": \"accessor is not in the worker allowlist\"}], \"incomplete\": true, \"next_cursor\": null, \"results\": [{\"label\": \"Phase4 G3 acceptance fixture\", \"path\": {\"segments\": []}, \"tag\": \"mcp2\", \"type_id\": null}], \"status\": \"INCOMPLETE\", \"truncated\": false, \"truncated_reason\": null, \"visited\": 1}, \"error\": null, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-driver5bphase4-find-1\", \"job_id\": \"2c5737b9-4386-4641-a61f-ba4a089e0724\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp2\", \"schema_version\": 1, \"server_instance_id\": \"f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"bbc0f086-ff84-4b7a-9311-aa833506dfe4\", \"request_hash\": \"c7d79540c6ef35c06728ef995f6474aeb5ae97d0f8724f45cb2f1000e63d8358\", \"request_id\": \"phase4-driver5bphase4-find-1\", \"revision\": 0, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_call",
+      "sequence": 6,
+      "structuredContent": {
+        "data": {
+          "budget": {
+            "max_nodes": 2000,
+            "max_rpc": 5000,
+            "max_seconds": 20.0
+          },
+          "complete": false,
+          "count": 1,
+          "errors": [
+            {
+              "code": "METHOD_NOT_ALLOWED",
+              "collection": "table",
+              "message": "accessor is not in the worker allowlist"
+            },
+            {
+              "code": "METHOD_NOT_ALLOWED",
+              "collection": "export",
+              "message": "accessor is not in the worker allowlist"
+            }
+          ],
+          "incomplete": true,
+          "next_cursor": null,
+          "results": [
+            {
+              "label": "Phase4 G3 acceptance fixture",
+              "path": {
+                "segments": []
+              },
+              "tag": "mcp2",
+              "type_id": null
+            }
+          ],
+          "status": "INCOMPLETE",
+          "truncated": false,
+          "truncated_reason": null,
+          "visited": 1
+        },
+        "error": null,
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-driver5bphase4-find-1",
+          "job_id": "2c5737b9-4386-4641-a61f-ba4a089e0724",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "bbc0f086-ff84-4b7a-9311-aa833506dfe4",
+          "request_hash": "c7d79540c6ef35c06728ef995f6474aeb5ae97d0f8724f45cb2f1000e63d8358",
+          "request_id": "phase4-driver5bphase4-find-1",
+          "revision": 0,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"API_UNSUPPORTED\", \"message\": \"the selected node does not expose properties()\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver5bphase4-schema-2\", \"job_id\": \"263f88d8-c9cb-49ac-9387-273dd5d07c47\", \"operation_id\": \"0bb9697a-ac6f-4fd1-82e3-c6d1d8ab96f3\", \"request_hash\": \"e3f74a5c041b8ad485e56d44478c5fa8299c5e4689752e1043eaf6b683272a90\", \"request_id\": \"phase4-driver5bphase4-schema-2\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "API_UNSUPPORTED",
+      "error_message": "the selected node does not expose properties()",
+      "operation": "operation_call",
+      "sequence": 7,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "API_UNSUPPORTED",
+          "message": "the selected node does not expose properties()",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5bphase4-schema-2",
+          "job_id": "263f88d8-c9cb-49ac-9387-273dd5d07c47",
+          "operation_id": "0bb9697a-ac6f-4fd1-82e3-c6d1d8ab96f3",
+          "request_hash": "e3f74a5c041b8ad485e56d44478c5fa8299c5e4689752e1043eaf6b683272a90",
+          "request_id": "phase4-driver5bphase4-schema-2"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"ISOLATION_PROOF_REQUIRED\", \"message\": \"remote_addr_valve receipt has no API probe\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver5bprobe-component\", \"job_id\": \"d71c8769-4bd6-47d2-b9a0-76873545db0c\", \"operation_id\": \"36c19b38-8221-4701-9aa3-faba64c3d02b\", \"request_hash\": \"4dcfa43686b8f5f1bdb70e834c0eecc194d8fc58a26668a697d08ad774a6f12c\", \"request_id\": \"phase4-driver5bprobe-component\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "ISOLATION_PROOF_REQUIRED",
+      "error_message": "remote_addr_valve receipt has no API probe",
+      "operation": "operation_call",
+      "sequence": 8,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "ISOLATION_PROOF_REQUIRED",
+          "message": "remote_addr_valve receipt has no API probe",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5bprobe-component",
+          "job_id": "d71c8769-4bd6-47d2-b9a0-76873545db0c",
+          "operation_id": "36c19b38-8221-4701-9aa3-faba64c3d02b",
+          "request_hash": "4dcfa43686b8f5f1bdb70e834c0eecc194d8fc58a26668a697d08ad774a6f12c",
+          "request_id": "phase4-driver5bprobe-component"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"ISOLATION_PROOF_REQUIRED\", \"message\": \"remote_addr_valve receipt has no API probe\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver5bprobe-geometry\", \"job_id\": \"913f370b-22e9-4b07-9542-feabc252d0e3\", \"operation_id\": \"91716279-1e69-4a73-aaaf-9eceadd21d19\", \"request_hash\": \"dfc5520716dd49a8ca5f46bdba4703daa9c12ab580fda25155d8552cbca49d9a\", \"request_id\": \"phase4-driver5bprobe-geometry\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "ISOLATION_PROOF_REQUIRED",
+      "error_message": "remote_addr_valve receipt has no API probe",
+      "operation": "operation_call",
+      "sequence": 9,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "ISOLATION_PROOF_REQUIRED",
+          "message": "remote_addr_valve receipt has no API probe",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5bprobe-geometry",
+          "job_id": "913f370b-22e9-4b07-9542-feabc252d0e3",
+          "operation_id": "91716279-1e69-4a73-aaaf-9eceadd21d19",
+          "request_hash": "dfc5520716dd49a8ca5f46bdba4703daa9c12ab580fda25155d8552cbca49d9a",
+          "request_id": "phase4-driver5bprobe-geometry"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"ISOLATION_PROOF_REQUIRED\", \"message\": \"remote_addr_valve receipt has no API probe\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver5bprobe-block\", \"job_id\": \"46d1f4a4-ce0e-4e4f-9ff9-7b49de053c76\", \"operation_id\": \"c25526d2-4664-47af-863b-8cac53a73ebc\", \"request_hash\": \"3ddb07ce43d9ef318672d13653bcef47483e8ee28fbab79db71e90623f36f558\", \"request_id\": \"phase4-driver5bprobe-block\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "ISOLATION_PROOF_REQUIRED",
+      "error_message": "remote_addr_valve receipt has no API probe",
+      "operation": "operation_call",
+      "sequence": 10,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "ISOLATION_PROOF_REQUIRED",
+          "message": "remote_addr_valve receipt has no API probe",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5bprobe-block",
+          "job_id": "46d1f4a4-ce0e-4e4f-9ff9-7b49de053c76",
+          "operation_id": "c25526d2-4664-47af-863b-8cac53a73ebc",
+          "request_hash": "3ddb07ce43d9ef318672d13653bcef47483e8ee28fbab79db71e90623f36f558",
+          "request_id": "phase4-driver5bprobe-block"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"ISOLATION_PROOF_REQUIRED\", \"message\": \"remote_addr_valve receipt has no API probe\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver5bprobe-mesh\", \"job_id\": \"913bece9-36b4-4f0d-b632-58a0a0afc325\", \"operation_id\": \"e47a0647-4b96-4b2e-aa18-6768872b429c\", \"request_hash\": \"50d09eee2616716b912516679ffba89efa3eb3efe11d0d466dcaabc9bcb04973\", \"request_id\": \"phase4-driver5bprobe-mesh\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "ISOLATION_PROOF_REQUIRED",
+      "error_message": "remote_addr_valve receipt has no API probe",
+      "operation": "operation_call",
+      "sequence": 11,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "ISOLATION_PROOF_REQUIRED",
+          "message": "remote_addr_valve receipt has no API probe",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5bprobe-mesh",
+          "job_id": "913bece9-36b4-4f0d-b632-58a0a0afc325",
+          "operation_id": "e47a0647-4b96-4b2e-aa18-6768872b429c",
+          "request_hash": "50d09eee2616716b912516679ffba89efa3eb3efe11d0d466dcaabc9bcb04973",
+          "request_id": "phase4-driver5bprobe-mesh"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"ISOLATION_PROOF_REQUIRED\", \"message\": \"remote_addr_valve receipt has no API probe\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver5bprobe-mesh_size\", \"job_id\": \"139dd858-88e1-40d2-8389-e788ebeb9bb5\", \"operation_id\": \"c59ede49-9ad7-4643-a3c1-ee670403966a\", \"request_hash\": \"496673128a792b7fa876e9de8f84eba50da69645deddb96f1ad005156b0d30a7\", \"request_id\": \"phase4-driver5bprobe-mesh_size\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "ISOLATION_PROOF_REQUIRED",
+      "error_message": "remote_addr_valve receipt has no API probe",
+      "operation": "operation_call",
+      "sequence": 12,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "ISOLATION_PROOF_REQUIRED",
+          "message": "remote_addr_valve receipt has no API probe",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5bprobe-mesh_size",
+          "job_id": "139dd858-88e1-40d2-8389-e788ebeb9bb5",
+          "operation_id": "c59ede49-9ad7-4643-a3c1-ee670403966a",
+          "request_hash": "496673128a792b7fa876e9de8f84eba50da69645deddb96f1ad005156b0d30a7",
+          "request_id": "phase4-driver5bprobe-mesh_size"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"ISOLATION_PROOF_REQUIRED\", \"message\": \"remote_addr_valve receipt has no API probe\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver5bprobe-physics\", \"job_id\": \"41371572-d637-4cae-8c20-0898cfc6b59b\", \"operation_id\": \"c6f839dd-db1e-414c-8878-1bf7b55a41ab\", \"request_hash\": \"a79caf956bb6b91f8d997488c72b57b2bde3c4f0e201364764f58fc0b33133ff\", \"request_id\": \"phase4-driver5bprobe-physics\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "ISOLATION_PROOF_REQUIRED",
+      "error_message": "remote_addr_valve receipt has no API probe",
+      "operation": "operation_call",
+      "sequence": 13,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "ISOLATION_PROOF_REQUIRED",
+          "message": "remote_addr_valve receipt has no API probe",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5bprobe-physics",
+          "job_id": "41371572-d637-4cae-8c20-0898cfc6b59b",
+          "operation_id": "c6f839dd-db1e-414c-8878-1bf7b55a41ab",
+          "request_hash": "a79caf956bb6b91f8d997488c72b57b2bde3c4f0e201364764f58fc0b33133ff",
+          "request_id": "phase4-driver5bprobe-physics"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"ISOLATION_PROOF_REQUIRED\", \"message\": \"remote_addr_valve receipt has no API probe\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver5bprobe-temperature\", \"job_id\": \"680a8a6a-aca7-43b3-bf24-80551aacc5c0\", \"operation_id\": \"a3a66ff1-6bb0-48be-8936-5f3be8f760a6\", \"request_hash\": \"0bda3096b0f81b3085213cf27fbc17a9088acc781bae302c469d2f9a8894df56\", \"request_id\": \"phase4-driver5bprobe-temperature\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "ISOLATION_PROOF_REQUIRED",
+      "error_message": "remote_addr_valve receipt has no API probe",
+      "operation": "operation_call",
+      "sequence": 14,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "ISOLATION_PROOF_REQUIRED",
+          "message": "remote_addr_valve receipt has no API probe",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5bprobe-temperature",
+          "job_id": "680a8a6a-aca7-43b3-bf24-80551aacc5c0",
+          "operation_id": "a3a66ff1-6bb0-48be-8936-5f3be8f760a6",
+          "request_hash": "0bda3096b0f81b3085213cf27fbc17a9088acc781bae302c469d2f9a8894df56",
+          "request_id": "phase4-driver5bprobe-temperature"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"ISOLATION_PROOF_REQUIRED\", \"message\": \"remote_addr_valve receipt has no API probe\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver5bprobe-material\", \"job_id\": \"c6d6fcb8-71b1-4d0b-9750-ecf575166074\", \"operation_id\": \"4f399eee-5052-4878-b9ad-b80bcbb8af70\", \"request_hash\": \"2ae8264320e5b9818098bb0c9288ae41e51a6302ca2dff9996a5f60c25d82459\", \"request_id\": \"phase4-driver5bprobe-material\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "ISOLATION_PROOF_REQUIRED",
+      "error_message": "remote_addr_valve receipt has no API probe",
+      "operation": "operation_call",
+      "sequence": 15,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "ISOLATION_PROOF_REQUIRED",
+          "message": "remote_addr_valve receipt has no API probe",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5bprobe-material",
+          "job_id": "c6d6fcb8-71b1-4d0b-9750-ecf575166074",
+          "operation_id": "4f399eee-5052-4878-b9ad-b80bcbb8af70",
+          "request_hash": "2ae8264320e5b9818098bb0c9288ae41e51a6302ca2dff9996a5f60c25d82459",
+          "request_id": "phase4-driver5bprobe-material"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"NODE_NOT_FOUND\", \"message\": \"could not resolve node path segment component:comp1\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver5bprobe-group-schema\", \"job_id\": \"e7ee7d8d-51ac-43b3-b23d-d652e1477e30\", \"operation_id\": \"f6426597-4e72-4ba1-a24b-4a3e9fedf2db\", \"request_hash\": \"57120647c49c1617ea9f85bf63cf94a8e348cb8a0e9d0b6ad52395c533a46c1e\", \"request_id\": \"phase4-driver5bprobe-group-schema\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "NODE_NOT_FOUND",
+      "error_message": "could not resolve node path segment component:comp1",
+      "operation": "operation_call",
+      "sequence": 16,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "NODE_NOT_FOUND",
+          "message": "could not resolve node path segment component:comp1",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5bprobe-group-schema",
+          "job_id": "e7ee7d8d-51ac-43b3-b23d-d652e1477e30",
+          "operation_id": "f6426597-4e72-4ba1-a24b-4a3e9fedf2db",
+          "request_hash": "57120647c49c1617ea9f85bf63cf94a8e348cb8a0e9d0b6ad52395c533a46c1e",
+          "request_id": "phase4-driver5bprobe-group-schema"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"NODE_NOT_FOUND\", \"message\": \"could not resolve node path segment component:comp1\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver5bphase4-find-3\", \"job_id\": \"85db58c1-51a6-4992-8820-0a6af4a84662\", \"operation_id\": \"49bdcf74-3acf-41c9-a618-29c0828351b8\", \"request_hash\": \"04be9d9221507e31f26af173b4e560d9c1a09b9783e8f17a8b1248977325aece\", \"request_id\": \"phase4-driver5bphase4-find-3\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "NODE_NOT_FOUND",
+      "error_message": "could not resolve node path segment component:comp1",
+      "operation": "operation_call",
+      "sequence": 17,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "NODE_NOT_FOUND",
+          "message": "could not resolve node path segment component:comp1",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5bphase4-find-3",
+          "job_id": "85db58c1-51a6-4992-8820-0a6af4a84662",
+          "operation_id": "49bdcf74-3acf-41c9-a618-29c0828351b8",
+          "request_hash": "04be9d9221507e31f26af173b4e560d9c1a09b9783e8f17a8b1248977325aece",
+          "request_id": "phase4-driver5bphase4-find-3"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"NODE_NOT_FOUND\", \"message\": \"could not resolve node path segment component:comp1\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver5bphase4-find-4\", \"job_id\": \"28906437-8340-42db-b927-38dedb3b0383\", \"operation_id\": \"d1b4ac34-eb7f-4c65-83e6-36da166a2275\", \"request_hash\": \"0159427b591414d363103a16127374da0d6bce7832c7c0012c8980be9cbd0c90\", \"request_id\": \"phase4-driver5bphase4-find-4\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "NODE_NOT_FOUND",
+      "error_message": "could not resolve node path segment component:comp1",
+      "operation": "operation_call",
+      "sequence": 18,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "NODE_NOT_FOUND",
+          "message": "could not resolve node path segment component:comp1",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5bphase4-find-4",
+          "job_id": "28906437-8340-42db-b927-38dedb3b0383",
+          "operation_id": "d1b4ac34-eb7f-4c65-83e6-36da166a2275",
+          "request_hash": "0159427b591414d363103a16127374da0d6bce7832c7c0012c8980be9cbd0c90",
+          "request_id": "phase4-driver5bphase4-find-4"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"NODE_NOT_FOUND\", \"message\": \"could not resolve node path segment component:comp1\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver5bphase4-find-5\", \"job_id\": \"a8b9812c-61b4-43a3-997f-18beaf096d20\", \"operation_id\": \"197ad100-ab13-47f4-aaaa-eb758a794e4f\", \"request_hash\": \"37a58f9cbb886de77d97b376c3afa17d76d651699c25489d10fa2b27dd7ec2fd\", \"request_id\": \"phase4-driver5bphase4-find-5\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "NODE_NOT_FOUND",
+      "error_message": "could not resolve node path segment component:comp1",
+      "operation": "operation_call",
+      "sequence": 19,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "NODE_NOT_FOUND",
+          "message": "could not resolve node path segment component:comp1",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5bphase4-find-5",
+          "job_id": "a8b9812c-61b4-43a3-997f-18beaf096d20",
+          "operation_id": "197ad100-ab13-47f4-aaaa-eb758a794e4f",
+          "request_hash": "37a58f9cbb886de77d97b376c3afa17d76d651699c25489d10fa2b27dd7ec2fd",
+          "request_id": "phase4-driver5bphase4-find-5"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"NODE_NOT_FOUND\", \"message\": \"could not resolve node path segment component:comp1\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver5bphase4-find-6\", \"job_id\": \"62ad62cd-6116-4a99-bd4b-87d8134a0304\", \"operation_id\": \"df96b505-12e6-46c8-9313-e9c3919725e2\", \"request_hash\": \"8b2c1cf55f66d8f469c4bfac704617d2432dcb0f55a13411f907ae59633d7bd7\", \"request_id\": \"phase4-driver5bphase4-find-6\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "NODE_NOT_FOUND",
+      "error_message": "could not resolve node path segment component:comp1",
+      "operation": "operation_call",
+      "sequence": 20,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "NODE_NOT_FOUND",
+          "message": "could not resolve node path segment component:comp1",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5bphase4-find-6",
+          "job_id": "62ad62cd-6116-4a99-bd4b-87d8134a0304",
+          "operation_id": "df96b505-12e6-46c8-9313-e9c3919725e2",
+          "request_hash": "8b2c1cf55f66d8f469c4bfac704617d2432dcb0f55a13411f907ae59633d7bd7",
+          "request_id": "phase4-driver5bphase4-find-6"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"NODE_NOT_FOUND\", \"message\": \"could not resolve node path segment component:comp1\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver5bphase4-find-7\", \"job_id\": \"6083b08e-74e0-463c-9e16-68522641109a\", \"operation_id\": \"9b3a3870-78d6-42a5-8885-fb12c279c1ca\", \"request_hash\": \"71dff579c0750dbce4e5750429c6666adb78daff9125215fa259c77a35124f30\", \"request_id\": \"phase4-driver5bphase4-find-7\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "NODE_NOT_FOUND",
+      "error_message": "could not resolve node path segment component:comp1",
+      "operation": "operation_call",
+      "sequence": 21,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "NODE_NOT_FOUND",
+          "message": "could not resolve node path segment component:comp1",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5bphase4-find-7",
+          "job_id": "6083b08e-74e0-463c-9e16-68522641109a",
+          "operation_id": "9b3a3870-78d6-42a5-8885-fb12c279c1ca",
+          "request_hash": "71dff579c0750dbce4e5750429c6666adb78daff9125215fa259c77a35124f30",
+          "request_id": "phase4-driver5bphase4-find-7"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"NODE_NOT_FOUND\", \"message\": \"could not resolve node path segment component:comp1\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver5bphase4-find-8\", \"job_id\": \"07e14181-f3f3-461b-bdf0-6f9a9590b13c\", \"operation_id\": \"ceec7f97-f396-4f24-86ce-39815c9311f9\", \"request_hash\": \"5dfb3ddb1643ec2c55e588e04e0f571057b5324af217c6859bc9f07b39ba7f9a\", \"request_id\": \"phase4-driver5bphase4-find-8\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "NODE_NOT_FOUND",
+      "error_message": "could not resolve node path segment component:comp1",
+      "operation": "operation_call",
+      "sequence": 22,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "NODE_NOT_FOUND",
+          "message": "could not resolve node path segment component:comp1",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5bphase4-find-8",
+          "job_id": "07e14181-f3f3-461b-bdf0-6f9a9590b13c",
+          "operation_id": "ceec7f97-f396-4f24-86ce-39815c9311f9",
+          "request_hash": "5dfb3ddb1643ec2c55e588e04e0f571057b5324af217c6859bc9f07b39ba7f9a",
+          "request_id": "phase4-driver5bphase4-find-8"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"NODE_NOT_FOUND\", \"message\": \"could not resolve node path segment component:comp1\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver5bphase4-find-9\", \"job_id\": \"375f4157-13b4-4708-8a79-1f8f6a6943d4\", \"operation_id\": \"474b8631-46b9-48a0-9182-bbd3a1905e80\", \"request_hash\": \"42b56b95e89a15bbb1a69caf47f87153908bbb8ea2eaac4632071bca0fec83d2\", \"request_id\": \"phase4-driver5bphase4-find-9\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "NODE_NOT_FOUND",
+      "error_message": "could not resolve node path segment component:comp1",
+      "operation": "operation_call",
+      "sequence": 23,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "NODE_NOT_FOUND",
+          "message": "could not resolve node path segment component:comp1",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5bphase4-find-9",
+          "job_id": "375f4157-13b4-4708-8a79-1f8f6a6943d4",
+          "operation_id": "474b8631-46b9-48a0-9182-bbd3a1905e80",
+          "request_hash": "42b56b95e89a15bbb1a69caf47f87153908bbb8ea2eaac4632071bca0fec83d2",
+          "request_id": "phase4-driver5bphase4-find-9"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"NODE_NOT_FOUND\", \"message\": \"could not resolve node path segment component:comp1\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver5bphase4-find-10\", \"job_id\": \"dcb99eda-f90e-4dba-84b4-7a4f71b13318\", \"operation_id\": \"3ede7cc2-bb0f-4559-88bb-51a9dff8a040\", \"request_hash\": \"fcee00ed1b62fc5d570a91f817b6c9772494a9cb551049e68ef415b18c45efea\", \"request_id\": \"phase4-driver5bphase4-find-10\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "NODE_NOT_FOUND",
+      "error_message": "could not resolve node path segment component:comp1",
+      "operation": "operation_call",
+      "sequence": 24,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "NODE_NOT_FOUND",
+          "message": "could not resolve node path segment component:comp1",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5bphase4-find-10",
+          "job_id": "dcb99eda-f90e-4dba-84b4-7a4f71b13318",
+          "operation_id": "3ede7cc2-bb0f-4559-88bb-51a9dff8a040",
+          "request_hash": "fcee00ed1b62fc5d570a91f817b6c9772494a9cb551049e68ef415b18c45efea",
+          "request_id": "phase4-driver5bphase4-find-10"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"NODE_NOT_FOUND\", \"message\": \"could not resolve node path segment component:comp1\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver5bprobe-node-schema-block-11\", \"job_id\": \"f49c5575-11ac-4611-8ee2-4f1a8208e741\", \"operation_id\": \"d8798795-a97d-47a9-a956-b737e06918b6\", \"request_hash\": \"fcf43c6591456e2269a65eed096c828756be79f7c128529df717ee49c3892175\", \"request_id\": \"phase4-driver5bprobe-node-schema-block\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "NODE_NOT_FOUND",
+      "error_message": "could not resolve node path segment component:comp1",
+      "operation": "operation_call",
+      "sequence": 25,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "NODE_NOT_FOUND",
+          "message": "could not resolve node path segment component:comp1",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5bprobe-node-schema-block-11",
+          "job_id": "f49c5575-11ac-4611-8ee2-4f1a8208e741",
+          "operation_id": "d8798795-a97d-47a9-a956-b737e06918b6",
+          "request_hash": "fcf43c6591456e2269a65eed096c828756be79f7c128529df717ee49c3892175",
+          "request_id": "phase4-driver5bprobe-node-schema-block"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"NODE_NOT_FOUND\", \"message\": \"could not resolve node path segment component:comp1\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver5bprobe-node-schema-mesh_size-12\", \"job_id\": \"ad709c39-cc52-42b9-8ec1-adcd8b958073\", \"operation_id\": \"daff20a2-f248-4c36-9921-8aca3b15a5e7\", \"request_hash\": \"41dc291ede524bf7c2f80606217976041d9fdd1ad4be1cb532031f74fa1ae5ba\", \"request_id\": \"phase4-driver5bprobe-node-schema-mesh_size\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "NODE_NOT_FOUND",
+      "error_message": "could not resolve node path segment component:comp1",
+      "operation": "operation_call",
+      "sequence": 26,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "NODE_NOT_FOUND",
+          "message": "could not resolve node path segment component:comp1",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5bprobe-node-schema-mesh_size-12",
+          "job_id": "ad709c39-cc52-42b9-8ec1-adcd8b958073",
+          "operation_id": "daff20a2-f248-4c36-9921-8aca3b15a5e7",
+          "request_hash": "41dc291ede524bf7c2f80606217976041d9fdd1ad4be1cb532031f74fa1ae5ba",
+          "request_id": "phase4-driver5bprobe-node-schema-mesh_size"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"NODE_NOT_FOUND\", \"message\": \"could not resolve node path segment component:comp1\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver5bprobe-node-schema-temperature-13\", \"job_id\": \"0486bd27-0378-46ed-90ff-5d47ddbd767d\", \"operation_id\": \"fb00e19e-27dc-4ded-a715-b92ab068ab80\", \"request_hash\": \"634059987f64eb5a35170661970ac428c8902a7a6e1bc6ff9251436707e0bd6e\", \"request_id\": \"phase4-driver5bprobe-node-schema-temperature\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "NODE_NOT_FOUND",
+      "error_message": "could not resolve node path segment component:comp1",
+      "operation": "operation_call",
+      "sequence": 27,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "NODE_NOT_FOUND",
+          "message": "could not resolve node path segment component:comp1",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5bprobe-node-schema-temperature-13",
+          "job_id": "0486bd27-0378-46ed-90ff-5d47ddbd767d",
+          "operation_id": "fb00e19e-27dc-4ded-a715-b92ab068ab80",
+          "request_hash": "634059987f64eb5a35170661970ac428c8902a7a6e1bc6ff9251436707e0bd6e",
+          "request_id": "phase4-driver5bprobe-node-schema-temperature"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"NODE_NOT_FOUND\", \"message\": \"could not resolve node path segment component:comp1\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver5bprobe-node-schema-physics-14\", \"job_id\": \"53ddf6b0-e876-4088-b1d5-e399e0e29f29\", \"operation_id\": \"96abeb86-5d69-4b0f-b165-559a6e2b74c4\", \"request_hash\": \"7ac29eaca035de512328bdafafccf362eab1622f2ade6b065ad81a27388e1b62\", \"request_id\": \"phase4-driver5bprobe-node-schema-physics\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "NODE_NOT_FOUND",
+      "error_message": "could not resolve node path segment component:comp1",
+      "operation": "operation_call",
+      "sequence": 28,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "NODE_NOT_FOUND",
+          "message": "could not resolve node path segment component:comp1",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5bprobe-node-schema-physics-14",
+          "job_id": "53ddf6b0-e876-4088-b1d5-e399e0e29f29",
+          "operation_id": "96abeb86-5d69-4b0f-b165-559a6e2b74c4",
+          "request_hash": "7ac29eaca035de512328bdafafccf362eab1622f2ade6b065ad81a27388e1b62",
+          "request_id": "phase4-driver5bprobe-node-schema-physics"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"NODE_NOT_FOUND\", \"message\": \"could not resolve node path segment component:comp1\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver5bprobe-node-schema-material-15\", \"job_id\": \"bc625da7-c25f-4843-8573-5ce60a7d0aa7\", \"operation_id\": \"af001607-0910-4741-88f6-fd2eac8196ba\", \"request_hash\": \"cda25b22618723fc64f134a13daa83d63ac96d1f7f3dde10a7a8cea247fbb9a4\", \"request_id\": \"phase4-driver5bprobe-node-schema-material\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "NODE_NOT_FOUND",
+      "error_message": "could not resolve node path segment component:comp1",
+      "operation": "operation_call",
+      "sequence": 29,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "NODE_NOT_FOUND",
+          "message": "could not resolve node path segment component:comp1",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5bprobe-node-schema-material-15",
+          "job_id": "bc625da7-c25f-4843-8573-5ce60a7d0aa7",
+          "operation_id": "af001607-0910-4741-88f6-fd2eac8196ba",
+          "request_hash": "cda25b22618723fc64f134a13daa83d63ac96d1f7f3dde10a7a8cea247fbb9a4",
+          "request_id": "phase4-driver5bprobe-node-schema-material"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"NODE_NOT_FOUND\", \"message\": \"could not resolve node path segment component:comp1\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver5bprobe-node-schema-geometry-16\", \"job_id\": \"d804b8a9-2711-4636-8780-236017d3aa45\", \"operation_id\": \"22a76c8f-1350-4582-a5d2-2a5a87c383f2\", \"request_hash\": \"bffb03366dc372d55068e867eebb708d79bdfec39df937383f5d6abf1766d2db\", \"request_id\": \"phase4-driver5bprobe-node-schema-geometry\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "NODE_NOT_FOUND",
+      "error_message": "could not resolve node path segment component:comp1",
+      "operation": "operation_call",
+      "sequence": 30,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "NODE_NOT_FOUND",
+          "message": "could not resolve node path segment component:comp1",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5bprobe-node-schema-geometry-16",
+          "job_id": "d804b8a9-2711-4636-8780-236017d3aa45",
+          "operation_id": "22a76c8f-1350-4582-a5d2-2a5a87c383f2",
+          "request_hash": "bffb03366dc372d55068e867eebb708d79bdfec39df937383f5d6abf1766d2db",
+          "request_id": "phase4-driver5bprobe-node-schema-geometry"
+        },
+        "success": false
+      },
+      "success": false
+    }
+  ]
+}

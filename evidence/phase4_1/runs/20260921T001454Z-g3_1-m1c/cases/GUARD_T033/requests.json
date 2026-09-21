@@ -1,0 +1,413 @@
+{
+  "case_id": "GUARD_T033",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1cphase4-describe-evaluate_expressions-137",
+          "request_id": "phase4-20260921T001454Z-g3_1-m1cphase4-describe-evaluate_expressions-137"
+        },
+        "operation_id": "evaluate_expressions"
+      },
+      "elapsed_s": 0.002751584048382938,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-138",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp6",
+            "schema_version": 1,
+            "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-138",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.005663583986461163,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "evaluation_policy": "pure_read",
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1ct033-pure",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp6",
+            "schema_version": 1,
+            "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T001454Z-g3_1-m1cpure",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "expected_revision": 0,
+        "expressions_json": "[{\"name\": \"phase4_pure\", \"expression\": \"2*3\"}]",
+        "model_ref": {
+          "generation": 1,
+          "model_tag": "mcp6",
+          "schema_version": 1,
+          "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "project_id": "comsol-mcp-phase4",
+        "session_id": "session-9f95c2e814acd5f99589961a"
+      },
+      "elapsed_s": 0.031849500024691224,
+      "operation": "evaluate_expressions",
+      "outer_isError": true,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-139",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp6",
+            "schema_version": 1,
+            "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-139",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.0050728340283967555,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "evaluation_policy": "ephemeral_mutation",
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1ct033-ephemeral",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp6",
+            "schema_version": 1,
+            "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T001454Z-g3_1-m1cephemeral",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "expected_revision": 0,
+        "expressions_json": "[{\"name\": \"phase4_ephemeral\", \"expression\": \"3*3\"}]",
+        "model_ref": {
+          "generation": 1,
+          "model_tag": "mcp6",
+          "schema_version": 1,
+          "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "project_id": "comsol-mcp-phase4",
+        "session_id": "session-9f95c2e814acd5f99589961a"
+      },
+      "elapsed_s": 0.033003290998749435,
+      "operation": "evaluate_expressions",
+      "outer_isError": false,
+      "sequence": 5
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 1,
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-140",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp6",
+            "schema_version": 1,
+            "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-140",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.005800500046461821,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 6
+    },
+    {
+      "arguments": {
+        "evaluation_policy": "ephemeral_mutation",
+        "execution": {
+          "expected_revision": 1,
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1ct033-ephemeral-serial",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp6",
+            "schema_version": 1,
+            "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T001454Z-g3_1-m1cephemeral",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "expected_revision": 1,
+        "expressions_json": "[{\"name\": \"phase4_ephemeral\", \"expression\": \"3*3\"}]",
+        "model_ref": {
+          "generation": 1,
+          "model_tag": "mcp6",
+          "schema_version": 1,
+          "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "project_id": "comsol-mcp-phase4",
+        "session_id": "session-9f95c2e814acd5f99589961a"
+      },
+      "elapsed_s": 0.022855875024106354,
+      "operation": "evaluate_expressions",
+      "outer_isError": false,
+      "sequence": 7
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 2,
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-phase4-142",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp6",
+            "schema_version": 1,
+            "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-phase4-142",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.005387499986682087,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 8
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 2,
+          "limit": 200,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp6",
+            "schema_version": 1,
+            "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "query": {},
+          "root": {
+            "segments": []
+          },
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 2,
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1cphase4-find-141",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp6",
+            "schema_version": 1,
+            "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T001454Z-g3_1-m1cphase4-find-141",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.find"
+      },
+      "elapsed_s": 0.01319112500641495,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 9
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1creconcile-ac2829f4-7f1a-43f3-b2d2-6417425189ec",
+          "request_id": "phase4-20260921T001454Z-g3_1-m1cjob_reconcile"
+        },
+        "job_id": "ac2829f4-7f1a-43f3-b2d2-6417425189ec"
+      },
+      "elapsed_s": 0.0038097910000942647,
+      "operation": "job_reconcile",
+      "outer_isError": false,
+      "sequence": 10
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1creconcile-ac2829f4-7f1a-43f3-b2d2-6417425189ec",
+          "request_id": "phase4-20260921T001454Z-g3_1-m1cjob_reconcile"
+        },
+        "job_id": "ac2829f4-7f1a-43f3-b2d2-6417425189ec"
+      },
+      "elapsed_s": 0.0034511249978095293,
+      "operation": "job_reconcile",
+      "outer_isError": false,
+      "sequence": 11
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 2,
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-143",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp6",
+            "schema_version": 1,
+            "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-143",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.005641208030283451,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 12
+    },
+    {
+      "arguments": {
+        "evaluation_policy": "ephemeral_mutation",
+        "execution": {
+          "expected_revision": 2,
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1ct033-constant",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp6",
+            "schema_version": 1,
+            "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T001454Z-g3_1-m1ct033-constant",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "expected_revision": 2,
+        "expressions_json": "[{\"name\": \"phase4_constant\", \"expression\": \"3*3\"}]",
+        "model_ref": {
+          "generation": 1,
+          "model_tag": "mcp6",
+          "schema_version": 1,
+          "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "project_id": "comsol-mcp-phase4",
+        "session_id": "session-9f95c2e814acd5f99589961a"
+      },
+      "elapsed_s": 0.006581166991963983,
+      "operation": "evaluate_expressions",
+      "outer_isError": true,
+      "sequence": 13
+    },
+    {
+      "arguments": {
+        "execution": {
+          "expected_revision": 2,
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-144",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp6",
+            "schema_version": 1,
+            "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-144",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "refresh": true
+      },
+      "elapsed_s": 0.005093666026368737,
+      "operation": "model_inspect",
+      "outer_isError": false,
+      "sequence": 14
+    },
+    {
+      "arguments": {
+        "evaluation_policy": "ephemeral_mutation",
+        "execution": {
+          "expected_revision": 3,
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1ct033-constant-revision-retry",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp6",
+            "schema_version": 1,
+            "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T001454Z-g3_1-m1ct033-constant-revision-retry",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "expected_revision": 3,
+        "expressions_json": "[{\"name\": \"phase4_constant\", \"expression\": \"3*3\"}]",
+        "model_ref": {
+          "generation": 1,
+          "model_tag": "mcp6",
+          "schema_version": 1,
+          "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "project_id": "comsol-mcp-phase4",
+        "session_id": "session-9f95c2e814acd5f99589961a"
+      },
+      "elapsed_s": 0.024683959025423974,
+      "operation": "evaluate_expressions",
+      "outer_isError": false,
+      "sequence": 15
+    },
+    {
+      "arguments": {
+        "evaluation_policy": "ephemeral_mutation",
+        "execution": {
+          "expected_revision": 4,
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1ct033-illegal_expression",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp6",
+            "schema_version": 1,
+            "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T001454Z-g3_1-m1ct033-illegal_expression",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "expected_revision": 4,
+        "expressions_json": "[{\"name\": \"phase4_illegal\", \"expression\": \"sin(\"}]",
+        "model_ref": {
+          "generation": 1,
+          "model_tag": "mcp6",
+          "schema_version": 1,
+          "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "project_id": "comsol-mcp-phase4",
+        "session_id": "session-9f95c2e814acd5f99589961a"
+      },
+      "elapsed_s": 0.05270191701129079,
+      "operation": "evaluate_expressions",
+      "outer_isError": true,
+      "sequence": 16
+    }
+  ]
+}

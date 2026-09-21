@@ -1,0 +1,59 @@
+{
+  "case_id": "REOPEN_CHECK",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "reopen-server-connect",
+          "request_id": "connect"
+        },
+        "host": "127.0.0.1",
+        "port": 56389
+      },
+      "elapsed_s": 1.2902552080340683,
+      "operation": "server_connect",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-describe-model-load-1",
+          "request_id": "phase4-describe-model-load-1"
+        },
+        "operation_id": "model.load"
+      },
+      "elapsed_s": 0.009337166033219546,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "artifact_id": "phase4-reopen-artifact",
+        "execution": {
+          "idempotency_key": "reopen-load",
+          "request_id": "model.load"
+        },
+        "path": "evidence/phase4_1/runs/20260921T042809Z-g3_1-m2a-chainA/chainA_result.mph"
+      },
+      "elapsed_s": 0.5099711670191027,
+      "operation": "model_load",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "depth": 3,
+        "execution": {
+          "idempotency_key": "reopen-tree",
+          "request_id": "reopen-tree"
+        }
+      },
+      "elapsed_s": 0.0035253330133855343,
+      "operation": "model_tree",
+      "outer_isError": true,
+      "sequence": 4
+    }
+  ]
+}

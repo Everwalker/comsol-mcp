@@ -341,6 +341,70 @@ _LICENSE_INSPECT_FIELDS = ("runtime_id", "products")
 _CAPABILITIES_FIELDS = ("runtime_id", "refresh")
 
 
+#: The Java signature of the varargs parameter ``ModelUtil.hasProduct(String...)``
+#: declares.  Sending the argument as a declared ``String[]`` value is what makes
+#: the call marshal: a bare scalar cannot be converted to the one array parameter
+#: the method declares, and the Worker then refuses the overload.
+STRING_ARRAY_SIGNATURE = "java.lang.String[]"
+
+
+def string_array_value(values: Sequence[str]) -> dict[str, Any]:
+    """Pack ``values`` as a declared Java ``String[]`` argument.
+
+    The typed-value form (``kind``/``shape``/``data``/``java_signature``) is the
+    contract the Worker's marshaller reads: ``java_signature`` is matched against
+    the parameter type of the overload it is offered to, so a signature mistake
+    is refused instead of being silently coerced, and ``data`` is the array
+    contents.  A ``String...`` parameter is one ``String[]`` parameter, which is
+    why the caller of e.g. ``hasProduct`` cannot pass a bare string.
+    """
+    items = [str(item) for item in values]
+    return {
+        "kind": "string",
+        "shape": [len(items)],
+        "data": items,
+        "java_signature": STRING_ARRAY_SIGNATURE,
+    }
+
+
+def _facade_argument(value: Any) -> Any:
+    """Unwrap a declared ``String[]`` value for a Python client facade.
+
+    The facade is called directly (no Worker marshaller in between), so a
+    single-element declared array argument is passed as its one element and a
+    longer array as a list: that is what a ``String...`` facade method receives
+    from Python either way.
+    """
+    if isinstance(value, Mapping) and value.get("java_signature") == STRING_ARRAY_SIGNATURE:
+        data = value.get("data")
+        if isinstance(data, list):
+            return data[0] if len(data) == 1 else data
+    return value
+
+
+def _bound_runtime_identity(worker: Any) -> dict[str, Any]:
+    """The identity of the runtime a licence probe actually ran against.
+
+    ``runtime_id`` in a request is a catalog label with no published grammar, so
+    it cannot be the identity of the runtime that answered.  This block reports
+    the observed Worker identity instead (instance id, connection epoch and
+    generation) and states that neither a bound model nor a model revision was
+    required, because a runtime capability question is not a model operation.
+    """
+    identity = _worker_identity(worker)
+    instance = identity.get("instance_id")
+    bound_id = f"runtime-{instance}" if isinstance(instance, str) and instance else None
+    metadata = dict(identity)
+    metadata["runtime_id"] = bound_id
+    metadata["runtime_id_source"] = "PersistentJavaWorker.runtime_metadata().instance_id"
+    metadata["revision_dependency"] = {
+        "required": False,
+        "reason": "a runtime capability query is not bound to a model revision",
+    }
+    metadata["bound_model_required"] = False
+    return metadata
+
+
 # ---------------------------------------------------------------------------
 # Worker channel
 # ---------------------------------------------------------------------------
@@ -466,7 +530,10 @@ def _license_api_call(worker: Any, method: str, arguments: Sequence[Any],
         try:
             return {
                 "ok": True,
-                "value": facade(*arguments),
+                # The facade is a Python callable, not the Worker's marshaller, so
+                # a declared ``String[]`` argument is unwrapped back to its
+                # contents (a varargs facade takes the product itself).
+                "value": facade(*[_facade_argument(item) for item in arguments]),
                 "code": None,
                 "message": None,
                 "allowlist_entry_required": None,
@@ -554,6 +621,16 @@ def _bound_model_used_products(worker: Any, model_tag: str, log: "_CallLog | Non
     """
     if log is not None:
         log.record("getUsedProducts")
+    if not model_tag:
+        # C05: a runtime-scoped probe carries no bound model.  The inventory is
+        # then unavailable *by design* instead of being reported as a failure of
+        # the runtime identity, and the licence answer never depends on it.
+        return {"model_tag": None, "used_products": None,
+                "source": "Model.getUsedProducts()",
+                "error": {"code": "NOT_BOUND",
+                          "message": "no model is bound to this request; the probe is runtime-scoped",
+                          "allowlist_entry_required": None},
+                "provenance": "inventory only; never a license decision"}
     try:
         model = bound_model(worker, model_tag)
     except Exception as exc:  # noqa: BLE001 - the probe must not depend on a model
@@ -630,7 +707,10 @@ def _product_rows(worker: Any, products: Sequence[str],
     rows: list[dict[str, Any]] = []
     unresolved: list[dict[str, Any]] = []
     for product in products:
-        outcome = _license_api_call(worker, "hasProduct", [product], log=log)
+        # One product per query, packed as the ``String[]`` the varargs parameter
+        # declares (C05): a bare scalar does not marshal to ``hasProduct(String...)``.
+        argument = string_array_value([product])
+        outcome = _license_api_call(worker, "hasProduct", [argument], log=log)
         if not outcome["ok"]:
             unresolved.append(
                 {
@@ -639,6 +719,10 @@ def _product_rows(worker: Any, products: Sequence[str],
                         "code": outcome["code"],
                         "message": outcome["message"],
                         "allowlist_entry_required": outcome["allowlist_entry_required"],
+                        "failure_kind": _probe_failure_kind(
+                            outcome["code"], outcome["allowlist_entry_required"]
+                        ),
+                        "argument": argument,
                     },
                 }
             )
@@ -651,6 +735,8 @@ def _product_rows(worker: Any, products: Sequence[str],
                         "code": "EXECUTION_STATE_UNKNOWN",
                         "message": "ModelUtil.hasProduct() did not return a boolean",
                         "allowlist_entry_required": None,
+                        "failure_kind": "non_boolean_answer",
+                        "argument": argument,
                     },
                 }
             )
@@ -663,9 +749,37 @@ def _product_rows(worker: Any, products: Sequence[str],
                 "documented_feature_string": product in DOCUMENTED_FEATURE_STRINGS,
                 "source": "ModelUtil.hasProduct(String)",
                 "channel": outcome["channel"],
+                "argument_shape": {
+                    "count": len(argument["data"]),
+                    "java_signature": argument["java_signature"],
+                },
             }
         )
     return rows, unresolved
+
+
+def _probe_failure_kind(code: Any, allowlist_entry: Any) -> str:
+    """Classify a licence-probe refusal so the five causes stay separately readable.
+
+    A refused probe is never "the product is not licensed": a missing API, an
+    argument that did not marshal, an unreachable runtime, a refused seat and an
+    allow-list gate are five different facts, and a caller (or a report) has to
+    be able to act on them differently.
+    """
+    text = str(code or "")
+    if allowlist_entry or _is_allowlist_refusal(code, None):
+        return "worker_allowlist"
+    if text in {"MODEL_UTIL_METHOD_ABSENT", "METHOD_NOT_FOUND", "NO_SUCH_METHOD"}:
+        return "api_unsupported"
+    if text in {"MODEL_UTIL_ARGUMENT_CONVERSION_FAILED", "ARGUMENT_CONVERSION_FAILED"}:
+        return "marshalling_failed"
+    if text in {"ENGINE_UNRESPONSIVE", "ENGINE_BUSY", "RUNTIME_CONFIGURATION_REQUIRED", "NOT_CONNECTED"}:
+        return "runtime_unavailable"
+    if text in {"PERMISSION_DENIED", "LICENSE_SEAT_REFUSED", "LICENSE_UNAVAILABLE"}:
+        return "seat_or_permission_refused"
+    if text == "EXECUTION_STATE_UNKNOWN":
+        return "unresolved_engine_state"
+    return "engine_call_failed"
 
 
 def _unresolved_refusal(unresolved: Sequence[Mapping[str, Any]], requested: int) -> ExecutionContractError:
@@ -681,9 +795,9 @@ def _unresolved_refusal(unresolved: Sequence[Mapping[str, Any]], requested: int)
     return ExecutionContractError(
         "BLOCKED_LICENSE",
         f"no non-checkout license answer was available for {len(unresolved)} of {requested} requested "
-        f"product(s): {detail} (probe ModelUtil.hasProduct refused with {first.get('code')}: "
-        f"{first.get('message')}{hint}). No seat was requested and no hasProduct value is reported for "
-        f"an unresolved product",
+        f"product(s): {detail} (probe ModelUtil.hasProduct refused with {first.get('code')} "
+        f"[{first.get('failure_kind')}]: {first.get('message')}{hint}). No seat was requested and no "
+        f"hasProduct value is reported for an unresolved product",
     )
 
 
@@ -711,6 +825,7 @@ def license_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
 
     data: dict[str, Any] = {
         "runtime_id": runtime_id,
+        "runtime_identity": _bound_runtime_identity(worker),
         "engine": engine,
         "bound_model": inventory,
         "requested_products": list(products),
@@ -835,20 +950,30 @@ def _capability_rows(worker: Any, *, refresh: bool, inventory: Mapping[str, Any]
     if not refresh:
         return rows
 
-    outcome = _license_api_call(worker, "hasProduct", ["ACDC"], log=log)
+    probe_argument = string_array_value(["ACDC"])
+    outcome = _license_api_call(worker, "hasProduct", [probe_argument], log=log)
     if outcome["ok"]:
         rows["ModelUtil.hasProduct"]["live_probe"] = {
             "status": "OK",
             "reason": None,
             "value": outcome["value"],
             "probe_product": "ACDC",
+            "argument_shape": {
+                "count": len(probe_argument["data"]),
+                "java_signature": probe_argument["java_signature"],
+            },
         }
     else:
         rows["ModelUtil.hasProduct"]["live_probe"] = {
             "status": "REFUSED",
             "reason": outcome["code"],
+            "failure_kind": _probe_failure_kind(outcome["code"], outcome["allowlist_entry_required"]),
             "allowlist_entry_required": outcome["allowlist_entry_required"],
             "probe_product": "ACDC",
+            "argument_shape": {
+                "count": len(probe_argument["data"]),
+                "java_signature": probe_argument["java_signature"],
+            },
             "message": outcome["message"],
         }
     return rows
@@ -871,6 +996,7 @@ def capabilities(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> d
     engine = _engine_identity(worker, log)
     inventory = _bound_model_used_products(worker, model_tag, log)
     rows = _capability_rows(worker, refresh=refresh, inventory=inventory, log=log)
+    identity = _bound_runtime_identity(worker)
 
     limits: list[dict[str, Any]] = []
     for api, row in rows.items():
@@ -885,7 +1011,12 @@ def capabilities(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> d
                 }
             )
     return {
-        "runtime_id": runtime_id,
+        "runtime_id": runtime_id if runtime_id is not None else identity.get("runtime_id"),
+        "runtime_id_source": (
+            "request label" if runtime_id is not None
+            else "PersistentJavaWorker.runtime_metadata().instance_id"
+        ),
+        "runtime_identity": identity,
         "engine": engine,
         "worker": _worker_identity(worker),
         "bound_model": inventory,

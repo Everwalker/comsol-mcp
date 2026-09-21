@@ -1,0 +1,1743 @@
+{
+  "case_status_counts": {
+    "BLOCKED": 6,
+    "FAIL": 0,
+    "NOT_RUN": 0,
+    "PASS": 0
+  },
+  "cases": [
+    {
+      "acceptance": [
+        "G3 §7 W13.T006"
+      ],
+      "assertion_count": 5,
+      "assertions": {
+        "dependency_blocked": {
+          "missing": [
+            "bound_model",
+            "observed_revision"
+          ],
+          "note": "downstream subcases list NOT_RUN against this root cause instead of becoming independent defects"
+        },
+        "first_cause": {
+          "case_id": "W13_T006_variables",
+          "class": "DEPENDENCY_BLOCKED",
+          "error_code": "DEPENDENCY_BLOCKED",
+          "reason": "the case's declared prerequisite(s) are not established: bound_model, observed_revision (no model_ref is bound: every live step of this case depends on one; the bound model's revision was never read back)",
+          "source": "declared"
+        },
+        "isolation": {
+          "applied": false,
+          "at": "2026-09-21T00:13:47.750317Z",
+          "attempted": false,
+          "declaration": {
+            "case_id": "W13_T006_variables",
+            "mode": "shared_bound",
+            "modes": [
+              "own_model",
+              "checkpoint_restore",
+              "shared_bound"
+            ],
+            "rationale": "reads/writes the run's bound model; the run is serial"
+          },
+          "reason": "declared: this case runs against the run's bound model, strictly serially"
+        },
+        "prerequisites": {
+          "case_id": "W13_T006_variables",
+          "checks": {
+            "bound_model": {
+              "applicable": true,
+              "evidence": "no model_ref is bound: every live step of this case depends on one",
+              "satisfied": false
+            },
+            "observed_revision": {
+              "applicable": true,
+              "evidence": "the bound model's revision was never read back",
+              "satisfied": false
+            },
+            "own_geometry": {
+              "applicable": false,
+              "evidence": "declared: the case builds its own component/geometry before using it",
+              "satisfied": null
+            }
+          },
+          "declared": [
+            "bound_model",
+            "observed_revision",
+            "own_geometry"
+          ],
+          "note": "a missing prerequisite makes this case DEPENDENCY_BLOCKED and points at the root cause; it never becomes a defect of this case",
+          "status": "UNSATISFIED",
+          "unknown_declarations": [],
+          "unsatisfied": [
+            "bound_model",
+            "observed_revision"
+          ]
+        },
+        "subcase_inventory": {
+          "levels": [
+            "live",
+            "static"
+          ],
+          "missing": [],
+          "planned": 7,
+          "recorded": 7
+        }
+      },
+      "case_id": "W13_T006_variables",
+      "finished_at": "2026-09-21T00:13:47.750373Z",
+      "package": "W13",
+      "reason": "the case's declared prerequisite(s) are not established: bound_model, observed_revision (no model_ref is bound: every live step of this case depends on one; the bound model's revision was never read back)",
+      "started_at": "2026-09-21T00:13:47.750305Z",
+      "status": "BLOCKED",
+      "subcase_count": 7,
+      "subcases": {
+        "component_and_global_scope": {
+          "acceptance": "W13 global and component scopes",
+          "level": "live",
+          "reason": "dependency not established: bound_model, observed_revision",
+          "status": "NOT_RUN"
+        },
+        "expression_evaluates_after_modification": {
+          "acceptance": "T006 expression still evaluates",
+          "level": "live",
+          "reason": "dependency not established: bound_model, observed_revision",
+          "status": "NOT_RUN"
+        },
+        "no_bogus_name_expr_variables": {
+          "acceptance": "T006 no fake name/expr variables",
+          "level": "live",
+          "reason": "dependency not established: bound_model, observed_revision",
+          "status": "NOT_RUN"
+        },
+        "static_legacy_variable_route_available": {
+          "acceptance": "T006 evaluation route",
+          "level": "static",
+          "reason": "dependency not established: bound_model, observed_revision",
+          "status": "NOT_RUN"
+        },
+        "static_variable_ops_availability": {
+          "acceptance": "W13 variable group add/update",
+          "level": "static",
+          "reason": "dependency not established: bound_model, observed_revision",
+          "status": "NOT_RUN"
+        },
+        "variables_two_in_one_group": {
+          "acceptance": "T006 two variables in one group",
+          "level": "live",
+          "reason": "dependency not established: bound_model, observed_revision",
+          "status": "NOT_RUN"
+        },
+        "varnames_contains_modified_variable": {
+          "acceptance": "T006 varnames contains the changed variable",
+          "level": "live",
+          "reason": "dependency not established: bound_model, observed_revision",
+          "status": "NOT_RUN"
+        }
+      }
+    },
+    {
+      "acceptance": [
+        "G3 §7 W13.T015"
+      ],
+      "assertion_count": 5,
+      "assertions": {
+        "dependency_blocked": {
+          "missing": [
+            "bound_model"
+          ],
+          "note": "downstream subcases list NOT_RUN against this root cause instead of becoming independent defects"
+        },
+        "first_cause": {
+          "case_id": "W13_T015_units",
+          "class": "DEPENDENCY_BLOCKED",
+          "error_code": "DEPENDENCY_BLOCKED",
+          "reason": "the case's declared prerequisite(s) are not established: bound_model (no model_ref is bound: every live step of this case depends on one)",
+          "source": "declared"
+        },
+        "isolation": {
+          "applied": false,
+          "at": "2026-09-21T00:13:47.751525Z",
+          "attempted": false,
+          "declaration": {
+            "case_id": "W13_T015_units",
+            "mode": "shared_bound",
+            "modes": [
+              "own_model",
+              "checkpoint_restore",
+              "shared_bound"
+            ],
+            "rationale": "reads/writes the run's bound model; the run is serial"
+          },
+          "reason": "declared: this case runs against the run's bound model, strictly serially"
+        },
+        "prerequisites": {
+          "case_id": "W13_T015_units",
+          "checks": {
+            "bound_model": {
+              "applicable": true,
+              "evidence": "no model_ref is bound: every live step of this case depends on one",
+              "satisfied": false
+            }
+          },
+          "declared": [
+            "bound_model"
+          ],
+          "note": "a missing prerequisite makes this case DEPENDENCY_BLOCKED and points at the root cause; it never becomes a defect of this case",
+          "status": "UNSATISFIED",
+          "unknown_declarations": [],
+          "unsatisfied": [
+            "bound_model"
+          ]
+        },
+        "subcase_inventory": {
+          "levels": [
+            "live",
+            "static"
+          ],
+          "missing": [],
+          "planned": 6,
+          "recorded": 6
+        }
+      },
+      "case_id": "W13_T015_units",
+      "finished_at": "2026-09-21T00:13:47.751539Z",
+      "package": "W13",
+      "reason": "the case's declared prerequisite(s) are not established: bound_model (no model_ref is bound: every live step of this case depends on one)",
+      "started_at": "2026-09-21T00:13:47.751519Z",
+      "status": "BLOCKED",
+      "subcase_count": 6,
+      "subcases": {
+        "coordinate_unit_m_and_mm": {
+          "acceptance": "T015 m/mm interpolation coordinates",
+          "level": "live",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        },
+        "no_implicit_thickness_or_absorptivity": {
+          "acceptance": "T015 no automatic thickness/absorptivity",
+          "level": "live",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        },
+        "static_physics_unit_ops_availability": {
+          "acceptance": "T015 source/unit actions",
+          "level": "static",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        },
+        "surface_source_W_per_m2": {
+          "acceptance": "T015 W/m^2 surface heat flux",
+          "level": "live",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        },
+        "volume_source_W_per_m3": {
+          "acceptance": "T015 W/m^3 volumetric source",
+          "level": "live",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        },
+        "wrong_unit_warns_or_fails": {
+          "acceptance": "T015 deliberate wrong unit",
+          "level": "live",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        }
+      }
+    },
+    {
+      "acceptance": [
+        "G3 §7 R04"
+      ],
+      "assertion_count": 6,
+      "assertions": {
+        "dependency_blocked": {
+          "missing": [
+            "bound_model",
+            "observed_revision"
+          ],
+          "note": "downstream subcases list NOT_RUN against this root cause instead of becoming independent defects"
+        },
+        "first_cause": {
+          "case_id": "R04_LIVE",
+          "class": "DEPENDENCY_BLOCKED",
+          "error_code": "DEPENDENCY_BLOCKED",
+          "reason": "the case's declared prerequisite(s) are not established: bound_model, observed_revision (no model_ref is bound: every live step of this case depends on one; the bound model's revision was never read back)",
+          "source": "declared"
+        },
+        "isolation": {
+          "applied": false,
+          "at": "2026-09-21T00:13:47.752375Z",
+          "attempted": true,
+          "declaration": {
+            "case_id": "R04_LIVE",
+            "mode": "own_model",
+            "modes": [
+              "own_model",
+              "checkpoint_restore",
+              "shared_bound"
+            ],
+            "rationale": "the stale-revision probe must not dirty the shared model"
+          },
+          "error_code": "ENGINE_UNRESPONSIVE",
+          "model_label": "R04_LIVE (Phase4 G3 acceptance fixture) isolation model",
+          "model_ref": {
+            "error_code": "ENGINE_UNRESPONSIVE",
+            "has_structured_content": true,
+            "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+            "operation_id": "d24ce662-ff16-4aaf-a4d5-b1af1cae4d9d",
+            "outer_isError": true,
+            "request_hash": "d1b17e78465989c587d6c2ad011b33c3cd80c354d970e5b987a6ad3440c44865",
+            "success": false
+          },
+          "reason": "the case's own model could not be created (ENGINE_UNRESPONSIVE)",
+          "route": "model.create",
+          "success": false
+        },
+        "prerequisites": {
+          "case_id": "R04_LIVE",
+          "checks": {
+            "bound_model": {
+              "applicable": true,
+              "evidence": "no model_ref is bound: every live step of this case depends on one",
+              "satisfied": false
+            },
+            "negative_probe": {
+              "applicable": false,
+              "evidence": "declared: the case asks for the product's own refusal",
+              "satisfied": null
+            },
+            "observed_revision": {
+              "applicable": true,
+              "evidence": "the bound model's revision was never read back",
+              "satisfied": false
+            }
+          },
+          "declared": [
+            "bound_model",
+            "observed_revision",
+            "negative_probe"
+          ],
+          "note": "a missing prerequisite makes this case DEPENDENCY_BLOCKED and points at the root cause; it never becomes a defect of this case",
+          "status": "UNSATISFIED",
+          "unknown_declarations": [],
+          "unsatisfied": [
+            "bound_model",
+            "observed_revision"
+          ]
+        },
+        "subcase_inventory": {
+          "levels": [
+            "live",
+            "protocol",
+            "static"
+          ],
+          "missing": [],
+          "planned": 8,
+          "recorded": 8
+        },
+        "unknown_job_ledger": {
+          "entries": [
+            {
+              "first_seen_at": "2026-09-21T00:13:47.763681Z",
+              "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+              "last_error_code": "EXECUTION_STATE_UNKNOWN",
+              "last_message": "connect to the existing worker before reconciliation",
+              "last_seen_at": "2026-09-21T00:13:47.766325Z",
+              "observations": [
+                {
+                  "at": "2026-09-21T00:13:47.763692Z",
+                  "error_code": "ENGINE_UNRESPONSIVE",
+                  "message": "connect to a server first",
+                  "tool": "model_create"
+                },
+                {
+                  "at": "2026-09-21T00:13:47.766327Z",
+                  "error_code": "EXECUTION_STATE_UNKNOWN",
+                  "message": "connect to the existing worker before reconciliation",
+                  "tool": "job_reconcile"
+                }
+              ],
+              "operation": "model_create",
+              "reconciled_quiescent": false,
+              "release_attempts": [
+                {
+                  "at": "2026-09-21T00:13:47.766344Z",
+                  "error_code": "EXECUTION_STATE_UNKNOWN",
+                  "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+                  "reconciled_quiescent": false,
+                  "reconciliation": null,
+                  "status": "UNKNOWN",
+                  "success": false
+                }
+              ],
+              "released": false,
+              "status": "UNKNOWN"
+            }
+          ],
+          "gate_refusals": {
+            "by_tool": {},
+            "count": 0,
+            "first": null,
+            "last": null
+          },
+          "note": "the driver records every job id an envelope reported as UNKNOWN (no published read lists the unresolved jobs) and releases each one through the published job_reconcile read before it replays a refused call once",
+          "released_jobs": [],
+          "still_blocked": [],
+          "unresolved_jobs": [
+            "0f23863c-fbe8-4dfc-b43d-88e605ebb73d"
+          ]
+        }
+      },
+      "case_id": "R04_LIVE",
+      "finished_at": "2026-09-21T00:13:47.771423Z",
+      "package": "R",
+      "reason": "the case's declared prerequisite(s) are not established: bound_model, observed_revision (no model_ref is bound: every live step of this case depends on one; the bound model's revision was never read back)",
+      "started_at": "2026-09-21T00:13:47.752371Z",
+      "status": "BLOCKED",
+      "subcase_count": 8,
+      "subcases": {
+        "checkpoint_recovery_after_failed_invariant": {
+          "acceptance": "G3 R04 checkpoint after failed invariant",
+          "level": "live",
+          "reason": "dependency not established: bound_model, observed_revision",
+          "status": "NOT_RUN"
+        },
+        "cross_model_transaction_record_rejected": {
+          "acceptance": "G3 R04 cross-model record binding",
+          "level": "live",
+          "reason": "dependency not established: bound_model, observed_revision",
+          "status": "NOT_RUN"
+        },
+        "invariant_violation_not_reported_as_pass": {
+          "acceptance": "G3 R04 required failure is not PASS",
+          "level": "live",
+          "reason": "dependency not established: bound_model, observed_revision",
+          "status": "NOT_RUN"
+        },
+        "recorded_pass_with_changed_live_property": {
+          "acceptance": "G3 R04 record passes but live property differs",
+          "level": "live",
+          "reason": "dependency not established: bound_model, observed_revision",
+          "status": "NOT_RUN"
+        },
+        "stale_revision_rejected": {
+          "acceptance": "G3 R04 stale revision",
+          "level": "live",
+          "reason": "dependency not established: bound_model, observed_revision",
+          "status": "NOT_RUN"
+        },
+        "static_transaction_ops_executable": {
+          "acceptance": "G3 R04 executable invariants",
+          "level": "static",
+          "reason": "dependency not established: bound_model, observed_revision",
+          "status": "NOT_RUN"
+        },
+        "static_unsupported_invariant_rejected_pre_write": {
+          "acceptance": "G3 R04 unsupported/malformed invariant rejected before write",
+          "level": "protocol",
+          "reason": "dependency not established: bound_model, observed_revision",
+          "status": "NOT_RUN"
+        },
+        "verified_transaction_status_split": {
+          "acceptance": "G3 R04 execution vs verification status",
+          "level": "live",
+          "reason": "dependency not established: bound_model, observed_revision",
+          "status": "NOT_RUN"
+        }
+      }
+    },
+    {
+      "acceptance": [
+        "G3 §10 T010"
+      ],
+      "assertion_count": 6,
+      "assertions": {
+        "dependency_blocked": {
+          "missing": [
+            "bound_model"
+          ],
+          "note": "downstream subcases list NOT_RUN against this root cause instead of becoming independent defects"
+        },
+        "first_cause": {
+          "case_id": "GUARD_T010",
+          "class": "DEPENDENCY_BLOCKED",
+          "error_code": "DEPENDENCY_BLOCKED",
+          "reason": "the case's declared prerequisite(s) are not established: bound_model (no model_ref is bound: every live step of this case depends on one)",
+          "source": "declared"
+        },
+        "isolation": {
+          "applied": false,
+          "at": "2026-09-21T00:13:47.772707Z",
+          "attempted": false,
+          "declaration": {
+            "case_id": "GUARD_T010",
+            "mode": "shared_bound",
+            "modes": [
+              "own_model",
+              "checkpoint_restore",
+              "shared_bound"
+            ],
+            "rationale": "reads/writes the run's bound model; the run is serial"
+          },
+          "reason": "declared: this case runs against the run's bound model, strictly serially"
+        },
+        "prerequisites": {
+          "case_id": "GUARD_T010",
+          "checks": {
+            "bound_model": {
+              "applicable": true,
+              "evidence": "no model_ref is bound: every live step of this case depends on one",
+              "satisfied": false
+            },
+            "negative_probe": {
+              "applicable": false,
+              "evidence": "declared: the case asks for the product's own refusal",
+              "satisfied": null
+            }
+          },
+          "declared": [
+            "bound_model",
+            "negative_probe"
+          ],
+          "note": "a missing prerequisite makes this case DEPENDENCY_BLOCKED and points at the root cause; it never becomes a defect of this case",
+          "status": "UNSATISFIED",
+          "unknown_declarations": [],
+          "unsatisfied": [
+            "bound_model"
+          ]
+        },
+        "subcase_inventory": {
+          "levels": [
+            "live",
+            "static"
+          ],
+          "missing": [],
+          "planned": 5,
+          "recorded": 5
+        },
+        "unknown_job_ledger": {
+          "entries": [
+            {
+              "first_seen_at": "2026-09-21T00:13:47.763681Z",
+              "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+              "last_error_code": "EXECUTION_STATE_UNKNOWN",
+              "last_message": "connect to the existing worker before reconciliation",
+              "last_seen_at": "2026-09-21T00:13:47.766325Z",
+              "observations": [
+                {
+                  "at": "2026-09-21T00:13:47.763692Z",
+                  "error_code": "ENGINE_UNRESPONSIVE",
+                  "message": "connect to a server first",
+                  "tool": "model_create"
+                },
+                {
+                  "at": "2026-09-21T00:13:47.766327Z",
+                  "error_code": "EXECUTION_STATE_UNKNOWN",
+                  "message": "connect to the existing worker before reconciliation",
+                  "tool": "job_reconcile"
+                }
+              ],
+              "operation": "model_create",
+              "reconciled_quiescent": false,
+              "release_attempts": [
+                {
+                  "at": "2026-09-21T00:13:47.766344Z",
+                  "error_code": "EXECUTION_STATE_UNKNOWN",
+                  "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+                  "reconciled_quiescent": false,
+                  "reconciliation": null,
+                  "status": "UNKNOWN",
+                  "success": false
+                }
+              ],
+              "released": false,
+              "status": "UNKNOWN"
+            }
+          ],
+          "gate_refusals": {
+            "by_tool": {},
+            "count": 0,
+            "first": null,
+            "last": null
+          },
+          "note": "the driver records every job id an envelope reported as UNKNOWN (no published read lists the unresolved jobs) and releases each one through the published job_reconcile read before it replays a refused call once",
+          "released_jobs": [],
+          "still_blocked": [],
+          "unresolved_jobs": [
+            "0f23863c-fbe8-4dfc-b43d-88e605ebb73d"
+          ]
+        }
+      },
+      "case_id": "GUARD_T010",
+      "finished_at": "2026-09-21T00:13:47.772720Z",
+      "package": "GUARD",
+      "reason": "the case's declared prerequisite(s) are not established: bound_model (no model_ref is bound: every live step of this case depends on one)",
+      "started_at": "2026-09-21T00:13:47.772701Z",
+      "status": "BLOCKED",
+      "subcase_count": 5,
+      "subcases": {
+        "repeated_key_not_reexecuted": {
+          "acceptance": "T010 repeated idempotency key",
+          "level": "live",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        },
+        "request_hash_conflict_rejected": {
+          "acceptance": "T010 request hash conflict",
+          "level": "live",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        },
+        "same_tag_different_type_rejected": {
+          "acceptance": "T010 same tag different type",
+          "level": "live",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        },
+        "same_tag_same_type_duplicate_rejected_or_idempotent": {
+          "acceptance": "T010 same tag/type duplicate",
+          "level": "live",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        },
+        "static_idempotency_contract_published": {
+          "acceptance": "T010 idempotency contract",
+          "level": "static",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        }
+      }
+    },
+    {
+      "acceptance": [
+        "G3 §10 T005"
+      ],
+      "assertion_count": 6,
+      "assertions": {
+        "dependency_blocked": {
+          "missing": [
+            "bound_model"
+          ],
+          "note": "downstream subcases list NOT_RUN against this root cause instead of becoming independent defects"
+        },
+        "first_cause": {
+          "case_id": "GUARD_T005",
+          "class": "DEPENDENCY_BLOCKED",
+          "error_code": "DEPENDENCY_BLOCKED",
+          "reason": "the case's declared prerequisite(s) are not established: bound_model (no model_ref is bound: every live step of this case depends on one)",
+          "source": "declared"
+        },
+        "isolation": {
+          "applied": false,
+          "at": "2026-09-21T00:13:47.773722Z",
+          "attempted": false,
+          "declaration": {
+            "case_id": "GUARD_T005",
+            "mode": "shared_bound",
+            "modes": [
+              "own_model",
+              "checkpoint_restore",
+              "shared_bound"
+            ],
+            "rationale": "reads/writes the run's bound model; the run is serial"
+          },
+          "reason": "declared: this case runs against the run's bound model, strictly serially"
+        },
+        "prerequisites": {
+          "case_id": "GUARD_T005",
+          "checks": {
+            "bound_model": {
+              "applicable": true,
+              "evidence": "no model_ref is bound: every live step of this case depends on one",
+              "satisfied": false
+            },
+            "negative_probe": {
+              "applicable": false,
+              "evidence": "declared: the case asks for the product's own refusal",
+              "satisfied": null
+            }
+          },
+          "declared": [
+            "bound_model",
+            "negative_probe"
+          ],
+          "note": "a missing prerequisite makes this case DEPENDENCY_BLOCKED and points at the root cause; it never becomes a defect of this case",
+          "status": "UNSATISFIED",
+          "unknown_declarations": [],
+          "unsatisfied": [
+            "bound_model"
+          ]
+        },
+        "subcase_inventory": {
+          "levels": [
+            "live",
+            "static"
+          ],
+          "missing": [],
+          "planned": 4,
+          "recorded": 4
+        },
+        "unknown_job_ledger": {
+          "entries": [
+            {
+              "first_seen_at": "2026-09-21T00:13:47.763681Z",
+              "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+              "last_error_code": "EXECUTION_STATE_UNKNOWN",
+              "last_message": "connect to the existing worker before reconciliation",
+              "last_seen_at": "2026-09-21T00:13:47.766325Z",
+              "observations": [
+                {
+                  "at": "2026-09-21T00:13:47.763692Z",
+                  "error_code": "ENGINE_UNRESPONSIVE",
+                  "message": "connect to a server first",
+                  "tool": "model_create"
+                },
+                {
+                  "at": "2026-09-21T00:13:47.766327Z",
+                  "error_code": "EXECUTION_STATE_UNKNOWN",
+                  "message": "connect to the existing worker before reconciliation",
+                  "tool": "job_reconcile"
+                }
+              ],
+              "operation": "model_create",
+              "reconciled_quiescent": false,
+              "release_attempts": [
+                {
+                  "at": "2026-09-21T00:13:47.766344Z",
+                  "error_code": "EXECUTION_STATE_UNKNOWN",
+                  "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+                  "reconciled_quiescent": false,
+                  "reconciliation": null,
+                  "status": "UNKNOWN",
+                  "success": false
+                }
+              ],
+              "released": false,
+              "status": "UNKNOWN"
+            }
+          ],
+          "gate_refusals": {
+            "by_tool": {},
+            "count": 0,
+            "first": null,
+            "last": null
+          },
+          "note": "the driver records every job id an envelope reported as UNKNOWN (no published read lists the unresolved jobs) and releases each one through the published job_reconcile read before it replays a refused call once",
+          "released_jobs": [],
+          "still_blocked": [],
+          "unresolved_jobs": [
+            "0f23863c-fbe8-4dfc-b43d-88e605ebb73d"
+          ]
+        }
+      },
+      "case_id": "GUARD_T005",
+      "finished_at": "2026-09-21T00:13:47.773733Z",
+      "package": "GUARD",
+      "reason": "the case's declared prerequisite(s) are not established: bound_model (no model_ref is bound: every live step of this case depends on one)",
+      "started_at": "2026-09-21T00:13:47.773718Z",
+      "status": "BLOCKED",
+      "subcase_count": 4,
+      "subcases": {
+        "invalid_expression_does_not_delete_nodes": {
+          "acceptance": "T005 invalid expression is non-destructive",
+          "level": "live",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        },
+        "static_evaluation_ops_available": {
+          "acceptance": "T005 evaluation route",
+          "level": "static",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        },
+        "temporary_nodes_cleaned": {
+          "acceptance": "T005 temporary nodes cleaned",
+          "level": "live",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        },
+        "user_derived_nodes_preserved": {
+          "acceptance": "T005 user nodes preserved",
+          "level": "live",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        }
+      }
+    },
+    {
+      "acceptance": [
+        "G3 §10 T033"
+      ],
+      "assertion_count": 6,
+      "assertions": {
+        "dependency_blocked": {
+          "missing": [
+            "bound_model",
+            "observed_revision",
+            "isolated_model"
+          ],
+          "note": "downstream subcases list NOT_RUN against this root cause instead of becoming independent defects"
+        },
+        "first_cause": {
+          "case_id": "GUARD_T033",
+          "class": "DEPENDENCY_BLOCKED",
+          "error_code": "DEPENDENCY_BLOCKED",
+          "reason": "the case's declared prerequisite(s) are not established: bound_model, observed_revision, isolated_model (no model_ref is bound: every live step of this case depends on one; the bound model's revision was never read back; the case's declared isolation (own_model) was not applied: the case's own model could not be created (EXECUTION_STATE_UNKNOWN))",
+          "source": "declared"
+        },
+        "isolation": {
+          "applied": false,
+          "at": "2026-09-21T00:13:47.774808Z",
+          "attempted": true,
+          "declaration": {
+            "case_id": "GUARD_T033",
+            "mode": "own_model",
+            "modes": [
+              "own_model",
+              "checkpoint_restore",
+              "shared_bound"
+            ],
+            "rationale": "the evaluation-policy probes need a clean, validly bound model that no earlier refusal has dirtied"
+          },
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "model_label": "GUARD_T033 (Phase4 G3 acceptance fixture) isolation model",
+          "model_ref": {
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "has_structured_content": true,
+            "job_id": "bfeba76f-1158-414f-849b-dd6721296c6c",
+            "operation_id": "6499558c-4025-4b24-9837-33136ae64dad",
+            "outer_isError": true,
+            "request_hash": "badeec17718a24f54588a319ae965831f9e9e41b0499dc9d9ae807a1c54ab87f",
+            "success": false
+          },
+          "reason": "the case's own model could not be created (EXECUTION_STATE_UNKNOWN)",
+          "route": "model.create",
+          "success": false
+        },
+        "prerequisites": {
+          "case_id": "GUARD_T033",
+          "checks": {
+            "bound_model": {
+              "applicable": true,
+              "evidence": "no model_ref is bound: every live step of this case depends on one",
+              "satisfied": false
+            },
+            "isolated_model": {
+              "applicable": true,
+              "evidence": "the case's declared isolation (own_model) was not applied: the case's own model could not be created (EXECUTION_STATE_UNKNOWN)",
+              "satisfied": false
+            },
+            "negative_probe": {
+              "applicable": false,
+              "evidence": "declared: the case asks for the product's own refusal",
+              "satisfied": null
+            },
+            "observed_revision": {
+              "applicable": true,
+              "evidence": "the bound model's revision was never read back",
+              "satisfied": false
+            }
+          },
+          "declared": [
+            "bound_model",
+            "observed_revision",
+            "negative_probe",
+            "isolated_model"
+          ],
+          "note": "a missing prerequisite makes this case DEPENDENCY_BLOCKED and points at the root cause; it never becomes a defect of this case",
+          "status": "UNSATISFIED",
+          "unknown_declarations": [],
+          "unsatisfied": [
+            "bound_model",
+            "observed_revision",
+            "isolated_model"
+          ]
+        },
+        "subcase_inventory": {
+          "levels": [
+            "live",
+            "static"
+          ],
+          "missing": [],
+          "planned": 6,
+          "recorded": 6
+        },
+        "unknown_job_ledger": {
+          "entries": [
+            {
+              "first_seen_at": "2026-09-21T00:13:47.763681Z",
+              "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+              "last_error_code": "EXECUTION_STATE_UNKNOWN",
+              "last_message": "connect to the existing worker before reconciliation",
+              "last_seen_at": "2026-09-21T00:13:47.782996Z",
+              "observations": [
+                {
+                  "at": "2026-09-21T00:13:47.763692Z",
+                  "error_code": "ENGINE_UNRESPONSIVE",
+                  "message": "connect to a server first",
+                  "tool": "model_create"
+                },
+                {
+                  "at": "2026-09-21T00:13:47.766327Z",
+                  "error_code": "EXECUTION_STATE_UNKNOWN",
+                  "message": "connect to the existing worker before reconciliation",
+                  "tool": "job_reconcile"
+                },
+                {
+                  "at": "2026-09-21T00:13:47.782998Z",
+                  "error_code": "EXECUTION_STATE_UNKNOWN",
+                  "message": "connect to the existing worker before reconciliation",
+                  "tool": "job_reconcile"
+                }
+              ],
+              "operation": "model_create",
+              "reconciled_quiescent": false,
+              "release_attempts": [
+                {
+                  "at": "2026-09-21T00:13:47.766344Z",
+                  "error_code": "EXECUTION_STATE_UNKNOWN",
+                  "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+                  "reconciled_quiescent": false,
+                  "reconciliation": null,
+                  "status": "UNKNOWN",
+                  "success": false
+                },
+                {
+                  "at": "2026-09-21T00:13:47.783024Z",
+                  "error_code": "EXECUTION_STATE_UNKNOWN",
+                  "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+                  "reconciled_quiescent": false,
+                  "reconciliation": null,
+                  "status": "UNKNOWN",
+                  "success": false
+                }
+              ],
+              "released": false,
+              "status": "UNKNOWN"
+            }
+          ],
+          "gate_refusals": {
+            "by_tool": {
+              "model_create": 1
+            },
+            "count": 1,
+            "first": {
+              "at": "2026-09-21T00:13:47.780463Z",
+              "error_code": "EXECUTION_STATE_UNKNOWN",
+              "job_id": "bfeba76f-1158-414f-849b-dd6721296c6c",
+              "message": "reconcile unfinished engine work before new operations",
+              "tool": "model_create"
+            },
+            "last": {
+              "at": "2026-09-21T00:13:47.780463Z",
+              "error_code": "EXECUTION_STATE_UNKNOWN",
+              "job_id": "bfeba76f-1158-414f-849b-dd6721296c6c",
+              "message": "reconcile unfinished engine work before new operations",
+              "tool": "model_create"
+            }
+          },
+          "note": "the driver records every job id an envelope reported as UNKNOWN (no published read lists the unresolved jobs) and releases each one through the published job_reconcile read before it replays a refused call once",
+          "released_jobs": [],
+          "still_blocked": [
+            {
+              "at": "2026-09-21T00:13:47.787893Z",
+              "error_code": "EXECUTION_STATE_UNKNOWN",
+              "gate": true,
+              "job_id": "bfeba76f-1158-414f-849b-dd6721296c6c",
+              "message": "reconcile unfinished engine work before new operations",
+              "phase": "release-failed",
+              "tool": "model_create",
+              "unreleased_jobs": [
+                "0f23863c-fbe8-4dfc-b43d-88e605ebb73d"
+              ]
+            }
+          ],
+          "unresolved_jobs": [
+            "0f23863c-fbe8-4dfc-b43d-88e605ebb73d"
+          ]
+        }
+      },
+      "case_id": "GUARD_T033",
+      "finished_at": "2026-09-21T00:13:47.787980Z",
+      "package": "GUARD",
+      "reason": "the case's declared prerequisite(s) are not established: bound_model, observed_revision, isolated_model (no model_ref is bound: every live step of this case depends on one; the bound model's revision was never read back; the case's declared isolation (own_model) was not applied: the case's own model could not be created (EXECUTION_STATE_UNKNOWN))",
+      "started_at": "2026-09-21T00:13:47.774801Z",
+      "status": "BLOCKED",
+      "subcase_count": 6,
+      "subcases": {
+        "ephemeral_mutation_recorded_and_serial": {
+          "acceptance": "T033 ephemeral mutation recorded/serial",
+          "level": "live",
+          "reason": "dependency not established: bound_model, observed_revision, isolated_model",
+          "status": "NOT_RUN"
+        },
+        "evaluation_expression_kinds_routed": {
+          "acceptance": "T033 constant/model/field/illegal expressions",
+          "level": "live",
+          "reason": "dependency not established: bound_model, observed_revision, isolated_model",
+          "status": "NOT_RUN"
+        },
+        "only_own_temporary_nodes_cleaned": {
+          "acceptance": "T033 only own nodes cleaned",
+          "level": "live",
+          "reason": "dependency not established: bound_model, observed_revision, isolated_model",
+          "status": "NOT_RUN"
+        },
+        "pure_read_rejects_or_isolates": {
+          "acceptance": "T033 pure_read behaviour",
+          "level": "live",
+          "reason": "dependency not established: bound_model, observed_revision, isolated_model",
+          "status": "NOT_RUN"
+        },
+        "static_evaluation_policy_documented": {
+          "acceptance": "T033 evaluation policy contract",
+          "level": "static",
+          "reason": "dependency not established: bound_model, observed_revision, isolated_model",
+          "status": "NOT_RUN"
+        },
+        "static_evaluation_policy_source_recorded": {
+          "acceptance": "T033 policy read path",
+          "level": "static",
+          "reason": "dependency not established: bound_model, observed_revision, isolated_model",
+          "status": "NOT_RUN"
+        }
+      }
+    }
+  ],
+  "engine_reconciliations": [
+    {
+      "at": "2026-09-21T00:13:47.763710Z",
+      "envelope_job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+      "error_code": "ENGINE_UNRESPONSIVE",
+      "gate": false,
+      "jobs": [
+        {
+          "at": "2026-09-21T00:13:47.766344Z",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+          "job_reads": [
+            {
+              "available": true,
+              "data_keys": [
+                "created_at",
+                "effective_timeouts",
+                "finished_at",
+                "job_id",
+                "metadata",
+                "operation",
+                "operation_id",
+                "result",
+                "started_at",
+                "status"
+              ],
+              "error_code": null,
+              "message": "",
+              "status": "UNKNOWN",
+              "success": true,
+              "terminal": false,
+              "tool": "job_status"
+            },
+            {
+              "available": true,
+              "data_keys": [
+                "created_at",
+                "effective_timeouts",
+                "finished_at",
+                "job_id",
+                "metadata",
+                "operation",
+                "operation_id",
+                "result",
+                "started_at",
+                "status"
+              ],
+              "error_code": null,
+              "message": "",
+              "status": "UNKNOWN",
+              "success": false,
+              "terminal": false,
+              "tool": "job_result"
+            }
+          ],
+          "observed_via": null,
+          "reconciled_quiescent": false,
+          "reconciliation": null,
+          "status": "UNKNOWN",
+          "success": false
+        }
+      ],
+      "message": "connect to a server first",
+      "released": false,
+      "retry": "not performed: a first-hand UNKNOWN result is this call's evidence",
+      "targets": [
+        "0f23863c-fbe8-4dfc-b43d-88e605ebb73d"
+      ],
+      "trigger": "first-hand UNKNOWN result",
+      "trigger_tool": "model_create",
+      "unresolved_before": [
+        "0f23863c-fbe8-4dfc-b43d-88e605ebb73d"
+      ]
+    },
+    {
+      "at": "2026-09-21T00:13:47.780490Z",
+      "envelope_job_id": "bfeba76f-1158-414f-849b-dd6721296c6c",
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "gate": true,
+      "jobs": [
+        {
+          "at": "2026-09-21T00:13:47.783024Z",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+          "job_reads": [
+            {
+              "available": true,
+              "data_keys": [
+                "created_at",
+                "effective_timeouts",
+                "finished_at",
+                "job_id",
+                "metadata",
+                "operation",
+                "operation_id",
+                "result",
+                "started_at",
+                "status"
+              ],
+              "error_code": null,
+              "message": "",
+              "status": "UNKNOWN",
+              "success": true,
+              "terminal": false,
+              "tool": "job_status"
+            },
+            {
+              "available": true,
+              "data_keys": [
+                "created_at",
+                "effective_timeouts",
+                "finished_at",
+                "job_id",
+                "metadata",
+                "operation",
+                "operation_id",
+                "result",
+                "started_at",
+                "status"
+              ],
+              "error_code": null,
+              "message": "",
+              "status": "UNKNOWN",
+              "success": false,
+              "terminal": false,
+              "tool": "job_result"
+            }
+          ],
+          "observed_via": null,
+          "reconciled_quiescent": false,
+          "reconciliation": null,
+          "status": "UNKNOWN",
+          "success": false
+        }
+      ],
+      "message": "reconcile unfinished engine work before new operations",
+      "released": false,
+      "retry": "not performed: the gate was not released",
+      "still_blocked": {
+        "at": "2026-09-21T00:13:47.787893Z",
+        "error_code": "EXECUTION_STATE_UNKNOWN",
+        "gate": true,
+        "job_id": "bfeba76f-1158-414f-849b-dd6721296c6c",
+        "message": "reconcile unfinished engine work before new operations",
+        "phase": "release-failed",
+        "tool": "model_create",
+        "unreleased_jobs": [
+          "0f23863c-fbe8-4dfc-b43d-88e605ebb73d"
+        ]
+      },
+      "targets": [
+        "0f23863c-fbe8-4dfc-b43d-88e605ebb73d"
+      ],
+      "trigger": "control-gate refusal",
+      "trigger_tool": "model_create",
+      "unresolved_before": [
+        "0f23863c-fbe8-4dfc-b43d-88e605ebb73d"
+      ]
+    }
+  ],
+  "execution_context": {
+    "active_models": {},
+    "auxiliary_rejections": [
+      "ambiguous_envelope",
+      "explicit_key_reuse"
+    ],
+    "dispatches": [],
+    "generation_replacements": [],
+    "model_states": [],
+    "negative_probes": [],
+    "note": "one execution context for the whole run: revisions and dirty flags are keyed by the full ModelRef (session/server epoch/tag/generation), every logical request carries its own run/case/step/sequence key, and every refusal is classified as stale_expected / external_observation / unknown_job / generation_mismatch",
+    "observations": [
+      {
+        "adopted": false,
+        "at": "2026-09-21T00:13:47.750243Z",
+        "dirty": null,
+        "error_code": "ENGINE_BUSY",
+        "job_id": "e7e355d6-45e2-4a32-b573-1120e301cf52",
+        "model_ref": null,
+        "revision": null,
+        "source": {
+          "data": "structuredContent.data",
+          "error": "structuredContent.error",
+          "execution": "structuredContent.execution",
+          "job_id": "execution.job_id",
+          "success": "structuredContent.success"
+        },
+        "success": false,
+        "tool": "server_connect"
+      },
+      {
+        "adopted": false,
+        "at": "2026-09-21T00:13:47.760641Z",
+        "dirty": null,
+        "error_code": null,
+        "job_id": null,
+        "model_ref": null,
+        "revision": null,
+        "source": {
+          "data": "structuredContent.data",
+          "success": "structuredContent.success"
+        },
+        "success": true,
+        "tool": "operation_describe"
+      },
+      {
+        "adopted": false,
+        "at": "2026-09-21T00:13:47.763656Z",
+        "dirty": null,
+        "error_code": "ENGINE_UNRESPONSIVE",
+        "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+        "model_ref": null,
+        "revision": null,
+        "source": {
+          "data": "structuredContent.data",
+          "error": "structuredContent.error",
+          "execution": "structuredContent.execution",
+          "job_id": "execution.job_id",
+          "success": "structuredContent.success"
+        },
+        "success": false,
+        "tool": "model_create"
+      },
+      {
+        "adopted": false,
+        "at": "2026-09-21T00:13:47.766309Z",
+        "dirty": null,
+        "error_code": "EXECUTION_STATE_UNKNOWN",
+        "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+        "model_ref": null,
+        "revision": null,
+        "source": {
+          "data": "structuredContent.data",
+          "error": "structuredContent.error",
+          "job_id": "data.job_id",
+          "success": "structuredContent.success"
+        },
+        "success": false,
+        "tool": "job_reconcile"
+      },
+      {
+        "adopted": false,
+        "at": "2026-09-21T00:13:47.768841Z",
+        "dirty": null,
+        "error_code": null,
+        "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+        "model_ref": null,
+        "revision": null,
+        "source": {
+          "data": "structuredContent.data",
+          "job_id": "data.job_id",
+          "success": "structuredContent.success"
+        },
+        "success": true,
+        "tool": "job_status"
+      },
+      {
+        "adopted": false,
+        "at": "2026-09-21T00:13:47.771321Z",
+        "dirty": null,
+        "error_code": null,
+        "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+        "model_ref": null,
+        "revision": null,
+        "source": {
+          "data": "structuredContent.data",
+          "job_id": "data.job_id",
+          "success": "structuredContent.success"
+        },
+        "success": false,
+        "tool": "job_result"
+      },
+      {
+        "adopted": false,
+        "at": "2026-09-21T00:13:47.777902Z",
+        "dirty": null,
+        "error_code": null,
+        "job_id": null,
+        "model_ref": null,
+        "revision": null,
+        "source": {
+          "data": "structuredContent.data",
+          "success": "structuredContent.success"
+        },
+        "success": true,
+        "tool": "operation_describe"
+      },
+      {
+        "adopted": false,
+        "at": "2026-09-21T00:13:47.780446Z",
+        "dirty": null,
+        "error_code": "EXECUTION_STATE_UNKNOWN",
+        "job_id": "bfeba76f-1158-414f-849b-dd6721296c6c",
+        "model_ref": null,
+        "revision": null,
+        "source": {
+          "data": "structuredContent.data",
+          "error": "structuredContent.error",
+          "execution": "structuredContent.execution",
+          "job_id": "execution.job_id",
+          "success": "structuredContent.success"
+        },
+        "success": false,
+        "tool": "model_create"
+      },
+      {
+        "adopted": false,
+        "at": "2026-09-21T00:13:47.782980Z",
+        "dirty": null,
+        "error_code": "EXECUTION_STATE_UNKNOWN",
+        "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+        "model_ref": null,
+        "revision": null,
+        "source": {
+          "data": "structuredContent.data",
+          "error": "structuredContent.error",
+          "job_id": "data.job_id",
+          "success": "structuredContent.success"
+        },
+        "success": false,
+        "tool": "job_reconcile"
+      },
+      {
+        "adopted": false,
+        "at": "2026-09-21T00:13:47.785468Z",
+        "dirty": null,
+        "error_code": null,
+        "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+        "model_ref": null,
+        "revision": null,
+        "source": {
+          "data": "structuredContent.data",
+          "job_id": "data.job_id",
+          "success": "structuredContent.success"
+        },
+        "success": true,
+        "tool": "job_status"
+      },
+      {
+        "adopted": false,
+        "at": "2026-09-21T00:13:47.787849Z",
+        "dirty": null,
+        "error_code": null,
+        "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+        "model_ref": null,
+        "revision": null,
+        "source": {
+          "data": "structuredContent.data",
+          "job_id": "data.job_id",
+          "success": "structuredContent.success"
+        },
+        "success": false,
+        "tool": "job_result"
+      }
+    ],
+    "reader_errors": 0,
+    "rejection_counts": {
+      "ambiguous_envelope": 0,
+      "explicit_key_reuse": 0,
+      "external_observation": 0,
+      "generation_mismatch": 0,
+      "stale_expected": 0,
+      "unknown_job": 0
+    },
+    "rejection_reasons": [
+      "stale_expected",
+      "external_observation",
+      "unknown_job",
+      "generation_mismatch"
+    ],
+    "rejections": [],
+    "replans": [],
+    "replays": [],
+    "request_count": 0,
+    "requests": [],
+    "run": "20260921T001346Z-g3_1-m1b",
+    "unfinished_entries": [
+      {
+        "first_at": "2026-09-21T00:13:47.763668Z",
+        "first_tool": "model_create",
+        "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+        "last_at": "2026-09-21T00:13:47.782989Z",
+        "last_error_code": "EXECUTION_STATE_UNKNOWN",
+        "last_message": "connect to the existing worker before reconciliation",
+        "last_tool": "job_reconcile",
+        "observations": 3,
+        "resolved": false
+      },
+      {
+        "first_at": "2026-09-21T00:13:47.780455Z",
+        "first_tool": "model_create",
+        "job_id": "bfeba76f-1158-414f-849b-dd6721296c6c",
+        "last_at": "2026-09-21T00:13:47.780457Z",
+        "last_error_code": "EXECUTION_STATE_UNKNOWN",
+        "last_message": "reconcile unfinished engine work before new operations",
+        "last_tool": "model_create",
+        "observations": 1,
+        "resolved": false
+      }
+    ],
+    "unfinished_jobs": [
+      "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+      "bfeba76f-1158-414f-849b-dd6721296c6c"
+    ]
+  },
+  "first_cause": {
+    "classes": [
+      "DEPENDENCY_BLOCKED",
+      "HARNESS_FAILURE",
+      "IMPLEMENTATION_GAP",
+      "EXTERNAL_BLOCKER"
+    ],
+    "counts": {
+      "DEPENDENCY_BLOCKED": 6,
+      "EXTERNAL_BLOCKER": 0,
+      "HARNESS_FAILURE": 0,
+      "IMPLEMENTATION_GAP": 0
+    },
+    "note": "each case contributes at most one first cause; downstream subcases list DEPENDENCY_BLOCKED against it instead of becoming pseudo-independent defects",
+    "per_case": {
+      "GUARD_T005": {
+        "case_id": "GUARD_T005",
+        "class": "DEPENDENCY_BLOCKED",
+        "error_code": "DEPENDENCY_BLOCKED",
+        "reason": "the case's declared prerequisite(s) are not established: bound_model (no model_ref is bound: every live step of this case depends on one)",
+        "source": "declared"
+      },
+      "GUARD_T010": {
+        "case_id": "GUARD_T010",
+        "class": "DEPENDENCY_BLOCKED",
+        "error_code": "DEPENDENCY_BLOCKED",
+        "reason": "the case's declared prerequisite(s) are not established: bound_model (no model_ref is bound: every live step of this case depends on one)",
+        "source": "declared"
+      },
+      "GUARD_T033": {
+        "case_id": "GUARD_T033",
+        "class": "DEPENDENCY_BLOCKED",
+        "error_code": "DEPENDENCY_BLOCKED",
+        "reason": "the case's declared prerequisite(s) are not established: bound_model, observed_revision, isolated_model (no model_ref is bound: every live step of this case depends on one; the bound model's revision was never read back; the case's declared isolation (own_model) was not applied: the case's own model could not be created (EXECUTION_STATE_UNKNOWN))",
+        "source": "declared"
+      },
+      "R04_LIVE": {
+        "case_id": "R04_LIVE",
+        "class": "DEPENDENCY_BLOCKED",
+        "error_code": "DEPENDENCY_BLOCKED",
+        "reason": "the case's declared prerequisite(s) are not established: bound_model, observed_revision (no model_ref is bound: every live step of this case depends on one; the bound model's revision was never read back)",
+        "source": "declared"
+      },
+      "W13_T006_variables": {
+        "case_id": "W13_T006_variables",
+        "class": "DEPENDENCY_BLOCKED",
+        "error_code": "DEPENDENCY_BLOCKED",
+        "reason": "the case's declared prerequisite(s) are not established: bound_model, observed_revision (no model_ref is bound: every live step of this case depends on one; the bound model's revision was never read back)",
+        "source": "declared"
+      },
+      "W13_T015_units": {
+        "case_id": "W13_T015_units",
+        "class": "DEPENDENCY_BLOCKED",
+        "error_code": "DEPENDENCY_BLOCKED",
+        "reason": "the case's declared prerequisite(s) are not established: bound_model (no model_ref is bound: every live step of this case depends on one)",
+        "source": "declared"
+      }
+    }
+  },
+  "generated_at": "2026-09-21T00:13:47.850690Z",
+  "leak_scan": {
+    "credential_fixture_hits": [],
+    "credential_hits": [],
+    "credential_leak_hits": [],
+    "excluded_fixtures": [],
+    "private_home_scanned": "$REPO/PRIVATE_REDACTED/g3_1-live-m1b/mcp-home",
+    "private_path_hits": [],
+    "runtime_state_hits": [],
+    "scanned_files": 28
+  },
+  "model_bind": {
+    "model_create_probe": {
+      "available": false,
+      "effect": "WRITE",
+      "error_code": null,
+      "evaluation_policy": null,
+      "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+      "evaluation_policy_source": null,
+      "executable": false,
+      "execution_fields": [
+        "session_id",
+        "model_ref",
+        "expected_revision",
+        "idempotency_key",
+        "request_id",
+        "rpc_timeout_s",
+        "queue_timeout_s",
+        "execution_timeout_s"
+      ],
+      "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "dimension": {
+            "type": "integer"
+          },
+          "idempotency_key": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "project_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "idempotency_key",
+          "session_id",
+          "label"
+        ],
+        "title": "model.create input",
+        "type": "object"
+      },
+      "input_schema_properties": [
+        "dimension",
+        "idempotency_key",
+        "label",
+        "project_id",
+        "request_id",
+        "session_id"
+      ],
+      "mcp_tool_name": "model_create",
+      "output_contract": true,
+      "probe_unreadable": null,
+      "remediation": null,
+      "required_products": null,
+      "route": "control plane",
+      "schema_is_object": true,
+      "wire_compatibility": {
+        "execution_fields": [
+          "session_id",
+          "model_ref",
+          "expected_revision",
+          "idempotency_key",
+          "request_id",
+          "rpc_timeout_s",
+          "queue_timeout_s",
+          "execution_timeout_s"
+        ],
+        "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+        "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+        "result_fields": [
+          "success",
+          "data",
+          "error",
+          "execution"
+        ],
+        "transport": "MCP structuredContent plus text mirror; isError equals not success"
+      }
+    },
+    "model_label": null,
+    "model_origin": "connect_failed (ENGINE_BUSY)"
+  },
+  "run_dir": "$REPO/evidence/phase4_1/runs/20260921T001346Z-g3_1-m1b",
+  "slice": {
+    "live": true,
+    "note": "a slice is a documented run plan, not a weakened acceptance: every selected case still records its own subcases at their declared evidence level, and a stage subset never turns an unselected case into a pass",
+    "only": [],
+    "selected": [
+      "W13_T006_variables",
+      "W13_T015_units",
+      "R04_LIVE",
+      "GUARD_T010",
+      "GUARD_T005",
+      "GUARD_T033"
+    ],
+    "stage": "M1",
+    "stages": {
+      "M0": [
+        "R01_LIVE",
+        "R03_LIVE",
+        "R_READBACK",
+        "W13_T048_selection_drift",
+        "W13_T016_2D_data",
+        "W14_T009_geometry_edit",
+        "W14_T034_local_paths",
+        "W15_T007_selections",
+        "W15_T017_material",
+        "W15_T042_license",
+        "W16_T018_mesh",
+        "W16_T019_chainC_continue",
+        "W16_T020_solver",
+        "GUARD_T035",
+        "GUARD_T038"
+      ],
+      "M1": [
+        "W13_T006_variables",
+        "W13_T015_units",
+        "R04_LIVE",
+        "GUARD_T010",
+        "GUARD_T005",
+        "GUARD_T033"
+      ],
+      "M2": [
+        "W16_T019_chainA_steady",
+        "W16_T019_chainB_transient"
+      ],
+      "M3": [
+        "R01_LIVE",
+        "R03_LIVE",
+        "R_READBACK",
+        "W13_T048_selection_drift",
+        "W13_T016_2D_data",
+        "W14_T009_geometry_edit",
+        "W14_T034_local_paths",
+        "W15_T007_selections",
+        "W15_T017_material",
+        "W15_T042_license",
+        "W16_T018_mesh",
+        "W16_T019_chainC_continue",
+        "W16_T020_solver",
+        "GUARD_T035",
+        "GUARD_T038"
+      ]
+    }
+  },
+  "startup_error": null,
+  "subcase_status_counts": {
+    "NOT_RUN": 36
+  },
+  "totals": {
+    "assertions": 34,
+    "subcases": 36
+  },
+  "unknown_job_ledger": {
+    "entries": [
+      {
+        "first_seen_at": "2026-09-21T00:13:47.763681Z",
+        "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+        "last_error_code": "EXECUTION_STATE_UNKNOWN",
+        "last_message": "connect to the existing worker before reconciliation",
+        "last_seen_at": "2026-09-21T00:13:47.782996Z",
+        "observations": [
+          {
+            "at": "2026-09-21T00:13:47.763692Z",
+            "error_code": "ENGINE_UNRESPONSIVE",
+            "message": "connect to a server first",
+            "tool": "model_create"
+          },
+          {
+            "at": "2026-09-21T00:13:47.766327Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "message": "connect to the existing worker before reconciliation",
+            "tool": "job_reconcile"
+          },
+          {
+            "at": "2026-09-21T00:13:47.782998Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "message": "connect to the existing worker before reconciliation",
+            "tool": "job_reconcile"
+          }
+        ],
+        "operation": "model_create",
+        "reconciled_quiescent": false,
+        "release_attempts": [
+          {
+            "at": "2026-09-21T00:13:47.766344Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+            "reconciled_quiescent": false,
+            "reconciliation": null,
+            "status": "UNKNOWN",
+            "success": false
+          },
+          {
+            "at": "2026-09-21T00:13:47.783024Z",
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+            "reconciled_quiescent": false,
+            "reconciliation": null,
+            "status": "UNKNOWN",
+            "success": false
+          }
+        ],
+        "released": false,
+        "status": "UNKNOWN"
+      }
+    ],
+    "gate_refusals": {
+      "by_tool": {
+        "model_create": 1
+      },
+      "count": 1,
+      "first": {
+        "at": "2026-09-21T00:13:47.780463Z",
+        "error_code": "EXECUTION_STATE_UNKNOWN",
+        "job_id": "bfeba76f-1158-414f-849b-dd6721296c6c",
+        "message": "reconcile unfinished engine work before new operations",
+        "tool": "model_create"
+      },
+      "last": {
+        "at": "2026-09-21T00:13:47.780463Z",
+        "error_code": "EXECUTION_STATE_UNKNOWN",
+        "job_id": "bfeba76f-1158-414f-849b-dd6721296c6c",
+        "message": "reconcile unfinished engine work before new operations",
+        "tool": "model_create"
+      }
+    },
+    "note": "the driver records every job id an envelope reported as UNKNOWN (no published read lists the unresolved jobs) and releases each one through the published job_reconcile read before it replays a refused call once",
+    "released_jobs": [],
+    "still_blocked": [
+      {
+        "at": "2026-09-21T00:13:47.787893Z",
+        "error_code": "EXECUTION_STATE_UNKNOWN",
+        "gate": true,
+        "job_id": "bfeba76f-1158-414f-849b-dd6721296c6c",
+        "message": "reconcile unfinished engine work before new operations",
+        "phase": "release-failed",
+        "tool": "model_create",
+        "unreleased_jobs": [
+          "0f23863c-fbe8-4dfc-b43d-88e605ebb73d"
+        ]
+      }
+    ],
+    "unresolved_jobs": [
+      "0f23863c-fbe8-4dfc-b43d-88e605ebb73d"
+    ]
+  }
+}

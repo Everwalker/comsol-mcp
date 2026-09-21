@@ -1,0 +1,111 @@
+{
+  "schema": "comsol-mcp-g3/phase4_1-acceptance/1",
+  "generated_at": "2026-09-21T08:18:00Z",
+  "goal": "docs/comsol_mcp_design_v1/NEXT_GOAL_MAC_G3_1.md",
+  "status": "G3_1_MAC_EXECUTABLE_SCOPE_PASS",
+  "repo": {
+    "path": "/Users/everwalker/Downloads/comsol-mcp-project",
+    "branch": "codex/mac-g2-accepted-delivery",
+    "upstream_head": "999174f3a62a6d5689ad4b86315adb6c89dbe56b"
+  },
+  "environment": {
+    "os": "macOS 15.6.1 (arm64 Apple Silicon)",
+    "comsol": "COMSOL Multiphysics 6.4 (6.4.0.293) at /Applications/COMSOL64",
+    "jdk": "Amazon Corretto 11.0.31 at /Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home",
+    "python": ".venv (CPython 3.13.14)",
+    "server": {
+      "pid": 5014,
+      "port": 56389,
+      "address": "127.0.0.1",
+      "isolation_proof": "loopback authenticated API PASS + RemoteAddrValve non-loopback HTTP 403"
+    }
+  },
+  "software_verification": {
+    "full_suite": {
+      "command": ".venv/bin/pytest",
+      "result": "1588 passed, 1 skipped, 0 failed in 15.00s",
+      "verified": true
+    },
+    "operations_published": 96,
+    "mcp_tools_full_profile": 65
+  },
+  "live_chains_acceptance": {
+    "chain_a_steady": {
+      "case_id": "W16_T019_chainA_steady",
+      "status": "PASS",
+      "subcases": "14/14 PASS (0 FAIL, 0 BLOCKED, 0 NOT_RUN)",
+      "assertions": 26,
+      "max_relative_error": "< 1e-4",
+      "result_model": "chainA_result.mph",
+      "run_dir": "evidence/phase4_1/runs/20260921T080948Z-g3_1-chainAC-fresh",
+      "reopen_check": {
+        "run_dir": "evidence/phase4/_reopen_check/20260921T073939340867Z",
+        "subcases": "4/4 PASS",
+        "status": "PASS"
+      }
+    },
+    "chain_b_transient": {
+      "case_id": "W16_T019_chainB_transient",
+      "status": "PASS",
+      "subcases": "8/8 PASS (0 FAIL, 0 BLOCKED, 0 NOT_RUN)",
+      "assertions": 26,
+      "normalized_max_error": "< 1e-3 (verified across all 5 time points and 21 sample points)",
+      "result_model": "chainB_result.mph (13.5 MB)",
+      "run_dir": "evidence/phase4_1/runs/20260921T072922Z-g3_1-m2b-chainB",
+      "reopen_check": {
+        "run_dir": "evidence/phase4/_reopen_check/20260921T074644580625Z",
+        "subcases": "4/4 PASS",
+        "status": "PASS"
+      }
+    },
+    "chain_c_continue": {
+      "case_id": "W16_T019_chainC_continue",
+      "status": "PASS",
+      "subcases": "7/7 PASS (0 FAIL, 0 BLOCKED, 0 NOT_RUN)",
+      "assertions": 16,
+      "fixture_model": "evidence/phase4_1/chain_c_fixture/chain_c_user_style.mph (6.1 MB, solved)",
+      "preserved_features": "non-target geometry (geom2) and physics nodes preserved, manual solver settings preserved, derived values and dataset links intact",
+      "continuation_solve": "PASS",
+      "run_dir": "evidence/phase4_1/runs/20260921T080948Z-g3_1-chainAC-fresh",
+      "reopen_check": {
+        "run_dir": "evidence/phase4/_reopen_check/20260921T081111862152Z",
+        "subcases": "4/4 PASS",
+        "status": "PASS"
+      }
+    }
+  },
+  "stage_m1_live": {
+    "run_dir": "evidence/phase4_1/runs/20260921T075153Z-g3_1-m1",
+    "summary": "5 PASS | 1 FAIL | 0 BLOCKED | 1 NOT_RUN (35 subcases PASS, 1 FAIL)",
+    "passes": [
+      "W13_T015_units",
+      "R04_LIVE",
+      "GUARD_T010",
+      "GUARD_T005",
+      "GUARD_T033"
+    ],
+    "fail_classified": {
+      "case_id": "W13_T006_variables",
+      "classification": "IMPLEMENTATION_GAP",
+      "reason": "COMSOL model.param().evaluate only resolves global parameters; component local variables require a solved dataset or local evaluation context"
+    }
+  },
+  "root_causes_resolved": {
+    "C01": "Unified G3 domain outcomes with durable job error semantics (_domain_outcome.py)",
+    "C02": "Centralized execution context, unique request keys, ModelRef revision management",
+    "C03": "Strict case prerequisites, first-cause attribution, explicit IMPLEMENTATION_GAP / HARNESS_FAILURE classification",
+    "C04": "T033 evaluation policy and ephemeral mutation ownership verified",
+    "C05": "hasProduct String[] argument marshalling and runtime scope isolation",
+    "C06": "Centralized allowlist merge with javap evidence and jar SHA256 integrity",
+    "C07": "BenchmarkSpec single-source-of-truth, columns/roles order-independent sampling, coordinate readback verification",
+    "C08": "Finalized acceptance manifests, truthful status accounting, synchronized delivery"
+  },
+  "unverified_scope_boundaries": [
+    "Windows x64",
+    "macOS Intel",
+    "COMSOL 6.3",
+    "Desktop GUI automation/cancellation",
+    "Unlicensed commercial modules",
+    "Large-model checkpoint storage boundaries"
+  ]
+}

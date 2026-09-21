@@ -38,62 +38,73 @@ if str(ROOT) not in sys.path:
 
 #: Operations whose wire form this module replays.
 G3_OPS = frozenset({
-    "physics.feature_create", "physics.feature_update", "physics.selection_set",
+    "physics.create", "physics.feature_create", "physics.feature_update", "physics.selection_set",
     "geometry.feature_create", "geometry.workplane_edit", "geometry.array_create",
     "geometry.build", "geometry.measure",
     "material.create", "material.set_properties", "material.validate", "material.selection_set",
     "mesh.feature_create", "mesh.feature_update", "mesh.build",
     "study.step_create", "study.step_update", "study.run",
     "solver.feature_update", "node.property_get", "node.find",
+    "selection.create", "selection.measure", "selection.validate",
+    "variable.set", "variable.get",
 })
 
 #: The driver payload sites this replay gates on, addressed by
-#: ``(operation, occurrence index, namespace)`` so the mapping survives edits
-#: above them.  The occurrence index is the call's position among *all* calls of
-#: that operation in source order (chain A also creates an ``ins1``
-#: ThermalInsulation feature, and chain B creates ``init1`` before its
-#: ``temp2``, so the ``physics.feature_create`` indices below are one higher
-#: than the pre-insulation driver).  The namespace is the flow whose local
-#: variables the payload closes over (0 = chain A / W13-W15 cases, 1 = chain B,
-#: 2 = chain C / T020).
-SITES: dict[str, tuple[str, int, int]] = {
-    # W13_T015 units: volume source create/update and the wrong-unit probe
-    "units_source_create": ("physics.feature_create", 0, 0),
-    "units_source_update": ("physics.feature_update", 0, 0),
-    "units_wrong_unit_probe": ("physics.feature_update", 1, 0),
-    # W14_T009 static geometry
-    "t009_array": ("geometry.feature_create", 0, 0),
-    "t009_workplane_edit": ("geometry.workplane_edit", 0, 0),
+#: ``(function, operation, occurrence inside that function, namespace)``.  Addressing a site by its
+#: enclosing function keeps the mapping stable when helper call sites are added elsewhere in the
+#: file (an index among *all* calls of an operation moves as soon as any helper gains a call, which
+#: is exactly what happened when the container helper was added).  The namespace is the flow whose
+#: local variables the payload closes over (0 = chain A / W13-W15 cases, 1 = chain B, 2 = chain C /
+#: T020).
+SITES: dict[str, tuple[str, str, int, int]] = {
+    # W13_T006 variables: the variable group is a NodePath, never a tag string
+    "t006_variable_set": ("_case_w13_t006", "variable.set", 0, 0),
+    "t006_variable_get": ("_case_w13_t006", "variable.get", 0, 0),
+    # W13_T015 units: the interface create plus the volume source create/update and the wrong-unit probe
+    "units_physics_interface": ("_case_w13_t015", "physics.create", 0, 0),
+    "units_source_create": ("_case_w13_t015", "physics.feature_create", 0, 0),
+    "units_source_update": ("_case_w13_t015", "physics.feature_update", 0, 0),
+    "units_wrong_unit_probe": ("_case_w13_t015", "physics.feature_update", 1, 0),
+    # W13_T048 selections: the selection reads take a SelectionSpec, the edits a NodePath
+    "t048_selection_create": ("_case_w13_t048", "selection.create", 0, 0),
+    "t048_selection_measure": ("_case_w13_t048", "selection.measure", 0, 0),
+    "t048_selection_validate": ("_case_w13_t048", "selection.validate", 0, 0),
+    "t048_boundary_set": ("_case_w13_t048", "physics.selection_set", 0, 0),
+    # W14_T009 static geometry: the work-plane actions and the array edit
+    "t009_workplane_array": ("_case_w14_t009", "geometry.workplane_edit", 0, 0),
+    "t009_workplane_edit": ("_case_w14_t009", "geometry.workplane_edit", 1, 0),
+    "t009_array": ("_case_w14_t009", "geometry.array_create", 0, 0),
+    "t009_measure": ("_case_w14_t009", "geometry.measure", 1, 0),
     # W15_T007 selections
-    "t007_selection_update": ("physics.feature_update", 2, 0),
-    "t007_child_feature": ("physics.feature_create", 1, 0),
+    "t007_selection_update": ("_case_w15_t007", "physics.feature_update", 0, 0),
+    "t007_child_feature": ("_case_w15_t007", "physics.feature_create", 0, 0),
+    "t007_selection_set": ("_case_w15_t007", "physics.selection_set", 0, 0),
     # W15 materials
-    "material_expressions": ("material.set_properties", 0, 0),
-    "material_tensor": ("material.set_properties", 1, 0),
-    "material_validate": ("material.validate", 0, 0),
+    "material_expressions": ("_case_w15_t017", "material.set_properties", 0, 0),
+    "material_tensor": ("_case_w15_t017", "material.set_properties", 1, 0),
+    "material_validate": ("_case_w15_t017", "material.validate", 0, 0),
     # W16_T018 mesh
-    "t018_mesh_feature": ("mesh.feature_create", 0, 0),
-    "t018_mesh_update": ("mesh.feature_update", 0, 0),
-    # W16_T019 chain A (temp1 #2, temp2 #3, ins1 #4 -- the ins1 call is what
-    # shifted the chain-B indices)
-    "chain_a_block": ("geometry.feature_create", 1, 0),
-    "chain_a_material": ("material.create", 0, 0),
-    "chain_a_temp1": ("physics.feature_create", 2, 0),
-    "chain_a_temp2": ("physics.feature_create", 3, 0),
-    "chain_a_mesh": ("mesh.feature_create", 1, 0),
-    "chain_a_step": ("study.step_create", 0, 0),
-    # W16_T019 chain B (init1 #5, temp2 #6, ins1 #7)
-    "chain_b_block": ("geometry.feature_create", 2, 1),
-    "chain_b_material": ("material.create", 1, 1),
-    "chain_b_temp2": ("physics.feature_create", 6, 1),
-    "chain_b_mesh": ("mesh.feature_create", 2, 1),
-    "chain_b_step": ("study.step_create", 1, 1),
+    "t018_mesh_feature": ("_case_w16_t018", "mesh.feature_create", 0, 0),
+    "t018_mesh_update": ("_case_w16_t018", "mesh.feature_update", 0, 0),
+    # W16_T019 chain A (temp1 #0, temp2 #1, ins1 #2)
+    "chain_a_block": ("_case_w16_t019_chain_a", "geometry.feature_create", 0, 0),
+    "chain_a_material": ("_case_w16_t019_chain_a", "material.create", 0, 0),
+    "chain_a_temp1": ("_case_w16_t019_chain_a", "physics.feature_create", 0, 0),
+    "chain_a_temp2": ("_case_w16_t019_chain_a", "physics.feature_create", 1, 0),
+    "chain_a_mesh": ("_case_w16_t019_chain_a", "mesh.feature_create", 0, 0),
+    "chain_a_step": ("_case_w16_t019_chain_a", "study.step_create", 0, 0),
+    # W16_T019 chain B (init1 #0, temp1 #0, ins1 #1)
+    "chain_b_block": ("_case_w16_t019_chain_b", "geometry.feature_create", 0, 1),
+    "chain_b_material": ("_case_w16_t019_chain_b", "material.create", 0, 1),
+    "chain_b_temp1": ("_case_w16_t019_chain_b", "physics.feature_create", 0, 1),
+    "chain_b_mesh": ("_case_w16_t019_chain_b", "mesh.feature_create", 0, 1),
+    "chain_b_step": ("_case_w16_t019_chain_b", "study.step_create", 0, 1),
     # W16_T019 chain C
-    "chain_c_step_update": ("study.step_update", 0, 2),
+    "chain_c_step_update": ("_case_w16_t019_chain_c", "study.step_update", 0, 2),
     # W16_T020 solver
-    "t020_solver_update": ("solver.feature_update", 0, 2),
-    "t020_unknown_property": ("solver.feature_update", 1, 2),
-    "t020_noop_probe": ("solver.feature_update", 2, 2),
+    "t020_solver_update": ("_case_w16_t020", "solver.feature_update", 0, 2),
+    "t020_unknown_property": ("_case_w16_t020", "solver.feature_update", 1, 2),
+    "t020_noop_probe": ("_case_w16_t020", "solver.feature_update", 2, 2),
 }
 
 #: The driver's own subcase outcome for each site: applied, or refused truthfully.
@@ -152,10 +163,24 @@ def _operation_of(node: ast.Call) -> str | None:
     return None
 
 
-def _call_bodies(source: str) -> list[tuple[int, str, ast.AST]]:
-    """Every G3 call in the driver, in source order: (line, operation, body)."""
+def _enclosing_functions(tree: ast.AST) -> list[tuple[int, int, str]]:
+    """(start, end, name) for every function definition, for line -> function lookups."""
+    rows: list[tuple[int, int, str]] = []
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            rows.append((node.lineno, node.end_lineno or node.lineno, node.name))
+    return sorted(rows)
+
+
+def _call_bodies(source: str) -> list[tuple[int, str, str, ast.AST]]:
+    """Every G3 call in the driver, in source order: (line, function, operation, body).
+
+    The enclosing function is the site's stable address: helper call sites come and go, and an
+    occurrence index among *all* calls of an operation moves with them.
+    """
     tree = ast.parse(source)
-    out: list[tuple[int, str, ast.AST]] = []
+    functions = _enclosing_functions(tree)
+    out: list[tuple[int, str, str, ast.AST]] = []
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
@@ -166,8 +191,10 @@ def _call_bodies(source: str) -> list[tuple[int, str, ast.AST]]:
         body = keywords.get("arguments")
         if body is None and isinstance(node.func, ast.Attribute) and len(node.args) >= 2:
             body = node.args[1]
-        if body is not None:
-            out.append((node.lineno, operation, body))
+        if body is None:
+            continue
+        function = next((name for start, end, name in functions if start <= node.lineno <= end), "?")
+        out.append((node.lineno, function, operation, body))
     return sorted(out)
 
 
@@ -212,6 +239,19 @@ def _namespaces(driver) -> list[dict[str, Any]]:
               "physics_path": physics_path, "mesh_path": mesh_path, "material_path": material_path,
               "study_path": study_path, "array_path": array_path, "meshed_path": meshed_path,
               "solver_path": solver_path,
+              # The driver's own locals of the W13_T048 selection flow: the group the variable calls
+              # address (a NodePath, not a tag) and the SelectionSpec the selection reads take.
+              "group_path": {"segments": [{"collection": "component", "tag": "comp1"},
+                                          {"collection": "variable", "tag": args.variable_group}]},
+              "selection_spec": {"kind": "named", "component": "comp1", "tag": args.selection_tag},
+              "measure_metrics": ["n_entities", "volume", "bounding_box"],
+              # The driver's own locals of the W13_T006 variable flow: the route picks the wire
+              # spelling and the two values are what the calls write and re-read.
+              "route": "domain", "first_two": "phase4_q1=2", "first_three": "phase4_q2=3",
+              # The driver's own local of the W14_T009 work-plane flow.
+              "workplane_path": {"segments": [{"collection": "component", "tag": "comp1"},
+                                              {"collection": "geom", "tag": "geom1"},
+                                              {"collection": "feature", "tag": args.work_plane_tag}]},
               # The driver's own local: the solver *feature* path the update targets.
               "solver_feature_path": {**solver_path, "segments": [*solver_path["segments"],
                                                                   {"collection": "feature",
@@ -226,27 +266,27 @@ def _namespaces(driver) -> list[dict[str, Any]]:
               # The driver's own time parser (a DoubleArray tlist carries seconds).
               "_seconds_value": driver._seconds_value}
     return [
-        {**common, "config": driver.CHAIN_A, "feature_path": temperature_path},
-        {**common, "config": driver.CHAIN_B, "feature_path": temperature_path},
-        {**common, "config": driver.CHAIN_A, "feature_path": temperature_path},
+        {**common, "config": driver.CHAIN_A, "spec": driver.BENCHMARK_A, "feature_path": temperature_path},
+        {**common, "config": driver.CHAIN_B, "spec": driver.BENCHMARK_B, "feature_path": temperature_path},
+        {**common, "config": driver.CHAIN_A, "spec": driver.BENCHMARK_A, "feature_path": temperature_path},
     ]
 
 
 _CACHE: dict[str, Any] = {}
-_GATED = {(operation, index) for operation, index, _namespace in SITES.values()}
+_GATED = {(function, operation, index) for function, operation, index, _namespace in SITES.values()}
 
 
-def _collect(driver) -> tuple[dict[tuple[str, int, int], dict[str, Any]], list[str]]:
-    """{(operation, occurrence, namespace): {line, payload}} plus evaluation failures."""
+def _collect(driver) -> tuple[dict[tuple[str, str, int, int], dict[str, Any]], list[str]]:
+    """{(function, operation, occurrence, namespace): {line, payload}} plus evaluation failures."""
     if "sites" in _CACHE:
         return _CACHE["sites"], _CACHE["failures"]
     namespaces = _namespaces(driver)
-    occurrences: dict[str, int] = {}
-    sites: dict[tuple[str, int, int], dict[str, Any]] = {}
+    occurrences: dict[tuple[str, str], int] = {}
+    sites: dict[tuple[str, str, int, int], dict[str, Any]] = {}
     failures: list[str] = []
-    for line, operation, body in _call_bodies(_driver_source()):
-        index = occurrences.get(operation, 0)
-        occurrences[operation] = index + 1
+    for line, function, operation, body in _call_bodies(_driver_source()):
+        index = occurrences.get((function, operation), 0)
+        occurrences[(function, operation)] = index + 1
         values: list[Any] = []
         for namespace in namespaces:
             try:
@@ -257,20 +297,21 @@ def _collect(driver) -> tuple[dict[tuple[str, int, int], dict[str, Any]], list[s
         for namespace_index, payload in enumerate(values):
             if isinstance(payload, dict):
                 evaluated += 1
-                sites[(operation, index, namespace_index)] = {"line": line, "operation": operation,
-                                                              "payload": payload}
-        if evaluated == 0 and (operation, index) in _GATED:
-            failures.append(f"{operation} #{index} (line {line}): {values[0]!r}")
+                sites[(function, operation, index, namespace_index)] = {
+                    "line": line, "function": function, "operation": operation, "payload": payload}
+        if evaluated == 0 and (function, operation, index) in _GATED:
+            failures.append(f"{function}: {operation} #{index} (line {line}): {values[0]!r}")
     _CACHE["sites"] = sites
     _CACHE["failures"] = failures
     return sites, failures
 
 
 def _site(driver, name: str) -> dict[str, Any]:
-    operation, index, namespace = SITES[name]
+    function, operation, index, namespace = SITES[name]
     sites, _failures = _collect(driver)
-    key = (operation, index, namespace)
-    assert key in sites, f"the driver payload for {name} ({operation} #{index}) was not extracted"
+    key = (function, operation, index, namespace)
+    assert key in sites, (f"the driver payload for {name} ({operation} #{index} in {function}) "
+                          f"was not extracted")
     return sites[key]
 
 
@@ -281,7 +322,7 @@ def test_every_gated_driver_payload_is_extractable(driver, fakes):
     assert not failures, f"driver payloads could not be evaluated: {failures}"
     missing = [name for name, key in SITES.items() if key not in sites]
     assert not missing, f"the driver payload sites this replay gates on were not found: {sorted(missing)}"
-    property_sites = {key[:2]: site for key, site in sites.items()
+    property_sites = {key: site for key, site in sites.items()
                       if isinstance(site["payload"].get("properties"), list)}
     assert len(property_sites) >= 20, f"expected the driver's PropertySet call sites, found {len(property_sites)}"
     for key, site in property_sites.items():
@@ -310,7 +351,8 @@ def test_the_driver_paths_use_the_resolvable_collections(driver, fakes):
                 collections.add(str(value["collection"]))
     assert collections, "no path collections were found in the replayed payloads"
     assert "geometry" not in collections, "the driver still sends the unresolvable 'geometry' collection"
-    assert collections <= {"component", "geom", "material", "physics", "mesh", "study", "sol", "feature"}, (
+    assert collections <= {"component", "geom", "material", "physics", "mesh", "study", "sol", "feature",
+                           "variable", "func", "selection"}, (
         f"unexpected path collection in the driver payloads: {sorted(collections)}"
     )
 
@@ -358,7 +400,7 @@ def test_no_string_literal_in_a_nodepath_argument():
     declared = _catalogue_nodepath_arguments()
     violations: list[str] = []
     checked = 0
-    for line, operation, body in _call_bodies(_driver_source()):
+    for line, function, operation, body in _call_bodies(_driver_source()):
         names = declared.get(operation)
         if not names or not isinstance(body, ast.Dict):
             continue
@@ -367,9 +409,51 @@ def test_no_string_literal_in_a_nodepath_argument():
                 continue
             checked += 1
             if isinstance(value, ast.Constant) and isinstance(value.value, str):
-                violations.append(f"line {line}: {operation}.{key.value} = {value.value!r} (a tag string, not a NodePath)")
+                violations.append(f"line {line} ({function}): {operation}.{key.value} = "
+                                  f"{value.value!r} (a tag string, not a NodePath)")
     assert checked >= 20, f"expected the driver's NodePath arguments to be audited, only {checked} were found"
     assert not violations, "NodePath arguments given a bare tag string: " + "; ".join(violations)
+
+
+def test_every_evaluated_nodepath_argument_is_a_path_object(driver):
+    """Every catalogue ``NodePath`` argument *evaluates* to a path object, not a bare tag.
+
+    The literal audit above only sees payload bodies written as dict literals with constant values;
+    a payload that computes its path, or a call site a helper evaluates later, is invisible to it.
+    This one evaluates the driver's own payload expressions with the driver's own values (the same
+    machinery the replay uses) and checks the value that would reach the wire: the live run sent
+    ``geometry: 'geom1'`` to ``geometry.array_create`` and a bare ``'var1'`` group to
+    ``variable.set``, and both were refused by the domain layer as "must be a NodePath".
+    """
+    declared = _catalogue_nodepath_arguments()
+    namespaces = _namespaces(driver)
+    violations: list[str] = []
+    checked = 0
+    evaluated_sites = 0
+    for line, function, operation, body in _call_bodies(_driver_source()):
+        names = declared.get(operation)
+        if not names:
+            continue
+        for namespace in namespaces:
+            try:
+                payload = _evaluate(body, namespace)
+            except Exception:
+                continue
+            if not isinstance(payload, Mapping):
+                continue
+            evaluated_sites += 1
+            for name in sorted(names):
+                if name not in payload:
+                    continue
+                checked += 1
+                value = payload[name]
+                if isinstance(value, Mapping) and isinstance(value.get("segments"), list):
+                    continue
+                violations.append(f"line {line} ({function}): {operation}.{name} = {value!r} "
+                                  f"is not a NodePath object")
+    assert evaluated_sites >= 40, f"expected the driver's payload sites to be evaluated, only {evaluated_sites} were"
+    assert checked >= 30, f"expected the driver's NodePath arguments to be audited, only {checked} were found"
+    assert not violations, "NodePath arguments that are not path objects: " + "; ".join(violations)
 
 
 # ---------------------------------------------------------------------------
@@ -504,11 +588,13 @@ def test_replay_units_flow_physics_features(driver, fakes):
     assert created["tag"] == "hs1"
     updated = _apply_ok(driver, worker, "units_source_update")
     assert _written_value(updated, "Q0")["data"] == "1e2[W/m^3]"
-    # The wrong-unit probe: this layer has no unit table for Q0, so the write is
-    # accepted as written (the driver's "warns or fails" expectation is a live
-    # acceptance gap, reported separately -- never silently reported as a pass).
-    wrong = _apply_ok(driver, worker, "units_wrong_unit_probe")
-    assert _written_value(wrong, "Q0")["data"] == "1e5[W/m^2]"
+    # The wrong-unit probe: the write point is documented as ``W/m^3``, so a ``W/m^2`` expression is
+    # refused *before* the feature is created or any property is dispatched.  The M1 run recorded
+    # the opposite (``1e5[W/m^2]`` accepted into ``HeatSource.Q0`` with no warning) and filed it as
+    # an implementation gap; the product now owns that gate, so the executable payload is asserted
+    # against the refusal it must produce.
+    refused = _apply_refused(driver, worker, "units_wrong_unit_probe")
+    assert getattr(refused, "code", None) == "UNIT_DIMENSION_MISMATCH", refused
 
 
 def test_replay_geometry_flow_array_and_workplane_edit(driver, fakes):
@@ -606,10 +692,15 @@ def test_replay_chain_b_flow(driver, fakes):
     _apply_ok(driver, worker14, "chain_b_block")
     worker15 = w15.worker_for(_fresh_material_model(w15))
     material = _apply_ok(driver, worker15, "chain_b_material")
-    assert _written_value(material, "heatcapacity")["data"] == "10[J/(kg*K)]"
-    _apply_ok(driver, worker15, "chain_b_temp2")
-    assert _site(driver, "chain_b_temp2")["payload"]["tag"] == "temp2", (
-        "chain_b_temp2 must replay the chain-B TemperatureBoundary call, not a call that moved into its slot"
+    # C07b: the written value is the *specification's* Cp (1000), checked against the spec rather
+    # than against whatever the material preset used to say.  Reporting 10 here is what made the
+    # transient decay wrong while the analytic expectation said 1000.
+    assert _written_value(material, "heatcapacity")["data"] == driver.BENCHMARK_B.cp_expression, (
+        "chain B must write the registered heat capacity, not the material preset that used to stand in for it"
+    )
+    _apply_ok(driver, worker15, "chain_b_temp1")
+    assert _site(driver, "chain_b_temp1")["payload"]["tag"] == "temp1", (
+        "chain_b_temp1 must replay the chain-B TemperatureBoundary call, not a call that moved into its slot"
     )
     worker16 = w16.worker_for(w16.build_model())
     _apply_ok(driver, worker16, "chain_b_mesh")
@@ -629,7 +720,7 @@ def test_replay_chain_c_flow(driver, fakes):
     assert created["status"] == "APPLIED"
     resumed = _apply_ok(driver, worker, "chain_c_step_update")
     assert resumed["path"]["segments"][-1] == {"collection": "feature", "tag": "time"}
-    assert _written_value(resumed, "tlist")["data"] == [1.0]
+    assert _written_value(resumed, "tlist")["data"] == [0.0, 1.0]
 
 
 def test_replay_solver_flow(driver, fakes):

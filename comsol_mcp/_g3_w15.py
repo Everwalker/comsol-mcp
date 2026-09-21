@@ -76,12 +76,15 @@ Anything that could not be verified is *not* guessed: those workstreams return
 
 from __future__ import annotations
 
+import re
+
 from collections.abc import Mapping, Sequence
 from typing import Any, Callable
 
 from ._g2_contract import (
     ExecutionContractError,
     NodePath,
+    PreWriteRefusal,
     property_schema_from_engine,
     typed_value_from_engine,
 )
@@ -102,6 +105,7 @@ from ._g3_common import (
     component_node,
     entity_list_hash,
     error_code_of,
+    node_not_found,
     node_type,
     operation_arguments,
     is_typed_value,
@@ -121,6 +125,7 @@ from ._g3_common import (
     selection_dimension,
     selection_state,
     split_parent_path,
+    tag_conflict,
     tag_list,
     validate_definition_keys,
     validate_selection_spec,
@@ -322,6 +327,90 @@ MATERIAL_DEF_GROUP_PROPERTIES: dict[str, dict[str, Any]] = {
                   "new String[]{44.5[W/(m*K)], ...}); Programming Reference 6.4 p.152 (getValueType: "
                   "String/StringArray/StringMatrix) + Table 2-108 Thermal conductivity thermalconductivity "
                   "(p.157); MaterialModel javadoc set(String,String[][])",
+        # The rank above is the *documented semantic* shape only (the property
+        # is a 3x3 tensor).  Which array shape the bound build actually stores is
+        # a per-build fact read from ``getValueType`` and handled by
+        # ``MATERIAL_TENSOR_PROPERTIES``; it is never assumed here.
+    },
+}
+
+#: Semantic-versus-storage adapter for the *tensor-valued* material properties.
+#:
+#: A material property such as ``thermalconductivity`` has two different
+#: shapes that the pre-G3 code conflated:
+#:
+#: * the **semantic** shape -- a 3x3 second-order tensor (the documented
+#:   ``StringMatrix`` row of ``MATERIAL_DEF_GROUP_PROPERTIES``, Programming
+#:   Reference Table 2-108 "Thermal conductivity thermalconductivity"), and
+#: * the **storage** shape of the bound build -- either a 3x3 string matrix or,
+#:   as this Mac's 6.4.0.293 build publishes, a rank-1 ``StringArray`` whose
+#:   *length* encodes the tensor structure.
+#:
+#: The conversion between the two is a documented protocol, not a flatten:
+#:
+#: * Model XML-File Format ("Materials", ``comsol_api_fileformats.53.13.html``;
+#:   sha256 a9c03166ff9ab086e634f87a3a57ae67723d867cc69ab022ec83a5a56d79aa3e):
+#:   "Tensor-valued properties use curly braces to specify tensors. ... If you
+#:   give one value to a 3-by-3 tensor property it will become an isotropic
+#:   tensor. Similarly, a value of length 3 is a diagonal tensor, and a value
+#:   of length 6 represents a symmetric tensor. Give 9 values (as in the
+#:   example above) to specify a full anisotropic tensor. The convention to use
+#:   a vector of values to a tensor is something that the COMSOL Multiphysics
+#:   software uses for property groups ..." -- the example row is the ``def``
+#:   group of the BMN-35 library material,
+#:   ``<set name="thermalconductivity" value="{'9.0[W/(m*K)]','0',...,'9.0[W/(m*K)]'}"/>``
+#:   (nine entries, row by row).
+#: * Programming Reference 6.4 p.152 ("``mm.getStringArray(<pname>)`` returns
+#:   the string array value of the given property. **Matrix values are returned
+#:   in a column-wise order.**"; sha256
+#:   5b7f23ad2eae77f59d71935f4f6c9b6b9ede380dc34da065181841e512bbc105): a
+#:   flat tensor readback is column-wise, which coincides with the row-major
+#:   write order exactly when the tensor is symmetric -- hence the declared
+#:   symmetry constraint below, which is what keeps the adapter lossless
+#:   instead of silently transposing an off-diagonal pair.
+#: * Application Programming Guide 6.4 p.59/p.72 documents the *isotropic*
+#:   spelling this adapter emits for an isotropic tensor:
+#:   ``propertyGroup("def").set("thermalconductivity", new String[]{"238[W/(m*K)]"})``.
+#: * Observed on the bound build (driver5c chain A,
+#:   ``evidence/phase4/runs/20260920T130620Z-g3-live/driver5c``): the engine
+#:   metadata refuses a rank-2 value ("property expects array rank 1, received
+#:   2"), and a nine-entry write of an isotropic tensor reads back as the
+#:   one-entry canonical form ``["10[W/(m*K)]"]``.  A non-canonical write
+#:   therefore fails the strict readback of the frozen G2 property discipline;
+#:   the adapter emits the canonical form instead of flattening to pass a test.
+#:
+#: Only shapes with a documented, lossless interpretation are produced.  A
+#: value whose tensor semantics cannot be represented in the storage shape the
+#: bound build publishes is *refused* (``PROPERTY_TENSOR_*``), never reshaped
+#: and never reduced by dropping entries.
+MATERIAL_TENSOR_PROPERTIES: dict[str, dict[str, Any]] = {
+    "thermalconductivity": {
+        "semantic_rank": 2,
+        "semantic_shape": (3, 3),
+        #: Documented rank-1 lengths: 1 = isotropic, 3 = diagonal, 6 = symmetric
+        #: (compact form), 9 = full anisotropic (row by row).
+        "vector_lengths": {"isotropic": 1, "diagonal": 3, "symmetric_compact": 6, "full": 9},
+        #: Constraints this layer *declares* for the property.  ``symmetric`` is
+        #: enforced (a rank-1 storage form cannot carry a non-symmetric tensor's
+        #: mirror-order without guessing); ``positive_definite`` is evaluated
+        #: when every entry is a numeric literal and otherwise reported as
+        #: ``not_evaluated`` -- this layer never invents a physics gate.
+        "declared_constraints": ("symmetric", "positive_definite"),
+        "unit_policy": "entries are COMSOL expression text (including any [unit]); the adapter only "
+                       "re-orders and re-shapes them, it never converts units or evaluates them",
+        "sources": {
+            "tensor_vector_convention": "COMSOL 6.4 Model XML-File Format, Materials "
+                                        "(comsol_api_fileformats.53.13.html; sha256 a9c03166...)",
+            "column_wise_readback": "COMSOL Programming Reference 6.4 p.152 (getStringArray returns matrix "
+                                    "values in column-wise order; sha256 5b7f23ad...)",
+            "isotropic_example": "COMSOL Application Programming Guide 6.4 p.59/p.72 "
+                                 "(set(\"thermalconductivity\", new String[]{\"238[W/(m*K)]\"}); "
+                                 "sha256 c36e7e6e...)",
+            "semantic_shape": "Programming Reference 6.4 Table 2-108 + MaterialModel javadoc "
+                              "(set(String,String[][]), getValueType)",
+            "observed_storage": "driver5c chain A (evidence/phase4/runs/20260920T130620Z-g3-live): "
+                                "rank-1 metadata + isotropic readback collapse to one entry",
+        },
     },
 }
 
@@ -407,13 +496,45 @@ def _property_write(node_path: Mapping[str, Any], worker: Any, model_tag: str,
         "failed": list(data.get("failed") or []),
         "not_executed": list(data.get("not_executed") or []),
         "execution_state_unknown": bool(result.get("execution_state_unknown")),
-        "readback_values": {row.get("name"): row.get("readback") for row in applied if isinstance(row, Mapping)},
+        "readback_values": {row.get("name"): row.get("readback") for row in applied if isinstance(row, Mapping) and row.get("name") is not None},
         "engine_error": result.get("error"),
     }
 
 
 def _component_path(component: str) -> dict[str, Any]:
     return {"segments": [{"collection": "component", "tag": component}]}
+
+
+def _unit_preflight(feature_type: Any, definition: Mapping[str, Any] | None, *, label: str,
+                    unit_checks: list[dict[str, Any]]) -> None:
+    """Check every declared unit against its write point *before* the first write.
+
+    Live evidence (``evidence/phase4_1/runs/20260920T235502Z-g3_1-m1``
+    W13_T015) is a ``1e5[W/m^2]`` expression accepted into the volumetric
+    ``HeatSource.Q0`` (documented SI unit ``W/m^3``) with no warning.  The
+    dimensions are compared by :mod:`comsol_mcp._g3_units` against the local
+    COMSOL 6.4 statements recorded there; only a *proven* mismatch is refused,
+    and it is refused here -- before the feature is created or its properties
+    are dispatched -- so the refusal can carry the explicit validation stage.
+    An expression without a resolvable ``[unit]`` is recorded and admitted, so a
+    legitimate write path is never narrowed by this check.
+    """
+    from ._g3_units import MISMATCH, unit_check
+    if not definition:
+        return
+    for name in definition:
+        check = unit_check(feature_type, name, definition[name])
+        if check is None:
+            continue
+        unit_checks.append(check)
+        if check["status"] != MISMATCH:
+            continue
+        raise PreWriteRefusal(
+            "UNIT_DIMENSION_MISMATCH",
+            f"{label}.{name}: {check['reason']}; the write is refused before it is dispatched "
+            f"(documented sources are recorded in the refusal details)",
+            details={"unit_check": check, "feature_type": feature_type, "property": name},
+        )
 
 
 def _require_component(worker: Any, model_tag: str, component: str) -> Any:
@@ -423,7 +544,7 @@ def _require_component(worker: Any, model_tag: str, component: str) -> Any:
     if probe["ok"] and probe["value"] is not None:
         tags = [str(item) for item in tag_list(probe["value"])]
         if component not in tags:
-            raise ExecutionContractError("NODE_NOT_FOUND", f"component {component!r} does not exist")
+            raise node_not_found(f"component {component!r} does not exist")
     return _call(model, "component", component)
 
 
@@ -443,8 +564,8 @@ def _require_geometry(worker: Any, model_tag: str, component: str, geometry: str
     if probe["ok"] and probe["value"] is not None:
         tags = [str(item) for item in tag_list(probe["value"])]
         if geometry not in tags:
-            raise ExecutionContractError(
-                "NODE_NOT_FOUND", f"geometry {geometry!r} does not exist in component {component!r}"
+            raise node_not_found(
+                f"geometry {geometry!r} does not exist in component {component!r}; the engine reports {tags}"
             )
     return _call(comp, "geom", geometry)
 
@@ -583,7 +704,8 @@ def _read_properties(node: Any, names: Sequence[str], *, limit: int = 200) -> di
 
 def _property_payload(node: Any, definition: Mapping[str, Any], *, label: str,
                       allowed: frozenset[str] | None = None,
-                      documented: Mapping[str, Mapping[str, Any]] | None = None) -> list[dict[str, Any]]:
+                      documented: Mapping[str, Mapping[str, Any]] | None = None,
+                      records: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
     """Turn a JSON property object into a validated ``property_set`` payload.
 
     Two value shapes are accepted for each property:
@@ -611,6 +733,13 @@ def _property_payload(node: Any, definition: Mapping[str, Any], *, label: str,
     documented nor known to the engine is still refused before the write, and
     when the engine can supply neither metadata nor a documented row, the value
     is refused here rather than dispatched with a guessed kind.
+
+    A property listed in ``MATERIAL_TENSOR_PROPERTIES`` never reaches
+    ``_json_to_typed``: its semantic 3x3 tensor is converted into the storage
+    shape the bound build publishes by the documented adapter, and the adapter's
+    evidence record is appended to ``records`` (an out-parameter, so a caller
+    can surface it in its own result without threading a return value through
+    every call site).
     """
     payload: list[dict[str, Any]] = []
     for key in definition:
@@ -655,6 +784,30 @@ def _property_payload(node: Any, definition: Mapping[str, Any], *, label: str,
                     "API_UNSUPPORTED",
                     f"the documented COMSOL 6.4 table has no verified value type for {label} property {name!r}",
                 )
+        if name in MATERIAL_TENSOR_PROPERTIES:
+            # Tensor-valued property: the semantic 3x3 tensor is converted into
+            # the storage shape the bound build publishes by a documented,
+            # lossless protocol (see MATERIAL_TENSOR_PROPERTIES).  A shape the
+            # storage cannot carry is refused, never flattened.
+            tensor_value = raw
+            if isinstance(raw, Mapping) and not is_typed_value(raw):
+                envelope_row = dict(raw)
+                reject_unknown_keys(envelope_row, ("value", "unit"), f"{label}.{name}")
+                if "value" not in envelope_row:
+                    raise ExecutionContractError("INVALID_REQUEST", f"{label}.{name}.value is required")
+                if envelope_row.get("unit") is not None:
+                    raise ExecutionContractError(
+                        "INVALID_REQUEST",
+                        f"{label}.{name}: a tensor property carries its unit inside every entry "
+                        f"(write {{\"value\": [[\"9[W/(m*K)]\", ...], ...]}}); an outer 'unit' has no documented "
+                        f"meaning for a tensor and is refused instead of being spread over the entries",
+                    )
+                tensor_value = envelope_row["value"]
+            storage, tensor_record = material_tensor_storage(name, tensor_value, schema=schema, label=name)
+            if records is not None:
+                records.append(tensor_record)
+            payload.append({"name": name, "value": storage})
+            continue
         if is_typed_value(raw):
             payload.append(property_row(name, raw, schema, label=name))
             continue
@@ -749,6 +902,363 @@ def _json_to_typed(value: Any, schema: Mapping[str, Any], *, label: str) -> dict
     return {"kind": kind, "shape": [len(rows), len(rows[0]) if rows else 0], "data": rows}
 
 
+# ---------------------------------------------------------------------------
+# Tensor-valued property adapter (semantic 3x3 <-> the build's storage shape)
+# ---------------------------------------------------------------------------
+
+_TENSOR_SIZE = 3
+
+
+def _tensor_entry_text(value: Any, *, label: str, position: str) -> str:
+    """One tensor entry as COMSOL expression text."""
+    if not isinstance(value, str):
+        raise ExecutionContractError(
+            "PROPERTY_TYPE_MISMATCH",
+            f"{label}{position} must be a COMSOL expression string; this layer never stringifies a number "
+            f"into a property entry (write \"12.5[W/(m*K)]\")",
+        )
+    text = value.strip()
+    if not text:
+        raise ExecutionContractError("PROPERTY_TYPE_MISMATCH", f"{label}{position} must not be empty")
+    return text
+
+
+def _tensor_entry_number(text: str) -> float | None:
+    """Numeric value of an entry that is a plain literal, optionally with a unit.
+
+    Returns ``None`` for an entry that is a genuine expression (``k(T)``), which
+    is the honest answer: the adapter never evaluates an expression to compare
+    mirror entries or to test definiteness.
+    """
+    match = re.fullmatch(r"([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)\s*(?:\[[^\]]*\])?", text)
+    if match is None:
+        return None
+    try:
+        return float(match.group(1))
+    except ValueError:  # pragma: no cover - the regex already constrains the form
+        return None
+
+
+def _tensor_is_zero(text: str) -> bool:
+    """True when an entry is the numeric literal zero (any zero spelling)."""
+    number = _tensor_entry_number(text)
+    return number is not None and number == 0.0
+
+
+def _tensor_matrix_from_value(value: Any, *, label: str) -> tuple[list[list[str]], str]:
+    """Normalise a wire value into a 3x3 matrix of expression text.
+
+    Returns ``(matrix, input_form)`` where ``input_form`` is one of ``scalar``
+    (one isotropic value), ``diagonal`` (three entries), ``matrix`` (three rows)
+    or ``full`` (nine entries in row-major order).  Only the documented tensor
+    spellings are accepted; the compact six-entry symmetric form is *not*
+    expanded because the local corpus documents its length but not the order of
+    its entries, and a guess there would silently permute the off-diagonals.
+    """
+    if isinstance(value, str):
+        text = _tensor_entry_text(value, label=label, position="")
+        return [[text if r == c else "0" for c in range(_TENSOR_SIZE)] for r in range(_TENSOR_SIZE)], "scalar"
+    if not isinstance(value, Sequence) or isinstance(value, (bytes,)):
+        raise ExecutionContractError(
+            "PROPERTY_TYPE_MISMATCH",
+            f"{label} must be a 3x3 tensor, a documented tensor vector (length 1, 3 or 9) or an expression "
+            f"string for this property",
+        )
+    items = list(value)
+    if not items:
+        raise ExecutionContractError("PROPERTY_TYPE_MISMATCH", f"{label} must not be empty")
+    if len(items) == 1:
+        text = _tensor_entry_text(items[0], label=label, position="[0]")
+        return [[text if r == c else "0" for c in range(_TENSOR_SIZE)] for r in range(_TENSOR_SIZE)], "scalar"
+    if any(isinstance(item, Sequence) and not isinstance(item, str) for item in items):
+        rows = [list(row) for row in items]
+        if len(rows) != _TENSOR_SIZE or any(len(row) != _TENSOR_SIZE for row in rows):
+            raise ExecutionContractError(
+                "PROPERTY_TYPE_MISMATCH",
+                f"{label} must be a 3x3 tensor; got a {len(rows)}x"
+                f"{len(rows[0]) if rows else 0} nesting, which has no documented tensor meaning",
+            )
+        return [[_tensor_entry_text(row[col], label=label, position=f"[{index}][{col}]")
+                 for col in range(_TENSOR_SIZE)] for index, row in enumerate(rows)], "matrix"
+    entries = [_tensor_entry_text(item, label=label, position=f"[{index}]") for index, item in enumerate(items)]
+    if len(entries) == _TENSOR_SIZE:
+        return [[entries[r] if r == c else "0" for c in range(_TENSOR_SIZE)] for r in range(_TENSOR_SIZE)], "diagonal"
+    if len(entries) == 6:
+        raise ExecutionContractError(
+            "PROPERTY_TENSOR_ORDER_UNVERIFIED",
+            f"{label}: a six-entry vector is documented as a *symmetric* tensor but the local COMSOL 6.4 "
+            f"corpus does not document the order of its six entries, so this layer refuses it instead of "
+            f"guessing an order; send the 3x3 matrix or its nine entries in row-major order",
+        )
+    if len(entries) == 9:
+        return [[entries[r * _TENSOR_SIZE + c] for c in range(_TENSOR_SIZE)] for r in range(_TENSOR_SIZE)], "full"
+    raise ExecutionContractError(
+        "PROPERTY_TYPE_MISMATCH",
+        f"{label} has {len(entries)} entries; a tensor property takes a 3x3 matrix or the documented vector "
+        f"lengths 1 (isotropic), 3 (diagonal) or 9 (full anisotropic)",
+    )
+
+
+def _tensor_constraint_record(name: str, matrix: list[list[str]]) -> dict[str, Any]:
+    """Declared-constraint evidence for one tensor (symmetry + definiteness)."""
+    spec = MATERIAL_TENSOR_PROPERTIES[name]
+    mirrors: list[dict[str, Any]] = []
+    symmetric = True
+    for row in range(_TENSOR_SIZE):
+        for col in range(row + 1, _TENSOR_SIZE):
+            left, right = matrix[row][col], matrix[col][row]
+            left_number, right_number = _tensor_entry_number(left), _tensor_entry_number(right)
+            if left_number is not None and right_number is not None:
+                equal = left_number == right_number
+                rule = "numeric_literal"
+            else:
+                equal = left == right
+                rule = "text_identity"
+            mirrors.append({"pair": [row, col], "mirror": [col, row], "left": left, "right": right,
+                            "equal": equal, "rule": rule})
+            symmetric = symmetric and equal
+    numbers = [[_tensor_entry_number(entry) for entry in row] for row in matrix]
+    definiteness: Any = "not_evaluated"
+    numeric = [[entry for entry in row if entry is not None] for row in numbers]
+    if all(len(numeric[r]) == _TENSOR_SIZE for r in range(_TENSOR_SIZE)):
+        grid = [[float(entry) for entry in numeric[r]] for r in range(_TENSOR_SIZE)]
+        definite = True
+        for size in range(1, _TENSOR_SIZE + 1):
+            minor = [row[:size] for row in grid[:size]]
+            if size == 1:
+                determinant = minor[0][0]
+            elif size == 2:
+                determinant = minor[0][0] * minor[1][1] - minor[0][1] * minor[1][0]
+            else:
+                a, b, c = minor[0]
+                d, e, f = minor[1]
+                g, h, i = minor[2]
+                determinant = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g)
+            if determinant <= 0:
+                definite = False
+                break
+        definiteness = definite
+    off_diagonal = [[matrix[r][c] for c in range(_TENSOR_SIZE) if c != r] for r in range(_TENSOR_SIZE)]
+    return {
+        "declared_constraints": list(spec["declared_constraints"]),
+        "symmetric": symmetric,
+        "mirror_entries": mirrors,
+        "positive_definite": definiteness,
+        "definiteness_basis": "Sylvester leading principal minors",
+        "off_diagonal_entries": [entry for row in off_diagonal for entry in row],
+        "off_diagonals_present": any(not _tensor_is_zero(entry) for row in off_diagonal for entry in row),
+    }
+
+
+def _tensor_storage_form(name: str, matrix: list[list[str]], *, engine_rank: int | None) -> tuple[Any, str, list[int]]:
+    """The storage value for one tensor, in the shape the bound build publishes."""
+    # Isotropic: every diagonal entry identical, every off-diagonal entry zero.
+    isotropic = (all(matrix[index][index] == matrix[0][0] for index in range(_TENSOR_SIZE))
+                 and all(_tensor_is_zero(matrix[r][c])
+                         for r in range(_TENSOR_SIZE) for c in range(_TENSOR_SIZE) if r != c))
+    diagonal = all(_tensor_is_zero(matrix[r][c])
+                   for r in range(_TENSOR_SIZE) for c in range(_TENSOR_SIZE) if r != c)
+    if engine_rank == 1:
+        if isotropic:
+            return [matrix[0][0]], "isotropic_vector", [1]
+        if diagonal:
+            return [matrix[index][index] for index in range(_TENSOR_SIZE)], "diagonal_vector", [3]
+        return [matrix[r][c] for r in range(_TENSOR_SIZE) for c in range(_TENSOR_SIZE)], "full_vector", [9]
+    if engine_rank == 2:
+        return [list(row) for row in matrix], "matrix", [_TENSOR_SIZE, _TENSOR_SIZE]
+    if engine_rank == 0:
+        if isotropic:
+            return matrix[0][0], "scalar", []
+        raise ExecutionContractError(
+            "PROPERTY_TENSOR_SHAPE_LOSS",
+            f"{name}: the bound build publishes this property as a scalar (rank 0) but the requested tensor "
+            f"is not isotropic; writing it would drop the off-diagonal or diagonal information, so it is "
+            f"refused",
+        )
+    # No engine metadata: keep the documented semantic shape instead of guessing
+    # a storage shape.
+    return [list(row) for row in matrix], "matrix", [_TENSOR_SIZE, _TENSOR_SIZE]
+
+
+def _tensor_typed_value(name: str, matrix: list[list[str]], *, kind: str, engine_rank: int | None,
+                        label: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Build the storage typed value plus the adapter record for one tensor."""
+    spec = MATERIAL_TENSOR_PROPERTIES[name]
+    constraints = _tensor_constraint_record(name, matrix)
+    storage, form, shape = _tensor_storage_form(name, matrix, engine_rank=engine_rank)
+    if form.endswith("_vector") and not constraints["symmetric"]:
+        raise ExecutionContractError(
+            "PROPERTY_TENSOR_NOT_SYMMETRIC",
+            f"{label} is not symmetric: the entries at "
+            f"{[[row['pair'], row['mirror']] for row in constraints['mirror_entries'] if not row['equal']]} "
+            f"differ.  A rank-1 tensor vector reads back in the engine's documented column-wise matrix order "
+            f"(Programming Reference 6.4 p.152), which is only identical to the row-major write order for a "
+            f"symmetric tensor, so a non-symmetric tensor is refused instead of being written in a guessed "
+            f"order",
+        )
+    data = [list(row) for row in storage] if isinstance(storage, list) and storage and isinstance(storage[0], list) \
+        else storage
+    typed = {"kind": kind, "shape": shape, "data": data}
+    record = {
+        "property": name,
+        "semantic_rank": spec["semantic_rank"],
+        "semantic_shape": list(spec["semantic_shape"]),
+        "semantic_data": [list(row) for row in matrix],
+        "storage_rank": len(shape),
+        "storage_shape": shape,
+        "storage_form": form,
+        "storage_data": data,
+        "index_order": "row-major on the wire; the engine's flat matrix readback is column-wise "
+                       "(Programming Reference 6.4 p.152) and the two coincide for the symmetric tensor this "
+                       "adapter requires",
+        "engine_rank_source": "getValueType metadata" if engine_rank is not None else "documented table",
+        "declared_constraints": constraints["declared_constraints"],
+        "symmetric": constraints["symmetric"],
+        "mirror_entries": constraints["mirror_entries"],
+        "positive_definite": constraints["positive_definite"],
+        "definiteness_check": constraints["definiteness_basis"],
+        "off_diagonals_present": constraints["off_diagonals_present"],
+        "off_diagonals_preserved": True,
+        "unit_policy": spec["unit_policy"],
+        "sources": dict(spec["sources"]),
+    }
+    return typed, record
+
+
+def material_tensor_storage(name: str, value: Any, *, schema: Mapping[str, Any], label: str
+                            ) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Convert a wire value for a tensor property into the build's storage shape.
+
+    ``schema`` is the property schema the caller already resolved (engine
+    metadata when readable, else the documented table).  The returned record is
+    evidence: it names the semantic tensor, the emitted storage form, the index
+    order and the declared constraints, so a caller never has to infer a silent
+    reshape.
+    """
+    if name not in MATERIAL_TENSOR_PROPERTIES:
+        raise ExecutionContractError(
+            "API_UNSUPPORTED", f"{name!r} has no verified semantic/storage adapter in this layer"
+        )
+    kind = schema.get("kind")
+    if not isinstance(kind, str):
+        raise ExecutionContractError(
+            "API_UNSUPPORTED", f"authoritative value metadata is unavailable for property {label!r}"
+        )
+    raw = value
+    declared_shape: Any = None
+    if is_typed_value(raw):
+        declared = dict(raw)
+        declared_kind = declared.get("kind")
+        # ``expression`` is the documented alias of the string kind for a
+        # caller-declared typed value (G2 ``validate_typed_value`` accepts it
+        # where the engine publishes ``string``), so it is accepted here too.
+        if declared_kind != kind and not (kind == "string" and declared_kind == "expression"):
+            raise ExecutionContractError(
+                "PROPERTY_TYPE_MISMATCH",
+                f"{label}: declared kind {declared_kind!r} does not match the property's {kind!r}",
+            )
+        declared_shape = declared.get("shape")
+        raw = declared.get("data")
+    rank = schema.get("shape_rank")
+    rank = rank if isinstance(rank, int) else None
+    matrix, input_form = _tensor_matrix_from_value(raw, label=label)
+    typed, record = _tensor_typed_value(name, matrix, kind=kind, engine_rank=rank, label=label)
+    record["input_form"] = input_form
+    record["input_shape_declared"] = declared_shape
+    return typed, record
+
+
+def material_tensor_readback(name: str, requested: Mapping[str, Any], readback: Any, *, schema: Mapping[str, Any],
+                             label: str) -> dict[str, Any]:
+    """Compare a readback against the requested tensor *as a tensor*.
+
+    Only documented reconstructions are used (a one-entry vector is isotropic,
+    three entries are the diagonal, nine entries are the full tensor in the
+    documented flat order, and a 3x3 value is the matrix itself).  A readback in
+    a documented-but-unevaluable form (six entries) is reported as
+    ``unverified``, never as a match, and a shorter form that cannot carry the
+    requested off-diagonals is a mismatch -- the adapter never accepts a value
+    that lost information.
+    """
+    requested_matrix = [[str(entry) for entry in row] for row in requested["semantic_data"]]
+    stored_entries = None
+    value = readback
+    if is_typed_value(readback):
+        value = readback.get("data")
+    returned_form = "unavailable"
+    returned_matrix: list[list[str]] | None = None
+    if isinstance(value, str):
+        returned_matrix = [[value if r == c else "0" for c in range(_TENSOR_SIZE)] for r in range(_TENSOR_SIZE)]
+        returned_form = "scalar"
+    elif isinstance(value, Sequence) and not isinstance(value, (bytes,)):
+        items = [item for item in value]
+        if items and all(isinstance(row, Sequence) and not isinstance(row, str) for row in items):
+            rows = [list(row) for row in items]
+            if len(rows) == _TENSOR_SIZE and all(len(row) == _TENSOR_SIZE for row in rows):
+                returned_matrix = [[str(entry) for entry in row] for row in rows]
+                returned_form = "matrix"
+        else:
+            entries = [str(item) for item in items]
+            stored_entries = entries
+            if len(entries) == 1:
+                returned_matrix = [[entries[0] if r == c else "0" for c in range(_TENSOR_SIZE)]
+                                   for r in range(_TENSOR_SIZE)]
+                returned_form = "isotropic_vector"
+            elif len(entries) == _TENSOR_SIZE:
+                returned_matrix = [[entries[r] if r == c else "0" for c in range(_TENSOR_SIZE)]
+                                   for r in range(_TENSOR_SIZE)]
+                returned_form = "diagonal_vector"
+            elif len(entries) == 9:
+                returned_matrix = [[entries[r * _TENSOR_SIZE + c] for c in range(_TENSOR_SIZE)]
+                                   for r in range(_TENSOR_SIZE)]
+                returned_form = "full_vector"
+            elif len(entries) == 6:
+                returned_form = "symmetric_compact"
+    record: dict[str, Any] = {
+        "property": name,
+        "returned_form": returned_form,
+        "returned_shape": schema.get("shape_rank") if isinstance(schema.get("shape_rank"), int) else None,
+    }
+    if returned_matrix is None:
+        record.update({"equivalent": False, "rule": "readback_form_not_documented",
+                       "returned_entries": stored_entries,
+                       "reason": f"a tensor readback of length {len(stored_entries) if stored_entries else 0} "
+                                 f"has no documented tensor interpretation in the local COMSOL 6.4 corpus; "
+                                 f"it is reported as unverified instead of being accepted"})
+        return record
+    equivalent = all(returned_matrix[r][c] == requested_matrix[r][c]
+                     for r in range(_TENSOR_SIZE) for c in range(_TENSOR_SIZE))
+    if not equivalent:
+        # A textual mismatch may still be the same numeric tensor ("0" vs "0.0").
+        equal_numbers = True
+        for r in range(_TENSOR_SIZE):
+            for c in range(_TENSOR_SIZE):
+                left, right = returned_matrix[r][c], requested_matrix[r][c]
+                if left == right:
+                    continue
+                left_number, right_number = _tensor_entry_number(left), _tensor_entry_number(right)
+                if left_number is None or right_number is None or left_number != right_number:
+                    equal_numbers = False
+                    break
+            if not equal_numbers:
+                break
+        equivalent = equal_numbers
+    record.update({
+        "equivalent": equivalent,
+        "rule": "tensor_elementwise",
+        "requested_tensor": requested_matrix,
+        "returned_tensor": returned_matrix,
+        "off_diagonals_preserved": all(
+            returned_matrix[r][c] == requested_matrix[r][c]
+            for r in range(_TENSOR_SIZE) for c in range(_TENSOR_SIZE) if r != c
+        ),
+        "index_order": "row-major (identical to the documented column-wise flat readback for a symmetric "
+                       "tensor)",
+        "note": f"label {label}",
+    })
+    return record
+
+
 def _material_property_group_handle(material: Any, group: str, *, create_missing: bool) -> tuple[Any, dict[str, Any]]:
     """Resolve a material property group through the verified ``propertyGroup()`` API.
 
@@ -783,8 +1293,7 @@ def _material_property_group_handle(material: Any, group: str, *, create_missing
     created = False
     if group not in tags:
         if not create_missing:
-            raise ExecutionContractError(
-                "NODE_NOT_FOUND",
+            raise node_not_found(
                 f"material property group {group!r} does not exist in this material "
                 f"(present: {sorted(tags)}); pass group_manage action 'create' first",
             )
@@ -1070,7 +1579,7 @@ def material_create(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
                 "TYPE_CONFLICT",
                 f"material {tag!r} already exists with type {current!r} (requested {type_id!r})",
             )
-        raise ExecutionContractError("TAG_CONFLICT", f"material {tag!r} already exists")
+        raise tag_conflict(f"material {tag!r} already exists")
 
     if component is None:
         # Programming Reference: model.material().create(<tag>,<type>) creates a
@@ -1123,6 +1632,7 @@ def material_create(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
         reject_unknown_keys(definition, ("group", "properties"), "definition")
         group = definition.get("group") or DEFAULT_MATERIAL_PROPERTY_GROUP
         properties = definition.get("properties")
+        tensor_records: list[dict[str, Any]] = []
         try:
             if properties is None:
                 raise ExecutionContractError(
@@ -1133,7 +1643,7 @@ def material_create(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
                 node, str(group), create_missing=type_id in MATERIAL_CONTAINER_TYPES
             )
             payload = _property_payload(group_node, properties, label=f"definition.properties[{group}]",
-                                        documented=_def_group_documented(str(group)))
+                                        documented=_def_group_documented(str(group)), records=tensor_records)
             envelope = _property_write(path_with_segment(path, "propertyGroup", str(group)),
                                        worker, model_tag, payload)
             applied.append({
@@ -1142,6 +1652,7 @@ def material_create(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
                 "group_readback": group_info["container_tags"],
                 "properties": envelope["applied"],
                 "readback_values": envelope["readback_values"],
+                "tensor_adapter": tensor_records,
             })
             failed.extend(_normalise_property_failures(envelope["failed"], action="set_properties",
                                                        group=str(group)))
@@ -1264,10 +1775,33 @@ def material_set_properties(worker: Any, model_tag: str, arguments: Mapping[str,
         provenance = require_mapping(provenance, "provenance")
 
     group_node, group_info = _material_property_group_handle(node, group, create_missing=False)
+    tensor_records: list[dict[str, Any]] = []
     payload = _property_payload(group_node, properties, label=f"properties[{group}]",
-                                documented=_def_group_documented(group))
+                                documented=_def_group_documented(group), records=tensor_records)
     group_path = path_with_segment(canonical, "propertyGroup", group)
     envelope = _property_write(group_path, worker, model_tag, payload)
+    readback_values = envelope["readback_values"] if isinstance(envelope["readback_values"], Mapping) else {}
+    # A readback that *mismatched* is still a readback: the frozen G2 envelope
+    # files it under ``failed`` with the observed value, and the tensor check
+    # wants it (that is exactly the case where "what was lost" matters).
+    observed_readbacks: dict[Any, Any] = dict(readback_values)
+    for failed_row in envelope["failed"]:
+        if isinstance(failed_row, Mapping) and failed_row.get("name") and failed_row.get("readback") is not None:
+            observed_readbacks.setdefault(failed_row["name"], failed_row["readback"])
+    for record in tensor_records:
+        schema = {"shape_rank": record.get("storage_rank")}
+        returned = observed_readbacks.get(record["property"])
+        if returned is None:
+            record["readback_check"] = {
+                "equivalent": None,
+                "rule": "no_readback",
+                "reason": "the property was not read back (the write failed or was not executed); the tensor "
+                          "adapter cannot confirm the storage form without a readback",
+            }
+        else:
+            record["readback_check"] = material_tensor_readback(
+                record["property"], record, returned, schema=schema, label=record["property"]
+            )
 
     applied = [{
         "group": group,
@@ -1288,6 +1822,11 @@ def material_set_properties(worker: Any, model_tag: str, arguments: Mapping[str,
         "not_executed": not_executed,
         "unit_policy": "expression text (including any [unit]) is written and read back as text; this layer "
                        "never converts units or evaluates an expression to a number for comparison",
+        "tensor_adapter": tensor_records,
+        "tensor_adapter_note": "tensor-valued properties are converted from their semantic 3x3 form to the "
+                               "storage shape this build publishes by the documented protocol in "
+                               "MATERIAL_TENSOR_PROPERTIES; each record names the emitted form, the index order "
+                               "and the declared symmetry/definiteness evidence",
         "temperature_dependency_note": "a temperature-dependent property such as k(T)/Cp(T) is written as an "
                                        "expression string and verified by exact text readback; the engine "
                                        "metadata kind is reported per property",
@@ -1332,9 +1871,9 @@ def material_group_manage(worker: Any, model_tag: str, arguments: Mapping[str, A
     # request-level refusal, not a partially applied change.  Everything after
     # the first write is reported as data (applied/failed/EXECUTION_STATE_UNKNOWN).
     if action == "create" and group in existing:
-        raise ExecutionContractError("TAG_CONFLICT", f"material property group {group!r} already exists")
+        raise tag_conflict(f"material property group {group!r} already exists")
     if action in {"remove", "inspect", "update"} and group not in existing:
-        raise ExecutionContractError("NODE_NOT_FOUND", f"material property group {group!r} does not exist")
+        raise node_not_found(f"material property group {group!r} does not exist")
     if action == "update" and definition is None:
         raise ExecutionContractError("INVALID_REQUEST", "group_manage action 'update' requires definition")
     if action == "update":
@@ -1364,12 +1903,15 @@ def material_group_manage(worker: Any, model_tag: str, arguments: Mapping[str, A
                 if props is not None:
                     props = property_definition(props, "definition.properties")
                     group_node = _call(node, "propertyGroup", group)
+                    group_tensor_records: list[dict[str, Any]] = []
                     payload = _property_payload(group_node, props, label=f"definition.properties[{group}]",
-                                                documented=_def_group_documented(group))
+                                                documented=_def_group_documented(group),
+                                                records=group_tensor_records)
                     envelope = _property_write(path_with_segment(canonical, "propertyGroup", group),
                                                worker, model_tag, payload)
                     applied.append({"action": "create.set_properties", "properties": envelope["applied"],
-                                    "readback_values": envelope["readback_values"]})
+                                    "readback_values": envelope["readback_values"],
+                                    "tensor_adapter": group_tensor_records})
                     failed.extend(_normalise_property_failures(envelope["failed"], action="set_properties",
                                                                group=group))
                     not_executed.extend(envelope["not_executed"])
@@ -1433,6 +1975,11 @@ def material_group_manage(worker: Any, model_tag: str, arguments: Mapping[str, A
                 changes: list[dict[str, Any]] = []
                 for name in add:
                     if name in current:
+                        # Deliberately *not* a PreWriteRefusal: this loop's own
+                        # addInput calls below may already have happened, so a
+                        # later iteration cannot prove the engine was untouched.
+                        # It stays fail-closed -- see the TAG_CONFLICT stage
+                        # sweep in tests/test_m1_product_repairs.py.
                         raise ExecutionContractError(
                             "TAG_CONFLICT", f"property group input {name!r} already exists"
                         )
@@ -1440,6 +1987,11 @@ def material_group_manage(worker: Any, model_tag: str, arguments: Mapping[str, A
                     changes.append({"method": "addInput", "name": name})
                 for name in remove:
                     if name not in current:
+                        # Deliberately *not* a PreWriteRefusal: the add loop above
+                        # may already have called addInput, so this raise cannot
+                        # prove the engine was untouched.  It stays fail-closed
+                        # (EXECUTION_STATE_UNKNOWN via the dispatch witness) --
+                        # see the stage sweep in tests/test_m1_product_repairs.py.
                         raise ExecutionContractError(
                             "NODE_NOT_FOUND", f"property group input {name!r} does not exist"
                         )
@@ -1554,7 +2106,7 @@ def material_remove(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
     container = _call(parent, "material")
     before = _list_tags(container)
     if tag not in before:
-        raise ExecutionContractError("NODE_NOT_FOUND", f"material {tag!r} does not exist")
+        raise node_not_found(f"material {tag!r} does not exist")
     lost = _material_domain_selection(node)
     lost_summary: dict[str, Any] = {}
     if isinstance(lost.get("entities"), list):
@@ -2030,11 +2582,19 @@ def physics_create(worker: Any, model_tag: str, arguments: Mapping[str, Any]) ->
     geometry_node = _require_geometry(worker, model_tag, resolved_component, geometry)
     geometries = _list_tags(_call(parent, "geom"))
     if len(geometries) > 1:
-        raise ExecutionContractError(
+        # A pure pre-write API judgement: the multi-geometry component cannot be
+        # bound by the installed three-argument create form, and every call
+        # above this line is a read.  Declaring the stage is what keeps a
+        # correct refusal out of the fail-closed EXECUTION_STATE_UNKNOWN
+        # (live evidence: evidence/phase4_1/runs/20260921T001454Z-g3_1-m1c,
+        # GUARD_T005 #61 -> physics.create).
+        raise PreWriteRefusal(
             "API_UNSUPPORTED",
             "the installed ComponentPhysicsList has no geometry-tag overload "
             "(javap 6.4.0.293: create(String tag, String physIntID, String[] defaultFieldNames)); a component "
             f"with several geometries ({', '.join(sorted(geometries))}) cannot be bound unambiguously",
+            details={"geometries": sorted(geometries), "requested_geometry": geometry,
+                     "method": "ComponentPhysicsList.create"},
         )
     container = _call(parent, "physics")
     existing = _list_tags(container)
@@ -2045,7 +2605,7 @@ def physics_create(worker: Any, model_tag: str, arguments: Mapping[str, Any]) ->
                 "TYPE_CONFLICT",
                 f"physics interface {tag!r} already exists with type {current!r} (requested {type_id!r})",
             )
-        raise ExecutionContractError("TAG_CONFLICT", f"physics interface {tag!r} already exists")
+        raise tag_conflict(f"physics interface {tag!r} already exists")
 
     # javap (com.comsol.api_1.0.0.jar, 6.4.0.293): the runtime container is a
     # ComponentPhysicsList whose create overloads are create(String tag,
@@ -2107,6 +2667,112 @@ def physics_create(worker: Any, model_tag: str, arguments: Mapping[str, Any]) ->
     }
 
 
+#: Default features the local COMSOL 6.4 corpus documents for a physics
+#: interface type, plus the reuse policy for them.
+#:
+#: Source: LiveLink for MATLAB User Guide 6.4, p.124 ("The physics method has
+#: the following child nodes: solid1, init1, ins1, idi1, os1, and cib1. These are
+#: the default features that come with the Heat Transfer in Solids interface.
+#: The first feature, solid1, consists of the heat balance equation."), and the
+#: same page's ``solid.set('k_mat', 1, 'userdef')`` example for modifying a
+#: default node.  Only solid1 has a documented type/operation there; for the
+#: other tags the corpus documents the *tag* as a default of the interface but
+#: not its type, so this layer reports the observed type and never infers one.
+DOCUMENTED_DEFAULT_PHYSICS_FEATURES: dict[str, dict[str, Any]] = {
+    "HeatTransferInSolids": {
+        "tags": ("solid1", "init1", "ins1", "idi1", "os1", "cib1"),
+        "documented_roles": {
+            "solid1": {
+                "role": "the heat balance equation of the interface",
+                "type_id": "Solid",
+                "operation": "SolidHeatTransferModel",
+                "role_source": "LiveLink for MATLAB User Guide 6.4 p.124",
+            },
+        },
+        "source": "LiveLink for MATLAB User Guide 6.4 p.124 (doc/com.comsol.help.llmatlab/"
+                  "LiveLinkForMATLABUsersGuide.pdf, sha256 735b3d4a...)",
+    },
+}
+
+#: The reuse policy this layer applies to documented defaults.  It is data (not
+#: prose in a docstring) because callers surface it in their readback.
+DEFAULT_FEATURE_REUSE_POLICY = (
+    "a documented default feature is reused only when it is *observed* on the node and the caller addresses "
+    "it by its observed tag; a documented default that is absent is reported in missing_documented_defaults "
+    "and the caller has to create the feature it needs explicitly -- this layer never assumes a tag such as "
+    "ins1 exists, never writes an unobserved node, and never lets a missing boundary condition be skipped "
+    "silently"
+)
+
+
+def _default_feature_inventory(node: Any, type_id: str | None) -> dict[str, Any]:
+    """Read-only inventory of an interface's features against the documented defaults.
+
+    Nothing here writes: the interface's own ``feature()`` container is read (its
+    ``tags()`` and, per tag, the child's type and selection), then each observed
+    tag is classified as a documented default or not, and each documented default
+    is reported as observed or missing.  A caller that needs a boundary condition
+    this inventory does not show has to create it -- the inventory exists so that
+    decision is made from a readback rather than from an assumption.
+    """
+    documented = DOCUMENTED_DEFAULT_PHYSICS_FEATURES.get(type_id or "")
+    documented_tags = tuple(documented["tags"]) if documented else ()
+    roles = dict(documented.get("documented_roles") or {}) if documented else {}
+    container_probe = call_probe(node, "feature")
+    observed: list[dict[str, Any]] = []
+    container_error: Any = None
+    if not container_probe["ok"] or container_probe["value"] is None:
+        container_error = container_probe["error"]
+    else:
+        container = container_probe["value"]
+        tags_probe = call_probe(container, "tags")
+        if not tags_probe["ok"] or not isinstance(tags_probe["value"], (list, tuple)):
+            container_error = tags_probe["error"]
+        else:
+            for raw_tag in tags_probe["value"]:
+                tag = str(raw_tag)
+                child = _call(container, "get", tag)
+                type_probe = call_probe(child, "getType")
+                role = roles.get(tag)
+                row: dict[str, Any] = {
+                    "tag": tag,
+                    "type_id": type_probe["value"] if type_probe["ok"] else None,
+                    "observed": True,
+                    "classification": "documented_default" if tag in documented_tags else "undocumented",
+                    "documented_role": (role or {}).get("role") if role else None,
+                    "selection": _selection_summary(child),
+                }
+                expected_type = (role or {}).get("type_id") if role else None
+                if expected_type is not None:
+                    row["expected_type_id"] = expected_type
+                    row["type_matches_documented_role"] = row["type_id"] == expected_type
+                observed.append(row)
+    observed_tags = {row["tag"] for row in observed}
+    defaults = [
+        {
+            "tag": tag,
+            "observed": tag in observed_tags,
+            "documented_role": (roles.get(tag) or {}).get("role"),
+            "expected_type_id": (roles.get(tag) or {}).get("type_id"),
+            "reuse": "addressed_by_observed_tag" if tag in observed_tags
+                     else "absent_create_explicitly_if_needed",
+        }
+        for tag in documented_tags
+    ]
+    return {
+        "type_id": type_id,
+        "documented": bool(documented),
+        "documented_defaults": defaults,
+        "missing_documented_defaults": [row["tag"] for row in defaults if not row["observed"]],
+        "observed_features": observed,
+        "observed_types": {row["tag"]: row["type_id"] for row in observed},
+        "observed_documented_defaults": [row["tag"] for row in defaults if row["observed"]],
+        "source": (documented or {}).get("source"),
+        "reuse_policy": DEFAULT_FEATURE_REUSE_POLICY,
+        "container_error": container_error,
+    }
+
+
 def physics_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     args = operation_arguments(arguments, ("path", "depth", "properties"), ("path",))
     depth = args.get("depth")
@@ -2139,6 +2805,9 @@ def physics_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
         "depth": depth,
         "children": trees,
         "errors": errors,
+        "default_feature_inventory": _default_feature_inventory(
+            node, type_probe["value"] if type_probe["ok"] and type_probe["value"] is not None else None
+        ),
         "readback": "physics(<tag>).getType()/geom()/selection() and feature()/field()/prop() containers",
     }
     if type_probe["ok"] and type_probe["value"] is not None and str(type_probe["value"]) not in PHYSICS_INTERFACE_IDS:
@@ -2206,7 +2875,7 @@ def physics_remove(worker: Any, model_tag: str, arguments: Mapping[str, Any]) ->
     container = _call(parent, "physics")
     before = _list_tags(container)
     if tag not in before:
-        raise ExecutionContractError("NODE_NOT_FOUND", f"physics interface {tag!r} does not exist")
+        raise node_not_found(f"physics interface {tag!r} does not exist")
 
     dependents: list[dict[str, Any]] = []
     scanned_scopes: list[dict[str, Any]] = []
@@ -2304,7 +2973,14 @@ def physics_feature_create(worker: Any, model_tag: str, arguments: Mapping[str, 
                 "TYPE_CONFLICT",
                 f"feature {tag!r} already exists under the parent with type {current!r} (requested {type_id!r})",
             )
-        raise ExecutionContractError("TAG_CONFLICT", f"feature {tag!r} already exists under this parent")
+        raise tag_conflict(f"feature {tag!r} already exists under this parent")
+
+    # Unit-dimension preflight: the requested feature type *is* the write point,
+    # so a provably wrong unit is refused before the feature is created (see
+    # ``_unit_preflight`` and ``comsol_mcp._g3_units``).  It runs after the path
+    # and tag checks so an earlier, more specific refusal keeps winning.
+    unit_checks: list[dict[str, Any]] = []
+    _unit_preflight(type_id, properties, label="properties", unit_checks=unit_checks)
 
     if entity_dimension is None:
         _call(container, "create", tag, type_id)
@@ -2361,6 +3037,7 @@ def physics_feature_create(worker: Any, model_tag: str, arguments: Mapping[str, 
         "applied": applied,
         "failed": failed,
         "not_executed": not_executed,
+        "unit_checks": unit_checks,
         **_status(applied, failed, not_executed, execution_state_unknown),
     }
 
@@ -2371,6 +3048,10 @@ def physics_feature_update(worker: Any, model_tag: str, arguments: Mapping[str, 
     node, canonical = _physics_lookup(worker, model_tag, args["path"])
     if canonical["segments"][-1]["collection"] not in {"feature", "physics", "field", "prop"}:
         raise ExecutionContractError("INVALID_NODE_PATH", "path must point at a physics feature node")
+    # The bound node's own readback type is the write point: a provably wrong
+    # unit is refused here, before the property dispatch (W13_T015 evidence).
+    unit_checks: list[dict[str, Any]] = []
+    _unit_preflight(node_type(node), properties, label="properties", unit_checks=unit_checks)
     payload = _property_payload(node, properties, label="properties")
     envelope = _property_write(canonical, worker, model_tag, payload)
     applied = [{
@@ -2386,6 +3067,7 @@ def physics_feature_update(worker: Any, model_tag: str, arguments: Mapping[str, 
     return {
         "path": canonical,
         "property_count": len(payload),
+        "unit_checks": unit_checks,
         "applied": applied,
         "failed": failed,
         "not_executed": not_executed,
@@ -2410,7 +3092,7 @@ def physics_feature_remove(worker: Any, model_tag: str, arguments: Mapping[str, 
     tag = str(canonical["segments"][-1]["tag"])
     before = _list_tags(container)
     if tag not in before:
-        raise ExecutionContractError("NODE_NOT_FOUND", f"feature {tag!r} does not exist under this parent")
+        raise node_not_found(f"feature {tag!r} does not exist under this parent")
     type_readback = node_type(node)
     try:
         _engine_call(container, "remove", tag)
@@ -2591,7 +3273,7 @@ def physics_multiphysics_manage(worker: Any, model_tag: str, arguments: Mapping[
                         f"multiphysics coupling {tag!r} already exists with type {current!r} "
                         f"(requested {verified['type_id']!r})",
                     )
-                raise ExecutionContractError("TAG_CONFLICT", f"multiphysics coupling {tag!r} already exists")
+                raise tag_conflict(f"multiphysics coupling {tag!r} already exists")
             dispatch_started = True
             if space_dimension is None:
                 _engine_call(container, "create", tag, verified["type_id"], geometry)
@@ -2632,7 +3314,7 @@ def physics_multiphysics_manage(worker: Any, model_tag: str, arguments: Mapping[
             container = _call(parent_node, "multiphysics")
             before = _list_tags(container)
             if tag not in before:
-                raise ExecutionContractError("NODE_NOT_FOUND", f"multiphysics coupling {tag!r} does not exist")
+                raise node_not_found(f"multiphysics coupling {tag!r} does not exist")
             if action == "inspect":
                 probe = call_probe(node, "properties")
                 names = [str(item) for item in probe["value"]] if probe["ok"] and probe["value"] else []
@@ -2749,8 +3431,7 @@ def physics_initial_values_set(worker: Any, model_tag: str, arguments: Mapping[s
             create_missing = args.get("create_missing")
             if tag is None:
                 if not (create_missing is None or create_missing is True):
-                    raise ExecutionContractError(
-                        "NODE_NOT_FOUND",
+                    raise node_not_found(
                         f"no {type_id!r} feature exists on this interface and create_missing is false",
                     )
                 tag = _next_free_tag(tags, "init")
@@ -2766,8 +3447,8 @@ def physics_initial_values_set(worker: Any, model_tag: str, arguments: Mapping[s
             else:
                 actual = _feature_type(container, tag)
                 if actual is None:
-                    raise ExecutionContractError(
-                        "NODE_NOT_FOUND", f"feature {tag!r} does not exist on this physics interface"
+                    raise node_not_found(
+                        f"feature {tag!r} does not exist on this physics interface"
                     )
                 if actual != type_id:
                     raise ExecutionContractError(

@@ -1,0 +1,2158 @@
+{
+  "case_id": "W16_T020_solver",
+  "results": [
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"scope\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\"], \"title\": \"study.list input\", \"type\": \"object\"}, \"domain\": \"study\", \"effect\": \"READ\", \"executable\": true, \"gate\": \"G3\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"scope\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\"], \"title\": \"study.list input\", \"type\": \"object\"}, \"mcp_tool_name\": \"study_list\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"study.list\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"列出Study、step、physics启用和solver关联\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 1,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "scope": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref"
+            ],
+            "title": "study.list input",
+            "type": "object"
+          },
+          "domain": "study",
+          "effect": "READ",
+          "executable": true,
+          "gate": "G3",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "scope": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref"
+            ],
+            "title": "study.list input",
+            "type": "object"
+          },
+          "mcp_tool_name": "study_list",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "study.list",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "列出Study、step、physics启用和solver关联",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"expected_revision\": {\"minimum\": 0, \"type\": \"integer\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"label\": {\"type\": \"string\"}, \"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}, \"tag\": {\"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"tag\"], \"title\": \"study.create input\", \"type\": \"object\"}, \"domain\": \"study\", \"effect\": \"WRITE\", \"executable\": true, \"gate\": \"G3\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"expected_revision\": {\"minimum\": 0, \"type\": \"integer\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"label\": {\"type\": \"string\"}, \"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}, \"tag\": {\"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"tag\"], \"title\": \"study.create input\", \"type\": \"object\"}, \"mcp_tool_name\": \"study_create\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"study.create\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"新建Study\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\", \"readback_and_revision\", \"idempotency_and_partial_failure\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 2,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "tag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "tag"
+            ],
+            "title": "study.create input",
+            "type": "object"
+          },
+          "domain": "study",
+          "effect": "WRITE",
+          "executable": true,
+          "gate": "G3",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "tag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "tag"
+            ],
+            "title": "study.create input",
+            "type": "object"
+          },
+          "mcp_tool_name": "study_create",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "study.create",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "新建Study",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful",
+            "readback_and_revision",
+            "idempotency_and_partial_failure"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"expected_revision\": {\"minimum\": 0, \"type\": \"integer\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"properties\": {\"$ref\": \"common.schema.json#/$defs/PropertySet\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}, \"study\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"tag\": {\"type\": \"string\"}, \"type_id\": {\"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"study\", \"tag\", \"type_id\", \"properties\"], \"title\": \"study.step_create input\", \"type\": \"object\"}, \"domain\": \"study\", \"effect\": \"WRITE\", \"executable\": true, \"gate\": \"G3\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"expected_revision\": {\"minimum\": 0, \"type\": \"integer\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"properties\": {\"$ref\": \"common.schema.json#/$defs/PropertySet\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}, \"study\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"tag\": {\"type\": \"string\"}, \"type_id\": {\"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"study\", \"tag\", \"type_id\", \"properties\"], \"title\": \"study.step_create input\", \"type\": \"object\"}, \"mcp_tool_name\": \"study_step_create\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"study.step_create\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"创建稳态/瞬态/频域/特征值等步骤\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\", \"readback_and_revision\", \"idempotency_and_partial_failure\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 3,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "properties": {
+                "$ref": "common.schema.json#/$defs/PropertySet"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "study": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "tag": {
+                "type": "string"
+              },
+              "type_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "study",
+              "tag",
+              "type_id",
+              "properties"
+            ],
+            "title": "study.step_create input",
+            "type": "object"
+          },
+          "domain": "study",
+          "effect": "WRITE",
+          "executable": true,
+          "gate": "G3",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "properties": {
+                "$ref": "common.schema.json#/$defs/PropertySet"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "study": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "tag": {
+                "type": "string"
+              },
+              "type_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "study",
+              "tag",
+              "type_id",
+              "properties"
+            ],
+            "title": "study.step_create input",
+            "type": "object"
+          },
+          "mcp_tool_name": "study_step_create",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "study.step_create",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "创建稳态/瞬态/频域/特征值等步骤",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful",
+            "readback_and_revision",
+            "idempotency_and_partial_failure"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"filter\": {\"type\": \"object\"}, \"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\"], \"title\": \"solver.list input\", \"type\": \"object\"}, \"domain\": \"solver\", \"effect\": \"READ\", \"executable\": true, \"gate\": \"G3\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"filter\": {\"type\": \"object\"}, \"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\"], \"title\": \"solver.list input\", \"type\": \"object\"}, \"mcp_tool_name\": \"solver_list\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"solver.list\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"列出solver和solution及关联\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 4,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "filter": {
+                "type": "object"
+              },
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref"
+            ],
+            "title": "solver.list input",
+            "type": "object"
+          },
+          "domain": "solver",
+          "effect": "READ",
+          "executable": true,
+          "gate": "G3",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "filter": {
+                "type": "object"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref"
+            ],
+            "title": "solver.list input",
+            "type": "object"
+          },
+          "mcp_tool_name": "solver_list",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "solver.list",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "列出solver和solution及关联",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"depth\": {\"type\": \"integer\"}, \"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"path\"], \"title\": \"solver.inspect input\", \"type\": \"object\"}, \"domain\": \"solver\", \"effect\": \"READ\", \"executable\": true, \"gate\": \"G3\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"depth\": {\"type\": \"integer\"}, \"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"path\"], \"title\": \"solver.inspect input\", \"type\": \"object\"}, \"mcp_tool_name\": \"solver_inspect\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"solver.inspect\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"递归读取solver设置、子特征与问题节点\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 5,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "depth": {
+                "type": "integer"
+              },
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "path"
+            ],
+            "title": "solver.inspect input",
+            "type": "object"
+          },
+          "domain": "solver",
+          "effect": "READ",
+          "executable": true,
+          "gate": "G3",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "depth": {
+                "type": "integer"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "path"
+            ],
+            "title": "solver.inspect input",
+            "type": "object"
+          },
+          "mcp_tool_name": "solver_inspect",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "solver.inspect",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "递归读取solver设置、子特征与问题节点",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"expected_revision\": {\"minimum\": 0, \"type\": \"integer\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"properties\": {\"$ref\": \"common.schema.json#/$defs/PropertySet\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"path\", \"properties\"], \"title\": \"solver.feature_update input\", \"type\": \"object\"}, \"domain\": \"solver\", \"effect\": \"WRITE\", \"executable\": true, \"gate\": \"G3\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"expected_revision\": {\"minimum\": 0, \"type\": \"integer\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"properties\": {\"$ref\": \"common.schema.json#/$defs/PropertySet\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"path\", \"properties\"], \"title\": \"solver.feature_update input\", \"type\": \"object\"}, \"mcp_tool_name\": \"solver_feature_update\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"solver.feature_update\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"typed设置容差、时间步、缩放等\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\", \"readback_and_revision\", \"idempotency_and_partial_failure\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 6,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "properties": {
+                "$ref": "common.schema.json#/$defs/PropertySet"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "path",
+              "properties"
+            ],
+            "title": "solver.feature_update input",
+            "type": "object"
+          },
+          "domain": "solver",
+          "effect": "WRITE",
+          "executable": true,
+          "gate": "G3",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "properties": {
+                "$ref": "common.schema.json#/$defs/PropertySet"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "path",
+              "properties"
+            ],
+            "title": "solver.feature_update input",
+            "type": "object"
+          },
+          "mcp_tool_name": "solver_feature_update",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "solver.feature_update",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "typed设置容差、时间步、缩放等",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful",
+            "readback_and_revision",
+            "idempotency_and_partial_failure"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"resources\": {\"type\": \"object\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}, \"study\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"timeout_s\": {\"type\": \"number\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"idempotency_key\", \"study\"], \"title\": \"study.run input\", \"type\": \"object\"}, \"domain\": \"study\", \"effect\": \"COMPUTE\", \"executable\": true, \"gate\": \"G3\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"resources\": {\"type\": \"object\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}, \"study\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"timeout_s\": {\"type\": \"number\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"idempotency_key\", \"study\"], \"title\": \"study.run input\", \"type\": \"object\"}, \"mcp_tool_name\": \"study_run\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"study.run\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"提交Study求解，立即返回持久job\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 7,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "resources": {
+                "type": "object"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "study": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "timeout_s": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "idempotency_key",
+              "study"
+            ],
+            "title": "study.run input",
+            "type": "object"
+          },
+          "domain": "study",
+          "effect": "COMPUTE",
+          "executable": true,
+          "gate": "G3",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "resources": {
+                "type": "object"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "study": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "timeout_s": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "idempotency_key",
+              "study"
+            ],
+            "title": "study.run input",
+            "type": "object"
+          },
+          "mcp_tool_name": "study_run",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "study.run",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "提交Study求解，立即返回持久job",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"expected_revision\": {\"minimum\": 0, \"type\": \"integer\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"replace_existing\": {\"type\": \"boolean\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}, \"study\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"study\", \"replace_existing\"], \"title\": \"study.solver_generate input\", \"type\": \"object\"}, \"domain\": \"study\", \"effect\": \"WRITE\", \"executable\": true, \"gate\": \"G3\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"expected_revision\": {\"minimum\": 0, \"type\": \"integer\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"replace_existing\": {\"type\": \"boolean\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}, \"study\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"study\", \"replace_existing\"], \"title\": \"study.solver_generate input\", \"type\": \"object\"}, \"mcp_tool_name\": \"study_solver_generate\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"study.solver_generate\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"生成自动solver；覆盖旧配置必须显式\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\", \"readback_and_revision\", \"idempotency_and_partial_failure\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 8,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "replace_existing": {
+                "type": "boolean"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "study": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "study",
+              "replace_existing"
+            ],
+            "title": "study.solver_generate input",
+            "type": "object"
+          },
+          "domain": "study",
+          "effect": "WRITE",
+          "executable": true,
+          "gate": "G3",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "replace_existing": {
+                "type": "boolean"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "study": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "study",
+              "replace_existing"
+            ],
+            "title": "study.solver_generate input",
+            "type": "object"
+          },
+          "mcp_tool_name": "study_solver_generate",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "study.solver_generate",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "生成自动solver；覆盖旧配置必须显式",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful",
+            "readback_and_revision",
+            "idempotency_and_partial_failure"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"model_ref\": {\"minLength\": 1, \"type\": \"string\"}, \"names\": {\"items\": {\"type\": \"string\"}, \"type\": \"array\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"path\", \"names\"], \"title\": \"node.property_get input\", \"type\": \"object\"}, \"domain\": \"node\", \"effect\": \"READ\", \"executable\": true, \"gate\": \"G2\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"model_ref\": {\"additionalProperties\": false, \"description\": \"Production ModelRef object; legacy catalog string is not used by the managed wire.\", \"properties\": {\"generation\": {\"minimum\": 1, \"type\": \"integer\"}, \"model_tag\": {\"minLength\": 1, \"type\": \"string\"}, \"schema_version\": {\"minimum\": 1, \"type\": \"integer\"}, \"server_instance_id\": {\"minLength\": 1, \"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"schema_version\", \"session_id\", \"server_instance_id\", \"model_tag\", \"generation\"], \"type\": \"object\"}, \"names\": {\"items\": {\"type\": \"string\"}, \"type\": \"array\"}, \"path\": {\"$ref\": \"common.schema.json#/$defs/NodePath\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"minLength\": 1, \"type\": \"string\"}}, \"required\": [\"project_id\", \"session_id\", \"model_ref\", \"path\", \"names\"], \"title\": \"node.property_get input\", \"type\": \"object\"}, \"mcp_tool_name\": \"node_property_get\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"node.property_get\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"按类型回读一个或多个属性\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\"], \"route\": \"versioned COMSOL Java API adapter\", \"scope\": \"model\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 9,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "model_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "names": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "path",
+              "names"
+            ],
+            "title": "node.property_get input",
+            "type": "object"
+          },
+          "domain": "node",
+          "effect": "READ",
+          "executable": true,
+          "gate": "G2",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "names": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "path",
+              "names"
+            ],
+            "title": "node.property_get input",
+            "type": "object"
+          },
+          "mcp_tool_name": "node_property_get",
+          "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "operation_id": "node.property_get",
+          "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "按类型回读一个或多个属性",
+          "required_tests": [
+            "schema_valid",
+            "normal_path",
+            "failure_is_truthful"
+          ],
+          "route": "versioned COMSOL Java API adapter",
+          "scope": "model",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"backend execution failed; inspect worker evidence\", \"safe_retry\": false, \"type\": \"JavaWorkerError\"}, \"execution\": {\"idempotency_key\": \"phase4-driver5cstudy_target_read\", \"job_id\": \"f4d2fc48-1957-49e5-b54e-cb261cbf2ca0\", \"operation_id\": \"7883e8ad-2730-42d5-9726-b57f97c77913\", \"request_hash\": \"97899ed548ce7a859c1b301e898db4dc88a675b96494a62571f803713aa36416\", \"request_id\": \"phase4-driver5cstudy_target_read\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "backend execution failed; inspect worker evidence",
+      "operation": "operation_call",
+      "sequence": 10,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "backend execution failed; inspect worker evidence",
+          "safe_retry": false,
+          "type": "JavaWorkerError"
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5cstudy_target_read",
+          "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+          "operation_id": "7883e8ad-2730-42d5-9726-b57f97c77913",
+          "request_hash": "97899ed548ce7a859c1b301e898db4dc88a675b96494a62571f803713aa36416",
+          "request_id": "phase4-driver5cstudy_target_read"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"created_at\": \"2026-09-20 22:55:32\", \"effective_timeouts\": {\"execution_timeout_s\": null, \"no_progress_warning_s\": null, \"queue_timeout_s\": null, \"rpc_timeout_s\": 30.0}, \"finished_at\": null, \"job_id\": \"f4d2fc48-1957-49e5-b54e-cb261cbf2ca0\", \"metadata\": {\"arguments\": {\"arguments\": {\"expected_revision\": 1, \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp_6e530ea2e718\", \"schema_version\": 1, \"server_instance_id\": \"80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"project_id\": \"comsol-mcp-phase4\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"study.list\"}, \"callback_completion_unknown\": true, \"engine_started_at\": 1789944932.224853, \"execution\": {\"expected_revision\": 1, \"idempotency_key\": \"phase4-driver5cstudy_target_read\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp_6e530ea2e718\", \"schema_version\": 1, \"server_instance_id\": \"80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"request_id\": \"phase4-driver5cstudy_target_read\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"finished_observed_at\": 1789944932.229813, \"operation\": \"operation_call\", \"queue_wait_s\": 2.195802517235279e-05, \"reconciled_quiescent\": false, \"reconciliation\": [{\"message\": \"worker request status unavailable\", \"request_id\": \"wrk-0c10394c-335d-410e-8c17-cc317c93611c\", \"status\": \"UNKNOWN\"}], \"replay_performed\": false}, \"operation\": {\"created_at\": \"2026-09-20 22:55:32\", \"effective_timeouts\": {\"execution_timeout_s\": null, \"no_progress_warning_s\": null, \"queue_timeout_s\": null, \"rpc_timeout_s\": 30.0}, \"finished_at\": null, \"idempotency_key\": \"phase4-driver5cstudy_target_read\", \"metadata\": {\"arguments\": {\"arguments\": {\"expected_revision\": 1, \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp_6e530ea2e718\", \"schema_version\": 1, \"server_instance_id\": \"80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"project_id\": \"comsol-mcp-phase4\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"study.list\"}, \"execution\": {\"expected_revision\": 1, \"idempotency_key\": \"phase4-driver5cstudy_target_read\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp_6e530ea2e718\", \"schema_version\": 1, \"server_instance_id\": \"80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"request_id\": \"phase4-driver5cstudy_target_read\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation\": \"operation_call\"}, \"operation\": \"operation_call\", \"operation_id\": \"7883e8ad-2730-42d5-9726-b57f97c77913\", \"request_hash\": \"97899ed548ce7a859c1b301e898db4dc88a675b96494a62571f803713aa36416\", \"request_id\": \"phase4-driver5cstudy_target_read\", \"result\": {\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"backend execution failed; inspect worker evidence\", \"safe_retry\": false, \"type\": \"JavaWorkerError\"}, \"execution\": {\"idempotency_key\": \"phase4-driver5cstudy_target_read\", \"job_id\": \"f4d2fc48-1957-49e5-b54e-cb261cbf2ca0\", \"operation_id\": \"7883e8ad-2730-42d5-9726-b57f97c77913\", \"request_hash\": \"97899ed548ce7a859c1b301e898db4dc88a675b96494a62571f803713aa36416\", \"request_id\": \"phase4-driver5cstudy_target_read\"}, \"success\": false}, \"started_at\": \"2026-09-20 22:55:32\", \"status\": \"UNKNOWN\"}, \"operation_id\": \"7883e8ad-2730-42d5-9726-b57f97c77913\", \"result\": {\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"backend execution failed; inspect worker evidence\", \"safe_retry\": false, \"type\": \"JavaWorkerError\"}, \"execution\": {\"idempotency_key\": \"phase4-driver5cstudy_target_read\", \"job_id\": \"f4d2fc48-1957-49e5-b54e-cb261cbf2ca0\", \"operation_id\": \"7883e8ad-2730-42d5-9726-b57f97c77913\", \"request_hash\": \"97899ed548ce7a859c1b301e898db4dc88a675b96494a62571f803713aa36416\", \"request_id\": \"phase4-driver5cstudy_target_read\"}, \"success\": false}, \"started_at\": \"2026-09-20 22:55:32\", \"status\": \"UNKNOWN\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "job_reconcile",
+      "sequence": 11,
+      "structuredContent": {
+        "data": {
+          "created_at": "2026-09-20 22:55:32",
+          "effective_timeouts": {
+            "execution_timeout_s": null,
+            "no_progress_warning_s": null,
+            "queue_timeout_s": null,
+            "rpc_timeout_s": 30.0
+          },
+          "finished_at": null,
+          "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+          "metadata": {
+            "arguments": {
+              "arguments": {
+                "expected_revision": 1,
+                "model_ref": {
+                  "generation": 1,
+                  "model_tag": "mcp_6e530ea2e718",
+                  "schema_version": 1,
+                  "server_instance_id": "80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530",
+                  "session_id": "session-9f95c2e814acd5f99589961a"
+                },
+                "project_id": "comsol-mcp-phase4",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "operation_id": "study.list"
+            },
+            "callback_completion_unknown": true,
+            "engine_started_at": 1789944932.224853,
+            "execution": {
+              "expected_revision": 1,
+              "idempotency_key": "phase4-driver5cstudy_target_read",
+              "model_ref": {
+                "generation": 1,
+                "model_tag": "mcp_6e530ea2e718",
+                "schema_version": 1,
+                "server_instance_id": "80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "request_id": "phase4-driver5cstudy_target_read",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "finished_observed_at": 1789944932.229813,
+            "operation": "operation_call",
+            "queue_wait_s": 2.195802517235279e-05,
+            "reconciled_quiescent": false,
+            "reconciliation": [
+              {
+                "message": "worker request status unavailable",
+                "request_id": "wrk-0c10394c-335d-410e-8c17-cc317c93611c",
+                "status": "UNKNOWN"
+              }
+            ],
+            "replay_performed": false
+          },
+          "operation": {
+            "created_at": "2026-09-20 22:55:32",
+            "effective_timeouts": {
+              "execution_timeout_s": null,
+              "no_progress_warning_s": null,
+              "queue_timeout_s": null,
+              "rpc_timeout_s": 30.0
+            },
+            "finished_at": null,
+            "idempotency_key": "phase4-driver5cstudy_target_read",
+            "metadata": {
+              "arguments": {
+                "arguments": {
+                  "expected_revision": 1,
+                  "model_ref": {
+                    "generation": 1,
+                    "model_tag": "mcp_6e530ea2e718",
+                    "schema_version": 1,
+                    "server_instance_id": "80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530",
+                    "session_id": "session-9f95c2e814acd5f99589961a"
+                  },
+                  "project_id": "comsol-mcp-phase4",
+                  "session_id": "session-9f95c2e814acd5f99589961a"
+                },
+                "operation_id": "study.list"
+              },
+              "execution": {
+                "expected_revision": 1,
+                "idempotency_key": "phase4-driver5cstudy_target_read",
+                "model_ref": {
+                  "generation": 1,
+                  "model_tag": "mcp_6e530ea2e718",
+                  "schema_version": 1,
+                  "server_instance_id": "80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530",
+                  "session_id": "session-9f95c2e814acd5f99589961a"
+                },
+                "request_id": "phase4-driver5cstudy_target_read",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "operation": "operation_call"
+            },
+            "operation": "operation_call",
+            "operation_id": "7883e8ad-2730-42d5-9726-b57f97c77913",
+            "request_hash": "97899ed548ce7a859c1b301e898db4dc88a675b96494a62571f803713aa36416",
+            "request_id": "phase4-driver5cstudy_target_read",
+            "result": {
+              "data": {},
+              "error": {
+                "code": "EXECUTION_STATE_UNKNOWN",
+                "message": "backend execution failed; inspect worker evidence",
+                "safe_retry": false,
+                "type": "JavaWorkerError"
+              },
+              "execution": {
+                "idempotency_key": "phase4-driver5cstudy_target_read",
+                "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+                "operation_id": "7883e8ad-2730-42d5-9726-b57f97c77913",
+                "request_hash": "97899ed548ce7a859c1b301e898db4dc88a675b96494a62571f803713aa36416",
+                "request_id": "phase4-driver5cstudy_target_read"
+              },
+              "success": false
+            },
+            "started_at": "2026-09-20 22:55:32",
+            "status": "UNKNOWN"
+          },
+          "operation_id": "7883e8ad-2730-42d5-9726-b57f97c77913",
+          "result": {
+            "data": {},
+            "error": {
+              "code": "EXECUTION_STATE_UNKNOWN",
+              "message": "backend execution failed; inspect worker evidence",
+              "safe_retry": false,
+              "type": "JavaWorkerError"
+            },
+            "execution": {
+              "idempotency_key": "phase4-driver5cstudy_target_read",
+              "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+              "operation_id": "7883e8ad-2730-42d5-9726-b57f97c77913",
+              "request_hash": "97899ed548ce7a859c1b301e898db4dc88a675b96494a62571f803713aa36416",
+              "request_id": "phase4-driver5cstudy_target_read"
+            },
+            "success": false
+          },
+          "started_at": "2026-09-20 22:55:32",
+          "status": "UNKNOWN"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"reconcile unfinished engine work before new operations\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-driver5cstudy_target_create\", \"job_id\": \"ef0e28df-c2cd-4960-99b3-4c4d84615d6a\", \"operation_id\": \"824eed15-50c0-4973-a934-f05e97819de1\", \"request_hash\": \"424a9e23fa5742fc2d6592e610a1b20ef9a1f8f8f64879de21d8b308271258cb\", \"request_id\": \"phase4-driver5cstudy_target_create\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "reconcile unfinished engine work before new operations",
+      "operation": "operation_call",
+      "sequence": 12,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "reconcile unfinished engine work before new operations",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5cstudy_target_create",
+          "job_id": "ef0e28df-c2cd-4960-99b3-4c4d84615d6a",
+          "operation_id": "824eed15-50c0-4973-a934-f05e97819de1",
+          "request_hash": "424a9e23fa5742fc2d6592e610a1b20ef9a1f8f8f64879de21d8b308271258cb",
+          "request_id": "phase4-driver5cstudy_target_create"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"created_at\": \"2026-09-20 22:55:32\", \"effective_timeouts\": {\"execution_timeout_s\": null, \"no_progress_warning_s\": null, \"queue_timeout_s\": null, \"rpc_timeout_s\": 30.0}, \"finished_at\": null, \"job_id\": \"f4d2fc48-1957-49e5-b54e-cb261cbf2ca0\", \"metadata\": {\"arguments\": {\"arguments\": {\"expected_revision\": 1, \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp_6e530ea2e718\", \"schema_version\": 1, \"server_instance_id\": \"80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"project_id\": \"comsol-mcp-phase4\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"study.list\"}, \"callback_completion_unknown\": true, \"engine_started_at\": 1789944932.224853, \"execution\": {\"expected_revision\": 1, \"idempotency_key\": \"phase4-driver5cstudy_target_read\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp_6e530ea2e718\", \"schema_version\": 1, \"server_instance_id\": \"80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"request_id\": \"phase4-driver5cstudy_target_read\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"finished_observed_at\": 1789944932.229813, \"operation\": \"operation_call\", \"queue_wait_s\": 2.195802517235279e-05, \"reconciled_quiescent\": false, \"reconciliation\": [{\"message\": \"worker request status unavailable\", \"request_id\": \"wrk-0c10394c-335d-410e-8c17-cc317c93611c\", \"status\": \"UNKNOWN\"}], \"replay_performed\": false}, \"operation\": {\"created_at\": \"2026-09-20 22:55:32\", \"effective_timeouts\": {\"execution_timeout_s\": null, \"no_progress_warning_s\": null, \"queue_timeout_s\": null, \"rpc_timeout_s\": 30.0}, \"finished_at\": null, \"idempotency_key\": \"phase4-driver5cstudy_target_read\", \"metadata\": {\"arguments\": {\"arguments\": {\"expected_revision\": 1, \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp_6e530ea2e718\", \"schema_version\": 1, \"server_instance_id\": \"80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"project_id\": \"comsol-mcp-phase4\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"study.list\"}, \"execution\": {\"expected_revision\": 1, \"idempotency_key\": \"phase4-driver5cstudy_target_read\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp_6e530ea2e718\", \"schema_version\": 1, \"server_instance_id\": \"80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"request_id\": \"phase4-driver5cstudy_target_read\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation\": \"operation_call\"}, \"operation\": \"operation_call\", \"operation_id\": \"7883e8ad-2730-42d5-9726-b57f97c77913\", \"request_hash\": \"97899ed548ce7a859c1b301e898db4dc88a675b96494a62571f803713aa36416\", \"request_id\": \"phase4-driver5cstudy_target_read\", \"result\": {\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"backend execution failed; inspect worker evidence\", \"safe_retry\": false, \"type\": \"JavaWorkerError\"}, \"execution\": {\"idempotency_key\": \"phase4-driver5cstudy_target_read\", \"job_id\": \"f4d2fc48-1957-49e5-b54e-cb261cbf2ca0\", \"operation_id\": \"7883e8ad-2730-42d5-9726-b57f97c77913\", \"request_hash\": \"97899ed548ce7a859c1b301e898db4dc88a675b96494a62571f803713aa36416\", \"request_id\": \"phase4-driver5cstudy_target_read\"}, \"success\": false}, \"started_at\": \"2026-09-20 22:55:32\", \"status\": \"UNKNOWN\"}, \"operation_id\": \"7883e8ad-2730-42d5-9726-b57f97c77913\", \"result\": {\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"backend execution failed; inspect worker evidence\", \"safe_retry\": false, \"type\": \"JavaWorkerError\"}, \"execution\": {\"idempotency_key\": \"phase4-driver5cstudy_target_read\", \"job_id\": \"f4d2fc48-1957-49e5-b54e-cb261cbf2ca0\", \"operation_id\": \"7883e8ad-2730-42d5-9726-b57f97c77913\", \"request_hash\": \"97899ed548ce7a859c1b301e898db4dc88a675b96494a62571f803713aa36416\", \"request_id\": \"phase4-driver5cstudy_target_read\"}, \"success\": false}, \"started_at\": \"2026-09-20 22:55:32\", \"status\": \"UNKNOWN\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "job_reconcile",
+      "sequence": 13,
+      "structuredContent": {
+        "data": {
+          "created_at": "2026-09-20 22:55:32",
+          "effective_timeouts": {
+            "execution_timeout_s": null,
+            "no_progress_warning_s": null,
+            "queue_timeout_s": null,
+            "rpc_timeout_s": 30.0
+          },
+          "finished_at": null,
+          "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+          "metadata": {
+            "arguments": {
+              "arguments": {
+                "expected_revision": 1,
+                "model_ref": {
+                  "generation": 1,
+                  "model_tag": "mcp_6e530ea2e718",
+                  "schema_version": 1,
+                  "server_instance_id": "80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530",
+                  "session_id": "session-9f95c2e814acd5f99589961a"
+                },
+                "project_id": "comsol-mcp-phase4",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "operation_id": "study.list"
+            },
+            "callback_completion_unknown": true,
+            "engine_started_at": 1789944932.224853,
+            "execution": {
+              "expected_revision": 1,
+              "idempotency_key": "phase4-driver5cstudy_target_read",
+              "model_ref": {
+                "generation": 1,
+                "model_tag": "mcp_6e530ea2e718",
+                "schema_version": 1,
+                "server_instance_id": "80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "request_id": "phase4-driver5cstudy_target_read",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "finished_observed_at": 1789944932.229813,
+            "operation": "operation_call",
+            "queue_wait_s": 2.195802517235279e-05,
+            "reconciled_quiescent": false,
+            "reconciliation": [
+              {
+                "message": "worker request status unavailable",
+                "request_id": "wrk-0c10394c-335d-410e-8c17-cc317c93611c",
+                "status": "UNKNOWN"
+              }
+            ],
+            "replay_performed": false
+          },
+          "operation": {
+            "created_at": "2026-09-20 22:55:32",
+            "effective_timeouts": {
+              "execution_timeout_s": null,
+              "no_progress_warning_s": null,
+              "queue_timeout_s": null,
+              "rpc_timeout_s": 30.0
+            },
+            "finished_at": null,
+            "idempotency_key": "phase4-driver5cstudy_target_read",
+            "metadata": {
+              "arguments": {
+                "arguments": {
+                  "expected_revision": 1,
+                  "model_ref": {
+                    "generation": 1,
+                    "model_tag": "mcp_6e530ea2e718",
+                    "schema_version": 1,
+                    "server_instance_id": "80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530",
+                    "session_id": "session-9f95c2e814acd5f99589961a"
+                  },
+                  "project_id": "comsol-mcp-phase4",
+                  "session_id": "session-9f95c2e814acd5f99589961a"
+                },
+                "operation_id": "study.list"
+              },
+              "execution": {
+                "expected_revision": 1,
+                "idempotency_key": "phase4-driver5cstudy_target_read",
+                "model_ref": {
+                  "generation": 1,
+                  "model_tag": "mcp_6e530ea2e718",
+                  "schema_version": 1,
+                  "server_instance_id": "80d3f962a2927896141dc0d15c605f50d00ac3be41310176cce1ceb5a3b1b530",
+                  "session_id": "session-9f95c2e814acd5f99589961a"
+                },
+                "request_id": "phase4-driver5cstudy_target_read",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "operation": "operation_call"
+            },
+            "operation": "operation_call",
+            "operation_id": "7883e8ad-2730-42d5-9726-b57f97c77913",
+            "request_hash": "97899ed548ce7a859c1b301e898db4dc88a675b96494a62571f803713aa36416",
+            "request_id": "phase4-driver5cstudy_target_read",
+            "result": {
+              "data": {},
+              "error": {
+                "code": "EXECUTION_STATE_UNKNOWN",
+                "message": "backend execution failed; inspect worker evidence",
+                "safe_retry": false,
+                "type": "JavaWorkerError"
+              },
+              "execution": {
+                "idempotency_key": "phase4-driver5cstudy_target_read",
+                "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+                "operation_id": "7883e8ad-2730-42d5-9726-b57f97c77913",
+                "request_hash": "97899ed548ce7a859c1b301e898db4dc88a675b96494a62571f803713aa36416",
+                "request_id": "phase4-driver5cstudy_target_read"
+              },
+              "success": false
+            },
+            "started_at": "2026-09-20 22:55:32",
+            "status": "UNKNOWN"
+          },
+          "operation_id": "7883e8ad-2730-42d5-9726-b57f97c77913",
+          "result": {
+            "data": {},
+            "error": {
+              "code": "EXECUTION_STATE_UNKNOWN",
+              "message": "backend execution failed; inspect worker evidence",
+              "safe_retry": false,
+              "type": "JavaWorkerError"
+            },
+            "execution": {
+              "idempotency_key": "phase4-driver5cstudy_target_read",
+              "job_id": "f4d2fc48-1957-49e5-b54e-cb261cbf2ca0",
+              "operation_id": "7883e8ad-2730-42d5-9726-b57f97c77913",
+              "request_hash": "97899ed548ce7a859c1b301e898db4dc88a675b96494a62571f803713aa36416",
+              "request_id": "phase4-driver5cstudy_target_read"
+            },
+            "success": false
+          },
+          "started_at": "2026-09-20 22:55:32",
+          "status": "UNKNOWN"
+        },
+        "success": true
+      },
+      "success": true
+    }
+  ]
+}

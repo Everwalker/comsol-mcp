@@ -1,0 +1,204 @@
+{
+  "assertion_count": 6,
+  "case": {
+    "acceptance": [
+      "G3 §7 R04"
+    ],
+    "assertions": {
+      "dependency_blocked": {
+        "missing": [
+          "bound_model",
+          "observed_revision"
+        ],
+        "note": "downstream subcases list NOT_RUN against this root cause instead of becoming independent defects"
+      },
+      "first_cause": {
+        "case_id": "R04_LIVE",
+        "class": "DEPENDENCY_BLOCKED",
+        "error_code": "DEPENDENCY_BLOCKED",
+        "reason": "the case's declared prerequisite(s) are not established: bound_model, observed_revision (no model_ref is bound: every live step of this case depends on one; the bound model's revision was never read back)",
+        "source": "declared"
+      },
+      "isolation": {
+        "applied": false,
+        "at": "2026-09-21T00:13:47.752375Z",
+        "attempted": true,
+        "declaration": {
+          "case_id": "R04_LIVE",
+          "mode": "own_model",
+          "modes": [
+            "own_model",
+            "checkpoint_restore",
+            "shared_bound"
+          ],
+          "rationale": "the stale-revision probe must not dirty the shared model"
+        },
+        "error_code": "ENGINE_UNRESPONSIVE",
+        "model_label": "R04_LIVE (Phase4 G3 acceptance fixture) isolation model",
+        "model_ref": {
+          "error_code": "ENGINE_UNRESPONSIVE",
+          "has_structured_content": true,
+          "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+          "operation_id": "d24ce662-ff16-4aaf-a4d5-b1af1cae4d9d",
+          "outer_isError": true,
+          "request_hash": "d1b17e78465989c587d6c2ad011b33c3cd80c354d970e5b987a6ad3440c44865",
+          "success": false
+        },
+        "reason": "the case's own model could not be created (ENGINE_UNRESPONSIVE)",
+        "route": "model.create",
+        "success": false
+      },
+      "prerequisites": {
+        "case_id": "R04_LIVE",
+        "checks": {
+          "bound_model": {
+            "applicable": true,
+            "evidence": "no model_ref is bound: every live step of this case depends on one",
+            "satisfied": false
+          },
+          "negative_probe": {
+            "applicable": false,
+            "evidence": "declared: the case asks for the product's own refusal",
+            "satisfied": null
+          },
+          "observed_revision": {
+            "applicable": true,
+            "evidence": "the bound model's revision was never read back",
+            "satisfied": false
+          }
+        },
+        "declared": [
+          "bound_model",
+          "observed_revision",
+          "negative_probe"
+        ],
+        "note": "a missing prerequisite makes this case DEPENDENCY_BLOCKED and points at the root cause; it never becomes a defect of this case",
+        "status": "UNSATISFIED",
+        "unknown_declarations": [],
+        "unsatisfied": [
+          "bound_model",
+          "observed_revision"
+        ]
+      },
+      "subcase_inventory": {
+        "levels": [
+          "live",
+          "protocol",
+          "static"
+        ],
+        "missing": [],
+        "planned": 8,
+        "recorded": 8
+      },
+      "unknown_job_ledger": {
+        "entries": [
+          {
+            "first_seen_at": "2026-09-21T00:13:47.763681Z",
+            "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "connect to the existing worker before reconciliation",
+            "last_seen_at": "2026-09-21T00:13:47.766325Z",
+            "observations": [
+              {
+                "at": "2026-09-21T00:13:47.763692Z",
+                "error_code": "ENGINE_UNRESPONSIVE",
+                "message": "connect to a server first",
+                "tool": "model_create"
+              },
+              {
+                "at": "2026-09-21T00:13:47.766327Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "connect to the existing worker before reconciliation",
+                "tool": "job_reconcile"
+              }
+            ],
+            "operation": "model_create",
+            "reconciled_quiescent": false,
+            "release_attempts": [
+              {
+                "at": "2026-09-21T00:13:47.766344Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+                "reconciled_quiescent": false,
+                "reconciliation": null,
+                "status": "UNKNOWN",
+                "success": false
+              }
+            ],
+            "released": false,
+            "status": "UNKNOWN"
+          }
+        ],
+        "gate_refusals": {
+          "by_tool": {},
+          "count": 0,
+          "first": null,
+          "last": null
+        },
+        "note": "the driver records every job id an envelope reported as UNKNOWN (no published read lists the unresolved jobs) and releases each one through the published job_reconcile read before it replays a refused call once",
+        "released_jobs": [],
+        "still_blocked": [],
+        "unresolved_jobs": [
+          "0f23863c-fbe8-4dfc-b43d-88e605ebb73d"
+        ]
+      }
+    },
+    "case_id": "R04_LIVE",
+    "finished_at": "2026-09-21T00:13:47.771423Z",
+    "package": "R",
+    "reason": "the case's declared prerequisite(s) are not established: bound_model, observed_revision (no model_ref is bound: every live step of this case depends on one; the bound model's revision was never read back)",
+    "started_at": "2026-09-21T00:13:47.752371Z",
+    "status": "BLOCKED",
+    "subcases": {
+      "checkpoint_recovery_after_failed_invariant": {
+        "acceptance": "G3 R04 checkpoint after failed invariant",
+        "level": "live",
+        "reason": "dependency not established: bound_model, observed_revision",
+        "status": "NOT_RUN"
+      },
+      "cross_model_transaction_record_rejected": {
+        "acceptance": "G3 R04 cross-model record binding",
+        "level": "live",
+        "reason": "dependency not established: bound_model, observed_revision",
+        "status": "NOT_RUN"
+      },
+      "invariant_violation_not_reported_as_pass": {
+        "acceptance": "G3 R04 required failure is not PASS",
+        "level": "live",
+        "reason": "dependency not established: bound_model, observed_revision",
+        "status": "NOT_RUN"
+      },
+      "recorded_pass_with_changed_live_property": {
+        "acceptance": "G3 R04 record passes but live property differs",
+        "level": "live",
+        "reason": "dependency not established: bound_model, observed_revision",
+        "status": "NOT_RUN"
+      },
+      "stale_revision_rejected": {
+        "acceptance": "G3 R04 stale revision",
+        "level": "live",
+        "reason": "dependency not established: bound_model, observed_revision",
+        "status": "NOT_RUN"
+      },
+      "static_transaction_ops_executable": {
+        "acceptance": "G3 R04 executable invariants",
+        "level": "static",
+        "reason": "dependency not established: bound_model, observed_revision",
+        "status": "NOT_RUN"
+      },
+      "static_unsupported_invariant_rejected_pre_write": {
+        "acceptance": "G3 R04 unsupported/malformed invariant rejected before write",
+        "level": "protocol",
+        "reason": "dependency not established: bound_model, observed_revision",
+        "status": "NOT_RUN"
+      },
+      "verified_transaction_status_split": {
+        "acceptance": "G3 R04 execution vs verification status",
+        "level": "live",
+        "reason": "dependency not established: bound_model, observed_revision",
+        "status": "NOT_RUN"
+      }
+    }
+  },
+  "subcase_count": 8
+}

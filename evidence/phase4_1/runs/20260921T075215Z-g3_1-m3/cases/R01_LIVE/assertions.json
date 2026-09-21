@@ -1,0 +1,2617 @@
+{
+  "assertion_count": 15,
+  "case": {
+    "acceptance": [
+      "G3 §7 R01"
+    ],
+    "assertions": {
+      "engine_reconciliations": [
+        {
+          "at": "2026-09-21T07:52:18.162806Z",
+          "envelope_job_id": "10589e36-9c3f-4011-9188-087c016c212d",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": false,
+          "jobs": [
+            {
+              "at": "2026-09-21T07:52:18.209262Z",
+              "error_code": null,
+              "job_id": "10589e36-9c3f-4011-9188-087c016c212d",
+              "reconciled_quiescent": true,
+              "reconciliation": [
+                {
+                  "request_id": "wrk-8b5c142f-2447-4401-b126-2b0fbd342204",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-bc3a6394-bff9-4ba0-a3c5-646de95a753e",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-daa2c168-17d9-458a-b251-7d9a4454d0b3",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-b5dd9e63-eac5-4270-a6f9-da850ede309b",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "message": "the operation left an unresolved engine state",
+          "released": true,
+          "retry": "not performed: a first-hand UNKNOWN result is this call's evidence",
+          "targets": [
+            "10589e36-9c3f-4011-9188-087c016c212d"
+          ],
+          "trigger": "first-hand UNKNOWN result",
+          "trigger_tool": "operation_call",
+          "unresolved_before": [
+            "10589e36-9c3f-4011-9188-087c016c212d"
+          ]
+        },
+        {
+          "at": "2026-09-21T07:52:18.209536Z",
+          "jobs": [
+            {
+              "at": "2026-09-21T07:52:18.254048Z",
+              "error_code": null,
+              "job_id": "10589e36-9c3f-4011-9188-087c016c212d",
+              "reconciled_quiescent": true,
+              "reconciliation": [
+                {
+                  "request_id": "wrk-8b5c142f-2447-4401-b126-2b0fbd342204",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-bc3a6394-bff9-4ba0-a3c5-646de95a753e",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-daa2c168-17d9-458a-b251-7d9a4454d0b3",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-b5dd9e63-eac5-4270-a6f9-da850ede309b",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "released": true,
+          "retry": "not performed: this call's own identity is unchanged",
+          "targets": [
+            "10589e36-9c3f-4011-9188-087c016c212d"
+          ],
+          "trigger": "an unfinished job must be resolved through its own published query before any new logical request is dispatched",
+          "unresolved_before": []
+        },
+        {
+          "at": "2026-09-21T07:52:18.284738Z",
+          "envelope_job_id": "0d272384-0ea4-422a-85ab-9da5d04e816c",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": false,
+          "jobs": [
+            {
+              "at": "2026-09-21T07:52:18.290378Z",
+              "error_code": null,
+              "job_id": "0d272384-0ea4-422a-85ab-9da5d04e816c",
+              "reconciled_quiescent": true,
+              "reconciliation": [
+                {
+                  "request_id": "wrk-00d7a5ab-ae5c-4ac9-8cf3-e687d040a06d",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-54971d2f-493e-4ca9-aa19-4ac830c4415f",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-2d3df2c0-5984-465d-a721-d08baba2e751",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-d947c99f-8f6c-46cb-a653-301f2a26b139",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-5c000abd-e333-411e-a83a-38e821783c52",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "message": "the operation left an unresolved engine state",
+          "released": true,
+          "retry": "not performed: a first-hand UNKNOWN result is this call's evidence",
+          "targets": [
+            "0d272384-0ea4-422a-85ab-9da5d04e816c"
+          ],
+          "trigger": "first-hand UNKNOWN result",
+          "trigger_tool": "operation_call",
+          "unresolved_before": [
+            "0d272384-0ea4-422a-85ab-9da5d04e816c"
+          ]
+        },
+        {
+          "at": "2026-09-21T07:52:18.290579Z",
+          "jobs": [
+            {
+              "at": "2026-09-21T07:52:18.296289Z",
+              "error_code": null,
+              "job_id": "0d272384-0ea4-422a-85ab-9da5d04e816c",
+              "reconciled_quiescent": true,
+              "reconciliation": [
+                {
+                  "request_id": "wrk-00d7a5ab-ae5c-4ac9-8cf3-e687d040a06d",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-54971d2f-493e-4ca9-aa19-4ac830c4415f",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-2d3df2c0-5984-465d-a721-d08baba2e751",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-d947c99f-8f6c-46cb-a653-301f2a26b139",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-5c000abd-e333-411e-a83a-38e821783c52",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "released": true,
+          "retry": "not performed: this call's own identity is unchanged",
+          "targets": [
+            "0d272384-0ea4-422a-85ab-9da5d04e816c"
+          ],
+          "trigger": "an unfinished job must be resolved through its own published query before any new logical request is dispatched",
+          "unresolved_before": []
+        },
+        {
+          "at": "2026-09-21T07:52:18.313911Z",
+          "envelope_job_id": "66aa4b44-a5c6-4247-8b32-a67d2b889260",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": false,
+          "jobs": [
+            {
+              "at": "2026-09-21T07:52:18.318218Z",
+              "error_code": null,
+              "job_id": "66aa4b44-a5c6-4247-8b32-a67d2b889260",
+              "reconciled_quiescent": true,
+              "reconciliation": [
+                {
+                  "request_id": "wrk-3bf0ff7c-8cdc-4b76-9b70-a9f09f91218f",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-81373596-6d43-4e91-8138-8dd80ad678a6",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-c7ef75e4-b9d8-491b-ad9d-f89e949615ed",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-f47b2b8e-8eec-458a-8bec-590fef8f272a",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-bd036fed-4f28-4946-b3b3-56851689f196",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-e751f583-2496-49ef-b4fa-fb8ed5f54a6f",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "message": "the operation left an unresolved engine state",
+          "released": true,
+          "retry": "not performed: a first-hand UNKNOWN result is this call's evidence",
+          "targets": [
+            "66aa4b44-a5c6-4247-8b32-a67d2b889260"
+          ],
+          "trigger": "first-hand UNKNOWN result",
+          "trigger_tool": "operation_call",
+          "unresolved_before": [
+            "66aa4b44-a5c6-4247-8b32-a67d2b889260"
+          ]
+        },
+        {
+          "at": "2026-09-21T07:52:18.318438Z",
+          "jobs": [
+            {
+              "at": "2026-09-21T07:52:18.322600Z",
+              "error_code": null,
+              "job_id": "66aa4b44-a5c6-4247-8b32-a67d2b889260",
+              "reconciled_quiescent": true,
+              "reconciliation": [
+                {
+                  "request_id": "wrk-3bf0ff7c-8cdc-4b76-9b70-a9f09f91218f",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-81373596-6d43-4e91-8138-8dd80ad678a6",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-c7ef75e4-b9d8-491b-ad9d-f89e949615ed",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-f47b2b8e-8eec-458a-8bec-590fef8f272a",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-bd036fed-4f28-4946-b3b3-56851689f196",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-e751f583-2496-49ef-b4fa-fb8ed5f54a6f",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "released": true,
+          "retry": "not performed: this call's own identity is unchanged",
+          "targets": [
+            "66aa4b44-a5c6-4247-8b32-a67d2b889260"
+          ],
+          "trigger": "an unfinished job must be resolved through its own published query before any new logical request is dispatched",
+          "unresolved_before": []
+        },
+        {
+          "at": "2026-09-21T07:52:18.353342Z",
+          "envelope_job_id": "74e0af9a-ef48-468f-b6cf-a07819db9e7c",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": false,
+          "jobs": [
+            {
+              "at": "2026-09-21T07:52:18.359578Z",
+              "error_code": null,
+              "job_id": "74e0af9a-ef48-468f-b6cf-a07819db9e7c",
+              "reconciled_quiescent": true,
+              "reconciliation": [
+                {
+                  "request_id": "wrk-e3b18653-4c70-4efd-8e76-e5fa35e07010",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-7aaef519-1a2b-4600-bf76-6c92c6daa9b5",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-25921784-2ec7-4d0b-8e27-e60e45f4ffcf",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-a965e969-1983-425a-8822-1a1569e03a5b",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-932a3027-b8bb-4183-b033-285de927bfc3",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "message": "the operation left an unresolved engine state",
+          "released": true,
+          "retry": "not performed: a first-hand UNKNOWN result is this call's evidence",
+          "targets": [
+            "74e0af9a-ef48-468f-b6cf-a07819db9e7c"
+          ],
+          "trigger": "first-hand UNKNOWN result",
+          "trigger_tool": "operation_call",
+          "unresolved_before": [
+            "74e0af9a-ef48-468f-b6cf-a07819db9e7c"
+          ]
+        },
+        {
+          "at": "2026-09-21T07:52:18.359836Z",
+          "jobs": [
+            {
+              "at": "2026-09-21T07:52:18.365511Z",
+              "error_code": null,
+              "job_id": "74e0af9a-ef48-468f-b6cf-a07819db9e7c",
+              "reconciled_quiescent": true,
+              "reconciliation": [
+                {
+                  "request_id": "wrk-e3b18653-4c70-4efd-8e76-e5fa35e07010",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-7aaef519-1a2b-4600-bf76-6c92c6daa9b5",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-25921784-2ec7-4d0b-8e27-e60e45f4ffcf",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-a965e969-1983-425a-8822-1a1569e03a5b",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-932a3027-b8bb-4183-b033-285de927bfc3",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "released": true,
+          "retry": "not performed: this call's own identity is unchanged",
+          "targets": [
+            "74e0af9a-ef48-468f-b6cf-a07819db9e7c"
+          ],
+          "trigger": "an unfinished job must be resolved through its own published query before any new logical request is dispatched",
+          "unresolved_before": []
+        },
+        {
+          "at": "2026-09-21T07:52:18.481531Z",
+          "envelope_job_id": "797c1af9-92cb-497b-b04d-ed736d62079b",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": false,
+          "jobs": [
+            {
+              "at": "2026-09-21T07:52:18.486353Z",
+              "error_code": null,
+              "job_id": "797c1af9-92cb-497b-b04d-ed736d62079b",
+              "reconciled_quiescent": true,
+              "reconciliation": [
+                {
+                  "request_id": "wrk-01cddbf5-d7a8-4a45-a841-ebca14beb62b",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-b2ce0e47-b59d-4705-9bb2-954f9c5770c2",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-4321c615-0f86-4b2c-b128-1851c6eb1d13",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-4ed2f239-84bc-4104-992b-3ad204afe659",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-cc11df2e-2842-401c-b0bb-e7bb16e367d0",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "message": "the operation left an unresolved engine state",
+          "released": true,
+          "retry": "not performed: a first-hand UNKNOWN result is this call's evidence",
+          "targets": [
+            "797c1af9-92cb-497b-b04d-ed736d62079b"
+          ],
+          "trigger": "first-hand UNKNOWN result",
+          "trigger_tool": "operation_call",
+          "unresolved_before": [
+            "797c1af9-92cb-497b-b04d-ed736d62079b"
+          ]
+        },
+        {
+          "at": "2026-09-21T07:52:18.486619Z",
+          "jobs": [
+            {
+              "at": "2026-09-21T07:52:18.491244Z",
+              "error_code": null,
+              "job_id": "797c1af9-92cb-497b-b04d-ed736d62079b",
+              "reconciled_quiescent": true,
+              "reconciliation": [
+                {
+                  "request_id": "wrk-01cddbf5-d7a8-4a45-a841-ebca14beb62b",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-b2ce0e47-b59d-4705-9bb2-954f9c5770c2",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-4321c615-0f86-4b2c-b128-1851c6eb1d13",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-4ed2f239-84bc-4104-992b-3ad204afe659",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-cc11df2e-2842-401c-b0bb-e7bb16e367d0",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "released": true,
+          "retry": "not performed: this call's own identity is unchanged",
+          "targets": [
+            "797c1af9-92cb-497b-b04d-ed736d62079b"
+          ],
+          "trigger": "an unfinished job must be resolved through its own published query before any new logical request is dispatched",
+          "unresolved_before": []
+        }
+      ],
+      "isolation": {
+        "applied": true,
+        "at": "2026-09-21T07:52:17.000454Z",
+        "attempted": true,
+        "declaration": {
+          "case_id": "R01_LIVE",
+          "mode": "own_model",
+          "modes": [
+            "own_model",
+            "checkpoint_restore",
+            "shared_bound"
+          ],
+          "rationale": "negative probes must not pollute another case's model"
+        },
+        "error_code": null,
+        "model_label": "R01_LIVE (Phase4 G3 acceptance fixture) isolation model",
+        "model_ref": {
+          "error_code": null,
+          "has_structured_content": true,
+          "job_id": "09ff9b45-0c13-4d73-9191-2ab9880d2518",
+          "operation_id": "2f2e1c25-7ab1-4ba9-a6ea-914c3a2b8b44",
+          "outer_isError": false,
+          "request_hash": "04424a8f7cf7c2aaf645f6b55d3cb8ac054347cb15a200e06b5c15bd0a751649",
+          "success": true
+        },
+        "route": "model.create",
+        "shared_model_restored": {
+          "note": "the case ran on its own model; the run's shared binding is restored for the cases that follow",
+          "ref": {
+            "generation": 1,
+            "model_tag": "mcp46",
+            "schema_version": 1,
+            "server_instance_id": "5458d770cd0be660ba337561931693c9f4b587b3205bad8bcd2526d58428e45f",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "revision": 0
+        },
+        "success": true
+      },
+      "malformed_typed_value_rejected_pre_engine": {
+        "engine_called": null,
+        "error_code": "PROPERTY_TYPE_MISMATCH",
+        "pass": true
+      },
+      "operation_availability": {
+        "node.property_get": {
+          "available": true,
+          "effect": "READ",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "names": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "path",
+              "names"
+            ],
+            "title": "node.property_get input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "model_ref",
+            "names",
+            "path",
+            "project_id",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "node_property_get",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "node.property_schema": {
+          "available": true,
+          "effect": "READ",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "name": {
+                "type": "string"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "path"
+            ],
+            "title": "node.property_schema input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "model_ref",
+            "name",
+            "path",
+            "project_id",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "node_property_schema",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "node.property_set": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "properties": {
+                "$ref": "common.schema.json#/$defs/PropertySet"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "path",
+              "properties"
+            ],
+            "title": "node.property_set input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "path",
+            "project_id",
+            "properties",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "node_property_set",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "transaction.preview": {
+          "available": true,
+          "effect": "READ",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "actions": {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "invariants": {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "actions"
+            ],
+            "title": "transaction.preview input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "actions",
+            "invariants",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "transaction_preview",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        }
+      },
+      "prerequisites": {
+        "case_id": "R01_LIVE",
+        "checks": {
+          "bound_model": {
+            "applicable": true,
+            "evidence": "a model_ref is bound",
+            "satisfied": true
+          },
+          "own_geometry": {
+            "applicable": false,
+            "evidence": "declared: the case builds its own component/geometry before using it",
+            "satisfied": null
+          }
+        },
+        "declared": [
+          "bound_model",
+          "own_geometry"
+        ],
+        "note": "a missing prerequisite makes this case DEPENDENCY_BLOCKED and points at the root cause; it never becomes a defect of this case",
+        "status": "SATISFIED",
+        "unknown_declarations": [],
+        "unsatisfied": []
+      },
+      "r01_array": {
+        "comparison": {
+          "matched": true,
+          "requested_kind": "expression",
+          "returned_kind": "string",
+          "rule": "exact_text_expression_string_mapping"
+        },
+        "error_code": null,
+        "property": "thermalconductivity",
+        "readback": {
+          "data": [
+            "10[W/(m*K)]"
+          ],
+          "java_signature": "java.lang.String[]",
+          "kind": "string",
+          "shape": [
+            1
+          ]
+        },
+        "shape": [
+          1
+        ]
+      },
+      "r01_discovery": {
+        "available": {
+          "scalar_number": 18,
+          "scalar_string": 108,
+          "string_array": 19,
+          "unit_bearing": 0
+        },
+        "candidates": 146,
+        "find": {
+          "complete": true,
+          "count": 1,
+          "errors": [],
+          "rpc_calls": null,
+          "status": "SUCCEEDED",
+          "truncated": false,
+          "visited": 1
+        },
+        "probe_fixture": {
+          "created_candidates": 111,
+          "discovery": {
+            "count": 56,
+            "roots": {
+              "{\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"geom\", \"tag\": \"p4geom\"}, {\"collection\": \"feature\", \"tag\": \"p4blk\"}]}": {
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "success": false
+              },
+              "{\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"geom\", \"tag\": \"p4geom\"}]}": {
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "success": false
+              },
+              "{\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"material\", \"tag\": \"p4mat\"}]}": {
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "success": false
+              },
+              "{\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"mesh\", \"tag\": \"p4mesh\"}, {\"collection\": \"feature\", \"tag\": \"p4size\"}]}": {
+                "complete": true,
+                "count": 4,
+                "errors": [],
+                "rpc_calls": null,
+                "status": "SUCCEEDED",
+                "truncated": false,
+                "visited": 4
+              },
+              "{\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"mesh\", \"tag\": \"p4mesh\"}]}": {
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "success": false
+              },
+              "{\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"physics\", \"tag\": \"p4ht\"}, {\"collection\": \"feature\", \"tag\": \"p4temp1\"}]}": {
+                "complete": true,
+                "count": 4,
+                "errors": [],
+                "rpc_calls": null,
+                "status": "SUCCEEDED",
+                "truncated": false,
+                "visited": 4
+              },
+              "{\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}, {\"collection\": \"physics\", \"tag\": \"p4ht\"}]}": {
+                "complete": true,
+                "count": 48,
+                "errors": [],
+                "rpc_calls": null,
+                "status": "SUCCEEDED",
+                "truncated": false,
+                "visited": 48
+              },
+              "{\"segments\": [{\"collection\": \"component\", \"tag\": \"comp1\"}]}": {
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "success": false
+              }
+            }
+          },
+          "fixture": {
+            "group_schema": {
+              "error_code": null,
+              "properties": [
+                {
+                  "getter": "getStringArray",
+                  "java_signature": "java.lang.String[]",
+                  "kind": "string",
+                  "metadata_status": "KNOWN",
+                  "name": "thermalconductivity",
+                  "shape_rank": 1,
+                  "type_id": "def",
+                  "value_type": "StringArray"
+                },
+                {
+                  "getter": "getString",
+                  "java_signature": "java.lang.String",
+                  "kind": "string",
+                  "metadata_status": "KNOWN",
+                  "name": "density",
+                  "shape_rank": 0,
+                  "type_id": "def",
+                  "value_type": "String"
+                },
+                {
+                  "getter": "getString",
+                  "java_signature": "java.lang.String",
+                  "kind": "string",
+                  "metadata_status": "KNOWN",
+                  "name": "heatcapacity",
+                  "shape_rank": 0,
+                  "type_id": "def",
+                  "value_type": "String"
+                }
+              ],
+              "success": true
+            },
+            "model_ref": {
+              "generation": 1,
+              "model_tag": "mcp47",
+              "schema_version": 1,
+              "server_instance_id": "5458d770cd0be660ba337561931693c9f4b587b3205bad8bcd2526d58428e45f",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "nodes": {
+              "block": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "geom",
+                    "tag": "p4geom"
+                  },
+                  {
+                    "collection": "feature",
+                    "tag": "p4blk"
+                  }
+                ]
+              },
+              "component": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  }
+                ]
+              },
+              "geometry": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "geom",
+                    "tag": "p4geom"
+                  }
+                ]
+              },
+              "material": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "material",
+                    "tag": "p4mat"
+                  }
+                ]
+              },
+              "mesh": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "mesh",
+                    "tag": "p4mesh"
+                  }
+                ]
+              },
+              "mesh_size": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "mesh",
+                    "tag": "p4mesh"
+                  },
+                  {
+                    "collection": "feature",
+                    "tag": "p4size"
+                  }
+                ]
+              },
+              "physics": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "physics",
+                    "tag": "p4ht"
+                  }
+                ]
+              },
+              "temperature": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "physics",
+                    "tag": "p4ht"
+                  },
+                  {
+                    "collection": "feature",
+                    "tag": "p4temp1"
+                  }
+                ]
+              }
+            },
+            "steps": [
+              {
+                "error_code": null,
+                "message": null,
+                "operation": "definition.component_manage",
+                "status": "APPLIED",
+                "step": "component",
+                "success": true
+              },
+              {
+                "error_code": null,
+                "message": null,
+                "operation": "geometry.sequence_create",
+                "status": "APPLIED",
+                "step": "geometry",
+                "success": true
+              },
+              {
+                "error_code": null,
+                "message": null,
+                "operation": "geometry.feature_create",
+                "status": "APPLIED",
+                "step": "block",
+                "success": true
+              },
+              {
+                "error_code": null,
+                "message": null,
+                "operation": "mesh.create",
+                "status": "APPLIED",
+                "step": "mesh",
+                "success": true
+              },
+              {
+                "error_code": null,
+                "message": null,
+                "operation": "mesh.feature_create",
+                "status": "APPLIED",
+                "step": "mesh_size",
+                "success": true
+              },
+              {
+                "error_code": null,
+                "message": null,
+                "operation": "physics.create",
+                "status": "APPLIED",
+                "step": "physics",
+                "success": true
+              },
+              {
+                "error_code": null,
+                "message": null,
+                "operation": "physics.feature_create",
+                "status": "APPLIED",
+                "step": "temperature",
+                "success": true
+              },
+              {
+                "error_code": null,
+                "message": null,
+                "operation": "material.create",
+                "status": "APPLIED",
+                "step": "material",
+                "success": true
+              },
+              {
+                "error_code": null,
+                "operation": "node.property_schema",
+                "status": "READ",
+                "step": "material_group_schema"
+              }
+            ]
+          },
+          "group_schema": {
+            "error_code": null,
+            "properties": [
+              {
+                "getter": "getStringArray",
+                "java_signature": "java.lang.String[]",
+                "kind": "string",
+                "metadata_status": "KNOWN",
+                "name": "thermalconductivity",
+                "shape_rank": 1,
+                "type_id": "def",
+                "value_type": "StringArray"
+              },
+              {
+                "getter": "getString",
+                "java_signature": "java.lang.String",
+                "kind": "string",
+                "metadata_status": "KNOWN",
+                "name": "density",
+                "shape_rank": 0,
+                "type_id": "def",
+                "value_type": "String"
+              },
+              {
+                "getter": "getString",
+                "java_signature": "java.lang.String",
+                "kind": "string",
+                "metadata_status": "KNOWN",
+                "name": "heatcapacity",
+                "shape_rank": 0,
+                "type_id": "def",
+                "value_type": "String"
+              }
+            ],
+            "success": true
+          },
+          "material_group_candidates": 3,
+          "owned_candidates": 32,
+          "owned_nodes": [
+            {
+              "error_code": null,
+              "known": [
+                "type",
+                "definedby",
+                "orientdef",
+                "lx",
+                "ly",
+                "lz",
+                "size",
+                "base",
+                "postype",
+                "pos",
+                "x",
+                "y",
+                "z",
+                "leftmargin",
+                "rightmargin",
+                "frontmargin",
+                "backmargin",
+                "bottommargin",
+                "topmargin",
+                "axis",
+                "axistype",
+                "ax3",
+                "ax2",
+                "rot",
+                "workplanesrc",
+                "workplane",
+                "extrainputkey",
+                "layername",
+                "layer",
+                "layerold",
+                "layernameold",
+                "buildcount",
+                "geomrep",
+                "layerimage",
+                "selresult",
+                "selresultshow",
+                "color",
+                "customcolor",
+                "sellayer",
+                "contributeto",
+                "geomattr",
+                "geomattrlevel",
+                "buildtime",
+                "buildinfox",
+                "buildinfo"
+              ],
+              "node": "block",
+              "path": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "geom",
+                    "tag": "p4geom"
+                  },
+                  {
+                    "collection": "feature",
+                    "tag": "p4blk"
+                  }
+                ]
+              },
+              "properties": 57,
+              "success": true
+            },
+            {
+              "error_code": null,
+              "known": [
+                "table",
+                "hmax",
+                "hmin",
+                "hcurve",
+                "hnarrow",
+                "hgrad",
+                "hauto",
+                "custom"
+              ],
+              "node": "mesh_size",
+              "path": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "mesh",
+                    "tag": "p4mesh"
+                  },
+                  {
+                    "collection": "feature",
+                    "tag": "p4size"
+                  }
+                ]
+              },
+              "properties": 13,
+              "success": true
+            },
+            {
+              "error_code": null,
+              "known": [
+                "constraintOptions",
+                "constraintType",
+                "constraintMethod",
+                "T0_src",
+                "T0",
+                "constraintGroup",
+                "StudyStep",
+                "showPhysicsSymbols",
+                "pairContrib"
+              ],
+              "node": "temperature",
+              "path": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "physics",
+                    "tag": "p4ht"
+                  },
+                  {
+                    "collection": "feature",
+                    "tag": "p4temp1"
+                  }
+                ]
+              },
+              "properties": 9,
+              "success": true
+            },
+            {
+              "error_code": "API_UNSUPPORTED",
+              "known": [],
+              "node": "physics",
+              "path": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "physics",
+                    "tag": "p4ht"
+                  }
+                ]
+              },
+              "properties": 0,
+              "success": false
+            },
+            {
+              "error_code": null,
+              "known": [
+                "bndType",
+                "thickness",
+                "sys",
+                "middlePlane",
+                "offset",
+                "hiddenCardSwitcher",
+                "stack",
+                "orientDist",
+                "widthRatio",
+                "family",
+                "color",
+                "customcolor",
+                "specular",
+                "customspecular",
+                "diffuse",
+                "customdiffuse",
+                "ambient",
+                "customambient",
+                "basis",
+                "scale",
+                "origin",
+                "basisx",
+                "specifybasisy",
+                "basisy",
+                "noise",
+                "normalnoisetype",
+                "noisescale",
+                "noisefreq",
+                "normalnoisebrush",
+                "colornoise",
+                "colornoisetype",
+                "colornoisescale",
+                "colornoisefrequency",
+                "colornoisebrush",
+                "noisecolor",
+                "customnoisecolor",
+                "noisecolorblend",
+                "colornoisenormalscale",
+                "transparency",
+                "uniformblending",
+                "lighting",
+                "fresnel",
+                "roughness",
+                "anisotropy",
+                "anisotropyaxis",
+                "metallic",
+                "pearl",
+                "diffusewrap",
+                "clearcoat",
+                "reflectance",
+                "showambientscale",
+                "ambientscale",
+                "shininess",
+                "phase",
+                "orientation",
+                "info"
+              ],
+              "node": "material",
+              "path": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "material",
+                    "tag": "p4mat"
+                  }
+                ]
+              },
+              "properties": 62,
+              "success": true
+            },
+            {
+              "error_code": "API_UNSUPPORTED",
+              "known": [],
+              "node": "geometry",
+              "path": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "geom",
+                    "tag": "p4geom"
+                  }
+                ]
+              },
+              "properties": 0,
+              "success": false
+            }
+          ],
+          "status": "READ"
+        },
+        "targets": [
+          {
+            "kind": "string",
+            "node": "PropertyGroup",
+            "path": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                },
+                {
+                  "collection": "material",
+                  "tag": "p4mat"
+                },
+                {
+                  "collection": "propertyGroup",
+                  "tag": "def"
+                }
+              ]
+            },
+            "property": "thermalconductivity",
+            "requirements": [
+              "string_array"
+            ],
+            "shape_rank": 1,
+            "source": "probe_fixture",
+            "unit": null
+          },
+          {
+            "kind": "string",
+            "node": "PropertyGroup",
+            "path": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                },
+                {
+                  "collection": "material",
+                  "tag": "p4mat"
+                },
+                {
+                  "collection": "propertyGroup",
+                  "tag": "def"
+                }
+              ]
+            },
+            "property": "density",
+            "requirements": [
+              "scalar_string"
+            ],
+            "shape_rank": 0,
+            "source": "probe_fixture",
+            "unit": null
+          },
+          {
+            "kind": "string",
+            "node": "PropertyGroup",
+            "path": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                },
+                {
+                  "collection": "material",
+                  "tag": "p4mat"
+                },
+                {
+                  "collection": "propertyGroup",
+                  "tag": "def"
+                }
+              ]
+            },
+            "property": "heatcapacity",
+            "requirements": [],
+            "shape_rank": 0,
+            "source": "probe_fixture",
+            "unit": null
+          },
+          {
+            "kind": "string",
+            "node": "block",
+            "path": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                },
+                {
+                  "collection": "geom",
+                  "tag": "p4geom"
+                },
+                {
+                  "collection": "feature",
+                  "tag": "p4blk"
+                }
+              ]
+            },
+            "property": "type",
+            "requirements": [],
+            "shape_rank": 0,
+            "source": "probe_fixture",
+            "unit": null
+          },
+          {
+            "kind": "string",
+            "node": "block",
+            "path": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                },
+                {
+                  "collection": "geom",
+                  "tag": "p4geom"
+                },
+                {
+                  "collection": "feature",
+                  "tag": "p4blk"
+                }
+              ]
+            },
+            "property": "definedby",
+            "requirements": [],
+            "shape_rank": 0,
+            "source": "probe_fixture",
+            "unit": null
+          },
+          {
+            "kind": "string",
+            "node": "block",
+            "path": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                },
+                {
+                  "collection": "geom",
+                  "tag": "p4geom"
+                },
+                {
+                  "collection": "feature",
+                  "tag": "p4blk"
+                }
+              ]
+            },
+            "property": "orientdef",
+            "requirements": [],
+            "shape_rank": 0,
+            "source": "probe_fixture",
+            "unit": null
+          },
+          {
+            "kind": "float64",
+            "node": "block",
+            "path": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                },
+                {
+                  "collection": "geom",
+                  "tag": "p4geom"
+                },
+                {
+                  "collection": "feature",
+                  "tag": "p4blk"
+                }
+              ]
+            },
+            "property": "lx",
+            "requirements": [
+              "scalar_number"
+            ],
+            "shape_rank": 0,
+            "source": "probe_fixture",
+            "unit": null
+          },
+          {
+            "kind": "float64",
+            "node": "block",
+            "path": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                },
+                {
+                  "collection": "geom",
+                  "tag": "p4geom"
+                },
+                {
+                  "collection": "feature",
+                  "tag": "p4blk"
+                }
+              ]
+            },
+            "property": "ly",
+            "requirements": [],
+            "shape_rank": 0,
+            "source": "probe_fixture",
+            "unit": null
+          }
+        ]
+      },
+      "r01_incompatible": {
+        "after": {
+          "data": 0.001,
+          "java_signature": "double",
+          "kind": "float64",
+          "shape": []
+        },
+        "before": {
+          "data": 0.001,
+          "java_signature": "double",
+          "kind": "float64",
+          "shape": []
+        },
+        "expression_error": "PROPERTY_TYPE_MISMATCH",
+        "expression_release": {
+          "gate": null,
+          "released": true,
+          "retry": "not performed: this call's own identity is unchanged",
+          "still_blocked": null,
+          "targets": [
+            "797c1af9-92cb-497b-b04d-ed736d62079b"
+          ],
+          "trigger": "an unfinished job must be resolved through its own published query before any new logical request is dispatched"
+        },
+        "expression_unknown_engine_state": null,
+        "property": "lx",
+        "revision_after": 15,
+        "revision_before": 15,
+        "unit_error": "PROPERTY_TYPE_MISMATCH",
+        "unit_release": {
+          "gate": null,
+          "released": true,
+          "retry": "not performed: this call's own identity is unchanged",
+          "still_blocked": null,
+          "targets": [
+            "797c1af9-92cb-497b-b04d-ed736d62079b"
+          ],
+          "trigger": "an unfinished job must be resolved through its own published query before any new logical request is dispatched"
+        },
+        "unit_unknown_engine_state": null
+      },
+      "r01_malformed_typed_value_preview": {
+        "engine_called": null,
+        "error_code": "PROPERTY_TYPE_MISMATCH",
+        "error_message": "typed value must be an object",
+        "outer_isError": true,
+        "static_only": null,
+        "status": null,
+        "success": false
+      },
+      "r01_nonfinite": {
+        "after": {
+          "data": 0.001,
+          "java_signature": "double",
+          "kind": "float64",
+          "shape": []
+        },
+        "before": {
+          "data": 0.001,
+          "java_signature": "double",
+          "kind": "float64",
+          "shape": []
+        },
+        "inf_error": "PROPERTY_TYPE_MISMATCH",
+        "inf_release": {
+          "gate": null,
+          "released": true,
+          "retry": "not performed: this call's own identity is unchanged",
+          "still_blocked": null,
+          "targets": [
+            "797c1af9-92cb-497b-b04d-ed736d62079b"
+          ],
+          "trigger": "an unfinished job must be resolved through its own published query before any new logical request is dispatched"
+        },
+        "inf_unknown_engine_state": null,
+        "nan_error": "PROPERTY_TYPE_MISMATCH",
+        "nan_release": {
+          "gate": null,
+          "released": true,
+          "retry": "not performed: this call's own identity is unchanged",
+          "still_blocked": null,
+          "targets": [
+            "797c1af9-92cb-497b-b04d-ed736d62079b"
+          ],
+          "trigger": "an unfinished job must be resolved through its own published query before any new logical request is dispatched"
+        },
+        "nan_unknown_engine_state": null,
+        "property": "lx"
+      },
+      "r01_normalization": {
+        "claimed_match": true,
+        "error_code": null,
+        "normalized": false,
+        "probe_text": "1000[kg/m^3] ",
+        "property": "density",
+        "readback": {
+          "data": "1000[kg/m^3] ",
+          "java_signature": "java.lang.String",
+          "kind": "string",
+          "shape": []
+        },
+        "restore_success": true,
+        "restored_value": {
+          "data": "1000[kg/m^3]",
+          "java_signature": "java.lang.String",
+          "kind": "string",
+          "shape": []
+        }
+      },
+      "r01_same_text": {
+        "comparison": {
+          "matched": true,
+          "requested_kind": "expression",
+          "returned_kind": "string",
+          "rule": "exact_text_expression_string_mapping"
+        },
+        "error_code": null,
+        "node": "PropertyGroup",
+        "outer_isError": false,
+        "path": {
+          "segments": [
+            {
+              "collection": "component",
+              "tag": "comp1"
+            },
+            {
+              "collection": "material",
+              "tag": "p4mat"
+            },
+            {
+              "collection": "propertyGroup",
+              "tag": "def"
+            }
+          ]
+        },
+        "property": "density",
+        "readback": {
+          "data": "1000[kg/m^3]",
+          "java_signature": "java.lang.String",
+          "kind": "string",
+          "shape": []
+        },
+        "requested": {
+          "data": "1000[kg/m^3]",
+          "kind": "expression",
+          "shape": []
+        }
+      },
+      "static_expression_readback_ops_executable": {
+        "operations": [
+          "node.property_schema",
+          "node.property_get",
+          "node.property_set"
+        ],
+        "pass": true
+      },
+      "subcase_inventory": {
+        "levels": [
+          "live",
+          "protocol",
+          "static"
+        ],
+        "missing": [],
+        "planned": 8,
+        "recorded": 8
+      },
+      "unknown_job_ledger": {
+        "entries": [
+          {
+            "first_seen_at": "2026-09-21T07:52:18.162765Z",
+            "job_id": "10589e36-9c3f-4011-9188-087c016c212d",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "the operation left an unresolved engine state",
+            "last_seen_at": "2026-09-21T07:52:18.162779Z",
+            "observations": [
+              {
+                "at": "2026-09-21T07:52:18.162780Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "the operation left an unresolved engine state",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-21T07:52:18.209262Z",
+                "error_code": null,
+                "job_id": "10589e36-9c3f-4011-9188-087c016c212d",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-8b5c142f-2447-4401-b126-2b0fbd342204",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-bc3a6394-bff9-4ba0-a3c5-646de95a753e",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-daa2c168-17d9-458a-b251-7d9a4454d0b3",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-b5dd9e63-eac5-4270-a6f9-da850ede309b",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              },
+              {
+                "at": "2026-09-21T07:52:18.254048Z",
+                "error_code": null,
+                "job_id": "10589e36-9c3f-4011-9188-087c016c212d",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-8b5c142f-2447-4401-b126-2b0fbd342204",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-bc3a6394-bff9-4ba0-a3c5-646de95a753e",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-daa2c168-17d9-458a-b251-7d9a4454d0b3",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-b5dd9e63-eac5-4270-a6f9-da850ede309b",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-21T07:52:18.254059Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-21T07:52:18.284669Z",
+            "job_id": "0d272384-0ea4-422a-85ab-9da5d04e816c",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "the operation left an unresolved engine state",
+            "last_seen_at": "2026-09-21T07:52:18.284705Z",
+            "observations": [
+              {
+                "at": "2026-09-21T07:52:18.284706Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "the operation left an unresolved engine state",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-21T07:52:18.290378Z",
+                "error_code": null,
+                "job_id": "0d272384-0ea4-422a-85ab-9da5d04e816c",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-00d7a5ab-ae5c-4ac9-8cf3-e687d040a06d",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-54971d2f-493e-4ca9-aa19-4ac830c4415f",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-2d3df2c0-5984-465d-a721-d08baba2e751",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-d947c99f-8f6c-46cb-a653-301f2a26b139",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-5c000abd-e333-411e-a83a-38e821783c52",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              },
+              {
+                "at": "2026-09-21T07:52:18.296289Z",
+                "error_code": null,
+                "job_id": "0d272384-0ea4-422a-85ab-9da5d04e816c",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-00d7a5ab-ae5c-4ac9-8cf3-e687d040a06d",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-54971d2f-493e-4ca9-aa19-4ac830c4415f",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-2d3df2c0-5984-465d-a721-d08baba2e751",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-d947c99f-8f6c-46cb-a653-301f2a26b139",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-5c000abd-e333-411e-a83a-38e821783c52",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-21T07:52:18.296300Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-21T07:52:18.313802Z",
+            "job_id": "66aa4b44-a5c6-4247-8b32-a67d2b889260",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "the operation left an unresolved engine state",
+            "last_seen_at": "2026-09-21T07:52:18.313857Z",
+            "observations": [
+              {
+                "at": "2026-09-21T07:52:18.313858Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "the operation left an unresolved engine state",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-21T07:52:18.318218Z",
+                "error_code": null,
+                "job_id": "66aa4b44-a5c6-4247-8b32-a67d2b889260",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-3bf0ff7c-8cdc-4b76-9b70-a9f09f91218f",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-81373596-6d43-4e91-8138-8dd80ad678a6",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-c7ef75e4-b9d8-491b-ad9d-f89e949615ed",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-f47b2b8e-8eec-458a-8bec-590fef8f272a",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-bd036fed-4f28-4946-b3b3-56851689f196",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-e751f583-2496-49ef-b4fa-fb8ed5f54a6f",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              },
+              {
+                "at": "2026-09-21T07:52:18.322600Z",
+                "error_code": null,
+                "job_id": "66aa4b44-a5c6-4247-8b32-a67d2b889260",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-3bf0ff7c-8cdc-4b76-9b70-a9f09f91218f",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-81373596-6d43-4e91-8138-8dd80ad678a6",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-c7ef75e4-b9d8-491b-ad9d-f89e949615ed",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-f47b2b8e-8eec-458a-8bec-590fef8f272a",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-bd036fed-4f28-4946-b3b3-56851689f196",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-e751f583-2496-49ef-b4fa-fb8ed5f54a6f",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-21T07:52:18.322612Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-21T07:52:18.353179Z",
+            "job_id": "74e0af9a-ef48-468f-b6cf-a07819db9e7c",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "the operation left an unresolved engine state",
+            "last_seen_at": "2026-09-21T07:52:18.353265Z",
+            "observations": [
+              {
+                "at": "2026-09-21T07:52:18.353267Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "the operation left an unresolved engine state",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-21T07:52:18.359578Z",
+                "error_code": null,
+                "job_id": "74e0af9a-ef48-468f-b6cf-a07819db9e7c",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-e3b18653-4c70-4efd-8e76-e5fa35e07010",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-7aaef519-1a2b-4600-bf76-6c92c6daa9b5",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-25921784-2ec7-4d0b-8e27-e60e45f4ffcf",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-a965e969-1983-425a-8822-1a1569e03a5b",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-932a3027-b8bb-4183-b033-285de927bfc3",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              },
+              {
+                "at": "2026-09-21T07:52:18.365511Z",
+                "error_code": null,
+                "job_id": "74e0af9a-ef48-468f-b6cf-a07819db9e7c",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-e3b18653-4c70-4efd-8e76-e5fa35e07010",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-7aaef519-1a2b-4600-bf76-6c92c6daa9b5",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-25921784-2ec7-4d0b-8e27-e60e45f4ffcf",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-a965e969-1983-425a-8822-1a1569e03a5b",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-932a3027-b8bb-4183-b033-285de927bfc3",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-21T07:52:18.365521Z",
+            "status": "UNKNOWN"
+          },
+          {
+            "first_seen_at": "2026-09-21T07:52:18.481333Z",
+            "job_id": "797c1af9-92cb-497b-b04d-ed736d62079b",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "the operation left an unresolved engine state",
+            "last_seen_at": "2026-09-21T07:52:18.481433Z",
+            "observations": [
+              {
+                "at": "2026-09-21T07:52:18.481434Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "the operation left an unresolved engine state",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-21T07:52:18.486353Z",
+                "error_code": null,
+                "job_id": "797c1af9-92cb-497b-b04d-ed736d62079b",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-01cddbf5-d7a8-4a45-a841-ebca14beb62b",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-b2ce0e47-b59d-4705-9bb2-954f9c5770c2",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-4321c615-0f86-4b2c-b128-1851c6eb1d13",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-4ed2f239-84bc-4104-992b-3ad204afe659",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-cc11df2e-2842-401c-b0bb-e7bb16e367d0",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              },
+              {
+                "at": "2026-09-21T07:52:18.491244Z",
+                "error_code": null,
+                "job_id": "797c1af9-92cb-497b-b04d-ed736d62079b",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-01cddbf5-d7a8-4a45-a841-ebca14beb62b",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-b2ce0e47-b59d-4705-9bb2-954f9c5770c2",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-4321c615-0f86-4b2c-b128-1851c6eb1d13",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-4ed2f239-84bc-4104-992b-3ad204afe659",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-cc11df2e-2842-401c-b0bb-e7bb16e367d0",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-21T07:52:18.491255Z",
+            "status": "UNKNOWN"
+          }
+        ],
+        "gate_refusals": {
+          "by_tool": {},
+          "count": 0,
+          "first": null,
+          "last": null
+        },
+        "note": "the driver records every job id an envelope reported as UNKNOWN (no published read lists the unresolved jobs) and releases each one through the published job_reconcile read before it replays a refused call once",
+        "released_jobs": [
+          "10589e36-9c3f-4011-9188-087c016c212d",
+          "0d272384-0ea4-422a-85ab-9da5d04e816c",
+          "66aa4b44-a5c6-4247-8b32-a67d2b889260",
+          "74e0af9a-ef48-468f-b6cf-a07819db9e7c",
+          "797c1af9-92cb-497b-b04d-ed736d62079b"
+        ],
+        "still_blocked": [],
+        "unresolved_jobs": []
+      }
+    },
+    "case_id": "R01_LIVE",
+    "finished_at": "2026-09-21T07:52:22.443970Z",
+    "package": "R",
+    "reason": null,
+    "started_at": "2026-09-21T07:52:17.000440Z",
+    "status": "NOT_RUN",
+    "subcases": {
+      "expression_array_or_matrix_verified": {
+        "acceptance": "G3 R01 expression array/matrix",
+        "level": "live",
+        "property": "thermalconductivity",
+        "status": "PASS"
+      },
+      "expression_string_same_text_verified": {
+        "acceptance": "G3 R01 same-text expression->String verified",
+        "comparison_rule": "exact_text_expression_string_mapping",
+        "level": "live",
+        "property": "density",
+        "status": "PASS"
+      },
+      "incompatible_kind_or_unit_rejected_before_write": {
+        "acceptance": "G3 R01 incompatible type/unit rejected before write",
+        "level": "live",
+        "status": "PASS"
+      },
+      "non_matching_readback_not_silently_accepted": {
+        "acceptance": "G3 R01 engine readback differs stays partial/UNKNOWN",
+        "level": "live",
+        "normalized": false,
+        "restored": true,
+        "status": "PASS"
+      },
+      "nonfinite_text_strictly_rejected": {
+        "acceptance": "G3 R01 complex/non-finite strict boundary",
+        "level": "live",
+        "status": "PASS"
+      },
+      "static_expression_readback_ops_executable": {
+        "acceptance": "G3 R01 readback path",
+        "level": "static",
+        "status": "PASS"
+      },
+      "static_malformed_typed_value_rejected_pre_engine": {
+        "acceptance": "G3 R01 fail-closed",
+        "level": "protocol",
+        "observed": {
+          "engine_called": null,
+          "error_code": "PROPERTY_TYPE_MISMATCH",
+          "error_message": "typed value must be an object",
+          "outer_isError": true,
+          "static_only": null,
+          "status": null,
+          "success": false
+        },
+        "status": "PASS"
+      },
+      "unit_expression_text_preserved": {
+        "acceptance": "G3 R01 unit field contract",
+        "level": "live",
+        "reason": "no property exposed authoritative unit metadata; unit-bearing text was not exercised",
+        "status": "NOT_RUN"
+      }
+    }
+  },
+  "subcase_count": 8
+}

@@ -1,0 +1,98 @@
+{
+  "case_id": "REOPEN_CHECK",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "reopen-server-connect",
+          "request_id": "connect"
+        },
+        "host": "127.0.0.1",
+        "port": 56389
+      },
+      "elapsed_s": 0.8519799169735052,
+      "operation": "server_connect",
+      "outer_isError": true,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "reconcile-2fa06644-b69d-4b17-8979-234beb461e5d",
+          "request_id": "job_reconcile"
+        },
+        "job_id": "2fa06644-b69d-4b17-8979-234beb461e5d"
+      },
+      "elapsed_s": 0.002670292044058442,
+      "operation": "job_reconcile",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-describe-model-load-1",
+          "request_id": "phase4-describe-model-load-1"
+        },
+        "operation_id": "model.load"
+      },
+      "elapsed_s": 0.0061815420049242675,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "artifact_id": "phase4-reopen-artifact",
+        "execution": {
+          "idempotency_key": "reopen-load",
+          "request_id": "model.load"
+        },
+        "path": "evidence/phase4_1/runs/20260921T042809Z-g3_1-m2a-chainA/chainA_result.mph"
+      },
+      "elapsed_s": 0.00239162496291101,
+      "operation": "model_load",
+      "outer_isError": true,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "reconcile-510430dd-79d4-4be3-97cf-9b98dfbf7950",
+          "request_id": "job_reconcile"
+        },
+        "job_id": "510430dd-79d4-4be3-97cf-9b98dfbf7950"
+      },
+      "elapsed_s": 0.001741791027598083,
+      "operation": "job_reconcile",
+      "outer_isError": false,
+      "sequence": 5
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "job_status-510430dd-79d4-4be3-97cf-9b98dfbf7950",
+          "request_id": "job_status"
+        },
+        "job_id": "510430dd-79d4-4be3-97cf-9b98dfbf7950"
+      },
+      "elapsed_s": 0.0014991249772720039,
+      "operation": "job_status",
+      "outer_isError": false,
+      "sequence": 6
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "job_result-510430dd-79d4-4be3-97cf-9b98dfbf7950",
+          "request_id": "job_result"
+        },
+        "job_id": "510430dd-79d4-4be3-97cf-9b98dfbf7950"
+      },
+      "elapsed_s": 0.0016289590275846422,
+      "operation": "job_result",
+      "outer_isError": true,
+      "sequence": 7
+    }
+  ]
+}

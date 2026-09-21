@@ -1,0 +1,351 @@
+{
+  "assertion_count": 11,
+  "case": {
+    "acceptance": [
+      "G3 §10 T035"
+    ],
+    "assertions": {
+      "isolation": {
+        "applied": false,
+        "at": "2026-09-21T03:29:07.664166Z",
+        "attempted": false,
+        "declaration": {
+          "case_id": "GUARD_T035",
+          "mode": "shared_bound",
+          "modes": [
+            "own_model",
+            "checkpoint_restore",
+            "shared_bound"
+          ],
+          "rationale": "reads/writes the run's bound model; the run is serial"
+        },
+        "reason": "declared: this case runs against the run's bound model, strictly serially"
+      },
+      "operation_availability": {
+        "docs.index": {
+          "available": true,
+          "effect": "STATE_WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "product": {
+                "type": "string"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "runtime_id": {
+                "type": "string"
+              },
+              "sources": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "version": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "idempotency_key",
+              "runtime_id",
+              "sources"
+            ],
+            "title": "docs.index input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "idempotency_key",
+            "product",
+            "project_id",
+            "request_id",
+            "runtime_id",
+            "sources",
+            "version"
+          ],
+          "mcp_tool_name": "docs_index",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "control plane",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "docs.search": {
+          "available": true,
+          "effect": "READ",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "limit": {
+                "type": "integer"
+              },
+              "product": {
+                "type": "string"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "query",
+              "version"
+            ],
+            "title": "docs.search input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "limit",
+            "product",
+            "project_id",
+            "query",
+            "request_id",
+            "version"
+          ],
+          "mcp_tool_name": "docs_search",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "control plane",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        }
+      },
+      "outside_file_unchanged": {
+        "after": "752ad993fa5ebc69f3f9a054a6305fd64956fae799437dfe87a38202ecc13d73",
+        "before": "752ad993fa5ebc69f3f9a054a6305fd64956fae799437dfe87a38202ecc13d73"
+      },
+      "prerequisites": {
+        "case_id": "GUARD_T035",
+        "checks": {
+          "bound_model": {
+            "applicable": false,
+            "evidence": "not applicable: the run is offline (no engine to bind a model on)",
+            "satisfied": null
+          },
+          "negative_probe": {
+            "applicable": false,
+            "evidence": "declared: the case asks for the product's own refusal",
+            "satisfied": null
+          }
+        },
+        "declared": [
+          "bound_model",
+          "negative_probe"
+        ],
+        "note": "a missing prerequisite makes this case DEPENDENCY_BLOCKED and points at the root cause; it never becomes a defect of this case",
+        "status": "SATISFIED",
+        "unknown_declarations": [],
+        "unsatisfied": []
+      },
+      "run_leak_scan": {
+        "credential_hits": [],
+        "private_path_hits": [],
+        "runtime_state_hits": [],
+        "scanned_files": 68
+      },
+      "static_docs_guard_ops_executable": {
+        "operations": [
+          "docs.index",
+          "docs.search"
+        ],
+        "pass": true
+      },
+      "subcase_inventory": {
+        "levels": [
+          "live",
+          "protocol",
+          "static"
+        ],
+        "missing": [],
+        "planned": 7,
+        "recorded": 7
+      },
+      "t035_credential_ingest": {
+        "credential_sha256": "REDACTED",
+        "index": {
+          "error_code": null,
+          "has_structured_content": true,
+          "job_id": "f40c444e-e46d-4d03-9410-7e0ea01cde51",
+          "operation_id": "1d5ada12-91ea-45bf-9227-18e55a88eb3e",
+          "outer_isError": false,
+          "request_hash": "ef76521c4ae0ad92633d5e4252672e215f7631962e6f3ef561e220154ae823e1",
+          "success": true
+        },
+        "search": {
+          "error_code": null,
+          "has_structured_content": true,
+          "job_id": "4602b37b-7377-4a80-9ac4-c6dfce56626f",
+          "operation_id": "181aebaa-c0fc-49c2-89d5-2c94ffc73724",
+          "outer_isError": false,
+          "request_hash": "56f5a2b694fbec92e58e385471eb111bf52de9e657a29c640c6bb7be7b9ecfd3",
+          "success": true
+        }
+      },
+      "t035_fixtures": {
+        "credential_fixture": "REDACTED",
+        "outside_file": "/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-mcp-phase4-outside-pm83_66j/outside_COMSOL_6.4_guard.md",
+        "outside_sha256": "752ad993fa5ebc69f3f9a054a6305fd64956fae799437dfe87a38202ecc13d73",
+        "symlink": "$REPO/evidence/phase4/runs/20260921T032906897124Z/outside_link_COMSOL_6.4.md"
+      },
+      "t035_index_attempts": {},
+      "t035_leak_scan": {
+        "credential_fixture_hits": [],
+        "credential_hits": [],
+        "credential_leak_hits": [],
+        "excluded_fixtures": [
+          "credentials_COMSOL_6.4.md"
+        ],
+        "private_home_scanned": null,
+        "private_path_hits": [],
+        "runtime_state_hits": [],
+        "scanned_files": 58
+      }
+    },
+    "case_id": "GUARD_T035",
+    "finished_at": "2026-09-21T03:29:07.682157Z",
+    "package": "GUARD",
+    "reason": null,
+    "started_at": "2026-09-21T03:29:07.664157Z",
+    "status": "NOT_RUN",
+    "subcases": {
+      "credential_text_not_persisted": {
+        "acceptance": "T035 credentials never persisted",
+        "hits": [],
+        "level": "protocol",
+        "status": "PASS"
+      },
+      "failed_denial_does_not_modify_files": {
+        "acceptance": "T035 failed access changes nothing",
+        "level": "live",
+        "status": "PASS"
+      },
+      "outside_workspace_source_denied": {
+        "acceptance": "T035 outside-workspace source",
+        "level": "live",
+        "reason": "offline run: --live was not supplied",
+        "status": "NOT_RUN"
+      },
+      "outside_write_attempt_denied": {
+        "acceptance": "T035 outside write attempt",
+        "level": "live",
+        "reason": "offline run: --live was not supplied",
+        "status": "NOT_RUN"
+      },
+      "private_paths_not_in_evidence": {
+        "acceptance": "T035 private paths redacted",
+        "level": "protocol",
+        "status": "PASS"
+      },
+      "static_docs_guard_ops_executable": {
+        "acceptance": "T035 outside-workspace source guard",
+        "level": "static",
+        "status": "PASS"
+      },
+      "symlink_outside_denied": {
+        "acceptance": "T035 symlink/reparse escape",
+        "level": "live",
+        "reason": "offline run: --live was not supplied",
+        "status": "NOT_RUN"
+      }
+    }
+  },
+  "subcase_count": 7
+}

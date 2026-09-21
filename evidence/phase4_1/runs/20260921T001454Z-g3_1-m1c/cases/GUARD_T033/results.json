@@ -1,0 +1,1724 @@
+{
+  "case_id": "GUARD_T033",
+  "results": [
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"catalog_input_schema\": {\"additionalProperties\": false, \"properties\": {\"evaluation_policy\": {\"default\": \"ephemeral_mutation\", \"title\": \"Evaluation Policy\", \"type\": \"string\"}, \"expressions_json\": {\"default\": \"[]\", \"title\": \"Expressions Json\", \"type\": \"string\"}, \"max_result_size\": {\"default\": 0, \"title\": \"Max Result Size\", \"type\": \"integer\"}}, \"title\": \"evaluate_expressionsArguments\", \"type\": \"object\"}, \"domain\": \"legacy\", \"effect\": \"EVALUATE\", \"executable\": true, \"gate\": \"W01 compatibility mapping plus ordinary service gate\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"additionalProperties\": false, \"properties\": {\"evaluation_policy\": {\"default\": \"ephemeral_mutation\", \"title\": \"Evaluation Policy\", \"type\": \"string\"}, \"expressions_json\": {\"default\": \"[]\", \"title\": \"Expressions Json\", \"type\": \"string\"}, \"max_result_size\": {\"default\": 0, \"title\": \"Max Result Size\", \"type\": \"integer\"}}, \"title\": \"evaluate_expressionsArguments\", \"type\": \"object\"}, \"mcp_tool_name\": \"evaluate_expressions\", \"notes\": \"Hidden from a narrowed static publication profile only; callable through operation_call with this explicit mapping. Input schema is generated from the registered FastMCP function signature; unknown fields are rejected before dispatch.\", \"operation_id\": \"evaluate_expressions\", \"output_contract\": \"success/data/error/execution envelope\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"Managed compatibility route for the original MCP tool\", \"required_tests\": [\"legacy_fallback\", \"permission_gate\"], \"route\": \"legacy managed backend\", \"scope\": \"legacy managed service\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "operation_describe",
+      "sequence": 1,
+      "structuredContent": {
+        "data": {
+          "catalog_input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "evaluation_policy": {
+                "default": "ephemeral_mutation",
+                "title": "Evaluation Policy",
+                "type": "string"
+              },
+              "expressions_json": {
+                "default": "[]",
+                "title": "Expressions Json",
+                "type": "string"
+              },
+              "max_result_size": {
+                "default": 0,
+                "title": "Max Result Size",
+                "type": "integer"
+              }
+            },
+            "title": "evaluate_expressionsArguments",
+            "type": "object"
+          },
+          "domain": "legacy",
+          "effect": "EVALUATE",
+          "executable": true,
+          "gate": "W01 compatibility mapping plus ordinary service gate",
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "evaluation_policy": {
+                "default": "ephemeral_mutation",
+                "title": "Evaluation Policy",
+                "type": "string"
+              },
+              "expressions_json": {
+                "default": "[]",
+                "title": "Expressions Json",
+                "type": "string"
+              },
+              "max_result_size": {
+                "default": 0,
+                "title": "Max Result Size",
+                "type": "integer"
+              }
+            },
+            "title": "evaluate_expressionsArguments",
+            "type": "object"
+          },
+          "mcp_tool_name": "evaluate_expressions",
+          "notes": "Hidden from a narrowed static publication profile only; callable through operation_call with this explicit mapping. Input schema is generated from the registered FastMCP function signature; unknown fields are rejected before dispatch.",
+          "operation_id": "evaluate_expressions",
+          "output_contract": "success/data/error/execution envelope",
+          "output_schema": {
+            "additionalProperties": true,
+            "properties": {
+              "data": {
+                "type": "object"
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "string",
+                  "null"
+                ]
+              },
+              "execution": {
+                "type": "object"
+              },
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success",
+              "data"
+            ],
+            "type": "object"
+          },
+          "purpose": "Managed compatibility route for the original MCP tool",
+          "required_tests": [
+            "legacy_fallback",
+            "permission_gate"
+          ],
+          "route": "legacy managed backend",
+          "scope": "legacy managed service",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-138\", \"job_id\": \"c325bee9-3564-448e-ab73-48b0020813a7\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp6\", \"schema_version\": 1, \"server_instance_id\": \"55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"a16f542f-183b-45bd-894e-ade95bf6086b\", \"request_hash\": \"78b005fe630fcf46a738426be61f558fe8fd926ce3364404b5d9ccc77753068d\", \"request_id\": \"phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-138\", \"revision\": 0, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "model_inspect",
+      "sequence": 2,
+      "structuredContent": {
+        "data": {},
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-138",
+          "job_id": "c325bee9-3564-448e-ab73-48b0020813a7",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp6",
+            "schema_version": 1,
+            "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "a16f542f-183b-45bd-894e-ade95bf6086b",
+          "request_hash": "78b005fe630fcf46a738426be61f558fe8fd926ce3364404b5d9ccc77753068d",
+          "request_id": "phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-138",
+          "revision": 0,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"datetime\": \"2026-09-21 08:14:59\", \"execution_state_unknown\": false, \"log_path\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs/server.log\", \"operations_path\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs/operations.jsonl\", \"partial_change\": false, \"server\": {\"attached_to_existing_server\": true, \"comsol_root\": \"/Applications/COMSOL64/Multiphysics\", \"current_model_label\": \"GUARD_T033 (Phase4 G3 acceptance fixture) isolation model\", \"current_model_origin\": \"bound-request\", \"current_model_path\": \"\", \"datetime\": \"2026-09-21 08:14:59\", \"desktop_client_role\": \"visual-client\", \"desktop_should_connect\": {\"host\": \"127.0.0.1\", \"port\": 56389}, \"last_command\": \"evaluate_expressions\", \"last_error\": \"pure_read evaluation is unavailable: this backend requires temporary numerical nodes; use ephemeral_mutation or an isolated model copy.\", \"logs_dir\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs\", \"mcp_home\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home\", \"outputs_dir\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/outputs\", \"recommended_desktop_flow\": \"visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.\", \"server_endpoint\": \"127.0.0.1:56389\", \"server_host\": \"127.0.0.1\", \"server_port\": 56389, \"server_running\": false, \"server_started_by_mcp\": false, \"status\": \"ready\", \"timestamp\": 1789949699.7965848, \"version\": \"0.1.9\", \"workflow\": {\"current_main_model_path\": \"\", \"guard_level\": \"strict\", \"main_model_label\": \"\", \"main_model_path\": \"\", \"main_model_tag\": \"\", \"mcp_client_lifecycle\": \"persistent-required\", \"mode\": \"manual\", \"model_dimension\": 0, \"notes\": \"\", \"one_shot_client_allowed\": false, \"snapshot_dir\": \"\", \"snapshot_name_template\": \"{prefix}_{label}_{timestamp}.mph\", \"snapshot_prefix\": \"\", \"snapshot_save_mode\": \"copy\", \"updated_at\": \"2026-09-21 08:14:54\", \"visible_main_locked\": false, \"workflow_stage\": \"awaiting_manual_server\"}}, \"timestamp\": 1789949699.796572, \"tool\": \"evaluate_expressions\", \"verification_status\": \"NOT_APPLICABLE\", \"verified_outcome\": \"failed\"}, \"error\": \"pure_read evaluation is unavailable: this backend requires temporary numerical nodes; use ephemeral_mutation or an isolated model copy.\", \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-20260921T001454Z-g3_1-m1ct033-pure\", \"job_id\": \"4bc0dc37-9f6d-4062-8c5e-7378147c2a37\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp6\", \"schema_version\": 1, \"server_instance_id\": \"55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"aa99d388-ecc9-4a1a-b355-baee7cffdf45\", \"request_hash\": \"bffb8977dd13ef568e7ad9ebf7aa87c0091f06e794a613f805833b53e440d6a2\", \"request_id\": \"phase4-20260921T001454Z-g3_1-m1cpure\", \"revision\": 0, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "pure_read evaluation is unavailable: this backend requires temporary numerical nodes; use ephemeral_mutation or an isolated model copy.",
+      "error_message": "pure_read evaluation is unavailable: this backend requires temporary numerical nodes; use ephemeral_mutation or an isolated model copy.",
+      "operation": "evaluate_expressions",
+      "sequence": 3,
+      "structuredContent": {
+        "data": {
+          "datetime": "2026-09-21 08:14:59",
+          "execution_state_unknown": false,
+          "log_path": "$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs/server.log",
+          "operations_path": "$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs/operations.jsonl",
+          "partial_change": false,
+          "server": {
+            "attached_to_existing_server": true,
+            "comsol_root": "/Applications/COMSOL64/Multiphysics",
+            "current_model_label": "GUARD_T033 (Phase4 G3 acceptance fixture) isolation model",
+            "current_model_origin": "bound-request",
+            "current_model_path": "",
+            "datetime": "2026-09-21 08:14:59",
+            "desktop_client_role": "visual-client",
+            "desktop_should_connect": {
+              "host": "127.0.0.1",
+              "port": 56389
+            },
+            "last_command": "evaluate_expressions",
+            "last_error": "pure_read evaluation is unavailable: this backend requires temporary numerical nodes; use ephemeral_mutation or an isolated model copy.",
+            "logs_dir": "$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs",
+            "mcp_home": "$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home",
+            "outputs_dir": "$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/outputs",
+            "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+            "server_endpoint": "127.0.0.1:56389",
+            "server_host": "127.0.0.1",
+            "server_port": 56389,
+            "server_running": false,
+            "server_started_by_mcp": false,
+            "status": "ready",
+            "timestamp": 1789949699.7965848,
+            "version": "0.1.9",
+            "workflow": {
+              "current_main_model_path": "",
+              "guard_level": "strict",
+              "main_model_label": "",
+              "main_model_path": "",
+              "main_model_tag": "",
+              "mcp_client_lifecycle": "persistent-required",
+              "mode": "manual",
+              "model_dimension": 0,
+              "notes": "",
+              "one_shot_client_allowed": false,
+              "snapshot_dir": "",
+              "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+              "snapshot_prefix": "",
+              "snapshot_save_mode": "copy",
+              "updated_at": "2026-09-21 08:14:54",
+              "visible_main_locked": false,
+              "workflow_stage": "awaiting_manual_server"
+            }
+          },
+          "timestamp": 1789949699.796572,
+          "tool": "evaluate_expressions",
+          "verification_status": "NOT_APPLICABLE",
+          "verified_outcome": "failed"
+        },
+        "error": "pure_read evaluation is unavailable: this backend requires temporary numerical nodes; use ephemeral_mutation or an isolated model copy.",
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1ct033-pure",
+          "job_id": "4bc0dc37-9f6d-4062-8c5e-7378147c2a37",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp6",
+            "schema_version": 1,
+            "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "aa99d388-ecc9-4a1a-b355-baee7cffdf45",
+          "request_hash": "bffb8977dd13ef568e7ad9ebf7aa87c0091f06e794a613f805833b53e440d6a2",
+          "request_id": "phase4-20260921T001454Z-g3_1-m1cpure",
+          "revision": 0,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-139\", \"job_id\": \"5da6f5e3-6b29-4724-a253-13a13c56422c\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp6\", \"schema_version\": 1, \"server_instance_id\": \"55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"064527d0-a92c-4087-b59b-662275cc2d99\", \"request_hash\": \"78b005fe630fcf46a738426be61f558fe8fd926ce3364404b5d9ccc77753068d\", \"request_id\": \"phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-139\", \"revision\": 0, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "model_inspect",
+      "sequence": 4,
+      "structuredContent": {
+        "data": {},
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-139",
+          "job_id": "5da6f5e3-6b29-4724-a253-13a13c56422c",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp6",
+            "schema_version": 1,
+            "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "064527d0-a92c-4087-b59b-662275cc2d99",
+          "request_hash": "78b005fe630fcf46a738426be61f558fe8fd926ce3364404b5d9ccc77753068d",
+          "request_id": "phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-139",
+          "revision": 0,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"cleanup\": {\"cleanup_failed\": false, \"created\": true, \"created_count\": 1, \"nodes\": 1, \"note\": \"every tag is a random uuid4 hex owned by this request; cleanup removes that tag only and the removal is verified against the engine's own numerical().tags() readback\", \"owner_operations\": [\"evaluate_expressions\"], \"policy\": \"ephemeral_mutation\", \"removed\": true, \"removed_count\": 1, \"unremoved_tags\": [], \"verified_removed\": true, \"verified_removed_count\": 1}, \"count\": 1, \"datetime\": \"2026-09-21 08:14:59\", \"ephemeral_mutation\": true, \"evaluation_policy\": \"ephemeral_mutation\", \"label\": \"GUARD_T033 (Phase4 G3 acceptance fixture) isolation model\", \"log_path\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs/server.log\", \"max_result_size_ignored\": null, \"operations_path\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs/operations.jsonl\", \"results\": [{\"expression\": \"3*3\", \"last_value\": [], \"name\": \"phase4_ephemeral\", \"ok\": true, \"value\": []}], \"server\": {\"attached_to_existing_server\": true, \"comsol_root\": \"/Applications/COMSOL64/Multiphysics\", \"current_model_label\": \"GUARD_T033 (Phase4 G3 acceptance fixture) isolation model\", \"current_model_origin\": \"bound-request\", \"current_model_path\": \"\", \"datetime\": \"2026-09-21 08:14:59\", \"desktop_client_role\": \"visual-client\", \"desktop_should_connect\": {\"host\": \"127.0.0.1\", \"port\": 56389}, \"last_command\": \"evaluate_expressions\", \"last_error\": \"\", \"logs_dir\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs\", \"mcp_home\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home\", \"outputs_dir\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/outputs\", \"recommended_desktop_flow\": \"visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.\", \"server_endpoint\": \"127.0.0.1:56389\", \"server_host\": \"127.0.0.1\", \"server_port\": 56389, \"server_running\": false, \"server_started_by_mcp\": false, \"status\": \"ready\", \"timestamp\": 1789949699.837541, \"version\": \"0.1.9\", \"workflow\": {\"current_main_model_path\": \"\", \"guard_level\": \"strict\", \"main_model_label\": \"\", \"main_model_path\": \"\", \"main_model_tag\": \"\", \"mcp_client_lifecycle\": \"persistent-required\", \"mode\": \"manual\", \"model_dimension\": 0, \"notes\": \"\", \"one_shot_client_allowed\": false, \"snapshot_dir\": \"\", \"snapshot_name_template\": \"{prefix}_{label}_{timestamp}.mph\", \"snapshot_prefix\": \"\", \"snapshot_save_mode\": \"copy\", \"updated_at\": \"2026-09-21 08:14:54\", \"visible_main_locked\": false, \"workflow_stage\": \"awaiting_manual_server\"}}, \"temporary_nodes\": [{\"created\": true, \"feature_type\": \"EvalGlobal\", \"owner\": {\"operation\": \"evaluate_expressions\", \"policy\": \"ephemeral_mutation\", \"request\": {\"expressions\": 1, \"tool\": \"evaluate_expressions\"}, \"scope\": \"mcp_owned_result_numerical_node\", \"tag_allocated_from\": \"random uuid4 hex, never reused from the model\"}, \"removed\": true, \"tag\": \"mcp_eval_fa90a9985f7542b38242b680adb1c993\", \"tags_after\": [], \"tags_before\": [], \"verified_removed\": true}], \"timestamp\": 1789949699.837524, \"tool\": \"evaluate_expressions\"}, \"error\": null, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-20260921T001454Z-g3_1-m1ct033-ephemeral\", \"job_id\": \"f8f0feb5-7610-4d58-9008-cf89d1e58fc9\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp6\", \"schema_version\": 1, \"server_instance_id\": \"55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"e02da98d-5ca1-4ad0-9070-c03792baebad\", \"request_hash\": \"8c2a18702aeab76bd90099309a809d0d5976e096659d09995288ddd043b5b1b9\", \"request_id\": \"phase4-20260921T001454Z-g3_1-m1cephemeral\", \"revision\": 1, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "evaluate_expressions",
+      "sequence": 5,
+      "structuredContent": {
+        "data": {
+          "cleanup": {
+            "cleanup_failed": false,
+            "created": true,
+            "created_count": 1,
+            "nodes": 1,
+            "note": "every tag is a random uuid4 hex owned by this request; cleanup removes that tag only and the removal is verified against the engine's own numerical().tags() readback",
+            "owner_operations": [
+              "evaluate_expressions"
+            ],
+            "policy": "ephemeral_mutation",
+            "removed": true,
+            "removed_count": 1,
+            "unremoved_tags": [],
+            "verified_removed": true,
+            "verified_removed_count": 1
+          },
+          "count": 1,
+          "datetime": "2026-09-21 08:14:59",
+          "ephemeral_mutation": true,
+          "evaluation_policy": "ephemeral_mutation",
+          "label": "GUARD_T033 (Phase4 G3 acceptance fixture) isolation model",
+          "log_path": "$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs/server.log",
+          "max_result_size_ignored": null,
+          "operations_path": "$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs/operations.jsonl",
+          "results": [
+            {
+              "expression": "3*3",
+              "last_value": [],
+              "name": "phase4_ephemeral",
+              "ok": true,
+              "value": []
+            }
+          ],
+          "server": {
+            "attached_to_existing_server": true,
+            "comsol_root": "/Applications/COMSOL64/Multiphysics",
+            "current_model_label": "GUARD_T033 (Phase4 G3 acceptance fixture) isolation model",
+            "current_model_origin": "bound-request",
+            "current_model_path": "",
+            "datetime": "2026-09-21 08:14:59",
+            "desktop_client_role": "visual-client",
+            "desktop_should_connect": {
+              "host": "127.0.0.1",
+              "port": 56389
+            },
+            "last_command": "evaluate_expressions",
+            "last_error": "",
+            "logs_dir": "$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs",
+            "mcp_home": "$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home",
+            "outputs_dir": "$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/outputs",
+            "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+            "server_endpoint": "127.0.0.1:56389",
+            "server_host": "127.0.0.1",
+            "server_port": 56389,
+            "server_running": false,
+            "server_started_by_mcp": false,
+            "status": "ready",
+            "timestamp": 1789949699.837541,
+            "version": "0.1.9",
+            "workflow": {
+              "current_main_model_path": "",
+              "guard_level": "strict",
+              "main_model_label": "",
+              "main_model_path": "",
+              "main_model_tag": "",
+              "mcp_client_lifecycle": "persistent-required",
+              "mode": "manual",
+              "model_dimension": 0,
+              "notes": "",
+              "one_shot_client_allowed": false,
+              "snapshot_dir": "",
+              "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+              "snapshot_prefix": "",
+              "snapshot_save_mode": "copy",
+              "updated_at": "2026-09-21 08:14:54",
+              "visible_main_locked": false,
+              "workflow_stage": "awaiting_manual_server"
+            }
+          },
+          "temporary_nodes": [
+            {
+              "created": true,
+              "feature_type": "EvalGlobal",
+              "owner": {
+                "operation": "evaluate_expressions",
+                "policy": "ephemeral_mutation",
+                "request": {
+                  "expressions": 1,
+                  "tool": "evaluate_expressions"
+                },
+                "scope": "mcp_owned_result_numerical_node",
+                "tag_allocated_from": "random uuid4 hex, never reused from the model"
+              },
+              "removed": true,
+              "tag": "mcp_eval_fa90a9985f7542b38242b680adb1c993",
+              "tags_after": [],
+              "tags_before": [],
+              "verified_removed": true
+            }
+          ],
+          "timestamp": 1789949699.837524,
+          "tool": "evaluate_expressions"
+        },
+        "error": null,
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1ct033-ephemeral",
+          "job_id": "f8f0feb5-7610-4d58-9008-cf89d1e58fc9",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp6",
+            "schema_version": 1,
+            "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "e02da98d-5ca1-4ad0-9070-c03792baebad",
+          "request_hash": "8c2a18702aeab76bd90099309a809d0d5976e096659d09995288ddd043b5b1b9",
+          "request_id": "phase4-20260921T001454Z-g3_1-m1cephemeral",
+          "revision": 1,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-140\", \"job_id\": \"29ad0d33-637c-4390-86aa-06a126e8a77a\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp6\", \"schema_version\": 1, \"server_instance_id\": \"55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"a5e8c6c5-e48c-4cc7-85a0-1bbb31896da4\", \"request_hash\": \"be9376ecab35fe3f86d7ed87951f7dd659e5944519a1aa40b1f27709e5e0f487\", \"request_id\": \"phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-140\", \"revision\": 1, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "model_inspect",
+      "sequence": 6,
+      "structuredContent": {
+        "data": {},
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-140",
+          "job_id": "29ad0d33-637c-4390-86aa-06a126e8a77a",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp6",
+            "schema_version": 1,
+            "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "a5e8c6c5-e48c-4cc7-85a0-1bbb31896da4",
+          "request_hash": "be9376ecab35fe3f86d7ed87951f7dd659e5944519a1aa40b1f27709e5e0f487",
+          "request_id": "phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-140",
+          "revision": 1,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"cleanup\": {\"cleanup_failed\": false, \"created\": true, \"created_count\": 1, \"nodes\": 1, \"note\": \"every tag is a random uuid4 hex owned by this request; cleanup removes that tag only and the removal is verified against the engine's own numerical().tags() readback\", \"owner_operations\": [\"evaluate_expressions\"], \"policy\": \"ephemeral_mutation\", \"removed\": true, \"removed_count\": 1, \"unremoved_tags\": [], \"verified_removed\": true, \"verified_removed_count\": 1}, \"count\": 1, \"datetime\": \"2026-09-21 08:14:59\", \"ephemeral_mutation\": true, \"evaluation_policy\": \"ephemeral_mutation\", \"label\": \"GUARD_T033 (Phase4 G3 acceptance fixture) isolation model\", \"log_path\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs/server.log\", \"max_result_size_ignored\": null, \"operations_path\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs/operations.jsonl\", \"results\": [{\"expression\": \"3*3\", \"last_value\": [], \"name\": \"phase4_ephemeral\", \"ok\": true, \"value\": []}], \"server\": {\"attached_to_existing_server\": true, \"comsol_root\": \"/Applications/COMSOL64/Multiphysics\", \"current_model_label\": \"GUARD_T033 (Phase4 G3 acceptance fixture) isolation model\", \"current_model_origin\": \"bound-request\", \"current_model_path\": \"\", \"datetime\": \"2026-09-21 08:14:59\", \"desktop_client_role\": \"visual-client\", \"desktop_should_connect\": {\"host\": \"127.0.0.1\", \"port\": 56389}, \"last_command\": \"evaluate_expressions\", \"last_error\": \"\", \"logs_dir\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs\", \"mcp_home\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home\", \"outputs_dir\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/outputs\", \"recommended_desktop_flow\": \"visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.\", \"server_endpoint\": \"127.0.0.1:56389\", \"server_host\": \"127.0.0.1\", \"server_port\": 56389, \"server_running\": false, \"server_started_by_mcp\": false, \"status\": \"ready\", \"timestamp\": 1789949699.867983, \"version\": \"0.1.9\", \"workflow\": {\"current_main_model_path\": \"\", \"guard_level\": \"strict\", \"main_model_label\": \"\", \"main_model_path\": \"\", \"main_model_tag\": \"\", \"mcp_client_lifecycle\": \"persistent-required\", \"mode\": \"manual\", \"model_dimension\": 0, \"notes\": \"\", \"one_shot_client_allowed\": false, \"snapshot_dir\": \"\", \"snapshot_name_template\": \"{prefix}_{label}_{timestamp}.mph\", \"snapshot_prefix\": \"\", \"snapshot_save_mode\": \"copy\", \"updated_at\": \"2026-09-21 08:14:54\", \"visible_main_locked\": false, \"workflow_stage\": \"awaiting_manual_server\"}}, \"temporary_nodes\": [{\"created\": true, \"feature_type\": \"EvalGlobal\", \"owner\": {\"operation\": \"evaluate_expressions\", \"policy\": \"ephemeral_mutation\", \"request\": {\"expressions\": 1, \"tool\": \"evaluate_expressions\"}, \"scope\": \"mcp_owned_result_numerical_node\", \"tag_allocated_from\": \"random uuid4 hex, never reused from the model\"}, \"removed\": true, \"tag\": \"mcp_eval_be6419e2aa844c1c9d68ed77f5d0239c\", \"tags_after\": [], \"tags_before\": [], \"verified_removed\": true}], \"timestamp\": 1789949699.867967, \"tool\": \"evaluate_expressions\"}, \"error\": null, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-20260921T001454Z-g3_1-m1ct033-ephemeral-serial\", \"job_id\": \"fc2c3607-0b76-4448-bec8-df97a6807403\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp6\", \"schema_version\": 1, \"server_instance_id\": \"55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"fa0e9bd1-0886-4ab3-ba75-b0a5a6b158fb\", \"request_hash\": \"4ff804b25245bde9087ebe500264a63771c5b26fa808f3c61e27a3f57fed18be\", \"request_id\": \"phase4-20260921T001454Z-g3_1-m1cephemeral\", \"revision\": 2, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "evaluate_expressions",
+      "sequence": 7,
+      "structuredContent": {
+        "data": {
+          "cleanup": {
+            "cleanup_failed": false,
+            "created": true,
+            "created_count": 1,
+            "nodes": 1,
+            "note": "every tag is a random uuid4 hex owned by this request; cleanup removes that tag only and the removal is verified against the engine's own numerical().tags() readback",
+            "owner_operations": [
+              "evaluate_expressions"
+            ],
+            "policy": "ephemeral_mutation",
+            "removed": true,
+            "removed_count": 1,
+            "unremoved_tags": [],
+            "verified_removed": true,
+            "verified_removed_count": 1
+          },
+          "count": 1,
+          "datetime": "2026-09-21 08:14:59",
+          "ephemeral_mutation": true,
+          "evaluation_policy": "ephemeral_mutation",
+          "label": "GUARD_T033 (Phase4 G3 acceptance fixture) isolation model",
+          "log_path": "$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs/server.log",
+          "max_result_size_ignored": null,
+          "operations_path": "$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs/operations.jsonl",
+          "results": [
+            {
+              "expression": "3*3",
+              "last_value": [],
+              "name": "phase4_ephemeral",
+              "ok": true,
+              "value": []
+            }
+          ],
+          "server": {
+            "attached_to_existing_server": true,
+            "comsol_root": "/Applications/COMSOL64/Multiphysics",
+            "current_model_label": "GUARD_T033 (Phase4 G3 acceptance fixture) isolation model",
+            "current_model_origin": "bound-request",
+            "current_model_path": "",
+            "datetime": "2026-09-21 08:14:59",
+            "desktop_client_role": "visual-client",
+            "desktop_should_connect": {
+              "host": "127.0.0.1",
+              "port": 56389
+            },
+            "last_command": "evaluate_expressions",
+            "last_error": "",
+            "logs_dir": "$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs",
+            "mcp_home": "$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home",
+            "outputs_dir": "$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/outputs",
+            "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+            "server_endpoint": "127.0.0.1:56389",
+            "server_host": "127.0.0.1",
+            "server_port": 56389,
+            "server_running": false,
+            "server_started_by_mcp": false,
+            "status": "ready",
+            "timestamp": 1789949699.867983,
+            "version": "0.1.9",
+            "workflow": {
+              "current_main_model_path": "",
+              "guard_level": "strict",
+              "main_model_label": "",
+              "main_model_path": "",
+              "main_model_tag": "",
+              "mcp_client_lifecycle": "persistent-required",
+              "mode": "manual",
+              "model_dimension": 0,
+              "notes": "",
+              "one_shot_client_allowed": false,
+              "snapshot_dir": "",
+              "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+              "snapshot_prefix": "",
+              "snapshot_save_mode": "copy",
+              "updated_at": "2026-09-21 08:14:54",
+              "visible_main_locked": false,
+              "workflow_stage": "awaiting_manual_server"
+            }
+          },
+          "temporary_nodes": [
+            {
+              "created": true,
+              "feature_type": "EvalGlobal",
+              "owner": {
+                "operation": "evaluate_expressions",
+                "policy": "ephemeral_mutation",
+                "request": {
+                  "expressions": 1,
+                  "tool": "evaluate_expressions"
+                },
+                "scope": "mcp_owned_result_numerical_node",
+                "tag_allocated_from": "random uuid4 hex, never reused from the model"
+              },
+              "removed": true,
+              "tag": "mcp_eval_be6419e2aa844c1c9d68ed77f5d0239c",
+              "tags_after": [],
+              "tags_before": [],
+              "verified_removed": true
+            }
+          ],
+          "timestamp": 1789949699.867967,
+          "tool": "evaluate_expressions"
+        },
+        "error": null,
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1ct033-ephemeral-serial",
+          "job_id": "fc2c3607-0b76-4448-bec8-df97a6807403",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp6",
+            "schema_version": 1,
+            "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "fa0e9bd1-0886-4ab3-ba75-b0a5a6b158fb",
+          "request_hash": "4ff804b25245bde9087ebe500264a63771c5b26fa808f3c61e27a3f57fed18be",
+          "request_id": "phase4-20260921T001454Z-g3_1-m1cephemeral",
+          "revision": 2,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-phase4-142\", \"job_id\": \"836d8079-d1c5-4327-bdf6-a520baafc3d9\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp6\", \"schema_version\": 1, \"server_instance_id\": \"55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"2f936e89-56a4-4583-bb20-0eca7c93d7a9\", \"request_hash\": \"56a23825a49805ec627881cc7dcad4e38e1fe90482bdd5f8613f92d7bbb5caf8\", \"request_id\": \"phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-phase4-142\", \"revision\": 2, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "model_inspect",
+      "sequence": 8,
+      "structuredContent": {
+        "data": {},
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-phase4-142",
+          "job_id": "836d8079-d1c5-4327-bdf6-a520baafc3d9",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp6",
+            "schema_version": 1,
+            "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "2f936e89-56a4-4583-bb20-0eca7c93d7a9",
+          "request_hash": "56a23825a49805ec627881cc7dcad4e38e1fe90482bdd5f8613f92d7bbb5caf8",
+          "request_id": "phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-phase4-142",
+          "revision": 2,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"budget\": {\"max_nodes\": 2000, \"max_rpc\": 5000, \"max_seconds\": 20.0}, \"complete\": false, \"count\": 1, \"errors\": [{\"code\": \"METHOD_NOT_ALLOWED\", \"collection\": \"table\", \"message\": \"accessor is not in the worker allowlist\"}, {\"code\": \"METHOD_NOT_ALLOWED\", \"collection\": \"export\", \"message\": \"accessor is not in the worker allowlist\"}], \"incomplete\": true, \"next_cursor\": null, \"requires_model_reconciliation\": true, \"results\": [{\"label\": \"GUARD_T033 (Phase4 G3 acceptance fixture) isolation model\", \"path\": {\"segments\": []}, \"tag\": \"mcp6\", \"type_id\": null}], \"status\": \"INCOMPLETE\", \"truncated\": false, \"truncated_reason\": null, \"visited\": 1}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"the operation left an unresolved engine state\", \"safe_retry\": false}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": true, \"idempotency_key\": \"phase4-20260921T001454Z-g3_1-m1cphase4-find-141\", \"job_id\": \"ac2829f4-7f1a-43f3-b2d2-6417425189ec\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp6\", \"schema_version\": 1, \"server_instance_id\": \"55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"c6882c22-b545-4284-a882-6a8bcb60b0c7\", \"request_hash\": \"555009815a77464dceffbaf454cea072c1b5225a712613522878e187065c1188\", \"request_id\": \"phase4-20260921T001454Z-g3_1-m1cphase4-find-141\", \"revision\": 2, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "error_message": "the operation left an unresolved engine state",
+      "operation": "operation_call",
+      "sequence": 9,
+      "structuredContent": {
+        "data": {
+          "budget": {
+            "max_nodes": 2000,
+            "max_rpc": 5000,
+            "max_seconds": 20.0
+          },
+          "complete": false,
+          "count": 1,
+          "errors": [
+            {
+              "code": "METHOD_NOT_ALLOWED",
+              "collection": "table",
+              "message": "accessor is not in the worker allowlist"
+            },
+            {
+              "code": "METHOD_NOT_ALLOWED",
+              "collection": "export",
+              "message": "accessor is not in the worker allowlist"
+            }
+          ],
+          "incomplete": true,
+          "next_cursor": null,
+          "requires_model_reconciliation": true,
+          "results": [
+            {
+              "label": "GUARD_T033 (Phase4 G3 acceptance fixture) isolation model",
+              "path": {
+                "segments": []
+              },
+              "tag": "mcp6",
+              "type_id": null
+            }
+          ],
+          "status": "INCOMPLETE",
+          "truncated": false,
+          "truncated_reason": null,
+          "visited": 1
+        },
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "the operation left an unresolved engine state",
+          "safe_retry": false
+        },
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": true,
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1cphase4-find-141",
+          "job_id": "ac2829f4-7f1a-43f3-b2d2-6417425189ec",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp6",
+            "schema_version": 1,
+            "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "c6882c22-b545-4284-a882-6a8bcb60b0c7",
+          "request_hash": "555009815a77464dceffbaf454cea072c1b5225a712613522878e187065c1188",
+          "request_id": "phase4-20260921T001454Z-g3_1-m1cphase4-find-141",
+          "revision": 2,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"created_at\": \"2026-09-21 00:14:59\", \"effective_timeouts\": {\"execution_timeout_s\": null, \"no_progress_warning_s\": null, \"queue_timeout_s\": null, \"rpc_timeout_s\": 30.0}, \"finished_at\": null, \"job_id\": \"ac2829f4-7f1a-43f3-b2d2-6417425189ec\", \"metadata\": {\"arguments\": {\"arguments\": {\"expected_revision\": 2, \"limit\": 200, \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp6\", \"schema_version\": 1, \"server_instance_id\": \"55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"project_id\": \"comsol-mcp-phase4\", \"query\": {}, \"root\": {\"segments\": []}, \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"node.find\"}, \"callback_completion_unknown\": true, \"engine_started_at\": 1789949699.882524, \"execution\": {\"expected_revision\": 2, \"idempotency_key\": \"phase4-20260921T001454Z-g3_1-m1cphase4-find-141\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp6\", \"schema_version\": 1, \"server_instance_id\": \"55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"request_id\": \"phase4-20260921T001454Z-g3_1-m1cphase4-find-141\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"finished_observed_at\": 1789949699.8924348, \"operation\": \"operation_call\", \"queue_wait_s\": 1.3083044905215502e-05, \"reconciled_quiescent\": true, \"reconciliation\": [{\"request_id\": \"wrk-30a12634-80dd-4197-8ffe-2f65fcafbb20\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-940d2461-4c41-4d22-b83b-dd310ae0657d\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-b49e7728-9dc4-49be-b1c5-797f61517dd0\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}], \"replay_performed\": false}, \"operation\": {\"created_at\": \"2026-09-21 00:14:59\", \"effective_timeouts\": {\"execution_timeout_s\": null, \"no_progress_warning_s\": null, \"queue_timeout_s\": null, \"rpc_timeout_s\": 30.0}, \"finished_at\": null, \"idempotency_key\": \"phase4-20260921T001454Z-g3_1-m1cphase4-find-141\", \"metadata\": {\"arguments\": {\"arguments\": {\"expected_revision\": 2, \"limit\": 200, \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp6\", \"schema_version\": 1, \"server_instance_id\": \"55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"project_id\": \"comsol-mcp-phase4\", \"query\": {}, \"root\": {\"segments\": []}, \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"node.find\"}, \"execution\": {\"expected_revision\": 2, \"idempotency_key\": \"phase4-20260921T001454Z-g3_1-m1cphase4-find-141\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp6\", \"schema_version\": 1, \"server_instance_id\": \"55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"request_id\": \"phase4-20260921T001454Z-g3_1-m1cphase4-find-141\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation\": \"operation_call\"}, \"operation\": \"operation_call\", \"operation_id\": \"c6882c22-b545-4284-a882-6a8bcb60b0c7\", \"request_hash\": \"555009815a77464dceffbaf454cea072c1b5225a712613522878e187065c1188\", \"request_id\": \"phase4-20260921T001454Z-g3_1-m1cphase4-find-141\", \"result\": {\"data\": {\"budget\": {\"max_nodes\": 2000, \"max_rpc\": 5000, \"max_seconds\": 20.0}, \"complete\": false, \"count\": 1, \"errors\": [{\"code\": \"METHOD_NOT_ALLOWED\", \"collection\": \"table\", \"message\": \"accessor is not in the worker allowlist\"}, {\"code\": \"METHOD_NOT_ALLOWED\", \"collection\": \"export\", \"message\": \"accessor is not in the worker allowlist\"}], \"incomplete\": true, \"next_cursor\": null, \"requires_model_reconciliation\": true, \"results\": [{\"label\": \"GUARD_T033 (Phase4 G3 acceptance fixture) isolation model\", \"path\": {\"segments\": []}, \"tag\": \"mcp6\", \"type_id\": null}], \"status\": \"INCOMPLETE\", \"truncated\": false, \"truncated_reason\": null, \"visited\": 1}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"the operation left an unresolved engine state\", \"safe_retry\": false}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": true, \"idempotency_key\": \"phase4-20260921T001454Z-g3_1-m1cphase4-find-141\", \"job_id\": \"ac2829f4-7f1a-43f3-b2d2-6417425189ec\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp6\", \"schema_version\": 1, \"server_instance_id\": \"55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"c6882c22-b545-4284-a882-6a8bcb60b0c7\", \"request_hash\": \"555009815a77464dceffbaf454cea072c1b5225a712613522878e187065c1188\", \"request_id\": \"phase4-20260921T001454Z-g3_1-m1cphase4-find-141\", \"revision\": 2, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": false}, \"started_at\": \"2026-09-21 00:14:59\", \"status\": \"UNKNOWN\"}, \"operation_id\": \"c6882c22-b545-4284-a882-6a8bcb60b0c7\", \"result\": {\"data\": {\"budget\": {\"max_nodes\": 2000, \"max_rpc\": 5000, \"max_seconds\": 20.0}, \"complete\": false, \"count\": 1, \"errors\": [{\"code\": \"METHOD_NOT_ALLOWED\", \"collection\": \"table\", \"message\": \"accessor is not in the worker allowlist\"}, {\"code\": \"METHOD_NOT_ALLOWED\", \"collection\": \"export\", \"message\": \"accessor is not in the worker allowlist\"}], \"incomplete\": true, \"next_cursor\": null, \"requires_model_reconciliation\": true, \"results\": [{\"label\": \"GUARD_T033 (Phase4 G3 acceptance fixture) isolation model\", \"path\": {\"segments\": []}, \"tag\": \"mcp6\", \"type_id\": null}], \"status\": \"INCOMPLETE\", \"truncated\": false, \"truncated_reason\": null, \"visited\": 1}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"the operation left an unresolved engine state\", \"safe_retry\": false}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": true, \"idempotency_key\": \"phase4-20260921T001454Z-g3_1-m1cphase4-find-141\", \"job_id\": \"ac2829f4-7f1a-43f3-b2d2-6417425189ec\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp6\", \"schema_version\": 1, \"server_instance_id\": \"55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"c6882c22-b545-4284-a882-6a8bcb60b0c7\", \"request_hash\": \"555009815a77464dceffbaf454cea072c1b5225a712613522878e187065c1188\", \"request_id\": \"phase4-20260921T001454Z-g3_1-m1cphase4-find-141\", \"revision\": 2, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": false}, \"started_at\": \"2026-09-21 00:14:59\", \"status\": \"UNKNOWN\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "job_reconcile",
+      "sequence": 10,
+      "structuredContent": {
+        "data": {
+          "created_at": "2026-09-21 00:14:59",
+          "effective_timeouts": {
+            "execution_timeout_s": null,
+            "no_progress_warning_s": null,
+            "queue_timeout_s": null,
+            "rpc_timeout_s": 30.0
+          },
+          "finished_at": null,
+          "job_id": "ac2829f4-7f1a-43f3-b2d2-6417425189ec",
+          "metadata": {
+            "arguments": {
+              "arguments": {
+                "expected_revision": 2,
+                "limit": 200,
+                "model_ref": {
+                  "generation": 1,
+                  "model_tag": "mcp6",
+                  "schema_version": 1,
+                  "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+                  "session_id": "session-9f95c2e814acd5f99589961a"
+                },
+                "project_id": "comsol-mcp-phase4",
+                "query": {},
+                "root": {
+                  "segments": []
+                },
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "operation_id": "node.find"
+            },
+            "callback_completion_unknown": true,
+            "engine_started_at": 1789949699.882524,
+            "execution": {
+              "expected_revision": 2,
+              "idempotency_key": "phase4-20260921T001454Z-g3_1-m1cphase4-find-141",
+              "model_ref": {
+                "generation": 1,
+                "model_tag": "mcp6",
+                "schema_version": 1,
+                "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "request_id": "phase4-20260921T001454Z-g3_1-m1cphase4-find-141",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "finished_observed_at": 1789949699.8924348,
+            "operation": "operation_call",
+            "queue_wait_s": 1.3083044905215502e-05,
+            "reconciled_quiescent": true,
+            "reconciliation": [
+              {
+                "request_id": "wrk-30a12634-80dd-4197-8ffe-2f65fcafbb20",
+                "source": "durable_worker_observation",
+                "status": "SUCCEEDED"
+              },
+              {
+                "request_id": "wrk-940d2461-4c41-4d22-b83b-dd310ae0657d",
+                "source": "durable_worker_observation",
+                "status": "SUCCEEDED"
+              },
+              {
+                "request_id": "wrk-b49e7728-9dc4-49be-b1c5-797f61517dd0",
+                "source": "durable_worker_observation",
+                "status": "SUCCEEDED"
+              }
+            ],
+            "replay_performed": false
+          },
+          "operation": {
+            "created_at": "2026-09-21 00:14:59",
+            "effective_timeouts": {
+              "execution_timeout_s": null,
+              "no_progress_warning_s": null,
+              "queue_timeout_s": null,
+              "rpc_timeout_s": 30.0
+            },
+            "finished_at": null,
+            "idempotency_key": "phase4-20260921T001454Z-g3_1-m1cphase4-find-141",
+            "metadata": {
+              "arguments": {
+                "arguments": {
+                  "expected_revision": 2,
+                  "limit": 200,
+                  "model_ref": {
+                    "generation": 1,
+                    "model_tag": "mcp6",
+                    "schema_version": 1,
+                    "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+                    "session_id": "session-9f95c2e814acd5f99589961a"
+                  },
+                  "project_id": "comsol-mcp-phase4",
+                  "query": {},
+                  "root": {
+                    "segments": []
+                  },
+                  "session_id": "session-9f95c2e814acd5f99589961a"
+                },
+                "operation_id": "node.find"
+              },
+              "execution": {
+                "expected_revision": 2,
+                "idempotency_key": "phase4-20260921T001454Z-g3_1-m1cphase4-find-141",
+                "model_ref": {
+                  "generation": 1,
+                  "model_tag": "mcp6",
+                  "schema_version": 1,
+                  "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+                  "session_id": "session-9f95c2e814acd5f99589961a"
+                },
+                "request_id": "phase4-20260921T001454Z-g3_1-m1cphase4-find-141",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "operation": "operation_call"
+            },
+            "operation": "operation_call",
+            "operation_id": "c6882c22-b545-4284-a882-6a8bcb60b0c7",
+            "request_hash": "555009815a77464dceffbaf454cea072c1b5225a712613522878e187065c1188",
+            "request_id": "phase4-20260921T001454Z-g3_1-m1cphase4-find-141",
+            "result": {
+              "data": {
+                "budget": {
+                  "max_nodes": 2000,
+                  "max_rpc": 5000,
+                  "max_seconds": 20.0
+                },
+                "complete": false,
+                "count": 1,
+                "errors": [
+                  {
+                    "code": "METHOD_NOT_ALLOWED",
+                    "collection": "table",
+                    "message": "accessor is not in the worker allowlist"
+                  },
+                  {
+                    "code": "METHOD_NOT_ALLOWED",
+                    "collection": "export",
+                    "message": "accessor is not in the worker allowlist"
+                  }
+                ],
+                "incomplete": true,
+                "next_cursor": null,
+                "requires_model_reconciliation": true,
+                "results": [
+                  {
+                    "label": "GUARD_T033 (Phase4 G3 acceptance fixture) isolation model",
+                    "path": {
+                      "segments": []
+                    },
+                    "tag": "mcp6",
+                    "type_id": null
+                  }
+                ],
+                "status": "INCOMPLETE",
+                "truncated": false,
+                "truncated_reason": null,
+                "visited": 1
+              },
+              "error": {
+                "code": "EXECUTION_STATE_UNKNOWN",
+                "message": "the operation left an unresolved engine state",
+                "safe_retry": false
+              },
+              "execution": {
+                "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+                "dirty": true,
+                "idempotency_key": "phase4-20260921T001454Z-g3_1-m1cphase4-find-141",
+                "job_id": "ac2829f4-7f1a-43f3-b2d2-6417425189ec",
+                "model_ownership": "mcp_owned",
+                "model_ref": {
+                  "generation": 1,
+                  "model_tag": "mcp6",
+                  "schema_version": 1,
+                  "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+                  "session_id": "session-9f95c2e814acd5f99589961a"
+                },
+                "operation_id": "c6882c22-b545-4284-a882-6a8bcb60b0c7",
+                "request_hash": "555009815a77464dceffbaf454cea072c1b5225a712613522878e187065c1188",
+                "request_id": "phase4-20260921T001454Z-g3_1-m1cphase4-find-141",
+                "revision": 2,
+                "server_ownership": "shared",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "success": false
+            },
+            "started_at": "2026-09-21 00:14:59",
+            "status": "UNKNOWN"
+          },
+          "operation_id": "c6882c22-b545-4284-a882-6a8bcb60b0c7",
+          "result": {
+            "data": {
+              "budget": {
+                "max_nodes": 2000,
+                "max_rpc": 5000,
+                "max_seconds": 20.0
+              },
+              "complete": false,
+              "count": 1,
+              "errors": [
+                {
+                  "code": "METHOD_NOT_ALLOWED",
+                  "collection": "table",
+                  "message": "accessor is not in the worker allowlist"
+                },
+                {
+                  "code": "METHOD_NOT_ALLOWED",
+                  "collection": "export",
+                  "message": "accessor is not in the worker allowlist"
+                }
+              ],
+              "incomplete": true,
+              "next_cursor": null,
+              "requires_model_reconciliation": true,
+              "results": [
+                {
+                  "label": "GUARD_T033 (Phase4 G3 acceptance fixture) isolation model",
+                  "path": {
+                    "segments": []
+                  },
+                  "tag": "mcp6",
+                  "type_id": null
+                }
+              ],
+              "status": "INCOMPLETE",
+              "truncated": false,
+              "truncated_reason": null,
+              "visited": 1
+            },
+            "error": {
+              "code": "EXECUTION_STATE_UNKNOWN",
+              "message": "the operation left an unresolved engine state",
+              "safe_retry": false
+            },
+            "execution": {
+              "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+              "dirty": true,
+              "idempotency_key": "phase4-20260921T001454Z-g3_1-m1cphase4-find-141",
+              "job_id": "ac2829f4-7f1a-43f3-b2d2-6417425189ec",
+              "model_ownership": "mcp_owned",
+              "model_ref": {
+                "generation": 1,
+                "model_tag": "mcp6",
+                "schema_version": 1,
+                "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "operation_id": "c6882c22-b545-4284-a882-6a8bcb60b0c7",
+              "request_hash": "555009815a77464dceffbaf454cea072c1b5225a712613522878e187065c1188",
+              "request_id": "phase4-20260921T001454Z-g3_1-m1cphase4-find-141",
+              "revision": 2,
+              "server_ownership": "shared",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "success": false
+          },
+          "started_at": "2026-09-21 00:14:59",
+          "status": "UNKNOWN"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"created_at\": \"2026-09-21 00:14:59\", \"effective_timeouts\": {\"execution_timeout_s\": null, \"no_progress_warning_s\": null, \"queue_timeout_s\": null, \"rpc_timeout_s\": 30.0}, \"finished_at\": null, \"job_id\": \"ac2829f4-7f1a-43f3-b2d2-6417425189ec\", \"metadata\": {\"arguments\": {\"arguments\": {\"expected_revision\": 2, \"limit\": 200, \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp6\", \"schema_version\": 1, \"server_instance_id\": \"55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"project_id\": \"comsol-mcp-phase4\", \"query\": {}, \"root\": {\"segments\": []}, \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"node.find\"}, \"callback_completion_unknown\": true, \"engine_started_at\": 1789949699.882524, \"execution\": {\"expected_revision\": 2, \"idempotency_key\": \"phase4-20260921T001454Z-g3_1-m1cphase4-find-141\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp6\", \"schema_version\": 1, \"server_instance_id\": \"55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"request_id\": \"phase4-20260921T001454Z-g3_1-m1cphase4-find-141\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"finished_observed_at\": 1789949699.8924348, \"operation\": \"operation_call\", \"queue_wait_s\": 1.3083044905215502e-05, \"reconciled_quiescent\": true, \"reconciliation\": [{\"request_id\": \"wrk-30a12634-80dd-4197-8ffe-2f65fcafbb20\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-940d2461-4c41-4d22-b83b-dd310ae0657d\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-b49e7728-9dc4-49be-b1c5-797f61517dd0\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}], \"replay_performed\": false}, \"operation\": {\"created_at\": \"2026-09-21 00:14:59\", \"effective_timeouts\": {\"execution_timeout_s\": null, \"no_progress_warning_s\": null, \"queue_timeout_s\": null, \"rpc_timeout_s\": 30.0}, \"finished_at\": null, \"idempotency_key\": \"phase4-20260921T001454Z-g3_1-m1cphase4-find-141\", \"metadata\": {\"arguments\": {\"arguments\": {\"expected_revision\": 2, \"limit\": 200, \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp6\", \"schema_version\": 1, \"server_instance_id\": \"55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"project_id\": \"comsol-mcp-phase4\", \"query\": {}, \"root\": {\"segments\": []}, \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"node.find\"}, \"execution\": {\"expected_revision\": 2, \"idempotency_key\": \"phase4-20260921T001454Z-g3_1-m1cphase4-find-141\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp6\", \"schema_version\": 1, \"server_instance_id\": \"55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"request_id\": \"phase4-20260921T001454Z-g3_1-m1cphase4-find-141\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation\": \"operation_call\"}, \"operation\": \"operation_call\", \"operation_id\": \"c6882c22-b545-4284-a882-6a8bcb60b0c7\", \"request_hash\": \"555009815a77464dceffbaf454cea072c1b5225a712613522878e187065c1188\", \"request_id\": \"phase4-20260921T001454Z-g3_1-m1cphase4-find-141\", \"result\": {\"data\": {\"budget\": {\"max_nodes\": 2000, \"max_rpc\": 5000, \"max_seconds\": 20.0}, \"complete\": false, \"count\": 1, \"errors\": [{\"code\": \"METHOD_NOT_ALLOWED\", \"collection\": \"table\", \"message\": \"accessor is not in the worker allowlist\"}, {\"code\": \"METHOD_NOT_ALLOWED\", \"collection\": \"export\", \"message\": \"accessor is not in the worker allowlist\"}], \"incomplete\": true, \"next_cursor\": null, \"requires_model_reconciliation\": true, \"results\": [{\"label\": \"GUARD_T033 (Phase4 G3 acceptance fixture) isolation model\", \"path\": {\"segments\": []}, \"tag\": \"mcp6\", \"type_id\": null}], \"status\": \"INCOMPLETE\", \"truncated\": false, \"truncated_reason\": null, \"visited\": 1}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"the operation left an unresolved engine state\", \"safe_retry\": false}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": true, \"idempotency_key\": \"phase4-20260921T001454Z-g3_1-m1cphase4-find-141\", \"job_id\": \"ac2829f4-7f1a-43f3-b2d2-6417425189ec\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp6\", \"schema_version\": 1, \"server_instance_id\": \"55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"c6882c22-b545-4284-a882-6a8bcb60b0c7\", \"request_hash\": \"555009815a77464dceffbaf454cea072c1b5225a712613522878e187065c1188\", \"request_id\": \"phase4-20260921T001454Z-g3_1-m1cphase4-find-141\", \"revision\": 2, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": false}, \"started_at\": \"2026-09-21 00:14:59\", \"status\": \"UNKNOWN\"}, \"operation_id\": \"c6882c22-b545-4284-a882-6a8bcb60b0c7\", \"result\": {\"data\": {\"budget\": {\"max_nodes\": 2000, \"max_rpc\": 5000, \"max_seconds\": 20.0}, \"complete\": false, \"count\": 1, \"errors\": [{\"code\": \"METHOD_NOT_ALLOWED\", \"collection\": \"table\", \"message\": \"accessor is not in the worker allowlist\"}, {\"code\": \"METHOD_NOT_ALLOWED\", \"collection\": \"export\", \"message\": \"accessor is not in the worker allowlist\"}], \"incomplete\": true, \"next_cursor\": null, \"requires_model_reconciliation\": true, \"results\": [{\"label\": \"GUARD_T033 (Phase4 G3 acceptance fixture) isolation model\", \"path\": {\"segments\": []}, \"tag\": \"mcp6\", \"type_id\": null}], \"status\": \"INCOMPLETE\", \"truncated\": false, \"truncated_reason\": null, \"visited\": 1}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"the operation left an unresolved engine state\", \"safe_retry\": false}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": true, \"idempotency_key\": \"phase4-20260921T001454Z-g3_1-m1cphase4-find-141\", \"job_id\": \"ac2829f4-7f1a-43f3-b2d2-6417425189ec\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp6\", \"schema_version\": 1, \"server_instance_id\": \"55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"c6882c22-b545-4284-a882-6a8bcb60b0c7\", \"request_hash\": \"555009815a77464dceffbaf454cea072c1b5225a712613522878e187065c1188\", \"request_id\": \"phase4-20260921T001454Z-g3_1-m1cphase4-find-141\", \"revision\": 2, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": false}, \"started_at\": \"2026-09-21 00:14:59\", \"status\": \"UNKNOWN\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "job_reconcile",
+      "sequence": 11,
+      "structuredContent": {
+        "data": {
+          "created_at": "2026-09-21 00:14:59",
+          "effective_timeouts": {
+            "execution_timeout_s": null,
+            "no_progress_warning_s": null,
+            "queue_timeout_s": null,
+            "rpc_timeout_s": 30.0
+          },
+          "finished_at": null,
+          "job_id": "ac2829f4-7f1a-43f3-b2d2-6417425189ec",
+          "metadata": {
+            "arguments": {
+              "arguments": {
+                "expected_revision": 2,
+                "limit": 200,
+                "model_ref": {
+                  "generation": 1,
+                  "model_tag": "mcp6",
+                  "schema_version": 1,
+                  "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+                  "session_id": "session-9f95c2e814acd5f99589961a"
+                },
+                "project_id": "comsol-mcp-phase4",
+                "query": {},
+                "root": {
+                  "segments": []
+                },
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "operation_id": "node.find"
+            },
+            "callback_completion_unknown": true,
+            "engine_started_at": 1789949699.882524,
+            "execution": {
+              "expected_revision": 2,
+              "idempotency_key": "phase4-20260921T001454Z-g3_1-m1cphase4-find-141",
+              "model_ref": {
+                "generation": 1,
+                "model_tag": "mcp6",
+                "schema_version": 1,
+                "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "request_id": "phase4-20260921T001454Z-g3_1-m1cphase4-find-141",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "finished_observed_at": 1789949699.8924348,
+            "operation": "operation_call",
+            "queue_wait_s": 1.3083044905215502e-05,
+            "reconciled_quiescent": true,
+            "reconciliation": [
+              {
+                "request_id": "wrk-30a12634-80dd-4197-8ffe-2f65fcafbb20",
+                "source": "durable_worker_observation",
+                "status": "SUCCEEDED"
+              },
+              {
+                "request_id": "wrk-940d2461-4c41-4d22-b83b-dd310ae0657d",
+                "source": "durable_worker_observation",
+                "status": "SUCCEEDED"
+              },
+              {
+                "request_id": "wrk-b49e7728-9dc4-49be-b1c5-797f61517dd0",
+                "source": "durable_worker_observation",
+                "status": "SUCCEEDED"
+              }
+            ],
+            "replay_performed": false
+          },
+          "operation": {
+            "created_at": "2026-09-21 00:14:59",
+            "effective_timeouts": {
+              "execution_timeout_s": null,
+              "no_progress_warning_s": null,
+              "queue_timeout_s": null,
+              "rpc_timeout_s": 30.0
+            },
+            "finished_at": null,
+            "idempotency_key": "phase4-20260921T001454Z-g3_1-m1cphase4-find-141",
+            "metadata": {
+              "arguments": {
+                "arguments": {
+                  "expected_revision": 2,
+                  "limit": 200,
+                  "model_ref": {
+                    "generation": 1,
+                    "model_tag": "mcp6",
+                    "schema_version": 1,
+                    "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+                    "session_id": "session-9f95c2e814acd5f99589961a"
+                  },
+                  "project_id": "comsol-mcp-phase4",
+                  "query": {},
+                  "root": {
+                    "segments": []
+                  },
+                  "session_id": "session-9f95c2e814acd5f99589961a"
+                },
+                "operation_id": "node.find"
+              },
+              "execution": {
+                "expected_revision": 2,
+                "idempotency_key": "phase4-20260921T001454Z-g3_1-m1cphase4-find-141",
+                "model_ref": {
+                  "generation": 1,
+                  "model_tag": "mcp6",
+                  "schema_version": 1,
+                  "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+                  "session_id": "session-9f95c2e814acd5f99589961a"
+                },
+                "request_id": "phase4-20260921T001454Z-g3_1-m1cphase4-find-141",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "operation": "operation_call"
+            },
+            "operation": "operation_call",
+            "operation_id": "c6882c22-b545-4284-a882-6a8bcb60b0c7",
+            "request_hash": "555009815a77464dceffbaf454cea072c1b5225a712613522878e187065c1188",
+            "request_id": "phase4-20260921T001454Z-g3_1-m1cphase4-find-141",
+            "result": {
+              "data": {
+                "budget": {
+                  "max_nodes": 2000,
+                  "max_rpc": 5000,
+                  "max_seconds": 20.0
+                },
+                "complete": false,
+                "count": 1,
+                "errors": [
+                  {
+                    "code": "METHOD_NOT_ALLOWED",
+                    "collection": "table",
+                    "message": "accessor is not in the worker allowlist"
+                  },
+                  {
+                    "code": "METHOD_NOT_ALLOWED",
+                    "collection": "export",
+                    "message": "accessor is not in the worker allowlist"
+                  }
+                ],
+                "incomplete": true,
+                "next_cursor": null,
+                "requires_model_reconciliation": true,
+                "results": [
+                  {
+                    "label": "GUARD_T033 (Phase4 G3 acceptance fixture) isolation model",
+                    "path": {
+                      "segments": []
+                    },
+                    "tag": "mcp6",
+                    "type_id": null
+                  }
+                ],
+                "status": "INCOMPLETE",
+                "truncated": false,
+                "truncated_reason": null,
+                "visited": 1
+              },
+              "error": {
+                "code": "EXECUTION_STATE_UNKNOWN",
+                "message": "the operation left an unresolved engine state",
+                "safe_retry": false
+              },
+              "execution": {
+                "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+                "dirty": true,
+                "idempotency_key": "phase4-20260921T001454Z-g3_1-m1cphase4-find-141",
+                "job_id": "ac2829f4-7f1a-43f3-b2d2-6417425189ec",
+                "model_ownership": "mcp_owned",
+                "model_ref": {
+                  "generation": 1,
+                  "model_tag": "mcp6",
+                  "schema_version": 1,
+                  "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+                  "session_id": "session-9f95c2e814acd5f99589961a"
+                },
+                "operation_id": "c6882c22-b545-4284-a882-6a8bcb60b0c7",
+                "request_hash": "555009815a77464dceffbaf454cea072c1b5225a712613522878e187065c1188",
+                "request_id": "phase4-20260921T001454Z-g3_1-m1cphase4-find-141",
+                "revision": 2,
+                "server_ownership": "shared",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "success": false
+            },
+            "started_at": "2026-09-21 00:14:59",
+            "status": "UNKNOWN"
+          },
+          "operation_id": "c6882c22-b545-4284-a882-6a8bcb60b0c7",
+          "result": {
+            "data": {
+              "budget": {
+                "max_nodes": 2000,
+                "max_rpc": 5000,
+                "max_seconds": 20.0
+              },
+              "complete": false,
+              "count": 1,
+              "errors": [
+                {
+                  "code": "METHOD_NOT_ALLOWED",
+                  "collection": "table",
+                  "message": "accessor is not in the worker allowlist"
+                },
+                {
+                  "code": "METHOD_NOT_ALLOWED",
+                  "collection": "export",
+                  "message": "accessor is not in the worker allowlist"
+                }
+              ],
+              "incomplete": true,
+              "next_cursor": null,
+              "requires_model_reconciliation": true,
+              "results": [
+                {
+                  "label": "GUARD_T033 (Phase4 G3 acceptance fixture) isolation model",
+                  "path": {
+                    "segments": []
+                  },
+                  "tag": "mcp6",
+                  "type_id": null
+                }
+              ],
+              "status": "INCOMPLETE",
+              "truncated": false,
+              "truncated_reason": null,
+              "visited": 1
+            },
+            "error": {
+              "code": "EXECUTION_STATE_UNKNOWN",
+              "message": "the operation left an unresolved engine state",
+              "safe_retry": false
+            },
+            "execution": {
+              "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+              "dirty": true,
+              "idempotency_key": "phase4-20260921T001454Z-g3_1-m1cphase4-find-141",
+              "job_id": "ac2829f4-7f1a-43f3-b2d2-6417425189ec",
+              "model_ownership": "mcp_owned",
+              "model_ref": {
+                "generation": 1,
+                "model_tag": "mcp6",
+                "schema_version": 1,
+                "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "operation_id": "c6882c22-b545-4284-a882-6a8bcb60b0c7",
+              "request_hash": "555009815a77464dceffbaf454cea072c1b5225a712613522878e187065c1188",
+              "request_id": "phase4-20260921T001454Z-g3_1-m1cphase4-find-141",
+              "revision": 2,
+              "server_ownership": "shared",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "success": false
+          },
+          "started_at": "2026-09-21 00:14:59",
+          "status": "UNKNOWN"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-143\", \"job_id\": \"2fab2664-b2a0-4481-ae05-2354b57f6625\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp6\", \"schema_version\": 1, \"server_instance_id\": \"55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"9c9db26f-14f4-4340-82b0-9cc8c292ba41\", \"request_hash\": \"56a23825a49805ec627881cc7dcad4e38e1fe90482bdd5f8613f92d7bbb5caf8\", \"request_id\": \"phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-143\", \"revision\": 3, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "model_inspect",
+      "sequence": 12,
+      "structuredContent": {
+        "data": {},
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-143",
+          "job_id": "2fab2664-b2a0-4481-ae05-2354b57f6625",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp6",
+            "schema_version": 1,
+            "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "9c9db26f-14f4-4340-82b0-9cc8c292ba41",
+          "request_hash": "56a23825a49805ec627881cc7dcad4e38e1fe90482bdd5f8613f92d7bbb5caf8",
+          "request_id": "phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-143",
+          "revision": 3,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"error\": {\"code\": \"REVISION_CONFLICT\", \"message\": \"expected_revision does not match managed revision\", \"safe_retry\": false}, \"execution\": {\"idempotency_key\": \"phase4-20260921T001454Z-g3_1-m1ct033-constant\", \"job_id\": \"0b1bcb27-d386-49a9-864b-e0487d1231cc\", \"operation_id\": \"89e4bf2d-1628-4fb3-b87d-046f233bcc23\", \"request_hash\": \"f4d8de7f43b5500102a44129a8d1a3473abfe013b490eb8f25e78954593c2ef7\", \"request_id\": \"phase4-20260921T001454Z-g3_1-m1ct033-constant\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "REVISION_CONFLICT",
+      "error_message": "expected_revision does not match managed revision",
+      "operation": "evaluate_expressions",
+      "sequence": 13,
+      "structuredContent": {
+        "data": {},
+        "error": {
+          "code": "REVISION_CONFLICT",
+          "message": "expected_revision does not match managed revision",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1ct033-constant",
+          "job_id": "0b1bcb27-d386-49a9-864b-e0487d1231cc",
+          "operation_id": "89e4bf2d-1628-4fb3-b87d-046f233bcc23",
+          "request_hash": "f4d8de7f43b5500102a44129a8d1a3473abfe013b490eb8f25e78954593c2ef7",
+          "request_id": "phase4-20260921T001454Z-g3_1-m1ct033-constant"
+        },
+        "success": false
+      },
+      "success": false
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {}, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-144\", \"job_id\": \"2b1d68f9-c9bf-4873-b9b3-4bba41044d9f\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp6\", \"schema_version\": 1, \"server_instance_id\": \"55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"67cb169b-b67d-4463-9909-697314baca2a\", \"request_hash\": \"56a23825a49805ec627881cc7dcad4e38e1fe90482bdd5f8613f92d7bbb5caf8\", \"request_id\": \"phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-144\", \"revision\": 3, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "model_inspect",
+      "sequence": 14,
+      "structuredContent": {
+        "data": {},
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-144",
+          "job_id": "2b1d68f9-c9bf-4873-b9b3-4bba41044d9f",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp6",
+            "schema_version": 1,
+            "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "67cb169b-b67d-4463-9909-697314baca2a",
+          "request_hash": "56a23825a49805ec627881cc7dcad4e38e1fe90482bdd5f8613f92d7bbb5caf8",
+          "request_id": "phase4-20260921T001454Z-g3_1-m1cphase4-reconcile-model-comsol-mcp-phase4-144",
+          "revision": 3,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"cleanup\": {\"cleanup_failed\": false, \"created\": true, \"created_count\": 1, \"nodes\": 1, \"note\": \"every tag is a random uuid4 hex owned by this request; cleanup removes that tag only and the removal is verified against the engine's own numerical().tags() readback\", \"owner_operations\": [\"evaluate_expressions\"], \"policy\": \"ephemeral_mutation\", \"removed\": true, \"removed_count\": 1, \"unremoved_tags\": [], \"verified_removed\": true, \"verified_removed_count\": 1}, \"count\": 1, \"datetime\": \"2026-09-21 08:14:59\", \"ephemeral_mutation\": true, \"evaluation_policy\": \"ephemeral_mutation\", \"label\": \"GUARD_T033 (Phase4 G3 acceptance fixture) isolation model\", \"log_path\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs/server.log\", \"max_result_size_ignored\": null, \"operations_path\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs/operations.jsonl\", \"results\": [{\"expression\": \"3*3\", \"last_value\": [], \"name\": \"phase4_constant\", \"ok\": true, \"value\": []}], \"server\": {\"attached_to_existing_server\": true, \"comsol_root\": \"/Applications/COMSOL64/Multiphysics\", \"current_model_label\": \"GUARD_T033 (Phase4 G3 acceptance fixture) isolation model\", \"current_model_origin\": \"bound-request\", \"current_model_path\": \"\", \"datetime\": \"2026-09-21 08:14:59\", \"desktop_client_role\": \"visual-client\", \"desktop_should_connect\": {\"host\": \"127.0.0.1\", \"port\": 56389}, \"last_command\": \"evaluate_expressions\", \"last_error\": \"\", \"logs_dir\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs\", \"mcp_home\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home\", \"outputs_dir\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/outputs\", \"recommended_desktop_flow\": \"visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.\", \"server_endpoint\": \"127.0.0.1:56389\", \"server_host\": \"127.0.0.1\", \"server_port\": 56389, \"server_running\": false, \"server_started_by_mcp\": false, \"status\": \"ready\", \"timestamp\": 1789949699.943488, \"version\": \"0.1.9\", \"workflow\": {\"current_main_model_path\": \"\", \"guard_level\": \"strict\", \"main_model_label\": \"\", \"main_model_path\": \"\", \"main_model_tag\": \"\", \"mcp_client_lifecycle\": \"persistent-required\", \"mode\": \"manual\", \"model_dimension\": 0, \"notes\": \"\", \"one_shot_client_allowed\": false, \"snapshot_dir\": \"\", \"snapshot_name_template\": \"{prefix}_{label}_{timestamp}.mph\", \"snapshot_prefix\": \"\", \"snapshot_save_mode\": \"copy\", \"updated_at\": \"2026-09-21 08:14:54\", \"visible_main_locked\": false, \"workflow_stage\": \"awaiting_manual_server\"}}, \"temporary_nodes\": [{\"created\": true, \"feature_type\": \"EvalGlobal\", \"owner\": {\"operation\": \"evaluate_expressions\", \"policy\": \"ephemeral_mutation\", \"request\": {\"expressions\": 1, \"tool\": \"evaluate_expressions\"}, \"scope\": \"mcp_owned_result_numerical_node\", \"tag_allocated_from\": \"random uuid4 hex, never reused from the model\"}, \"removed\": true, \"tag\": \"mcp_eval_33c0145cbb5e45008366244570611fe4\", \"tags_after\": [], \"tags_before\": [], \"verified_removed\": true}], \"timestamp\": 1789949699.9434738, \"tool\": \"evaluate_expressions\"}, \"error\": null, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"phase4-20260921T001454Z-g3_1-m1ct033-constant-revision-retry\", \"job_id\": \"352ea2e2-50bc-4af6-8316-6faddcef0bbc\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp6\", \"schema_version\": 1, \"server_instance_id\": \"55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"a68a9f61-ddff-4135-848b-ef8478673787\", \"request_hash\": \"e47ded9f0f33649d6913e0144913359d4b3c7f66b7085ba2ad72b8d96c6cafda\", \"request_id\": \"phase4-20260921T001454Z-g3_1-m1ct033-constant-revision-retry\", \"revision\": 4, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": true}",
+          "type": "text"
+        }
+      ],
+      "error_code": null,
+      "error_message": "",
+      "operation": "evaluate_expressions",
+      "sequence": 15,
+      "structuredContent": {
+        "data": {
+          "cleanup": {
+            "cleanup_failed": false,
+            "created": true,
+            "created_count": 1,
+            "nodes": 1,
+            "note": "every tag is a random uuid4 hex owned by this request; cleanup removes that tag only and the removal is verified against the engine's own numerical().tags() readback",
+            "owner_operations": [
+              "evaluate_expressions"
+            ],
+            "policy": "ephemeral_mutation",
+            "removed": true,
+            "removed_count": 1,
+            "unremoved_tags": [],
+            "verified_removed": true,
+            "verified_removed_count": 1
+          },
+          "count": 1,
+          "datetime": "2026-09-21 08:14:59",
+          "ephemeral_mutation": true,
+          "evaluation_policy": "ephemeral_mutation",
+          "label": "GUARD_T033 (Phase4 G3 acceptance fixture) isolation model",
+          "log_path": "$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs/server.log",
+          "max_result_size_ignored": null,
+          "operations_path": "$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs/operations.jsonl",
+          "results": [
+            {
+              "expression": "3*3",
+              "last_value": [],
+              "name": "phase4_constant",
+              "ok": true,
+              "value": []
+            }
+          ],
+          "server": {
+            "attached_to_existing_server": true,
+            "comsol_root": "/Applications/COMSOL64/Multiphysics",
+            "current_model_label": "GUARD_T033 (Phase4 G3 acceptance fixture) isolation model",
+            "current_model_origin": "bound-request",
+            "current_model_path": "",
+            "datetime": "2026-09-21 08:14:59",
+            "desktop_client_role": "visual-client",
+            "desktop_should_connect": {
+              "host": "127.0.0.1",
+              "port": 56389
+            },
+            "last_command": "evaluate_expressions",
+            "last_error": "",
+            "logs_dir": "$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs",
+            "mcp_home": "$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home",
+            "outputs_dir": "$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/outputs",
+            "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+            "server_endpoint": "127.0.0.1:56389",
+            "server_host": "127.0.0.1",
+            "server_port": 56389,
+            "server_running": false,
+            "server_started_by_mcp": false,
+            "status": "ready",
+            "timestamp": 1789949699.943488,
+            "version": "0.1.9",
+            "workflow": {
+              "current_main_model_path": "",
+              "guard_level": "strict",
+              "main_model_label": "",
+              "main_model_path": "",
+              "main_model_tag": "",
+              "mcp_client_lifecycle": "persistent-required",
+              "mode": "manual",
+              "model_dimension": 0,
+              "notes": "",
+              "one_shot_client_allowed": false,
+              "snapshot_dir": "",
+              "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+              "snapshot_prefix": "",
+              "snapshot_save_mode": "copy",
+              "updated_at": "2026-09-21 08:14:54",
+              "visible_main_locked": false,
+              "workflow_stage": "awaiting_manual_server"
+            }
+          },
+          "temporary_nodes": [
+            {
+              "created": true,
+              "feature_type": "EvalGlobal",
+              "owner": {
+                "operation": "evaluate_expressions",
+                "policy": "ephemeral_mutation",
+                "request": {
+                  "expressions": 1,
+                  "tool": "evaluate_expressions"
+                },
+                "scope": "mcp_owned_result_numerical_node",
+                "tag_allocated_from": "random uuid4 hex, never reused from the model"
+              },
+              "removed": true,
+              "tag": "mcp_eval_33c0145cbb5e45008366244570611fe4",
+              "tags_after": [],
+              "tags_before": [],
+              "verified_removed": true
+            }
+          ],
+          "timestamp": 1789949699.9434738,
+          "tool": "evaluate_expressions"
+        },
+        "error": null,
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1ct033-constant-revision-retry",
+          "job_id": "352ea2e2-50bc-4af6-8316-6faddcef0bbc",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp6",
+            "schema_version": 1,
+            "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "a68a9f61-ddff-4135-848b-ef8478673787",
+          "request_hash": "e47ded9f0f33649d6913e0144913359d4b3c7f66b7085ba2ad72b8d96c6cafda",
+          "request_id": "phase4-20260921T001454Z-g3_1-m1ct033-constant-revision-retry",
+          "revision": 4,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": true
+      },
+      "success": true
+    },
+    {
+      "content": [
+        {
+          "annotations": null,
+          "meta": null,
+          "text": "{\"data\": {\"cleanup\": {\"cleanup_failed\": false, \"created\": true, \"created_count\": 2, \"nodes\": 2, \"note\": \"every tag is a random uuid4 hex owned by this request; cleanup removes that tag only and the removal is verified against the engine's own numerical().tags() readback\", \"owner_operations\": [\"evaluate_expressions\"], \"policy\": \"ephemeral_mutation\", \"removed\": true, \"removed_count\": 2, \"unremoved_tags\": [], \"verified_removed\": true, \"verified_removed_count\": 2}, \"count\": 1, \"datetime\": \"2026-09-21 08:14:59\", \"ephemeral_mutation\": true, \"evaluation_policy\": \"ephemeral_mutation\", \"execution_state_unknown\": false, \"failed_item_may_have_changed\": false, \"label\": \"GUARD_T033 (Phase4 G3 acceptance fixture) isolation model\", \"log_path\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs/server.log\", \"max_result_size_ignored\": null, \"operations_path\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs/operations.jsonl\", \"partial_change\": true, \"requires_model_reconciliation\": true, \"results\": [{\"error\": \"EvalGlobal failed: {\\\"completed_at_ms\\\": \\\"1789949699964\\\", \\\"failure\\\": {\\\"code\\\": \\\"ENGINE_CALL_FAILED\\\", \\\"execution_state_unknown\\\": true, \\\"message\\\": \\\"FlException: Syntax_error_in_expression\\\", \\\"ok\\\": false}, \\\"ok\\\": false, \\\"queued_at_ms\\\": \\\"1789949699962\\\", \\\"request_id\\\": \\\"wrk-87fc0924-d948-4c22-84d3-2fe68ad7ffc9\\\", \\\"started_at_ms\\\": \\\"1789949699962\\\", \\\"status\\\": \\\"FAILED\\\", \\\"type\\\": \\\"call\\\"}; Eval/getData fallback failed: {\\\"completed_at_ms\\\": \\\"1789949699972\\\", \\\"failure\\\": {\\\"code\\\": \\\"ENGINE_CALL_FAILED\\\", \\\"execution_state_unknown\\\": true, \\\"message\\\": \\\"FlException: Syntax_error_in_expression\\\", \\\"ok\\\": false}, \\\"ok\\\": false, \\\"queued_at_ms\\\": \\\"1789949699970\\\", \\\"request_id\\\": \\\"wrk-38c43047-8496-40e1-bdba-b702913e580f\\\", \\\"started_at_ms\\\": \\\"1789949699970\\\", \\\"status\\\": \\\"FAILED\\\", \\\"type\\\": \\\"call\\\"}\", \"expression\": \"sin(\", \"name\": \"phase4_illegal\", \"ok\": false}], \"safe_retry\": true, \"server\": {\"attached_to_existing_server\": true, \"comsol_root\": \"/Applications/COMSOL64/Multiphysics\", \"current_model_label\": \"GUARD_T033 (Phase4 G3 acceptance fixture) isolation model\", \"current_model_origin\": \"bound-request\", \"current_model_path\": \"\", \"datetime\": \"2026-09-21 08:14:59\", \"desktop_client_role\": \"visual-client\", \"desktop_should_connect\": {\"host\": \"127.0.0.1\", \"port\": 56389}, \"last_command\": \"evaluate_expressions\", \"last_error\": \"One or more expressions could not be evaluated.\", \"logs_dir\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs\", \"mcp_home\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home\", \"outputs_dir\": \"$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/outputs\", \"recommended_desktop_flow\": \"visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.\", \"server_endpoint\": \"127.0.0.1:56389\", \"server_host\": \"127.0.0.1\", \"server_port\": 56389, \"server_running\": false, \"server_started_by_mcp\": false, \"status\": \"ready\", \"timestamp\": 1789949699.99611, \"version\": \"0.1.9\", \"workflow\": {\"current_main_model_path\": \"\", \"guard_level\": \"strict\", \"main_model_label\": \"\", \"main_model_path\": \"\", \"main_model_tag\": \"\", \"mcp_client_lifecycle\": \"persistent-required\", \"mode\": \"manual\", \"model_dimension\": 0, \"notes\": \"\", \"one_shot_client_allowed\": false, \"snapshot_dir\": \"\", \"snapshot_name_template\": \"{prefix}_{label}_{timestamp}.mph\", \"snapshot_prefix\": \"\", \"snapshot_save_mode\": \"copy\", \"updated_at\": \"2026-09-21 08:14:54\", \"visible_main_locked\": false, \"workflow_stage\": \"awaiting_manual_server\"}}, \"status\": \"partial\", \"temporary_nodes\": [{\"created\": true, \"feature_type\": \"EvalGlobal\", \"owner\": {\"operation\": \"evaluate_expressions\", \"policy\": \"ephemeral_mutation\", \"request\": {\"expressions\": 1, \"tool\": \"evaluate_expressions\"}, \"scope\": \"mcp_owned_result_numerical_node\", \"tag_allocated_from\": \"random uuid4 hex, never reused from the model\"}, \"removed\": true, \"tag\": \"mcp_eval_330824f7f4b443308e33062e6d479aab\", \"tags_after\": [], \"tags_before\": [], \"verified_removed\": true}, {\"created\": true, \"feature_type\": \"Eval\", \"owner\": {\"operation\": \"evaluate_expressions\", \"policy\": \"ephemeral_mutation\", \"request\": {\"expressions\": 1, \"tool\": \"evaluate_expressions\"}, \"scope\": \"mcp_owned_result_numerical_node\", \"tag_allocated_from\": \"random uuid4 hex, never reused from the model\"}, \"removed\": true, \"tag\": \"mcp_eval_8f8f3b24b57e46348ad62b4f180f2b0c\", \"tags_after\": [], \"tags_before\": [], \"verified_removed\": true}], \"timestamp\": 1789949699.996095, \"tool\": \"evaluate_expressions\", \"verification_status\": \"NOT_APPLICABLE\", \"verified_outcome\": \"partial\"}, \"error\": \"One or more expressions could not be evaluated.\", \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": true, \"idempotency_key\": \"phase4-20260921T001454Z-g3_1-m1ct033-illegal_expression\", \"job_id\": \"8cc414a2-2a3f-4b75-bdb5-6f60dd1831e5\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp6\", \"schema_version\": 1, \"server_instance_id\": \"55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"operation_id\": \"c7ac471e-aa06-4fcf-abb0-f18868217d0e\", \"request_hash\": \"ae59ff9d5b2762d00987984c118aa8799dc62c69378d32e73706d49ccd3e1c94\", \"request_id\": \"phase4-20260921T001454Z-g3_1-m1ct033-illegal_expression\", \"revision\": 5, \"server_ownership\": \"shared\", \"session_id\": \"session-9f95c2e814acd5f99589961a\"}, \"success\": false}",
+          "type": "text"
+        }
+      ],
+      "error_code": "One or more expressions could not be evaluated.",
+      "error_message": "One or more expressions could not be evaluated.",
+      "operation": "evaluate_expressions",
+      "sequence": 16,
+      "structuredContent": {
+        "data": {
+          "cleanup": {
+            "cleanup_failed": false,
+            "created": true,
+            "created_count": 2,
+            "nodes": 2,
+            "note": "every tag is a random uuid4 hex owned by this request; cleanup removes that tag only and the removal is verified against the engine's own numerical().tags() readback",
+            "owner_operations": [
+              "evaluate_expressions"
+            ],
+            "policy": "ephemeral_mutation",
+            "removed": true,
+            "removed_count": 2,
+            "unremoved_tags": [],
+            "verified_removed": true,
+            "verified_removed_count": 2
+          },
+          "count": 1,
+          "datetime": "2026-09-21 08:14:59",
+          "ephemeral_mutation": true,
+          "evaluation_policy": "ephemeral_mutation",
+          "execution_state_unknown": false,
+          "failed_item_may_have_changed": false,
+          "label": "GUARD_T033 (Phase4 G3 acceptance fixture) isolation model",
+          "log_path": "$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs/server.log",
+          "max_result_size_ignored": null,
+          "operations_path": "$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs/operations.jsonl",
+          "partial_change": true,
+          "requires_model_reconciliation": true,
+          "results": [
+            {
+              "error": "EvalGlobal failed: {\"completed_at_ms\": \"1789949699964\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: Syntax_error_in_expression\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1789949699962\", \"request_id\": \"wrk-87fc0924-d948-4c22-84d3-2fe68ad7ffc9\", \"started_at_ms\": \"1789949699962\", \"status\": \"FAILED\", \"type\": \"call\"}; Eval/getData fallback failed: {\"completed_at_ms\": \"1789949699972\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: Syntax_error_in_expression\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1789949699970\", \"request_id\": \"wrk-38c43047-8496-40e1-bdba-b702913e580f\", \"started_at_ms\": \"1789949699970\", \"status\": \"FAILED\", \"type\": \"call\"}",
+              "expression": "sin(",
+              "name": "phase4_illegal",
+              "ok": false
+            }
+          ],
+          "safe_retry": true,
+          "server": {
+            "attached_to_existing_server": true,
+            "comsol_root": "/Applications/COMSOL64/Multiphysics",
+            "current_model_label": "GUARD_T033 (Phase4 G3 acceptance fixture) isolation model",
+            "current_model_origin": "bound-request",
+            "current_model_path": "",
+            "datetime": "2026-09-21 08:14:59",
+            "desktop_client_role": "visual-client",
+            "desktop_should_connect": {
+              "host": "127.0.0.1",
+              "port": 56389
+            },
+            "last_command": "evaluate_expressions",
+            "last_error": "One or more expressions could not be evaluated.",
+            "logs_dir": "$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/logs",
+            "mcp_home": "$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home",
+            "outputs_dir": "$REPO/PRIVATE_REDACTED/g3_1-live-m1c/mcp-home/outputs",
+            "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+            "server_endpoint": "127.0.0.1:56389",
+            "server_host": "127.0.0.1",
+            "server_port": 56389,
+            "server_running": false,
+            "server_started_by_mcp": false,
+            "status": "ready",
+            "timestamp": 1789949699.99611,
+            "version": "0.1.9",
+            "workflow": {
+              "current_main_model_path": "",
+              "guard_level": "strict",
+              "main_model_label": "",
+              "main_model_path": "",
+              "main_model_tag": "",
+              "mcp_client_lifecycle": "persistent-required",
+              "mode": "manual",
+              "model_dimension": 0,
+              "notes": "",
+              "one_shot_client_allowed": false,
+              "snapshot_dir": "",
+              "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+              "snapshot_prefix": "",
+              "snapshot_save_mode": "copy",
+              "updated_at": "2026-09-21 08:14:54",
+              "visible_main_locked": false,
+              "workflow_stage": "awaiting_manual_server"
+            }
+          },
+          "status": "partial",
+          "temporary_nodes": [
+            {
+              "created": true,
+              "feature_type": "EvalGlobal",
+              "owner": {
+                "operation": "evaluate_expressions",
+                "policy": "ephemeral_mutation",
+                "request": {
+                  "expressions": 1,
+                  "tool": "evaluate_expressions"
+                },
+                "scope": "mcp_owned_result_numerical_node",
+                "tag_allocated_from": "random uuid4 hex, never reused from the model"
+              },
+              "removed": true,
+              "tag": "mcp_eval_330824f7f4b443308e33062e6d479aab",
+              "tags_after": [],
+              "tags_before": [],
+              "verified_removed": true
+            },
+            {
+              "created": true,
+              "feature_type": "Eval",
+              "owner": {
+                "operation": "evaluate_expressions",
+                "policy": "ephemeral_mutation",
+                "request": {
+                  "expressions": 1,
+                  "tool": "evaluate_expressions"
+                },
+                "scope": "mcp_owned_result_numerical_node",
+                "tag_allocated_from": "random uuid4 hex, never reused from the model"
+              },
+              "removed": true,
+              "tag": "mcp_eval_8f8f3b24b57e46348ad62b4f180f2b0c",
+              "tags_after": [],
+              "tags_before": [],
+              "verified_removed": true
+            }
+          ],
+          "timestamp": 1789949699.996095,
+          "tool": "evaluate_expressions",
+          "verification_status": "NOT_APPLICABLE",
+          "verified_outcome": "partial"
+        },
+        "error": "One or more expressions could not be evaluated.",
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": true,
+          "idempotency_key": "phase4-20260921T001454Z-g3_1-m1ct033-illegal_expression",
+          "job_id": "8cc414a2-2a3f-4b75-bdb5-6f60dd1831e5",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp6",
+            "schema_version": 1,
+            "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "operation_id": "c7ac471e-aa06-4fcf-abb0-f18868217d0e",
+          "request_hash": "ae59ff9d5b2762d00987984c118aa8799dc62c69378d32e73706d49ccd3e1c94",
+          "request_id": "phase4-20260921T001454Z-g3_1-m1ct033-illegal_expression",
+          "revision": 5,
+          "server_ownership": "shared",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "success": false
+      },
+      "success": false
+    }
+  ]
+}

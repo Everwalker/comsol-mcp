@@ -1,0 +1,85 @@
+{
+  "case_id": "REOPEN_CHECK",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "reopen-server-connect",
+          "request_id": "connect"
+        },
+        "host": "127.0.0.1",
+        "port": 56389
+      },
+      "elapsed_s": 0.2564764169510454,
+      "operation": "server_connect",
+      "outer_isError": true,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-describe-model-load-1",
+          "request_id": "phase4-describe-model-load-1"
+        },
+        "operation_id": "model.load"
+      },
+      "elapsed_s": 0.008396207995247096,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "artifact_id": "phase4-reopen-artifact",
+        "execution": {
+          "idempotency_key": "reopen-load",
+          "request_id": "model.load"
+        },
+        "path": "evidence/phase4_1/runs/20260921T074204Z-g3_1-m2b-chainB/chainB_result.mph"
+      },
+      "elapsed_s": 0.002675957977771759,
+      "operation": "model_load",
+      "outer_isError": true,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "reconcile-8e266126-7556-496f-9400-f1d824a3284a",
+          "request_id": "job_reconcile"
+        },
+        "job_id": "8e266126-7556-496f-9400-f1d824a3284a"
+      },
+      "elapsed_s": 0.0016115829930640757,
+      "operation": "job_reconcile",
+      "outer_isError": true,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "job_status-8e266126-7556-496f-9400-f1d824a3284a",
+          "request_id": "job_status"
+        },
+        "job_id": "8e266126-7556-496f-9400-f1d824a3284a"
+      },
+      "elapsed_s": 0.0015730000450275838,
+      "operation": "job_status",
+      "outer_isError": false,
+      "sequence": 5
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "job_result-8e266126-7556-496f-9400-f1d824a3284a",
+          "request_id": "job_result"
+        },
+        "job_id": "8e266126-7556-496f-9400-f1d824a3284a"
+      },
+      "elapsed_s": 0.0015846670139580965,
+      "operation": "job_result",
+      "outer_isError": true,
+      "sequence": 6
+    }
+  ]
+}

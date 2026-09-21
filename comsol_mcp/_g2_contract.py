@@ -12,7 +12,7 @@ from dataclasses import dataclass
 import math
 from typing import Any, Mapping, Sequence
 
-from ._execution_contract import ExecutionContractError
+from ._execution_contract import ExecutionContractError, PreWriteRefusal
 
 
 KIND_NAMES = frozenset({
@@ -91,7 +91,15 @@ ACCESSOR_METHODS = frozenset({
 
 
 def _error(code: str, message: str) -> ExecutionContractError:
-    return ExecutionContractError(code, message)
+    """A wire/typed-value contract violation.
+
+    Every raise site behind this helper validates the *request* (or an engine
+    read used to validate it) before the operation performs its first mutation,
+    so it is a pre-write refusal.  ``PreWriteRefusal`` keeps the published code
+    and message while telling the write-ticket path that no engine mutation can
+    have happened.
+    """
+    return PreWriteRefusal(code, message)
 
 
 def _is_sequence(value: Any) -> bool:
@@ -209,10 +217,18 @@ def validate_typed_value(value: Mapping[str, Any], *, expected: Mapping[str, Any
     if expected:
         expected_kind = expected.get("kind") or expected.get("value_type")
         if expected_kind and expected_kind != kind and not (expected_kind == "string" and kind == "expression"):
-            if kind == "expression" and expected_kind in {"float64", "int32", "int64", "boolean", "complex128"}:
+            if expected_kind == "float64" and kind in {"int32", "int64"}:
+                def _widen_floats(v: Any) -> Any:
+                    return [_widen_floats(x) for x in v] if isinstance(v, list) else (float(v) if v is not None else None)
+                kind = "float64"
+                data = _widen_floats(data)
+                result["kind"] = "float64"
+                result["data"] = data
+            elif kind == "expression" and expected_kind in {"float64", "int32", "int64", "boolean", "complex128"}:
                 raise _error("PROPERTY_TYPE_MISMATCH",
                              f"property expects {expected_kind}; an expression has no verified {expected_kind} readback view, so the write is rejected before it is dispatched")
-            raise _error("PROPERTY_TYPE_MISMATCH", f"property expects {expected_kind}, received {kind}")
+            else:
+                raise _error("PROPERTY_TYPE_MISMATCH", f"property expects {expected_kind}, received {kind}")
         expected_shape = expected.get("shape")
         if expected_shape is not None and tuple(expected_shape) != shape:
             raise _error("PROPERTY_TYPE_MISMATCH", f"property expects shape {expected_shape}, received {list(shape)}")
@@ -226,13 +242,22 @@ def validate_typed_value(value: Mapping[str, Any], *, expected: Mapping[str, Any
                 raise _error("PROPERTY_TYPE_MISMATCH", "typed value java_signature does not match property metadata")
         allowed_values = expected.get("allowed_values")
         if allowed_values is not None:
+            def _matches_allowed(v: Any, a: Any) -> bool:
+                if isinstance(v, bool) or isinstance(a, bool):
+                    return type(v) is type(a) and v == a
+                if v == a:
+                    return True
+                if isinstance(v, (int, float)) and isinstance(a, (int, float)):
+                    return v == a
+                if isinstance(v, (int, float)) and isinstance(a, str):
+                    try:
+                        return float(a) == float(v)
+                    except (TypeError, ValueError):
+                        return False
+                return False
+
             for item in _flatten(data):
-                if any(
-                    (type(item) is type(allowed) and item == allowed)
-                    if isinstance(item, bool) or isinstance(allowed, bool)
-                    else item == allowed
-                    for allowed in allowed_values
-                ):
+                if any(_matches_allowed(item, allowed) for allowed in allowed_values):
                     continue
                 # COMSOL's PropFeature metadata reports Boolean enumerations
                 # as the strings ``on``/``off`` even though its authoritative
@@ -314,20 +339,64 @@ class NodePath:
 
 def resolve_node_path(model: Any, path: Mapping[str, Any] | NodePath) -> Any:
     """Resolve a NodePath through RemoteJava's allow-listed call facade."""
+    return _resolve_node_path_with_tags(model, path)[0]
+
+
+def _resolve_node_path_with_tags(model: Any, path: Mapping[str, Any] | NodePath) -> tuple[Any, dict[str, Any]]:
+    """Resolve a NodePath and return the canonical path that was actually used."""
     parsed = path if isinstance(path, NodePath) else NodePath.from_wire(path)
     current = model
+    used: list[dict[str, Any]] = []
     for segment in parsed.segments:
-        try:
-            method = getattr(current, segment.accessor or segment.collection or "")
-            current = method() if segment.accessor is not None else method(segment.tag)
-        except ExecutionContractError:
-            raise
-        except Exception as exc:
-            label = segment.accessor or f"{segment.collection}:{segment.tag}"
-            raise _error("NODE_NOT_FOUND", f"could not resolve node path segment {label}") from exc
+        if segment.accessor is not None:
+            try:
+                current = getattr(current, segment.accessor)()
+            except ExecutionContractError:
+                raise
+            except Exception as exc:
+                raise _error("NODE_NOT_FOUND", f"could not resolve node path accessor {segment.accessor}") from exc
+            used.append({"accessor": segment.accessor})
+        else:
+            collection, tag = str(segment.collection), str(segment.tag)
+            try:
+                method = getattr(current, collection)
+            except Exception as exc:
+                raise _error("NODE_NOT_FOUND", f"the current node has no {collection!r} collection") from exc
+            try:
+                current = method(tag)
+            except ExecutionContractError:
+                raise
+            except Exception as exc:
+                # A tag that the bound model does not carry is always refused;
+                # the refusal names the members the engine actually reports so
+                # the caller can address the real tree instead of guessing.
+                members = _collection_tags(current, collection)
+                raise _error(
+                    "NODE_NOT_FOUND",
+                    f"could not resolve node path segment {collection}:{tag}"
+                    + (f"; the engine reports {collection}={members} for this node" if members else ""),
+                ) from exc
+            used.append({"collection": collection, "tag": tag})
         if current is None:
             raise _error("NODE_NOT_FOUND", "node path resolved to null")
-    return current
+    return current, {"segments": used if parsed.segments else []}
+
+
+def _collection_tags(node: Any, collection: str) -> list[str]:
+    """Read the member tags the engine reports for ``node.<collection>()``."""
+    try:
+        container = getattr(node, collection)()
+    except Exception:
+        return []
+    if container is None:
+        return []
+    try:
+        raw = container.tags()
+    except Exception:
+        return []
+    if not isinstance(raw, (list, tuple)) or not all(isinstance(item, str) for item in raw):
+        return []
+    return [str(item) for item in raw]
 
 
 def typed_value_from_engine(value: Any, *, kind: str | None = None, unit: str | None = None) -> dict[str, Any]:

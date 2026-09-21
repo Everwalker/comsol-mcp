@@ -211,8 +211,11 @@ def test_expression_row_failure_is_outer_business_failure_with_preserved_rows(mo
         _tools_params.evaluate_expressions('[{"name":"good","expression":"u"},{"name":"bad","expression":"missing_symbol"}]')
     data = raised.value.data
     assert data["status"] == "partial"
+    # C04 extends the evaluated row with the shape of the published value; the dataset/solution/route
+    # fields are published by the one evaluation path, which this test replaces with a double, so
+    # exactly the value-derived field is added here.
     assert data["results"] == [
-        {"name": "good", "expression": "u", "value": [[2.0]], "last_value": 2.0, "ok": True},
+        {"name": "good", "expression": "u", "value": [[2.0]], "last_value": 2.0, "shape": [1, 1], "ok": True},
         {"name": "bad", "expression": "missing_symbol", "ok": False, "error": "Undefined variable missing_symbol"},
     ]
     assert data["safe_retry"] is True

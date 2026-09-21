@@ -1,0 +1,95 @@
+{
+  "case_id": "W13_T015_units",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver5bphase4-describe-physics-create",
+          "request_id": "phase4-driver5bphase4-describe-physics-create"
+        },
+        "operation_id": "physics.create"
+      },
+      "elapsed_s": 0.002690083987545222,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver5bphase4-describe-physics-feature_create",
+          "request_id": "phase4-driver5bphase4-describe-physics-feature_create"
+        },
+        "operation_id": "physics.feature_create"
+      },
+      "elapsed_s": 0.0019364160252735019,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver5bphase4-describe-physics-feature_update",
+          "request_id": "phase4-driver5bphase4-describe-physics-feature_update"
+        },
+        "operation_id": "physics.feature_update"
+      },
+      "elapsed_s": 0.0025122910155914724,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver5bphase4-describe-physics-validate",
+          "request_id": "phase4-driver5bphase4-describe-physics-validate"
+        },
+        "operation_id": "physics.validate"
+      },
+      "elapsed_s": 0.0025093749864026904,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "component": "comp1",
+          "expected_revision": 0,
+          "geometry": "geom1",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "ht",
+          "type_id": "HeatTransfer"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driver5bsurface_source_W_per_m2",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bsurface_source_W_per_m2",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "physics.create"
+      },
+      "elapsed_s": 0.008072958036791533,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 5
+    }
+  ]
+}

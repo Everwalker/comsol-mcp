@@ -1,0 +1,1406 @@
+{
+  "assertion_count": 8,
+  "case": {
+    "acceptance": [
+      "G3 §7 W13.T015"
+    ],
+    "assertions": {
+      "engine_reconciliations": [
+        {
+          "at": "2026-09-21T00:14:56.346994Z",
+          "envelope_job_id": "2d981494-9492-43dc-aa57-590a8c89cd8a",
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": false,
+          "jobs": [
+            {
+              "at": "2026-09-21T00:14:56.351941Z",
+              "error_code": null,
+              "job_id": "2d981494-9492-43dc-aa57-590a8c89cd8a",
+              "reconciled_quiescent": true,
+              "reconciliation": [
+                {
+                  "request_id": "wrk-32fdf94a-a4c2-4427-a27d-cde7a7e5e40d",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-49808fd3-ba6c-4849-9090-9be1f14d501c",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-9b169635-c424-4a8e-bef7-30704318c037",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-13d51366-7eb4-4385-81ad-32dc389657d5",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-6446f638-4910-44da-b1eb-da3282eae31d",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-09fa528d-1785-4ac1-8eb4-16410dc4cbeb",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "message": "definition.component_manage failed with TAG_CONFLICT (component 'comp1' already exists); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+          "released": true,
+          "retry": "not performed: a first-hand UNKNOWN result is this call's evidence",
+          "targets": [
+            "2d981494-9492-43dc-aa57-590a8c89cd8a"
+          ],
+          "trigger": "first-hand UNKNOWN result",
+          "trigger_tool": "operation_call",
+          "unresolved_before": [
+            "2d981494-9492-43dc-aa57-590a8c89cd8a"
+          ]
+        },
+        {
+          "at": "2026-09-21T00:14:56.352153Z",
+          "jobs": [
+            {
+              "at": "2026-09-21T00:14:56.357039Z",
+              "error_code": null,
+              "job_id": "2d981494-9492-43dc-aa57-590a8c89cd8a",
+              "reconciled_quiescent": true,
+              "reconciliation": [
+                {
+                  "request_id": "wrk-32fdf94a-a4c2-4427-a27d-cde7a7e5e40d",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-49808fd3-ba6c-4849-9090-9be1f14d501c",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-9b169635-c424-4a8e-bef7-30704318c037",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-13d51366-7eb4-4385-81ad-32dc389657d5",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-6446f638-4910-44da-b1eb-da3282eae31d",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-09fa528d-1785-4ac1-8eb4-16410dc4cbeb",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                }
+              ],
+              "status": "UNKNOWN",
+              "success": true
+            }
+          ],
+          "released": true,
+          "retry": "not performed: this call's own identity is unchanged",
+          "targets": [
+            "2d981494-9492-43dc-aa57-590a8c89cd8a"
+          ],
+          "trigger": "an unfinished job must be resolved through its own published query before any new logical request is dispatched",
+          "unresolved_before": []
+        },
+        {
+          "at": "2026-09-21T00:14:56.414066Z",
+          "classification": {
+            "basis": "every observation that advanced this model's revision came from a dispatch of this run",
+            "envelope_job_id": "6c011bce-98e7-470e-ab0a-44a7178677b5",
+            "expected_revision": 1,
+            "observed_revision": 1,
+            "precondition": "external-change",
+            "reason": "stale_expected",
+            "request_id": "phase4-20260921T001454Z-g3_1-m1ct015-geometry",
+            "request_token": "REDACTED",
+            "self_caused": true
+          },
+          "envelope_job_id": "6c011bce-98e7-470e-ab0a-44a7178677b5",
+          "error_code": "REVISION_CONFLICT",
+          "expected_revision_rewritten_to": 3,
+          "gate": false,
+          "message": "external model change requires reconciliation",
+          "precondition": "external-change",
+          "refresh": {
+            "at": "2026-09-21T00:14:56.414088Z",
+            "available": true,
+            "dirty": false,
+            "error_code": null,
+            "model_ref": {
+              "generation": 1,
+              "model_tag": "mcp4",
+              "schema_version": 1,
+              "server_instance_id": "55cc0a04e5e87a1643bb489f11da9499f7c4ae2f1b002d06af886193a85507dd",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "note": "the reconcile read reports the ledger revision and whether the model still carries an unacknowledged engine change",
+            "refresh": true,
+            "released": true,
+            "revision": 3,
+            "sent_expected_revision": 1,
+            "session_id": "session-9f95c2e814acd5f99589961a",
+            "success": true,
+            "tool": "model_inspect"
+          },
+          "replan": {
+            "at": "2026-09-21T00:14:56.421786Z",
+            "dispatch_stage": "refused_before_engine",
+            "evidence": {
+              "dispatch_stage": "refused_before_engine",
+              "error_code": "REVISION_CONFLICT",
+              "reconciled": true,
+              "revision": 3,
+              "source": "the execution ledger refused this call in its preflight (managed-revision precondition)"
+            },
+            "granted": true,
+            "new_key": "20260921T001454Z-g3_1-m1c-unplanned-phase4-20260921T001454Z-g3_1-m1ct015-geometry-1",
+            "new_request_id": "20260921T001454Z-g3_1-m1c-unplanned-phase4-20260921T001454Z-g3_1-m1ct015-geometry-1",
+            "request_id": "phase4-20260921T001454Z-g3_1-m1ct015-geometry",
+            "why": "managed revision conflict: refreshed and re-dispatched once"
+          },
+          "retry": {
+            "error_code": null,
+            "precondition": null,
+            "retried_expected_revision": 3,
+            "success": true
+          },
+          "sent_expected_revision": 1,
+          "trigger": "managed revision conflict",
+          "trigger_tool": "operation_call"
+        }
+      ],
+      "isolation": {
+        "applied": false,
+        "at": "2026-09-21T00:14:56.281961Z",
+        "attempted": false,
+        "declaration": {
+          "case_id": "W13_T015_units",
+          "mode": "shared_bound",
+          "modes": [
+            "own_model",
+            "checkpoint_restore",
+            "shared_bound"
+          ],
+          "rationale": "reads/writes the run's bound model; the run is serial"
+        },
+        "reason": "declared: this case runs against the run's bound model, strictly serially"
+      },
+      "operation_availability": {
+        "physics.create": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "component": {
+                "type": "string"
+              },
+              "dependent_variables": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "geometry": {
+                "type": "string"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "tag": {
+                "type": "string"
+              },
+              "type_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "component",
+              "tag",
+              "type_id",
+              "geometry"
+            ],
+            "title": "physics.create input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "component",
+            "dependent_variables",
+            "expected_revision",
+            "geometry",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "session_id",
+            "tag",
+            "type_id"
+          ],
+          "mcp_tool_name": "physics_create",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "physics.feature_create": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "entity_dimension": {
+                "type": "integer"
+              },
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "parent": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "properties": {
+                "$ref": "common.schema.json#/$defs/PropertySet"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "tag": {
+                "type": "string"
+              },
+              "type_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "parent",
+              "tag",
+              "type_id"
+            ],
+            "title": "physics.feature_create input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "entity_dimension",
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "parent",
+            "project_id",
+            "properties",
+            "request_id",
+            "session_id",
+            "tag",
+            "type_id"
+          ],
+          "mcp_tool_name": "physics_feature_create",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "physics.feature_update": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "properties": {
+                "$ref": "common.schema.json#/$defs/PropertySet"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "path",
+              "properties"
+            ],
+            "title": "physics.feature_update input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "path",
+            "project_id",
+            "properties",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "physics_feature_update",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "physics.validate": {
+          "available": true,
+          "effect": "EVALUATE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "checks": {
+                "type": "object"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "scope": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "idempotency_key"
+            ],
+            "title": "physics.validate input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "checks",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "scope",
+            "session_id"
+          ],
+          "mcp_tool_name": "physics_validate",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        }
+      },
+      "prerequisites": {
+        "case_id": "W13_T015_units",
+        "checks": {
+          "bound_model": {
+            "applicable": true,
+            "evidence": "a model_ref is bound",
+            "satisfied": true
+          }
+        },
+        "declared": [
+          "bound_model"
+        ],
+        "note": "a missing prerequisite makes this case DEPENDENCY_BLOCKED and points at the root cause; it never becomes a defect of this case",
+        "status": "SATISFIED",
+        "unknown_declarations": [],
+        "unsatisfied": []
+      },
+      "static_physics_unit_ops_executable": {
+        "operations": [
+          "physics.create",
+          "physics.feature_create",
+          "physics.feature_update",
+          "physics.validate"
+        ],
+        "pass": true
+      },
+      "subcase_inventory": {
+        "levels": [
+          "live",
+          "static"
+        ],
+        "missing": [],
+        "planned": 6,
+        "recorded": 6
+      },
+      "t015_containers": {
+        "block": "t015_blk",
+        "component": "comp1",
+        "geometry": "geom1",
+        "prefix": "t015",
+        "reason": "definition.component_manage returned EXECUTION_STATE_UNKNOWN: definition.component_manage failed with TAG_CONFLICT (component 'comp1' already exists); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+        "status": "BLOCKED",
+        "steps": [
+          {
+            "error_code": "EXECUTION_STATE_UNKNOWN",
+            "identity": {
+              "error_code": "EXECUTION_STATE_UNKNOWN",
+              "has_structured_content": true,
+              "job_id": "2d981494-9492-43dc-aa57-590a8c89cd8a",
+              "operation_id": "af403f80-de62-4abd-b7a4-548706979163",
+              "outer_isError": true,
+              "request_hash": "b4b845bc2abe4ea727ed38568595313ad2826b32687053fe8b3e160ca1b3ccf8",
+              "success": false
+            },
+            "message": "definition.component_manage failed with TAG_CONFLICT (component 'comp1' already exists); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+            "operation": "definition.component_manage",
+            "status": "BLOCKED",
+            "step": "t015-component"
+          },
+          {
+            "error_code": null,
+            "identity": {
+              "error_code": null,
+              "has_structured_content": true,
+              "job_id": "f554752f-88fa-45a2-a85b-4a524cb1e7fe",
+              "operation_id": "a3bb5322-4b6d-45e8-b3d3-399c85c14bd7",
+              "outer_isError": false,
+              "request_hash": "f3ba8ff81a979b942d50dcaf7b9ed8bc8eba14b0b74fb8a92c8f0e324a00118b",
+              "success": true
+            },
+            "message": null,
+            "operation": "geometry.sequence_create",
+            "status": "APPLIED",
+            "step": "t015-geometry"
+          },
+          {
+            "error_code": null,
+            "identity": {
+              "error_code": null,
+              "has_structured_content": true,
+              "job_id": "b88d83ec-7f2d-4273-86dd-7ca2f3fa0b66",
+              "operation_id": "94ce50cd-60e1-4fd0-9593-f5898257919f",
+              "outer_isError": false,
+              "request_hash": "7780d06c8dcd551a0228299e628d15e2c1b4de971b15383e44bb63bf19df58a3",
+              "success": true
+            },
+            "message": null,
+            "operation": "geometry.feature_create",
+            "status": "APPLIED",
+            "step": "t015-block"
+          },
+          {
+            "error_code": null,
+            "identity": {
+              "error_code": null,
+              "has_structured_content": true,
+              "job_id": "0d6e15fa-639b-4b82-b0a6-9674894c6d7b",
+              "operation_id": "ee9e2e8f-de51-4d61-9ce1-6584206b1ed1",
+              "outer_isError": false,
+              "request_hash": "6908f3475bc4ac6e3e9d0c7b0e7796b9ddb2141abb27bf13604412d6e2989206",
+              "success": true
+            },
+            "message": null,
+            "operation": "geometry.build",
+            "status": "APPLIED",
+            "step": "t015-build"
+          }
+        ]
+      },
+      "unknown_job_ledger": {
+        "entries": [
+          {
+            "first_seen_at": "2026-09-21T00:14:56.346962Z",
+            "job_id": "2d981494-9492-43dc-aa57-590a8c89cd8a",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "definition.component_manage failed with TAG_CONFLICT (component 'comp1' already exists); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+            "last_seen_at": "2026-09-21T00:14:56.346973Z",
+            "observations": [
+              {
+                "at": "2026-09-21T00:14:56.346976Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "definition.component_manage failed with TAG_CONFLICT (component 'comp1' already exists); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+                "tool": "operation_call"
+              }
+            ],
+            "operation": "operation_call",
+            "reconciled_quiescent": true,
+            "release_attempts": [
+              {
+                "at": "2026-09-21T00:14:56.351941Z",
+                "error_code": null,
+                "job_id": "2d981494-9492-43dc-aa57-590a8c89cd8a",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-32fdf94a-a4c2-4427-a27d-cde7a7e5e40d",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-49808fd3-ba6c-4849-9090-9be1f14d501c",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-9b169635-c424-4a8e-bef7-30704318c037",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-13d51366-7eb4-4385-81ad-32dc389657d5",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-6446f638-4910-44da-b1eb-da3282eae31d",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-09fa528d-1785-4ac1-8eb4-16410dc4cbeb",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              },
+              {
+                "at": "2026-09-21T00:14:56.357039Z",
+                "error_code": null,
+                "job_id": "2d981494-9492-43dc-aa57-590a8c89cd8a",
+                "reconciled_quiescent": true,
+                "reconciliation": [
+                  {
+                    "request_id": "wrk-32fdf94a-a4c2-4427-a27d-cde7a7e5e40d",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-49808fd3-ba6c-4849-9090-9be1f14d501c",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-9b169635-c424-4a8e-bef7-30704318c037",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-13d51366-7eb4-4385-81ad-32dc389657d5",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-6446f638-4910-44da-b1eb-da3282eae31d",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  },
+                  {
+                    "request_id": "wrk-09fa528d-1785-4ac1-8eb4-16410dc4cbeb",
+                    "source": "durable_worker_observation",
+                    "status": "SUCCEEDED"
+                  }
+                ],
+                "status": "UNKNOWN",
+                "success": true
+              }
+            ],
+            "released": true,
+            "released_at": "2026-09-21T00:14:56.357079Z",
+            "status": "UNKNOWN"
+          }
+        ],
+        "gate_refusals": {
+          "by_tool": {},
+          "count": 0,
+          "first": null,
+          "last": null
+        },
+        "note": "the driver records every job id an envelope reported as UNKNOWN (no published read lists the unresolved jobs) and releases each one through the published job_reconcile read before it replays a refused call once",
+        "released_jobs": [
+          "2d981494-9492-43dc-aa57-590a8c89cd8a"
+        ],
+        "still_blocked": [],
+        "unresolved_jobs": []
+      }
+    },
+    "case_id": "W13_T015_units",
+    "finished_at": "2026-09-21T00:14:56.700401Z",
+    "package": "W13",
+    "reason": null,
+    "started_at": "2026-09-21T00:14:56.281945Z",
+    "status": "BLOCKED",
+    "subcases": {
+      "coordinate_unit_m_and_mm": {
+        "acceptance": "T015 m/mm interpolation coordinates",
+        "level": "live",
+        "observed": {
+          "block": "t015_blk",
+          "component": "comp1",
+          "geometry": "geom1",
+          "prefix": "t015",
+          "reason": "definition.component_manage returned EXECUTION_STATE_UNKNOWN: definition.component_manage failed with TAG_CONFLICT (component 'comp1' already exists); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+          "status": "BLOCKED",
+          "steps": [
+            {
+              "error_code": "EXECUTION_STATE_UNKNOWN",
+              "identity": {
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "has_structured_content": true,
+                "job_id": "2d981494-9492-43dc-aa57-590a8c89cd8a",
+                "operation_id": "af403f80-de62-4abd-b7a4-548706979163",
+                "outer_isError": true,
+                "request_hash": "b4b845bc2abe4ea727ed38568595313ad2826b32687053fe8b3e160ca1b3ccf8",
+                "success": false
+              },
+              "message": "definition.component_manage failed with TAG_CONFLICT (component 'comp1' already exists); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+              "operation": "definition.component_manage",
+              "status": "BLOCKED",
+              "step": "t015-component"
+            },
+            {
+              "error_code": null,
+              "identity": {
+                "error_code": null,
+                "has_structured_content": true,
+                "job_id": "f554752f-88fa-45a2-a85b-4a524cb1e7fe",
+                "operation_id": "a3bb5322-4b6d-45e8-b3d3-399c85c14bd7",
+                "outer_isError": false,
+                "request_hash": "f3ba8ff81a979b942d50dcaf7b9ed8bc8eba14b0b74fb8a92c8f0e324a00118b",
+                "success": true
+              },
+              "message": null,
+              "operation": "geometry.sequence_create",
+              "status": "APPLIED",
+              "step": "t015-geometry"
+            },
+            {
+              "error_code": null,
+              "identity": {
+                "error_code": null,
+                "has_structured_content": true,
+                "job_id": "b88d83ec-7f2d-4273-86dd-7ca2f3fa0b66",
+                "operation_id": "94ce50cd-60e1-4fd0-9593-f5898257919f",
+                "outer_isError": false,
+                "request_hash": "7780d06c8dcd551a0228299e628d15e2c1b4de971b15383e44bb63bf19df58a3",
+                "success": true
+              },
+              "message": null,
+              "operation": "geometry.feature_create",
+              "status": "APPLIED",
+              "step": "t015-block"
+            },
+            {
+              "error_code": null,
+              "identity": {
+                "error_code": null,
+                "has_structured_content": true,
+                "job_id": "0d6e15fa-639b-4b82-b0a6-9674894c6d7b",
+                "operation_id": "ee9e2e8f-de51-4d61-9ce1-6584206b1ed1",
+                "outer_isError": false,
+                "request_hash": "6908f3475bc4ac6e3e9d0c7b0e7796b9ddb2141abb27bf13604412d6e2989206",
+                "success": true
+              },
+              "message": null,
+              "operation": "geometry.build",
+              "status": "APPLIED",
+              "step": "t015-build"
+            }
+          ]
+        },
+        "reason": "definition.component_manage returned EXECUTION_STATE_UNKNOWN: definition.component_manage failed with TAG_CONFLICT (component 'comp1' already exists); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+        "status": "BLOCKED"
+      },
+      "no_implicit_thickness_or_absorptivity": {
+        "acceptance": "T015 no automatic thickness/absorptivity",
+        "level": "live",
+        "observed": {
+          "block": "t015_blk",
+          "component": "comp1",
+          "geometry": "geom1",
+          "prefix": "t015",
+          "reason": "definition.component_manage returned EXECUTION_STATE_UNKNOWN: definition.component_manage failed with TAG_CONFLICT (component 'comp1' already exists); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+          "status": "BLOCKED",
+          "steps": [
+            {
+              "error_code": "EXECUTION_STATE_UNKNOWN",
+              "identity": {
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "has_structured_content": true,
+                "job_id": "2d981494-9492-43dc-aa57-590a8c89cd8a",
+                "operation_id": "af403f80-de62-4abd-b7a4-548706979163",
+                "outer_isError": true,
+                "request_hash": "b4b845bc2abe4ea727ed38568595313ad2826b32687053fe8b3e160ca1b3ccf8",
+                "success": false
+              },
+              "message": "definition.component_manage failed with TAG_CONFLICT (component 'comp1' already exists); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+              "operation": "definition.component_manage",
+              "status": "BLOCKED",
+              "step": "t015-component"
+            },
+            {
+              "error_code": null,
+              "identity": {
+                "error_code": null,
+                "has_structured_content": true,
+                "job_id": "f554752f-88fa-45a2-a85b-4a524cb1e7fe",
+                "operation_id": "a3bb5322-4b6d-45e8-b3d3-399c85c14bd7",
+                "outer_isError": false,
+                "request_hash": "f3ba8ff81a979b942d50dcaf7b9ed8bc8eba14b0b74fb8a92c8f0e324a00118b",
+                "success": true
+              },
+              "message": null,
+              "operation": "geometry.sequence_create",
+              "status": "APPLIED",
+              "step": "t015-geometry"
+            },
+            {
+              "error_code": null,
+              "identity": {
+                "error_code": null,
+                "has_structured_content": true,
+                "job_id": "b88d83ec-7f2d-4273-86dd-7ca2f3fa0b66",
+                "operation_id": "94ce50cd-60e1-4fd0-9593-f5898257919f",
+                "outer_isError": false,
+                "request_hash": "7780d06c8dcd551a0228299e628d15e2c1b4de971b15383e44bb63bf19df58a3",
+                "success": true
+              },
+              "message": null,
+              "operation": "geometry.feature_create",
+              "status": "APPLIED",
+              "step": "t015-block"
+            },
+            {
+              "error_code": null,
+              "identity": {
+                "error_code": null,
+                "has_structured_content": true,
+                "job_id": "0d6e15fa-639b-4b82-b0a6-9674894c6d7b",
+                "operation_id": "ee9e2e8f-de51-4d61-9ce1-6584206b1ed1",
+                "outer_isError": false,
+                "request_hash": "6908f3475bc4ac6e3e9d0c7b0e7796b9ddb2141abb27bf13604412d6e2989206",
+                "success": true
+              },
+              "message": null,
+              "operation": "geometry.build",
+              "status": "APPLIED",
+              "step": "t015-build"
+            }
+          ]
+        },
+        "reason": "definition.component_manage returned EXECUTION_STATE_UNKNOWN: definition.component_manage failed with TAG_CONFLICT (component 'comp1' already exists); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+        "status": "BLOCKED"
+      },
+      "static_physics_unit_ops_availability": {
+        "acceptance": "T015 source/unit actions",
+        "level": "static",
+        "status": "PASS"
+      },
+      "surface_source_W_per_m2": {
+        "acceptance": "T015 W/m^2 surface heat flux",
+        "level": "live",
+        "observed": {
+          "block": "t015_blk",
+          "component": "comp1",
+          "geometry": "geom1",
+          "prefix": "t015",
+          "reason": "definition.component_manage returned EXECUTION_STATE_UNKNOWN: definition.component_manage failed with TAG_CONFLICT (component 'comp1' already exists); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+          "status": "BLOCKED",
+          "steps": [
+            {
+              "error_code": "EXECUTION_STATE_UNKNOWN",
+              "identity": {
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "has_structured_content": true,
+                "job_id": "2d981494-9492-43dc-aa57-590a8c89cd8a",
+                "operation_id": "af403f80-de62-4abd-b7a4-548706979163",
+                "outer_isError": true,
+                "request_hash": "b4b845bc2abe4ea727ed38568595313ad2826b32687053fe8b3e160ca1b3ccf8",
+                "success": false
+              },
+              "message": "definition.component_manage failed with TAG_CONFLICT (component 'comp1' already exists); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+              "operation": "definition.component_manage",
+              "status": "BLOCKED",
+              "step": "t015-component"
+            },
+            {
+              "error_code": null,
+              "identity": {
+                "error_code": null,
+                "has_structured_content": true,
+                "job_id": "f554752f-88fa-45a2-a85b-4a524cb1e7fe",
+                "operation_id": "a3bb5322-4b6d-45e8-b3d3-399c85c14bd7",
+                "outer_isError": false,
+                "request_hash": "f3ba8ff81a979b942d50dcaf7b9ed8bc8eba14b0b74fb8a92c8f0e324a00118b",
+                "success": true
+              },
+              "message": null,
+              "operation": "geometry.sequence_create",
+              "status": "APPLIED",
+              "step": "t015-geometry"
+            },
+            {
+              "error_code": null,
+              "identity": {
+                "error_code": null,
+                "has_structured_content": true,
+                "job_id": "b88d83ec-7f2d-4273-86dd-7ca2f3fa0b66",
+                "operation_id": "94ce50cd-60e1-4fd0-9593-f5898257919f",
+                "outer_isError": false,
+                "request_hash": "7780d06c8dcd551a0228299e628d15e2c1b4de971b15383e44bb63bf19df58a3",
+                "success": true
+              },
+              "message": null,
+              "operation": "geometry.feature_create",
+              "status": "APPLIED",
+              "step": "t015-block"
+            },
+            {
+              "error_code": null,
+              "identity": {
+                "error_code": null,
+                "has_structured_content": true,
+                "job_id": "0d6e15fa-639b-4b82-b0a6-9674894c6d7b",
+                "operation_id": "ee9e2e8f-de51-4d61-9ce1-6584206b1ed1",
+                "outer_isError": false,
+                "request_hash": "6908f3475bc4ac6e3e9d0c7b0e7796b9ddb2141abb27bf13604412d6e2989206",
+                "success": true
+              },
+              "message": null,
+              "operation": "geometry.build",
+              "status": "APPLIED",
+              "step": "t015-build"
+            }
+          ]
+        },
+        "reason": "definition.component_manage returned EXECUTION_STATE_UNKNOWN: definition.component_manage failed with TAG_CONFLICT (component 'comp1' already exists); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+        "status": "BLOCKED"
+      },
+      "volume_source_W_per_m3": {
+        "acceptance": "T015 W/m^3 volumetric source",
+        "level": "live",
+        "observed": {
+          "block": "t015_blk",
+          "component": "comp1",
+          "geometry": "geom1",
+          "prefix": "t015",
+          "reason": "definition.component_manage returned EXECUTION_STATE_UNKNOWN: definition.component_manage failed with TAG_CONFLICT (component 'comp1' already exists); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+          "status": "BLOCKED",
+          "steps": [
+            {
+              "error_code": "EXECUTION_STATE_UNKNOWN",
+              "identity": {
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "has_structured_content": true,
+                "job_id": "2d981494-9492-43dc-aa57-590a8c89cd8a",
+                "operation_id": "af403f80-de62-4abd-b7a4-548706979163",
+                "outer_isError": true,
+                "request_hash": "b4b845bc2abe4ea727ed38568595313ad2826b32687053fe8b3e160ca1b3ccf8",
+                "success": false
+              },
+              "message": "definition.component_manage failed with TAG_CONFLICT (component 'comp1' already exists); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+              "operation": "definition.component_manage",
+              "status": "BLOCKED",
+              "step": "t015-component"
+            },
+            {
+              "error_code": null,
+              "identity": {
+                "error_code": null,
+                "has_structured_content": true,
+                "job_id": "f554752f-88fa-45a2-a85b-4a524cb1e7fe",
+                "operation_id": "a3bb5322-4b6d-45e8-b3d3-399c85c14bd7",
+                "outer_isError": false,
+                "request_hash": "f3ba8ff81a979b942d50dcaf7b9ed8bc8eba14b0b74fb8a92c8f0e324a00118b",
+                "success": true
+              },
+              "message": null,
+              "operation": "geometry.sequence_create",
+              "status": "APPLIED",
+              "step": "t015-geometry"
+            },
+            {
+              "error_code": null,
+              "identity": {
+                "error_code": null,
+                "has_structured_content": true,
+                "job_id": "b88d83ec-7f2d-4273-86dd-7ca2f3fa0b66",
+                "operation_id": "94ce50cd-60e1-4fd0-9593-f5898257919f",
+                "outer_isError": false,
+                "request_hash": "7780d06c8dcd551a0228299e628d15e2c1b4de971b15383e44bb63bf19df58a3",
+                "success": true
+              },
+              "message": null,
+              "operation": "geometry.feature_create",
+              "status": "APPLIED",
+              "step": "t015-block"
+            },
+            {
+              "error_code": null,
+              "identity": {
+                "error_code": null,
+                "has_structured_content": true,
+                "job_id": "0d6e15fa-639b-4b82-b0a6-9674894c6d7b",
+                "operation_id": "ee9e2e8f-de51-4d61-9ce1-6584206b1ed1",
+                "outer_isError": false,
+                "request_hash": "6908f3475bc4ac6e3e9d0c7b0e7796b9ddb2141abb27bf13604412d6e2989206",
+                "success": true
+              },
+              "message": null,
+              "operation": "geometry.build",
+              "status": "APPLIED",
+              "step": "t015-build"
+            }
+          ]
+        },
+        "reason": "definition.component_manage returned EXECUTION_STATE_UNKNOWN: definition.component_manage failed with TAG_CONFLICT (component 'comp1' already exists); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+        "status": "BLOCKED"
+      },
+      "wrong_unit_warns_or_fails": {
+        "acceptance": "T015 deliberate wrong unit",
+        "level": "live",
+        "observed": {
+          "block": "t015_blk",
+          "component": "comp1",
+          "geometry": "geom1",
+          "prefix": "t015",
+          "reason": "definition.component_manage returned EXECUTION_STATE_UNKNOWN: definition.component_manage failed with TAG_CONFLICT (component 'comp1' already exists); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+          "status": "BLOCKED",
+          "steps": [
+            {
+              "error_code": "EXECUTION_STATE_UNKNOWN",
+              "identity": {
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "has_structured_content": true,
+                "job_id": "2d981494-9492-43dc-aa57-590a8c89cd8a",
+                "operation_id": "af403f80-de62-4abd-b7a4-548706979163",
+                "outer_isError": true,
+                "request_hash": "b4b845bc2abe4ea727ed38568595313ad2826b32687053fe8b3e160ca1b3ccf8",
+                "success": false
+              },
+              "message": "definition.component_manage failed with TAG_CONFLICT (component 'comp1' already exists); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+              "operation": "definition.component_manage",
+              "status": "BLOCKED",
+              "step": "t015-component"
+            },
+            {
+              "error_code": null,
+              "identity": {
+                "error_code": null,
+                "has_structured_content": true,
+                "job_id": "f554752f-88fa-45a2-a85b-4a524cb1e7fe",
+                "operation_id": "a3bb5322-4b6d-45e8-b3d3-399c85c14bd7",
+                "outer_isError": false,
+                "request_hash": "f3ba8ff81a979b942d50dcaf7b9ed8bc8eba14b0b74fb8a92c8f0e324a00118b",
+                "success": true
+              },
+              "message": null,
+              "operation": "geometry.sequence_create",
+              "status": "APPLIED",
+              "step": "t015-geometry"
+            },
+            {
+              "error_code": null,
+              "identity": {
+                "error_code": null,
+                "has_structured_content": true,
+                "job_id": "b88d83ec-7f2d-4273-86dd-7ca2f3fa0b66",
+                "operation_id": "94ce50cd-60e1-4fd0-9593-f5898257919f",
+                "outer_isError": false,
+                "request_hash": "7780d06c8dcd551a0228299e628d15e2c1b4de971b15383e44bb63bf19df58a3",
+                "success": true
+              },
+              "message": null,
+              "operation": "geometry.feature_create",
+              "status": "APPLIED",
+              "step": "t015-block"
+            },
+            {
+              "error_code": null,
+              "identity": {
+                "error_code": null,
+                "has_structured_content": true,
+                "job_id": "0d6e15fa-639b-4b82-b0a6-9674894c6d7b",
+                "operation_id": "ee9e2e8f-de51-4d61-9ce1-6584206b1ed1",
+                "outer_isError": false,
+                "request_hash": "6908f3475bc4ac6e3e9d0c7b0e7796b9ddb2141abb27bf13604412d6e2989206",
+                "success": true
+              },
+              "message": null,
+              "operation": "geometry.build",
+              "status": "APPLIED",
+              "step": "t015-build"
+            }
+          ]
+        },
+        "reason": "definition.component_manage returned EXECUTION_STATE_UNKNOWN: definition.component_manage failed with TAG_CONFLICT (component 'comp1' already exists); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+        "status": "BLOCKED"
+      }
+    }
+  },
+  "subcase_count": 6
+}

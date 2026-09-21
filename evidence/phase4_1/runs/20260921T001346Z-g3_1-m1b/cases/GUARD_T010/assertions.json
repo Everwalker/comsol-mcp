@@ -1,0 +1,164 @@
+{
+  "assertion_count": 6,
+  "case": {
+    "acceptance": [
+      "G3 §10 T010"
+    ],
+    "assertions": {
+      "dependency_blocked": {
+        "missing": [
+          "bound_model"
+        ],
+        "note": "downstream subcases list NOT_RUN against this root cause instead of becoming independent defects"
+      },
+      "first_cause": {
+        "case_id": "GUARD_T010",
+        "class": "DEPENDENCY_BLOCKED",
+        "error_code": "DEPENDENCY_BLOCKED",
+        "reason": "the case's declared prerequisite(s) are not established: bound_model (no model_ref is bound: every live step of this case depends on one)",
+        "source": "declared"
+      },
+      "isolation": {
+        "applied": false,
+        "at": "2026-09-21T00:13:47.772707Z",
+        "attempted": false,
+        "declaration": {
+          "case_id": "GUARD_T010",
+          "mode": "shared_bound",
+          "modes": [
+            "own_model",
+            "checkpoint_restore",
+            "shared_bound"
+          ],
+          "rationale": "reads/writes the run's bound model; the run is serial"
+        },
+        "reason": "declared: this case runs against the run's bound model, strictly serially"
+      },
+      "prerequisites": {
+        "case_id": "GUARD_T010",
+        "checks": {
+          "bound_model": {
+            "applicable": true,
+            "evidence": "no model_ref is bound: every live step of this case depends on one",
+            "satisfied": false
+          },
+          "negative_probe": {
+            "applicable": false,
+            "evidence": "declared: the case asks for the product's own refusal",
+            "satisfied": null
+          }
+        },
+        "declared": [
+          "bound_model",
+          "negative_probe"
+        ],
+        "note": "a missing prerequisite makes this case DEPENDENCY_BLOCKED and points at the root cause; it never becomes a defect of this case",
+        "status": "UNSATISFIED",
+        "unknown_declarations": [],
+        "unsatisfied": [
+          "bound_model"
+        ]
+      },
+      "subcase_inventory": {
+        "levels": [
+          "live",
+          "static"
+        ],
+        "missing": [],
+        "planned": 5,
+        "recorded": 5
+      },
+      "unknown_job_ledger": {
+        "entries": [
+          {
+            "first_seen_at": "2026-09-21T00:13:47.763681Z",
+            "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+            "last_error_code": "EXECUTION_STATE_UNKNOWN",
+            "last_message": "connect to the existing worker before reconciliation",
+            "last_seen_at": "2026-09-21T00:13:47.766325Z",
+            "observations": [
+              {
+                "at": "2026-09-21T00:13:47.763692Z",
+                "error_code": "ENGINE_UNRESPONSIVE",
+                "message": "connect to a server first",
+                "tool": "model_create"
+              },
+              {
+                "at": "2026-09-21T00:13:47.766327Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "message": "connect to the existing worker before reconciliation",
+                "tool": "job_reconcile"
+              }
+            ],
+            "operation": "model_create",
+            "reconciled_quiescent": false,
+            "release_attempts": [
+              {
+                "at": "2026-09-21T00:13:47.766344Z",
+                "error_code": "EXECUTION_STATE_UNKNOWN",
+                "job_id": "0f23863c-fbe8-4dfc-b43d-88e605ebb73d",
+                "reconciled_quiescent": false,
+                "reconciliation": null,
+                "status": "UNKNOWN",
+                "success": false
+              }
+            ],
+            "released": false,
+            "status": "UNKNOWN"
+          }
+        ],
+        "gate_refusals": {
+          "by_tool": {},
+          "count": 0,
+          "first": null,
+          "last": null
+        },
+        "note": "the driver records every job id an envelope reported as UNKNOWN (no published read lists the unresolved jobs) and releases each one through the published job_reconcile read before it replays a refused call once",
+        "released_jobs": [],
+        "still_blocked": [],
+        "unresolved_jobs": [
+          "0f23863c-fbe8-4dfc-b43d-88e605ebb73d"
+        ]
+      }
+    },
+    "case_id": "GUARD_T010",
+    "finished_at": "2026-09-21T00:13:47.772720Z",
+    "package": "GUARD",
+    "reason": "the case's declared prerequisite(s) are not established: bound_model (no model_ref is bound: every live step of this case depends on one)",
+    "started_at": "2026-09-21T00:13:47.772701Z",
+    "status": "BLOCKED",
+    "subcases": {
+      "repeated_key_not_reexecuted": {
+        "acceptance": "T010 repeated idempotency key",
+        "level": "live",
+        "reason": "dependency not established: bound_model",
+        "status": "NOT_RUN"
+      },
+      "request_hash_conflict_rejected": {
+        "acceptance": "T010 request hash conflict",
+        "level": "live",
+        "reason": "dependency not established: bound_model",
+        "status": "NOT_RUN"
+      },
+      "same_tag_different_type_rejected": {
+        "acceptance": "T010 same tag different type",
+        "level": "live",
+        "reason": "dependency not established: bound_model",
+        "status": "NOT_RUN"
+      },
+      "same_tag_same_type_duplicate_rejected_or_idempotent": {
+        "acceptance": "T010 same tag/type duplicate",
+        "level": "live",
+        "reason": "dependency not established: bound_model",
+        "status": "NOT_RUN"
+      },
+      "static_idempotency_contract_published": {
+        "acceptance": "T010 idempotency contract",
+        "level": "static",
+        "reason": "dependency not established: bound_model",
+        "status": "NOT_RUN"
+      }
+    }
+  },
+  "subcase_count": 5
+}

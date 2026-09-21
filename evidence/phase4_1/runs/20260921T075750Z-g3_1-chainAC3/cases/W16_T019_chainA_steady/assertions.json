@@ -1,0 +1,4511 @@
+{
+  "assertion_count": 26,
+  "case": {
+    "acceptance": [
+      "G3 §8 chain A"
+    ],
+    "assertions": {
+      "analytic_reference_preregistered": {
+        "pass": true,
+        "sha256": "1a8c9ad785e6efbe3e2cfcae82986753d4978853c0289ae261e2b7e4da9240b8"
+      },
+      "benchmark_spec": {
+        "alpha_m2_s": 1e-05,
+        "chain": "A",
+        "cp_j_kgk": 1000.0,
+        "delta_t_k": null,
+        "error_definition": "max |T_engine(x) - T_analytic(x)| / (T1 - T0) over the pre-registered sample line, T(x) = T0 + (T1-T0)*x/L",
+        "error_limit": 0.0001,
+        "expected_model_values": [
+          {
+            "expression": "10[W/(m*K)]",
+            "item": "thermalconductivity",
+            "unit": "W/(m*K)",
+            "value": 10.0
+          },
+          {
+            "expression": "1000[kg/m^3]",
+            "item": "density",
+            "unit": "kg/m^3",
+            "value": 1000.0
+          },
+          {
+            "expression": "1000[J/(kg*K)]",
+            "item": "heatcapacity",
+            "unit": "J/(kg*K)",
+            "value": 1000.0
+          },
+          {
+            "expression": null,
+            "item": "length_m",
+            "unit": "m",
+            "value": 0.01
+          },
+          {
+            "expression": null,
+            "item": "width_m",
+            "unit": "m",
+            "value": 0.01
+          },
+          {
+            "expression": null,
+            "item": "height_m",
+            "unit": "m",
+            "value": 0.005
+          },
+          {
+            "expression": "300[K]",
+            "item": "initial_value",
+            "unit": "K",
+            "value": 300.0
+          },
+          {
+            "expression": "400[K]",
+            "item": "hot_boundary",
+            "unit": "K",
+            "value": 400.0
+          }
+        ],
+        "height_m": 0.005,
+        "hot_k": 400.0,
+        "k_w_mk": 10.0,
+        "length_m": 0.01,
+        "rho_kg_m3": 1000.0,
+        "sample_count": 21,
+        "sanity_checks": [
+          {
+            "check": "unit:k_w_mk",
+            "ok": true,
+            "unit": "W/(m*K)",
+            "value": 10.0,
+            "why": "a positive finite quantity in the registered unit"
+          },
+          {
+            "check": "unit:rho_kg_m3",
+            "ok": true,
+            "unit": "kg/m^3",
+            "value": 1000.0,
+            "why": "a positive finite quantity in the registered unit"
+          },
+          {
+            "check": "unit:cp_j_kgk",
+            "ok": true,
+            "unit": "J/(kg*K)",
+            "value": 1000.0,
+            "why": "a positive finite quantity in the registered unit"
+          },
+          {
+            "check": "unit:length_m",
+            "ok": true,
+            "unit": "m",
+            "value": 0.01,
+            "why": "a positive finite quantity in the registered unit"
+          },
+          {
+            "check": "unit:t0_k",
+            "ok": true,
+            "unit": "K",
+            "value": 300.0,
+            "why": "a positive finite quantity in the registered unit"
+          },
+          {
+            "check": "diffusivity",
+            "ok": true,
+            "unit": "m^2/s",
+            "value": 1e-05,
+            "why": "alpha = k/(rho*Cp) is the only diffusivity the analytic model uses"
+          },
+          {
+            "check": "decay_rate",
+            "ok": true,
+            "unit": "1/s",
+            "value": 0.9869604401089359,
+            "why": "alpha*(pi/L)^2: the transient factor must decay, not grow"
+          },
+          {
+            "check": "steady_profile_endpoints",
+            "ok": true,
+            "unit": "K",
+            "value": [
+              300.0,
+              400.0
+            ],
+            "why": "T(0)=T0 and T(L)=Thot for the registered boundary values"
+          },
+          {
+            "check": "steady_profile_monotone",
+            "ok": true,
+            "unit": "K",
+            "value": [
+              300.0,
+              305.0,
+              310.0
+            ],
+            "why": "a linear driven profile cannot decrease along the driving direction"
+          },
+          {
+            "check": "flux_times_area",
+            "ok": true,
+            "unit": "W",
+            "value": 5.0,
+            "why": "the total power is the flux through the *actual* end-face area"
+          }
+        ],
+        "sides": "insulated on the four lateral faces",
+        "source": "G3.1 §8.1 pre-registered benchmark specification",
+        "t0_k": 300.0,
+        "time_points_s": [],
+        "width_m": 0.01
+      },
+      "chain_a_containers": {
+        "component": "comp1",
+        "component_create": {
+          "error_code": null,
+          "has_structured_content": true,
+          "job_id": "c009bf15-f555-474c-b8de-63d8a7d450fc",
+          "operation_id": "3c4beb6a-42e1-4d12-a01b-7683e1bd7620",
+          "outer_isError": false,
+          "request_hash": "b1d423455fc5467e951c21352167d2ec548b6648cb82b971e922886dec9dbbad",
+          "success": true
+        },
+        "dimension": 3,
+        "geometry": "geom1",
+        "geometry_create": {
+          "error_code": null,
+          "has_structured_content": true,
+          "job_id": "05a8900f-2f96-4ade-953d-5c263a32bd20",
+          "operation_id": "7bad3768-7715-4ba2-8343-32c74bc5f9be",
+          "outer_isError": false,
+          "request_hash": "74b09d8974bc496c03751713a0205669edceecd9b335ce36441130b7fc8f14d1",
+          "success": true
+        },
+        "reason": null,
+        "status": "PASS"
+      },
+      "chain_a_geometry": {
+        "block": {
+          "error_code": null,
+          "has_structured_content": true,
+          "job_id": "c5c4c65b-37c3-46df-8f69-cfce459ee61d",
+          "operation_id": "2d8f6dd5-1180-4a41-af27-2ad1daa23fbd",
+          "outer_isError": false,
+          "request_hash": "d6d18a85bc3569620554b96395d25b3e6650bae893cf417f4330780b6ad689c8",
+          "success": true
+        },
+        "build": {
+          "error_code": null,
+          "has_structured_content": true,
+          "job_id": "27ef9d3c-e2d1-46e2-b16f-49a3f6f8d3b5",
+          "operation_id": "c7388f58-3220-4f5f-acc3-e8901fd71848",
+          "outer_isError": false,
+          "request_hash": "4ce1e3b94fc1d8246b4b9b91d006db588980f22d39dbf1b605e001d09520279b",
+          "success": true
+        }
+      },
+      "chain_a_material": {
+        "create": {
+          "error_code": null,
+          "has_structured_content": true,
+          "job_id": "452892c5-1acd-4971-a12f-56ef87bf8d30",
+          "operation_id": "dff19a42-b9bc-4e43-aeb4-a6fa6fabb428",
+          "outer_isError": false,
+          "request_hash": "9307955abe2b000b26aa09da243b6f83e91c2c82c9402252bea8a98ba9df2499",
+          "success": true
+        },
+        "properties": {
+          "applied_actions": [
+            "create",
+            "set_properties"
+          ],
+          "error_code": null,
+          "failed": [],
+          "missing_properties": [],
+          "status": "APPLIED",
+          "written_properties": [
+            "density",
+            "heatcapacity",
+            "thermalconductivity"
+          ]
+        },
+        "selection": {
+          "error_code": null,
+          "has_structured_content": true,
+          "job_id": "62819028-3f57-43e9-9cce-95b2f9d11ddd",
+          "operation_id": "338b0238-ce90-42dd-a0e4-f2ebda6192a7",
+          "outer_isError": false,
+          "request_hash": "471f8d7fe131dc605abaa3f17cfbcf235cd5440d1c9a56f23d80c029a841926a",
+          "success": true
+        }
+      },
+      "chain_a_mesh_build": {
+        "error_code": null,
+        "success": true
+      },
+      "chain_a_mesh_create": {
+        "error_code": null,
+        "has_structured_content": true,
+        "job_id": "0fe1e676-2ae4-4f8c-970e-56b183372abe",
+        "operation_id": "861f137c-6937-4972-b8d8-f0130668a359",
+        "outer_isError": false,
+        "request_hash": "209e7c58d44876db53de88f0b8dd196144a3b820d6262fd312faa1cdf0909c3e",
+        "success": true
+      },
+      "chain_a_mesh_statistics": {
+        "allowlist_entry_required": [],
+        "build_time_ms": 0,
+        "component": "comp1",
+        "dof_estimate": {
+          "reason": "a mesh-only read has no verified COMSOL API that reports the assembled degrees of freedom; the DOF count belongs to the compiled equations of a study step (COMSOL Reference Manual, Compile Equations Statistics)",
+          "status": "NOT_AVAILABLE"
+        },
+        "element_count": 15923,
+        "element_types": [
+          "tet",
+          "tri",
+          "edg",
+          "vtx"
+        ],
+        "elements_by_dimension": null,
+        "has_second_order_elements": false,
+        "is_complete": true,
+        "is_empty": false,
+        "max_growth_rate": 4.258,
+        "max_volume": 8.184e-11,
+        "mean_growth_rate": 1.674,
+        "mean_quality": 0.684,
+        "mesh": "mesh1",
+        "mesh_volume": 5e-07,
+        "min_quality": 0.2539,
+        "min_volume": 5.972e-12,
+        "notes": [
+          "a successful build is not a quality statement: report the measure, the minimum and the counts only when they were actually read"
+        ],
+        "path": {
+          "segments": [
+            {
+              "collection": "component",
+              "tag": "comp1"
+            },
+            {
+              "collection": "mesh",
+              "tag": "mesh1"
+            }
+          ]
+        },
+        "problems": [],
+        "quality_definition": "element quality is a dimensionless 0..1 measure; the comparison is only meaningful with the measure named by quality_measure",
+        "quality_measure": "volcircum",
+        "read_errors": {
+          "getMaxDimension": {
+            "allowlist_entry_required": null,
+            "code": "ENGINE_CALL_FAILED",
+            "message": "COMSOL getMaxDimension probe failed: JavaWorkerError"
+          },
+          "getQualityDistr": {
+            "allowlist_entry_required": null,
+            "code": "ENGINE_CALL_FAILED",
+            "message": "COMSOL getQualityDistr probe failed: JavaWorkerError"
+          }
+        },
+        "sdim": 3,
+        "statistics": {
+          "getMaxGrowthRate": 4.258,
+          "getMaxVolume": 8.184e-11,
+          "getMeanGrowthRate": 1.674,
+          "getMeanQuality": 0.684,
+          "getMinQuality": 0.2539,
+          "getMinVolume": 5.972e-12,
+          "getNumElem": 15923,
+          "getNumVertex": 3094,
+          "getQualityMeasure": "volcircum",
+          "getTypes": [
+            "tet",
+            "tri",
+            "edg",
+            "vtx"
+          ],
+          "getVolume": 5e-07,
+          "isComplete": true,
+          "isEmpty": false
+        },
+        "statistics_node_available": true,
+        "vertex_count": 3094
+      },
+      "chain_a_model_create": {
+        "error_code": null,
+        "has_structured_content": true,
+        "job_id": "f14889fd-917d-45b0-a08c-dcca2cddbffd",
+        "operation_id": "49203fc5-e7bb-4e8b-83ae-86dbd62bd8da",
+        "outer_isError": false,
+        "request_hash": "dde66b3d9e1ee6d4ba0e6610aff53799c6d21e083a9d9dfaac087d8ba9466114",
+        "success": true
+      },
+      "chain_a_physics": {
+        "create": {
+          "error_code": null,
+          "has_structured_content": true,
+          "job_id": "98f6c4b5-2a7a-4868-8c74-787e174fa1d3",
+          "operation_id": "715103e5-08b9-4899-adf1-f6d312e29953",
+          "outer_isError": false,
+          "request_hash": "73df80124fa5950b916793dd7568bcb84681f6bd3e4b7831b1a45aefb353e8fc",
+          "success": true
+        },
+        "insulation": {
+          "error_code": "TAG_CONFLICT",
+          "has_structured_content": true,
+          "job_id": "8cd2a876-3cb6-4e0f-8e61-b0188d58503f",
+          "operation_id": "ac01e140-6802-4395-850c-09b5a72ce55f",
+          "outer_isError": true,
+          "request_hash": "2031ee919474ee67075a43bb207a255913822b8bb00f3d3b3a4697cd79444d92",
+          "success": false
+        },
+        "insulation_adoption": {
+          "adopted": true,
+          "found": {
+            "label": "热绝缘 1",
+            "path": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                },
+                {
+                  "collection": "physics",
+                  "tag": "ht"
+                },
+                {
+                  "collection": "feature",
+                  "tag": "ins1"
+                }
+              ]
+            },
+            "tag": "ins1",
+            "type_id": "ThermalInsulation"
+          },
+          "label": "热绝缘 1",
+          "payload": {
+            "_outer_isError": false,
+            "_structuredContent": {
+              "data": {
+                "budget": {
+                  "max_nodes": 2000,
+                  "max_rpc": 5000,
+                  "max_seconds": 20.0
+                },
+                "complete": true,
+                "count": 1,
+                "errors": [],
+                "incomplete": false,
+                "next_cursor": null,
+                "results": [
+                  {
+                    "label": "热绝缘 1",
+                    "path": {
+                      "segments": [
+                        {
+                          "collection": "component",
+                          "tag": "comp1"
+                        },
+                        {
+                          "collection": "physics",
+                          "tag": "ht"
+                        },
+                        {
+                          "collection": "feature",
+                          "tag": "ins1"
+                        }
+                      ]
+                    },
+                    "tag": "ins1",
+                    "type_id": "ThermalInsulation"
+                  }
+                ],
+                "status": "SUCCEEDED",
+                "truncated": false,
+                "truncated_reason": null,
+                "visited": 52
+              },
+              "error": null,
+              "execution": {
+                "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+                "dirty": false,
+                "idempotency_key": "phase4-20260921T075750Z-g3_1-chainAC3chain-a-insulation-read",
+                "job_id": "c19546be-e366-4d09-9856-280c7be82f5a",
+                "model_ownership": "mcp_owned",
+                "model_ref": {
+                  "generation": 1,
+                  "model_tag": "mcp54",
+                  "schema_version": 1,
+                  "server_instance_id": "8532fc04fe8c6e370904f4f65cea9d3fffed59521ea006612db36e3a12b293f2",
+                  "session_id": "session-9f95c2e814acd5f99589961a"
+                },
+                "operation_id": "8619ffdd-6591-49c5-b5cf-9b3a3291de33",
+                "request_hash": "3bccb835d68c898b896870d4d63f1258d72a7cebdbde5231d059f41144e06d94",
+                "request_id": "phase4-20260921T075750Z-g3_1-chainAC3chain-a",
+                "revision": 11,
+                "server_ownership": "shared",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "success": true
+            },
+            "data": {
+              "budget": {
+                "max_nodes": 2000,
+                "max_rpc": 5000,
+                "max_seconds": 20.0
+              },
+              "complete": true,
+              "count": 1,
+              "errors": [],
+              "incomplete": false,
+              "next_cursor": null,
+              "results": [
+                {
+                  "label": "热绝缘 1",
+                  "path": {
+                    "segments": [
+                      {
+                        "collection": "component",
+                        "tag": "comp1"
+                      },
+                      {
+                        "collection": "physics",
+                        "tag": "ht"
+                      },
+                      {
+                        "collection": "feature",
+                        "tag": "ins1"
+                      }
+                    ]
+                  },
+                  "tag": "ins1",
+                  "type_id": "ThermalInsulation"
+                }
+              ],
+              "status": "SUCCEEDED",
+              "truncated": false,
+              "truncated_reason": null,
+              "visited": 52
+            },
+            "error": null,
+            "execution": {
+              "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+              "dirty": false,
+              "idempotency_key": "phase4-20260921T075750Z-g3_1-chainAC3chain-a-insulation-read",
+              "job_id": "c19546be-e366-4d09-9856-280c7be82f5a",
+              "model_ownership": "mcp_owned",
+              "model_ref": {
+                "generation": 1,
+                "model_tag": "mcp54",
+                "schema_version": 1,
+                "server_instance_id": "8532fc04fe8c6e370904f4f65cea9d3fffed59521ea006612db36e3a12b293f2",
+                "session_id": "session-9f95c2e814acd5f99589961a"
+              },
+              "operation_id": "8619ffdd-6591-49c5-b5cf-9b3a3291de33",
+              "request_hash": "3bccb835d68c898b896870d4d63f1258d72a7cebdbde5231d059f41144e06d94",
+              "request_id": "phase4-20260921T075750Z-g3_1-chainAC3chain-a",
+              "revision": 11,
+              "server_ownership": "shared",
+              "session_id": "session-9f95c2e814acd5f99589961a"
+            },
+            "success": true
+          },
+          "read": {
+            "error_code": null,
+            "has_structured_content": true,
+            "job_id": "c19546be-e366-4d09-9856-280c7be82f5a",
+            "operation_id": "8619ffdd-6591-49c5-b5cf-9b3a3291de33",
+            "outer_isError": false,
+            "request_hash": "3bccb835d68c898b896870d4d63f1258d72a7cebdbde5231d059f41144e06d94",
+            "success": true
+          },
+          "refusal_message": "feature 'ins1' already exists under this parent",
+          "refused_with": "TAG_CONFLICT",
+          "type_id": "ThermalInsulation",
+          "verdict": "the interface already carries the engine's own insulation feature",
+          "verified_as_insulation": true
+        },
+        "temp1": {
+          "error_code": null,
+          "has_structured_content": true,
+          "job_id": "94e600a5-192e-4f67-8735-de7cab51bd8e",
+          "operation_id": "488deaeb-44de-4a98-a0bb-a30c40e1f80c",
+          "outer_isError": false,
+          "request_hash": "0c57b29c933872013430a58f510f56f149448993622de4474fc1b4b5661bc313",
+          "success": true
+        },
+        "temp1_selection": {
+          "error_code": null,
+          "has_structured_content": true,
+          "job_id": "7c8d7245-4106-45de-987a-cf27588bb477",
+          "operation_id": "e2cf84ea-ca6a-4cac-9220-e61e977121ec",
+          "outer_isError": false,
+          "request_hash": "d29a83afdb496569edfd0b479d38721d8200037bb5af82a3bef31f6ae066165b",
+          "success": true
+        },
+        "temp2": {
+          "error_code": null,
+          "has_structured_content": true,
+          "job_id": "4019ceed-ab5c-4f17-8c0d-5fcb494e211b",
+          "operation_id": "487474c9-b0ec-4188-bcde-0ef13a014ac4",
+          "outer_isError": false,
+          "request_hash": "069935eb26dfe49d7adbb52f24893808876fbeb0d64b0be2391b824707110d9f",
+          "success": true
+        },
+        "temp2_selection": {
+          "error_code": null,
+          "has_structured_content": true,
+          "job_id": "8904be2e-0d65-4030-bbc4-2ec08dd1aac6",
+          "operation_id": "59d71160-bfda-48be-9815-4b0a1244987a",
+          "outer_isError": false,
+          "request_hash": "227699acf4457bf965e8bfce1ea4d2585b55ce8ebfafe0d6ecd96980cca3325b",
+          "success": true
+        }
+      },
+      "chain_a_power_balance": {
+        "analytic_heat_flux_w_m2": 100000.0,
+        "analytic_power_w": 5.0,
+        "derived_heat_flux_w_m2": 100000.0,
+        "reported_heat_flux_w_m2": null
+      },
+      "chain_a_pre_solve_readback": {
+        "chain": "A",
+        "error_definition": "max |T_engine(x) - T_analytic(x)| / (T1 - T0) over the pre-registered sample line, T(x) = T0 + (T1-T0)*x/L",
+        "error_limit": 0.0001,
+        "mismatched": [],
+        "not_comparable": [],
+        "not_observed": [],
+        "note": "read back before the solve and compared against the pre-registered specification; the specification and the tolerance were not modified by this observation",
+        "observed_envelopes": {
+          "density": {
+            "error_code": null,
+            "has_structured_content": true,
+            "job_id": "dcdb0a5c-1aea-4030-8d86-0f4400fada55",
+            "operation_id": "7af1caca-a4bc-46b8-973e-6667ce449c55",
+            "outer_isError": false,
+            "request_hash": "6447d3e6475d1f96db413176e78a1113225888d429df8e26e16c220cf582f665",
+            "success": true
+          },
+          "heatcapacity": {
+            "error_code": null,
+            "has_structured_content": true,
+            "job_id": "35afc47a-3f91-496d-af84-f8b47b83bb03",
+            "operation_id": "663bbf20-584b-4cf2-a122-62417680e61e",
+            "outer_isError": false,
+            "request_hash": "18feb32e004d2df0199caa53aaad509447bc88853e919ef750ead7f2500b6490",
+            "success": true
+          },
+          "height_m": {
+            "error_code": null,
+            "has_structured_content": true,
+            "job_id": "735b5a10-0078-49ef-b10e-c7839ec7f087",
+            "operation_id": "50bff4c5-70c2-4afd-9295-c44a424bd2d4",
+            "outer_isError": false,
+            "request_hash": "47dbb8dab6ab02dbc9ee425d217cab377719a564ccb3527e51fcd8aea87d4426",
+            "success": true
+          },
+          "hot_boundary": {
+            "error_code": null,
+            "has_structured_content": true,
+            "job_id": "d3e5b163-8507-496d-b11e-444a27f49a0f",
+            "operation_id": "36b5eb10-5c7b-4359-9d5d-5e5843395a04",
+            "outer_isError": false,
+            "request_hash": "ebd90c14d8dc9d1fd64f3b71a4e26b13ad724f894fda8b57c3dccd385c0c52b0",
+            "success": true
+          },
+          "initial_value": {
+            "error_code": null,
+            "has_structured_content": true,
+            "job_id": "3f3d381d-68c0-45b6-be64-9dc9348da682",
+            "operation_id": "e05f2d72-20a1-4d81-8a9d-0692994ec1a4",
+            "outer_isError": false,
+            "request_hash": "b2cdd78101a64f3ba40060ff9b2e2341e70370e6764f3f87b2734e244fb01837",
+            "success": true
+          },
+          "length_m": {
+            "error_code": null,
+            "has_structured_content": true,
+            "job_id": "15bc0297-45f1-4f6a-971f-c505b8652e75",
+            "operation_id": "8bd93cc1-a65c-40ca-b9b3-8bb51e55920b",
+            "outer_isError": false,
+            "request_hash": "e36ba6cbec8ddd111568d536f36158a621a38f3e75e9ed5961d867d36cbb4fe5",
+            "success": true
+          },
+          "thermalconductivity": {
+            "error_code": null,
+            "has_structured_content": true,
+            "job_id": "5a63e413-127e-40d4-938c-8c801b557015",
+            "operation_id": "97c48718-5b60-4287-a92d-6f897fc95844",
+            "outer_isError": false,
+            "request_hash": "0462e1699745f862c91a9ba1fb82c433a95d635edf60ac53e6da7c883324e8c0",
+            "success": true
+          },
+          "width_m": {
+            "error_code": null,
+            "has_structured_content": true,
+            "job_id": "a7175f24-adc5-4e6a-9fde-d33e1b4f5349",
+            "operation_id": "2f4ad48a-57cb-40c0-aa51-e36c92f12c63",
+            "outer_isError": false,
+            "request_hash": "47d4ed8c805953c42e1d57678316ef64b3e187426427749644e9d5a99742e3b9",
+            "success": true
+          }
+        },
+        "read_errors": {},
+        "rows": [
+          {
+            "expected": 10.0,
+            "item": "thermalconductivity",
+            "observed": {
+              "data": [
+                "10[W/(m*K)]"
+              ],
+              "java_signature": "java.lang.String[]",
+              "kind": "string",
+              "shape": [
+                1
+              ]
+            },
+            "observed_number": 10.0,
+            "reason": null,
+            "status": "MATCH",
+            "unit": "W/(m*K)"
+          },
+          {
+            "expected": 1000.0,
+            "item": "density",
+            "observed": {
+              "data": "1000[kg/m^3]",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "shape": []
+            },
+            "observed_number": 1000.0,
+            "reason": null,
+            "status": "MATCH",
+            "unit": "kg/m^3"
+          },
+          {
+            "expected": 1000.0,
+            "item": "heatcapacity",
+            "observed": {
+              "data": "1000[J/(kg*K)]",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "shape": []
+            },
+            "observed_number": 1000.0,
+            "reason": null,
+            "status": "MATCH",
+            "unit": "J/(kg*K)"
+          },
+          {
+            "expected": 0.01,
+            "item": "length_m",
+            "observed": {
+              "data": 0.01,
+              "java_signature": "double",
+              "kind": "float64",
+              "shape": []
+            },
+            "observed_number": 0.01,
+            "reason": null,
+            "status": "MATCH",
+            "unit": "m"
+          },
+          {
+            "expected": 0.01,
+            "item": "width_m",
+            "observed": {
+              "data": 0.01,
+              "java_signature": "double",
+              "kind": "float64",
+              "shape": []
+            },
+            "observed_number": 0.01,
+            "reason": null,
+            "status": "MATCH",
+            "unit": "m"
+          },
+          {
+            "expected": 0.005,
+            "item": "height_m",
+            "observed": {
+              "data": 0.005,
+              "java_signature": "double",
+              "kind": "float64",
+              "shape": []
+            },
+            "observed_number": 0.005,
+            "reason": null,
+            "status": "MATCH",
+            "unit": "m"
+          },
+          {
+            "expected": 300.0,
+            "item": "initial_value",
+            "observed": {
+              "data": "300[K]",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "shape": []
+            },
+            "observed_number": 300.0,
+            "reason": null,
+            "status": "MATCH",
+            "unit": "K"
+          },
+          {
+            "expected": 400.0,
+            "item": "hot_boundary",
+            "observed": {
+              "data": "400[K]",
+              "java_signature": "java.lang.String",
+              "kind": "string",
+              "shape": []
+            },
+            "observed_number": 400.0,
+            "reason": null,
+            "status": "MATCH",
+            "unit": "K"
+          }
+        ],
+        "spec_source": "G3.1 §8.1 pre-registered benchmark specification",
+        "status": "PASS"
+      },
+      "chain_a_prerequisites": {
+        "boundary_temperatures_and_insulation": "PASS",
+        "constant_material_assigned": "PASS",
+        "empty_model_geometry_block": "PASS",
+        "local_mesh_built": "PASS",
+        "stationary_study_and_solver": "PASS"
+      },
+      "chain_a_reference": {
+        "analytic_model": "steady 1D conduction in a slab insulated on four sides: T(x) = T0 + (T1-T0)*x/L",
+        "benchmark_spec": {
+          "alpha_m2_s": 1e-05,
+          "chain": "A",
+          "cp_j_kgk": 1000.0,
+          "delta_t_k": null,
+          "error_definition": "max |T_engine(x) - T_analytic(x)| / (T1 - T0) over the pre-registered sample line, T(x) = T0 + (T1-T0)*x/L",
+          "error_limit": 0.0001,
+          "expected_model_values": [
+            {
+              "expression": "10[W/(m*K)]",
+              "item": "thermalconductivity",
+              "unit": "W/(m*K)",
+              "value": 10.0
+            },
+            {
+              "expression": "1000[kg/m^3]",
+              "item": "density",
+              "unit": "kg/m^3",
+              "value": 1000.0
+            },
+            {
+              "expression": "1000[J/(kg*K)]",
+              "item": "heatcapacity",
+              "unit": "J/(kg*K)",
+              "value": 1000.0
+            },
+            {
+              "expression": null,
+              "item": "length_m",
+              "unit": "m",
+              "value": 0.01
+            },
+            {
+              "expression": null,
+              "item": "width_m",
+              "unit": "m",
+              "value": 0.01
+            },
+            {
+              "expression": null,
+              "item": "height_m",
+              "unit": "m",
+              "value": 0.005
+            },
+            {
+              "expression": "300[K]",
+              "item": "initial_value",
+              "unit": "K",
+              "value": 300.0
+            },
+            {
+              "expression": "400[K]",
+              "item": "hot_boundary",
+              "unit": "K",
+              "value": 400.0
+            }
+          ],
+          "height_m": 0.005,
+          "hot_k": 400.0,
+          "k_w_mk": 10.0,
+          "length_m": 0.01,
+          "rho_kg_m3": 1000.0,
+          "sample_count": 21,
+          "sanity_checks": [
+            {
+              "check": "unit:k_w_mk",
+              "ok": true,
+              "unit": "W/(m*K)",
+              "value": 10.0,
+              "why": "a positive finite quantity in the registered unit"
+            },
+            {
+              "check": "unit:rho_kg_m3",
+              "ok": true,
+              "unit": "kg/m^3",
+              "value": 1000.0,
+              "why": "a positive finite quantity in the registered unit"
+            },
+            {
+              "check": "unit:cp_j_kgk",
+              "ok": true,
+              "unit": "J/(kg*K)",
+              "value": 1000.0,
+              "why": "a positive finite quantity in the registered unit"
+            },
+            {
+              "check": "unit:length_m",
+              "ok": true,
+              "unit": "m",
+              "value": 0.01,
+              "why": "a positive finite quantity in the registered unit"
+            },
+            {
+              "check": "unit:t0_k",
+              "ok": true,
+              "unit": "K",
+              "value": 300.0,
+              "why": "a positive finite quantity in the registered unit"
+            },
+            {
+              "check": "diffusivity",
+              "ok": true,
+              "unit": "m^2/s",
+              "value": 1e-05,
+              "why": "alpha = k/(rho*Cp) is the only diffusivity the analytic model uses"
+            },
+            {
+              "check": "decay_rate",
+              "ok": true,
+              "unit": "1/s",
+              "value": 0.9869604401089359,
+              "why": "alpha*(pi/L)^2: the transient factor must decay, not grow"
+            },
+            {
+              "check": "steady_profile_endpoints",
+              "ok": true,
+              "unit": "K",
+              "value": [
+                300.0,
+                400.0
+              ],
+              "why": "T(0)=T0 and T(L)=Thot for the registered boundary values"
+            },
+            {
+              "check": "steady_profile_monotone",
+              "ok": true,
+              "unit": "K",
+              "value": [
+                300.0,
+                305.0,
+                310.0
+              ],
+              "why": "a linear driven profile cannot decrease along the driving direction"
+            },
+            {
+              "check": "flux_times_area",
+              "ok": true,
+              "unit": "W",
+              "value": 5.0,
+              "why": "the total power is the flux through the *actual* end-face area"
+            }
+          ],
+          "sides": "insulated on the four lateral faces",
+          "source": "G3.1 §8.1 pre-registered benchmark specification",
+          "t0_k": 300.0,
+          "time_points_s": [],
+          "width_m": 0.01
+        },
+        "config": {
+          "chain": "A",
+          "cp_j_kgk": 1000.0,
+          "height_m": 0.005,
+          "k_w_mk": 10.0,
+          "length_m": 0.01,
+          "relative_error_limit": 0.0001,
+          "rho_kg_m3": 1000.0,
+          "sample_count": 21,
+          "t0_k": 300.0,
+          "t1_k": 400.0,
+          "width_m": 0.01
+        },
+        "cross_section_area_m2": 5e-05,
+        "error_definition": "max |T_engine(x) - T_analytic(x)| / (T1 - T0) over the pre-registered sample line, T(x) = T0 + (T1-T0)*x/L",
+        "heat_flux_w_m2": 100000.0,
+        "length_m": 0.01,
+        "power_w": 5.0,
+        "reference_sha256": "1a8c9ad785e6efbe3e2cfcae82986753d4978853c0289ae261e2b7e4da9240b8",
+        "relative_error_limit": 0.0001,
+        "t0_k": 300.0,
+        "temperature_difference_k": 100.0
+      },
+      "chain_a_samples": {
+        "max_relative_error": 2.2737367544323206e-15,
+        "path": "$REPO/evidence/phase4_1/runs/20260921T075750Z-g3_1-chainAC3/chainA_samples.json",
+        "rows": 21,
+        "sha256": "88ab58b47fa6f04172b22ad05b843a0e5a0e3cc17574107b033b202ee5adacfa"
+      },
+      "chain_a_saved_mph": {
+        "path": "$REPO/evidence/phase4_1/runs/20260921T075750Z-g3_1-chainAC3/chainA_result.mph",
+        "reopen_command": "tools/phase4_run_mcp.py --reopen-check $REPO/evidence/phase4_1/runs/20260921T075750Z-g3_1-chainAC3/chainA_result.mph",
+        "sha256": "81fe2dedda94790dcfb90a8c5b1de9c19b99987e36eab90b9a2a03be18a7dc8e"
+      },
+      "chain_a_solve": {
+        "error_code": null,
+        "success": true
+      },
+      "chain_a_solver_sequence": {
+        "generate": {
+          "error_code": null,
+          "has_structured_content": true,
+          "job_id": "b1292953-3584-40d3-b775-5a73428157eb",
+          "operation_id": "643e7974-4acf-4feb-945d-7265ab6a042c",
+          "outer_isError": false,
+          "request_hash": "e0ccfd652939014ec5b57e6b43133983a540a60290223be6b855c9b6a7a7c5e9",
+          "success": true
+        },
+        "list": {
+          "association_semantics": "model.sol(<tag>).study() returns the associated study tag; attach() is what makes a sequence part of the study sequence",
+          "filter": {
+            "study": "std1"
+          },
+          "solver_count": 1,
+          "solvers": [
+            {
+              "allowlist_entry_required": [],
+              "default_solnum": null,
+              "feature_count": 3,
+              "features": [
+                {
+                  "label": "编译方程: 稳态",
+                  "tag": "st1",
+                  "type_id": "StudyStep"
+                },
+                {
+                  "label": "因变量 1",
+                  "tag": "v1",
+                  "type_id": "Variables"
+                },
+                {
+                  "label": "稳态求解器 1",
+                  "tag": "s1",
+                  "type_id": "Stationary"
+                }
+              ],
+              "has_problems": false,
+              "is_attached": true,
+              "is_empty": true,
+              "is_initialized": false,
+              "label": "解 1",
+              "parameter_names": null,
+              "parameter_values": null,
+              "path": {
+                "segments": [
+                  {
+                    "collection": "sol",
+                    "tag": "sol1"
+                  }
+                ]
+              },
+              "read_errors": {
+                "getDefaultSolnum": {
+                  "allowlist_entry_required": null,
+                  "code": "ENGINE_CALL_FAILED",
+                  "message": "COMSOL getDefaultSolnum probe failed: JavaWorkerError"
+                },
+                "getPNames": {
+                  "allowlist_entry_required": null,
+                  "code": "ENGINE_CALL_FAILED",
+                  "message": "COMSOL getPNames probe failed: JavaWorkerError"
+                },
+                "getPVals": {
+                  "allowlist_entry_required": null,
+                  "code": "ENGINE_CALL_FAILED",
+                  "message": "COMSOL getPVals probe failed: JavaWorkerError"
+                }
+              },
+              "sequence_type": "None",
+              "solver": "sol1",
+              "study": "std1",
+              "study_readback_error": null
+            }
+          ]
+        },
+        "solver_sequence_ok": true
+      },
+      "chain_a_step_create": {
+        "error_code": null,
+        "has_structured_content": true,
+        "job_id": "d9d97889-4afa-4a97-87a7-c65b8c6159aa",
+        "operation_id": "76d48898-4bfb-4284-8177-52dd8e1a1ee9",
+        "outer_isError": false,
+        "request_hash": "d507fa0253218b120785ed6c1376a093843273530d8c45034518fec7d7aca6a2",
+        "success": true
+      },
+      "chain_a_study_create": {
+        "error_code": null,
+        "has_structured_content": true,
+        "job_id": "85e22ba9-bc57-48c9-891a-2e035644eea4",
+        "operation_id": "58caf8e2-d945-4980-a986-845eeefcf250",
+        "outer_isError": false,
+        "request_hash": "86dc29bef460fd41386bd9d04fdba212df9edd0bad38ee2febec11a659d1b2cc",
+        "success": true
+      },
+      "isolation": {
+        "applied": false,
+        "at": "2026-09-21T07:57:52.110456Z",
+        "attempted": false,
+        "declaration": {
+          "case_id": "W16_T019_chainA_steady",
+          "mode": "shared_bound",
+          "modes": [
+            "own_model",
+            "checkpoint_restore",
+            "shared_bound"
+          ],
+          "rationale": "reads/writes the run's bound model; the run is serial"
+        },
+        "reason": "declared: this case runs against the run's bound model, strictly serially"
+      },
+      "operation_availability": {
+        "geometry.build": {
+          "available": true,
+          "effect": "COMPUTE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "geometry": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "until_tag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "idempotency_key",
+              "geometry"
+            ],
+            "title": "geometry.build input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "geometry",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "session_id",
+            "until_tag"
+          ],
+          "mcp_tool_name": "geometry_build",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "geometry.feature_create": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "inputs": {
+                "type": "object"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "parent": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "properties": {
+                "$ref": "common.schema.json#/$defs/PropertySet"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "tag": {
+                "type": "string"
+              },
+              "type_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "parent",
+              "tag",
+              "type_id",
+              "properties"
+            ],
+            "title": "geometry.feature_create input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "expected_revision",
+            "idempotency_key",
+            "inputs",
+            "model_ref",
+            "parent",
+            "project_id",
+            "properties",
+            "request_id",
+            "session_id",
+            "tag",
+            "type_id"
+          ],
+          "mcp_tool_name": "geometry_feature_create",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "material.create": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "component": {
+                "type": "string"
+              },
+              "definition": {
+                "type": "object"
+              },
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "tag": {
+                "type": "string"
+              },
+              "type_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "component",
+              "tag",
+              "type_id"
+            ],
+            "title": "material.create input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "component",
+            "definition",
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "session_id",
+            "tag",
+            "type_id"
+          ],
+          "mcp_tool_name": "material_create",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "material.selection_set": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "selection": {
+                "$ref": "common.schema.json#/$defs/SelectionSpec"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "path",
+              "selection"
+            ],
+            "title": "material.selection_set input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "path",
+            "project_id",
+            "request_id",
+            "selection",
+            "session_id"
+          ],
+          "mcp_tool_name": "material_selection_set",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "material.set_properties": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "group": {
+                "type": "string"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "properties": {
+                "$ref": "common.schema.json#/$defs/PropertySet"
+              },
+              "provenance": {
+                "type": "object"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "path",
+              "group",
+              "properties"
+            ],
+            "title": "material.set_properties input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "expected_revision",
+            "group",
+            "idempotency_key",
+            "model_ref",
+            "path",
+            "project_id",
+            "properties",
+            "provenance",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "material_set_properties",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "mesh.build": {
+          "available": true,
+          "effect": "COMPUTE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "until_tag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "idempotency_key",
+              "path"
+            ],
+            "title": "mesh.build input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "idempotency_key",
+            "model_ref",
+            "path",
+            "project_id",
+            "request_id",
+            "session_id",
+            "until_tag"
+          ],
+          "mcp_tool_name": "mesh_build",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "mesh.create": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "component": {
+                "type": "string"
+              },
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "geometry": {
+                "type": "string"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "tag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "component",
+              "tag",
+              "geometry"
+            ],
+            "title": "mesh.create input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "component",
+            "expected_revision",
+            "geometry",
+            "idempotency_key",
+            "mode",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "session_id",
+            "tag"
+          ],
+          "mcp_tool_name": "mesh_create",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "mesh.feature_create": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "parent": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "properties": {
+                "$ref": "common.schema.json#/$defs/PropertySet"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "selection": {
+                "$ref": "common.schema.json#/$defs/SelectionSpec"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "tag": {
+                "type": "string"
+              },
+              "type_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "parent",
+              "tag",
+              "type_id",
+              "properties"
+            ],
+            "title": "mesh.feature_create input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "parent",
+            "project_id",
+            "properties",
+            "request_id",
+            "selection",
+            "session_id",
+            "tag",
+            "type_id"
+          ],
+          "mcp_tool_name": "mesh_feature_create",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "model.create": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": false,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "fallback_tool": "model_create",
+          "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "dimension": {
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "idempotency_key",
+              "session_id",
+              "label"
+            ],
+            "title": "model.create input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "dimension",
+            "idempotency_key",
+            "label",
+            "project_id",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "model_create",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "reason": "strict model.create is PROPOSED_NOT_IMPLEMENTED; the published legacy MCP action model_create carries this operation",
+          "remediation": null,
+          "required_products": null,
+          "route": "legacy published MCP route (model_create)",
+          "schema_is_object": true,
+          "strict_available": false,
+          "strict_probe": {
+            "available": false,
+            "effect": "WRITE",
+            "error_code": null,
+            "evaluation_policy": null,
+            "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+            "evaluation_policy_source": null,
+            "executable": false,
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+            "input_schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "additionalProperties": false,
+              "properties": {
+                "dimension": {
+                  "type": "integer"
+                },
+                "idempotency_key": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "project_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "request_id": {
+                  "type": "string"
+                },
+                "session_id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "project_id",
+                "idempotency_key",
+                "session_id",
+                "label"
+              ],
+              "title": "model.create input",
+              "type": "object"
+            },
+            "input_schema_properties": [
+              "dimension",
+              "idempotency_key",
+              "label",
+              "project_id",
+              "request_id",
+              "session_id"
+            ],
+            "mcp_tool_name": "model_create",
+            "output_contract": true,
+            "probe_unreadable": null,
+            "remediation": null,
+            "required_products": null,
+            "route": "control plane",
+            "schema_is_object": true,
+            "wire_compatibility": {
+              "execution_fields": [
+                "session_id",
+                "model_ref",
+                "expected_revision",
+                "idempotency_key",
+                "request_id",
+                "rpc_timeout_s",
+                "queue_timeout_s",
+                "execution_timeout_s"
+              ],
+              "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+              "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+              "result_fields": [
+                "success",
+                "data",
+                "error",
+                "execution"
+              ],
+              "transport": "MCP structuredContent plus text mirror; isError equals not success"
+            }
+          },
+          "strict_route": "control plane",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "model.save": {
+          "available": true,
+          "effect": "FILE_WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": false,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "fallback_tool": "save_model",
+          "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "destination": {
+                "type": "string"
+              },
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "include_solution": {
+                "type": "boolean"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "overwrite": {
+                "type": "boolean"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "destination",
+              "overwrite"
+            ],
+            "title": "model.save input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "destination",
+            "expected_revision",
+            "idempotency_key",
+            "include_solution",
+            "model_ref",
+            "overwrite",
+            "project_id",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "model_save",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "reason": "strict model.save is PROPOSED_NOT_IMPLEMENTED; the published legacy MCP action save_model carries this operation",
+          "remediation": null,
+          "required_products": null,
+          "route": "legacy published MCP route (save_model)",
+          "schema_is_object": true,
+          "strict_available": false,
+          "strict_probe": {
+            "available": false,
+            "effect": "FILE_WRITE",
+            "error_code": null,
+            "evaluation_policy": null,
+            "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+            "evaluation_policy_source": null,
+            "executable": false,
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+            "input_schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "additionalProperties": false,
+              "properties": {
+                "destination": {
+                  "type": "string"
+                },
+                "expected_revision": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "idempotency_key": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "include_solution": {
+                  "type": "boolean"
+                },
+                "model_ref": {
+                  "additionalProperties": false,
+                  "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                  "properties": {
+                    "generation": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "model_tag": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "schema_version": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "server_instance_id": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "session_id": {
+                      "minLength": 1,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "schema_version",
+                    "session_id",
+                    "server_instance_id",
+                    "model_tag",
+                    "generation"
+                  ],
+                  "type": "object"
+                },
+                "overwrite": {
+                  "type": "boolean"
+                },
+                "project_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "request_id": {
+                  "type": "string"
+                },
+                "session_id": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "project_id",
+                "session_id",
+                "model_ref",
+                "expected_revision",
+                "idempotency_key",
+                "destination",
+                "overwrite"
+              ],
+              "title": "model.save input",
+              "type": "object"
+            },
+            "input_schema_properties": [
+              "destination",
+              "expected_revision",
+              "idempotency_key",
+              "include_solution",
+              "model_ref",
+              "overwrite",
+              "project_id",
+              "request_id",
+              "session_id"
+            ],
+            "mcp_tool_name": "model_save",
+            "output_contract": true,
+            "probe_unreadable": null,
+            "remediation": null,
+            "required_products": null,
+            "route": "versioned COMSOL Java API adapter",
+            "schema_is_object": true,
+            "wire_compatibility": {
+              "execution_fields": [
+                "session_id",
+                "model_ref",
+                "expected_revision",
+                "idempotency_key",
+                "request_id",
+                "rpc_timeout_s",
+                "queue_timeout_s",
+                "execution_timeout_s"
+              ],
+              "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+              "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+              "result_fields": [
+                "success",
+                "data",
+                "error",
+                "execution"
+              ],
+              "transport": "MCP structuredContent plus text mirror; isError equals not success"
+            }
+          },
+          "strict_route": "versioned COMSOL Java API adapter",
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "physics.create": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "component": {
+                "type": "string"
+              },
+              "dependent_variables": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "geometry": {
+                "type": "string"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "tag": {
+                "type": "string"
+              },
+              "type_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "component",
+              "tag",
+              "type_id",
+              "geometry"
+            ],
+            "title": "physics.create input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "component",
+            "dependent_variables",
+            "expected_revision",
+            "geometry",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "session_id",
+            "tag",
+            "type_id"
+          ],
+          "mcp_tool_name": "physics_create",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "physics.feature_create": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "entity_dimension": {
+                "type": "integer"
+              },
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "parent": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "properties": {
+                "$ref": "common.schema.json#/$defs/PropertySet"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "tag": {
+                "type": "string"
+              },
+              "type_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "parent",
+              "tag",
+              "type_id"
+            ],
+            "title": "physics.feature_create input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "entity_dimension",
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "parent",
+            "project_id",
+            "properties",
+            "request_id",
+            "session_id",
+            "tag",
+            "type_id"
+          ],
+          "mcp_tool_name": "physics_feature_create",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "physics.selection_set": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "selection": {
+                "$ref": "common.schema.json#/$defs/SelectionSpec"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "path",
+              "selection"
+            ],
+            "title": "physics.selection_set input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "path",
+            "project_id",
+            "request_id",
+            "selection",
+            "session_id"
+          ],
+          "mcp_tool_name": "physics_selection_set",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "result.sample_path": {
+          "available": true,
+          "effect": "EVALUATE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "path_definition": {
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "spec": {
+                "$ref": "common.schema.json#/$defs/EvaluationSpec"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "idempotency_key",
+              "spec",
+              "path_definition"
+            ],
+            "title": "result.sample_path input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "idempotency_key",
+            "model_ref",
+            "path_definition",
+            "project_id",
+            "request_id",
+            "session_id",
+            "spec"
+          ],
+          "mcp_tool_name": "result_sample_path",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "study.create": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "tag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "tag"
+            ],
+            "title": "study.create input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "expected_revision",
+            "idempotency_key",
+            "label",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "session_id",
+            "tag"
+          ],
+          "mcp_tool_name": "study_create",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "study.run": {
+          "available": true,
+          "effect": "COMPUTE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "resources": {
+                "type": "object"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "study": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "timeout_s": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "idempotency_key",
+              "study"
+            ],
+            "title": "study.run input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "request_id",
+            "resources",
+            "session_id",
+            "study",
+            "timeout_s"
+          ],
+          "mcp_tool_name": "study_run",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "study.step_create": {
+          "available": true,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": true,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "SUPPORTED_UNVERIFIED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "expected_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "model_ref": {
+                "additionalProperties": false,
+                "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+                "properties": {
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "model_tag": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "server_instance_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_version",
+                  "session_id",
+                  "server_instance_id",
+                  "model_tag",
+                  "generation"
+                ],
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "properties": {
+                "$ref": "common.schema.json#/$defs/PropertySet"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "study": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "tag": {
+                "type": "string"
+              },
+              "type_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "study",
+              "tag",
+              "type_id",
+              "properties"
+            ],
+            "title": "study.step_create input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "expected_revision",
+            "idempotency_key",
+            "model_ref",
+            "project_id",
+            "properties",
+            "request_id",
+            "session_id",
+            "study",
+            "tag",
+            "type_id"
+          ],
+          "mcp_tool_name": "study_step_create",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "versioned COMSOL Java API adapter",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        }
+      },
+      "prerequisites": {
+        "case_id": "W16_T019_chainA_steady",
+        "checks": {
+          "bound_model": {
+            "applicable": true,
+            "evidence": "a model_ref is bound",
+            "satisfied": true
+          },
+          "own_geometry": {
+            "applicable": false,
+            "evidence": "declared: the case builds its own component/geometry before using it",
+            "satisfied": null
+          }
+        },
+        "declared": [
+          "bound_model",
+          "own_geometry"
+        ],
+        "note": "a missing prerequisite makes this case DEPENDENCY_BLOCKED and points at the root cause; it never becomes a defect of this case",
+        "status": "SATISFIED",
+        "unknown_declarations": [],
+        "unsatisfied": []
+      },
+      "solved_solutions": [
+        {
+          "at": "2026-09-21T07:57:55.609399Z",
+          "case": "W16_T019_chainA_steady",
+          "dataset": "dset1",
+          "solution": "sol1",
+          "source": "chain A steady solve"
+        }
+      ],
+      "static_chain_a_ops_executable": {
+        "operations": [
+          "model.create",
+          "geometry.feature_create",
+          "geometry.build",
+          "material.create",
+          "material.set_properties",
+          "material.selection_set",
+          "physics.create",
+          "physics.feature_create",
+          "physics.selection_set",
+          "mesh.create",
+          "mesh.feature_create",
+          "mesh.build",
+          "study.create",
+          "study.step_create",
+          "study.run",
+          "result.sample_path",
+          "model.save"
+        ],
+        "pass": true
+      },
+      "subcase_inventory": {
+        "levels": [
+          "fixture",
+          "live",
+          "static"
+        ],
+        "missing": [],
+        "planned": 14,
+        "recorded": 14
+      }
+    },
+    "case_id": "W16_T019_chainA_steady",
+    "finished_at": "2026-09-21T07:57:55.762745Z",
+    "package": "W16",
+    "reason": null,
+    "started_at": "2026-09-21T07:57:52.110441Z",
+    "status": "PASS",
+    "subcases": {
+      "analytic_reference_preregistered": {
+        "acceptance": "T019 chain A analytic reference",
+        "level": "fixture",
+        "sha256": "1a8c9ad785e6efbe3e2cfcae82986753d4978853c0289ae261e2b7e4da9240b8",
+        "status": "PASS"
+      },
+      "benchmark_spec_registered_and_sane": {
+        "acceptance": "T019 chain A pre-registered BenchmarkSpec (C07b): units, dimensions and derived quantities",
+        "level": "live",
+        "observed": {
+          "alpha_m2_s": 1e-05,
+          "chain": "A",
+          "cp_j_kgk": 1000.0,
+          "delta_t_k": null,
+          "error_definition": "max |T_engine(x) - T_analytic(x)| / (T1 - T0) over the pre-registered sample line, T(x) = T0 + (T1-T0)*x/L",
+          "error_limit": 0.0001,
+          "expected_model_values": [
+            {
+              "expression": "10[W/(m*K)]",
+              "item": "thermalconductivity",
+              "unit": "W/(m*K)",
+              "value": 10.0
+            },
+            {
+              "expression": "1000[kg/m^3]",
+              "item": "density",
+              "unit": "kg/m^3",
+              "value": 1000.0
+            },
+            {
+              "expression": "1000[J/(kg*K)]",
+              "item": "heatcapacity",
+              "unit": "J/(kg*K)",
+              "value": 1000.0
+            },
+            {
+              "expression": null,
+              "item": "length_m",
+              "unit": "m",
+              "value": 0.01
+            },
+            {
+              "expression": null,
+              "item": "width_m",
+              "unit": "m",
+              "value": 0.01
+            },
+            {
+              "expression": null,
+              "item": "height_m",
+              "unit": "m",
+              "value": 0.005
+            },
+            {
+              "expression": "300[K]",
+              "item": "initial_value",
+              "unit": "K",
+              "value": 300.0
+            },
+            {
+              "expression": "400[K]",
+              "item": "hot_boundary",
+              "unit": "K",
+              "value": 400.0
+            }
+          ],
+          "height_m": 0.005,
+          "hot_k": 400.0,
+          "k_w_mk": 10.0,
+          "length_m": 0.01,
+          "rho_kg_m3": 1000.0,
+          "sample_count": 21,
+          "sanity_checks": [
+            {
+              "check": "unit:k_w_mk",
+              "ok": true,
+              "unit": "W/(m*K)",
+              "value": 10.0,
+              "why": "a positive finite quantity in the registered unit"
+            },
+            {
+              "check": "unit:rho_kg_m3",
+              "ok": true,
+              "unit": "kg/m^3",
+              "value": 1000.0,
+              "why": "a positive finite quantity in the registered unit"
+            },
+            {
+              "check": "unit:cp_j_kgk",
+              "ok": true,
+              "unit": "J/(kg*K)",
+              "value": 1000.0,
+              "why": "a positive finite quantity in the registered unit"
+            },
+            {
+              "check": "unit:length_m",
+              "ok": true,
+              "unit": "m",
+              "value": 0.01,
+              "why": "a positive finite quantity in the registered unit"
+            },
+            {
+              "check": "unit:t0_k",
+              "ok": true,
+              "unit": "K",
+              "value": 300.0,
+              "why": "a positive finite quantity in the registered unit"
+            },
+            {
+              "check": "diffusivity",
+              "ok": true,
+              "unit": "m^2/s",
+              "value": 1e-05,
+              "why": "alpha = k/(rho*Cp) is the only diffusivity the analytic model uses"
+            },
+            {
+              "check": "decay_rate",
+              "ok": true,
+              "unit": "1/s",
+              "value": 0.9869604401089359,
+              "why": "alpha*(pi/L)^2: the transient factor must decay, not grow"
+            },
+            {
+              "check": "steady_profile_endpoints",
+              "ok": true,
+              "unit": "K",
+              "value": [
+                300.0,
+                400.0
+              ],
+              "why": "T(0)=T0 and T(L)=Thot for the registered boundary values"
+            },
+            {
+              "check": "steady_profile_monotone",
+              "ok": true,
+              "unit": "K",
+              "value": [
+                300.0,
+                305.0,
+                310.0
+              ],
+              "why": "a linear driven profile cannot decrease along the driving direction"
+            },
+            {
+              "check": "flux_times_area",
+              "ok": true,
+              "unit": "W",
+              "value": 5.0,
+              "why": "the total power is the flux through the *actual* end-face area"
+            }
+          ],
+          "sides": "insulated on the four lateral faces",
+          "source": "G3.1 §8.1 pre-registered benchmark specification",
+          "t0_k": 300.0,
+          "time_points_s": [],
+          "width_m": 0.01
+        },
+        "status": "PASS"
+      },
+      "boundary_temperatures_and_insulation": {
+        "acceptance": "T019 chain A end temperatures, other faces insulated",
+        "level": "live",
+        "observed": {
+          "operations": [
+            {
+              "error_code": null,
+              "has_structured_content": true,
+              "job_id": "98f6c4b5-2a7a-4868-8c74-787e174fa1d3",
+              "operation_id": "715103e5-08b9-4899-adf1-f6d312e29953",
+              "outer_isError": false,
+              "request_hash": "73df80124fa5950b916793dd7568bcb84681f6bd3e4b7831b1a45aefb353e8fc",
+              "step": "physics.create",
+              "success": true
+            },
+            {
+              "error_code": null,
+              "has_structured_content": true,
+              "job_id": "94e600a5-192e-4f67-8735-de7cab51bd8e",
+              "operation_id": "488deaeb-44de-4a98-a0bb-a30c40e1f80c",
+              "outer_isError": false,
+              "request_hash": "0c57b29c933872013430a58f510f56f149448993622de4474fc1b4b5661bc313",
+              "step": "physics.feature_create temp1",
+              "success": true
+            },
+            {
+              "error_code": null,
+              "has_structured_content": true,
+              "job_id": "7c8d7245-4106-45de-987a-cf27588bb477",
+              "operation_id": "e2cf84ea-ca6a-4cac-9220-e61e977121ec",
+              "outer_isError": false,
+              "request_hash": "d29a83afdb496569edfd0b479d38721d8200037bb5af82a3bef31f6ae066165b",
+              "step": "physics.selection_set temp1",
+              "success": true
+            },
+            {
+              "error_code": null,
+              "has_structured_content": true,
+              "job_id": "4019ceed-ab5c-4f17-8c0d-5fcb494e211b",
+              "operation_id": "487474c9-b0ec-4188-bcde-0ef13a014ac4",
+              "outer_isError": false,
+              "request_hash": "069935eb26dfe49d7adbb52f24893808876fbeb0d64b0be2391b824707110d9f",
+              "step": "physics.feature_create temp2",
+              "success": true
+            },
+            {
+              "error_code": null,
+              "has_structured_content": true,
+              "job_id": "8904be2e-0d65-4030-bbc4-2ec08dd1aac6",
+              "operation_id": "59d71160-bfda-48be-9815-4b0a1244987a",
+              "outer_isError": false,
+              "request_hash": "227699acf4457bf965e8bfce1ea4d2585b55ce8ebfafe0d6ecd96980cca3325b",
+              "step": "physics.selection_set temp2",
+              "success": true
+            },
+            {
+              "error_code": null,
+              "has_structured_content": true,
+              "job_id": "c19546be-e366-4d09-9856-280c7be82f5a",
+              "operation_id": "8619ffdd-6591-49c5-b5cf-9b3a3291de33",
+              "outer_isError": false,
+              "request_hash": "3bccb835d68c898b896870d4d63f1258d72a7cebdbde5231d059f41144e06d94",
+              "step": "ins1 (the engine's own insulation feature, read back)",
+              "success": true
+            }
+          ]
+        },
+        "status": "PASS"
+      },
+      "constant_material_assigned": {
+        "acceptance": "T019 chain A constant material",
+        "level": "live",
+        "observed": {
+          "create": {
+            "error_code": null,
+            "has_structured_content": true,
+            "job_id": "452892c5-1acd-4971-a12f-56ef87bf8d30",
+            "operation_id": "dff19a42-b9bc-4e43-aeb4-a6fa6fabb428",
+            "outer_isError": false,
+            "request_hash": "9307955abe2b000b26aa09da243b6f83e91c2c82c9402252bea8a98ba9df2499",
+            "success": true
+          },
+          "properties": {
+            "applied_actions": [
+              "create",
+              "set_properties"
+            ],
+            "error_code": null,
+            "failed": [],
+            "missing_properties": [],
+            "status": "APPLIED",
+            "written_properties": [
+              "density",
+              "heatcapacity",
+              "thermalconductivity"
+            ]
+          },
+          "selection": {
+            "error_code": null,
+            "has_structured_content": true,
+            "job_id": "62819028-3f57-43e9-9cce-95b2f9d11ddd",
+            "operation_id": "338b0238-ce90-42dd-a0e4-f2ebda6192a7",
+            "outer_isError": false,
+            "request_hash": "471f8d7fe131dc605abaa3f17cfbcf235cd5440d1c9a56f23d80c029a841926a",
+            "success": true
+          }
+        },
+        "status": "PASS"
+      },
+      "empty_model_geometry_block": {
+        "acceptance": "T019 chain A block geometry from an empty model",
+        "level": "live",
+        "observed": {
+          "operations": [
+            {
+              "error_code": null,
+              "has_structured_content": true,
+              "job_id": "c5c4c65b-37c3-46df-8f69-cfce459ee61d",
+              "operation_id": "2d8f6dd5-1180-4a41-af27-2ad1daa23fbd",
+              "outer_isError": false,
+              "request_hash": "d6d18a85bc3569620554b96395d25b3e6650bae893cf417f4330780b6ad689c8",
+              "step": "geometry.feature_create",
+              "success": true
+            },
+            {
+              "error_code": null,
+              "has_structured_content": true,
+              "job_id": "27ef9d3c-e2d1-46e2-b16f-49a3f6f8d3b5",
+              "operation_id": "c7388f58-3220-4f5f-acc3-e8901fd71848",
+              "outer_isError": false,
+              "request_hash": "4ce1e3b94fc1d8246b4b9b91d006db588980f22d39dbf1b605e001d09520279b",
+              "step": "geometry.build",
+              "success": true
+            }
+          ]
+        },
+        "status": "PASS"
+      },
+      "heat_flux_and_power_balance": {
+        "acceptance": "T019 chain A flux/power balance",
+        "level": "live",
+        "status": "PASS"
+      },
+      "linear_profile_relative_error_le_1e-4": {
+        "acceptance": "T019 chain A T(x) relative error <= 1e-4",
+        "level": "live",
+        "max_relative_error": 2.2737367544323206e-15,
+        "samples": 21,
+        "status": "PASS",
+        "worst_point": {
+          "T_analytic_k": 365.0,
+          "T_k": 365.0000000000002,
+          "x_m": 0.006500000000000001
+        }
+      },
+      "local_mesh_built": {
+        "acceptance": "T019 chain A local mesh",
+        "level": "live",
+        "observed": {
+          "operations": [
+            {
+              "error_code": null,
+              "has_structured_content": true,
+              "job_id": "0fe1e676-2ae4-4f8c-970e-56b183372abe",
+              "operation_id": "861f137c-6937-4972-b8d8-f0130668a359",
+              "outer_isError": false,
+              "request_hash": "209e7c58d44876db53de88f0b8dd196144a3b820d6262fd312faa1cdf0909c3e",
+              "step": "mesh.create",
+              "success": true
+            },
+            {
+              "error_code": null,
+              "has_structured_content": true,
+              "job_id": "a03d4425-a057-4435-b2f7-7d47cffdca95",
+              "operation_id": "c116ad83-6f19-4ce9-a940-d39b329f943f",
+              "outer_isError": false,
+              "request_hash": "03eab0e29fd928a05caf875f96aeb2d6bb73ce0359584d893308cdaeb83906d5",
+              "step": "mesh.feature_create size",
+              "success": true
+            },
+            {
+              "error_code": null,
+              "has_structured_content": true,
+              "job_id": "d9676643-cb8a-4169-acd1-08b3456e8955",
+              "operation_id": "64a09e68-d934-4d7f-b87c-fcb3ecd3e0bb",
+              "outer_isError": false,
+              "request_hash": "b0efe18b2490e1b05c1b8bbe3de4a3dcb0507b144af0c5186b348290af7edc66",
+              "step": "mesh.feature_create ftet",
+              "success": true
+            },
+            {
+              "error_code": null,
+              "has_structured_content": true,
+              "job_id": "6b345ac1-d78a-4553-8aa7-6a1851f25da9",
+              "operation_id": "b44dda2e-c6a7-476a-b2e5-85519fbad532",
+              "outer_isError": false,
+              "request_hash": "c33c0f3814a5c96c873224ce2f3a0154c73cc16441914db5a309f91979984ab4",
+              "step": "mesh.build",
+              "success": true
+            }
+          ]
+        },
+        "status": "PASS"
+      },
+      "pre_solve_readback_matches_spec": {
+        "acceptance": "T019 chain A model read-back checked item by item against the frozen specification",
+        "level": "live",
+        "observed": {
+          "chain": "A",
+          "error_definition": "max |T_engine(x) - T_analytic(x)| / (T1 - T0) over the pre-registered sample line, T(x) = T0 + (T1-T0)*x/L",
+          "error_limit": 0.0001,
+          "mismatched": [],
+          "not_comparable": [],
+          "not_observed": [],
+          "note": "read back before the solve and compared against the pre-registered specification; the specification and the tolerance were not modified by this observation",
+          "observed_envelopes": {
+            "density": {
+              "error_code": null,
+              "has_structured_content": true,
+              "job_id": "dcdb0a5c-1aea-4030-8d86-0f4400fada55",
+              "operation_id": "7af1caca-a4bc-46b8-973e-6667ce449c55",
+              "outer_isError": false,
+              "request_hash": "6447d3e6475d1f96db413176e78a1113225888d429df8e26e16c220cf582f665",
+              "success": true
+            },
+            "heatcapacity": {
+              "error_code": null,
+              "has_structured_content": true,
+              "job_id": "35afc47a-3f91-496d-af84-f8b47b83bb03",
+              "operation_id": "663bbf20-584b-4cf2-a122-62417680e61e",
+              "outer_isError": false,
+              "request_hash": "18feb32e004d2df0199caa53aaad509447bc88853e919ef750ead7f2500b6490",
+              "success": true
+            },
+            "height_m": {
+              "error_code": null,
+              "has_structured_content": true,
+              "job_id": "735b5a10-0078-49ef-b10e-c7839ec7f087",
+              "operation_id": "50bff4c5-70c2-4afd-9295-c44a424bd2d4",
+              "outer_isError": false,
+              "request_hash": "47dbb8dab6ab02dbc9ee425d217cab377719a564ccb3527e51fcd8aea87d4426",
+              "success": true
+            },
+            "hot_boundary": {
+              "error_code": null,
+              "has_structured_content": true,
+              "job_id": "d3e5b163-8507-496d-b11e-444a27f49a0f",
+              "operation_id": "36b5eb10-5c7b-4359-9d5d-5e5843395a04",
+              "outer_isError": false,
+              "request_hash": "ebd90c14d8dc9d1fd64f3b71a4e26b13ad724f894fda8b57c3dccd385c0c52b0",
+              "success": true
+            },
+            "initial_value": {
+              "error_code": null,
+              "has_structured_content": true,
+              "job_id": "3f3d381d-68c0-45b6-be64-9dc9348da682",
+              "operation_id": "e05f2d72-20a1-4d81-8a9d-0692994ec1a4",
+              "outer_isError": false,
+              "request_hash": "b2cdd78101a64f3ba40060ff9b2e2341e70370e6764f3f87b2734e244fb01837",
+              "success": true
+            },
+            "length_m": {
+              "error_code": null,
+              "has_structured_content": true,
+              "job_id": "15bc0297-45f1-4f6a-971f-c505b8652e75",
+              "operation_id": "8bd93cc1-a65c-40ca-b9b3-8bb51e55920b",
+              "outer_isError": false,
+              "request_hash": "e36ba6cbec8ddd111568d536f36158a621a38f3e75e9ed5961d867d36cbb4fe5",
+              "success": true
+            },
+            "thermalconductivity": {
+              "error_code": null,
+              "has_structured_content": true,
+              "job_id": "5a63e413-127e-40d4-938c-8c801b557015",
+              "operation_id": "97c48718-5b60-4287-a92d-6f897fc95844",
+              "outer_isError": false,
+              "request_hash": "0462e1699745f862c91a9ba1fb82c433a95d635edf60ac53e6da7c883324e8c0",
+              "success": true
+            },
+            "width_m": {
+              "error_code": null,
+              "has_structured_content": true,
+              "job_id": "a7175f24-adc5-4e6a-9fde-d33e1b4f5349",
+              "operation_id": "2f4ad48a-57cb-40c0-aa51-e36c92f12c63",
+              "outer_isError": false,
+              "request_hash": "47d4ed8c805953c42e1d57678316ef64b3e187426427749644e9d5a99742e3b9",
+              "success": true
+            }
+          },
+          "read_errors": {},
+          "rows": [
+            {
+              "expected": 10.0,
+              "item": "thermalconductivity",
+              "observed": {
+                "data": [
+                  "10[W/(m*K)]"
+                ],
+                "java_signature": "java.lang.String[]",
+                "kind": "string",
+                "shape": [
+                  1
+                ]
+              },
+              "observed_number": 10.0,
+              "reason": null,
+              "status": "MATCH",
+              "unit": "W/(m*K)"
+            },
+            {
+              "expected": 1000.0,
+              "item": "density",
+              "observed": {
+                "data": "1000[kg/m^3]",
+                "java_signature": "java.lang.String",
+                "kind": "string",
+                "shape": []
+              },
+              "observed_number": 1000.0,
+              "reason": null,
+              "status": "MATCH",
+              "unit": "kg/m^3"
+            },
+            {
+              "expected": 1000.0,
+              "item": "heatcapacity",
+              "observed": {
+                "data": "1000[J/(kg*K)]",
+                "java_signature": "java.lang.String",
+                "kind": "string",
+                "shape": []
+              },
+              "observed_number": 1000.0,
+              "reason": null,
+              "status": "MATCH",
+              "unit": "J/(kg*K)"
+            },
+            {
+              "expected": 0.01,
+              "item": "length_m",
+              "observed": {
+                "data": 0.01,
+                "java_signature": "double",
+                "kind": "float64",
+                "shape": []
+              },
+              "observed_number": 0.01,
+              "reason": null,
+              "status": "MATCH",
+              "unit": "m"
+            },
+            {
+              "expected": 0.01,
+              "item": "width_m",
+              "observed": {
+                "data": 0.01,
+                "java_signature": "double",
+                "kind": "float64",
+                "shape": []
+              },
+              "observed_number": 0.01,
+              "reason": null,
+              "status": "MATCH",
+              "unit": "m"
+            },
+            {
+              "expected": 0.005,
+              "item": "height_m",
+              "observed": {
+                "data": 0.005,
+                "java_signature": "double",
+                "kind": "float64",
+                "shape": []
+              },
+              "observed_number": 0.005,
+              "reason": null,
+              "status": "MATCH",
+              "unit": "m"
+            },
+            {
+              "expected": 300.0,
+              "item": "initial_value",
+              "observed": {
+                "data": "300[K]",
+                "java_signature": "java.lang.String",
+                "kind": "string",
+                "shape": []
+              },
+              "observed_number": 300.0,
+              "reason": null,
+              "status": "MATCH",
+              "unit": "K"
+            },
+            {
+              "expected": 400.0,
+              "item": "hot_boundary",
+              "observed": {
+                "data": "400[K]",
+                "java_signature": "java.lang.String",
+                "kind": "string",
+                "shape": []
+              },
+              "observed_number": 400.0,
+              "reason": null,
+              "status": "MATCH",
+              "unit": "K"
+            }
+          ],
+          "spec_source": "G3.1 §8.1 pre-registered benchmark specification",
+          "status": "PASS"
+        },
+        "status": "PASS"
+      },
+      "sample_table_and_units_recorded": {
+        "acceptance": "T019 chain A sampling evidence",
+        "level": "live",
+        "status": "PASS",
+        "table": "$REPO/evidence/phase4_1/runs/20260921T075750Z-g3_1-chainAC3/chainA_samples.json"
+      },
+      "saved_mph_hash_recorded": {
+        "acceptance": "T019 chain A saved mph and hash",
+        "level": "live",
+        "sha256": "81fe2dedda94790dcfb90a8c5b1de9c19b99987e36eab90b9a2a03be18a7dc8e",
+        "status": "PASS"
+      },
+      "solve_produced_solution": {
+        "acceptance": "T019 chain A real solution",
+        "level": "live",
+        "observed": {
+          "applied": [
+            {
+              "duration_s": 1.024,
+              "method": "study.run",
+              "step": "run",
+              "timestamp_changed": true
+            }
+          ],
+          "applied_count": 1,
+          "cleanup_failed": false,
+          "computation_after": {
+            "getLastComputationDate": 1789977475587,
+            "getLastComputationTime": 690,
+            "getLastComputationVersion": "COMSOL 6.4.0.293"
+          },
+          "computation_before": {
+            "getLastComputationDate": -1,
+            "getLastComputationTime": -1,
+            "getLastComputationVersion": ""
+          },
+          "computation_timestamp_changed": true,
+          "dispatch_stage": "post_dispatch",
+          "domain_outcome": {
+            "applied_count": 1,
+            "cleanup_failed": false,
+            "details": {
+              "status_token": "REDACTED"
+            },
+            "dispatch_stage": "post_dispatch",
+            "execution_state_unknown": false,
+            "failed_count": 0,
+            "not_executed_count": 0,
+            "operation": "study.run",
+            "state": "succeeded",
+            "status_token": "REDACTED",
+            "verification_status": "NOT_APPLICABLE",
+            "witness": {
+              "engine_calls": 20,
+              "methods": [
+                "feature",
+                "get",
+                "getLastComputationDate",
+                "getLastComputationTime",
+                "getLastComputationVersion",
+                "getType",
+                "label",
+                "run",
+                "sol",
+                "study",
+                "tags"
+              ],
+              "mutation_issued": true,
+              "mutation_method": "run"
+            }
+          },
+          "domain_state": "succeeded",
+          "duration_s": 1.024,
+          "effect": "compute",
+          "engine_error": null,
+          "execution_state_unknown": false,
+          "failed": [],
+          "failed_count": 0,
+          "isolation_proof": {
+            "api_probe": {
+              "authenticated_api_success": true,
+              "denial_evidence_source": "server_access_log",
+              "loopback_address": "127.0.0.1",
+              "loopback_port": 56389,
+              "nonloopback_address": "192.168.100.152",
+              "nonloopback_api_exception_http_status": null,
+              "nonloopback_port": 56389,
+              "observed_at": "2026-09-20T23:54:50Z",
+              "probe_kind": "comsol_java_api",
+              "server_access_log": {
+                "entries": [
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 403,
+                    "method": "GET",
+                    "peer": "192.168.100.152",
+                    "route": "/webbridge/websocket"
+                  }
+                ],
+                "finished_at": "2026-09-20T23:54:50Z",
+                "inode": 29220293,
+                "java_request_id": "g2-valve-nonloopback-connect",
+                "offset_after": 261,
+                "offset_before": 0,
+                "parsed_nonloopback_entry": {
+                  "http_status": 403,
+                  "method": "GET",
+                  "peer": "192.168.100.152",
+                  "route": "/webbridge/websocket"
+                },
+                "path": "$HOME/Desktop/comsol-mcp-project/PRIVATE_REDACTED/g2-valve-runtime-20260920T235437288577Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-21.txt",
+                "phase": "java_connect_only",
+                "raw_probe_started_after_capture": true,
+                "segment_sha256": "153b4460967fb7d0554677290668ba6f0ded93c018b2f767344cda37d67d62d5",
+                "started_at": "2026-09-20T23:54:42Z",
+                "status": "PASS"
+              }
+            },
+            "birth": "Mon Sep 21 07:54:37 2026",
+            "config_inode": 14720294,
+            "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+            "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+            "endpoint": "127.0.0.1:56389",
+            "established_client_pids": [
+              5014,
+              64447
+            ],
+            "listener": {
+              "endpoint": "*:56389",
+              "local_endpoint": "*:56389",
+              "pid": 5014,
+              "raw": "java     5014 everwalker   59u  IPv6 0xd172207ae153cb69      0t0  TCP *:56389 (LISTEN)",
+              "remote_endpoint": null,
+              "state": "LISTEN"
+            },
+            "listener_binding": "wildcard",
+            "loopback_listener": false,
+            "pid": 5014,
+            "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+            "receipt": "REDACTED",
+            "verified": true,
+            "worker_pid": 64447
+          },
+          "long_task_semantics": {
+            "caller_deadline": "timeout_s/rpc deadlines limit caller waiting only; an expired wait does not prove that COMSOL stopped computing, so the original job must be inspected rather than resubmitted",
+            "engine_call": "study(<tag>).run() is executed synchronously on the serial worker queue",
+            "health": "the worker's health/status socket stays responsive during a solve",
+            "owner": "control_plane"
+          },
+          "not_executed": [],
+          "not_executed_count": 0,
+          "notes": [
+            "study.run() corresponds to Compute in the Desktop and regenerates the solver sequence for an unedited study",
+            "the timestamps are the study's own record of the last computation and are the only verified post-run evidence this layer can read back"
+          ],
+          "ok": true,
+          "partial_change": true,
+          "readback": {
+            "allowlist_entry_required": [],
+            "errors": {},
+            "readable": true,
+            "state": {
+              "getLastComputationDate": 1789977475587,
+              "getLastComputationTime": 690,
+              "getLastComputationVersion": "COMSOL 6.4.0.293"
+            }
+          },
+          "requested_resources": null,
+          "requested_timeout_s": 900.0,
+          "solver_sequences": [
+            "sol1"
+          ],
+          "status": "APPLIED",
+          "steps": [
+            "stat"
+          ],
+          "study": {
+            "segments": [
+              {
+                "collection": "study",
+                "tag": "std1"
+              }
+            ]
+          },
+          "study_tag": "std1",
+          "verification_status": "NOT_APPLICABLE"
+        },
+        "status": "PASS"
+      },
+      "static_chain_a_ops_availability": {
+        "acceptance": "T019 chain A empty-model chain",
+        "level": "static",
+        "status": "PASS"
+      },
+      "stationary_study_and_solver": {
+        "acceptance": "T019 chain A study and solver",
+        "level": "live",
+        "observed": {
+          "operations": [
+            {
+              "error_code": null,
+              "has_structured_content": true,
+              "job_id": "85e22ba9-bc57-48c9-891a-2e035644eea4",
+              "operation_id": "58caf8e2-d945-4980-a986-845eeefcf250",
+              "outer_isError": false,
+              "request_hash": "86dc29bef460fd41386bd9d04fdba212df9edd0bad38ee2febec11a659d1b2cc",
+              "step": "study.create",
+              "success": true
+            },
+            {
+              "error_code": null,
+              "has_structured_content": true,
+              "job_id": "d9d97889-4afa-4a97-87a7-c65b8c6159aa",
+              "operation_id": "76d48898-4bfb-4284-8177-52dd8e1a1ee9",
+              "outer_isError": false,
+              "request_hash": "d507fa0253218b120785ed6c1376a093843273530d8c45034518fec7d7aca6a2",
+              "step": "study.step_create",
+              "success": true
+            }
+          ]
+        },
+        "status": "PASS"
+      }
+    }
+  },
+  "subcase_count": 14
+}

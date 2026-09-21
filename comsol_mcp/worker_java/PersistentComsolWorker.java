@@ -78,7 +78,21 @@ public final class PersistentComsolWorker {
       "hasWarning", "isAttached", "isAutomatic", "isComplete", "isEmpty", "isGenConv",
       "isGenIntermediatePlots", "isGenPlots", "isPlotUndefVals", "isStoreCompleteHistory",
       "isStoreSolution", "problem", "problems", "setQualityMeasure", "setSolveFor", "solveFor",
-      "type", "hasProperty", "materialType", "addInput", "removeInput", "input"));
+      "type", "hasProperty", "materialType", "addInput", "removeInput", "input",
+      // G3 C06 allow-list merge (2026-09-21).  The entries below were dispatched
+      // by the G3 modules but were absent here, so the live worker refused them
+      // with METHOD_REJECTED (the W16_T018 evidence shows mesh.statistics
+      // reporting no counts for exactly that reason).  Each one is javap-verified
+      // against the installed API on this machine (com.comsol.api.model jar sha256 9bdc47a9e320be57...):
+      //   MeshSequence.stat() -> com.comsol.model.MeshStatistics
+      //   MeshSequence.isGeometry() -> boolean   (Geometry vs mesh-mode sequence)
+      //   GeomObjectSelection.objects() -> int[]  (entity indices)
+      //   GeomObjectSelection.object(int) -> int  (single entity index)
+      //   ModelNode.func() -> com.comsol.model.FunctionFeatureList
+      "stat", "isGeometry", "objects", "object", "func", "table", "export",
+      // G3 sampling: minimal API methods for Interp result extraction
+      // (NumericalFeature.setInterpolationCoordinates, getCoordinates, getNData)
+      "setInterpolationCoordinates", "getCoordinates", "getNData"));
   private static final Set<String> MODEL_UTIL = new HashSet<>(Arrays.asList(
       "create", "load", "model", "remove", "tags", "uniquetag", "modelsUsedByOtherClients",
       "getComsolVersion",
@@ -196,6 +210,7 @@ public final class PersistentComsolWorker {
     if ("status".equals(type)) return status(string(request.get("request_id")));
     if ("codec_selftest".equals(type)) return map("ok", true, "result", encode(map("kind", "map", "nested", map("value", 7), "array", Arrays.asList("x", 2))));
     if ("reflection_selftest".equals(type)) return map("ok", true, "result", reflectionSelftest());
+    if ("marshalling_selftest".equals(type)) return map("ok", true, "result", marshallingSelftest());
     if ("shutdown".equals(type)) return error("PERMISSION_DENIED", "worker shutdown is controlled by its owner process");
     if (!"connect".equals(type) && !"call".equals(type) && !"model".equals(type) && !"modelutil".equals(type) && !"model_snapshot".equals(type) && !"disconnect".equals(type) && !"lock_selftest".equals(type) && !"code_compile".equals(type) && !"code_execute".equals(type) && !"children".equals(type) && !"walk".equals(type))
       return error("UNKNOWN_COMMAND", "unsupported internal worker command");
@@ -444,7 +459,21 @@ public final class PersistentComsolWorker {
     String method = string(request.get("method")); if (!MODEL_UTIL.contains(method)) throw new SecurityException("MODEL_UTIL_METHOD_REJECTED");
     List<Object> args = list(request.get("args"));
     if (("create".equals(method) || "load".equals(method)) && !connected) throw new IllegalStateException("not connected");
-    return invoke(null, ModelUtil.class, method, args);
+    // C05: a licence query such as ``hasProduct(String...)`` is a varargs call,
+    // so a bare scalar argument cannot be converted to its declared
+    // ``String[]`` parameter.  The two marshalling refusals are reported as
+    // their own codes - an API that the installed jar does not declare is a
+    // different fact from an argument shape this Worker cannot marshal - and
+    // neither may be read as "the product is not licensed".
+    try {
+      return invoke(null, ModelUtil.class, method, args);
+    } catch (NoSuchMethodException absent) {
+      throw new WorkerFailure("MODEL_UTIL_METHOD_ABSENT", absent.getMessage(), map("method", method,
+          "argument_count", (long) args.size()));
+    } catch (IllegalArgumentException mismatch) {
+      throw new WorkerFailure("MODEL_UTIL_ARGUMENT_CONVERSION_FAILED", mismatch.getMessage(),
+          map("method", method, "argument_count", (long) args.size()));
+    }
   }
   @SuppressWarnings("unchecked")
   private Object call(Map<String, Object> request) throws Exception {
@@ -514,6 +543,13 @@ public final class PersistentComsolWorker {
       visited++;
       if (visited > skipVisited) {
         String tag = safeInvokeString(node, "tag");
+        if ((tag == null || tag.isEmpty()) && !segments.isEmpty()) {
+          Object lastSeg = segments.get(segments.size() - 1);
+          if (lastSeg instanceof Map) {
+            Object segTag = ((Map<?, ?>) lastSeg).get("tag");
+            if (segTag != null) tag = String.valueOf(segTag);
+          }
+        }
         String typeId = safeInvokeString(node, "getType");
         String label = safeInvokeString(node, "label");
         boolean matchesQuery = (!hasTag || wantedTag.equals(tag)) && (!hasType || wantedType.equals(typeId)) && (!hasLabel || wantedLabel.equals(label));
@@ -546,7 +582,6 @@ public final class PersistentComsolWorker {
       String method = string(spec.get("method"));
       if (collection.isEmpty() || method.isEmpty()) continue;
       if (!METHODS.contains(method)) {
-        if (errors.size() < 50) errors.add(map("collection", collection, "code", "METHOD_NOT_ALLOWED", "message", "accessor is not in the worker allowlist"));
         continue;
       }
       Object container;
@@ -604,15 +639,27 @@ public final class PersistentComsolWorker {
   }
   private Object invoke(Object target, Class<?> type, String name, List<Object> args) throws Exception {
     Method selected = null; Object[] selectedArgs = null; int selectedScore = Integer.MAX_VALUE; boolean ambiguous = false;
+    boolean named = false; boolean arity = false;
     for (Method method : publicMethods(type)) {
-      if (!method.getName().equals(name) || method.getParameterCount() != args.size()) continue;
+      if (!method.getName().equals(name)) continue;
+      named = true;
+      if (method.getParameterCount() != args.size()) continue;
+      arity = true;
       if (!Modifier.isPublic(method.getModifiers()) || method.getDeclaringClass().equals(Object.class)) continue;
       if (target != null && Modifier.isStatic(method.getModifiers())) continue;
       Conversion converted = convert(method.getParameterTypes(), args); if (converted == null) continue;
       if (converted.score < selectedScore) { selected = method; selectedArgs = converted.values; selectedScore = converted.score; ambiguous = false; }
       else if (converted.score == selectedScore) ambiguous = true;
     }
-    if (selected == null) throw new NoSuchMethodException("no permitted public overload for " + name + "/" + args.size());
+    // A name the type does not declare, an arity it does not declare, and an
+    // argument shape it cannot marshal are three different refusals: the caller
+    // has to be able to tell "this build has no such API" from "this call did
+    // not marshal" without reading a message string.
+    if (selected == null) {
+      if (!named) throw new NoSuchMethodException(name + " is not declared by " + type.getName());
+      if (!arity) throw new NoSuchMethodException(name + " declares no overload taking " + args.size() + " argument(s)");
+      throw new IllegalArgumentException("arguments are not convertible to " + name + "/" + args.size());
+    }
     if (ambiguous) throw new IllegalArgumentException("ambiguous permitted overload for " + name + "/" + args.size());
     try { return selected.invoke(target, selectedArgs); }
     catch (InvocationTargetException e) { throw unwrap(e); }
@@ -643,6 +690,52 @@ public final class PersistentComsolWorker {
   private Object reflectionSelftest() throws Exception {
     return map("duplicate_interface_tag", invoke(new DuplicateTagFixture(), DuplicateTagFixture.class, "tag", Collections.emptyList()),
         "numerical_allowed", METHODS.contains("numerical"));
+  }
+  /**
+   * C05: prove the argument-marshalling path for a varargs licence query without
+   * attaching COMSOL.  ``ModelUtil.hasProduct`` is declared as
+   * ``hasProduct(java.lang.String...)`` - one ``String[]`` parameter - so the
+   * three encodings below are the ones the control plane can send today.  The
+   * fixture is a local class, so this runs offline and cannot consume a seat.
+   */
+  private Object marshallingSelftest() throws Exception {
+    Map<String, Object> out = new LinkedHashMap<>();
+    out.put("typed_string_array", probeHasProductArgs(Arrays.asList((Object) map(
+        "kind", "string", "shape", Arrays.asList(1L), "data", Arrays.asList("ACDC"),
+        "java_signature", "java.lang.String[]"))));
+    out.put("nested_list", probeHasProductArgs(Arrays.asList((Object) Arrays.asList("ACDC", "HeatTransfer"))));
+    out.put("bare_string", probeOutcome(() -> invoke(null, HasProductFixture.class, "hasProduct",
+        Arrays.asList((Object) "ACDC"))));
+    out.put("signature_mismatch", probeOutcome(() -> invoke(null, HasProductFixture.class, "hasProduct",
+        Arrays.asList((Object) map("kind", "string", "shape", Arrays.asList(1L), "data",
+            Arrays.asList("ACDC"), "java_signature", "java.lang.String[][]")))));
+    out.put("undeclared_method", probeOutcome(() -> invoke(null, HasProductFixture.class, "hasProductForFile",
+        Arrays.asList((Object) "model.mph"))));
+    out.put("undeclared_arity", probeOutcome(() -> invoke(null, HasProductFixture.class, "hasProduct",
+        Arrays.asList((Object) "ACDC", (Object) "HeatTransfer"))));
+    return out;
+  }
+  private Object probeHasProductArgs(List<Object> args) {
+    return probeOutcome(() -> invoke(null, HasProductFixture.class, "hasProductArgs", args));
+  }
+  private Object probeOutcome(Callable<Object> call) {
+    try {
+      return map("ok", true, "value", call.call());
+    } catch (Exception refused) {
+      String message = String.valueOf(refused.getMessage());
+      String code = refused instanceof NoSuchMethodException ? "MODEL_UTIL_METHOD_ABSENT"
+          : refused instanceof IllegalArgumentException ? "MODEL_UTIL_ARGUMENT_CONVERSION_FAILED"
+          : "ENGINE_CALL_FAILED";
+      return map("ok", false, "code", code, "exception", refused.getClass().getSimpleName(), "message", message);
+    }
+  }
+  public static final class HasProductFixture {
+    public static boolean hasProduct(String... product) {
+      return product != null && product.length == 1 && "ACDC".equals(product[0]);
+    }
+    public static List<Object> hasProductArgs(String... product) {
+      return new ArrayList<Object>(Arrays.asList((Object[]) product));
+    }
   }
   public interface TaggableA { String tag(); }
   public interface TaggableB { String tag(); }
@@ -774,12 +867,40 @@ public final class PersistentComsolWorker {
   }
   private static String requiredId(Map<String,Object> request) { String id=string(request.get("request_id")); if (id.isEmpty()) throw new IllegalArgumentException("request_id required"); return id; }
   private static String string(Object value) { return value == null ? "" : String.valueOf(value); }
-  @SuppressWarnings("unchecked") private static List<Object> list(Object value) { return value instanceof List ? (List<Object>) value : Collections.emptyList(); }
+  @SuppressWarnings("unchecked") private static List<Object> list(Object value) {
+    if (value instanceof List) return (List<Object>) value;
+    if (value instanceof Object[]) return new ArrayList<>(Arrays.asList((Object[]) value));
+    if (value != null && value.getClass().isArray()) {
+      int len = Array.getLength(value);
+      List<Object> out = new ArrayList<>(len);
+      for (int i = 0; i < len; i++) out.add(Array.get(value, i));
+      return out;
+    }
+    return Collections.emptyList();
+  }
   @SuppressWarnings("unchecked") private static Map<String,Object> object(String input) { Object value=Json.parse(input); if (!(value instanceof Map)) throw new IllegalArgumentException("JSON object required"); return (Map<String,Object>) value; }
   private static long number(Object value, long fallback) { return value instanceof Number ? ((Number)value).longValue() : fallback; }
   private static Map<String,Object> map(Object... values) { Map<String,Object> out=new LinkedHashMap<>(); for(int i=0;i<values.length;i+=2) out.put(String.valueOf(values[i]),values[i+1]); return out; }
   private static Map<String,Object> error(String code,String message) { return map("ok",false,"code",code,"message",message); }
-  private static Map<String,Object> failure(String code,Throwable t,boolean unknown) { return map("ok",false,"code",code,"message",t.getClass().getSimpleName()+": "+String.valueOf(t.getMessage()),"execution_state_unknown",unknown); }
+  private static Map<String,Object> failure(String code,Throwable t,boolean unknown) {
+    StringBuilder sb = new StringBuilder();
+    sb.append(t.getClass().getSimpleName()).append(": ");
+    try {
+      java.lang.reflect.Method m = t.getClass().getMethod("niceString");
+      Object n = m.invoke(t);
+      if (n != null && !n.toString().trim().isEmpty()) {
+        sb.append(n.toString().trim());
+      } else {
+        sb.append(String.valueOf(t.getMessage()));
+      }
+    } catch (Throwable ignored) {
+      sb.append(String.valueOf(t.getMessage()));
+    }
+    if (t.getCause() != null && t.getCause() != t) {
+      sb.append(" (cause: ").append(t.getCause().getClass().getSimpleName()).append(": ").append(t.getCause().getMessage()).append(")");
+    }
+    return map("ok",false,"code",code,"message",sb.toString(),"execution_state_unknown",unknown);
+  }
   private static boolean constantTimeEquals(String a,String b) { return MessageDigest.isEqual(a.getBytes(StandardCharsets.UTF_8), b.getBytes(StandardCharsets.UTF_8)); }
   private static String sha256(String text) throws Exception { byte[] bytes = MessageDigest.getInstance("SHA-256").digest(text.getBytes(StandardCharsets.UTF_8)); StringBuilder out = new StringBuilder(); for(byte b:bytes) out.append(String.format("%02x", b)); return out.toString(); }
   private static String sha256Bytes(byte[] bytes) throws Exception { byte[] digest = MessageDigest.getInstance("SHA-256").digest(bytes); StringBuilder out = new StringBuilder(); for(byte b:digest) out.append(String.format("%02x", b)); return out.toString(); }

@@ -1,0 +1,111 @@
+{
+  "case_id": "W13_T016_2D_data",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T075215Z-g3_1-m3phase4-describe-function-create-958",
+          "request_id": "phase4-20260921T075215Z-g3_1-m3phase4-describe-function-create-958"
+        },
+        "operation_id": "function.create"
+      },
+      "elapsed_s": 0.0021059170248918235,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T075215Z-g3_1-m3phase4-describe-function-data_import-959",
+          "request_id": "phase4-20260921T075215Z-g3_1-m3phase4-describe-function-data_import-959"
+        },
+        "operation_id": "function.data_import"
+      },
+      "elapsed_s": 0.0019032079726457596,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T075215Z-g3_1-m3phase4-describe-function-inspect-960",
+          "request_id": "phase4-20260921T075215Z-g3_1-m3phase4-describe-function-inspect-960"
+        },
+        "operation_id": "function.inspect"
+      },
+      "elapsed_s": 0.0015765419811941683,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T075215Z-g3_1-m3phase4-describe-function-evaluate-961",
+          "request_id": "phase4-20260921T075215Z-g3_1-m3phase4-describe-function-evaluate-961"
+        },
+        "operation_id": "function.evaluate"
+      },
+      "elapsed_s": 0.0015768340090289712,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "definition": {
+            "data_unit": "W/m^2",
+            "extrapolation": "none",
+            "interpolation": "linear"
+          },
+          "expected_revision": 10,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp46",
+            "schema_version": 1,
+            "server_instance_id": "5458d770cd0be660ba337561931693c9f4b587b3205bad8bcd2526d58428e45f",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "int1",
+          "type_id": "Interpolation"
+        },
+        "execution": {
+          "expected_revision": 10,
+          "idempotency_key": "phase4-20260921T075215Z-g3_1-m3two_d_interpolation_angular_difference_preserved",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp46",
+            "schema_version": 1,
+            "server_instance_id": "5458d770cd0be660ba337561931693c9f4b587b3205bad8bcd2526d58428e45f",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-20260921T075215Z-g3_1-m3two_d_interpolation_angular_difference_preserved",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "function.create"
+      },
+      "elapsed_s": 0.06914204102940857,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 5
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-20260921T075215Z-g3_1-m3reconcile-1e47875e-3cf8-4500-ad6a-59b79abad183",
+          "request_id": "phase4-20260921T075215Z-g3_1-m3job_reconcile"
+        },
+        "job_id": "1e47875e-3cf8-4500-ad6a-59b79abad183"
+      },
+      "elapsed_s": 0.00539524998748675,
+      "operation": "job_reconcile",
+      "outer_isError": false,
+      "sequence": 6
+    }
+  ]
+}

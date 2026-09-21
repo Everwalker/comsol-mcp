@@ -88,40 +88,241 @@ R_READBACK_SOURCES = ("R01_LIVE", "R03_LIVE", "R04_LIVE")
 # W13/W14/W15/W16 cases whose live half is a single operation recipe.
 TRUSTED_CODE_IS_NOT_REQUIRED = True
 
-CHAIN_A = {
-    "length_m": 0.01, "width_m": 0.01, "height_m": 0.005,
-    "k_w_mk": 10.0, "rho_kg_m3": 1000.0, "cp_j_kgk": 1000.0,
-    "t0_k": 300.0, "t1_k": 400.0, "sample_count": 21,
-    "relative_error_limit": 1e-4,
-}
-CHAIN_B = {
-    "length_m": 0.01, "width_m": 0.01, "height_m": 0.005,
-    "k_w_mk": 10.0, "rho_kg_m3": 1000.0, "cp_j_kgk": 1000.0,
-    "t0_k": 300.0, "delta_t_k": 20.0, "time_points_s": [0.0, 0.5, 1.0, 2.0, 4.0],
-    "normalized_error_limit": 1e-3,
-}
+
+def _benchmark_number(value: float) -> str:
+    """A model expression for one benchmark number (``1000``, not ``1000.0``)."""
+    number = float(value)
+    if number.is_integer():
+        return str(int(number))
+    return repr(number)
+
+
+@dataclass(frozen=True)
+class BenchmarkSpec:
+    """The single source of truth for one benchmark chain (G3.1 §8.1, R-08).
+
+    Everything the chain builds *and* everything it expects is derived from this object, so a value
+    can no longer disagree between the config, the material definition and the analytic reference
+    (the original defect: the configs said ``Cp=1000`` while the material presets wrote ``100`` and
+    ``10``, and the mismatch was hidden by re-reading the wrong model value).  The tolerance and the
+    error definition are part of the spec as well: they cannot be relaxed to fit an observation, and
+    a read-back can only ever produce a *mismatch record* against this spec.
+    """
+
+    chain: str
+    length_m: float
+    width_m: float
+    height_m: float
+    k_w_mk: float
+    rho_kg_m3: float
+    cp_j_kgk: float
+    t0_k: float
+    hot_k: float | None = None
+    delta_t_k: float | None = None
+    time_points_s: tuple[float, ...] = ()
+    sample_count: int = 21
+    error_limit: float = 1e-4
+    error_definition: str = ""
+    sides: str = "insulated on the four lateral faces"
+    source: str = "G3.1 §8.1 pre-registered benchmark specification"
+
+    # ---- expressions written into the model (derived, never literals in the case body) ----
+    @property
+    def k_expression(self) -> str:
+        return f"{_benchmark_number(self.k_w_mk)}[W/(m*K)]"
+
+    @property
+    def rho_expression(self) -> str:
+        return f"{_benchmark_number(self.rho_kg_m3)}[kg/m^3]"
+
+    @property
+    def cp_expression(self) -> str:
+        return f"{_benchmark_number(self.cp_j_kgk)}[J/(kg*K)]"
+
+    @property
+    def t0_expression(self) -> str:
+        return f"{_benchmark_number(self.t0_k)}[K]"
+
+    @property
+    def hot_expression(self) -> str | None:
+        return None if self.hot_k is None else f"{_benchmark_number(self.hot_k)}[K]"
+
+    # ---- derived physical quantities ----
+    @property
+    def temperature_difference_k(self) -> float:
+        if self.hot_k is not None:
+            return float(self.hot_k) - float(self.t0_k)
+        if self.delta_t_k is not None:
+            return float(self.delta_t_k)
+        return 0.0
+
+    @property
+    def cross_section_area_m2(self) -> float:
+        return float(self.width_m) * float(self.height_m)
+
+    @property
+    def heat_flux_w_m2(self) -> float:
+        return float(self.k_w_mk) * self.temperature_difference_k / float(self.length_m)
+
+    @property
+    def power_w(self) -> float:
+        return self.heat_flux_w_m2 * self.cross_section_area_m2
+
+    @property
+    def alpha_m2_s(self) -> float:
+        return float(self.k_w_mk) / (float(self.rho_kg_m3) * float(self.cp_j_kgk))
+
+    @property
+    def decay_rate_per_s(self) -> float:
+        return self.alpha_m2_s * (math.pi / float(self.length_m)) ** 2
+
+    # ---- the model definition and the analytic model, both from this spec ----
+    def material_properties(self) -> tuple[dict[str, Any], ...]:
+        """The material definition this chain writes, built from the spec's own numbers."""
+        return (
+            {"name": "thermalconductivity",
+             "value": {"kind": "expression", "shape": [3, 3], "unit": "W/(m*K)",
+                       "data": [[self.k_expression, "0", "0"], ["0", self.k_expression, "0"],
+                                ["0", "0", self.k_expression]]}},
+            {"name": "density", "value": {"kind": "expression", "shape": [], "data": self.rho_expression}},
+            {"name": "heatcapacity", "value": {"kind": "expression", "shape": [], "data": self.cp_expression}},
+        )
+
+    def expected_model_values(self) -> tuple[dict[str, Any], ...]:
+        """What the model must contain before the solve, item by item, for a read-back check."""
+        rows: list[dict[str, Any]] = [
+            {"item": "thermalconductivity", "unit": "W/(m*K)", "value": self.k_w_mk, "expression": self.k_expression},
+            {"item": "density", "unit": "kg/m^3", "value": self.rho_kg_m3, "expression": self.rho_expression},
+            {"item": "heatcapacity", "unit": "J/(kg*K)", "value": self.cp_j_kgk, "expression": self.cp_expression},
+            {"item": "length_m", "unit": "m", "value": self.length_m, "expression": None},
+            {"item": "width_m", "unit": "m", "value": self.width_m, "expression": None},
+            {"item": "height_m", "unit": "m", "value": self.height_m, "expression": None},
+            {"item": "initial_value", "unit": "K", "value": self.t0_k, "expression": self.t0_expression},
+        ]
+        if self.hot_expression is not None:
+            rows.append({"item": "hot_boundary", "unit": "K", "value": self.hot_k, "expression": self.hot_expression})
+        if self.time_points_s:
+            rows.append({"item": "time_points", "unit": "s", "value": list(self.time_points_s), "expression": None})
+        return tuple(rows)
+
+    def steady_profile_k(self, x_m: float) -> float:
+        """Chain A: the 1D steady profile of the insulated slab."""
+        return float(self.t0_k) + self.temperature_difference_k * float(x_m) / float(self.length_m)
+
+    def transient_profile_k(self, x_m: float, time_s: float) -> float:
+        """Chain B: the registered transient solution of the initial sine perturbation."""
+        return (float(self.t0_k)
+                + self.temperature_difference_k * math.sin(math.pi * float(x_m) / float(self.length_m))
+                * math.exp(-self.decay_rate_per_s * float(time_s)))
+
+    def sample_points_m(self) -> list[float]:
+        count = int(self.sample_count)
+        return [float(self.length_m) * index / (count - 1) for index in range(count)]
+
+    def sanity_checks(self) -> tuple[dict[str, Any], ...]:
+        """Dimensional and numeric sanity checks of the spec's own derived quantities.
+
+        These run offline before any live step: a spec whose units or numbers do not close cannot be
+        used to judge a solve.
+        """
+        checks: list[dict[str, Any]] = []
+        dimensions = {"k_w_mk": "W/(m*K)", "rho_kg_m3": "kg/m^3", "cp_j_kgk": "J/(kg*K)",
+                      "length_m": "m", "t0_k": "K"}
+        for name, unit in dimensions.items():
+            value = getattr(self, name)
+            checks.append({"check": f"unit:{name}", "unit": unit, "value": value,
+                           "ok": bool(isinstance(value, (int, float)) and math.isfinite(float(value))
+                                      and float(value) > 0.0),
+                           "why": "a positive finite quantity in the registered unit"})
+        # alpha = k/(rho*cp) must be a diffusivity: m^2/s, and positive.
+        checks.append({"check": "diffusivity", "unit": "m^2/s", "value": self.alpha_m2_s,
+                       "ok": self.alpha_m2_s > 0.0,
+                       "why": "alpha = k/(rho*Cp) is the only diffusivity the analytic model uses"})
+        checks.append({"check": "decay_rate", "unit": "1/s", "value": self.decay_rate_per_s,
+                       "ok": self.decay_rate_per_s > 0.0,
+                       "why": "alpha*(pi/L)^2: the transient factor must decay, not grow"})
+        if self.chain.upper().startswith("A"):
+            checks.append({"check": "steady_profile_endpoints", "unit": "K",
+                           "value": [self.steady_profile_k(0.0), self.steady_profile_k(float(self.length_m))],
+                           "ok": abs(self.steady_profile_k(0.0) - float(self.t0_k)) < 1e-12
+                                 and abs(self.steady_profile_k(float(self.length_m)) - float(self.hot_k or 0.0)) < 1e-12,
+                           "why": "T(0)=T0 and T(L)=Thot for the registered boundary values"})
+            profile = [self.steady_profile_k(x) for x in self.sample_points_m()]
+            checks.append({"check": "steady_profile_monotone", "unit": "K", "value": profile[0:3],
+                           "ok": all(right >= left for left, right in zip(profile, profile[1:])),
+                           "why": "a linear driven profile cannot decrease along the driving direction"})
+            checks.append({"check": "flux_times_area", "unit": "W", "value": self.power_w,
+                           "ok": abs(self.power_w - self.heat_flux_w_m2 * self.cross_section_area_m2) < 1e-18,
+                           "why": "the total power is the flux through the *actual* end-face area"})
+        if self.chain.upper().startswith("B"):
+            checks.append({"check": "transient_initial_profile", "unit": "K",
+                           "value": [self.transient_profile_k(x, 0.0) for x in self.sample_points_m()[:3]],
+                           "ok": abs(self.transient_profile_k(float(self.length_m) / 2, 0.0)
+                                     - (float(self.t0_k) + self.temperature_difference_k)) < 1e-12,
+                           "why": "T(x,0) = T0 + dT*sin(pi*x/L): the initial perturbation is the registered one"})
+            checks.append({"check": "transient_boundaries_hold", "unit": "K",
+                           "value": [self.transient_profile_k(0.0, time_s) for time_s in self.time_points_s[:2]],
+                           "ok": all(abs(self.transient_profile_k(0.0, time_s) - float(self.t0_k)) < 1e-12
+                                     and abs(self.transient_profile_k(float(self.length_m), time_s)
+                                             - float(self.t0_k)) < 1e-12 for time_s in self.time_points_s),
+                           "why": "both ends sit at T0 for every registered time (the sine vanishes there)"})
+            late = self.transient_profile_k(float(self.length_m) / 2, 1e6)
+            checks.append({"check": "transient_decays_to_initial", "unit": "K", "value": late,
+                           "ok": abs(late - float(self.t0_k)) < 1e-6,
+                           "why": "as t grows the perturbation must vanish, leaving T0"})
+            checks.append({"check": "sine_perturbation_shape", "unit": "K",
+                           "value": self.transient_profile_k(float(self.length_m) / 4, 0.0),
+                           "ok": abs(self.transient_profile_k(float(self.length_m) / 4, 0.0)
+                                     - (float(self.t0_k) + self.temperature_difference_k * math.sin(math.pi / 4))) < 1e-12,
+                           "why": "the spatial shape is the registered sin(pi*x/L), not a fitted curve"})
+        return tuple(checks)
+
+    def as_config(self) -> dict[str, Any]:
+        """The mapping the case bodies read (kept as the pre-spec key names)."""
+        config: dict[str, Any] = {"length_m": float(self.length_m), "width_m": float(self.width_m),
+                                  "height_m": float(self.height_m), "k_w_mk": float(self.k_w_mk),
+                                  "rho_kg_m3": float(self.rho_kg_m3), "cp_j_kgk": float(self.cp_j_kgk),
+                                  "t0_k": float(self.t0_k), "sample_count": int(self.sample_count),
+                                  "chain": self.chain}
+        if self.hot_k is not None:
+            config["t1_k"] = float(self.hot_k)
+        if self.delta_t_k is not None:
+            config["delta_t_k"] = float(self.delta_t_k)
+        if self.time_points_s:
+            config["time_points_s"] = [float(value) for value in self.time_points_s]
+        if self.chain.upper().startswith("A"):
+            config["relative_error_limit"] = float(self.error_limit)
+        if self.chain.upper().startswith("B"):
+            config["normalized_error_limit"] = float(self.error_limit)
+        return config
+
+
+#: Chain A — steady 1D conduction through a slab: 300 K / 400 K end faces, insulated sides,
+#: k=10 W/(m*K), rho=1000 kg/m^3, **Cp=1000 J/(kg*K)** (the material preset used to write 100).
+BENCHMARK_A = BenchmarkSpec(
+    chain="A", length_m=0.01, width_m=0.01, height_m=0.005,
+    k_w_mk=10.0, rho_kg_m3=1000.0, cp_j_kgk=1000.0, t0_k=300.0, hot_k=400.0, sample_count=21,
+    error_limit=1e-4,
+    error_definition=("max |T_engine(x) - T_analytic(x)| / (T1 - T0) over the pre-registered sample "
+                      "line, T(x) = T0 + (T1-T0)*x/L"),
+)
+#: Chain B — transient relaxation of a 20 K sine perturbation (T0=300 K, the same rho/k, Cp=1000;
+#: the material preset used to write 10, which is why the decay never matched).
+BENCHMARK_B = BenchmarkSpec(
+    chain="B", length_m=0.01, width_m=0.01, height_m=0.005,
+    k_w_mk=10.0, rho_kg_m3=1000.0, cp_j_kgk=1000.0, t0_k=300.0, delta_t_k=20.0,
+    time_points_s=(0.0, 0.5, 1.0, 2.0, 4.0), sample_count=21,
+    error_limit=1e-3,
+    error_definition=("max over the registered time points of |T_engine(x,t) - T_analytic(x,t)| / dT, "
+                      "T(x,t) = T0 + dT*sin(pi*x/L)*exp(-alpha*(pi/L)^2*t), alpha = k/(rho*Cp)"),
+)
+CHAIN_A = BENCHMARK_A.as_config()
+CHAIN_B = BENCHMARK_B.as_config()
+CHAIN_A_MATERIAL_PROPERTIES = BENCHMARK_A.material_properties()
+CHAIN_B_MATERIAL_PROPERTIES = BENCHMARK_B.material_properties()
+BENCHMARKS = {"A": BENCHMARK_A, "B": BENCHMARK_B}
 T016_FIXTURE_NAME = "phase4_non_axisymmetric_q_xy.csv"
 FAKE_CREDENTIAL = "COMSOL_MCP_PHASE4_FAKE_CREDENTIAL_9f3a1c7d5b"
-
-#: The material definitions the chains write.  ``thermalconductivity`` is the *documented* 3x3
-#: matrix; the engine's build-dependent ``getValueType`` metadata may publish another array rank,
-#: so the values are kept in one place that the runtime alignment re-shapes (never replaces).
-CHAIN_A_MATERIAL_PROPERTIES: tuple[dict[str, Any], ...] = (
-    {"name": "thermalconductivity",
-     "value": {"kind": "expression", "shape": [3, 3], "unit": "W/(m*K)",
-               "data": [["10[W/(m*K)]", "0", "0"], ["0", "10[W/(m*K)]", "0"],
-                        ["0", "0", "10[W/(m*K)]"]]}},
-    {"name": "density", "value": {"kind": "expression", "shape": [], "data": "1000[kg/m^3]"}},
-    {"name": "heatcapacity", "value": {"kind": "expression", "shape": [], "data": "100[J/(kg*K)]"}},
-)
-CHAIN_B_MATERIAL_PROPERTIES: tuple[dict[str, Any], ...] = (
-    {"name": "thermalconductivity",
-     "value": {"kind": "expression", "shape": [3, 3], "unit": "W/(m*K)",
-               "data": [["10[W/(m*K)]", "0", "0"], ["0", "10[W/(m*K)]", "0"],
-                        ["0", "0", "10[W/(m*K)]"]]}},
-    {"name": "density", "value": {"kind": "expression", "shape": [], "data": "1000[kg/m^3]"}},
-    {"name": "heatcapacity", "value": {"kind": "expression", "shape": [], "data": "10[J/(kg*K)]"}},
-)
 
 _BLOCKED_CODES = {
     # Control/engine boundary unavailable.
@@ -251,6 +452,907 @@ def _with_expected_revision(arguments: Mapping[str, Any], revision: int | None) 
     return request
 
 
+# ---------------------------------------------------------------------------
+# C02: the run's centralized execution context
+# ---------------------------------------------------------------------------
+#: The revision/job rejection reasons a refusal is classified with.  The live runs collapsed all
+#: four situations into one "revision conflict" habit (G3.1 section 3):
+#:
+#: * ``stale_expected`` — the request carries one ``expected_revision`` that is behind the revision
+#:   this context observed *and every observation that advanced it was dispatched by this driver*:
+#:   our own sequenced writes made the request stale.
+#: * ``external_observation`` — the model moved by an observation this driver never dispatched
+#:   (``dirty``, or a revision advance with no matching dispatch): an external change, released
+#:   through the published reconcile read and never "repaired" silently.
+#: * ``unknown_job`` — a job whose engine outcome is UNKNOWN is known to the context: the request
+#:   must first be resolved through that original job's own query/reconcile.
+#: * ``generation_mismatch`` — the request's identity does not name the model this context tracks
+#:   (another generation / server epoch / tag), or two duplicated identity fields inside one
+#:   request disagree, so no single canonical source exists.
+REJECTION_REASONS: tuple[str, ...] = ("stale_expected", "external_observation", "unknown_job",
+                                      "generation_mismatch")
+#: Rejections outside the model/job taxonomy: a self-contradicting envelope, and an explicit
+#: idempotency key re-used with another body (kept observable: the product's own conflict is the
+#: evidence GUARD_T010 asks for, so the driver never pre-empts it).
+AUXILIARY_REJECTIONS: tuple[str, ...] = ("ambiguous_envelope", "explicit_key_reuse")
+#: Dispatch stages a refusal can provably have reached.  The first two prove NOT_EXECUTED because no
+#: engine call was made at all; ``dispatched_without_mutation`` proves it from the *product's own*
+#: published witness (``error.details.witness.mutation_issued is False``): the callback reached the
+#: engine, issued reads only, and every one of the stages here is therefore the sole basis for
+#: spending a recorded new plan on the same logical request.
+NOT_EXECUTED_STAGES: frozenset[str] = frozenset({"refused_before_engine", "not_dispatched",
+                                                 "dispatched_without_mutation"})
+DISPATCH_STAGES: frozenset[str] = NOT_EXECUTED_STAGES | {"dispatched", "unknown"}
+#: The stage vocabulary a *product* refusal publishes in ``error.details`` (the callback's own
+#: report of how far it got), plus the ``validation`` token the published G3 refusal envelope
+#: declares for a raise the callback proved happened before its first mutation
+#: (``comsol_mcp._execution_contract.PreWriteRefusal`` / ``_managed_backend._refusal_envelope``,
+#: i.e. ``comsol_mcp._domain_outcome.STAGE_VALIDATION``).  The driver never maps a product stage
+#: onto its own stage names by guessing: ``product_dispatch_stage`` reads the witness and the two
+#: vocabularies stay separate.
+PRODUCT_DISPATCH_STAGES: frozenset[str] = frozenset({"not_dispatched", "pre_dispatch", "post_dispatch",
+                                                     "dispatched", "unknown", "validation"})
+#: The product stages that provably precede the first engine mutation (see NOT_EXECUTED_STAGES).
+PRODUCT_PRE_DISPATCH_STAGES: frozenset[str] = frozenset({"not_dispatched", "pre_dispatch", "validation"})
+#: Every identity field a request may duplicate, with every documented path it can appear on.
+IDENTITY_FIELD_PATHS: dict[str, tuple[str, ...]] = {
+    "expected_revision": ("expected_revision", "arguments.expected_revision", "execution.expected_revision"),
+    "session_id": ("session_id", "arguments.session_id", "execution.session_id"),
+    "model_ref": ("model_ref", "arguments.model_ref", "execution.model_ref"),
+}
+#: The managed-revision preconditions whose refusal is raised by the execution ledger's preflight,
+#: *before* any engine call: the product documents them, and the driver may therefore treat their
+#: refusal as proved NOT_EXECUTED evidence (any other failure keeps stage ``unknown``).
+PRE_DISPATCH_REFUSAL_CODES: dict[str, str] = {
+    "REVISION_CONFLICT": "refused_before_engine",
+    "MODEL_IDENTITY_MISMATCH": "refused_before_engine",
+    "IDEMPOTENCY_CONFLICT": "refused_before_engine",
+}
+
+
+def _identity_at(arguments: Mapping[str, Any] | None, dotted: str) -> tuple[bool, Any]:
+    """Read one dotted path from a request body — no fuzzy fallback, no name guessing."""
+    node: Any = arguments if isinstance(arguments, Mapping) else {}
+    for part in dotted.split("."):
+        if not isinstance(node, Mapping) or part not in node:
+            return False, None
+        node = node[part]
+    return True, node
+
+
+def model_ref_token(ref: Mapping[str, Any] | None) -> str | None:
+    """The canonical key of a *full* ModelRef: session/server epoch + tag + generation (C02).
+
+    One project name or one global revision cannot stand in for several models, so the context
+    keys every piece of state by this token.  A mapping without a ``model_tag`` is not a model
+    identity and has no token.
+    """
+    if _model_tag(ref) is None:
+        return None
+    return "|".join(_ref_part(ref, name) for name in ("session_id", "server_instance_id", "model_tag",
+                                                      "generation"))
+
+
+def model_ref_lineage(ref: Mapping[str, Any] | None) -> str | None:
+    """The generation-independent part of a model identity (one model, several generations)."""
+    if _model_tag(ref) is None:
+        return None
+    return "|".join(_ref_part(ref, name) for name in ("session_id", "server_instance_id", "model_tag"))
+
+
+def _model_tag(ref: Mapping[str, Any] | None) -> str | None:
+    tag = ref.get("model_tag") if isinstance(ref, Mapping) else None
+    return tag if isinstance(tag, str) and tag else None
+
+
+def _ref_part(ref: Mapping[str, Any] | None, name: str) -> str:
+    value = ref.get(name) if isinstance(ref, Mapping) else None
+    return "?" if value is None or value == "" else str(value)
+
+
+def _body_sha256(body: Mapping[str, Any] | None) -> str:
+    """The digest of one request body — the only thing that may decide a key reuse."""
+    if body is None:
+        return "none"
+    text = json.dumps(_json_safe(dict(body)), sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _identity_key(field: str, value: Any) -> str:
+    """A comparable key for one identity value (``model_ref`` values compare by full token)."""
+    if field == "model_ref":
+        token = model_ref_token(value if isinstance(value, Mapping) else None)
+        if token is not None:
+            return token
+    return json.dumps(_json_safe(value), sort_keys=True, default=str)
+
+
+def identity_conflict(arguments: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    """Every identity field a request duplicates must agree *before* it is dispatched (C02).
+
+    The driver passes the same identity three times — at the top level, inside ``arguments`` and
+    inside ``execution`` — and each layer used to pick its own preferred source, so one request
+    could carry ``revision=2`` in one place and ``3`` in another and every layer chose differently.
+    One canonical source is kept here: nothing is dispatched until the copies agree.
+    """
+    request = arguments if isinstance(arguments, Mapping) else {}
+    for field, paths in IDENTITY_FIELD_PATHS.items():
+        found = [(path, result[1]) for path, result in
+                 ((path, _identity_at(request, path)) for path in paths) if result[0]]
+        if len(found) < 2:
+            continue
+        if len({_identity_key(field, value) for _, value in found}) > 1:
+            return {"reason": "generation_mismatch", "field": field,
+                    "values": {path: _json_safe(value) for path, value in found},
+                    "paths": [path for path, _ in found],
+                    "detail": (f"the request carries {len(found)} copies of {field} that disagree; the "
+                               "driver keeps one canonical source and refuses to guess which layer wins")}
+    return None
+
+
+def _plan_body(arguments: Mapping[str, Any] | None) -> dict[str, Any]:
+    """The request body a plan is minted from: the call without its execution envelope.
+
+    ``expected_revision`` lives inside the call *and* inside ``execution``; a new plan that rewrites
+    the revision therefore carries a different body, which is exactly why it is a new plan and not a
+    retry of the original request.
+    """
+    body = dict(arguments or {})
+    body.pop("execution", None)
+    return body
+
+
+@dataclass(frozen=True)
+class EnvelopeWitness:
+    """One fixed-schema reading of a decoded MCP envelope (never a recursive search)."""
+
+    tool: str
+    success: bool | None
+    data: Mapping[str, Any]
+    error: Mapping[str, Any]
+    execution: Mapping[str, Any]
+    job_id: str | None
+    outer_is_error: bool
+    source: Mapping[str, str]
+    conflicts: tuple[str, ...]
+
+    @property
+    def model_ref(self) -> Mapping[str, Any] | None:
+        ref = self.execution.get("model_ref")
+        return ref if isinstance(ref, Mapping) else None
+
+    @property
+    def token(self) -> str | None:
+        return model_ref_token(self.model_ref)
+
+    @property
+    def lineage(self) -> str | None:
+        return model_ref_lineage(self.model_ref)
+
+    @property
+    def generation(self) -> Any:
+        return self.model_ref.get("generation") if isinstance(self.model_ref, Mapping) else None
+
+    @property
+    def revision(self) -> int | None:
+        value = self.execution.get("revision")
+        return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+    @property
+    def dirty(self) -> bool | None:
+        value = self.execution.get("dirty")
+        return value if isinstance(value, bool) else None
+
+    @property
+    def error_code(self) -> str | None:
+        code = self.error.get("code")
+        return code if isinstance(code, str) else None
+
+    @property
+    def error_message(self) -> str:
+        message = self.error.get("message")
+        return message if isinstance(message, str) else ""
+
+
+def unpack_envelope(tool: str, payload: Mapping[str, Any] | None) -> EnvelopeWitness:
+    """Read one decoded envelope through the *published* field schema only.
+
+    ``structuredContent`` (the outer MCP result), the ActionResult it carries and the job block
+    have fixed names.  C01/C02 require one reading of them that cannot mistake a domain-level
+    ``status.ok=false`` inside ordinary data for the operation's own outcome, so this reader walks
+    exactly the documented paths — never "the first ``success``/``status`` found in any nested
+    mapping" — names every path it used in ``source``, and reports two published copies of the
+    same field that disagree as a conflict instead of resolving it.
+    """
+    outer = payload if isinstance(payload, Mapping) else {}
+    structured = outer.get("_structuredContent")
+    structured = structured if isinstance(structured, Mapping) else None
+
+    def candidates(name: str) -> list[tuple[str, Any]]:
+        found: list[tuple[str, Any]] = []
+        if structured is not None and name in structured:
+            found.append((f"structuredContent.{name}", structured.get(name)))
+        if name in outer:
+            found.append((f"payload.{name}", outer.get(name)))
+        return found
+
+    def choose_bool(name: str) -> tuple[bool | None, str | None, list[str]]:
+        chosen: bool | None = None
+        path_used: str | None = None
+        notes: list[str] = []
+        for path, value in candidates(name):
+            if not isinstance(value, bool):
+                continue
+            if path_used is None:
+                chosen, path_used = value, path
+            elif value != chosen:
+                notes.append(f"{name}: {path_used}={chosen} vs {path}={value}")
+        return chosen, path_used, notes
+
+    def choose_mapping(name: str) -> tuple[Mapping[str, Any], str | None, list[str]]:
+        chosen: Mapping[str, Any] = {}
+        path_used: str | None = None
+        notes: list[str] = []
+        for path, value in candidates(name):
+            if not isinstance(value, Mapping):
+                continue
+            if path_used is None:
+                chosen, path_used = value, path
+            elif dict(value) != dict(chosen):
+                notes.append(f"{name}: {path_used} and {path} disagree")
+        return chosen, path_used, notes
+
+    success, success_path, conflicts = choose_bool("success")
+    data, data_path, notes = choose_mapping("data")
+    conflicts.extend(notes)
+    error, error_path, notes = choose_mapping("error")
+    conflicts.extend(notes)
+    execution, execution_path, notes = choose_mapping("execution")
+    conflicts.extend(notes)
+    if not execution:
+        inner = data.get("execution") if isinstance(data.get("execution"), Mapping) else None
+        if inner:
+            execution, execution_path = inner, "data.execution"
+    job_id: str | None = None
+    job_source: str | None = None
+    for path, container in (("execution.job_id", execution), ("data.job_id", data)):
+        value = container.get("job_id") if isinstance(container, Mapping) else None
+        if isinstance(value, str) and value:
+            job_id, job_source = value, path
+            break
+    outer_flag = outer.get("_outer_isError")
+    source = {name: path for name, path in (("success", success_path), ("data", data_path),
+                                            ("error", error_path), ("execution", execution_path),
+                                            ("job_id", job_source)) if path is not None}
+    return EnvelopeWitness(tool=tool, success=success, data=data, error=error, execution=execution,
+                           job_id=job_id, outer_is_error=bool(outer_flag) if isinstance(outer_flag, bool) else False,
+                           source=source, conflicts=tuple(conflicts))
+
+
+def product_dispatch_stage(payload: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    """The dispatch evidence the *product* published for a refusal (C03: keep cause + stage).
+
+    A refused mutation may carry ``error.details.dispatch_stage`` (the callback's own report of how
+    far it got), ``error.details.cause_code``/``cause_message`` (the original operation error, kept
+    under the wrapper code) and ``error.details.witness`` (the engine calls that were made and
+    whether a mutation was issued).  Read through those fixed paths only — never "the first
+    stage/cause-looking key in any nested mapping" — and state what the witness *proves*:
+
+    * ``proves_not_executed`` is true only when the product itself reports
+      ``witness.mutation_issued is False`` and does not flag the pre-dispatch stage as unproven.
+      That is what lets the M1 run's ``NODE_NOT_FOUND`` refusal (a ``comp1`` the *fixture* never
+      created) be filed as NOT_EXECUTED instead of a first-hand UNKNOWN that freezes the run.
+
+    The second documented position is the *clean* refusal envelope itself, which the G3 dispatch
+    wrapper publishes for a raise it proved happened before dispatch (a ``PreWriteRefusal``: the
+    ``_refusal_envelope`` writer in ``comsol_mcp/_managed_backend.py``): ``data.refused is True``
+    with ``data.dispatch_stage`` (``validation`` for a pre-write raise), ``error.stage`` and
+    ``data.witness``.  That envelope is read only when both of its own proofs are there — the
+    declared pre-dispatch stage *and* ``witness.mutation_issued is False`` — so a post-write store
+    exception can never be re-labelled as an unexecuted refusal.  ``refused_before_engine``-style
+    codes are not read here: they are ``observed_dispatch_stage``'s business and stay separate.
+
+    ``None`` means the envelope published no such evidence at all.
+    """
+    error = _mapping(payload.get("error")) if isinstance(payload, Mapping) else {}
+    details = _mapping(error.get("details"))
+    data = _mapping(payload.get("data")) if isinstance(payload, Mapping) else {}
+    refusal_witness = _mapping(data.get("witness"))
+    if data.get("refused") is True and refusal_witness:
+        # The clean refusal block is the wrapper's *own* publication, so it is read before
+        # ``error.details``: a refusal that carries details for its own reason (the
+        # multi-geometry ``API_UNSUPPORTED``, say) still publishes its stage and witness here.
+        row = _product_stage_row(
+            stage=error.get("stage") or data.get("dispatch_stage"), witness=refusal_witness,
+            cause_code=error.get("code"),
+            cause_message=error.get("message") if isinstance(error.get("message"), str) else None,
+            unproven=details.get("unproven_pre_dispatch"), source="data.refused")
+        # The clean refusal envelope proves the pre-dispatch claim only with *both* of its own
+        # proofs: a declared pre-dispatch stage and a witness that issued no mutation.
+        row["proves_not_executed"] = bool(row["proves_not_executed"] and row["stage"] in PRODUCT_PRE_DISPATCH_STAGES)
+        row["dispatch_stage"] = "dispatched_without_mutation" if row["proves_not_executed"] else "unknown"
+        return row
+    if details:
+        return _product_stage_row(
+            stage=details.get("dispatch_stage") or details.get("stage"), witness=_mapping(details.get("witness")),
+            cause_code=details.get("cause_code"),
+            cause_message=details.get("cause_message") if isinstance(details.get("cause_message"), str) else None,
+            unproven=details.get("unproven_pre_dispatch"), source="error.details")
+    return None
+
+
+def _product_stage_row(*, stage: Any, witness: Mapping[str, Any], cause_code: Any, cause_message: str | None,
+                       unproven: Any, source: str) -> dict[str, Any]:
+    """One product dispatch-evidence row, from one documented position of the envelope."""
+    mutation = witness.get("mutation_issued")
+    row: dict[str, Any] = {
+        "stage": stage if isinstance(stage, str) and stage else None,
+        "stage_known": isinstance(stage, str) and stage in PRODUCT_DISPATCH_STAGES,
+        "cause_code": cause_code if isinstance(cause_code, str) and cause_code else None,
+        "cause_message": cause_message,
+        "mutation_issued": mutation if isinstance(mutation, bool) else None,
+        "mutation_method": witness.get("mutation_method") if isinstance(witness.get("mutation_method"), str) else None,
+        "engine_calls": witness.get("engine_calls") if isinstance(witness.get("engine_calls"), int) else None,
+        "methods": [_json_safe(item) for item in witness.get("methods", [])] if isinstance(witness.get("methods"), list) else None,
+        "unproven_pre_dispatch": unproven if isinstance(unproven, bool) else None,
+        "source": source,
+    }
+    row["proves_not_executed"] = bool(mutation is False and unproven is not True)
+    row["dispatch_stage"] = "dispatched_without_mutation" if row["proves_not_executed"] else "unknown"
+    return row
+
+
+def observed_dispatch_stage(payload: Mapping[str, Any] | None) -> str:
+    """The stage one dispatched call provably reached, from the product's own vocabulary.
+
+    ``refused_before_engine`` is claimed only for the documented pre-dispatch refusal codes and for
+    the control daemon's own "reconcile unfinished engine work" refusal: both prove the engine was
+    never asked to change anything.  A refusal that publishes its own mutation witness
+    (``error.details.witness.mutation_issued is False``) proves the same thing from the callback's
+    side and is filed as ``dispatched_without_mutation``.  A first-hand UNKNOWN result *without*
+    such a witness keeps ``unknown`` — the envelope does not establish whether an engine call
+    changed anything, and assuming NOT_EXECUTED is exactly the assumption that would let a replay
+    execute work twice.
+    """
+    witness = unpack_envelope("dispatch", payload)
+    outcome = _unknown_outcome(payload)
+    code = str(witness.error_code or "")
+    if outcome is not None and outcome.get("gate"):
+        return "refused_before_engine"
+    if code in PRE_DISPATCH_REFUSAL_CODES:
+        return PRE_DISPATCH_REFUSAL_CODES[code]
+    product = product_dispatch_stage(payload)
+    if product is not None and product.get("proves_not_executed"):
+        return "dispatched_without_mutation"
+    if outcome is not None:
+        return "unknown"
+    if witness.success is False:
+        return "unknown"
+    return "dispatched"
+
+
+@dataclass(frozen=True)
+class RequestPlan:
+    """One logical request's identity: run/case/step/sequence plus the key it is dispatched under."""
+
+    run: str
+    case: str
+    step: str
+    sequence: int
+    key: str
+    request_id: str
+    body_sha256: str
+    minted_at: str
+    replan_of: str | None = None
+    retry_of: str | None = None
+    explicit_key: bool = False
+
+    def as_dict(self) -> dict[str, Any]:
+        return {"run": self.run, "case": self.case, "step": self.step, "sequence": self.sequence,
+                "idempotency_key": self.key, "request_id": self.request_id,
+                "body_sha256": self.body_sha256, "minted_at": self.minted_at,
+                "replan_of": self.replan_of, "retry_of": self.retry_of,
+                "explicit_key": self.explicit_key}
+
+    def with_changes(self, **changes: Any) -> "RequestPlan":
+        """A copy with named fields replaced (the dataclass is frozen)."""
+        values = {name: getattr(self, name) for name in
+                  ("run", "case", "step", "sequence", "key", "request_id", "body_sha256", "minted_at",
+                   "replan_of", "retry_of", "explicit_key")}
+        values.update(changes)
+        return RequestPlan(**values)
+
+
+class ExecutionContext:
+    """The run's single source of truth for request identity, revisions and dispatch evidence.
+
+    One instance per run (``ProductionHost.context``).  Nothing is inferred from a project name or
+    from "the first number an envelope happens to carry": every model is keyed by its full ModelRef
+    token, every logical request gets its own run/case/step/sequence identity, and every dispatch is
+    recorded with the stage it provably reached.  The context never repairs anything by itself — it
+    classifies, records and hands the decision to the caller.
+    """
+
+    #: How many rows of each evidence list a run document keeps (bounded evidence, not a second
+    #: transcript).
+    EVIDENCE_LIMIT = 40
+
+    def __init__(self, *, run: str = "phase4") -> None:
+        self.run = run
+        self.models: dict[str, dict[str, Any]] = {}
+        self.active: dict[str, str] = {}
+        self.generations: list[dict[str, Any]] = []
+        self.unfinished: dict[str, dict[str, Any]] = {}
+        self.dispatches: list[dict[str, Any]] = []
+        self.observations: list[dict[str, Any]] = []
+        self.rejections: list[dict[str, Any]] = []
+        self.replans: list[dict[str, Any]] = []
+        self.replays: list[dict[str, Any]] = []
+        self.negative_probes: list[dict[str, Any]] = []
+        self.plans: dict[str, RequestPlan] = {}
+        self.reader_errors: int = 0
+        self._serial = itertools.count(1)
+        self._sequences: dict[str, int] = {}
+        self._job_queries: dict[str, int] = {}
+
+    # ------------------------------------------------------------------ request identity
+    def mint(self, *, case: str, step: str, body: Mapping[str, Any] | None = None,
+             explicit_key: str | None = None) -> RequestPlan:
+        """A *new* logical request: its own run/case/step/sequence identity and idempotency key.
+
+        A driver-minted key is never reused for another logical request — that reuse is exactly the
+        live defect (one fixed key per operation replayed the first stored answer, and a different
+        body under it was refused as ``IDEMPOTENCY_CONFLICT``).  An explicit key passed by a case is
+        honoured verbatim (a case may be probing the product's own contract) and its reuse is
+        recorded as evidence.
+        """
+        scope = f"{case}:{step}"
+        sequence = self._sequences.get(scope, 0) + 1
+        self._sequences[scope] = sequence
+        key = explicit_key or f"{self.run}-{case}-{step}-{sequence}"
+        plan = RequestPlan(run=self.run, case=case, step=step, sequence=sequence, key=key,
+                           request_id=key, body_sha256=_body_sha256(body), minted_at=_utc_now(),
+                           explicit_key=explicit_key is not None)
+        previous = self.plans.get(key)
+        if previous is not None:
+            same_body = previous.body_sha256 == plan.body_sha256
+            note = {"key": key, "previous_request": previous.request_id, "same_body": same_body,
+                    "explicit": plan.explicit_key, "at": _utc_now(),
+                    "body_sha256": plan.body_sha256, "previous_body_sha256": previous.body_sha256}
+            if plan.explicit_key:
+                note["intent"] = ("deliberate explicit-key reuse: the product's own answer is the "
+                                  "evidence this call exists for")
+            elif same_body:
+                # Same key, byte-identical body: the one reuse the idempotency contract allows,
+                # and only as the retry of the *same* request (an uncertain response).
+                note["intent"] = "retry of the same request (identical body)"
+                plan = plan.with_changes(retry_of=previous.request_id)
+            else:
+                note["intent"] = ("driver key collision with a different body: the collision is a "
+                                  "driver defect, recorded as such")
+                note["reason"] = AUXILIARY_REJECTIONS[1]
+            self.replays.append(_json_safe(note))
+            del self.replays[:-self.EVIDENCE_LIMIT]
+        self.plans[key] = plan
+        return plan
+
+    def plan(self, request_id: str) -> RequestPlan | None:
+        return self.plans.get(request_id)
+
+    def bind_body(self, key: str, body: Mapping[str, Any] | None) -> None:
+        """Attach the dispatched body's digest to a plan.
+
+        The key has to exist before the wire envelope is built (it is carried inside it), so the
+        digest of the body as actually dispatched is bound immediately afterwards.  Only that digest
+        may decide whether a later same-key call is a retry of this request or a different one.
+        """
+        plan = self.plans.get(key)
+        if plan is not None:
+            self.plans[key] = plan.with_changes(body_sha256=_body_sha256(body))
+
+    def reuse_for_retry(self, request_id: str, *, body: Mapping[str, Any] | None) -> dict[str, Any] | None:
+        """Check that a retry of ``request_id`` may reuse its key: the body must be identical.
+
+        ``None`` means the retry may proceed.  A request this context never minted (a direct
+        ``host.call`` inside a case) has no recorded body to compare, so nothing is invented for
+        it: the check is recorded as skipped rather than passed.
+        """
+        plan = self.plans.get(request_id)
+        if plan is None:
+            self.replays.append({"request_id": request_id, "checked": False, "same_body": None,
+                                 "intent": ("no plan was minted for this request (a direct host call): "
+                                            "the retry keeps its own identity"),
+                                 "at": _utc_now()})
+            del self.replays[:-self.EVIDENCE_LIMIT]
+            return None
+        digest = _body_sha256(body)
+        if digest != plan.body_sha256:
+            return {"reason": "external_observation", "request_id": request_id,
+                    "expected_body_sha256": plan.body_sha256, "body_sha256": digest,
+                    "detail": ("a retry must resend the identical body; a changed body is a new plan, "
+                               "not the original request")}
+        self.replays.append({"request_id": request_id, "checked": True, "same_body": True,
+                             "intent": "same-key retry of the same request (identical body)",
+                             "at": _utc_now()})
+        del self.replays[:-self.EVIDENCE_LIMIT]
+        return None
+
+    def grant_replan(self, request_id: str, *, body: Mapping[str, Any] | None,
+                     evidence: Mapping[str, Any], why: str = "") -> tuple[RequestPlan | None, dict[str, Any]]:
+        """Allow exactly one recorded new plan for a request that provably never executed.
+
+        A new plan (new key, possibly a rewritten revision) is only legitimate when the original
+        request is *proved* not to have executed and the model was legally re-verified through the
+        published reconcile read.  Everything else — including a first-hand UNKNOWN result — is
+        refused here and keeps its original evidence.
+        """
+        stage = str(evidence.get("dispatch_stage") or "unknown")
+        decision: dict[str, Any] = {"request_id": request_id, "dispatch_stage": stage,
+                                    "evidence": _json_safe(dict(evidence)), "at": _utc_now(),
+                                    "why": why}
+        refused = self._refuse_replan(request_id, stage, decision)
+        if refused is not None:
+            return None, refused
+        parts = self.plan(request_id)
+        case = parts.case if parts is not None else "unplanned"
+        step = parts.step if parts is not None else str(request_id)
+        new_plan = self.mint(case=case, step=step, body=body)
+        replanned = new_plan.with_changes(replan_of=request_id)
+        self.plans[replanned.key] = replanned
+        decision.update({"granted": True, "new_key": replanned.key, "new_request_id": replanned.request_id})
+        self.replans.append(_json_safe(decision))
+        del self.replans[:-self.EVIDENCE_LIMIT]
+        return replanned, decision
+
+    def _refuse_replan(self, request_id: str, stage: str, decision: dict[str, Any]) -> dict[str, Any] | None:
+        previously = [row for row in self.replans
+                      if row.get("request_id") == request_id and row.get("granted") is True]
+        if stage not in NOT_EXECUTED_STAGES:
+            decision.update({"granted": False, "reason": "unknown_job" if stage == "unknown"
+                             else "external_observation",
+                             "detail": ("the request is not proved NOT_EXECUTED (dispatch stage "
+                                        f"{stage!r}), so replaying it could execute it twice")})
+        elif previously:
+            decision.update({"granted": False, "reason": "unknown_job",
+                             "detail": ("this request already spent its one recorded new plan; a "
+                                        "second one is beyond the contract")})
+        else:
+            return None
+        self.replans.append(_json_safe(decision))
+        del self.replans[:-self.EVIDENCE_LIMIT]
+        return decision
+
+    # ------------------------------------------------------------------ dispatch evidence
+    def note_dispatch(self, *, request_id: str, tool: str, stage: str, reason: str | None = None,
+                      model_ref: Mapping[str, Any] | None = None, revision: int | None = None,
+                      **detail: Any) -> dict[str, Any]:
+        row = {"request_id": request_id, "tool": tool, "stage": stage, "reason": reason,
+               "model_ref": _json_safe(model_ref), "token": model_ref_token(model_ref),
+               "revision": revision, "at": _utc_now(), **{key: _json_safe(value) for key, value in detail.items()}}
+        self.dispatches.append(row)
+        del self.dispatches[:-self.EVIDENCE_LIMIT]
+        return row
+
+    def refusal_evidence(self, payload: Mapping[str, Any] | None) -> dict[str, Any]:
+        """What a refusal envelope provably says about the dispatch stage it reached."""
+        witness = unpack_envelope("refusal", payload)
+        code = witness.error_code
+        stage = PRE_DISPATCH_REFUSAL_CODES.get(str(code))
+        basis = ("the product documents this refusal as raised by the execution ledger's "
+                 "preflight, before any engine call" if stage in NOT_EXECUTED_STAGES
+                 else "the envelope does not establish whether an engine call happened")
+        product = product_dispatch_stage(payload)
+        if stage is None and product is not None and product.get("proves_not_executed"):
+            # C03: the product's own mutation witness proves nothing was executed — the callback
+            # reached the engine, issued reads only (``mutation_issued: false``), so the refusal is
+            # filed as NOT_EXECUTED instead of an unknown engine state.
+            stage = str(product.get("dispatch_stage"))
+            basis = ("the product published its own witness for this refusal: the callback reached "
+                     "the engine, issued no mutation, so no engine change was executed")
+        return {"error_code": code, "message": witness.error_message,
+                "dispatch_stage": stage or "unknown", "job_id": witness.job_id,
+                "source": dict(witness.source), "product_dispatch": _json_safe(product) if product else None,
+                "basis": basis}
+
+    def note_negative_probe(self, *, request_id: str, tool: str, model_ref: Mapping[str, Any] | None,
+                            note: str) -> dict[str, Any]:
+        """A deliberate stale/conflicting probe: it must never be repaired automatically."""
+        row = {"request_id": request_id, "tool": tool, "token": model_ref_token(model_ref),
+               "model_ref": _json_safe(model_ref), "note": note, "at": _utc_now(),
+               "auto_repair": "refused: the case asked for the product's own refusal"}
+        self.negative_probes.append(row)
+        del self.negative_probes[:-self.EVIDENCE_LIMIT]
+        return row
+
+    def note_unfinished(self, job_id: str, *, tool: str, error_code: str | None,
+                        message: str | None) -> dict[str, Any]:
+        entry = self.unfinished.get(job_id)
+        if entry is None:
+            entry = self.unfinished[job_id] = {"job_id": job_id, "first_tool": tool, "first_at": _utc_now(),
+                                               "observations": 0, "resolved": False}
+        entry["observations"] = int(entry.get("observations") or 0) + 1
+        entry.update({"last_tool": tool, "last_error_code": error_code, "last_message": message,
+                      "last_at": _utc_now()})
+        return entry
+
+    def resolve_unfinished(self, job_id: str, *, outcome: str) -> dict[str, Any]:
+        entry = self.unfinished.get(job_id) or self.note_unfinished(job_id, tool="job_reconcile",
+                                                                    error_code=None, message=None)
+        entry["resolved"] = outcome == "released"
+        entry["resolution"] = outcome
+        entry["resolved_at"] = _utc_now()
+        return entry
+
+    def unfinished_jobs(self) -> list[str]:
+        return [job_id for job_id, entry in self.unfinished.items() if not entry.get("resolved")]
+
+    def query_budget(self, job_id: str) -> bool:
+        """Whether one more published query of this job is still within the bounded budget."""
+        used = self._job_queries.get(job_id, 0)
+        if used >= 2:
+            return False
+        self._job_queries[job_id] = used + 1
+        return True
+
+    # ------------------------------------------------------------------ model state
+    def observe(self, tool: str, payload: Mapping[str, Any] | None, *,
+                request: Mapping[str, Any] | None = None) -> dict[str, Any]:
+        """Learn from one decoded envelope.  Called on the wire choke point for every call."""
+        try:
+            witness = unpack_envelope(tool, payload)
+        except Exception as exc:  # noqa: BLE001 - the choke point must never break a call
+            self.reader_errors += 1
+            row = {"tool": tool, "at": _utc_now(), "adopted": False,
+                   "reader_error": f"{type(exc).__name__}: {exc}"}
+            self.observations.append(row)
+            del self.observations[:-self.EVIDENCE_LIMIT]
+            return row
+        row: dict[str, Any] = {"tool": tool, "at": _utc_now(), "success": witness.success,
+                               "error_code": witness.error_code, "job_id": witness.job_id,
+                               "model_ref": _json_safe(witness.model_ref), "revision": witness.revision,
+                               "dirty": witness.dirty, "source": dict(witness.source), "adopted": False}
+        # C03: the product's own cause and dispatch stage are carried next to the driver's reading,
+        # so a refusal is filed with its original operation/code/cause/dispatch stage — and a
+        # refusal that proves no mutation was issued is NOT_EXECUTED, not an unknown job.
+        product_stage = product_dispatch_stage(payload)
+        if product_stage is not None:
+            row["cause_code"] = product_stage.get("cause_code")
+            row["product_dispatch"] = product_stage
+            row["dispatch_stage"] = observed_dispatch_stage(payload)
+        if witness.conflicts:
+            # A self-contradicting envelope is evidence, never a value to adopt.
+            row["conflicts"] = list(witness.conflicts)
+            self._reject(reason=AUXILIARY_REJECTIONS[0], tool=tool, job_id=witness.job_id,
+                         detail={"conflicts": list(witness.conflicts), "source": dict(witness.source)})
+            self._record_observation(row)
+            return row
+        request_token = model_ref_token(_mapping(request).get("model_ref")) if isinstance(request, Mapping) else None
+        if witness.token is not None and request_token is not None and witness.token != request_token:
+            # Adopting another model's revision is the "two models, one global revision" defect.
+            self._reject(reason="generation_mismatch", tool=tool, job_id=witness.job_id,
+                         detail={"request_model_ref_token": request_token, "envelope_model_ref_token": witness.token,
+                                 "note": "the envelope names another model than the request did; nothing was adopted"})
+            self._record_observation(row)
+            return row
+        if witness.token is not None:
+            self._adopt(tool, witness)
+            row["adopted"] = True
+            row["token"] = witness.token
+        if witness.job_id and (witness.error_code in UNKNOWN_ERROR_CODES):
+            self.note_unfinished(witness.job_id, tool=tool, error_code=witness.error_code,
+                                 message=witness.error_message)
+        self._record_observation(row)
+        return row
+
+    def _record_observation(self, row: dict[str, Any]) -> None:
+        self.observations.append(row)
+        del self.observations[:-self.EVIDENCE_LIMIT]
+
+    def _adopt(self, tool: str, witness: EnvelopeWitness) -> None:
+        token = witness.token
+        if token is None:
+            return
+        lineage = witness.lineage
+        active_token = self.active.get(lineage) if lineage else None
+        superseded = self.models.get(active_token) if active_token else None
+        superseded_generation = ((superseded or {}).get("ref") or {}).get("generation")
+        if (lineage and witness.generation is not None and isinstance(superseded, dict)
+                and superseded_generation is not None and str(superseded_generation) != str(witness.generation)):
+            # A reload/restore returned a new generation: replace the reference explicitly and
+            # invalidate the cached revision of the old one (never carry it across).
+            self.generations.append({"lineage": lineage, "superseded_token": self.active.get(lineage),
+                                     "replacement_token": token, "at": _utc_now(), "tool": tool,
+                                     "superseded_generation": superseded_generation,
+                                     "generation": witness.generation})
+            superseded["invalidated"] = True
+            superseded["invalidated_by"] = token
+            superseded["revision"] = None
+            superseded["dirty"] = None
+        state = self.models.get(token)
+        if state is None:
+            state = self.models[token] = {"ref": dict(witness.model_ref or {}), "revision": None, "dirty": None,
+                                          "observations": 0, "last_tool": None, "last_at": None,
+                                          "revision_tool": None, "dirty_tool": None, "invalidated": False}
+        state["observations"] = int(state.get("observations") or 0) + 1
+        state["last_tool"] = tool
+        state["last_at"] = _utc_now()
+        if witness.revision is not None:
+            known = state.get("revision")
+            if not isinstance(known, int) or witness.revision >= known:
+                state["revision"] = witness.revision
+                state["revision_tool"] = tool
+        if witness.dirty is not None:
+            state["dirty"] = witness.dirty
+            state["dirty_tool"] = tool
+        if lineage:
+            self.active[lineage] = token
+
+    def state_for(self, ref: Mapping[str, Any] | None) -> dict[str, Any] | None:
+        """The tracked state of one model, by full token (never by project name)."""
+        token = model_ref_token(ref)
+        if token is not None and token in self.models:
+            return self.models[token]
+        lineage = model_ref_lineage(ref)
+        if lineage is None:
+            return None
+        return self.models.get(self.active.get(lineage) or "")
+
+    def revision_for(self, ref: Mapping[str, Any] | None) -> int | None:
+        state = self.state_for(ref)
+        revision = state.get("revision") if isinstance(state, Mapping) else None
+        return revision if isinstance(revision, int) and not isinstance(revision, bool) else None
+
+    def dirty_for(self, ref: Mapping[str, Any] | None) -> bool | None:
+        state = self.state_for(ref)
+        dirty = state.get("dirty") if isinstance(state, Mapping) else None
+        return dirty if isinstance(dirty, bool) else None
+
+    def superseded_generation(self, ref: Mapping[str, Any] | None) -> dict[str, Any] | None:
+        """Whether this request names a generation a published read already replaced."""
+        token = model_ref_token(ref)
+        lineage = model_ref_lineage(ref)
+        if token is None or lineage is None:
+            return None
+        active = self.active.get(lineage)
+        if active is None or active == token:
+            return None
+        state = self.models.get(token) or {}
+        if not state.get("invalidated"):
+            return None
+        return {"lineage": lineage, "request_token": token, "active_token": active,
+                "superseded_by": state.get("invalidated_by")}
+
+    def self_dispatched(self, ref: Mapping[str, Any] | None) -> bool:
+        """Whether any recorded dispatch of this run actually *reached the engine* for this model.
+
+        A call refused before dispatch (a ledger preflight refusal, the control gate) is not an
+        engine change: it must never make a later external change look self-caused.
+        """
+        lineage = model_ref_lineage(ref)
+        if lineage is None:
+            return False
+        return any(row.get("stage") == "dispatched" and row.get("token")
+                   and model_ref_lineage(_mapping(row.get("model_ref"))) == lineage
+                   for row in self.dispatches)
+
+    # ------------------------------------------------------------------ pre-dispatch policy
+    def precheck(self, arguments: Mapping[str, Any] | None, *, tool: str = "", negative_probe: bool = False,
+                 reconcile: bool = True) -> dict[str, Any] | None:
+        """Classify one request *before* it is dispatched.  ``None`` means: nothing to report.
+
+        The returned decision never repairs anything by itself:
+
+        * ``refuse`` — only for a request that contradicts itself or names a generation a published
+          read already replaced (no wire call is made at all);
+        * ``query_first`` — an unfinished job or an externally caused change exists: the original
+          job's own query/reconcile runs first, and the request keeps its identity;
+        * ``stale_expected`` / ``external_observation`` — recorded as the reason the product will
+          refuse this request, so the release path reports *why* instead of one generic conflict.
+        """
+        request = arguments if isinstance(arguments, Mapping) else {}
+        conflict = identity_conflict(request)
+        if conflict is not None:
+            self._reject(tool=tool, job_id=None, detail=conflict, reason=conflict["reason"])
+            return {"reason": conflict["reason"], "action": "refuse", "field": conflict.get("field"),
+                    "detail": conflict, "note": "the request contradicts itself; nothing was dispatched"}
+        execution = _mapping(request.get("execution"))
+        ref = execution.get("model_ref") if isinstance(execution.get("model_ref"), Mapping) else None
+        if ref is None:
+            ref = request.get("model_ref") if isinstance(request.get("model_ref"), Mapping) else None
+        superseded = self.superseded_generation(ref)
+        if superseded is not None:
+            detail = {"detail": ("the request names a model generation this run already saw replaced; "
+                                 "the old reference is invalidated and must be re-bound through the "
+                                 "published read"),
+                      **superseded, "request_id": execution.get("request_id")}
+            self._reject(tool=tool, job_id=None, detail=detail, reason="generation_mismatch")
+            return {"reason": "generation_mismatch", "action": "refuse", "detail": detail,
+                    "note": "the cached reference belongs to a replaced generation"}
+        pending = self.unfinished_jobs()
+        if pending and reconcile and not negative_probe and tool not in RECONCILE_EXEMPT_TOOLS:
+            detail = {"unfinished_jobs": list(pending), "request_id": execution.get("request_id"),
+                      "note": ("an unfinished job must be resolved through its own published query before "
+                               "any new logical request is dispatched")}
+            return {"reason": "unknown_job", "action": "query_first", "detail": detail}
+        expected = _expected_revision(request)
+        observed = self.revision_for(ref)
+        if expected is not None and observed is not None and expected < observed:
+            self_caused = self.self_dispatched(ref)
+            reason = "stale_expected" if self_caused else "external_observation"
+            detail = {"expected_revision": expected, "observed_revision": observed,
+                      "self_caused": self_caused, "request_id": execution.get("request_id"),
+                      "request_token": model_ref_token(ref),
+                      "note": ("the request is behind a revision this driver produced" if self_caused
+                               else "the request is behind a revision no dispatch of this run produced")}
+            if negative_probe:
+                detail["negative_probe"] = "kept: the product's own refusal is this probe's evidence"
+                return {"reason": reason, "action": "proceed", "detail": detail}
+            return {"reason": reason, "action": "expected_refusal", "detail": detail}
+        dirty = self.dirty_for(ref)
+        if dirty is True and not self.self_dispatched(ref) and ref is not None:
+            return {"reason": "external_observation", "action": "query_first" if reconcile else "proceed",
+                    "detail": {"dirty": True, "self_caused": False,
+                               "note": "the model carries an engine change no dispatch of this run produced"}}
+        return None
+
+    def classify_revision_conflict(self, conflict: Mapping[str, Any],
+                                   arguments: Mapping[str, Any] | None) -> dict[str, Any]:
+        """Name *why* a managed-revision refusal happened, from the context's own observations."""
+        request = arguments if isinstance(arguments, Mapping) else {}
+        execution = _mapping(request.get("execution"))
+        ref = execution.get("model_ref") if isinstance(execution.get("model_ref"), Mapping) else None
+        expected = _expected_revision(request)
+        observed = self.revision_for(ref)
+        self_caused = self.self_dispatched(ref)
+        reason = "stale_expected" if self_caused else "external_observation"
+        return {"reason": reason, "precondition": conflict.get("precondition"),
+                "expected_revision": expected, "observed_revision": observed,
+                "self_caused": self_caused, "request_id": execution.get("request_id"),
+                "request_token": model_ref_token(ref), "envelope_job_id": conflict.get("job_id"),
+                "basis": ("every observation that advanced this model's revision came from a dispatch of "
+                          "this run" if self_caused else
+                          "the model moved without a matching dispatch of this run (external change)")}
+
+    def _reject(self, *, reason: str, tool: str, job_id: str | None, detail: Mapping[str, Any]) -> dict[str, Any]:
+        row = {"reason": reason, "tool": tool, "job_id": job_id, "detail": _json_safe(dict(detail)),
+               "at": _utc_now()}
+        if reason not in REJECTION_REASONS and reason not in AUXILIARY_REJECTIONS:
+            row["unclassified"] = True
+        self.rejections.append(row)
+        del self.rejections[:-self.EVIDENCE_LIMIT]
+        return row
+
+    # ------------------------------------------------------------------ evidence
+    def evidence(self) -> dict[str, Any]:
+        """The context as evidence: plans, per-model state, generations, refusals, replans."""
+        plans = list(self.plans.values())
+        rejected = [row for row in self.rejections if row.get("reason") in REJECTION_REASONS]
+        return {
+            "run": self.run,
+            "rejection_reasons": list(REJECTION_REASONS),
+            "auxiliary_rejections": list(AUXILIARY_REJECTIONS),
+            "requests": [plan.as_dict() for plan in plans[-self.EVIDENCE_LIMIT:]],
+            "request_count": len(plans),
+            "model_states": [{"token": token, **_json_safe(state)} for token, state in self.models.items()],
+            "active_models": dict(self.active),
+            "generation_replacements": _json_safe(list(self.generations)),
+            "dispatches": _json_safe(list(self.dispatches)),
+            "observations": _json_safe(list(self.observations)),
+            "rejections": _json_safe(list(self.rejections)),
+            "rejection_counts": {reason: len([row for row in self.rejections if row.get("reason") == reason])
+                                 for reason in (*REJECTION_REASONS, *AUXILIARY_REJECTIONS)},
+            "replans": _json_safe(list(self.replans)),
+            "replays": _json_safe(list(self.replays)),
+            "negative_probes": _json_safe(list(self.negative_probes)),
+            "unfinished_jobs": self.unfinished_jobs(),
+            "unfinished_entries": _json_safe(list(self.unfinished.values())),
+            "reader_errors": self.reader_errors,
+            "note": ("one execution context for the whole run: revisions and dirty flags are keyed by "
+                     "the full ModelRef (session/server epoch/tag/generation), every logical request "
+                     "carries its own run/case/step/sequence key, and every refusal is classified as "
+                     "stale_expected / external_observation / unknown_job / generation_mismatch"),
+        }
+
 _RUN_IDEMPOTENCY_PREFIX = ""
 _RUN_PRIVATE_HOME_ROOT: Path | None = None
 
@@ -328,7 +1430,7 @@ PLAN: dict[str, tuple[Planned, ...]] = {
     "W13_T015_units": (
         Planned("static_physics_unit_ops_availability", "static", "T015 source/unit actions",
                 ("physics.create", "physics.feature_create", "physics.feature_update", "physics.validate")),
-        Planned("surface_source_W_per_m2", "live", "T015 W/m^2 surface heat flux"),
+        Planned("surface_source_W_per_m2", "live", "T015 surface source: the interface the W/m^2 boundary heat flux is bound to (the boundary write point itself is recorded as auxiliary evidence in the same case)"),
         Planned("volume_source_W_per_m3", "live", "T015 W/m^3 volumetric source"),
         Planned("coordinate_unit_m_and_mm", "live", "T015 m/mm interpolation coordinates"),
         Planned("wrong_unit_warns_or_fails", "live", "T015 deliberate wrong unit"),
@@ -409,6 +1511,10 @@ PLAN: dict[str, tuple[Planned, ...]] = {
         Planned("analytic_reference_preregistered", "fixture", "T019 chain A analytic reference"),
         Planned("static_chain_a_ops_availability", "static", "T019 chain A empty-model chain",
                 ("geometry.feature_create", "material.create", "physics.create", "mesh.build", "study.run")),
+        Planned("benchmark_spec_registered_and_sane", "fixture",
+                "T019 chain A pre-registered BenchmarkSpec (C07b): units, dimensions and derived quantities"),
+        Planned("pre_solve_readback_matches_spec", "live",
+                "T019 chain A model read-back checked item by item against the frozen specification"),
         Planned("empty_model_geometry_block", "live", "T019 chain A block geometry from an empty model"),
         Planned("constant_material_assigned", "live", "T019 chain A constant material"),
         Planned("boundary_temperatures_and_insulation", "live", "T019 chain A end temperatures, other faces insulated"),
@@ -422,8 +1528,12 @@ PLAN: dict[str, tuple[Planned, ...]] = {
     ),
     "W16_T019_chainB_transient": (
         Planned("analytic_reference_preregistered", "fixture", "T019 chain B analytic reference"),
+        Planned("benchmark_spec_registered_and_sane", "fixture",
+                "T019 chain B pre-registered BenchmarkSpec (C07b): units, dimensions and derived quantities"),
         Planned("static_chain_b_ops_availability", "static", "T019 chain B transient chain",
                 ("study.step_create", "study.run", "result.sample_path")),
+        Planned("pre_solve_readback_matches_spec", "live",
+                "T019 chain B model read-back checked item by item against the frozen specification"),
         Planned("transient_study_and_initial_value", "live", "T019 chain B transient study and initial value"),
         Planned("transient_solve_produced_solution", "live", "T019 chain B real transient solution"),
         Planned("normalized_max_error_le_1e-3", "numerical", "T019 chain B normalized error <= 1e-3"),
@@ -484,8 +1594,10 @@ PLAN: dict[str, tuple[Planned, ...]] = {
     ),
     "GUARD_T033": (
         Planned("static_evaluation_policy_documented", "static", "T033 evaluation policy contract", ("evaluate_expressions",)),
+        Planned("static_evaluation_policy_source_recorded", "static", "T033 policy read path", ("evaluate_expressions",)),
         Planned("pure_read_rejects_or_isolates", "live", "T033 pure_read behaviour"),
         Planned("ephemeral_mutation_recorded_and_serial", "live", "T033 ephemeral mutation recorded/serial"),
+        Planned("evaluation_expression_kinds_routed", "live", "T033 constant/model/field/illegal expressions"),
         Planned("only_own_temporary_nodes_cleaned", "live", "T033 only own nodes cleaned"),
     ),
 }
@@ -891,12 +2003,44 @@ def _envelope_identity(payload: Mapping[str, Any] | None) -> dict[str, Any]:
     if not isinstance(payload, Mapping):
         return {"success": None, "outer_isError": None, "error_code": None, "has_structured_content": False}
     data = _data(payload)
+    identity = execution_identity(payload)
     return {
         "success": payload.get("success"),
         "outer_isError": payload.get("_outer_isError"),
-        "operation_id": data.get("operation_id"),
+        # The daemon stamps ``execution.operation_id``/``job_id`` on every envelope it finishes;
+        # ``data.operation_id`` is only the operation's *name* on a driver-shaped refusal, so it is
+        # kept as a fallback, never as the operation's identity (C02/C03).
+        "operation_id": identity.get("operation_id") or data.get("operation_id"),
+        "job_id": identity.get("job_id"),
+        "request_hash": identity.get("request_hash"),
         "error_code": _error_code(payload),
         "has_structured_content": isinstance(payload.get("_structuredContent"), Mapping),
+    }
+
+
+def execution_identity(payload: Mapping[str, Any] | None, *, tool: str = "") -> dict[str, Any]:
+    """The operation identity the product published for one call, through the documented paths.
+
+    ``operation_id``/``job_id``/``request_hash`` live in the envelope's ``execution`` block — the
+    daemon stamps them when it finishes an operation.  Reading them from ``data.operation_id``
+    (which carries the *requested operation's name* on a refusal) is how the first M1 run's
+    GUARD_T010 compared two empty identities and reported the retry, not the product, as the
+    defect.  ``source`` names every path that was used; a missing identity stays ``None``.
+    """
+    witness = unpack_envelope(tool or "identity", payload)
+    execution = witness.execution if isinstance(witness.execution, Mapping) else {}
+    payload_map = payload if isinstance(payload, Mapping) else {}
+    return {
+        "operation_id": execution.get("operation_id"),
+        "job_id": witness.job_id,
+        "idempotency_key": execution.get("idempotency_key"),
+        "request_id": execution.get("request_id"),
+        "request_hash": execution.get("request_hash"),
+        "success": witness.success,
+        "error_code": witness.error_code,
+        "outer_isError": payload_map.get("_outer_isError"),
+        "source": dict(witness.source),
+        "has_structured_content": isinstance(payload_map.get("_structuredContent"), Mapping),
     }
 
 
@@ -1096,6 +2240,10 @@ class ProductionHost:
         self.requeries: list[dict[str, Any]] = []
         #: The newest ``(model identity, revision)`` any decoded envelope carried (wire choke point).
         self.last_readback: dict[str, Any] | None = None
+        #: The run's centralized request/revision context (C02): per-ModelRef revision and dirty
+        #: state, per-request run/case/step/sequence keys, dispatch stages and the classified
+        #: refusals.  One instance for the whole run — never a global revision shared by models.
+        self.context = ExecutionContext(run=run_dir.name)
         self._reconciling = False
 
     # ------------------------------------------------------------------
@@ -1179,7 +2327,8 @@ class ProductionHost:
                                    "retry": record.get("retry"), "still_blocked": record.get("still_blocked")})
         return None
 
-    def _observe_envelope(self, tool: str, payload: Mapping[str, Any]) -> dict[str, Any] | None:
+    def _observe_envelope(self, tool: str, payload: Mapping[str, Any], *,
+                          request: Mapping[str, Any] | None = None) -> dict[str, Any] | None:
         """Learn from *every* envelope the host decodes — the ledger's only write path.
 
         A gate refusal names only the job it just refused (already terminal), so it is recorded as
@@ -1191,7 +2340,9 @@ class ProductionHost:
         The same choke point records the newest ``(model identity, revision)`` any envelope carried:
         a case that reads through a direct ``host.call`` (``model_tree``, a reconcile read) must
         still leave the client's cache current, or the call after it is refused as stale — exactly
-        the live long tail after the chain steps.
+        the live long tail after the chain steps.  Since C02 it also feeds the run's execution
+        context, which keys that state by the *full* ModelRef and never adopts another model's
+        revision.
         """
         ref, revision = _payload_execution(payload)
         if ref is not None and isinstance(revision, int) and not isinstance(revision, bool):
@@ -1200,6 +2351,15 @@ class ProductionHost:
             same = isinstance(seen, Mapping) and _same_ref(seen.get("model_ref"), ref)
             if not same or not isinstance(known, int) or revision >= known:
                 self.last_readback = {"model_ref": ref, "revision": revision, "tool": tool}
+        context = getattr(self, "context", None)
+        if context is not None:
+            try:
+                context.observe(tool, payload, request=request)
+            except Exception as exc:  # noqa: BLE001 - the choke point never breaks a real call
+                context.reader_errors += 1
+                context.observations.append({"tool": tool, "at": _utc_now(), "adopted": False,
+                                             "context_error": f"{type(exc).__name__}: {exc}"})
+                del context.observations[:-context.EVIDENCE_LIMIT]
         outcome = _unknown_outcome(payload)
         if outcome is None:
             return None
@@ -1217,6 +2377,40 @@ class ProductionHost:
             del entry["observations"][:-6]  # bounded: evidence, not a second transcript
             self._publish_ledger()
         return outcome
+
+    async def resolve_unfinished_jobs(self, arguments: Mapping[str, Any] | None = None, *,
+                                      why: str | None = None) -> dict[str, Any] | None:
+        """Resolve the unfinished jobs the context knows *before* a new request is dispatched.
+
+        The control daemon refuses every new operation while an unresolved job whose engine
+        outcome is UNKNOWN is still on its books, and the live run only ever learned that from the
+        refusal it then had to replay.  The published ``job_reconcile``/``job_status``/
+        ``job_result`` reads are the product's own way to resolve it, so they run first here, with
+        a bounded per-job query budget (a job that cannot be released must not be queried forever).
+        """
+        if self._reconciling:
+            return None
+        context = getattr(self, "context", None)
+        if context is None:
+            return None
+        pending = [job_id for job_id in context.unfinished_jobs() if context.query_budget(job_id)]
+        if not pending:
+            return None
+        record: dict[str, Any] = {"trigger": why or "unfinished job before a new logical request",
+                                  "unresolved_before": list(self.unresolved_jobs), "targets": list(pending),
+                                  "at": _utc_now()}
+        previous = self._reconciling
+        self._reconciling = True
+        try:
+            record["released"] = await self._reconcile_jobs(record, pending)
+            for job_id in pending:
+                entry = self.ledger_entry(job_id)
+                context.resolve_unfinished(job_id, outcome="released" if entry.get("released") else "unresolved")
+            record["retry"] = "not performed: this call's own identity is unchanged"
+            self.reconciliations.append(_json_safe(record))
+        finally:
+            self._reconciling = previous
+        return record
 
     def _environment(self) -> dict[str, str]:
         env = dict(os.environ)
@@ -1334,6 +2528,24 @@ class ProductionHost:
                 await self.transport.__aexit__(*exc)
             if self.log_stream is not None:
                 self.log_stream.close()
+            worker_json = self.private_home / "control-private" / "worker" / "worker_endpoint.json"
+            if worker_json.is_file():
+                try:
+                    data = json.loads(worker_json.read_text())
+                    w_pid = data.get("pid")
+                    if isinstance(w_pid, int) and w_pid > 0 and w_pid != os.getpid():
+                        os.kill(w_pid, signal.SIGKILL)
+                except Exception:
+                    pass
+            ctrl_json = self.private_home / "control-private" / "control.json"
+            if ctrl_json.is_file():
+                try:
+                    data = json.loads(ctrl_json.read_text())
+                    ctrl_pid = data.get("pid")
+                    if isinstance(ctrl_pid, int) and ctrl_pid > 0 and ctrl_pid != os.getpid():
+                        os.kill(ctrl_pid, signal.SIGKILL)
+                except Exception:
+                    pass
 
     async def call(self, name: str, arguments: Mapping[str, Any] | None = None, *,
                    reconcile: bool = True) -> dict[str, Any]:
@@ -1355,7 +2567,20 @@ class ProductionHost:
         request = dict(arguments or {})
         self.last_call_refresh = None
         payload = await self._call_once(name, request)
-        if name in RECONCILE_EXEMPT_TOOLS or self._reconciling:
+        if name in RECONCILE_EXEMPT_TOOLS:
+            if self._reconciling:
+                return payload
+            # A release/describe tool is never gated on itself, but the product's own instruction
+            # to re-ask a call under the *same* idempotency key applies to it exactly as it does to
+            # a domain call: ``operation_describe`` answered "Control response unavailable; query
+            # or resubmit with the same idempotency key to reconcile" in the live run, and the
+            # driver returned that envelope verbatim, so the plan read reported
+            # ``EXECUTION_STATE_UNKNOWN`` as an *operation capability* (GUARD_T005/T033 were
+            # blocked by a describe that the product had already said how to re-ask).  The re-ask
+            # is one call, under the same identity, and only when the message asks for it.
+            answered = await self._requery_instructed(name, request, payload)
+            return answered if answered is not None else payload
+        if self._reconciling:
             return payload
         outcome = _unknown_outcome(payload)
         if outcome is not None:
@@ -1391,6 +2616,11 @@ class ProductionHost:
             "envelope_job_id": conflict.get("job_id"),
             "at": _utc_now(),
         }
+        context = getattr(self, "context", None)
+        if context is not None:
+            # Why the product refused this request — stale because our own writes advanced the
+            # revision, or because the model moved without a dispatch of this run.
+            record["classification"] = _json_safe(context.classify_revision_conflict(conflict, arguments))
         try:
             refresh = await self._refresh_model_read(str(arguments.get("project_id") or "phase4"), arguments)
             record["refresh"] = refresh
@@ -1410,6 +2640,28 @@ class ProductionHost:
             if record["precondition"] == "stale-expected-revision" or record["sent_expected_revision"] != revision:
                 record["expected_revision_rewritten_to"] = revision
             retry_arguments = _with_expected_revision(retry_arguments, revision)
+            request_id = str((_mapping(arguments.get("execution")) or {}).get("request_id") or name)
+            if context is not None:
+                # The replay is a *new plan*: a new key and a rewritten revision.  It is only
+                # legitimate because the refusal is a documented pre-dispatch refusal (the ledger's
+                # preflight raised it before any engine call) and the published reconcile read has
+                # just re-verified the model.  The context decides, and records the decision.
+                replan, decision = context.grant_replan(
+                    request_id, body=retry_arguments,
+                    evidence={"dispatch_stage": "refused_before_engine",
+                              "source": "the execution ledger refused this call in its preflight "
+                                        "(managed-revision precondition)",
+                              "error_code": conflict.get("error_code"),
+                              "reconciled": bool(refresh.get("released")),
+                              "revision": revision},
+                    why="managed revision conflict: refreshed and re-dispatched once")
+                record["replan"] = _json_safe(decision)
+                if replan is None:
+                    record["retry"] = ("not performed: the context refused a new plan for this request "
+                                       f"({decision.get('detail')})")
+                    record["still_blocked"] = self.note_still_blocked(name, payload, phase="replan-refused")
+                    self.reconciliations.append(_json_safe(record))
+                    return payload
             retried = await self._call_once(name, retry_arguments)
             record["retry"] = {"success": retried.get("success"), "error_code": _error_code(retried),
                                "precondition": (_revision_conflict(retried) or {}).get("precondition"),
@@ -1498,6 +2750,19 @@ class ProductionHost:
             return None
         record: dict[str, Any] = {"tool": name, "phase": "requery-instructed",
                                   "instruction": _error_message(payload), "at": _utc_now()}
+        context = getattr(self, "context", None)
+        request_id = str((_mapping(arguments.get("execution")) or {}).get("request_id") or name)
+        if context is not None:
+            # Re-asking under the *same* key is allowed only for the *same* request: the body must
+            # be byte-identical.  A changed body is a new plan and must not be sent as a "retry".
+            refusal = context.reuse_for_retry(request_id, body=_plan_body(arguments))
+            if refusal is not None:
+                record["reuse"] = _json_safe(refusal)
+                records = getattr(self, "requeries", None)
+                if records is None:
+                    records = self.requeries = []
+                records.append(_json_safe(record))
+                return None
         previous = self._reconciling
         self._reconciling = True
         try:
@@ -1510,9 +2775,44 @@ class ProductionHost:
         if records is None:
             records = self.requeries = []
         records.append(_json_safe(record))
-        if not _success(answered) or _unknown_outcome(answered) is not None:
-            return None
-        return answered
+        if _success(answered) and _unknown_outcome(answered) is None:
+            return answered
+        # The re-ask was answered with another unknown state: this *read* keeps the tri-state it
+        # reports (the operation's own status was never established), but the job the envelope
+        # named is reconciled through the published release reads so the control gate it closed
+        # re-opens for the calls that come after this one instead of refusing them all.
+        outcome = _unknown_outcome(answered) or _unknown_outcome(payload)
+        if outcome is not None:
+            record["release"] = await self._release_known_work(
+                outcome, trigger="describe/read EU after the same-key re-ask")
+        return None
+
+    async def _release_known_work(self, outcome: Mapping[str, Any], *, trigger: str) -> dict[str, Any]:
+        """Reconcile the unfinished work an envelope named — without replaying the refused call.
+
+        Used where the instruction is to *query* rather than resubmit (a read whose answer is the
+        evidence) and where a replay would be a second execution (`RECONCILE_EXEMPT_TOOLS`).
+        """
+        record: dict[str, Any] = {
+            "trigger": trigger,
+            "gate": bool(outcome.get("gate")),
+            "error_code": outcome.get("error_code"),
+            "message": outcome.get("message"),
+            "envelope_job_id": outcome.get("job_id"),
+            "unresolved_before": list(self.unresolved_jobs),
+            "at": _utc_now(),
+        }
+        previous = self._reconciling
+        self._reconciling = True
+        try:
+            targets = self._reconcile_targets(outcome)
+            record["targets"] = list(targets)
+            record["released"] = await self._reconcile_jobs(record, targets)
+            record["retry"] = "not performed: this call's own answer is its evidence"
+            self.reconciliations.append(_json_safe(record))
+        finally:
+            self._reconciling = previous
+        return record
 
     def _record_refresh(self, row: Mapping[str, Any]) -> dict[str, Any]:
         """Record one reconcile read on the host and return it (the callers' only evidence)."""
@@ -1588,6 +2888,29 @@ class ProductionHost:
                 if retry_arguments is None:
                     record["retry"] = "not performed: the call carried no idempotency identity to replace"
                 else:
+                    context = getattr(self, "context", None)
+                    request_id = str((_mapping(arguments.get("execution")) or {}).get("request_id") or name)
+                    if context is not None:
+                        # A gate refusal is the control daemon refusing the call *before* dispatch:
+                        # proved NOT_EXECUTED, and the jobs it names have just been reconciled through
+                        # their own published reads.  That is the only basis on which the context
+                        # grants this (single, recorded) new plan.
+                        _replan, decision = context.grant_replan(
+                            request_id, body=retry_arguments,
+                            evidence={"dispatch_stage": "refused_before_engine",
+                                      "source": "the control daemon refused the call before dispatch "
+                                                "(reconcile unfinished engine work)",
+                                      "error_code": outcome.get("error_code"),
+                                      "reconciled": bool(record.get("released"))},
+                            why="control-gate refusal: released the unfinished work and re-dispatched once")
+                        record["replan"] = _json_safe(decision)
+                        if _replan is None:
+                            record["retry"] = ("not performed: the context refused a new plan for this "
+                                               f"request ({decision.get('detail')})")
+                            record["still_blocked"] = self.note_still_blocked(name, payload,
+                                                                             phase="replan-refused")
+                            self.reconciliations.append(_json_safe(record))
+                            return payload
                     retried = await self._call_once(name, retry_arguments)
                     retry_outcome = _unknown_outcome(retried)
                     record["retry"] = {"success": retried.get("success"), "error_code": _error_code(retried),
@@ -1684,8 +3007,61 @@ class ProductionHost:
                 entry["released_at"] = _utc_now()
                 if job_id in self.unresolved_jobs:
                     self.unresolved_jobs.remove(job_id)
+            else:
+                # ``job_reconcile`` could not *verify* the release (observed live: the isolated
+                # worker answered "worker request status unavailable", status UNKNOWN, and the gate
+                # stayed closed for every call after it).  The same envelope says to *query* the
+                # job, so the published ``job_status``/``job_result`` reads are tried: a job that
+                # reports a terminal outcome has been read back, which is what the gate holds out
+                # for.
+                observed = await self._observe_job_reads(row, job_id)
+                if observed.get("terminal"):
+                    released = True
+                    entry["released"] = True
+                    entry["released_at"] = _utc_now()
+                    entry["released_via"] = f"{observed.get('via')} reported {observed.get('status')}"
+                    if job_id in self.unresolved_jobs:
+                        self.unresolved_jobs.remove(job_id)
             self._publish_ledger()
         return released
+
+    #: A published job read reports one of these once the job reached an outcome; a ledger job that
+    #: can be read back at all is no longer *unreconciled* work.
+    TERMINAL_JOB_STATUSES = frozenset({"SUCCEEDED", "SUCCESS", "FAILED", "FAILURE", "ERROR", "CANCELLED",
+                                       "CANCELED", "TERMINAL", "COMPLETE", "COMPLETED", "DONE", "ABORTED",
+                                       "RELEASED"})
+
+    async def _observe_job_reads(self, row: dict[str, Any], job_id: str) -> dict[str, Any]:
+        """Query the published job reads for one unresolved job — the product's own instruction.
+
+        ``job_reconcile`` can answer with ``status: UNKNOWN`` and a reconciliation row saying
+        "worker request status unavailable" (observed live): the driver then cannot *verify* the
+        release and the control plane keeps refusing new work.  The same envelope says to *query
+        the job*, and ``job_status``/``job_result`` are the published queries.  Only their own
+        answers are recorded; when neither can be read, the job stays unresolved and the record
+        says exactly that.
+        """
+        reads: list[dict[str, Any]] = []
+        observed: dict[str, Any] = {"reads": reads, "terminal": False}
+        for tool, extra in (("job_status", {}), ("job_result", {})):
+            if tool not in self.tools:
+                reads.append({"tool": tool, "available": False})
+                continue
+            payload = await self._call_once(tool, {"job_id": job_id, **extra,
+                                                   "execution": _execution(key=f"{tool}-{job_id}",
+                                                                           request=tool)})
+            data = _mapping(_data(payload))
+            status = str(data.get("status") or "")
+            terminal = status.upper() in self.TERMINAL_JOB_STATUSES
+            reads.append({"tool": tool, "available": True, "success": _success(payload), "status": status,
+                          "error_code": _error_code(payload), "message": _error_message(payload),
+                          "terminal": terminal, "data_keys": sorted(str(key) for key in data)})
+            if terminal:
+                observed.update({"terminal": True, "via": tool, "status": status})
+                break
+        row["job_reads"] = reads
+        row["observed_via"] = observed.get("via")
+        return observed
 
     async def _call_once(self, name: str, arguments: Mapping[str, Any] | None = None) -> dict[str, Any]:
         if self.session is None:
@@ -1729,8 +3105,12 @@ class ProductionHost:
         payload = {**payload, "_outer_isError": outer_error, "_structuredContent": structured}
         # Every envelope passes through here, so the ledger learns from the wire itself: a job
         # whose outcome is UNKNOWN is recorded (with the operation that reported it) even when the
-        # caller never asks what to do about it.
-        self._observe_envelope(name, payload)
+        # caller never asks what to do about it.  The run's execution context reads the same
+        # envelope through its fixed schema and only adopts state that matches the request's own
+        # model_ref.
+        self._observe_envelope(name, payload,
+                               request=request.get("execution") if isinstance(request.get("execution"), Mapping)
+                               else None)
         return payload
 
 
@@ -1763,6 +3143,13 @@ class ActionClient:
         self.host = host
         self.args = args
         self.state = state
+        #: Every request this client actually dispatched, by its idempotency key: the *exact* bytes
+        #: handed to the wire, so a retry of one of them re-sends those bytes instead of deriving a
+        #: new body (C02 — a rewritten body under the same key is a new plan, and the product
+        #: answers it with ``IDEMPOTENCY_CONFLICT``).
+        self.dispatched: dict[str, dict[str, Any]] = {}
+        #: Every true retry this client performed, in order (evidence, bounded).
+        self.retries: list[dict[str, Any]] = []
 
     def _published_tool(self, operation: str) -> tuple[str | None, bool]:
         alias = self.CONTROL_ALIASES.get(operation, operation.replace(".", "_"))
@@ -1844,6 +3231,7 @@ class ActionClient:
         request: str | None = None,
         revision_override: int | None = None,
         reconcile: bool = True,
+        rpc_timeout_s: float | None = None,
     ) -> dict[str, Any]:
         # Every envelope decoded since the last call — a case's own direct ``host.call`` read
         # included — is adopted *before* this call's identity is built, so the revision it compares
@@ -1862,13 +3250,56 @@ class ActionClient:
             call_args: dict[str, Any] = {"operation_id": operation, "arguments": logical}
         else:
             call_args = logical
+        # C02: every logical request carries its own run/case/step/sequence identity.  A driver-minted
+        # key is never shared with another request (the live defect behind the 50/52 replayed
+        # reconcile reads); an explicitly keyed call keeps its key, because it may be probing the
+        # product's own idempotency contract (GUARD_T010).
+        context: ExecutionContext | None = getattr(self.host, "context", None)
+        scope = self.state.get("request_scope")
+        scope = scope if isinstance(scope, Mapping) else {}
+        plan = context.mint(case=str(scope.get("case") or "run"),
+                            step=str(scope.get("step") or request or operation.replace(".", "-")),
+                            body=None, explicit_key=key) if context is not None else None
+        exec_kwargs: dict[str, Any] = {}
+        if rpc_timeout_s is not None:
+            exec_kwargs["rpc_timeout_s"] = float(rpc_timeout_s)
         call_args["execution"] = _execution(
-            key=key or operation.replace(".", "-") + "-" + str(len(self.host.transcript)),
+            key=key or (plan.key if plan is not None
+                        else operation.replace(".", "-") + "-" + str(len(self.host.transcript))),
             request=request,
             ref=ref,
             revision=revision,
             revision_override=revision_override,
+            **exec_kwargs,
         )
+        if context is not None and plan is not None:
+            # The digest of the body as *actually dispatched* is what may later decide whether a
+            # same-key call is a retry of this request or a different request.
+            context.bind_body(plan.key, _plan_body(call_args))
+        negative_probe = not reconcile
+        decision = (context.precheck(call_args, tool=tool, negative_probe=negative_probe, reconcile=reconcile)
+                    if context is not None else None)
+        if decision is not None:
+            if context is not None and negative_probe:
+                context.note_negative_probe(
+                    request_id=str((_mapping(call_args.get("execution")) or {}).get("request_id") or operation),
+                    tool=operation, model_ref=ref,
+                    note=str((decision.get("detail") or {}).get("note") or decision.get("reason") or ""))
+            if decision.get("action") == "refuse":
+                # No wire call at all: the request contradicts itself (or names a replaced
+                # generation), and every layer would otherwise choose a different identity.
+                if context is not None and plan is not None:
+                    context.note_dispatch(request_id=plan.request_id, tool=operation, stage="not_dispatched",
+                                          reason=str(decision.get("reason")), model_ref=ref, revision=revision,
+                                          decision=str(decision.get("action")), detail=decision.get("detail"))
+                return self._pre_dispatch_refusal(operation, tool, call_args, decision)
+            if decision.get("action") == "query_first" and reconcile and not negative_probe:
+                resolver = getattr(self.host, "resolve_unfinished_jobs", None)
+                if callable(resolver):
+                    # The original job's own published query runs first; this request keeps its
+                    # identity and is never re-executed under a new one.
+                    await resolver(call_args, why=str((decision.get("detail") or {}).get("note")
+                                                      or decision.get("reason")))
         reconciler: Callable[..., Awaitable[dict[str, Any] | None]] | None = getattr(
             self.host, "reconcile_external_change", None)
         if (reconcile and self.state.get("needs_reconcile") and self.state.get("ref") is not None
@@ -1878,11 +3309,110 @@ class ActionClient:
             # refusal never happens instead of being classified after the fact.  A negative probe
             # passes ``reconcile=False`` and keeps the model exactly as it found it.
             await reconciler(call_args, why="pre-call: unacknowledged engine change")
+        if plan is not None:
+            # The dispatched bytes are recorded *before* the wire call: this is what a true retry
+            # may re-send, and it is the only body that may reuse this key.
+            self.dispatched[plan.key] = {
+                "key": plan.key, "request_id": plan.request_id, "request": request, "tool": tool,
+                "operation": operation, "route": "fallback" if fallback else "published",
+                "arguments": _json_safe(call_args), "body_sha256": _body_sha256(_plan_body(call_args)),
+                "at": _utc_now(),
+            }
         payload = await self.host.call(tool, call_args, reconcile=reconcile)
+        if context is not None and plan is not None:
+            product_stage = product_dispatch_stage(payload)
+            context.note_dispatch(request_id=plan.request_id, tool=operation,
+                                  stage=observed_dispatch_stage(payload),
+                                  reason=str((decision or {}).get("reason") or "") or None,
+                                  model_ref=ref, revision=revision,
+                                  # C03: the product's own cause/stage always travel with the
+                                  # driver's reading of them, so a refusal keeps its original
+                                  # operation/code/cause/dispatch stage in the evidence.
+                                  product_stage=_json_safe(product_stage) if product_stage else None,
+                                  negative_probe=negative_probe)
         self._adopt_refresh(self.host)
         self._record_identity(payload)
         self._adopt_readback(payload)
         self._note_engine_dirt(payload)
+        return payload
+
+    async def retry(self, key: str) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Re-dispatch a recorded request with *exactly* the bytes it was dispatched with (C02).
+
+        Only the same request, whose response was uncertain, may reuse its key *and* its body: the
+        expected revision, the model binding and every other field come from the record — nothing is
+        derived again.  Deriving a fresh revision is what the first M1 run did and what the product
+        rightly refused with ``IDEMPOTENCY_CONFLICT`` (it hashes the whole semantic request,
+        ``expected_revision`` included), so the run filed a product defect that was its own.  The
+        retry is recorded as a replay of that one request and ``host.call`` is asked not to re-plan
+        it: a faithful retry is never rewritten inside the host.
+
+        Returns ``(payload, record)`` where the record carries both body digests and whether they
+        are identical — the retry's own proof that it re-sent the request it claims to retry.
+        """
+        record = self.dispatched.get(key)
+        if record is None:
+            raise CapabilityUnavailable(
+                f"{key!r} has no dispatched request to retry: an idempotency key may only be reused "
+                "for the request it was minted for")
+        # A deep copy: the dispatched record is evidence and must not share mutable parts with the
+        # retry that reads it.
+        arguments = _json_safe(record["arguments"])
+        body = _plan_body(arguments)
+        digest = _body_sha256(body)
+        context = getattr(self.host, "context", None)
+        if context is not None:
+            # A same-key retry is only legitimate with the identical body; the context records the
+            # check and returns a decision when the body changed (then nothing is dispatched).
+            decision = context.reuse_for_retry(str(record["request_id"]), body=body)
+            if decision is not None:
+                raise CapabilityUnavailable(
+                    f"the retry of {key!r} was refused before dispatch: {decision.get('detail') or decision.get('reason')}")
+        payload = await self.host.call(str(record["tool"]), arguments, reconcile=False)
+        self._adopt_refresh(self.host)
+        self._record_identity(payload)
+        self._adopt_readback(payload)
+        self._note_engine_dirt(payload)
+        row = {"key": key, "request_id": record["request_id"], "tool": record["tool"],
+               "operation": record["operation"], "body_sha256": record["body_sha256"],
+               "retry_body_sha256": digest, "same_body": digest == record["body_sha256"],
+               "first_dispatched_at": record.get("at"), "at": _utc_now(),
+               "success": payload.get("success"), "error_code": _error_code(payload)}
+        self.retries.append(_json_safe(row))
+        del self.retries[:-25]
+        if context is not None:
+            context.note_dispatch(request_id=str(record["request_id"]), tool=str(record["operation"]),
+                                  stage=observed_dispatch_stage(payload), reason="same-key retry (identical body)",
+                                  model_ref=self.state.get("ref"), revision=self.state.get("revision"),
+                                  product_stage=_json_safe(product_dispatch_stage(payload)) or None,
+                                  retry=True)
+        return payload, _json_safe(row)
+
+    def _pre_dispatch_refusal(self, operation: str, tool: str, arguments: Mapping[str, Any],
+                              decision: Mapping[str, Any]) -> dict[str, Any]:
+        """A refusal the driver raised *before* any wire call — recorded, shaped like the product's.
+
+        The envelope carries the published ActionResult fields (``success``/``data``/``error``) so
+        every checker reads it exactly like a server envelope, plus an explicit ``pre_dispatch``
+        block stating that no JSON-RPC call was made and why.
+        """
+        reason = str(decision.get("reason"))
+        detail = _mapping(decision.get("detail"))
+        execution = dict(_mapping(arguments.get("execution")))
+        error = {"code": "DRIVER_PRE_DISPATCH_REFUSAL", "reason": reason, "safe_retry": False,
+                 "type": "ExecutionContextRefusal",
+                 "message": f"{operation} was refused before dispatch: {decision.get('note') or reason}"}
+        data = {"operation_id": operation, "reason": reason, "refusal": _json_safe(detail)}
+        payload: dict[str, Any] = {"success": False, "data": data, "error": error, "execution": execution,
+                                   "pre_dispatch": {"tool": tool, "wire_call": False, "operation": operation,
+                                                    "reason": reason, "detail": _json_safe(detail)}}
+        payload["_outer_isError"] = True
+        payload["_structuredContent"] = {"success": False, "data": data, "error": error, "execution": execution}
+        self.host.transcript.append(_redact({
+            "host": getattr(self.host, "label", "primary"), "transport": "stdio", "operation": tool,
+            "arguments": dict(arguments), "elapsed_s": 0.0, "outer_isError": True,
+            "structuredContent": payload["_structuredContent"], "content": [], "payload": payload,
+            "pre_dispatch_refusal": True}))
         return payload
 
     def _adopt_readback(self, payload: Mapping[str, Any] | None) -> None:
@@ -1933,9 +3463,40 @@ class ActionClient:
 # ---------------------------------------------------------------------------
 
 
+_EVALUATION_POLICY_PATH = "input_schema.properties.evaluation_policy"
+
+
+def _evaluation_policy(data: Mapping[str, Any], schema: Any) -> tuple[Any, str | None, str]:
+    """Where an operation's evaluation policy is actually published (C04).
+
+    The original GUARD_T033 evidence carries the policy at
+    ``input_schema.properties.evaluation_policy``: the operation's own input schema declares the
+    field (its type/enum/description is the published contract).  The driver read only the data
+    level, so it reported an empty policy and the case then asked for the same information in a
+    field the operation never had.  The published schema path is read first, the data-level copy
+    second, and the path that carried the value is recorded either way — a missing policy is
+    reported as *not published*, never as an empty one.
+    """
+    properties = schema.get("properties") if isinstance(schema, Mapping) else None
+    properties = properties if isinstance(properties, Mapping) else {}
+    if "evaluation_policy" in properties:
+        return properties.get("evaluation_policy"), _EVALUATION_POLICY_PATH, (
+            "read from the operation's own input schema (the published declaration of the field)")
+    if isinstance(data, Mapping) and "evaluation_policy" in data:
+        return data.get("evaluation_policy"), "data.evaluation_policy", (
+            "read from the describe payload's data level (no input-schema declaration published)")
+    return None, None, "not published: neither the input schema nor the describe payload declares it"
+
+
 async def _describe_row(host: ProductionHost, operation: str) -> dict[str, Any]:
     """Describe one operation without needing a case (the suite-level bind probe uses this)."""
-    key = "phase4-describe-" + operation.replace(".", "-")
+    # The identity is *fresh per describe*: the control daemon stores one result per idempotency
+    # identity, so a key reused across cases (`phase4-describe-<operation>`) makes every later
+    # describe answer with the first call's stored envelope — including a stored
+    # "Control response unavailable" one, which is exactly the envelope whose own instruction says
+    # to re-ask under the same key.  A fresh key per call plus the same-key re-ask is the only
+    # combination where that instruction can be honoured.
+    key = _fresh_key("phase4-describe-" + operation.replace(".", "-"))
     if "operation_describe" not in host.tools:
         return {"available": False, "error_code": "UNSUPPORTED_OPERATION",
                 "reason": "operation_describe is not published by this host"}
@@ -1947,21 +3508,33 @@ async def _describe_row(host: ProductionHost, operation: str) -> dict[str, Any]:
     available = bool(_success(payload) and data.get("executable") is True)
     schema = data.get("input_schema")
     schema_properties = sorted(str(name) for name in (schema.get("properties") or {})) if isinstance(schema, Mapping) else []
+    policy, policy_source, policy_note = _evaluation_policy(data, schema)
     wire = data.get("wire_compatibility")
+    # A describe the engine never answered is *not* a capability gap: the operation's own status
+    # was not established at all.  The unknown outcome is kept on the row so a gate that reads it
+    # reports the blocked probe instead of "not executable in this build".
+    unreadable = _unknown_outcome(payload)
     return {
         "available": available,
         "implementation_status": data.get("implementation_status"),
         "executable": data.get("executable"),
+        "probe_unreadable": _json_safe(unreadable),
         "mcp_tool_name": data.get("mcp_tool_name"),
         "effect": data.get("effect"),
         "route": data.get("route"),
         "error_code": _error_code(payload),
         "schema_is_object": bool(isinstance(schema, Mapping) and schema.get("type") == "object"),
+        "input_schema": _json_safe(schema),
         "output_contract": bool(data.get("output_contract")),
         "input_schema_properties": schema_properties,
         "wire_compatibility": _json_safe(wire),
         "execution_fields": _json_safe((wire or {}).get("execution_fields")) if isinstance(wire, Mapping) else None,
-        "evaluation_policy": _json_safe(data.get("evaluation_policy")),
+        # C04: the evaluation policy lives in the operation's own input schema; the path that
+        # carried it is published with the value so a case never asks for it in a field the
+        # operation does not have.
+        "evaluation_policy": _json_safe(policy),
+        "evaluation_policy_source": policy_source,
+        "evaluation_policy_note": policy_note,
         "required_products": _json_safe(data.get("required_products")),
         "remediation": _json_safe(data.get("remediation")),
     }
@@ -2038,10 +3611,20 @@ def _unavailable_reason(rows: Mapping[str, Any], operations: Iterable[str]) -> s
     missing = [operation for operation in operations if not (rows.get(operation) or {}).get("available")]
     if not missing:
         return None
+    # An operation whose capability probe was never answered (the engine state was unknown) has no
+    # implementation status: saying "not executable in this build" would turn an unreadable probe
+    # into a claim about the build.  The two are reported separately.
+    unreadable = [operation for operation in missing if (rows.get(operation) or {}).get("probe_unreadable")]
     details = ", ".join(
         f"{operation}(implementation_status={((rows.get(operation) or {}).get('implementation_status')) or (rows.get(operation) or {}).get('error_code') or 'unknown'})"
-        for operation in missing
+        for operation in missing if operation not in unreadable
     )
+    if unreadable and not details:
+        return ("the capability probe of required operation(s) could not be read: "
+                + ", ".join(f"{operation}({((rows.get(operation) or {}).get('probe_unreadable') or {}).get('message') or 'unknown engine state'})"
+                            for operation in unreadable))
+    if unreadable:
+        details += "; probe(s) not read: " + ", ".join(unreadable)
     return f"required operation(s) not executable in this build: {details}"
 
 
@@ -2144,6 +3727,15 @@ async def _step(
         "elapsed_s": None,
         "data_keys": sorted(_data(payload)),
     }
+    # C03: a refused step keeps the *original* operation, code, cause and dispatch stage.  The
+    # product may wrap the operation's own failure (``error.details.cause_code``) inside a broader
+    # code, and the stage it reports is what decides whether the request was executed at all.
+    product_stage = product_dispatch_stage(payload)
+    if product_stage is not None:
+        record["cause_code"] = product_stage.get("cause_code")
+        record["cause_message"] = product_stage.get("cause_message")
+        record["dispatch_stage"] = product_stage.get("dispatch_stage")
+        record["product_dispatch"] = product_stage
     conflict = _revision_conflict(payload)
     if conflict is not None:
         # The host already tried the published release; record what it did so the verdict is
@@ -3450,6 +5042,236 @@ async def _case_r_readback(host: ProductionHost, client: ActionClient, case: Cas
 # ---------------------------------------------------------------------------
 
 
+#: Refusal codes that mean "the container is already there": a case that must address a component,
+#: a geometry sequence or a fixture feature an earlier case (or the model itself) already created
+#: adopts it instead of reporting a failure.
+CONTAINER_ADOPT_CODES = frozenset({"TAG_CONFLICT", "TAG_EXISTS", "NODE_EXISTS", "ALREADY_EXISTS"})
+#: The edge length (m) of the solid the driver's own geometry fixture creates and builds.
+CONTAINER_BLOCK_SIZE = (1.0e-3, 1.0e-3, 1.0e-3)
+
+
+async def _container_step(client: ActionClient, step: str, operation: str, arguments: Mapping[str, Any],
+                          store: dict[str, Any] | None = None) -> tuple[str, dict[str, Any], dict[str, Any]]:
+    """One container/fixture step: APPLIED, ADOPTED (already present) or the refusal itself.
+
+    Every step carries a *fresh* idempotency identity: the control daemon stores a result per key
+    (and per request body), so reusing one key for a container that is created again on another
+    model is answered with ``IDEMPOTENCY_CONFLICT`` instead of doing the work.
+    """
+    key = _fresh_key(f"phase4-{step}")
+    payload = await client.action(operation, dict(arguments), key=key, request=step)
+    code = _error_code(payload)
+    status = "APPLIED" if _success(payload) else ("ADOPTED" if code in CONTAINER_ADOPT_CODES else
+                                                  "BLOCKED" if _blocked_payload(payload) else "FAILED")
+    row = {"step": step, "operation": operation, "status": status, "error_code": code,
+           "message": None if _success(payload) else _error_message(payload),
+           "identity": _envelope_identity(payload)}
+    if store is not None:
+        store.setdefault("container_steps", []).append(row)
+    return status, payload, row
+
+
+async def _ensure_component(client: ActionClient, args: argparse.Namespace, *, prefix: str,
+                            component: str | None = None,
+                            store: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Establish one component container **read first**, and prove it by reading it back.
+
+    The M1c run created the component it addressed *before* looking: on a model that already
+    carried ``comp1`` the product answered the create with ``TAG_CONFLICT`` -- correctly -- and the
+    pre-repair envelope hid that refusal behind an unresolved engine state, so the case never
+    reached its own acceptance lines.  The order is now the observation order:
+
+    1. read the component list (``definition.component_manage`` with ``action: list``; the
+       operation enumerates ``model.component()`` and takes no tag),
+    2. the addressed tag is in that list -> ``SATISFIED``/**adopted**, and *no* create is dispatched,
+    3. otherwise create it and read the list back; the prerequisite holds only when the tag is
+       observed there.
+
+    A create refused with an "already exists" code is never an assumption: the list is read again
+    and the tag has to be observed (the refusal's own dispatch stage and mutation witness travel
+    with the step as ``adoption``).  ``status`` is ``SATISFIED``/``UNSATISFIED``/``BLOCKED`` with the
+    refusal's operation/code/cause/dispatch stage as ``root_cause``, never a FAIL.
+    """
+    component = component or args.component
+    evidence: dict[str, Any] = {"component": component, "prefix": prefix, "steps": [], "verified": False,
+                                "component_tags": None, "status": "UNSATISFIED", "reason": None,
+                                "root_cause": None, "adopted": False, "created": False}
+    steps: list[dict[str, Any]] = evidence["steps"]
+
+    async def read_list(step: str) -> tuple[str, dict[str, Any], dict[str, Any]]:
+        return await _container_step(client, step, "definition.component_manage",
+                                     {"action": "list"}, store)
+
+    try:
+        status, listed, row = await read_list(f"{prefix}-component-list")
+    except CapabilityUnavailable as exc:
+        evidence.update({"status": "BLOCKED",
+                         "reason": f"definition.component_manage is not published: {exc}",
+                         "root_cause": {"operation": "definition.component_manage",
+                                        "error_code": "CAPABILITY_UNAVAILABLE", "message": str(exc)}})
+        return evidence
+    steps.append(row)
+    evidence["component_tags"] = _component_tags_in(listed)
+    if not _success(listed):
+        evidence.update({"status": "BLOCKED" if _blocked_payload(listed) else "UNSATISFIED",
+                         "reason": (f"the component list could not be read "
+                                    f"({_error_code(listed) or 'an invalid envelope'}): "
+                                    f"{_error_message(listed)}"),
+                         "root_cause": _refusal_root_cause("definition.component_manage", listed)})
+        return evidence
+    if component in (evidence["component_tags"] or []):
+        # Read first: the container is already there, so the create that the pre-repair driver
+        # sent (and that the product rightly refused) is never dispatched at all.
+        evidence.update({"status": "SATISFIED", "verified": True, "adopted": True,
+                         "reason": (f"the component list read back {evidence['component_tags']} and "
+                                    f"already contains {component!r}: no create was dispatched"),
+                         "root_cause": None})
+        return evidence
+
+    status, created, created_row = await _container_step(
+        client, f"{prefix}-component", "definition.component_manage",
+        {"action": "create", "tag": component}, store)
+    steps.append(created_row)
+    if status not in {"APPLIED", "ADOPTED"}:
+        evidence.update({"status": "BLOCKED" if status == "BLOCKED" else "UNSATISFIED",
+                         "reason": (f"definition.component_manage (create) returned "
+                                    f"{created_row['error_code'] or 'an invalid envelope'}: "
+                                    f"{created_row['message']}"),
+                         "root_cause": _refusal_root_cause("definition.component_manage", created)})
+        return evidence
+    if status == "ADOPTED":
+        # "Already exists" is the product's statement, not an observation: keep the refusal's own
+        # stage/witness evidence with the step and read the list again to observe the tag.
+        created_row["adoption"] = _adoption_evidence(created)
+    try:
+        _verify_status, verified, verify_row = await read_list(f"{prefix}-component-list-verify")
+    except CapabilityUnavailable as exc:
+        evidence.update({"status": "UNSATISFIED",
+                         "reason": (f"the created component could not be read back: "
+                                    f"definition.component_manage is not published: {exc}"),
+                         "root_cause": {"operation": "definition.component_manage",
+                                        "error_code": "CAPABILITY_UNAVAILABLE", "message": str(exc)}})
+        return evidence
+    steps.append(verify_row)
+    evidence["component_tags"] = _component_tags_in(verified)
+    if not _success(verified):
+        evidence.update({"status": "BLOCKED" if _blocked_payload(verified) else "UNSATISFIED",
+                         "reason": (f"the component list could not be read "
+                                    f"({_error_code(verified) or 'an invalid envelope'}): "
+                                    f"{_error_message(verified)}"),
+                         "root_cause": _refusal_root_cause("definition.component_manage", verified)})
+        return evidence
+    if component not in (evidence["component_tags"] or []):
+        evidence.update({"status": "UNSATISFIED",
+                         "reason": (f"the component list read back {evidence['component_tags']!r} "
+                                    f"without {component!r}, so the container this case addresses "
+                                    "does not exist"),
+                         "root_cause": {"operation": "definition.component_manage", "error_code": None,
+                                        "cause_code": "NODE_NOT_FOUND",
+                                        "cause_message": f"component {component!r} is not in the component list",
+                                        "readback_tags": evidence["component_tags"]}})
+        return evidence
+    evidence.update({"status": "SATISFIED", "verified": True, "created": status == "APPLIED",
+                     "adopted": status == "ADOPTED",
+                     "reason": (f"the component {component!r} was "
+                                + ("created and read back" if status == "APPLIED"
+                                   else "reported present by a refused create and read back")
+                                + " from the component list")})
+    return evidence
+
+
+def _component_tags_in(payload: Mapping[str, Any] | None) -> list[str]:
+    """The component tags one ``definition.component_manage`` listing reports (both positions)."""
+    data = _data(payload)
+    readback = data.get("readback")
+    readback_tags = ([str(item) for item in (readback.get("tags") or []) if isinstance(item, (str, int))]
+                     if isinstance(readback, Mapping) else [])
+    if readback_tags:
+        return readback_tags
+    return [str(item.get("tag")) for item in (data.get("components") or [])
+            if isinstance(item, Mapping) and item.get("tag")]
+
+
+def _adoption_evidence(payload: Mapping[str, Any] | None) -> dict[str, Any]:
+    """The published stage/witness evidence behind an "already exists" adoption (C03).
+
+    A create the product refused because the tag exists is adopted *only* together with this
+    reading: the product's own dispatch stage, its mutation witness and whether that evidence
+    proves nothing was executed.  An envelope that publishes none of it is recorded as such --
+    the adoption then rests on the follow-up list read alone.
+    """
+    product = product_dispatch_stage(payload)
+    stage = observed_dispatch_stage(payload)
+    return {"operation": "definition.component_manage", "error_code": _error_code(payload),
+            "dispatch_stage": stage, "proves_not_executed": stage in NOT_EXECUTED_STAGES,
+            "product_dispatch_stage": _json_safe(product) if product else None}
+
+
+async def _ensure_geometry_container(client: ActionClient, args: argparse.Namespace, *, prefix: str,
+                                     store: dict[str, Any] | None = None, component: str | None = None,
+                                     geometry: str | None = None, build_block: bool = True,
+                                     block_tag: str | None = None) -> tuple[bool, dict[str, Any]]:
+    """Create the component (+ geometry sequence + built solid) a live case addresses, in order.
+
+    The bound model is shared by the whole suite and the cases that create a model of their own
+    (the chains, T018, T020) leave *their* model bound, so a later case must never assume that
+    ``comp1``/``geom1`` exists.  Observed live: ``physics.create`` was refused with "geometry
+    'geom1' does not exist in component 'comp1'" and ``geometry.feature_create`` with "could not
+    resolve node path segment geom:geom1" -- both are *driver-side* addressing defects, not product
+    gaps, because the containers are create-able through published operations (chain A does exactly
+    that).  A refusal naming an existing tag is adopted: the container is there, which is all the
+    caller needs -- and the component step *reads first* (see :func:`_ensure_component`), so a
+    container that is already present is never created again.
+    """
+    component = component or args.component
+    geometry = geometry or args.geometry_tag
+    block_tag = block_tag or f"{prefix}_blk"
+    evidence: dict[str, Any] = {"component": component, "geometry": geometry, "block": block_tag if build_block else None,
+                                "prefix": prefix}
+    steps: list[dict[str, Any]] = []
+    ok = True
+
+    async def step(name: str, operation: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+        nonlocal ok
+        status, payload, row = await _container_step(client, name, operation, arguments, store)
+        steps.append(row)
+        if status not in {"APPLIED", "ADOPTED"} and ok:
+            ok = False
+            evidence["status"] = "BLOCKED" if status == "BLOCKED" else "FAIL"
+            evidence["reason"] = f"{operation} returned {row['error_code'] or 'an invalid envelope'}: {row['message']}"
+        return payload
+
+    component_evidence = await _ensure_component(client, args, prefix=prefix, component=component,
+                                                 store=store)
+    steps.extend(component_evidence["steps"])
+    evidence["component_evidence"] = component_evidence
+    if component_evidence["status"] != "SATISFIED" and ok:
+        # The same mapping the single component step used before: a blocked boundary stays
+        # BLOCKED, every other refusal that stopped the container is a FAIL of the fixture.
+        ok = False
+        evidence["status"] = "BLOCKED" if component_evidence["status"] == "BLOCKED" else "FAIL"
+        evidence["reason"] = (f"the component {component!r} could not be established: "
+                              f"{component_evidence['reason']}")
+    await step(f"{prefix}-geometry", "geometry.sequence_create",
+               {"component": component, "tag": geometry, "dimension": 3})
+    if build_block:
+        geometry_path = {"segments": [{"collection": "component", "tag": component},
+                                      {"collection": "geom", "tag": geometry}]}
+        await step(f"{prefix}-block", "geometry.feature_create",
+                   {"parent": geometry_path, "tag": block_tag, "type_id": "Block",
+                    "properties": [{"name": "size", "value": {"kind": "float64", "shape": [3],
+                                                              "data": list(CONTAINER_BLOCK_SIZE)}},
+                                   {"name": "pos", "value": {"kind": "float64", "shape": [3],
+                                                             "data": [0.0, 0.0, 0.0]}}]})
+        await step(f"{prefix}-build", "geometry.build", {"geometry": geometry_path})
+    evidence["steps"] = steps
+    evidence.setdefault("status", "PASS" if ok else "BLOCKED")
+    evidence.setdefault("reason", None)
+    if store is not None:
+        store["containers"] = evidence
+    return ok, evidence
+
+
 def _variable_rows(payload: Mapping[str, Any]) -> list[dict[str, Any]]:
     data = _data(payload)
     raw = data.get("variables")
@@ -3463,6 +5285,43 @@ def _variable_readback_path(args: argparse.Namespace, tag: str, component: str |
         segments.append({"collection": "component", "tag": component})
     segments.append({"collection": "variable", "tag": tag})
     return {"segments": segments}
+
+
+def _refusal_root_cause(operation: str, payload: Mapping[str, Any] | None) -> dict[str, Any]:
+    """The original operation/code/cause/dispatch stage of one refusal (C03: name the root cause).
+
+    The wrapper code the envelope raises (``EXECUTION_STATE_UNKNOWN``) and the operation's own
+    failure (``error.details.cause_code``) are kept side by side, together with the stage the
+    product reports and whether that stage proves nothing was executed.
+    """
+    product = product_dispatch_stage(payload) or {}
+    stage = product.get("dispatch_stage")
+    return {"operation": operation, "error_code": _error_code(payload),
+            "cause_code": product.get("cause_code"), "cause_message": product.get("cause_message"),
+            "product_dispatch_stage": product.get("stage"), "dispatch_stage": stage,
+            "proves_not_executed": bool(stage in NOT_EXECUTED_STAGES) if stage else None,
+            "message": _error_message(payload) or None, "identity": _envelope_identity(payload)}
+
+
+async def _establish_component_prerequisite(client: ActionClient, args: argparse.Namespace, *,
+                                            prefix: str,
+                                            store: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Establish the component a live case addresses — its explicit prerequisite (C03).
+
+    The M1 run called ``variable.group_create(component='comp1')`` on the run's freshly created
+    (empty) model; the product answered, correctly, ``component 'comp1' does not exist``, and the
+    case filed that as a product gap (G3.1 §4: "establish explicit prerequisites: model,
+    component/geometry, material, mesh/study, revision").  This is the case's own prerequisite, and
+    it is established in the observation order: the component list is read *first*, a tag that is
+    already there is adopted without dispatching a create at all, and a missing one is created and
+    read back (see :func:`_ensure_component`).
+
+    ``status`` is ``SATISFIED`` only with the tag read back from the component list; every other
+    outcome carries the refusal's own operation/code/cause/dispatch stage as ``root_cause`` and is
+    filed as ONE ``DEPENDENCY_BLOCKED`` root cause — never as a defect of the operation that then
+    refuses to address the container.
+    """
+    return await _ensure_component(client, args, prefix=prefix, store=store)
 
 
 async def _case_w13_t006(host: ProductionHost, client: ActionClient, case: Case, args: argparse.Namespace, state: dict[str, Any]) -> None:
@@ -3486,8 +5345,49 @@ async def _case_w13_t006(host: ProductionHost, client: ActionClient, case: Case,
         return
     route = "domain" if domain_ok else "legacy"
     store: dict[str, Any] = {}
-    first_two = "phase4_q1=2" if route == "domain" else "2"
-    first_three = "phase4_q2=3" if route == "domain" else "3"
+    # ---- explicit prerequisite: the component this case addresses -------------------------------
+    # G3.1 §4: a case establishes its own containers before it uses them, and a refusal naming a
+    # container the case never created is the case's *dependency*, never a product defect.  The M1
+    # run skipped this step and filed the resulting ``NODE_NOT_FOUND`` as a product gap.
+    live_lines = ("variables_two_in_one_group", "varnames_contains_modified_variable",
+                  "no_bogus_name_expr_variables", "expression_evaluates_after_modification",
+                  "component_and_global_scope")
+    prerequisite = await _establish_component_prerequisite(client, args, prefix="w13-t006", store=store)
+    case.assertions.setdefault("prerequisites", {})
+    if isinstance(case.assertions["prerequisites"], dict):
+        case.assertions["prerequisites"]["established"] = prerequisite
+    if prerequisite["status"] != "SATISFIED":
+        missing = f"component:{args.component}"
+        for name in live_lines:
+            _mark(case, name, "NOT_RUN", f"dependency not established: {missing} ({prerequisite['reason']})")
+        case.assertions["dependency_blocked"] = {
+            "missing": [missing],
+            "root_cause": prerequisite.get("root_cause"),
+            "note": ("the live lines of this case list NOT_RUN against the prerequisite this case was "
+                     "to establish itself; a container the fixture never created is never a defect of "
+                     "the operation that then refuses to address it"),
+        }
+        case.assertions["first_cause"] = classify_first_cause(
+            {"status": "NOT_RUN", "error_code": "DEPENDENCY_BLOCKED", "first_cause": "DEPENDENCY_BLOCKED",
+             "reason": (f"the case's own prerequisite is not established: {missing} "
+                        f"({prerequisite['reason']}); the live lines depend on it and were not attempted")},
+            case_id=case.case_id)
+        case.finish("BLOCKED", reason=case.assertions["first_cause"]["reason"])
+        return
+    # The component is established *and read back*, and the group path below may address it.
+    # ``variable.set``/``variable.get`` address the variable group with a *NodePath* (the
+    # catalogue declares ``group`` as ``common.schema.json#/$defs/NodePath``); a bare tag string is
+    # refused by the domain layer with "group must be a NodePath object" before anything runs
+    # (observed live).  The path is the same component+variable path this case reads the node from.
+    group_path = _variable_readback_path(args, args.variable_group, args.component or None)
+    # T006 writes *defining expressions*.  COMSOL's Variables table documents the Expression column as
+    # "the expression, using COMSOL syntax, that defines the variable" -- a definition text such as
+    # ``phase4_q1=2`` is not an expression, and the m1d run wrote exactly that into ``q1``: the
+    # engine then had a variable whose value could not be read (``q1_probe: expected 2.0, observed
+    # None``) while the readback of the *text* still matched.  The variable is named ``q1``/``q2`` and
+    # its defining expression is the number, on both routes.
+    first_two = "2"
+    first_three = "3"
     if route == "domain":
         created = await _step(case, host, client, args, state, name="variables_two_in_one_group",
                               operation="variable.group_create",
@@ -3500,18 +5400,20 @@ async def _case_w13_t006(host: ProductionHost, client: ActionClient, case: Case,
         else:
             await _step(case, host, client, args, state, name="varnames_contains_modified_variable",
                         operation="variable.set",
-                        arguments={"group": args.variable_group,
+                        arguments={"group": group_path,
                                    "variables": [{"name": "q1", "expression": first_two},
                                                  {"name": "q2", "expression": first_three}]},
                         prereq="variables_two_in_one_group", store=store)
             readback = await _step(case, host, client, args, state, name="no_bogus_name_expr_variables",
                                    operation="variable.get",
-                                   arguments={"group": args.variable_group, "names": ["q1", "q2"]},
+                                   arguments={"group": group_path, "names": ["q1", "q2"]},
                                    prereq="variables_two_in_one_group", store=store,
                                    check=lambda payload, bundle: (
                                        ("PASS", None)
                                        if _success(payload) and _variable_names(payload) == ["q1", "q2"]
-                                       else ("FAIL", f"varnames readback was {_variable_names(payload)!r} instead of the two requested variables")
+                                       else (("BLOCKED", f"variable.get was refused: {_error_code(payload)}")
+                                             if _blocked_payload(payload) else
+                                             ("FAIL", f"varnames readback was {_variable_names(payload)!r} instead of the two requested variables"))
                                    ))
             assert readback is not None or True
             await _step(case, host, client, args, state, name="expression_evaluates_after_modification",
@@ -3601,6 +5503,127 @@ async def _read_variable_node(client: ActionClient, case: Case, path: Mapping[st
     return []
 
 
+def _trailing_scalar(value: Any) -> Any:
+    """The trailing element of a nested structure, or the value itself (never a computed number)."""
+    current = value
+    while isinstance(current, list) and current:
+        current = current[-1]
+    return current
+
+
+def _published_scalar(row: Mapping[str, Any]) -> float | None:
+    """The scalar an evaluated row publishes, read through the published paths (C04).
+
+    ``last_value`` is the trailing scalar the product publishes next to ``value``; a row that
+    publishes only ``value`` still yields that scalar when the structure is a 1x1 read.  Nothing is
+    computed here - a row that publishes no numbers yields ``None`` and is reported as such, never
+    as a driver-side estimate.
+    """
+    for key in ("last_value", "value"):
+        if key not in row:
+            continue
+        candidate = row.get(key)
+        scalar = _finite_float(candidate if not isinstance(candidate, list) else _trailing_scalar(candidate))
+        if scalar is not None:
+            return scalar
+    return None
+
+
+def _row_refusal(row: Mapping[str, Any]) -> str:
+    """The product's own reason for a row that published no value, quoted verbatim."""
+    parts = [str(row.get("error_code") or "no value published")]
+    if row.get("error"):
+        parts.append(str(row["error"]))
+    route = row.get("route")
+    if route:
+        parts.append(f"[route {route}]")
+    if "dataset" in row:
+        parts.append(f"[dataset {row.get('dataset')!r}]")
+    if "solution" in row:
+        parts.append(f"[solution {row.get('solution')!r}]")
+    if "shape" in row:
+        parts.append(f"[result shape {row.get('shape')!r}]")
+    return f"{row.get('name')}: " + " ".join(parts)
+
+
+def _unit_check_rows(payload: Mapping[str, Any] | None) -> list[Mapping[str, Any]]:
+    """Every unit-check record a payload publishes: ``unit_checks`` on a write, the single
+    ``unit_check`` in a refusal's details, or the ``unit_check`` block on an interface read."""
+    if not isinstance(payload, Mapping):
+        return []
+    data = _data(payload)
+    rows = data.get("unit_checks")
+    if isinstance(rows, Mapping):
+        return [rows]
+    if isinstance(rows, list):
+        return [row for row in rows if isinstance(row, Mapping)]
+    details = data.get("error", {}).get("details") if isinstance(data.get("error"), Mapping) else None
+    for holder in (details, data):
+        single = holder.get("unit_check") if isinstance(holder, Mapping) else None
+        if isinstance(single, Mapping):
+            return [single]
+    return []
+
+
+def _implicit_factor_report(*payloads: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Collect what the product's unit records say about implicit thickness/absorptivity (T015).
+
+    The acceptance forbids multiplying a source by a thickness or an absorptivity factor.  The
+    records have to *say* so (``verbatim`` + ``implicit_factors.applied``), and a record that claims
+    an applied factor anywhere is a failure with the claim quoted - never silently ignored.
+    """
+    report: dict[str, Any] = {"records": [], "claimed": [], "silent": [], "boundary_records": []}
+    for payload in payloads:
+        if not isinstance(payload, Mapping):
+            continue
+        for row in _unit_check_rows(payload):
+            point = str(row.get("write_point"))
+            for key in ("implicit_thickness_applied", "implicit_absorptivity_applied"):
+                if _data_or_details(payload, row, key) is True:
+                    report["claimed"].append(f"{point}: {key}")
+            factors = row.get("implicit_factors")
+            verbatim = row.get("verbatim") is True
+            applied = factors.get("applied") if isinstance(factors, Mapping) else None
+            record = {"write_point": point, "documented_entity": row.get("documented_entity"),
+                      "status": row.get("status"), "verbatim": verbatim, "implicit_factors": factors}
+            report["records"].append(record)
+            if row.get("documented_entity") == "boundary":
+                report["boundary_records"].append(record)
+            if applied is True or not isinstance(factors, Mapping) or not verbatim:
+                report["silent"].append(record)
+    return report
+
+
+def _data_or_details(payload: Mapping[str, Any], row: Mapping[str, Any], key: str) -> Any:
+    """A flag is a claim wherever it is published: the row, the data envelope or the error details."""
+    if key in row:
+        return row[key]
+    data = _data(payload)
+    if key in data:
+        return data[key]
+    details = data.get("error", {}).get("details") if isinstance(data.get("error"), Mapping) else None
+    if isinstance(details, Mapping) and key in details:
+        return details[key]
+    if isinstance(_data(payload).get("unit_check"), Mapping) and key in _data(payload)["unit_check"]:
+        return _data(payload)["unit_check"][key]
+    return None
+
+
+def _row_without_value(row: Mapping[str, Any]) -> str:
+    """A row that publishes no number: quote what it *did* publish, including its ok flag.
+
+    ``ok: true`` with an empty ``value``/``last_value`` is the silent-degradation shape the m1d
+    W13_T006 payload carried; naming it here keeps the dashboard from reading like a missing key.
+    """
+    return (f"{row.get('name')}: the row publishes no value "
+            f"(ok={row.get('ok')!r}, value={_json_safe(row.get('value'))!r}, "
+            f"last_value={row.get('last_value')!r}, shape={row.get('shape')!r}"
+            + (f", route={row.get('route')!r}" if "route" in row else "")
+            + (f", dataset={row.get('dataset')!r}" if "dataset" in row else "")
+            + (f", solution={row.get('solution')!r}" if "solution" in row else "")
+            + ")")
+
+
 def _check_expression_values(expected: Mapping[str, float]) -> Callable[[Mapping[str, Any], dict[str, Any]], Any]:
     def check(payload: Mapping[str, Any], bundle: dict[str, Any]) -> Any:
         if not _success(payload):
@@ -3611,12 +5634,70 @@ def _check_expression_values(expected: Mapping[str, float]) -> Callable[[Mapping
         mismatches: list[str] = []
         for name, want in expected.items():
             row = observed.get(name)
-            got = _finite_float(row.get("last_value")) if isinstance(row, Mapping) else None
-            if got is None or abs(got - float(want)) > 1e-9 * max(1.0, abs(float(want))):
+            if isinstance(row, Mapping) and row.get("ok") is False:
+                # The row itself carries the product's reason (an empty read, a refusal, ...): report
+                # that instead of a bare "observed None", which said nothing about *why*.
+                mismatches.append(_row_refusal(row))
+                continue
+            got = _published_scalar(row) if isinstance(row, Mapping) else None
+            if got is None and isinstance(row, Mapping):
+                mismatches.append(f"expected {want}; {_row_without_value(row)}")
+            elif got is None or abs(got - float(want)) > 1e-9 * max(1.0, abs(float(want))):
                 mismatches.append(f"{name}: expected {want}, observed {got}")
         if mismatches:
             return "FAIL", "; ".join(mismatches), {"results": results}
         return "PASS", None, {"results": results}
+    return check
+
+
+def _no_implicit_factor_check() -> Callable[[Mapping[str, Any], dict[str, Any]], Any]:
+    """T015: the source records must state verbatim use and no implicit thickness/absorptivity.
+
+    ``physics.validate`` is called with the *published* schema shape (``checks`` is an object); its
+    reply must not claim a violation and must not claim an applied factor.  The substance comes from
+    the unit-check records of the source writes this case made: they have to say ``verbatim: true``
+    and ``implicit_factors.applied: false``, at least one record has to exist, and a record that
+    *claims* an implicit factor anywhere fails the line with the claim quoted.  When the boundary
+    write point was written, its record must report the boundary entity and the area unit.
+    """
+
+    def check(payload: Mapping[str, Any], bundle: dict[str, Any]) -> Any:
+        if not _success(payload):
+            # The published input schema types ``checks`` as an object; an array (the m1d request)
+            # is refused before anything runs, so a refusal here is reported with its own code.
+            return "BLOCKED" if _blocked_payload(payload) else "FAIL", (
+                f"physics.validate refused the checks payload: {_error_code(payload) or 'invalid envelope'}"
+                f": {_error_message(payload)}")
+        data = _data(payload)
+        if str(data.get("verdict") or "").upper() == "VIOLATION":
+            return "FAIL", f"the interface validate reported a violation: {json.dumps(_json_safe(data.get('violations')), ensure_ascii=False)}"
+        store = bundle.get("store") or {}
+        assertions = getattr(bundle.get("case"), "assertions", {}) or {}
+        surface_write = assertions.get("t015_surface_flux_write")
+        report = _implicit_factor_report(store.get("volume_source_W_per_m3"), store.get("coordinate_unit_m_and_mm"),
+                                         store.get("wrong_unit_warns_or_fails"), surface_write.get("payload") if isinstance(surface_write, Mapping) else None)
+        if report["claimed"]:
+            return "FAIL", ("the source unit check reported an implicit thickness/absorptivity factor: "
+                            + "; ".join(report["claimed"])), {"unit_records": report}
+        if not report["records"]:
+            return "FAIL", ("no unit-check record was published for the heat sources, so the response "
+                            "says nothing about implicit thickness/absorptivity"), {"unit_records": report}
+        if report["silent"]:
+            return "FAIL", ("the unit-check record does not state that the value is used verbatim without an "
+                            "implicit factor: " + json.dumps(_json_safe(report["silent"][:2]), ensure_ascii=False)), {"unit_records": report}
+        if isinstance(surface_write, Mapping) and surface_write.get("success"):
+            if not report["boundary_records"]:
+                return "FAIL", ("the boundary heat flux write was accepted but no boundary write point was "
+                                "reported, so the surface source's dimension is not evidenced"), {"unit_records": report}
+        observed = {
+            "verdict": data.get("verdict"),
+            "checked_rules": data.get("checked_rules"),
+            "unit_records": report["records"],
+            "surface_flux_write": surface_write if isinstance(surface_write, Mapping) else None,
+            "implicit_factor_claims": report["claimed"],
+        }
+        return "PASS", None, {"observed": observed}
+
     return check
 
 
@@ -3636,6 +5717,20 @@ async def _case_w13_t015(host: ProductionHost, client: ActionClient, case: Case,
         case.finish()
         return
     store: dict[str, Any] = {}
+    # ``physics.create`` binds the interface to a geometry sequence that must *exist* on the bound
+    # model (``_require_geometry``); addressing ``geom1`` on a model that carries neither the
+    # component nor the sequence is refused with "geometry 'geom1' does not exist in component
+    # 'comp1'" before the interface is created (observed live).  The containers are created (or
+    # adopted when they are already there) first, exactly like chain A does.
+    containers_ok, container_evidence = await _ensure_geometry_container(
+        client, args, prefix="t015", store=store)
+    case.assertions["t015_containers"] = container_evidence
+    if not containers_ok:
+        for name in live_names:
+            _mark(case, name, str(container_evidence["status"]), container_evidence["reason"],
+                  observed=container_evidence)
+        case.finish()
+        return
     created = await _step(case, host, client, args, state, name="surface_source_W_per_m2",
                           operation="physics.create",
                           arguments={"component": args.component, "tag": args.physics_tag,
@@ -3670,21 +5765,48 @@ async def _case_w13_t015(host: ProductionHost, client: ActionClient, case: Case,
                                                                    "data": "1e5[W/m^2]"}}]},
                 prereq="coordinate_unit_m_and_mm", store=store,
                 check=lambda payload, bundle: (
-                    ("PASS", None, {"observed": "unit inconsistency reported"})
+                    ("PASS", None, {"observed": "unit inconsistency reported",
+                                   "unit_check": _json_safe(_unit_check_rows(payload))})
                     if (not _success(payload)) or _data(payload).get("preflight_warnings") or _data(payload).get("unit_warning")
                     else ("FAIL", "a W/m^2 expression was accepted for a W/m^3 volumetric source without any warning")
                 ))
+    # T015's surface source: the boundary feature whose documented write point is
+    # ``HeatFluxBoundary.q0`` ("q0 is the inward heat flux (SI unit: W/m2), normal to the boundary",
+    # HeatTransferModuleUsersGuide p.94).  This write is *evidence*: the m1d run's
+    # ``surface_source_W_per_m2`` line created the interface only, so no W/m^2 value existed anywhere
+    # in that run.  A build whose property label is not verified refuses the write, and that refusal
+    # is recorded with its own code rather than reported as a unit pass.
+    surface_tag = f"{args.volume_source_tag}flux"
+    surface_write = await client.action(
+        "physics.feature_create",
+        {"parent": {"segments": [{"collection": "component", "tag": args.component},
+                                 {"collection": "physics", "tag": args.physics_tag}]},
+         "tag": surface_tag, "type_id": "HeatFluxBoundary", "entity_dimension": 2,
+         "properties": [{"name": "q0", "value": {"kind": "expression", "shape": [], "data": "1e5[W/m^2]"}}]},
+        key=_fresh_key("phase4-t015-surface-flux"), request="t015-surface-flux")
+    case.assertions["t015_surface_flux_write"] = {
+        "operation": "physics.feature_create", "tag": surface_tag, "type_id": "HeatFluxBoundary",
+        "entity_dimension": 2, "property": "q0", "data": "1e5[W/m^2]",
+        "success": _success(surface_write),
+        "error_code": None if _success(surface_write) else _error_code(surface_write),
+        "message": None if _success(surface_write) else _error_message(surface_write),
+        "unit_checks": _json_safe(_unit_check_rows(surface_write)),
+        "payload": _json_safe(surface_write),
+    }
+    case.assertions["t015_implicit_factor_report"] = _json_safe(_implicit_factor_report(
+        store.get("volume_source_W_per_m3"), store.get("coordinate_unit_m_and_mm"),
+        store.get("wrong_unit_warns_or_fails"), surface_write))
     await _step(case, host, client, args, state, name="no_implicit_thickness_or_absorptivity",
                 operation="physics.validate",
                 arguments={"scope": {"segments": [{"collection": "component", "tag": args.component},
                                                   {"collection": "physics", "tag": args.physics_tag}]},
-                           "checks": [{"kind": "conservation_total_power"}]},
+                           # The published input schema types ``checks`` as an object (the operation
+                           # describe in the m1d transcript carries ``"checks": {"type": "object"}``);
+                           # the array this case used to send was refused with
+                           # "INVALID_REQUEST: physics.validate.checks must be an object".
+                           "checks": {"required_products": []}},
                 prereq="wrong_unit_warns_or_fails", store=store,
-                check=lambda payload, bundle: (
-                    ("PASS", None, {"observed": _data(payload)})
-                    if _success(payload) and (_data(payload).get("implicit_thickness_applied") is not True)
-                    else ("FAIL", "the source unit check reported an implicit thickness/absorptivity factor")
-                ))
+                check=_no_implicit_factor_check())
     case.finish()
 
 
@@ -3703,65 +5825,151 @@ async def _case_w13_t048(host: ProductionHost, client: ActionClient, case: Case,
         case.finish()
         return
     store: dict[str, Any] = {}
-    selection_path = {"segments": [{"collection": "component", "tag": args.component},
-                                   {"collection": "selection", "tag": args.selection_tag}]}
+    # The selection is addressed by a *SelectionSpec* (``kind: named``) in every read/validate call
+    # and by a NodePath only where an operation declares one; the Box definition uses the documented
+    # Box property vocabulary (xmin/xmax/ymin/ymax/zmin/zmax), never a nested ``box`` object — the
+    # live run sent ``{"box": ...}`` and the domain layer refused it as neither an assignment field
+    # nor a documented Box property.  The model also has to *carry* something the box can select:
+    # the geometry containers and a built solid are created first.
+    containers_ok, container_evidence = await _ensure_geometry_container(client, args, prefix="t048", store=store)
+    case.assertions["t048_containers"] = container_evidence
+    if not containers_ok:
+        for name in live_names:
+            _mark(case, name, str(container_evidence["status"]), container_evidence["reason"],
+                  observed=container_evidence)
+        case.finish()
+        return
+    selection_spec = {"kind": "named", "component": args.component, "tag": args.selection_tag}
+    measure_metrics = ["n_entities", "volume", "bounding_box"]
     await _step(case, host, client, args, state, name="named_selection_created_and_bound",
                 operation="selection.create",
                 arguments={"component": args.component, "tag": args.selection_tag, "type_id": "Box",
-                           "definition": {"entity_dimension": 3, "box": {"x": ["0", "0.001"]}}},
-                store=store)
-    await _step(case, host, client, args, state, name="geometry_revision_recorded",
-                operation="selection.measure",
-                arguments={"selection": selection_path, "metrics": ["count", "volume", "centroid"]},
-                prereq="named_selection_created_and_bound", store=store,
+                           "definition": {"entity_dimension": 3, "xmin": 0.0, "xmax": 2.0e-3,
+                                          "ymin": 0.0, "ymax": 2.0e-3, "zmin": 0.0, "zmax": 2.0e-3}},
+                store=store,
                 check=lambda payload, bundle: (
                     ("PASS", None, {"observed": _data(payload)})
-                    if _success(payload) and isinstance(_data(payload).get("geometry_revision"), (int, str))
-                    else ("FAIL", "selection.measure did not report the geometry revision it measured against")
+                    if _success(payload) and _data(payload).get("type_readback") == "Box"
+                    else _unreadable_verdict(payload, "the named Box selection could not be created")
                 ))
-    before = store.get("geometry_revision_recorded")
-    await _step(case, host, client, args, state, name="revalidation_after_geometry_change",
-                operation="selection.validate",
-                arguments={"selection": selection_path, "expectations": [{"kind": "count", "min": 1}]},
-                prereq="geometry_revision_recorded", store=store,
-                check=lambda payload, bundle: _check_selection_drift(payload, before))
-    await _step(case, host, client, args, state, name="drift_stops_boundary_application",
-                operation="physics.selection_set",
-                arguments={"path": {"segments": [{"collection": "component", "tag": args.component},
-                                                {"collection": "physics", "tag": args.physics_tag},
-                                                {"collection": "feature", "tag": args.temperature_tag}]},
-                           "selection": {"kind": "named", "tag": args.selection_tag}},
-                prereq="revalidation_after_geometry_change", store=store,
-                check=lambda payload, bundle: (
-                    ("PASS", None)
-                    if (not _success(payload)) or _data(payload).get("drift_detected") is not True
-                    else ("FAIL", "a boundary was applied to a selection whose entities drifted")
-                ))
+    # What the product publishes about a selection is its *resolved* component/geometry/dimension,
+    # its entity list and the measured metrics of those entities (``selection.measure``); there is
+    # no geometry-revision getter in this build.  The pre-change reference therefore records the
+    # resolved binding and the measured metrics: that is the state a later revalidation has to be
+    # compared against, and it is what the acceptance line needs to be able to observe drift.
+    measured_before = await _step(case, host, client, args, state, name="geometry_revision_recorded",
+                                  operation="selection.measure",
+                                  arguments={"selection": selection_spec, "metrics": measure_metrics},
+                                  store=store,
+                                  check=lambda payload, bundle: (
+                                      ("PASS", None, {"observed": _data(payload)})
+                                      if _success(payload) and _data(payload).get("geometry")
+                                      and isinstance(_data(payload).get("entity_count"), int)
+                                      else _unreadable_verdict(
+                                          payload, "the selection's geometry binding and entity measure were not recorded")
+                                  ))
+    before_metrics = _selection_metric_values(measured_before)
+    # A real geometry change: the block the containers created is resized and the sequence rebuilt,
+    # so the selection's entities are renumbered/re-measured by the engine itself.
+    edit = await _container_step(client, "t048-geometry-change", "geometry.feature_update",
+                                 {"path": {"segments": [{"collection": "component", "tag": args.component},
+                                                        {"collection": "geom", "tag": args.geometry_tag},
+                                                        {"collection": "feature", "tag": "t048_blk"}]},
+                                  "properties": [{"name": "size", "value": {"kind": "float64", "shape": [3],
+                                                                            "data": [3.0e-3, 1.0e-3, 1.0e-3]}}]},
+                                 store)
+    edit_status, edit_payload, edit_row = edit
+    rebuilt = await _container_step(client, "t048-geometry-rebuild", "geometry.build",
+                                    {"geometry": {"segments": [{"collection": "component", "tag": args.component},
+                                                               {"collection": "geom", "tag": args.geometry_tag}]}},
+                                    store)
+    case.assertions["t048_geometry_change"] = {"edit": edit_row, "rebuild": rebuilt[2]}
+    geometry_changed = edit_status == "APPLIED" and rebuilt[0] == "APPLIED"
+    measured_after = await _step(case, host, client, args, state, name="revalidation_after_geometry_change",
+                                 operation="selection.validate",
+                                 arguments={"selection": selection_spec,
+                                            "expectations": [{"kind": "count", "min": 0}]},
+                                 prereq="geometry_revision_recorded", store=store,
+                                 check=lambda payload, bundle: _check_selection_revalidation(
+                                     payload, before_metrics, geometry_changed))
+    after_metrics = _selection_metric_values(measured_after)
+    drift = bool(before_metrics) and bool(after_metrics) and before_metrics != after_metrics
+    case.assertions["t048_drift"] = {"before": before_metrics, "after": after_metrics,
+                                     "geometry_changed": geometry_changed, "drift_observed": drift}
+    if not geometry_changed:
+        _mark(case, "drift_stops_boundary_application", "NOT_RUN",
+              "the geometry change did not apply, so no drift could be provoked")
+    elif not drift:
+        _mark(case, "drift_stops_boundary_application", "NOT_RUN",
+              "the measured selection state did not change across the geometry rebuild, so no drift could be "
+              "provoked")
+    else:
+        await _step(case, host, client, args, state, name="drift_stops_boundary_application",
+                    operation="physics.selection_set",
+                    arguments={"path": {"segments": [{"collection": "component", "tag": args.component},
+                                                     {"collection": "physics", "tag": args.physics_tag},
+                                                     {"collection": "feature", "tag": args.temperature_tag}]},
+                               "selection": selection_spec},
+                    prereq="revalidation_after_geometry_change", store=store,
+                    check=lambda payload, bundle: (
+                        ("FAIL", "a boundary was applied to a selection whose measured entities drifted",
+                         {"observed": _data(payload), "drift": case.assertions["t048_drift"]})
+                        if _success(payload) else
+                        _unreadable_verdict(payload, "the boundary application on a drifted selection")
+                    ))
     await _step(case, host, client, args, state, name="entity_measure_change_recorded",
                 operation="selection.measure",
-                arguments={"selection": selection_path, "metrics": ["count", "volume", "centroid"]},
+                arguments={"selection": selection_spec, "metrics": measure_metrics},
                 prereq="revalidation_after_geometry_change", store=store,
                 check=lambda payload, bundle: (
                     ("PASS", None, {"observed": _data(payload)})
-                    if _success(payload) and isinstance(_data(payload).get("geometry_revision"), (int, str))
-                    else ("FAIL", "the post-change measure did not report its geometry revision")
+                    if _success(payload) and isinstance(_data(payload).get("entity_count"), int)
+                    and _selection_metric_values(payload)
+                    else _unreadable_verdict(payload, "the post-change measure did not report the selection's "
+                                                      "resolved entities and metrics")
                 ))
     case.finish()
 
 
-def _check_selection_drift(payload: Mapping[str, Any], before: Mapping[str, Any] | None) -> Any:
+def _selection_metric_values(payload: Mapping[str, Any] | None) -> dict[str, Any]:
+    """The measured entity count and metric values of a ``selection.measure``/``validate`` payload."""
+    data = _data(payload) if isinstance(payload, Mapping) else {}
+    raw_metrics = data.get("metrics")
+    metrics: Mapping[str, Any] = raw_metrics if isinstance(raw_metrics, Mapping) else {}
+    values: dict[str, Any] = {}
+    for name, row in sorted(metrics.items()):
+        value = row.get("value") if isinstance(row, Mapping) else None
+        values[str(name)] = _json_safe((value or {}).get("data")) if isinstance(value, Mapping) else None
+    if isinstance(data.get("entity_count"), int):
+        values["entity_count"] = data["entity_count"]
+    return values
+
+
+def _check_selection_revalidation(payload: Mapping[str, Any], before: Mapping[str, Any],
+                                  geometry_changed: bool) -> Any:
+    """Verdict for a ``selection.validate`` re-read after a geometry change.
+
+    The product publishes the resolved selection, its checks and its verdict — but no
+    geometry-revision getter.  A refusal is blocked, a failing check is reported with its own check
+    results, and a verdict that claims validity while the driver *measured* a different entity state
+    than before the change is the drift this acceptance line exists to catch.
+    """
     if not _success(payload):
-        return ("BLOCKED" if _blocked_payload(payload) else "FAIL",
-                f"selection.validate returned {_error_code(payload) or 'an invalid envelope'}")
+        return _unreadable_verdict(payload, "the selection could not be revalidated after the geometry change")
     data = _data(payload)
-    after_revision = data.get("geometry_revision")
-    before_revision = _data(before).get("geometry_revision") if isinstance(before, Mapping) else None
-    if before_revision is None:
-        return "FAIL", "no geometry revision was recorded before the change"
-    if data.get("valid") is True and after_revision == before_revision:
-        return "FAIL", "the selection was reported valid although the geometry revision changed"
-    return ("PASS", None, {"geometry_revision_before": before_revision, "geometry_revision_after": after_revision,
-                           "valid": data.get("valid"), "drift": data.get("drift")})
+    observed = {"verdict": data.get("verdict"), "checks": _json_safe(data.get("checks")),
+                "entity_count": data.get("entity_count"), "geometry": data.get("geometry"),
+                "before": _json_safe(before), "geometry_changed": geometry_changed}
+    after = _selection_metric_values(payload)
+    if geometry_changed and before and after and before != after and data.get("verdict") == "PASS":
+        # The entities were re-measured after a geometry rebuild and the validation still reports a
+        # plain PASS: the drift is recorded here and the boundary line is what must catch it.
+        return ("PASS", None, {**observed, "drift": {"before": before, "after": after}})
+    if data.get("verdict") not in {"PASS"}:
+        return ("FAIL", f"the revalidation verdict was {data.get('verdict')!r} with failed checks "
+                        f"{[check.get('check') for check in (data.get('checks') or []) if isinstance(check, Mapping) and check.get('status') != 'PASS']}",
+                observed)
+    return ("PASS", None, observed)
 
 
 async def _case_w13_t016(host: ProductionHost, client: ActionClient, case: Case, args: argparse.Namespace,
@@ -3923,31 +6131,87 @@ async def _case_w14_t009(host: ProductionHost, client: ActionClient, case: Case,
         return
     store: dict[str, Any] = {}
     paths = _geometry_paths(args)
+    workplane_path = {"segments": [{"collection": "component", "tag": args.component},
+                                   {"collection": "geom", "tag": args.geometry_tag},
+                                   {"collection": "feature", "tag": args.work_plane_tag}]}
     array_path = {"segments": [{"collection": "component", "tag": args.component},
                                {"collection": "geom", "tag": args.geometry_tag},
                                {"collection": "feature", "tag": args.array_tag}]}
+    # The case edits a *local sub-feature*: the work plane and the rectangle it carries must exist
+    # before ``geometry.workplane_edit`` can address them, and the geometry sequence itself must
+    # exist before either.  Observed live: the sequence did not exist and the edit was refused with
+    # "could not resolve node path segment geom:geom1" — a driver-side addressing gap (both the
+    # containers and the fixture are create-able through published operations).
+    containers_ok, container_evidence = await _ensure_geometry_container(client, args, prefix="t009",
+                                                                        store=store, build_block=False)
+    case.assertions["t009_containers"] = container_evidence
+    if not containers_ok:
+        for name in live_names:
+            _mark(case, name, str(container_evidence["status"]), container_evidence["reason"],
+                  observed=container_evidence)
+        case.finish()
+        return
+    fixture_status, fixture_payload, fixture_row = await _container_step(
+        client, "t009-workplane", "geometry.workplane_create",
+        {"geometry": paths["geometry"], "tag": args.work_plane_tag,
+         "definition": {"planetype": "quick", "quickplane": "yz", "unite": True}}, store)
+    fixture_ok = fixture_status in {"APPLIED", "ADOPTED"}
+    case.assertions["t009_workplane"] = fixture_row
+    if fixture_ok:
+        # ``r1`` lives inside the work plane's own 2D sequence: it is created through the same
+        # ``workplane_edit`` surface the case is about (its ``create`` action), then built.
+        fixture_status, fixture_payload, fixture_row = await _container_step(
+            client, "t009-rectangle", "geometry.workplane_edit",
+            {"workplane": workplane_path,
+             "actions": [{"action": "create", "tag": args.rectangle_tag, "type_id": "Rectangle",
+                          "definition": {"size": [float(args.rect_width), float(args.rect_height)]}},
+                         {"action": "build"}]}, store)
+        fixture_ok = fixture_status in {"APPLIED", "ADOPTED"} or _error_code(fixture_payload) == "TAG_CONFLICT"
+        case.assertions["t009_rectangle"] = fixture_row
+    if not fixture_ok:
+        for name in live_names:
+            _mark(case, name, "BLOCKED" if fixture_status == "BLOCKED" else "FAIL",
+                  f"the work-plane fixture could not be created: {fixture_row['operation']} returned "
+                  f"{fixture_row['error_code'] or 'an invalid envelope'}: {fixture_row['message']}",
+                  observed=fixture_row)
+        case.finish()
+        return
     measure_before = await client.action("geometry.measure", {
         "geometry": paths["geometry"],
         "query": {"mode": "objects", "metrics": ["n_entities", "volume", "bounding_box"]}})
     store["measure_before"] = measure_before
     await _step(case, host, client, args, state, name="work_plane_and_array_located",
-                operation="geometry.feature_create",
-                arguments={"parent": paths["geometry"], "tag": args.array_tag, "type_id": "Array",
-                           "properties": [{"name": "size", "value": {"kind": "int32", "shape": [2],
-                                                                     "data": [int(args.array_size_x),
-                                                                              int(args.array_size_y)]}}],
-                           "inputs": {"input": [args.rectangle_tag]}},
-                store=store)
+                operation="geometry.workplane_edit",
+                arguments={"workplane": workplane_path,
+                           "actions": [{"action": "create", "tag": args.array_tag, "type_id": "Array",
+                                        "definition": {"type": "rectangular",
+                                                       "size": [int(args.array_size_x), int(args.array_size_y)],
+                                                       "displ": [float(args.array_pitch), 0.0]},
+                                        "inputs": {"input": [args.rectangle_tag]}},
+                                       {"action": "build"}]},
+                store=store,
+                check=lambda payload, bundle: (
+                    ("PASS", None, {"observed": _data(payload)})
+                    if _success(payload)
+                    and args.array_tag in [str(tag) for tag in (_data(payload).get("features_after") or [])]
+                    and args.rectangle_tag in [str(tag) for tag in (_data(payload).get("preserved_features") or [])]
+                    else _unreadable_verdict(payload, "the work plane and its array could not be located")
+                ))
     await _step(case, host, client, args, state, name="local_subfeature_edit_applied",
                 operation="geometry.workplane_edit",
-                arguments={"workplane": {"segments": [{"collection": "component", "tag": args.component},
-                                                      {"collection": "geom", "tag": args.geometry_tag},
-                                                      {"collection": "feature", "tag": args.work_plane_tag}]},
+                arguments={"workplane": workplane_path,
                            "actions": [{"action": "update", "tag": args.rectangle_tag,
                                         "properties": [{"name": "size", "value": {"kind": "float64", "shape": [2],
                                                                                    "data": [float(args.rect_width),
-                                                                                            float(args.rect_height)]}}]}]},
-                prereq="work_plane_and_array_located", store=store)
+                                                                                            float(args.rect_height)]}}]},
+                                       {"action": "build"}]},
+                prereq="work_plane_and_array_located", store=store,
+                check=lambda payload, bundle: (
+                    ("PASS", None, {"observed": _data(payload)})
+                    if _success(payload) and args.rectangle_tag in [str(tag) for tag
+                                                                   in (_data(payload).get("features_after") or [])]
+                    else _unreadable_verdict(payload, "the local sub-feature edit was not applied")
+                ))
     await _step(case, host, client, args, state, name="left_most_object_preserved",
                 operation="geometry.measure",
                 arguments={"geometry": paths["geometry"],
@@ -3956,16 +6220,13 @@ async def _case_w14_t009(host: ProductionHost, client: ActionClient, case: Case,
                 check=lambda payload, bundle: _check_geometry_preserved(payload, bundle.get("measure_before")))
     await _step(case, host, client, args, state, name="count_position_spacing_quantified",
                 operation="geometry.array_create",
-                arguments={"geometry": args.geometry_tag, "tag": args.array_tag,
-                           "definition": {"displ": [float(args.array_pitch), 0.0],
-                                          "size": [int(args.array_size_x), int(args.array_size_y)]}},
+                arguments={"geometry": paths["geometry"], "tag": f"{args.array_tag}_geo",
+                           "definition": {"type": "rectangular",
+                                          "size": [int(args.array_size_x), int(args.array_size_y)],
+                                          "displ": [float(args.array_pitch), 0.0]},
+                           "inputs": {"input": [args.rectangle_tag]}},
                 prereq="left_most_object_preserved", store=store,
-                check=lambda payload, bundle: (
-                    ("PASS", None, {"observed": _data(payload)})
-                    if _success(payload)
-                    and all(key in _data(payload) for key in ("count", "position", "spacing"))
-                    else ("FAIL", "the array result did not quantify count/position/spacing")
-                ))
+                check=lambda payload, bundle: _check_array_quantified(payload))
     await _step(case, host, client, args, state, name="main_model_not_replaced",
                 operation="node.find",
                 arguments={"query": {"kind": "geometry_feature", "ids": [args.geometry_tag]},
@@ -3986,6 +6247,33 @@ async def _case_w14_t009(host: ProductionHost, client: ActionClient, case: Case,
                     else ("FAIL", "the edited feature's sibling properties could not be read back")
                 ))
     case.finish()
+
+
+def _check_array_quantified(payload: Mapping[str, Any]) -> Any:
+    """The array's count, spacing and extent as the *engine* reports them back.
+
+    ``geometry.array_create`` publishes ``array_type``, the written ``properties`` and the applied
+    ``inputs``; those are the engine's own readback of the write (count/position/spacing are the
+    ``size``/``displ``/``fullsize`` properties).
+    """
+    if not _success(payload):
+        return _unreadable_verdict(payload, "the rectangular array edit could not be applied")
+    data = _data(payload)
+    raw_properties = data.get("properties")
+    properties: Mapping[str, Any] = raw_properties if isinstance(raw_properties, Mapping) else {}
+    quantified = [name for name in ("size", "displ", "fullsize") if name in properties]
+    raw_inputs = data.get("inputs")
+    inputs: Mapping[str, Any] = raw_inputs if isinstance(raw_inputs, Mapping) else {}
+    raw_applied = inputs.get("applied")
+    applied = raw_applied if isinstance(raw_applied, list) else []
+    objects = [obj for row in applied if isinstance(row, Mapping) for obj in (row.get("objects") or [])]
+    observed = {"array_type": data.get("array_type"), "quantified": quantified,
+                "inputs": _json_safe(applied), "properties": _json_safe(properties)}
+    if data.get("array_type") != "rectangular" or not quantified:
+        return ("FAIL", "the array readback did not quantify the count/spacing properties", observed)
+    if applied and not objects:
+        return ("FAIL", "the array's inputs readback does not name the rectangle it displaces", observed)
+    return ("PASS", None, observed)
 
 
 def _check_geometry_preserved(payload: Mapping[str, Any], before: Mapping[str, Any] | None) -> Any:
@@ -4051,23 +6339,39 @@ async def _case_w14_t034(host: ProductionHost, client: ActionClient, case: Case,
         # run was merely offline.
         _mark(case, "missing_dependency_reported", status, why)
     else:
-        probe = chinese / "missing_dependency.mph"
-        probe.write_text("phase4 missing-dependency probe\n", encoding="utf-8")
-        dependency_reason = ("the driver planted a text probe instead of a real .mph with a missing import; "
-                             "a live reload of a model with an unresolved external dependency must be supplied by the orchestrator")
-        _mark(case, "missing_dependency_reported", "BLOCKED", dependency_reason)
+        # A *real* missing-dependency .mph: the driver writes the interpolation source file it will
+        # reference, creates the function that references it on the engine, saves the model and only
+        # then deletes the source — so the stored model carries an unresolved external dependency
+        # that the reload has to report.  Planting a text file named ``.mph`` proves nothing and is
+        # not an acceptable substitute.
+        fixture = await _missing_dependency_fixture(host, client, case, args, state, rows, chinese)
+        _mark(case, "missing_dependency_reported", fixture["status"], fixture["reason"],
+              observed=fixture)
     cad_ops = ("geometry.import",)
     cad_runnable, cad_status, cad_why = _can_run(case, args, state, rows, cad_ops, require_writable_model=True)
     if not cad_runnable:
         _mark(case, "cad_import_license_limited", cad_status, cad_why)
     else:
+        # ``geometry.import`` addresses the geometry sequence with a NodePath and only accepts the
+        # documented option keys; the live run sent a bare tag and ``{"repair": false}`` and was
+        # refused with INVALID_REQUEST before the engine ever saw the import.
+        cad_file = chinese / f"{args.cad_artifact_id}.stl"
+        try:
+            cad_file.write_text(_ascii_stl_probe(), encoding="ascii")
+            cad_fixture = {"path": str(cad_file), "bytes": cad_file.stat().st_size,
+                           "sha256": _sha256(cad_file)}
+        except OSError as exc:
+            cad_fixture = {"error": f"{type(exc).__name__}: {exc}"}
+        case.assertions["cad_import_fixture"] = cad_fixture
         payload = await client.action("geometry.import", {
-            "geometry": args.geometry_tag, "tag": args.import_tag,
-            "artifact_id": args.cad_artifact_id, "options": {"repair": False}}, require_model=True,
-            key="t034-cad-import", request="cad-import")
+            "geometry": _geometry_paths(args)["geometry"], "tag": args.import_tag,
+            "artifact_id": str(cad_file),
+            "options": {"path_check": "local", "build": False}}, require_model=True,
+            key=_fresh_key("t034-cad-import"), request="cad-import")
         code = _error_code(payload)
         if code in _BLOCKED_CODES or (code and "LICENSE" in code.upper()):
-            case.assertions["cad_import"] = {"error_code": code, "error": _error_message(payload)}
+            case.assertions["cad_import"] = {"error_code": code, "error": _error_message(payload),
+                                             "fixture": cad_fixture}
             _mark(case, "cad_import_license_limited", "BLOCKED",
                   f"CAD import is license-limited in this installation: {code}")
         else:
@@ -4075,6 +6379,147 @@ async def _case_w14_t034(host: ProductionHost, client: ActionClient, case: Case,
                   None if _success(payload) else f"geometry.import returned {code or 'an invalid envelope'}",
                   observed=_data(payload))
     case.finish()
+
+
+#: The minimal ASCII STL the CAD-import probe imports: a unit tetrahedron, written in the *import*
+#: vocabulary the product publishes (the probe is the artefact, not a substitute for one).
+ASCII_STL_PROBE = """solid phase4_probe
+facet normal 0 0 -1
+  outer loop
+    vertex 0 0 0
+    vertex 1 0 0
+    vertex 0 1 0
+  endloop
+endfacet
+facet normal 0 -1 0
+  outer loop
+    vertex 0 0 0
+    vertex 0 0 1
+    vertex 0 1 0
+  endloop
+endfacet
+facet normal -1 0 0
+  outer loop
+    vertex 0 0 0
+    vertex 1 0 0
+    vertex 0 0 1
+  endloop
+endfacet
+facet normal 1 1 1
+  outer loop
+    vertex 1 0 0
+    vertex 0 1 0
+    vertex 0 0 1
+  endloop
+endfacet
+endsolid phase4_probe
+"""
+
+
+def _ascii_stl_probe() -> str:
+    return ASCII_STL_PROBE
+
+
+async def _missing_dependency_fixture(host: ProductionHost, client: ActionClient, case: Case,
+                                      args: argparse.Namespace, state: dict[str, Any],
+                                      rows: Mapping[str, Any], chinese: Path) -> dict[str, Any]:
+    """Build a real model whose external dependency is gone, then reload it.
+
+    Steps (each one a published operation, each one recorded):
+      1. write the interpolation source file the function will reference;
+      2. create a scratch model (the shared bound model is never touched);
+      3. ``function.create`` an ``Interpolation`` function sourced from that file;
+      4. ``model.save`` the model to ``missing_dependency.mph``;
+      5. delete the source file and unload the scratch model;
+      6. ``model.load`` the saved file — the reload is what has to report the unresolved dependency.
+    A step the build cannot do is reported as BLOCKED with that operation's own refusal, never as a
+    planted stand-in.
+    """
+    required = ("function.create", "model.save", "model.load", "model.remove", "model.create")
+    probe_rows = rows if all(op in rows for op in required) else await _prepare_case(case, host, required)
+    evidence: dict[str, Any] = {"required_operations": list(required)}
+    unavailable = [op for op in required if not (probe_rows.get(op) or {}).get("available")]
+    if unavailable:
+        evidence.update({"status": "BLOCKED", "unavailable": unavailable})
+        return {**evidence, "status": "BLOCKED",
+                "reason": "the missing-dependency fixture needs operations this build does not offer: "
+                          + ", ".join(unavailable)}
+    source = chinese / "missing_dependency_source.csv"
+    saved = chinese / "missing_dependency.mph"
+    model_tag = f"phase4_missing_dep_{state.get('run_stamp') or 'x'}"
+    try:
+        source.write_text("0 0\n1 1\n", encoding="utf-8")
+        evidence["source"] = {"path": str(source), "sha256": _sha256(source), "bytes": source.stat().st_size}
+    except OSError as exc:
+        evidence.update({"status": "BLOCKED", "error": f"{type(exc).__name__}: {exc}"})
+        return {**evidence, "status": "BLOCKED",
+                "reason": f"the interpolation source file could not be written: {type(exc).__name__}: {exc}"}
+
+    async def call(step: str, operation: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+        key = _fresh_key(f"t034-{step}")
+        payload = await client.action(operation, dict(arguments), key=key, request=step)
+        row = {"step": step, "operation": operation, "success": bool(payload.get("success")),
+               "error_code": _error_code(payload), "message": _error_message(payload),
+               "identity": _envelope_identity(payload)}
+        evidence.setdefault("steps", []).append(row)
+        return payload
+
+    created = await call("scratch-model", "model.create", {"name": model_tag})
+    if not _success(created):
+        return {**evidence, "status": "BLOCKED",
+                "reason": f"model.create returned {_error_code(created) or 'an invalid envelope'}: "
+                          f"{_error_message(created)}"}
+    reference = await call("interpolation-function", "function.create",
+                           {"tag": "phase4_missing_dep", "type_id": "Interpolation",
+                            "definition": {"sourcetype": "file", "filename": str(source),
+                                           "funcname": "phase4_missing_dep"}})
+    reference_status = "APPLIED" if _success(reference) else ("BLOCKED" if _blocked_payload(reference) else "FAILED")
+    evidence["reference"] = {"status": reference_status, "error_code": _error_code(reference),
+                             "message": _error_message(reference)}
+    if reference_status != "APPLIED":
+        await call("scratch-remove", "model.remove", {"name": model_tag})
+        return {**evidence, "status": "BLOCKED" if reference_status == "BLOCKED" else "FAIL",
+                "reason": f"function.create returned {_error_code(reference) or 'an invalid envelope'}: "
+                          f"{_error_message(reference)} — the fixture could not be built"}
+    stored = await call("save", "model.save", {"model": model_tag, "destination": str(saved),
+                                               "overwrite": True})
+    if not _success(stored) or not saved.is_file():
+        await call("scratch-remove", "model.remove", {"name": model_tag})
+        return {**evidence, "status": "BLOCKED" if _blocked_payload(stored) else "FAIL",
+                "reason": f"model.save returned {_error_code(stored) or 'an invalid envelope'} and "
+                          f"{'the file is missing' if not saved.is_file() else 'the file exists'}"}
+    evidence["saved"] = {"path": str(saved), "sha256": _sha256(saved), "bytes": saved.stat().st_size}
+    await call("source-removed", "model.remove", {"name": model_tag})
+    try:
+        source.unlink()
+        evidence["source_removed"] = True
+    except OSError as exc:
+        evidence["source_removed"] = f"{type(exc).__name__}: {exc}"
+    reloaded = await call("reload", "model.load", {"source": str(saved)})
+    evidence["reload"] = {"success": bool(reloaded.get("success")), "error_code": _error_code(reloaded),
+                          "message": _error_message(reloaded), "data": _json_safe(_data(reloaded))}
+    message = " ".join(str(part or "") for part in (_error_message(reloaded), _json_safe(_data(reloaded))))
+    if _success(reloaded):
+        # The reload succeeded; whether the *unresolved* dependency is reported is what the driver
+        # has to read, so it reads the function back instead of assuming either way.
+        readback = await call("dependency-readback", "node.property_get",
+                              {"path": {"segments": [{"collection": "func", "tag": "phase4_missing_dep"}]},
+                               "names": ["filename", "sourcetype"]})
+        evidence["readback"] = {"success": bool(readback.get("success")), "error_code": _error_code(readback),
+                                "message": _error_message(readback), "data": _json_safe(_data(readback))}
+        reported = bool(_error_code(readback)) or "missing" in " ".join(
+            str(part or "") for part in (_error_message(readback), _json_safe(_data(readback)))).lower()
+        return {**evidence, "status": "PASS" if reported else "NOT_RUN",
+                "reason": None if reported else
+                "the model reloaded and the function readback did not report the deleted source file, so "
+                "no missing dependency could be observed"}
+    if _blocked_payload(reloaded) or "MISSING" in " ".join(str(part or "").upper() for part
+                                                          in (_error_code(reloaded), message)):
+        return {**evidence, "status": "PASS",
+                "reason": None}
+    return {**evidence, "status": "FAIL",
+            "reason": f"model.load returned {_error_code(reloaded) or 'an invalid envelope'}: "
+                      f"{_error_message(reloaded)}"}
 
 
 # ---------------------------------------------------------------------------
@@ -4104,6 +6549,45 @@ async def _case_w15_t007(host: ProductionHost, client: ActionClient, case: Case,
     feature_path = {"segments": [{"collection": "component", "tag": args.component},
                                  {"collection": "physics", "tag": args.physics_tag},
                                  {"collection": "feature", "tag": args.temperature_tag}]}
+    # The case assigns a selection to a physics interface and to one of its features, using a *named*
+    # selection; none of the three exists on the bound model yet (live the very first call was
+    # refused with "physics:ht" — the interface was never created).  Create them (or adopt what is
+    # already there) before addressing them.
+    containers_ok, container_evidence = await _ensure_geometry_container(client, args, prefix="t007", store=store)
+    case.assertions["t007_containers"] = container_evidence
+    fixture_ok = containers_ok
+    fixture_row: dict[str, Any] = {"step": "containers", "operation": "definition.component_manage",
+                                   "status": container_evidence["status"], "error_code": None,
+                                   "message": container_evidence.get("reason")}
+    if fixture_ok:
+        for step, operation, arguments in (
+            ("t007-physics", "physics.create",
+             {"component": args.component, "tag": args.physics_tag, "type_id": args.heat_physics_type,
+              "geometry": args.geometry_tag}),
+            ("t007-temperature", "physics.feature_create",
+             {"parent": physics_path, "tag": args.temperature_tag, "type_id": "TemperatureBoundary",
+              "entity_dimension": 2,
+              "properties": [{"name": "T0", "value": {"kind": "expression", "shape": [], "data": "300[K]"}}]}),
+            ("t007-selection", "selection.create",
+             {"component": args.component, "tag": args.selection_tag, "type_id": "Box",
+              "definition": {"entity_dimension": 2, "xmin": -1.0e-3, "xmax": 2.0e-3,
+                             "ymin": -1.0e-3, "ymax": 2.0e-3, "zmin": -1.0e-3, "zmax": 2.0e-3}}),
+        ):
+            step_status, _step_payload, step_row = await _container_step(client, step, operation, arguments, store)
+            if step_status not in {"APPLIED", "ADOPTED"}:
+                fixture_ok = False
+                fixture_row = step_row
+                break
+    case.assertions["t007_fixture"] = {"ok": fixture_ok, "failure": fixture_row,
+                                       "steps": store.get("container_steps")}
+    if not fixture_ok:
+        for name in live_names:
+            _mark(case, name, "BLOCKED" if fixture_row["status"] == "BLOCKED" else "FAIL",
+                  f"the physics/feature/selection fixture could not be built: {fixture_row['operation']} "
+                  f"returned {fixture_row['error_code'] or 'an invalid envelope'}: {fixture_row['message']}",
+                  observed=fixture_row)
+        case.finish()
+        return
     await _step(case, host, client, args, state, name="physics_level_selection_set",
                 operation="physics.selection_set",
                 arguments={"path": physics_path, "selection": {"kind": "named", "component": args.component,
@@ -4513,12 +6997,23 @@ async def _case_w16_t018(host: ProductionHost, client: ActionClient, case: Case,
         meshed_path = {"segments": [{"collection": "component", "tag": args.component},
                                     {"collection": "mesh", "tag": args.mesh_tag},
                                     {"collection": "feature", "tag": args.mesh_size_tag}]}
-        # ``mesh.create`` binds a mesh sequence to a geometry sequence that must *exist* in the bound
-        # model; the tag is resolved from the model's own tree instead of the configured default.
+        store: dict[str, Any] = {}
+        # The mesh binds to a geometry sequence that has to exist *and carry a built solid* before a
+        # mesh sequence is worth creating; the bound model is shared, so the driver ensures its own
+        # (component, sequence, block) first instead of assuming what an earlier case left behind.
+        containers_ok, container_evidence = await _ensure_geometry_container(client, args, prefix="t018", store=store)
+        case.assertions["t018_containers"] = container_evidence
+        if not containers_ok:
+            for name in live_names:
+                _mark(case, name, str(container_evidence["status"]), container_evidence["reason"],
+                      observed=container_evidence)
+            case.finish()
+            return
+        # ``mesh.create`` binds a mesh sequence to a geometry sequence; the tag is read from the
+        # model's own tree (the configured tag is a default, not a fact about the bound model).
         geometry_resolution = await _bound_geometry_tag(client, args)
         case.assertions["t018_geometry_resolution"] = geometry_resolution
         bound_geometry = str(geometry_resolution["tag"])
-        store: dict[str, Any] = {}
         await _step(case, host, client, args, state, name="free_tet_sequence_created",
                     operation="mesh.create",
                     arguments={"component": args.component, "tag": args.mesh_tag, "geometry": bound_geometry},
@@ -4550,11 +7045,7 @@ async def _case_w16_t018(host: ProductionHost, client: ActionClient, case: Case,
                     operation="mesh.statistics",
                     arguments={"path": mesh_path},
                     prereq="modify_and_rebuild", store=store,
-                    check=lambda payload, bundle: (
-                        ("PASS", None, {"observed": _data(payload)})
-                        if _success(payload) and any(key in _data(payload) for key in ("elements", "element_count", "tetrahedra"))
-                        else ("FAIL", "mesh.statistics did not report element counts")
-                    ))
+                    check=lambda payload, bundle: _check_mesh_statistics(payload))
         await _step(case, host, client, args, state, name="quality_definition_and_low_quality_locations",
                     operation="mesh.quality",
                     arguments={"path": mesh_path, "metric": args.mesh_quality_metric, "bins": 10},
@@ -4574,6 +7065,38 @@ async def _case_w16_t018(host: ProductionHost, client: ActionClient, case: Case,
     case.subcase("build_success_is_not_quality_pass", "PASS" if separation_ok else "FAIL", level="protocol",
                  reason=None if separation_ok else "a successful build was reported as a quality pass")
     case.finish()
+
+
+def _check_mesh_statistics(payload: Mapping[str, Any]) -> Any:
+    """The mesh's element counts and coverage as the *engine* reported them — or the read's refusal.
+
+    ``mesh.statistics`` publishes ``element_count``/``vertex_count``/``element_types``/
+    ``elements_by_dimension`` plus the read errors of every probe it attempted.  A read the engine
+    never answered is not a statistics failure (observed live: the envelope was a control-response
+    UNKNOWN), and a read that answered with a null count because the engine could not read the
+    counter is reported with that read's own error instead of a bare "no counts".
+    """
+    if not _success(payload):
+        return _unreadable_verdict(payload, "the mesh statistics could not be read")
+    data = _data(payload)
+    counts = {name: data.get(name) for name in ("element_count", "vertex_count", "element_types")}
+    coverage = data.get("elements_by_dimension")
+    errors = data.get("read_errors") if isinstance(data.get("read_errors"), Mapping) else {}
+    empty = data.get("is_empty")
+    observed = {"counts": _json_safe(counts), "elements_by_dimension": _json_safe(coverage),
+                "is_empty": empty, "is_complete": data.get("is_complete"),
+                "build_time_ms": data.get("build_time_ms"), "read_errors": _json_safe(errors),
+                "statistics_node_available": data.get("statistics_node_available")}
+    if not isinstance(counts["element_count"], int):
+        reason = "mesh.statistics did not report an element count"
+        if errors:
+            reason += f"; the engine's own read errors say: {_json_safe(errors)}"
+        if empty is True:
+            reason += "; the mesh sequence reports itself empty (is_empty=true)"
+        if data.get("allowlist_entry_required"):
+            reason += f"; the read needs an allowlist entry: {_json_safe(data.get('allowlist_entry_required'))}"
+        return "FAIL", reason, observed
+    return "PASS", None, observed
 
 
 async def _bound_geometry_tag(client: ActionClient, args: argparse.Namespace) -> dict[str, Any]:
@@ -5013,6 +7536,179 @@ async def _prepare_chain_containers(client: ActionClient, args: argparse.Namespa
     return True, evidence
 
 
+def _mark_benchmark_spec(case: Case, spec: BenchmarkSpec) -> dict[str, Any]:
+    """Register the frozen specification and record its dimensional/numeric sanity checks."""
+    checks = spec.sanity_checks()
+    failed = [row for row in checks if not row.get("ok")]
+    document = _spec_document(spec)
+    case.assertions["benchmark_spec"] = document
+    if failed:
+        _mark(case, "benchmark_spec_registered_and_sane", "FAIL",
+              "the registered specification does not close dimensionally/numerically: "
+              + ", ".join(f"{row['check']} ({row['value']!r} {row['unit']})" for row in failed),
+              observed=document)
+        return document
+    _mark(case, "benchmark_spec_registered_and_sane", "PASS", None, observed=document)
+    return document
+
+
+def _mark_benchmark_readback(case: Case, verdict: Mapping[str, Any]) -> None:
+    """One acceptance line for the pre-solve read-back, with the mismatching items named."""
+    status = str(verdict.get("status") or "BLOCKED")
+    if status == "PASS":
+        _mark(case, "pre_solve_readback_matches_spec", "PASS", None, observed=verdict)
+        return
+    if status == "FAIL":
+        _mark(case, "pre_solve_readback_matches_spec", "FAIL",
+              "the model disagrees with the pre-registered specification at: "
+              + ", ".join(str(item) for item in verdict.get("mismatched") or [])
+              + " (the specification and its tolerance were left unchanged)",
+              observed=verdict)
+        return
+    _mark(case, "pre_solve_readback_matches_spec", "BLOCKED",
+          "the read-back could not be compared item by item against the specification: not observed "
+          f"{verdict.get('not_observed') or []}, not comparable {verdict.get('not_comparable') or []}",
+          observed=verdict)
+
+
+def _property_value(payload: Mapping[str, Any] | None, name: str) -> tuple[Any, str | None]:
+    """The value one ``node.property_get`` reply published for ``name`` (never a substitute)."""
+    data = _mapping(_data(payload))
+    for key in ("properties", "values", "rows"):
+        rows = data.get(key)
+        for row in rows if isinstance(rows, list) else []:
+            if isinstance(row, Mapping) and str(row.get("name")) == name:
+                for value_key in ("value", "expression", "data"):
+                    if value_key in row:
+                        return row[value_key], None
+                return row, None
+    if name in data:
+        return data[name], None
+    return None, (f"the reply published no value for {name!r} "
+                  f"(keys: {sorted(str(key) for key in data) or 'none'})")
+
+
+def _extract_spec_number(value: Any) -> float | None:
+    if isinstance(value, Mapping):
+        for k in ("data", "expression", "value"):
+            if k in value:
+                res = _extract_spec_number(value[k])
+                if res is not None:
+                    return res
+        return None
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return float(value) if math.isfinite(value) else None
+    if isinstance(value, (list, tuple)):
+        for item in value:
+            num = _extract_spec_number(item)
+            if num is not None and num != 0.0:
+                return num
+        if value:
+            return _extract_spec_number(value[0])
+        return None
+    if isinstance(value, str):
+        m = re.search(r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?", value.strip())
+        if m:
+            try:
+                n = float(m.group(0))
+                if math.isfinite(n):
+                    return n
+            except ValueError:
+                pass
+    return None
+
+
+def _benchmark_readback_verdict(spec: BenchmarkSpec, observed: Mapping[str, Any],
+                                errors: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Compare a pre-solve model read-back against the frozen spec, item by item (G3.1 §8.1).
+
+    The comparison direction matters: the spec is the acceptance line, so a model value that
+    disagrees fails *the comparison*.  It never edits the expected value, the shape of the analytic
+    model or the tolerance — that substitution is exactly how a wrong build (``Cp=100`` instead of
+    ``1000``) used to stay hidden.
+    """
+    errors = errors if isinstance(errors, Mapping) else {}
+    rows: list[dict[str, Any]] = []
+    for expected in spec.expected_model_values():
+        item = str(expected["item"])
+        errors_for_item = errors.get(item)
+        if item not in observed:
+            rows.append({"item": item, "unit": expected["unit"], "expected": expected["value"],
+                         "observed": None, "status": "NOT_OBSERVED",
+                         "reason": (errors_for_item.get("why") if isinstance(errors_for_item, Mapping) else None)
+                                   or "the model published no value for this item"})
+            continue
+        raw = observed[item]
+        value = raw.get("value") if isinstance(raw, Mapping) else raw
+        if isinstance(expected["value"], (list, tuple)):
+            expected_list = [_extract_spec_number(x) for x in expected["value"]]
+            raw_data = value.get("data") if isinstance(value, Mapping) else value
+            if isinstance(raw_data, (list, tuple)):
+                observed_list = [_extract_spec_number(x) for x in raw_data]
+            else:
+                observed_list = [_extract_spec_number(raw_data)]
+            matched = (len(expected_list) == len(observed_list) and
+                       all(e is not None and o is not None and math.isclose(e, o, rel_tol=1e-6, abs_tol=1e-6)
+                           for e, o in zip(expected_list, observed_list)))
+            rows.append({"item": item, "unit": expected["unit"], "expected": expected["value"],
+                         "observed": _json_safe(value), "status": "MATCH" if matched else "MISMATCH",
+                         "reason": None if matched else "the model time list does not match the registered spec"})
+            continue
+        number = _extract_spec_number(value)
+        expected_number = _extract_spec_number(expected["value"])
+        if number is not None and expected_number is not None:
+            matched = math.isclose(number, expected_number, rel_tol=1e-6, abs_tol=1e-6)
+            rows.append({"item": item, "unit": expected["unit"], "expected": expected["value"],
+                         "observed": _json_safe(value), "observed_number": number,
+                         "status": "MATCH" if matched else "MISMATCH",
+                         "reason": None if matched else
+                                   (f"the model holds {number!r} where the registered specification says "
+                                    f"{expected_number!r} {expected['unit']}: the specification is the "
+                                    "acceptance line and is not changed by this observation")})
+            continue
+        rows.append({"item": item, "unit": expected["unit"], "expected": expected["value"],
+                     "observed": _json_safe(value), "status": "NOT_COMPARABLE",
+                     "reason": ("the value could not be reduced to a number, so it was not compared "
+                                "against the specification")})
+    wrong = [row["item"] for row in rows if row["status"] == "MISMATCH"]
+    missing = [row["item"] for row in rows if row["status"] == "NOT_OBSERVED"]
+    incomparable = [row["item"] for row in rows if row["status"] == "NOT_COMPARABLE"]
+    status = "FAIL" if wrong else ("BLOCKED" if (missing or incomparable) else "PASS")
+    return {"chain": spec.chain, "spec_source": spec.source, "error_limit": spec.error_limit,
+            "error_definition": spec.error_definition, "rows": rows, "mismatched": wrong,
+            "not_observed": missing, "not_comparable": incomparable, "status": status,
+            "note": ("read back before the solve and compared against the pre-registered specification; "
+                     "the specification and the tolerance were not modified by this observation")}
+
+
+async def _benchmark_readback(client: ActionClient, spec: BenchmarkSpec, *,
+                              material_path: Mapping[str, Any], property_paths: Mapping[str, Any],
+                              key_stem: str) -> dict[str, Any]:
+    """Read the built values back through the published node path and compare them to the spec."""
+    observed: dict[str, Any] = {}
+    errors: dict[str, Any] = {}
+    for row in spec.expected_model_values():
+        item = str(row["item"])
+        target = property_paths.get(item)
+        if target is None:
+            continue
+        if isinstance(target, (tuple, list)) and len(target) == 2:
+            path, prop_name = target[0], target[1]
+        else:
+            path, prop_name = target, item
+        payload = await client.action("node.property_get", {"path": dict(path), "names": [prop_name]},
+                                      key=f"{key_stem}-readback-{item}", request="benchmark-readback")
+        value, why = _property_value(payload, prop_name)
+        if value is None:
+            errors[item] = {"error_code": _error_code(payload), "why": why}
+            continue
+        observed[item] = {"value": value, "envelope": _envelope_identity(payload)}
+    verdict = _benchmark_readback_verdict(spec, observed, errors)
+    verdict["observed_envelopes"] = {item: row.get("envelope") for item, row in observed.items()}
+    verdict["read_errors"] = _json_safe(errors)
+    return verdict
+
+
 async def _case_w16_t019_chain_a(host: ProductionHost, client: ActionClient, case: Case, args: argparse.Namespace,
                                  state: dict[str, Any]) -> None:
     run_dir = Path(args.run_dir)
@@ -5023,6 +7719,7 @@ async def _case_w16_t019_chain_a(host: ProductionHost, client: ActionClient, cas
                  reason=None, sha256=reference["reference_sha256"])
     chain_ops = ("model.create", "geometry.feature_create", "geometry.build", "material.create",
                  "material.set_properties", "material.selection_set", "physics.create", "physics.feature_create",
+                 "physics.selection_set",
                  "mesh.create", "mesh.feature_create", "mesh.build", "study.create", "study.step_create",
                  "study.run", "result.sample_path", "model.save")
     # Every operation this case gates on is probed, including the ones the plan inventory does
@@ -5051,7 +7748,11 @@ async def _case_w16_t019_chain_a(host: ProductionHost, client: ActionClient, cas
             _mark(case, name, "NOT_RUN", "prerequisite subcase empty_model_geometry_block did not pass")
         case.finish()
         return
-    config = CHAIN_A
+    spec = BENCHMARK_A
+    config = spec.as_config()
+    # C07b (R-08): the specification is pre-registered and sanity-checked *before* anything is built,
+    # and the same object is the only source of the material definition and of the analytic model.
+    _mark_benchmark_spec(case, spec)
     # An empty model has no component and no geometry sequence: both containers this chain
     # addresses are created here, in order, before the first feature.  Live, the driver's first
     # engine operation was the block feature create on ``component/comp1/geom/geom1``, which the
@@ -5138,32 +7839,56 @@ async def _case_w16_t019_chain_a(host: ProductionHost, client: ActionClient, cas
                                           {"component": args.component, "tag": args.physics_tag,
                                            "type_id": args.heat_physics_type, "geometry": args.geometry_tag},
                                           key="chain-a-physics", request="chain-a")
+    physics_temp1_path = {"segments": [{"collection": "component", "tag": args.component},
+                                        {"collection": "physics", "tag": args.physics_tag},
+                                        {"collection": "feature", "tag": "temp1"}]}
+    physics_temp2_path = {"segments": [{"collection": "component", "tag": args.component},
+                                        {"collection": "physics", "tag": args.physics_tag},
+                                        {"collection": "feature", "tag": "temp2"}]}
     temperature_hot = await client.action("physics.feature_create",
                                           {"parent": physics_path, "tag": "temp1", "type_id": "TemperatureBoundary",
                                            "entity_dimension": 2,
                                            "properties": [{"name": "T0", "value": {"kind": "expression", "shape": [],
-                                                                                   "data": "300[K]"}}]},
+                                                                                   "data": spec.t0_expression}}]},
                                           key="chain-a-temp1", request="chain-a")
+    selection_hot = await client.action("physics.selection_set",
+                                        {"path": physics_temp1_path,
+                                         "selection": {"kind": "explicit", "component": args.component,
+                                                       "geometry": args.geometry_tag, "entity_dimension": 2,
+                                                       "entities": [1]}},
+                                        key="chain-a-temp1-sel", request="chain-a")
     temperature_cold = await client.action("physics.feature_create",
-                                          {"parent": physics_path, "tag": "temp2", "type_id": "TemperatureBoundary",
-                                           "entity_dimension": 2,
-                                           "properties": [{"name": "T0", "value": {"kind": "expression", "shape": [],
-                                                                                   "data": "400[K]"}}]},
-                                          key="chain-a-temp2", request="chain-a")
+                                           {"parent": physics_path, "tag": "temp2", "type_id": "TemperatureBoundary",
+                                            "entity_dimension": 2,
+                                            "properties": [{"name": "T0", "value": {"kind": "expression", "shape": [],
+                                                                                    "data": spec.hot_expression}}]},
+                                           key="chain-a-temp2", request="chain-a")
+    selection_cold = await client.action("physics.selection_set",
+                                         {"path": physics_temp2_path,
+                                          "selection": {"kind": "explicit", "component": args.component,
+                                                        "geometry": args.geometry_tag, "entity_dimension": 2,
+                                                        "entities": [6]}},
+                                         key="chain-a-temp2-sel", request="chain-a")
     insulation = await client.action("physics.feature_create",
-                                     {"parent": physics_path, "tag": "ins1", "type_id": "ThermalInsulation",
-                                      "entity_dimension": 2, "properties": []},
-                                     key="chain-a-insulation", request="chain-a")
+                                      {"parent": physics_path, "tag": "ins1", "type_id": "ThermalInsulation",
+                                       "entity_dimension": 2, "properties": []},
+                                      key="chain-a-insulation", request="chain-a")
     insulation_adoption = await _adopt_engine_insulation(
         client, insulation, physics_path=physics_path, tag="ins1",
         key_stem="chain-a-insulation", request_stem="chain-a")
     case.assertions["chain_a_physics"] = {
         "create": _envelope_identity(physics_created), "temp1": _envelope_identity(temperature_hot),
-        "temp2": _envelope_identity(temperature_cold), "insulation": _envelope_identity(insulation),
+        "temp1_selection": _envelope_identity(selection_hot),
+        "temp2": _envelope_identity(temperature_cold),
+        "temp2_selection": _envelope_identity(selection_cold),
+        "insulation": _envelope_identity(insulation),
         "insulation_adoption": insulation_adoption}
     physics_rows: list[tuple[str, Mapping[str, Any]]] = [
-        ("physics.create", physics_created), ("physics.feature_create temp1", temperature_hot),
-        ("physics.feature_create temp2", temperature_cold)]
+        ("physics.create", physics_created),
+        ("physics.feature_create temp1", temperature_hot),
+        ("physics.selection_set temp1", selection_hot),
+        ("physics.feature_create temp2", temperature_cold),
+        ("physics.selection_set temp2", selection_cold)]
     if insulation_adoption is not None and insulation_adoption.get("verified_as_insulation"):
         # The engine's own interface default *is* the insulation this line needs: the create was
         # refused because the tag is taken, and the feature was read back as an insulation node.
@@ -5193,12 +7918,46 @@ async def _case_w16_t019_chain_a(host: ProductionHost, client: ActionClient, cas
                                      "properties": [{"name": "hauto", "value": {"kind": "int32", "shape": [],
                                                                                 "data": 4}}]},
                                     key="chain-a-size", request="chain-a")
+    mesh_tet = await client.action("mesh.feature_create",
+                                   {"parent": mesh_path, "tag": "ftet1", "type_id": "FreeTet",
+                                    "properties": []},
+                                   key="chain-a-ftet", request="chain-a")
     mesh_built = await client.action("mesh.build", {"path": mesh_path}, key="chain-a-meshbuild", request="chain-a")
     case.assertions["chain_a_mesh_build"] = {"success": _success(mesh_built), "error_code": _error_code(mesh_built)}
     statistics = await client.action("mesh.statistics", {"path": mesh_path}, key="chain-a-stats", request="chain-a")
     case.assertions["chain_a_mesh_statistics"] = _json_safe(_data(statistics))
     _chain_line(case, "local_mesh_built",
-                [("mesh.create", mesh_created), ("mesh.feature_create", mesh_size), ("mesh.build", mesh_built)])
+                [("mesh.create", mesh_created), ("mesh.feature_create size", mesh_size),
+                 ("mesh.feature_create ftet", mesh_tet), ("mesh.build", mesh_built)])
+
+    # C07b (R-08): read the built values back *before* the solve and check them item by item against
+    # the frozen specification.  The read-back informs the mismatch record only — it never edits the
+    # specification, the analytic model or the tolerance, which is how Cp=100 vs Cp=1000 stayed hidden.
+    material_def_path = {"segments": [{"collection": "component", "tag": args.component},
+                                      {"collection": "material", "tag": args.material_tag},
+                                      {"collection": "propertyGroup", "tag": "def"}]}
+    geom_block_path = {"segments": [{"collection": "component", "tag": args.component},
+                                    {"collection": "geom", "tag": args.geometry_tag},
+                                    {"collection": "feature", "tag": "blk1"}]}
+    physics_temp1_path = {"segments": [{"collection": "component", "tag": args.component},
+                                       {"collection": "physics", "tag": args.physics_tag},
+                                       {"collection": "feature", "tag": "temp1"}]}
+    physics_temp2_path = {"segments": [{"collection": "component", "tag": args.component},
+                                       {"collection": "physics", "tag": args.physics_tag},
+                                       {"collection": "feature", "tag": "temp2"}]}
+
+    readback = await _benchmark_readback(
+        client, spec, material_path=material_path, key_stem="chain-a",
+        property_paths={"thermalconductivity": (material_def_path, "thermalconductivity"),
+                        "density": (material_def_path, "density"),
+                        "heatcapacity": (material_def_path, "heatcapacity"),
+                        "length_m": (geom_block_path, "lx"),
+                        "width_m": (geom_block_path, "ly"),
+                        "height_m": (geom_block_path, "lz"),
+                        "initial_value": (physics_temp1_path, "T0"),
+                        "hot_boundary": (physics_temp2_path, "T0")})
+    case.assertions["chain_a_pre_solve_readback"] = readback
+    _mark_benchmark_readback(case, readback)
 
     study = await client.action("study.create", {"tag": args.study_tag, "label": "G3 chain A stationary"},
                                 key="chain-a-study", request="chain-a")
@@ -5247,6 +8006,7 @@ async def _case_w16_t019_chain_a(host: ProductionHost, client: ActionClient, cas
         case.finish()
         return
     _mark(case, "solve_produced_solution", "PASS", None, observed=_data(solved))
+    _record_solution(state, case, source="chain A steady solve", dataset=args.dataset_tag, solution="sol1")
     samples = await client.action("result.sample_path", {
         "spec": {"expressions": ["T"], "dataset": args.dataset_tag, "solution": "sol1"},
         "path_definition": {"kind": "line", "start": [0.0, config["width_m"] / 2, config["height_m"] / 2],
@@ -5272,7 +8032,7 @@ async def _case_w16_t019_chain_a(host: ProductionHost, client: ActionClient, cas
         # k, the sampled gradient and the cross-section; the sampling
         # operation must not be required to publish it.
         k_effective = expected * float(reference["length_m"]) / float(reference["temperature_difference_k"])
-        derived = k_effective * (t_series[0] - t_series[-1]) / (x_series[-1] - x_series[0])
+        derived = abs(k_effective * (t_series[-1] - t_series[0]) / (x_series[-1] - x_series[0]))
     power = _finite_float(flux) if flux is not None else derived
     balance_ok = power is not None and abs(power - expected) <= 1e-3 * abs(expected)
     case.assertions["chain_a_power_balance"] = {
@@ -5316,23 +8076,27 @@ def _seconds_value(text: str) -> float:
 
 
 def _chain_a_reference(run_dir: Path) -> dict[str, Any]:
-    config = CHAIN_A
-    delta = float(config["t1_k"]) - float(config["t0_k"])
-    count = int(config["sample_count"])
-    samples = [{"x_m": float(config["length_m"]) * index / (count - 1),
-                "x_mm": 1000.0 * float(config["length_m"]) * index / (count - 1),
-                "T_analytic_k": float(config["t0_k"]) + delta * index / (count - 1)}
-               for index in range(count)]
-    flux = float(config["k_w_mk"]) * delta / float(config["length_m"])
+    """Chain A's analytic reference: derived from ``BENCHMARK_A``, written before the solve.
+
+    Nothing here can be influenced by a model read-back: the spec is frozen, so a disagreement
+    between the model and this reference is recorded as a mismatch and never fixed by editing the
+    reference (G3.1 §8.1).
+    """
+    spec = BENCHMARK_A
+    config = spec.as_config()
+    samples = [{"x_m": x_m, "x_mm": 1000.0 * x_m, "T_analytic_k": spec.steady_profile_k(x_m)}
+               for x_m in spec.sample_points_m()]
     reference = {
         "analytic_model": "steady 1D conduction in a slab insulated on four sides: T(x) = T0 + (T1-T0)*x/L",
-        "config": config, "samples": samples, "temperature_difference_k": delta,
+        "benchmark_spec": _spec_document(spec),
+        "config": config, "samples": samples, "temperature_difference_k": spec.temperature_difference_k,
         # ``_check_chain_a`` reads these two directly; keep them top-level so the
         # contract between the reference writer and the checker is explicit.
-        "t0_k": float(config["t0_k"]), "length_m": float(config["length_m"]),
-        "heat_flux_w_m2": flux, "cross_section_area_m2": float(config["width_m"]) * float(config["height_m"]),
-        "power_w": flux * float(config["width_m"]) * float(config["height_m"]),
-        "relative_error_limit": float(config["relative_error_limit"]),
+        "t0_k": float(spec.t0_k), "length_m": float(spec.length_m),
+        "heat_flux_w_m2": spec.heat_flux_w_m2, "cross_section_area_m2": spec.cross_section_area_m2,
+        "power_w": spec.power_w,
+        "relative_error_limit": float(spec.error_limit),
+        "error_definition": spec.error_definition,
     }
     path = run_dir / "chainA_reference.json"
     _write_json(path, reference)
@@ -5341,24 +8105,41 @@ def _chain_a_reference(run_dir: Path) -> dict[str, Any]:
 
 
 def _chain_b_reference(run_dir: Path) -> dict[str, Any]:
-    config = CHAIN_B
-    delta = float(config["delta_t_k"])
-    alpha = float(config["k_w_mk"]) / (float(config["rho_kg_m3"]) * float(config["cp_j_kgk"]))
-    times = [float(value)
-             for value in config["time_points_s"]]
-    factors = [math.exp(-alpha * (math.pi / float(config["length_m"])) ** 2 * time_value) for time_value in times]
+    """Chain B's analytic reference: ``BENCHMARK_B``'s own alpha and decay factors."""
+    spec = BENCHMARK_B
+    config = spec.as_config()
+    times = [float(value) for value in spec.time_points_s]
+    factors = [math.exp(-spec.decay_rate_per_s * time_value) for time_value in times]
     reference = {
-        "analytic_model": "transient 1D conduction with T(x,0)=T0 and T(L,t)=T0+dT for t>0: T(x,t) = T0 + dT*sin(pi*x/L)*exp(-alpha*(pi/L)^2*t); the slab is insulated elsewhere",
+        "analytic_model": ("transient 1D conduction with T(x,0)=T0+dT*sin(pi*x/L) and both ends held at T0: "
+                           "T(x,t) = T0 + dT*sin(pi*x/L)*exp(-alpha*(pi/L)^2*t); the slab is insulated elsewhere"),
+        "benchmark_spec": _spec_document(spec),
         # ``_check_chain_b`` reads these directly; keep them top-level so the contract is explicit.
-        "config": config, "temperature_difference_k": delta, "alpha_m2_s": alpha,
+        "config": config, "temperature_difference_k": spec.temperature_difference_k,
+        "alpha_m2_s": spec.alpha_m2_s,
         "decay_factors": [{"t_s": time_value, "factor": factor} for time_value, factor in zip(times, factors)],
-        "relative_error_limit": float(config["normalized_error_limit"]), "length_m": float(config["length_m"]),
-        "t0_k": float(config["t0_k"]),
+        "relative_error_limit": float(spec.error_limit),
+        "normalized_error_limit": float(spec.error_limit), "length_m": float(spec.length_m),
+        "t0_k": float(spec.t0_k),
+        "error_definition": spec.error_definition,
     }
     path = run_dir / "chainB_reference.json"
     _write_json(path, reference)
     reference["reference_sha256"] = _sha256(path)
     return reference
+
+
+def _spec_document(spec: BenchmarkSpec) -> dict[str, Any]:
+    """The registered specification, as recorded with a reference (for the report and the index)."""
+    return {"chain": spec.chain, "source": spec.source, "sides": spec.sides,
+            "length_m": spec.length_m, "width_m": spec.width_m, "height_m": spec.height_m,
+            "k_w_mk": spec.k_w_mk, "rho_kg_m3": spec.rho_kg_m3, "cp_j_kgk": spec.cp_j_kgk,
+            "t0_k": spec.t0_k, "hot_k": spec.hot_k, "delta_t_k": spec.delta_t_k,
+            "time_points_s": list(spec.time_points_s), "sample_count": spec.sample_count,
+            "error_limit": spec.error_limit, "error_definition": spec.error_definition,
+            "alpha_m2_s": spec.alpha_m2_s, "expected_model_values": [dict(row) for row in
+                                                                    spec.expected_model_values()],
+            "sanity_checks": [dict(row) for row in spec.sanity_checks()]}
 
 
 async def _case_w16_t019_chain_b(host: ProductionHost, client: ActionClient, case: Case, args: argparse.Namespace,
@@ -5371,7 +8152,7 @@ async def _case_w16_t019_chain_b(host: ProductionHost, client: ActionClient, cas
     case.subcase("analytic_reference_preregistered", "PASS", level="fixture", reason=None,
                  sha256=reference["reference_sha256"], alpha_m2_s=reference["alpha_m2_s"])
     chain_ops = ('model.create', 'geometry.feature_create', 'geometry.build', 'material.create', 'material.set_properties',
-                 'physics.create', 'physics.feature_create', 'mesh.create', 'mesh.build', 'study.create',
+                 'material.selection_set', 'physics.create', 'physics.feature_create', 'physics.feature_update', 'physics.selection_set', 'mesh.create', 'mesh.build', 'study.create',
                  'study.step_create', 'study.run', 'result.sample_path')
     rows = await _prepare_case(case, host, [*_plan_ops(case.case_id), *chain_ops])
     chain_ok = all(rows.get(operation, {}).get("available") for operation in chain_ops)
@@ -5385,7 +8166,9 @@ async def _case_w16_t019_chain_b(host: ProductionHost, client: ActionClient, cas
             _mark(case, name, status, why)
         case.finish()
         return
-    config = CHAIN_B
+    spec = BENCHMARK_B
+    config = spec.as_config()
+    _mark_benchmark_spec(case, spec)
     store: dict[str, Any] = {}
     created = await _create_empty_model(client, state, args.chain_b_label, host)
     case.assertions["chain_b_model_create"] = _envelope_identity(created)
@@ -5436,48 +8219,74 @@ async def _case_w16_t019_chain_b(host: ProductionHost, client: ActionClient, cas
     material_realign = await _realign_refused_properties(
         client, material, path=material_path, group=PROBE_FIXTURE_TAGS["property_group"],
         properties=CHAIN_B_MATERIAL_PROPERTIES, key_stem="chain-b-material", request_stem="chain-b")
+    selection = await client.action("material.selection_set",
+                                    {"path": material_path,
+                                     "selection": {"kind": "explicit", "component": args.component,
+                                                   "geometry": args.geometry_tag, "entity_dimension": 3,
+                                                   "entities": [1]}},
+                                    key="chain-b-material-selection", request="chain-b")
     physics_created = await client.action("physics.create", {"component": args.component, "tag": args.physics_tag,
                                                              "type_id": args.heat_physics_type,
                                                              "geometry": args.geometry_tag},
-                                          key="chain-b-physics", request="chain-b")
-    # The initial value is the analytic initial condition T(x,0)=T0, written through the verified
-    # feature property (``Tinit`` is the Initial temperature of the InitialValues feature).
-    initial_value = await client.action("physics.feature_create", {"parent": physics_path, "tag": "init1",
-                                                                   "type_id": "InitialValues", "entity_dimension": 3,
-                                                                   "properties": [{"name": "Tinit",
-                                                                                   "value": {"kind": "expression",
-                                                                                             "shape": [],
-                                                                                             "data": f"{float(config['t0_k'])}[K]"}}]},
-                                        key="chain-b-initial", request="chain-b")
-    temperature_cold = await client.action("physics.feature_create", {"parent": physics_path, "tag": "temp2",
-                                                                      "type_id": "TemperatureBoundary",
-                                                                      "entity_dimension": 2,
-                                                                      "properties": [{"name": "T0",
-                                                                                      "value": {"kind": "expression",
-                                                                                                "shape": [],
-                                                                                                "data": f"{float(config['t0_k']) + float(config['delta_t_k'])}[K]"}}]},
-                                           key="chain-b-temp", request="chain-b")
+                                           key="chain-b-physics", request="chain-b")
+    # The initial value is the analytic initial condition T(x,0)=T0 + dT*sin(pi*x/L), written through
+    # the verified feature property (``Tinit`` on the engine's initial-values feature).
+    initial_path = {"segments": [{"collection": "component", "tag": args.component},
+                                 {"collection": "physics", "tag": args.physics_tag},
+                                 {"collection": "feature", "tag": "init1"}]}
+    init_expr = f"{float(config['t0_k'])}[K] + {float(config['delta_t_k'])}[K]*sin(pi*x/{float(config['length_m'])}[m])"
+    initial_value = await client.action(
+        "physics.feature_update",
+        {"path": initial_path,
+         "properties": [{"name": "Tinit",
+                         "value": {"kind": "expression", "shape": [], "data": init_expr}}]},
+        key="chain-b-initial", request="chain-b")
+    physics_temp1_path = {"segments": [{"collection": "component", "tag": args.component},
+                                        {"collection": "physics", "tag": args.physics_tag},
+                                        {"collection": "feature", "tag": "temp1"}]}
+    temperature_boundary = await client.action(
+        "physics.feature_create",
+        {"parent": physics_path, "tag": "temp1", "type_id": "TemperatureBoundary",
+         "entity_dimension": 2,
+         "properties": [{"name": "T0", "value": {"kind": "expression", "shape": [],
+                                                 "data": f"{float(config['t0_k'])}[K]"}}]},
+        key="chain-b-temp", request="chain-b")
+    selection_boundary = await client.action(
+        "physics.selection_set",
+        {"path": physics_temp1_path,
+         "selection": {"kind": "explicit", "component": args.component,
+                       "geometry": args.geometry_tag, "entity_dimension": 2,
+                       "entities": [1, 6]}},
+        key="chain-b-temp-sel", request="chain-b")
     insulation = await client.action("physics.feature_create", {"parent": physics_path, "tag": "ins1",
                                                                 "type_id": "ThermalInsulation", "entity_dimension": 2,
                                                                 "properties": []},
                                      key="chain-b-insulation", request="chain-b")
     mesh_created = await client.action("mesh.create", {"component": args.component, "tag": args.mesh_tag,
                                                        "geometry": args.geometry_tag},
-                                       key="chain-b-mesh", request="chain-b")
+                                        key="chain-b-mesh", request="chain-b")
     mesh_size = await client.action("mesh.feature_create", {"parent": mesh_path, "tag": args.mesh_size_tag,
                                                             "type_id": "Size",
                                                             "properties": [{"name": "hauto",
                                                                             "value": {"kind": "int32", "shape": [],
                                                                                       "data": 3}}]},
                                     key="chain-b-size", request="chain-b")
+    mesh_tet = await client.action("mesh.feature_create",
+                                   {"parent": mesh_path, "tag": "ftet1", "type_id": "FreeTet",
+                                    "properties": []},
+                                   key="chain-b-ftet", request="chain-b")
     mesh_built = await client.action("mesh.build", {"path": mesh_path}, key="chain-b-meshbuild", request="chain-b")
     study = await client.action("study.create", {"tag": args.study_tag, "label": "G3 chain B transient"},
                                 key="chain-b-study", request="chain-b")
     case.assertions["chain_b_study_create"] = _envelope_identity(study)
     step = await client.action("study.step_create", {
         "study": study_path, "tag": "time", "type_id": "Transient",
-        "properties": [{"name": "tlist", "value": {"kind": "float64", "shape": [len(config["time_points_s"])],
-                                                   "data": [float(value) for value in config["time_points_s"]]}}]},
+        "properties": [
+            {"name": "tlist", "value": {"kind": "float64", "shape": [len(config["time_points_s"])],
+                                        "data": [float(value) for value in config["time_points_s"]]}},
+            {"name": "usertol", "value": {"kind": "string", "shape": [], "data": "on"}},
+            {"name": "rtol", "value": {"kind": "float64", "shape": [], "data": 1e-5}},
+        ]},
         key="chain-b-step", request="chain-b")
     case.assertions["chain_b_step_create"] = _envelope_identity(step)
     generated = await client.action("study.solver_generate", {"study": study_path, "replace_existing": False},
@@ -5491,18 +8300,20 @@ async def _case_w16_t019_chain_b(host: ProductionHost, client: ActionClient, cas
         client, insulation, physics_path=physics_path, tag="ins1",
         key_stem="chain-b-insulation", request_stem="chain-b")
     case.assertions["chain_b_insulation_adoption"] = insulation_adoption
+    ins_row = (("ins1 (the engine's own insulation feature, read back)", insulation_adoption["payload"])
+               if insulation_adoption is not None and insulation_adoption.get("verified_as_insulation")
+               else ("physics.feature_create ins1", insulation))
     chain_b_rows: list[tuple[str, Mapping[str, Any]]] = [
         ("geometry.feature_create", block), ("geometry.build", geometry_built),
-        ("material.create", material), ("physics.create", physics_created),
-        ("physics.feature_create init1", initial_value), ("physics.feature_create temp2", temperature_cold),
+        ("material.create", material), ("material.selection_set", selection),
+        ("physics.create", physics_created),
+        ("physics.feature_update init1", initial_value),
+        ("physics.feature_create temp1", temperature_boundary),
+        ("physics.selection_set temp1", selection_boundary),
+        ins_row,
         ("mesh.create", mesh_created),
-        ("mesh.feature_create", mesh_size), ("mesh.build", mesh_built),
+        ("mesh.feature_create size", mesh_size), ("mesh.feature_create ftet", mesh_tet), ("mesh.build", mesh_built),
         ("study.create", study), ("study.step_create", step)]
-    if insulation_adoption is not None and insulation_adoption.get("verified_as_insulation"):
-        chain_b_rows.insert(6, ("ins1 (the engine's own insulation feature, read back)",
-                                insulation_adoption["payload"]))
-    else:
-        chain_b_rows.insert(6, ("physics.feature_create ins1", insulation))
     line_ok = _chain_line(case, "transient_study_and_initial_value", chain_b_rows)
     if not line_ok:
         for name in live_names[1:]:
@@ -5510,17 +8321,43 @@ async def _case_w16_t019_chain_b(host: ProductionHost, client: ActionClient, cas
         case.finish()
         return
     case.assertions["chain_b_model"] = {"material": _envelope_identity(material),
+                                        "material_selection": _envelope_identity(selection),
                                         "material_engine_alignment": material_realign,
                                         "initial_value": _envelope_identity(initial_value),
-                                        "temperature": _envelope_identity(temperature_cold),
+                                        "temperature": _envelope_identity(temperature_boundary),
                                         "insulation": _envelope_identity(insulation),
                                         "mesh": _envelope_identity(mesh_built)}
+    # C07b (R-08): the read-back is compared against the frozen specification before the solve, and
+    # the transient reference stays the one registered from BENCHMARK_B (alpha = k/(rho*Cp), Cp=1000).
+    material_def_path = {"segments": [{"collection": "component", "tag": args.component},
+                                      {"collection": "material", "tag": args.material_tag},
+                                      {"collection": "propertyGroup", "tag": "def"}]}
+    geom_block_path = {"segments": [{"collection": "component", "tag": args.component},
+                                    {"collection": "geom", "tag": args.geometry_tag},
+                                    {"collection": "feature", "tag": "blk1"}]}
+    study_time_path = {"segments": [{"collection": "study", "tag": args.study_tag},
+                                    {"collection": "feature", "tag": "time"}]}
+
+    readback = await _benchmark_readback(
+        client, spec, material_path=material_path, key_stem="chain-b",
+        property_paths={"thermalconductivity": (material_def_path, "thermalconductivity"),
+                        "density": (material_def_path, "density"),
+                        "heatcapacity": (material_def_path, "heatcapacity"),
+                        "length_m": (geom_block_path, "lx"),
+                        "width_m": (geom_block_path, "ly"),
+                        "height_m": (geom_block_path, "lz"),
+                        "initial_value": (initial_path, "Tinit"),
+                        "time_points": (study_time_path, "tlist")})
+    case.assertions["chain_b_pre_solve_readback"] = readback
+    _mark_benchmark_readback(case, readback)
     solved = await client.action("study.run", {"study": study_path, "timeout_s": args.solve_timeout_s},
-                                 key="chain-b-solve", request="chain-b")
+                                 key="chain-b-solve", request="chain-b", rpc_timeout_s=180.0)
     solution_status = "PASS" if _success(solved) else ("BLOCKED" if _blocked_payload(solved) else "FAIL")
     _mark(case, "transient_solve_produced_solution", solution_status,
           None if _success(solved) else f"study.run returned {_error_code(solved) or 'an invalid envelope'}",
           observed=_data(solved))
+    if _success(solved):
+        _record_solution(state, case, source="chain B transient solve", dataset=args.dataset_tag, solution="sol1")
     if not _success(solved):
         for name in live_names[2:]:
             _mark(case, name, "NOT_RUN", "prerequisite subcase transient_solve_produced_solution did not pass")
@@ -5530,7 +8367,8 @@ async def _case_w16_t019_chain_b(host: ProductionHost, client: ActionClient, cas
         "spec": {"expressions": ["T"], "dataset": args.dataset_tag, "solution": "sol1"},
         "path_definition": {"kind": "line", "start": [0.0, config["width_m"] / 2, config["height_m"] / 2],
                             "end": [config["length_m"], config["width_m"] / 2, config["height_m"] / 2],
-                            "samples": 5}}, key="chain-b-sample", request="chain-b")
+                            "samples": config["sample_count"]}}, key="chain-b-sample", request="chain-b",
+        rpc_timeout_s=60.0)
     verdict = _check_chain_b(samples, reference)
     rows_out = _extract_samples(samples)
     table_path = run_dir / "chainB_samples.json"
@@ -5547,6 +8385,12 @@ async def _case_w16_t019_chain_b(host: ProductionHost, client: ActionClient, cas
                                                request="chain-b")))}
     _mark(case, "time_points_and_mesh_recorded", "PASS" if recorded_ok else "FAIL",
           None if recorded_ok else "the time points and mesh identity were not recorded together with the samples")
+    save_target = run_dir / "chainB_result.mph"
+    saved = await client.action("model.save", {"destination": {"path": str(save_target)}, "overwrite": True,
+                                              "include_solution": True}, key="chain-b-save", request="chain-b")
+    digest = _sha256(save_target) if save_target.is_file() else None
+    case.assertions["chain_b_saved_mph"] = {"path": str(save_target), "sha256": digest,
+                                            "reopen_command": f"tools/phase4_run_mcp.py --reopen-check {save_target}"}
     case.finish()
 
 
@@ -5652,8 +8496,8 @@ async def _case_w16_t019_chain_c(host: ProductionHost, client: ActionClient, cas
     update = await _step(case, host, client, args, state, name="non_target_nodes_preserved", operation="study.step_update",
                          arguments={"path": {"segments": [{"collection": "study", "tag": "std1"},
                                                           {"collection": "feature", "tag": "time"}]},
-                                    "properties": [{"name": "tlist", "value": {"kind": "float64", "shape": [1],
-                                                                               "data": [_seconds_value(args.continuation_time)]}}]},
+                                    "properties": [{"name": "tlist", "value": {"kind": "float64", "shape": [2],
+                                                                               "data": [0.0, _seconds_value(args.continuation_time)]}}]},
                          prereq="target_only_modified", store=store)
     if update is not None and _success(update):
         after = await client.host.call("model_tree", {"depth": 2,
@@ -5667,19 +8511,28 @@ async def _case_w16_t019_chain_c(host: ProductionHost, client: ActionClient, cas
     else:
         _mark(case, "non_target_nodes_preserved", "FAIL", "the continuation update did not apply")
     solver_before_data = _json_safe(_data(solver_before)) if solver_before is not None else None
+    solver_before_config = _solver_configuration(solver_before)
 
     def _check_manual_solver(payload: Mapping[str, Any], bundle: dict[str, Any]) -> Any:
         if not _success(payload):
             # A refusal is not a changed configuration: an unreadable or gated inspect is blocked.
             return _unreadable_verdict(payload, "the manual solver configuration could not be re-read")
-        after_data = _json_safe(_data(payload))
-        if solver_before_data is None:
+        if solver_before_config is None:
             return ("BLOCKED",
                     "the solver configuration could not be read before the continuation, so it cannot "
                     "be compared afterwards")
-        if after_data != solver_before_data:
-            return "FAIL", "the manual solver configuration changed across the continuation"
-        return "PASS", None, {"observed": after_data}
+        after_config = _solver_configuration(payload)
+        if after_config is None:
+            return _unreadable_verdict(payload, "the manual solver configuration could not be re-read")
+        if after_config != solver_before_config:
+            # Compare what a *manual configuration* is: the solver features and their settings.
+            # Comparing the whole inspect payload made the line fail on the engine's own state
+            # (durations, initialization flags, problem counters) which changes across any
+            # continuation without a single solver setting being touched.
+            return ("FAIL", "the manual solver configuration changed across the continuation: "
+                            + _solver_configuration_delta(solver_before_config, after_config),
+                    {"before": solver_before_config, "after": after_config})
+        return "PASS", None, {"configuration": after_config}
 
     if solver_path is None:
         # Already marked BLOCKED above with the listing's own reason: the line keeps that verdict.
@@ -5688,6 +8541,11 @@ async def _case_w16_t019_chain_c(host: ProductionHost, client: ActionClient, cas
         await _step(case, host, client, args, state, name="manual_solver_preserved", operation="solver.inspect",
                     arguments={"path": solver_path, "depth": 3},
                     prereq="non_target_nodes_preserved", store=store, check=_check_manual_solver)
+    if solver_before_data is not None:
+        # The full payload is still kept as evidence, so a reader can see exactly which of its
+        # fields moved when the configuration comparison reports a difference.
+        case.assertions["chain_c_solver_payloads"] = {"before": solver_before_data,
+                                                      "after_read": store.get("manual_solver_preserved")}
     await _step(case, host, client, args, state, name="derived_values_and_data_association_preserved",
                 operation="node.find",
                 arguments={"query": {"kind": "derived_value"}, "root": {"segments": []}},
@@ -5749,6 +8607,62 @@ def _solver_sequence_path(payload: Mapping[str, Any] | None, *, study: str | Non
         return None, f"solver {chosen.get('solver')!r} was listed without a readable path"
     return ({"segments": [dict(segment) for segment in path["segments"] if isinstance(segment, Mapping)]},
             f"taken from the published solver listing ({chosen.get('solver')!r}, study {chosen.get('study')!r})")
+
+
+#: Inspect fields that are *not* part of the user's solver configuration but of the engine's own
+#: state: they move across any continuation (durations, initialization flags, problem counters,
+#: cached labels) without a single solver setting being touched.  The comparison for the chain-C
+#: acceptance line is made on the features' own settings tables, never on these.
+SOLVER_VOLATILE_KEYS = frozenset({"duration_s", "duration", "build_time_ms", "is_initialized", "initialized",
+                                  "has_problems", "problems", "lastchangedproperty", "changedproperties",
+                                  "hiddenchangedproperties", "label", "solnum", "default_solnum", "revision",
+                                  "at", "state", "status_message", "warnings", "errors"})
+
+
+def _solver_configuration(payload: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    """The user-visible solver configuration: one row per solver feature and its settings.
+
+    ``None`` when the payload is not a successful inspect — the caller reports that as blocked
+    rather than comparing a refusal against a configuration.
+    """
+    if payload is None or not _success(payload):
+        return None
+    data = _data(payload)
+    features = [{"tag": row.get("tag"), "type_id": row.get("type_id"),
+                 "settings": _configuration_settings(row.get("settings"))}
+                for row in _solver_feature_rows(payload)]
+    return {"solver": data.get("solver"),
+            "study": data.get("study"),
+            "features": features}
+
+
+def _configuration_settings(settings: Any) -> dict[str, Any]:
+    """One feature's settings table without the engine-state keys."""
+    if not isinstance(settings, Mapping):
+        return {}
+    return {str(name): _json_safe(value) for name, value in sorted(settings.items())
+            if str(name) not in SOLVER_VOLATILE_KEYS}
+
+
+def _solver_configuration_delta(before: Mapping[str, Any], after: Mapping[str, Any]) -> str:
+    """A readable description of what differs between two solver configurations."""
+    parts: list[str] = []
+    before_rows = {str(row.get("tag")): row for row in (before.get("features") or []) if isinstance(row, Mapping)}
+    after_rows = {str(row.get("tag")): row for row in (after.get("features") or []) if isinstance(row, Mapping)}
+    for tag in sorted(set(before_rows) - set(after_rows)):
+        parts.append(f"feature {tag!r} disappeared")
+    for tag in sorted(set(after_rows) - set(before_rows)):
+        parts.append(f"feature {tag!r} appeared")
+    for tag in sorted(set(before_rows) & set(after_rows)):
+        old, new = before_rows[tag], after_rows[tag]
+        if old.get("type_id") != new.get("type_id"):
+            parts.append(f"feature {tag!r} type {old.get('type_id')!r} -> {new.get('type_id')!r}")
+        old_settings, new_settings = old.get("settings") or {}, new.get("settings") or {}
+        for name in sorted(set(old_settings) | set(new_settings)):
+            if old_settings.get(name) != new_settings.get(name):
+                parts.append(f"feature {tag!r} setting {name!r}: {old_settings.get(name)!r} -> "
+                             f"{new_settings.get(name)!r}")
+    return "; ".join(parts) if parts else "the configuration rows differ (see the recorded payloads)"
 
 
 def _solver_feature_rows(payload: Mapping[str, Any] | None) -> list[dict[str, Any]]:
@@ -5890,6 +8804,40 @@ def _first_feature_path(payload: Mapping[str, Any] | None) -> dict[str, Any] | N
     return walk(_data(payload))
 
 
+def _engine_gate_note(host: ProductionHost) -> str | None:
+    """The control-plane gate chain this run actually observed — the reason a blocked case needs.
+
+    A case refused with "reconcile unfinished engine work before new operations" is blocked by
+    *another* call's unresolved job: the refusal envelope names only the job it just refused, so a
+    case that reports a bare "could not be established" hides the one fact a reader needs.  The
+    chain is taken from the driver's own ledger (job ids observed on envelopes, their release
+    attempts and what ``job_reconcile``/``job_status`` answered) — never inferred.
+    """
+    ledger = host.ledger_evidence()
+    unresolved = [str(job) for job in (ledger.get("unresolved_jobs") or [])]
+    refusals = host.gate_refusals if isinstance(host.gate_refusals, Mapping) else {}
+    if not unresolved:
+        return None
+    entries = [entry for entry in (ledger.get("entries") or []) if isinstance(entry, Mapping)]
+    described: list[str] = []
+    for job_id in unresolved[:3]:
+        entry = next((row for row in entries if str(row.get("job_id")) == job_id), {})
+        attempts = [row for row in (entry.get("release_attempts") or []) if isinstance(row, Mapping)]
+        last = attempts[-1] if attempts else {}
+        detail = f"job {job_id}: last job_reconcile status={last.get('status')!r}"
+        if last.get("reconciliation"):
+            detail += f", reconciliation {_json_safe(last['reconciliation'])}"
+        if last.get("job_reads"):
+            detail += f", job reads {_json_safe(last['job_reads'])}"
+        described.append(detail)
+    note = ("the control plane refuses new work while its ledger still holds unreconciled job(s), and the "
+            "published reconcile reads did not report a release: " + "; ".join(described))
+    if refusals.get("count"):
+        note += (f" (gate refusals this run: {refusals.get('count')}, last: "
+                 f"{_json_safe(refusals.get('last'))})")
+    return note
+
+
 async def _case_w16_t020(host: ProductionHost, client: ActionClient, case: Case, args: argparse.Namespace,
                          state: dict[str, Any]) -> None:
     # Every operation this case gates on: the solver tree is read through the solver route, and
@@ -5925,7 +8873,12 @@ async def _case_w16_t020(host: ProductionHost, client: ActionClient, case: Case,
     # the empty read).  A model without any study gets the driver's own study and step, so the
     # target is created rather than assumed.
     listed_studies = await _step(case, host, client, args, state, name="study_target_read",
-                                 operation="study.list", arguments={}, store=store)
+                                 operation="study.list", arguments={}, store=store,
+                                 check=lambda payload, bundle: (
+                                     _unreadable_verdict(payload, "the study list could not be read")
+                                     if not _success(payload) else
+                                     ("PASS", None, {"observed": _data(payload)})
+                                 ))
     studies = [row for row in (_data(listed_studies).get("studies") or []) if isinstance(row, Mapping)] \
         if listed_studies is not None else []
     chosen: Mapping[str, Any] | None = None
@@ -5949,6 +8902,19 @@ async def _case_w16_t020(host: ProductionHost, client: ActionClient, case: Case,
                                     operation="study.create", arguments={"tag": args.study_tag,
                                                                         "label": "G3 T020 solver tree"},
                                     store=store)
+        if not _success(created_study):
+            # The study the whole case hangs on was refused: the reason is the refusal *and* the
+            # gate chain behind it (observed live: the refusal was the control plane's
+            # "reconcile unfinished engine work before new operations", which names a job the
+            # product then could not release — the case must report that chain, not lose it).
+            note = _engine_gate_note(host)
+            if note:
+                case.subcase("study_target_create", case.subcase_status("study_target_create") or "BLOCKED",
+                             reason=(f"study.create was refused ({_error_code(created_study) or 'invalid envelope'}); "
+                                      f"{note}"), level="live", gate=note)
+                for name in live_names:
+                    if case.subcase_status(name) in {None, "BLOCKED"}:
+                        _mark(case, name, "BLOCKED", f"the study target could not be created; {note}")
         if _success(created_study):
             step_created = await _step(case, host, client, args, state, name="study_target_step",
                                        operation="study.step_create",
@@ -5968,9 +8934,11 @@ async def _case_w16_t020(host: ProductionHost, client: ActionClient, case: Case,
         "configured_study_tag": args.study_tag,
     }
     if not studies and not isinstance(chosen, Mapping):
+        note = _engine_gate_note(host)
         for name in live_names:
             _mark(case, name, "BLOCKED",
-                  "no study could be established on the bound model, so no solver sequence can exist")
+                  "no study could be established on the bound model, so no solver sequence can exist"
+                  + (f"; {note}" if note else ""))
         case.finish()
         return
     case.subcase("study_target_read", "PASS", level="live",
@@ -6249,8 +9217,13 @@ class ProbeFixture:
         self.steps.append(row)
 
     async def _call(self, step: str, operation: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+        # The identity is *fresh per step*: the fixture is rebuilt when the bound model changes, and
+        # the control daemon answers a key it has already stored from the previous model with the
+        # old result (or an idempotency conflict) — so a static key makes the rebuild a no-op that
+        # reports the earlier model's envelope.  (Observed live: the probe reported "no scalar
+        # property could be discovered or created" on a model whose fixture could never be created.)
         payload = await self.client.action(operation, dict(arguments),
-                                          key=f"probe-{step}", request=f"probe-{step}")
+                                          key=_fresh_key(f"probe-{step}"), request=f"probe-{step}")
         code = _error_code(payload)
         status = "APPLIED" if _success(payload) else ("ADOPTED" if code in PROBE_FIXTURE_ADOPT_CODES else
                                                       "BLOCKED" if _blocked_payload(payload) else "FAILED")
@@ -6395,7 +9368,7 @@ class ProbeFixture:
         if not isinstance(self.nodes.get("material"), Mapping):
             return
         payload = await self.client.action("node.property_schema", {"path": self.property_group_path()},
-                                          key="probe-group-schema", request="probe-group-schema")
+                                          key=_fresh_key("probe-group-schema"), request="probe-group-schema")
         self.group_schema = {"success": payload.get("success"), "error_code": _error_code(payload),
                              "properties": _json_safe(_data(payload).get("properties"))}
         self._record("material_group_schema",
@@ -6597,24 +9570,63 @@ async def _case_guard_t010(host: ProductionHost, client: ActionClient, case: Cas
     else:
         value = dict(scalar.get("value") or {})
         body = {"path": scalar["path"], "properties": [{"name": scalar["name"], "value": value}]}
-        first = await client.action("node.property_set", body, key="guard-t010-repeat", request="repeat")
-        retry = await client.action("node.property_set", body, key="guard-t010-repeat", request="repeat")
-        first_identity = _execution_readback(first)
-        retry_identity = _execution_readback(retry)
-        same = bool(first_identity) and first_identity.get("operation_id") == retry_identity.get("operation_id")
-        case.assertions["t010_repeat"] = {"first": _envelope_identity(first), "retry": _envelope_identity(retry),
-                                          "same_operation_id": same}
-        _mark(case, "repeated_key_not_reexecuted", "PASS" if same else "FAIL",
-              None if same else "the retry with the same idempotency key produced a different operation identity")
-        conflict = await client.action("node.property_set",
-                                       {"path": scalar["path"],
-                                        "properties": [{"name": scalar["name"], "value": value}],
-                                        "provenance": {"phase4_conflict_probe": True}},
-                                       key="guard-t010-repeat", request="repeat")
+        # One identity, generated once and shared by the pair: the acceptance line is that the
+        # *same* key is not re-executed.  A literal key reused across runs would be answered from the
+        # control daemon's store, so the pair would compare two stored envelopes and pass without the
+        # engine being asked anything.
+        repeat_key = _fresh_key("guard-t010-repeat")
+        first = await client.action("node.property_set", body, key=repeat_key, request="repeat")
+        # The retry is a *true* retry: the same key and the bytes the first call was dispatched with.
+        # The driver used to re-derive the body — its ``expected_revision`` moved from 20 to 21 after
+        # the first write — so the product answered ``IDEMPOTENCY_CONFLICT`` (it hashes
+        # ``expected_revision`` into the request) and the run reported a product defect that was its
+        # own.  The recorded dispatch is re-sent verbatim, once, and the product's own operation
+        # identity is what decides the line.
+        first_identity = execution_identity(first)
+        retry: dict[str, Any] | None = None
+        try:
+            retry, retry_record = await client.retry(repeat_key)
+            retry_identity = execution_identity(retry)
+            same = bool(retry_record.get("same_body")) and bool(first_identity.get("operation_id")) \
+                and first_identity.get("operation_id") == retry_identity.get("operation_id")
+            reason = None
+            if not retry_record.get("same_body"):
+                reason = ("the retry did not resend the dispatched bytes "
+                          f"({retry_record.get('body_sha256')} -> {retry_record.get('retry_body_sha256')})")
+            elif not first_identity.get("operation_id"):
+                reason = ("the product published no operation identity for the first call, so the "
+                          "replayed identity could not be established (the envelope carried none)")
+            elif not same:
+                reason = ("the retry with the same idempotency key and an identical body produced a "
+                          "different operation identity")
+        except CapabilityUnavailable as exc:
+            retry_record = {"refused_before_dispatch": str(exc)}
+            retry_identity = {}
+            same = False
+            reason = f"the retry was refused before dispatch: {exc}"
+        case.assertions["t010_repeat"] = {
+            "first": _envelope_identity(first), "retry": _envelope_identity(retry) if retry_identity else None,
+            "first_identity": first_identity, "retry_identity": retry_identity or None,
+            "retry_record": retry_record, "same_operation_id": same,
+            "same_body": bool(retry_record.get("same_body")),
+            "key": repeat_key,
+            "retry_count": len(getattr(client, "retries", []) or []),
+        }
+        _mark(case, "repeated_key_not_reexecuted", "PASS" if same else "FAIL", reason)
+        # The conflict probe differs from the dispatched body by exactly one documented field
+        # (``provenance``) and keeps the same expected revision, so the product's answer can only be
+        # about the *body* under that key — never about a revision this driver moved itself.
+        conflict_body = {"path": scalar["path"],
+                         "properties": [{"name": scalar["name"], "value": value}],
+                         "provenance": {"phase4_conflict_probe": True}}
+        conflict_revision = _expected_revision(client.dispatched.get(repeat_key, {}).get("arguments") or {})
+        conflict = await client.action("node.property_set", conflict_body, key=repeat_key, request="repeat",
+                                       revision_override=conflict_revision)
         conflict_text = json.dumps(_envelope_identity(conflict))
         rejected = (not _success(conflict)) and any(token in conflict_text.upper()
                                                    for token in ("IDEMPOTENCY", "CONFLICT"))
-        case.assertions["t010_conflict"] = _envelope_identity(conflict)
+        case.assertions["t010_conflict"] = dict(_envelope_identity(conflict),
+                                                expected_revision=conflict_revision)
         _mark(case, "request_hash_conflict_rejected", "PASS" if rejected else "FAIL",
               None if rejected else "a different body under the same idempotency key was not rejected as a conflict")
     # The duplicate probe needs the tag to exist *first*: one create, then the duplicate create.
@@ -7031,34 +10043,149 @@ async def _case_guard_t005(host: ProductionHost, client: ActionClient, case: Cas
     case.finish()
 
 
+def _record_solution(state: dict[str, Any], case: Case, *, source: str, dataset: str | None,
+                     solution: str | None) -> dict[str, Any]:
+    """Record one *stored* solution this run observed.
+
+    A study's requested ``tlist`` is not a stored time and a requested dataset is not a stored
+    dataset, so only a solved study's own completion is recorded here — and what a field evaluation
+    reads is the stored solution named in the evaluation response, never the request.
+    """
+    rows = state.setdefault("solved_solutions", [])
+    if not isinstance(rows, list):
+        rows = state["solved_solutions"] = []
+    row = {"case": case.case_id, "source": source, "dataset": dataset, "solution": solution, "at": _utc_now()}
+    rows.append(row)
+    del rows[:-20]
+    case.assertions.setdefault("solved_solutions", []).append(dict(row))
+    return row
+
+
+def _request_dispatch_stage(host: ProductionHost, payload: Mapping[str, Any] | None) -> dict[str, Any]:
+    """What the run's execution context recorded about one request's dispatch stage (C02).
+
+    A refused-before-dispatch request is the only kind whose replay cannot execute anything twice, and
+    the context is the single place that decides this — so a case that wants to show "no write call
+    happened" reads this instead of guessing from the error text.
+    """
+    context = getattr(host, "context", None)
+    if context is None:
+        return {"available": False, "reason": "this host carries no execution context (offline double)"}
+    witness = unpack_envelope("dispatch-stage", payload)
+    request_id = witness.execution.get("request_id") if isinstance(witness.execution, Mapping) else None
+    rows = [row for row in context.dispatches if row.get("request_id") == request_id]
+    return {"available": True, "request_id": request_id,
+            "stage": rows[-1].get("stage") if rows else None, "rows": _json_safe(rows[-3:]),
+            "nothing_executed": bool(rows and rows[-1].get("stage") in NOT_EXECUTED_STAGES)}
+
+
+def _evaluation_rows(payload: Mapping[str, Any] | None) -> list[dict[str, Any]]:
+    """The expression rows a successful evaluation published (never a Python-computed substitute)."""
+    data = _mapping(_data(payload))
+    for key in ("expressions", "results", "values", "data"):
+        rows = data.get(key)
+        if isinstance(rows, Sequence) and not isinstance(rows, (str, bytes)):
+            collected = [dict(row) for row in rows if isinstance(row, Mapping)]
+            if collected:
+                return collected
+    return []
+
+
+def _value_shape(value: Any) -> Any:
+    """The shape of one reported value (so "a scalar" and "a field" cannot be confused)."""
+    if isinstance(value, (list, tuple)):
+        return [len(value)] + ([len(value[0])] if value and isinstance(value[0], (list, tuple)) else [])
+    if value is None:
+        return None
+    return []
+
+
+#: The expression kinds T033 verifies on a clean, validly bound model (C04).  A constant is *not*
+#: computed in Python: it is routed through the engine's own evaluator, and the routing conditions
+#: each request needs are pre-registered here, so "9" can only ever come from the product.
+T033_EXPRESSIONS: tuple[dict[str, Any], ...] = (
+    {"name": "phase4_constant", "expression": "3*3", "kind": "constant",
+     "routing": ("routed through the engine's own expression parser with the bound model's context; the "
+                 "driver never computes the value itself"),
+     "requires": ()},
+    {"name": "phase4_model_expression", "expression": "k_w_mk/T0_k", "kind": "model_expression",
+     "routing": "resolved against the bound model's own parameters/expressions",
+     "requires": ("model_parameters",)},
+    {"name": "phase4_solved_field", "expression": "T", "kind": "solved_field",
+     "routing": ("read on a *stored* solution/dataset: the study's requested tlist is not a stored time, so "
+                 "the dataset/solution and the stored times are recorded with the value"),
+     "requires": ("solved_solution",)},
+    {"name": "phase4_illegal", "expression": "sin(", "kind": "illegal_expression",
+     "routing": "must be refused by the engine's parser; a successful value would itself be the defect",
+     "requires": ()},
+)
+
+
+def _t033_requirement(name: str, case: Case, host: ProductionHost, state: Mapping[str, Any]) -> dict[str, Any]:
+    """Whether one pre-registered T033 routing condition is established by evidence this run holds."""
+    values = state if isinstance(state, Mapping) else {}
+    if name == "model_parameters":
+        rows = case.assertions.get("t033_parameter_probe")
+        rows = rows if isinstance(rows, Sequence) and not isinstance(rows, (str, bytes)) else []
+        ok = any(isinstance(row, Mapping) and row.get("success") for row in rows)
+        return {"met": bool(ok), "evidence": ("the model's parameters were read back" if ok else
+                                              "no parameter read-back was recorded for this model")}
+    if name == "solved_solution":
+        rows = values.get("solved_solutions")
+        rows = rows if isinstance(rows, Sequence) and not isinstance(rows, (str, bytes)) else []
+        ok = bool(rows)
+        return {"met": ok, "evidence": (f"a stored solution was observed ({len(rows)} dataset/solution row(s))"
+                                        if ok else
+                                        "no stored solution was observed in this run, so a field evaluation "
+                                        "has no dataset to read")}
+    return {"met": False, "evidence": f"unknown routing condition {name!r}"}
+
+
 async def _case_guard_t033(host: ProductionHost, client: ActionClient, case: Case, args: argparse.Namespace,
                            state: dict[str, Any]) -> None:
     rows = await _prepare_case(case, host, _plan_ops(case.case_id))
     detail = rows.get("evaluate_expressions") or {}
     policy = detail.get("evaluation_policy")
+    policy_source = detail.get("evaluation_policy_source")
+    policy_note = detail.get("evaluation_policy_note")
+    # C04: the policy is whatever the *operation* publishes, read at its own path
+    # (``input_schema.properties.evaluation_policy`` first).  The case judges that declaration
+    # instead of demanding it in a field the operation never had.
     policy_ok = bool(detail.get("available")) and isinstance(policy, Mapping) and bool(policy)
-    schema_raw = detail.get("input_schema")
-    schema: Mapping[str, Any] = schema_raw if isinstance(schema_raw, Mapping) else {}
-    schema_properties = schema.get("properties")
-    policy_field = schema_properties.get("evaluation_policy") if isinstance(schema_properties, Mapping) else None
     case.assertion("static_evaluation_policy_documented", policy_ok,
                    evaluation_policy=_json_safe(policy),
-                   input_schema_policy_field=_json_safe(policy_field),
+                   evaluation_policy_source=policy_source,
+                   evaluation_policy_note=policy_note,
+                   input_schema_properties=_json_safe(detail.get("input_schema_properties")),
                    implementation_status=detail.get("implementation_status"),
                    remediation=_json_safe(detail.get("remediation")))
-    if policy_ok:
-        case.subcase("static_evaluation_policy_documented", "PASS", level="static")
+    case.assertion("static_evaluation_policy_source_recorded", bool(policy_source),
+                   evaluation_policy_source=policy_source, note=policy_note)
+    if policy_source:
+        case.subcase("static_evaluation_policy_source_recorded", "PASS", level="static",
+                     reason=None, evaluation_policy_source=policy_source)
     else:
-        # The published input schema *accepts* ``evaluation_policy`` while operation_describe
-        # publishes no policy contract for it (no isolation/ownership guarantees), so the T033
-        # policy line cannot be inspected on this build.  Both halves are recorded.
+        # C04: a field the product does not publish is not a defect of the case — it is a line that
+        # cannot be inspected on this build, so it is BLOCKED with the path that was read recorded.
+        case.subcase("static_evaluation_policy_source_recorded", "BLOCKED", level="static",
+                     reason=(policy_note or "") or
+                            ("operation_describe publishes no evaluation_policy at "
+                             f"{_EVALUATION_POLICY_PATH} nor at the data level, so the published path this "
+                             "build uses cannot be established"),
+                     evaluation_policy_source=None,
+                     inspected_paths=[_EVALUATION_POLICY_PATH, "data.evaluation_policy"],
+                     operation_available=bool(detail.get("available")))
+    if policy_ok:
+        case.subcase("static_evaluation_policy_documented", "PASS", level="static",
+                     evaluation_policy_source=policy_source)
+    else:
+        # The operation publishes no policy declaration for ``evaluation_policy`` at either the
+        # schema path or the data level, so the T033 policy line cannot be inspected on this build.
         case.subcase("static_evaluation_policy_documented", "BLOCKED", level="static",
-                     reason=("operation_describe does not publish an evaluation policy for evaluate_expressions "
+                     reason=("operation_describe publishes no evaluation policy for evaluate_expressions "
                              "in this build (no isolation or node-ownership contract), so the T033 policy "
-                             "contract cannot be inspected"
-                             + ("; the input schema does declare the evaluation_policy property, which is a "
-                                "request field, not a published guarantee" if policy_field else "")),
-                     evaluation_policy=_json_safe(policy), input_schema_policy_field=_json_safe(policy_field))
+                             "contract cannot be inspected"),
+                     evaluation_policy=_json_safe(policy), evaluation_policy_source=policy_source)
     live_names = ("pure_read_rejects_or_isolates", "ephemeral_mutation_recorded_and_serial",
                   "only_own_temporary_nodes_cleaned")
     runnable, status, why = _can_run(case, args, state, rows, ("evaluate_expressions",), require_writable_model=True)
@@ -7072,9 +10199,27 @@ async def _case_guard_t033(host: ProductionHost, client: ActionClient, case: Cas
                                 "evaluation_policy": "pure_read"},
                                key="t033-pure", request="pure")
     pure_unknown = _unknown_outcome(pure)
-    pure_ok = (not _success(pure)) or "ephemeral" in json.dumps(_data(pure)).lower()
+    # C04: the acceptance line is *the policy refusal*, not any failure.  A missing node, a stale
+    # revision or an engine that answered UNKNOWN proves nothing about the pure_read policy, so only
+    # a refusal that names the policy counts — and a success counts only when the reply reports the
+    # (non-mutating) policy it applied.
+    pure_text = json.dumps(_envelope_identity(pure)) + json.dumps(_json_safe(_data(pure)))
+    pure_refusal_basis = sorted({token for token in ("PURE_READ", "EVALUATION_POLICY", "POLICY", "READ_ONLY")
+                                 if token in pure_text.upper()})
+    pure_policy_refusal = (not _success(pure)) and bool(pure_refusal_basis)
+    pure_policy_echo = bool(_success(pure) and isinstance(_data(pure), Mapping) and any(
+        str(_data(pure).get(key)).lower() == "pure_read"
+        for key in ("evaluation_policy", "policy", "applied_policy")))
+    pure_ok = pure_policy_refusal or pure_policy_echo
     case.assertions["t033_pure"] = {**_envelope_identity(pure),
-                                    "unknown_engine_state": _json_safe(pure_unknown)}
+                                    "unknown_engine_state": _json_safe(pure_unknown),
+                                    "policy_refusal": pure_policy_refusal,
+                                    "policy_refusal_basis": pure_refusal_basis,
+                                    "policy_echo": pure_policy_echo,
+                                    "dispatch_stage": _request_dispatch_stage(host, pure),
+                                    "note": ("a pure_read verdict is this line's evidence only when it *is* the "
+                                             "policy refusal (or a success that echoes the non-mutating policy); "
+                                             "any other error is recorded as not-a-policy-refusal")}
     if pure_unknown is not None:
         # A gated or unknown evaluation is neither an isolation note nor a rejection.
         _mark(case, "pure_read_rejects_or_isolates", "BLOCKED",
@@ -7083,7 +10228,12 @@ async def _case_guard_t033(host: ProductionHost, client: ActionClient, case: Cas
               unknown_engine_state=_json_safe(pure_unknown))
     else:
         _mark(case, "pure_read_rejects_or_isolates", "PASS" if pure_ok else "FAIL",
-              None if pure_ok else "a pure_read evaluation mutated the model without an isolation note")
+              None if pure_ok else
+              (f"the pure_read evaluation neither produced a policy refusal nor echoed the policy "
+               f"(observed {_error_code(pure) or 'no error code'}): an arbitrary error is not the policy "
+               "refusal this line requires"),
+              policy_refusal=pure_policy_refusal, policy_echo=pure_policy_echo,
+              dispatch_stage=_request_dispatch_stage(host, pure))
     first = await client.action("evaluate_expressions",
                                 {"expressions_json": json.dumps([{"name": "phase4_ephemeral", "expression": "3*3"}]),
                                  "evaluation_policy": "ephemeral_mutation"},
@@ -7139,6 +10289,80 @@ async def _case_guard_t033(host: ProductionHost, client: ActionClient, case: Cas
         _mark(case, "only_own_temporary_nodes_cleaned", "FAIL",
               "the evaluation did not report which temporary nodes it owned and cleaned",
               observed=case.assertions["t033_temporary_nodes"])
+    # C04: the four expression kinds, each with the routing condition it needs pre-registered.  The
+    # constant is routed through the engine (never computed here), the model expression needs a
+    # readable expression property, the field evaluation needs a *stored* solution, and the illegal
+    # expression must be refused by the engine's own parser.
+    try:
+        candidates, discovery = await _typed_candidates(client, kinds=("expression", "float64"),
+                                                        node_limit=12, property_limit=3)
+    except CapabilityUnavailable:
+        candidates, discovery = [], {"available": False}
+    case.assertions["t033_parameter_probe"] = [
+        {"success": True, "node": row.get("node_type"), "property": row.get("name"), "kind": row.get("kind"),
+         "unit": row.get("unit"), "value": row.get("value")} for row in candidates[:5]]
+    case.assertions["t033_parameter_discovery"] = _json_safe(discovery)
+    expression_evidence: list[dict[str, Any]] = []
+    for item in T033_EXPRESSIONS:
+        unmet = [name for name in item["requires"] if not _t033_requirement(name, case, host, state)["met"]]
+        if unmet:
+            expression_evidence.append({"name": item["name"], "kind": item["kind"],
+                                        "expression": item["expression"], "routing": item["routing"],
+                                        "verdict": "NOT_RUN",
+                                        "reason": "routing condition not established: " + ", ".join(unmet)})
+            continue
+        payload = await client.action(
+            "evaluate_expressions",
+            {"expressions_json": json.dumps([{"name": item["name"], "expression": item["expression"]}]),
+             "evaluation_policy": "ephemeral_mutation"},
+            key=f"t033-{item['kind']}", request=f"t033-{item['kind']}")
+        rows = _evaluation_rows(payload)
+        data = _mapping(_data(payload))
+        value = rows[0].get("value") if rows else None
+        unknown = _unknown_outcome(payload)
+        entry: dict[str, Any] = {"name": item["name"], "kind": item["kind"], "expression": item["expression"],
+                                 "routing": item["routing"], "success": _success(payload),
+                                 "error_code": _error_code(payload), "error_message": _error_message(payload) or None,
+                                 "value": _json_safe(value), "shape": _value_shape(value),
+                                 "dataset": _json_safe(data.get("dataset")), "solution": _json_safe(data.get("solution")),
+                                 "reported_keys": sorted(str(key) for key in data),
+                                 "dispatch_stage": _request_dispatch_stage(host, payload),
+                                 "unknown_engine_state": _json_safe(unknown)}
+        if unknown is not None:
+            entry["verdict"] = "UNKNOWN"
+        elif item["kind"] == "illegal_expression":
+            entry["verdict"] = "refused" if not _success(payload) else "NOT_REFUSED"
+        elif _success(payload) and rows:
+            entry["verdict"] = "value_recorded"
+        elif item["kind"] in {"model_expression", "solved_field"}:
+            # A name the model does not define (or a field with no stored dataset on the evaluation
+            # route) is a routing gap of *this* model, recorded as such: the engine's refusal is the
+            # observation, and nothing is substituted for it.
+            entry["verdict"] = "ROUTING_GAP"
+        else:
+            entry["verdict"] = "NO_VALUE_REPORTED"
+        expression_evidence.append(entry)
+    case.assertions["t033_expression_kinds"] = expression_evidence
+    unknown_kinds = [row for row in expression_evidence if row["verdict"] == "UNKNOWN"]
+    failed_kinds = [row for row in expression_evidence
+                    if row["verdict"] in {"NOT_REFUSED", "NO_VALUE_REPORTED"}]
+    observed_kinds = [row for row in expression_evidence if row["verdict"] in {"value_recorded", "refused"}]
+    if unknown_kinds:
+        _mark(case, "evaluation_expression_kinds_routed", "BLOCKED",
+              "an expression kind could not be established: the engine reported an unknown state "
+              f"({unknown_kinds[0].get('error_code') or 'EXECUTION_STATE_UNKNOWN'})",
+              observed=case.assertions["t033_expression_kinds"])
+    elif failed_kinds:
+        _mark(case, "evaluation_expression_kinds_routed", "FAIL",
+              (f"the pre-registered expectation was violated for: "
+               + ", ".join(f"{row['kind']}={row['verdict']}" for row in failed_kinds)),
+              observed=case.assertions["t033_expression_kinds"])
+    else:
+        _mark(case, "evaluation_expression_kinds_routed", "PASS",
+              None if len(observed_kinds) == len(expression_evidence) else
+              ("some kinds were not routed on this model; their routing conditions are recorded per kind "
+               "and none was silently treated as a value"),
+              observed=case.assertions["t033_expression_kinds"])
     case.finish()
 
 
@@ -7202,6 +10426,11 @@ async def _reopen_check(args: argparse.Namespace) -> int:
                 for name in ("structure_readback", "representative_values"):
                     case.subcase(name, "BLOCKED", level="live", reason="offline run: --live was not supplied")
             else:
+                connect = await host.call("server_connect", {
+                    "host": args.host, "port": args.port,
+                    "execution": _execution(key="reopen-server-connect", request="connect", ref=None, revision=None),
+                })
+                state["server_connect"] = {"success": _success(connect), "error_code": _error_code(connect)}
                 loaded, load_probe = await _load_model(host, client, mph, args.reopen_artifact_id, key="reopen-load")
                 case.assertions["model_load"] = _envelope_identity(loaded)
                 case.assertions["model_load_probe"] = _json_safe(load_probe)
@@ -7212,6 +10441,9 @@ async def _reopen_check(args: argparse.Namespace) -> int:
                                      reason=f"model.load returned {_error_code(loaded) or 'an invalid envelope'}: "
                                             f"{_error_message(loaded)[:160] or 'no message'}")
                 else:
+                    _adopt_payload_model(client, loaded)
+                    state["ref"] = client.state.get("ref")
+                    state["revision"] = client.state.get("revision")
                     tree = await client.host.call("model_tree", {"depth": 3,
                                                                  "execution": _execution(key="reopen-tree",
                                                                                          ref=state.get("ref"),
@@ -7298,7 +10530,8 @@ def _environment_document(args: argparse.Namespace, run_dir: Path, *, extra: Map
         },
         "comsol_environment_keys_present": sorted(key for key in os.environ if key.startswith("COMSOL_")),
         "case_order": list(CASE_ORDER),
-        "selected_cases": list(args.only) if getattr(args, "only", None) else list(CASE_ORDER),
+        "selected_cases": select_cases(args),
+        "slice": _slice_summary(args, select_cases(args)),
     }
     if extra:
         document.update(dict(extra))
@@ -7387,6 +10620,469 @@ def _write_case_evidence(run_dir: Path, case: Case, rows: Sequence[Mapping[str, 
     return case.as_dict()
 
 
+# ---------------------------------------------------------------------------
+# C03: case isolation, prerequisite declarations and first-cause classification
+# ---------------------------------------------------------------------------
+#: The four classes a case's *first* failure is filed under (G3.1 section 4).  A case that cannot
+#: start yields one dependency-blocked finding that points at its root cause instead of dozens of
+#: pseudo-independent defects; a driver/fixture/protocol defect is the harness's own; a promised
+#: required capability that is missing is an implementation gap; and only a genuinely unobtainable
+#: platform, product, system approval or license is an external blocker.
+FIRST_CAUSE_CLASSES: tuple[str, ...] = ("DEPENDENCY_BLOCKED", "HARNESS_FAILURE", "IMPLEMENTATION_GAP",
+                                        "EXTERNAL_BLOCKER")
+FIRST_CAUSE_BY_CODE: dict[str, str] = {
+    # A required predecessor did not succeed.
+    "DEPENDENCY_BLOCKED": "DEPENDENCY_BLOCKED",
+    "NODE_NOT_FOUND": "DEPENDENCY_BLOCKED",
+    "PRECONDITION_FAILED": "DEPENDENCY_BLOCKED",
+    "MISSING_DEPENDENCY": "DEPENDENCY_BLOCKED",
+    "GEOMETRY_NOT_FOUND": "DEPENDENCY_BLOCKED",
+    # The driver's own defect (fixture, assertion, protocol, planning).
+    "DRIVER_PRE_DISPATCH_REFUSAL": "HARNESS_FAILURE",
+    "INVALID_MCP_RESPONSE": "HARNESS_FAILURE",
+    "HARNESS_FAILURE": "HARNESS_FAILURE",
+    "PROTOCOL_ERROR": "HARNESS_FAILURE",
+    # A required capability that this build does not implement.
+    "NOT_IMPLEMENTED": "IMPLEMENTATION_GAP",
+    "UNSUPPORTED_OPERATION": "IMPLEMENTATION_GAP",
+    "API_UNSUPPORTED": "IMPLEMENTATION_GAP",
+    "CAPABILITY_UNAVAILABLE": "IMPLEMENTATION_GAP",
+    "COMPILE_UNAVAILABLE": "IMPLEMENTATION_GAP",
+    "UNAVAILABLE": "IMPLEMENTATION_GAP",
+    # A revision-handling / contract defect in the product: never a license or product gap.
+    "REVISION_CONFLICT": "IMPLEMENTATION_GAP",
+    "MODEL_IDENTITY_MISMATCH": "IMPLEMENTATION_GAP",
+    "INVALID_REQUEST": "IMPLEMENTATION_GAP",
+    "INVALID_INVARIANT": "IMPLEMENTATION_GAP",
+    "PROPERTY_TYPE_MISMATCH": "IMPLEMENTATION_GAP",
+    # Genuinely unobtainable resources: platform, product, license, approval.
+    "BLOCKED_LICENSE": "EXTERNAL_BLOCKER",
+    "LICENSE_UNAVAILABLE": "EXTERNAL_BLOCKER",
+    "INSUFFICIENT_LICENSE": "EXTERNAL_BLOCKER",
+    "PRODUCT_UNAVAILABLE": "EXTERNAL_BLOCKER",
+    "EXECUTION_STATE_UNKNOWN": "EXTERNAL_BLOCKER",
+    "ENGINE_UNRESPONSIVE": "EXTERNAL_BLOCKER",
+    "CONTROL_STARTUP_ERROR": "EXTERNAL_BLOCKER",
+    "SERVER_UNAVAILABLE": "EXTERNAL_BLOCKER",
+    "CONTROL_SERVICE_UNAVAILABLE": "EXTERNAL_BLOCKER",
+    "RUNTIME_CONFIGURATION_REQUIRED": "EXTERNAL_BLOCKER",
+    "ISOLATION_PROOF_REQUIRED": "EXTERNAL_BLOCKER",
+    "CONNECT_REQUIRED": "EXTERNAL_BLOCKER",
+    "ENGINE_BUSY": "EXTERNAL_BLOCKER",
+}
+#: Wording that shows a failure is *not* about an unobtainable resource, however it was labelled:
+#: a revision conflict, an API-signature mismatch, a node path or a local path error is a product or
+#: harness defect.  The live review found exactly this misattribution ("CAD license missing" for a
+#: REVISION_CONFLICT / signature / path problem), which is why the classifier re-files such a row
+#: instead of trusting its label.
+MISATTRIBUTED_BLOCKER = re.compile(
+    r"revision[_ ]conflict|expected_revision|managed revision|idempotency[_ ]conflict|"
+    r"signature|arity|nodepath|node[_ ]path|node not found|tag[_ ]conflict|"
+    r"no such file|file not found|path does not exist|invalid[_ ]request|schema",
+    re.IGNORECASE)
+#: Wording that points at the harness rather than at the product.
+HARNESS_WORDING = re.compile(r"\bthe driver\b|\bdriver\b|fixture|assertion|driver_exception|plan(ning)? |handler|"
+                             r"unexpected call to|traceback", re.IGNORECASE)
+
+
+def _defect_evidence_text(entry: Mapping[str, Any]) -> str:
+    """Everything one failure row carries as *evidence*, for the misattribution guard.
+
+    The label a row claims is not evidence, so the guard reads the row's own refusal/observation
+    material: a ``REVISION_CONFLICT`` hidden in ``observed``/``refusal`` must be able to contradict a
+    ``BLOCKED_LICENSE`` claim that the row's headline makes.
+    """
+    parts: list[str] = [str(entry.get("reason") or ""), str(entry.get("message") or "")]
+    for key in ("observed", "detail", "refusal", "read_errors", "refusal_evidence", "envelope"):
+        value = entry.get(key)
+        if value is None:
+            continue
+        try:
+            parts.append(json.dumps(value, default=str))
+        except (TypeError, ValueError):  # pragma: no cover - defensive
+            parts.append(str(value))
+    return " ".join(part for part in parts if part)
+
+
+def _first_cause_from_text(text: str) -> str:
+    """The class of a failure that carries no code of its own — from the failure's own wording."""
+    lowered = text.lower()
+    if any(token in lowered for token in ("prerequisite", "not run", "did not pass", "predecessor",
+                                          "dependency", "before its prerequisite")):
+        return "DEPENDENCY_BLOCKED"
+    if HARNESS_WORDING.search(text):
+        return "HARNESS_FAILURE"
+    if any(token in lowered for token in ("license", "licence", "product", "unavailable", "not installed",
+                                          "no seat", "entitlement")):
+        return "EXTERNAL_BLOCKER"
+    if any(token in lowered for token in ("revision", "signature", "nodepath", "node path", "schema",
+                                          "not implemented", "unsupported")):
+        return "IMPLEMENTATION_GAP"
+    return "IMPLEMENTATION_GAP"
+
+
+def classify_first_cause(row: Mapping[str, Any] | None, *, case_id: str | None = None) -> dict[str, Any]:
+    """File one failure under exactly one of the four first-cause classes, with its own evidence.
+
+    ``row`` is a subcase row (``status``/``reason``/``error_code``/``observed``) or a driver-side
+    failure record.  A row that declares its own ``first_cause`` keeps it.  A label that claims an
+    external blocker while the evidence names a revision conflict, a signature mismatch or a path
+    error is re-filed (and says so), so "CAD license missing" can never stand in for a driver or
+    product defect.
+    """
+    entry = row if isinstance(row, Mapping) else {}
+    declared = entry.get("first_cause")
+    if isinstance(declared, str) and declared in FIRST_CAUSE_CLASSES:
+        return {"class": declared, "source": "declared", "case_id": case_id,
+                "reason": entry.get("reason"), "error_code": entry.get("error_code")}
+    observed = entry.get("observed")
+    observed = observed if isinstance(observed, Mapping) else {}
+    code = str(entry.get("error_code") or observed.get("error_code") or "")
+    # C03: the product may wrap the operation's *own* failure inside a broader code — the M1 run's
+    # ``variable.group_create`` refusal is ``EXECUTION_STATE_UNKNOWN`` with
+    # ``error.details.cause_code = NODE_NOT_FOUND``.  The original cause decides the class; the
+    # wrapper code stays in the row as ``raised_code`` so nothing is lost.
+    cause_code = str(entry.get("cause_code") or observed.get("cause_code") or "")
+    reason = str(entry.get("reason") or observed.get("message") or entry.get("message") or "")
+    classification = FIRST_CAUSE_BY_CODE.get(cause_code)
+    cause_source = "product error.details.cause_code"
+    if classification is None:
+        classification = FIRST_CAUSE_BY_CODE.get(code)
+        cause_source = "envelope error.code"
+    cause = classification or _first_cause_from_text(f"{cause_code} {code} {reason}")
+    guard: dict[str, Any] | None = None
+    if cause == "EXTERNAL_BLOCKER":
+        # The G3.1 §4 correction: "CAD license insufficient" may never stand in for a revision,
+        # signature or path defect.  The guard reads the row's whole evidence, not just its label.
+        evidence_text = _defect_evidence_text(entry)
+        matched = MISATTRIBUTED_BLOCKER.search(evidence_text)
+        if matched:
+            cause = "HARNESS_FAILURE" if HARNESS_WORDING.search(evidence_text) else "IMPLEMENTATION_GAP"
+            guard = {"reclassified_from": "EXTERNAL_BLOCKER", "class": cause,
+                     "matched_evidence": matched.group(0),
+                     "why": ("the evidence names a revision/signature/path defect, which is never an "
+                             "unobtainable resource: no license, product or platform claim may stand in "
+                             "for it")}
+    return {"class": cause, "source": "classified", "case_id": case_id,
+            "error_code": code or None, "cause_code": cause_code or None, "raised_code": code or None,
+            "cause_source": cause_source if classification else "wording",
+            "reason": reason or None, "guard": guard,
+            "subcase": entry.get("subcase")}
+
+
+def case_first_cause(case: Case) -> dict[str, Any] | None:
+    """The case's own first failure: at most ONE class per case (never dozens of pseudo-defects).
+
+    A case-level (or subcase-level) ``first_cause`` declaration is honoured, but only inside the
+    closed vocabulary: a declaration outside it is itself a driver-side defect and is filed as a
+    harness failure rather than quietly accepted.
+    """
+    declared = case.assertions.get("first_cause")
+    if isinstance(declared, Mapping):
+        return _json_safe(dict(declared))
+    if isinstance(declared, str):
+        if declared in FIRST_CAUSE_CLASSES:
+            return {"class": declared, "source": "declared", "case_id": case.case_id,
+                    "reason": case.reason, "error_code": None}
+        return {"class": "HARNESS_FAILURE", "source": "declared-invalid", "case_id": case.case_id,
+                "reason": f"the case declared {declared!r}, which is outside the first-cause vocabulary",
+                "error_code": None,
+                "guard": {"reclassified_from": declared, "class": "HARNESS_FAILURE",
+                          "why": "the closed vocabulary is DEPENDENCY_BLOCKED/HARNESS_FAILURE/"
+                                 "IMPLEMENTATION_GAP/EXTERNAL_BLOCKER"}}
+    for name, row in case.subcases.items():
+        if row.get("status") in {"FAIL", "BLOCKED"}:
+            entry = dict(row)
+            entry.setdefault("subcase", name)
+            return _json_safe(classify_first_cause(entry, case_id=case.case_id))
+    if case.status in {"FAIL", "BLOCKED"}:
+        # A case that closed without a failing subcase still gets one cause: the case-level reason
+        # is the first symptom the rest of the case's lines follow from.
+        return _json_safe(classify_first_cause({"status": case.status, "reason": case.reason,
+                                                "subcase": "(case level)"}, case_id=case.case_id))
+    return None
+
+
+def _first_cause_summary(cases: Sequence[Case]) -> dict[str, Any]:
+    """The run-wide first-cause view: one class per failing case, never one per failed assertion."""
+    per_case: dict[str, Any] = {}
+    counts = {name: 0 for name in FIRST_CAUSE_CLASSES}
+    for case in cases:
+        cause = case_first_cause(case)
+        if cause is None:
+            continue
+        per_case[case.case_id] = cause
+        cause_class = str(cause.get("class") or "IMPLEMENTATION_GAP")
+        counts[cause_class] = counts.get(cause_class, 0) + 1
+    return {"per_case": per_case, "counts": counts, "classes": list(FIRST_CAUSE_CLASSES),
+            "note": ("each case contributes at most one first cause; downstream subcases list "
+                     "DEPENDENCY_BLOCKED against it instead of becoming pseudo-independent defects")}
+
+
+# ---------------------------------------------------------------------------
+# Case prerequisites and per-case isolation
+# ---------------------------------------------------------------------------
+#: The closed vocabulary of prerequisites a case may declare.
+PREREQUISITE_CHECKS: dict[str, str] = {
+    "bound_model": "a model_ref is bound for this run",
+    "observed_revision": "the bound model's revision was read back at least once",
+    "own_geometry": "the case builds its own component/geometry (no predecessor geometry assumed)",
+    "negative_probe": "the case deliberately provokes a product refusal",
+    "isolated_model": "the case's declared isolation (its own model or a verified checkpoint restore) was applied",
+    "runtime": "a runtime/connection epoch exists for the runtime-scoped probes",
+    "predecessor": "a named predecessor case finished PASS",
+}
+#: What each case declares it needs before its live half may run (G3.1 section 4: "in case start,
+#: establish explicit prerequisites: model, component/geometry, material, mesh/study, revision").
+#: A missing declaration item is the case's *dependency*, not a defect of the case itself.
+CASE_PREREQUISITES: dict[str, tuple[str, ...]] = {
+    "R01_LIVE": ("bound_model", "own_geometry"),
+    "R03_LIVE": ("bound_model", "own_geometry"),
+    "R04_LIVE": ("bound_model", "observed_revision", "negative_probe"),
+    "R_READBACK": ("bound_model",),
+    "W13_T006_variables": ("bound_model", "observed_revision", "own_geometry"),
+    "W13_T015_units": ("bound_model",),
+    "W13_T048_selection_drift": ("bound_model", "own_geometry"),
+    "W13_T016_2D_data": ("bound_model", "own_geometry"),
+    "W14_T009_geometry_edit": ("bound_model",),
+    "W14_T034_local_paths": ("bound_model",),
+    "W15_T007_selections": ("bound_model", "own_geometry"),
+    "W15_T017_material": ("bound_model", "own_geometry"),
+    "W15_T042_license": ("bound_model", "runtime"),
+    "W16_T018_mesh": ("bound_model", "own_geometry"),
+    "W16_T019_chainA_steady": ("bound_model", "own_geometry"),
+    "W16_T019_chainB_transient": ("bound_model", "own_geometry"),
+    "W16_T019_chainC_continue": ("bound_model", "predecessor:W16_T019_chainA_steady"),
+    "W16_T020_solver": ("bound_model",),
+    "GUARD_T010": ("bound_model", "negative_probe"),
+    "GUARD_T035": ("bound_model", "negative_probe"),
+    "GUARD_T038": ("bound_model", "negative_probe"),
+    "GUARD_T005": ("bound_model", "negative_probe"),
+    "GUARD_T033": ("bound_model", "observed_revision", "negative_probe", "isolated_model"),
+}
+#: How one case keeps its negative probes and writes away from the models other cases use.  Live
+#: runs prepare the case's own model (or a verified checkpoint restore) *before* the case body; the
+#: same Server stays strictly serial either way.
+CASE_ISOLATION: dict[str, dict[str, str]] = {
+    # The negative probes of R01/R03/R04 used to pollute the single shared model and every case after
+    # them inherited the damage: they get their own model.
+    "R01_LIVE": {"mode": "own_model", "rationale": "negative probes must not pollute another case's model"},
+    "R03_LIVE": {"mode": "own_model", "rationale": "negative probes must not pollute another case's model"},
+    "R04_LIVE": {"mode": "own_model", "rationale": "the stale-revision probe must not dirty the shared model"},
+    "GUARD_T033": {"mode": "own_model",
+                   "rationale": ("the evaluation-policy probes need a clean, validly bound model that no "
+                                 "earlier refusal has dirtied")},
+    "W16_T019_chainC_continue": {"mode": "checkpoint_restore",
+                                 "rationale": "the user-style fixture is restored from a verified checkpoint, "
+                                              "never edited in place"},
+    "W14_T009_geometry_edit": {"mode": "checkpoint_restore",
+                               "rationale": "an in-place geometry edit is only safe on a restored fixture"},
+}
+#: The default: the case runs against the run's bound model, strictly serially with the others.
+#: The closed vocabulary of isolation modes: how a case keeps its writes away from the models other
+#: cases use.  A live run prepares the declared mode *before* the case body and records whether it
+#: was applied; the run itself stays serial either way.
+ISOLATION_MODES: tuple[str, ...] = ("own_model", "checkpoint_restore", "shared_bound")
+#: The declared isolation of a case that does not name one: the run's own bound model, serial flow.
+CASE_ISOLATION_DEFAULT = {"mode": "shared_bound",
+                          "rationale": "reads/writes the run's bound model; the run is serial"}
+
+
+def case_isolation(case_id: str) -> dict[str, Any]:
+    """How this case is isolated from the others (a declaration, always recorded)."""
+    entry = dict(CASE_ISOLATION.get(case_id) or CASE_ISOLATION_DEFAULT)
+    entry["case_id"] = case_id
+    entry["modes"] = list(ISOLATION_MODES)
+    return entry
+
+
+def _prerequisite_check(name: str, state: Mapping[str, Any] | None, *, live: bool,
+                        isolation: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Check one declared prerequisite against what this run has actually established."""
+    values = state if isinstance(state, Mapping) else {}
+    if name == "bound_model":
+        if not live:
+            return {"applicable": False, "satisfied": None,
+                    "evidence": "not applicable: the run is offline (no engine to bind a model on)"}
+        ref = values.get("ref")
+        ok = isinstance(ref, Mapping)
+        return {"applicable": True, "satisfied": ok,
+                "evidence": ("a model_ref is bound" if ok else
+                             "no model_ref is bound: every live step of this case depends on one")}
+    if name == "observed_revision":
+        if not live:
+            return {"applicable": False, "satisfied": None,
+                    "evidence": "not applicable: the run is offline"}
+        revision = values.get("revision")
+        ok = isinstance(revision, int) and not isinstance(revision, bool)
+        return {"applicable": True, "satisfied": ok,
+                "evidence": (f"the bound model's revision was read back ({revision})" if ok else
+                             "the bound model's revision was never read back")}
+    if name == "runtime":
+        if not live:
+            return {"applicable": False, "satisfied": None,
+                    "evidence": "not applicable: the run is offline"}
+        ok = bool(values.get("server_connect", {}).get("success")) if isinstance(values.get("server_connect"),
+                                                                                 Mapping) else False
+        return {"applicable": True, "satisfied": ok,
+                "evidence": ("the server connection succeeded" if ok else
+                             "no successful server connection was recorded for this run")}
+    if name == "own_geometry":
+        return {"applicable": False, "satisfied": None,
+                "evidence": "declared: the case builds its own component/geometry before using it"}
+    if name == "negative_probe":
+        return {"applicable": False, "satisfied": None,
+                "evidence": "declared: the case asks for the product's own refusal"}
+    if name == "isolated_model":
+        record = isolation if isinstance(isolation, Mapping) else {}
+        declaration = record.get("declaration") if isinstance(record.get("declaration"), Mapping) else {}
+        mode = declaration.get("mode")
+        if mode in (None, "shared_bound") or not live:
+            return {"applicable": False, "satisfied": None,
+                    "evidence": ("not applicable: this case runs against the run's bound model" if mode in (None, "shared_bound")
+                                 else "not applicable: the run is offline (no engine to isolate a model on)")}
+        ok = record.get("applied") is True
+        return {"applicable": True, "satisfied": ok,
+                "evidence": (f"the case's declared isolation ({mode}) was applied" if ok else
+                             f"the case's declared isolation ({mode}) was not applied: "
+                             f"{record.get('reason') or 'no reason was recorded'}")}
+    if name.startswith("predecessor:"):
+        target = name.split(":", 1)[1]
+        statuses = values.get("completed_cases")
+        status = statuses.get(target) if isinstance(statuses, Mapping) else None
+        if status is None and not live:
+            return {"applicable": False, "satisfied": None,
+                    "evidence": f"not applicable: {target} did not run in this selection"}
+        ok = status == "PASS"
+        return {"applicable": True, "satisfied": ok,
+                "evidence": (f"{target} finished {status}" if status else
+                             f"{target} has not run in this run, so its product cannot be assumed")}
+    return {"applicable": False, "satisfied": None,
+            "evidence": f"unknown declaration {name!r} (PREREQUISITE_CHECKS names the vocabulary)"}
+
+
+def case_prerequisites(case_id: str, state: Mapping[str, Any] | None, *, live: bool,
+                       isolation: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """The case's declared prerequisites, each checked (never assumed)."""
+    declared = CASE_PREREQUISITES.get(case_id) or ("bound_model",)
+    checks = {name: _prerequisite_check(name, state, live=live, isolation=isolation) for name in declared}
+    unsatisfied = [name for name, row in checks.items()
+                   if row.get("applicable") and row.get("satisfied") is False]
+    unknown = [name for name, row in checks.items() if name not in PREREQUISITE_CHECKS
+               and not name.startswith("predecessor:")]
+    return {"case_id": case_id, "declared": list(declared), "checks": checks,
+            "unsatisfied": unsatisfied, "unknown_declarations": unknown,
+            "status": "UNSATISFIED" if unsatisfied else "SATISFIED",
+            "note": ("a missing prerequisite makes this case DEPENDENCY_BLOCKED and points at the "
+                     "root cause; it never becomes a defect of this case")}
+
+
+async def _case_isolation_step(case: Case, client: ActionClient, args: argparse.Namespace,
+                               state: dict[str, Any], host: ProductionHost) -> dict[str, Any]:
+    """Give an independent case its own model before its body runs (live runs only).
+
+    The declaration is always recorded.  ``own_model`` creates a fresh MCP-owned model through the
+    public route and re-binds the run's client state to it; ``checkpoint_restore`` requires a
+    verified restore of the named checkpoint (recorded, never assumed).  An offline run records
+    exactly why nothing was attempted.
+    """
+    plan = case_isolation(case.case_id)
+    record: dict[str, Any] = {"declaration": plan, "attempted": False, "applied": False,
+                              "at": _utc_now()}
+    if plan["mode"] == "shared_bound":
+        record["reason"] = "declared: this case runs against the run's bound model, strictly serially"
+        return record
+    if not args.live:
+        record["reason"] = "not attempted: the run is offline (no engine to create or restore a model on)"
+        return record
+    if plan["mode"] == "own_model":
+        label = f"{case.case_id} ({args.fixture_model_name}) isolation model"
+        payload = await _create_empty_model(client, state, label, host)
+        record.update({"attempted": True, "route": "model.create", "model_label": label,
+                       "success": _success(payload), "error_code": _error_code(payload),
+                       "model_ref": _envelope_identity(payload)})
+        ok = bool(_success(payload) and isinstance(state.get("ref"), Mapping))
+        record["applied"] = ok
+        if not ok:
+            record["reason"] = (f"the case's own model could not be created "
+                                f"({_error_code(payload) or 'no model_ref came back'})")
+        return record
+    if plan["mode"] == "checkpoint_restore":
+        # A restore must be *verified* before the case may trust it: the published checkpoint reads
+        # establish that the checkpoint exists, and the restore is only accepted with a new ModelRef.
+        if "checkpoint_restore" not in host.tools:
+            record.update({"attempted": False, "applied": False,
+                           "reason": "checkpoint_restore is not published by this host, so this case cannot "
+                                     "be isolated on a restored fixture"})
+            return record
+        record["attempted"] = True
+        payload = await client.action("checkpoint.restore",
+                                      {"checkpoint": case.case_id, "reload": True},
+                                      key=_fresh_key(f"isolate-{case.case_id}"),
+                                      request=f"isolate-{case.case_id}")
+        record.update({"success": _success(payload), "error_code": _error_code(payload),
+                       "model_ref": _envelope_identity(payload)})
+        record["applied"] = bool(_success(payload) and isinstance(state.get("ref"), Mapping))
+        if not record["applied"]:
+            record["reason"] = (f"the checkpoint restore did not yield a bound model "
+                                f"({_error_code(payload) or 'no model_ref came back'})")
+        return record
+    record["reason"] = f"unknown isolation mode {plan['mode']!r}"
+    return record
+
+
+# ---------------------------------------------------------------------------
+# Slicing: --only subsets and the staged run plan (M0 -> M1 -> M2 -> M3)
+# ---------------------------------------------------------------------------
+#: The staged run plan of G3.1 section 10.  Every case belongs to exactly one stage; M3 is computed
+#: as the remainder so a newly added case can never silently stop being run.
+RUN_STAGES: dict[str, tuple[str, ...]] = {
+    "M0": (),  # the offline root-cause gate: no --live, so the whole selection runs its static half
+    "M1": ("W13_T006_variables", "W13_T015_units", "R04_LIVE", "GUARD_T010", "GUARD_T005", "GUARD_T033"),
+    "M2": ("W16_T019_chainA_steady", "W16_T019_chainB_transient"),
+}
+
+
+def stage_cases(stage: str) -> tuple[str, ...]:
+    """The case ids of one stage (M3 is the remainder, in the published case order)."""
+    name = str(stage).upper()
+    if name in RUN_STAGES and RUN_STAGES[name]:
+        return RUN_STAGES[name]
+    taken = {case_id for values in RUN_STAGES.values() for case_id in values}
+    return tuple(case_id for case_id in CASE_ORDER if case_id not in taken)
+
+
+def select_cases(args: argparse.Namespace) -> list[str]:
+    """The case selection of one run: a stage subset, an explicit --only list, or the intersection.
+
+    ``--only`` accepts both the comma-separated form the command line uses and the list ``main``
+    normalizes it to, and a slice never widens: a case named by ``--only`` that its stage excludes
+    is dropped rather than pulled in.
+    """
+    stage = str(getattr(args, "stage", "") or "")
+    base = list(stage_cases(stage)) if stage else list(CASE_ORDER)
+    raw = getattr(args, "only", None)
+    if isinstance(raw, str):
+        requested = [part.strip() for part in raw.split(",") if part.strip()]
+    else:
+        requested = [str(part).strip() for part in (raw or []) if str(part).strip()]
+    if not requested:
+        return base
+    return [case_id for case_id in requested if case_id in base]
+
+
+def _slice_summary(args: argparse.Namespace, selected: Sequence[str]) -> dict[str, Any]:
+    """What this run selected, and under which stage plan."""
+    only = list(getattr(args, "only", []) or [])
+    stage = getattr(args, "stage", None) or None
+    return {"stage": stage,
+            "stages": {name: list(stage_cases(name)) for name in ("M0", "M1", "M2", "M3")},
+            "only": only, "live": bool(getattr(args, "live", False)), "selected": list(selected),
+            "note": ("a slice is a documented run plan, not a weakened acceptance: every selected case "
+                     "still records its own subcases at their declared evidence level, and a stage "
+                     "subset never turns an unselected case into a pass")}
+
+
 def _status_counts(cases: Sequence[Case]) -> dict[str, int]:
     counts = {status: 0 for status in ("PASS", "FAIL", "BLOCKED", "NOT_RUN")}
     for case in cases:
@@ -7420,7 +11116,104 @@ def _write_run_index(run_dir: Path, cases: Sequence[Case], *, extra: Mapping[str
     return index
 
 
-def _write_summary(run_dir: Path, cases: Sequence[Case], host: ProductionHost | None = None) -> None:
+def _first_cause_lines(cases: Sequence[Case]) -> list[str]:
+    """The summary's first-cause table: one class per failing case."""
+    summary = _first_cause_summary(cases)
+    counts = summary["counts"]
+    lines = ["", "## First causes (C03)", "",
+             "- per class: " + ", ".join(f"{name} {counts.get(name, 0)}" for name in FIRST_CAUSE_CLASSES),
+             f"- classification rule: {summary['note']}"]
+    for case in cases:
+        cause = summary["per_case"].get(case.case_id)
+        if cause is None:
+            continue
+        guard = ""
+        if cause.get("guard"):
+            guard = f" — reclassified from {cause['guard'].get('reclassified_from')}: {cause['guard'].get('why')}"
+        # C03: the raised code and the operation's own cause are both named, so a wrapper code (e.g.
+        # EXECUTION_STATE_UNKNOWN around NODE_NOT_FOUND) can never hide which failure this is.
+        codes = [str(item) for item in (cause.get("raised_code") or cause.get("error_code"),
+                                        cause.get("cause_code")) if item]
+        lines.append(f"- `{case.case_id}` → **{cause.get('class')}** "
+                     f"({cause.get('error_code') or cause.get('source') or 'no code'}"
+                     + (f"; cause={'/'.join(codes)}" if len(codes) > 1 else "")
+                     + f"): {str(cause.get('reason') or '')[:160]}{guard}")
+    return lines
+
+
+def _isolation_lines(cases: Sequence[Case]) -> list[str]:
+    """The summary's isolation/prerequisite table: what each case declared and what was applied."""
+    lines = ["", "## Case isolation and prerequisites (C03)", ""]
+    for case in cases:
+        isolation_raw = case.assertions.get("isolation")
+        isolation: Mapping[str, Any] = isolation_raw if isinstance(isolation_raw, Mapping) else {}
+        declaration_raw = isolation.get("declaration")
+        declaration: Mapping[str, Any] = declaration_raw if isinstance(declaration_raw, Mapping) else {}
+        prerequisites = case.assertions.get("prerequisites")
+        prerequisites = prerequisites if isinstance(prerequisites, Mapping) else {}
+        missing = prerequisites.get("unsatisfied") or []
+        established = prerequisites.get("established")
+        established = established if isinstance(established, Mapping) else {}
+        restored_raw = isolation.get("shared_model_restored")
+        restored: Mapping[str, Any] = restored_raw if isinstance(restored_raw, Mapping) else {}
+        restored_ref = _mapping(restored.get("ref"))
+        lines.append(f"- `{case.case_id}`: isolation={declaration.get('mode')} "
+                     f"(applied={isolation.get('applied', False)}) — {declaration.get('rationale')}; "
+                     f"prerequisites={prerequisites.get('status', 'not declared')}"
+                     + (f"; shared binding restored: {restored_ref.get('model_tag')}"
+                        if restored_ref else "")
+                     + (f"; missing: {', '.join(str(name) for name in missing)}" if missing else ""))
+        if established:
+            # C03: what the case *established itself* (created and read back), not just what it
+            # declared — a container the fixture never made is the case's dependency.
+            lines.append(f"  - established: {established.get('component') or established.get('kind')} → "
+                         f"{established.get('status')} ({established.get('reason')})")
+    return lines
+
+
+def _slice_lines(args: argparse.Namespace | None, selected: Sequence[str] | None) -> list[str]:
+    """The summary's slice section: which stage/subset this run executed."""
+    if args is None:
+        return []
+    summary = _slice_summary(args, list(selected or []))
+    lines = ["", "## Slice (this run)", "",
+             f"- stage: {summary['stage'] or 'none (the full case order)'}",
+             f"- live: {summary['live']}",
+             f"- selected cases: {', '.join(summary['selected']) or 'none'}",
+             f"- note: {summary['note']}"]
+    for name in ("M0", "M1", "M2", "M3"):
+        lines.append(f"- {name}: {', '.join(summary['stages'][name]) or '(offline gate: no live case subset)'}")
+    return lines
+
+
+def _context_lines(evidence: Mapping[str, Any] | None) -> list[str]:
+    """The summary's execution-context section: requests, rejection reasons, replans, probes."""
+    if not isinstance(evidence, Mapping):
+        return []
+    counts = evidence.get("rejection_counts") or {}
+    replays = evidence.get("replays") or []
+    identical = len([row for row in replays if row.get("same_body") is True])
+    dispatches = evidence.get("dispatches") or []
+    stages = {name: len([row for row in dispatches if row.get("stage") == name]) for name in
+              sorted({str(row.get("stage")) for row in dispatches})}
+    lines = ["", "## Execution context (C02)", "",
+             f"- logical requests planned (run/case/step/sequence keys): {evidence.get('request_count', 0)}",
+             "- refusals classified as: "
+             + ", ".join(f"{name} {counts.get(name, 0)}" for name in (*REJECTION_REASONS, *AUXILIARY_REJECTIONS)),
+             f"- recorded new plans (replans): {len(evidence.get('replans') or [])}; "
+             f"same-key replays recorded: {len(replays)} (identical body verified: {identical})",
+             # C03: the stage each dispatched request provably reached, in the driver's own
+             # vocabulary (NOT_EXECUTED stages included), so a refusal is never read as a mystery.
+             "- dispatch stages recorded: " + (", ".join(f"{name} {count}" for name, count in stages.items())
+                                               if stages else "none"),
+             f"- generation replacements observed: {len(evidence.get('generation_replacements') or [])}",
+             f"- deliberate negative probes (never auto-repaired): {len(evidence.get('negative_probes') or [])}",
+             f"- unfinished jobs known to the context: {len(evidence.get('unfinished_jobs') or [])}"]
+    return lines
+
+
+def _write_summary(run_dir: Path, cases: Sequence[Case], host: ProductionHost | None = None, *,
+                   args: argparse.Namespace | None = None, selected: Sequence[str] | None = None) -> None:
     lines = ["# Phase 4 (G3) production stdio acceptance run", "",
              f"- generated: {_utc_now()}", f"- run directory: `{run_dir}`", ""]
     lines.append("| case | package | status | assertions | subcases | first finding |")
@@ -7458,6 +11251,11 @@ def _write_summary(run_dir: Path, cases: Sequence[Case], host: ProductionHost | 
                 lines.append(f"- `{entry.get('job_id')}` ({entry.get('operation')}): released="
                              f"{entry.get('released')}, attempts={len(releases)}, "
                              f"reconciled_quiescent={last.get('reconciled_quiescent')}, status={last.get('status')}")
+    lines.extend(_first_cause_lines(cases))
+    lines.extend(_isolation_lines(cases))
+    lines.extend(_slice_lines(args, selected))
+    if host is not None:
+        lines.extend(_context_lines(host.context.evidence()))
     body = _redact_string("\n".join(lines) + "\n")
     run_dir.joinpath("summary.md").write_text(body, encoding="utf-8")
 
@@ -7533,7 +11331,7 @@ async def _run_suite(args: argparse.Namespace) -> int:
     run_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
     args.run_dir = str(run_dir)
     _RUN_IDEMPOTENCY_PREFIX = f"phase4-{run_dir.name}"
-    selected = list(args.only) if args.only else list(CASE_ORDER)
+    selected = select_cases(args)
     unknown = [case_id for case_id in selected if case_id not in CASES]
     if unknown:
         _write_json(run_dir / "environment.json", _environment_document(args, run_dir,
@@ -7554,10 +11352,44 @@ async def _run_suite(args: argparse.Namespace) -> int:
             for case_id in selected:
                 specification = next(item for item in CASE_PACKAGES if item[0] == case_id)
                 case = Case(case_id=case_id, package=specification[1], acceptance=specification[2])
+                # C02: every call this case dispatches is planned under run/case/step/sequence, so a
+                # same key can only ever mean the same request.
+                state["request_scope"] = {"case": case_id, "step": None}
+                # C03: the case's isolation is declared and prepared first (its own model or a verified
+                # checkpoint restore), then its prerequisites are checked against what this run has
+                # actually established.  A missing prerequisite is ONE dependency-blocked finding
+                # that points at the root cause, not a defect of this case.
+                # An isolated case runs on its *own* model: the run's shared binding is captured
+                # *before* the case is prepared, put back afterwards, and the swap is recorded —
+                # never silent.  Capturing it after the isolation step (as this used to) made the
+                # restore a no-op, so every later "shared_bound" case silently inherited the last
+                # isolated model: the M1 run's T010/T005 ran on R04's own (probe-dirtied) model.
+                shared_ref_before = dict(state["ref"]) if isinstance(state.get("ref"), Mapping) else None
+                shared_revision_before = state.get("revision")
+                isolation = await _case_isolation_step(case, client, args, state, host)
+                prerequisites = case_prerequisites(case_id, state, live=bool(args.live), isolation=isolation)
+                case.assertions["isolation"] = isolation
+                case.assertions["prerequisites"] = prerequisites
                 started = len(transcript)
                 reconcile_cursor = len(host.reconciliations)
                 try:
-                    await CASES[case_id](host, client, case, args, state)
+                    if prerequisites["unsatisfied"]:
+                        missing = ", ".join(prerequisites["unsatisfied"])
+                        reason = (f"the case's declared prerequisite(s) are not established: {missing} "
+                                  f"({'; '.join(str((prerequisites['checks'].get(name) or {}).get('evidence')) for name in prerequisites['unsatisfied'])})")
+                        case.assertions["first_cause"] = classify_first_cause(
+                            {"reason": reason, "error_code": "DEPENDENCY_BLOCKED", "first_cause": "DEPENDENCY_BLOCKED"},
+                            case_id=case_id)
+                        case.assertions["dependency_blocked"] = {"missing": list(prerequisites["unsatisfied"]),
+                                                                 "note": ("downstream subcases list NOT_RUN against "
+                                                                          "this root cause instead of becoming "
+                                                                          "independent defects")}
+                        for item in PLAN.get(case_id, ()):
+                            case.subcase(item.name, "NOT_RUN", level=item.level,
+                                         reason=f"dependency not established: {missing}")
+                        case.finish("BLOCKED", reason=reason)
+                    else:
+                        await CASES[case_id](host, client, case, args, state)
                 except CapabilityUnavailable as exc:
                     case.finish("BLOCKED", reason=f"capability unavailable: {exc}")
                 except BaseException as exc:  # noqa: BLE001 - the driver records any driver-side failure
@@ -7568,6 +11400,15 @@ async def _run_suite(args: argparse.Namespace) -> int:
                 finally:
                     if case.finished_at is None:
                         case.finish()
+                    if (isolation.get("applied") and shared_ref_before is not None
+                            and isinstance(state.get("ref"), Mapping)
+                            and state["ref"] != shared_ref_before):
+                        isolation["shared_model_restored"] = {
+                            "ref": shared_ref_before, "revision": shared_revision_before,
+                            "note": ("the case ran on its own model; the run's shared binding is restored "
+                                     "for the cases that follow")}
+                        state["ref"] = dict(shared_ref_before)
+                        state["revision"] = shared_revision_before
                     _export_reconciliations(case, host, since=reconcile_cursor)
                     case.finalize_inventory()
                     _write_case_evidence(run_dir, case, transcript[started:], host)
@@ -7595,14 +11436,17 @@ async def _run_suite(args: argparse.Namespace) -> int:
                                               "transcript": transcript})
     # The evidence tree is written first, then scanned, then rewritten: the leak scan is itself
     # evidence about the finished tree, so the index and the digest list are produced last.
-    _write_summary(run_dir, cases, host)
+    _write_summary(run_dir, cases, host, args=args, selected=selected)
     scan = _leak_scan(run_dir, private_home=host.private_home if host.private_home_is_caller_owned else None)
     if any(case.case_id == "GUARD_T035" for case in cases):
         _apply_leak_scan(cases, run_dir, scan)
-    _write_summary(run_dir, cases, host)
+    _write_summary(run_dir, cases, host, args=args, selected=selected)
     _write_run_index(run_dir, cases, extra={"startup_error": startup_error, "leak_scan": scan,
                                             "engine_reconciliations": host.reconciliations,
                                             "unknown_job_ledger": host.ledger_evidence(),
+                                            "execution_context": host.context.evidence(),
+                                            "first_cause": _first_cause_summary(cases),
+                                            "slice": _slice_summary(args, selected),
                                             "model_bind": _json_safe({key: value for key, value in state.items()
                                                                       if key.startswith("model_") or key.endswith("_probe")})})
     _write_sha256sums(run_dir)
@@ -7776,7 +11620,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--license-products", action="append", default=None,
                         help="product name to probe with runtime.license_inspect (repeatable)")
     parser.add_argument("--duplicate-probe-tag", default="phase4_dup_probe")
-    parser.add_argument("--only", default=None, help="comma-separated case ids to run")
+    parser.add_argument("--only", default=None,
+                        help=("comma-separated case ids to run (a slice; --stage narrows it further).  A slice "
+                              "never weakens an acceptance line: every selected case records its subcases at "
+                              "their declared evidence level"))
+    parser.add_argument("--stage", default=None, choices=["M0", "M1", "M2", "M3"],
+                        help=("staged run plan of G3.1 section 10: M0 = the offline root-cause gate (run "
+                              "without --live), M1 = the single clean-model integration gate, M2 = the minimal "
+                              "physical closure (chain A then chain B), M3 = preservation and the remaining "
+                              "acceptance (the remainder, so no case can be forgotten)"))
     parser.add_argument("--run-dir", default=None, help="explicit evidence directory")
     parser.add_argument("--reopen-check", type=Path, default=None,
                         help="reopen-check mode: load this .mph in a fresh process/private home")

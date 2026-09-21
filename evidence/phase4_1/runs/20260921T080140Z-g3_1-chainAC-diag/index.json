@@ -1,0 +1,486 @@
+{
+  "case_status_counts": {
+    "BLOCKED": 2,
+    "FAIL": 0,
+    "NOT_RUN": 0,
+    "PASS": 0
+  },
+  "cases": [
+    {
+      "acceptance": [
+        "G3 §8 chain A"
+      ],
+      "assertion_count": 5,
+      "assertions": {
+        "dependency_blocked": {
+          "missing": [
+            "bound_model"
+          ],
+          "note": "downstream subcases list NOT_RUN against this root cause instead of becoming independent defects"
+        },
+        "first_cause": {
+          "case_id": "W16_T019_chainA_steady",
+          "class": "DEPENDENCY_BLOCKED",
+          "error_code": "DEPENDENCY_BLOCKED",
+          "reason": "the case's declared prerequisite(s) are not established: bound_model (no model_ref is bound: every live step of this case depends on one)",
+          "source": "declared"
+        },
+        "isolation": {
+          "applied": false,
+          "at": "2026-09-21T08:01:41.742096Z",
+          "attempted": false,
+          "declaration": {
+            "case_id": "W16_T019_chainA_steady",
+            "mode": "shared_bound",
+            "modes": [
+              "own_model",
+              "checkpoint_restore",
+              "shared_bound"
+            ],
+            "rationale": "reads/writes the run's bound model; the run is serial"
+          },
+          "reason": "declared: this case runs against the run's bound model, strictly serially"
+        },
+        "prerequisites": {
+          "case_id": "W16_T019_chainA_steady",
+          "checks": {
+            "bound_model": {
+              "applicable": true,
+              "evidence": "no model_ref is bound: every live step of this case depends on one",
+              "satisfied": false
+            },
+            "own_geometry": {
+              "applicable": false,
+              "evidence": "declared: the case builds its own component/geometry before using it",
+              "satisfied": null
+            }
+          },
+          "declared": [
+            "bound_model",
+            "own_geometry"
+          ],
+          "note": "a missing prerequisite makes this case DEPENDENCY_BLOCKED and points at the root cause; it never becomes a defect of this case",
+          "status": "UNSATISFIED",
+          "unknown_declarations": [],
+          "unsatisfied": [
+            "bound_model"
+          ]
+        },
+        "subcase_inventory": {
+          "levels": [
+            "fixture",
+            "live",
+            "numerical",
+            "static"
+          ],
+          "missing": [],
+          "planned": 14,
+          "recorded": 14
+        }
+      },
+      "case_id": "W16_T019_chainA_steady",
+      "finished_at": "2026-09-21T08:01:41.742144Z",
+      "package": "W16",
+      "reason": "the case's declared prerequisite(s) are not established: bound_model (no model_ref is bound: every live step of this case depends on one)",
+      "started_at": "2026-09-21T08:01:41.742085Z",
+      "status": "BLOCKED",
+      "subcase_count": 14,
+      "subcases": {
+        "analytic_reference_preregistered": {
+          "acceptance": "T019 chain A analytic reference",
+          "level": "fixture",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        },
+        "benchmark_spec_registered_and_sane": {
+          "acceptance": "T019 chain A pre-registered BenchmarkSpec (C07b): units, dimensions and derived quantities",
+          "level": "fixture",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        },
+        "boundary_temperatures_and_insulation": {
+          "acceptance": "T019 chain A end temperatures, other faces insulated",
+          "level": "live",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        },
+        "constant_material_assigned": {
+          "acceptance": "T019 chain A constant material",
+          "level": "live",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        },
+        "empty_model_geometry_block": {
+          "acceptance": "T019 chain A block geometry from an empty model",
+          "level": "live",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        },
+        "heat_flux_and_power_balance": {
+          "acceptance": "T019 chain A flux/power balance",
+          "level": "numerical",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        },
+        "linear_profile_relative_error_le_1e-4": {
+          "acceptance": "T019 chain A T(x) relative error <= 1e-4",
+          "level": "numerical",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        },
+        "local_mesh_built": {
+          "acceptance": "T019 chain A local mesh",
+          "level": "live",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        },
+        "pre_solve_readback_matches_spec": {
+          "acceptance": "T019 chain A model read-back checked item by item against the frozen specification",
+          "level": "live",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        },
+        "sample_table_and_units_recorded": {
+          "acceptance": "T019 chain A sampling evidence",
+          "level": "numerical",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        },
+        "saved_mph_hash_recorded": {
+          "acceptance": "T019 chain A saved mph and hash",
+          "level": "live",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        },
+        "solve_produced_solution": {
+          "acceptance": "T019 chain A real solution",
+          "level": "live",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        },
+        "static_chain_a_ops_availability": {
+          "acceptance": "T019 chain A empty-model chain",
+          "level": "static",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        },
+        "stationary_study_and_solver": {
+          "acceptance": "T019 chain A study and solver",
+          "level": "live",
+          "reason": "dependency not established: bound_model",
+          "status": "NOT_RUN"
+        }
+      }
+    },
+    {
+      "acceptance": [
+        "G3 §8 chain C"
+      ],
+      "assertion_count": 5,
+      "assertions": {
+        "dependency_blocked": {
+          "missing": [
+            "bound_model",
+            "predecessor:W16_T019_chainA_steady"
+          ],
+          "note": "downstream subcases list NOT_RUN against this root cause instead of becoming independent defects"
+        },
+        "first_cause": {
+          "case_id": "W16_T019_chainC_continue",
+          "class": "DEPENDENCY_BLOCKED",
+          "error_code": "DEPENDENCY_BLOCKED",
+          "reason": "the case's declared prerequisite(s) are not established: bound_model, predecessor:W16_T019_chainA_steady (no model_ref is bound: every live step of this case depends on one; W16_T019_chainA_steady finished BLOCKED)",
+          "source": "declared"
+        },
+        "isolation": {
+          "applied": false,
+          "at": "2026-09-21T08:01:41.743375Z",
+          "attempted": false,
+          "declaration": {
+            "case_id": "W16_T019_chainC_continue",
+            "mode": "checkpoint_restore",
+            "modes": [
+              "own_model",
+              "checkpoint_restore",
+              "shared_bound"
+            ],
+            "rationale": "the user-style fixture is restored from a verified checkpoint, never edited in place"
+          },
+          "reason": "checkpoint_restore is not published by this host, so this case cannot be isolated on a restored fixture"
+        },
+        "prerequisites": {
+          "case_id": "W16_T019_chainC_continue",
+          "checks": {
+            "bound_model": {
+              "applicable": true,
+              "evidence": "no model_ref is bound: every live step of this case depends on one",
+              "satisfied": false
+            },
+            "predecessor:W16_T019_chainA_steady": {
+              "applicable": true,
+              "evidence": "W16_T019_chainA_steady finished BLOCKED",
+              "satisfied": false
+            }
+          },
+          "declared": [
+            "bound_model",
+            "predecessor:W16_T019_chainA_steady"
+          ],
+          "note": "a missing prerequisite makes this case DEPENDENCY_BLOCKED and points at the root cause; it never becomes a defect of this case",
+          "status": "UNSATISFIED",
+          "unknown_declarations": [],
+          "unsatisfied": [
+            "bound_model",
+            "predecessor:W16_T019_chainA_steady"
+          ]
+        },
+        "subcase_inventory": {
+          "levels": [
+            "fixture",
+            "live",
+            "static"
+          ],
+          "missing": [],
+          "planned": 7,
+          "recorded": 7
+        }
+      },
+      "case_id": "W16_T019_chainC_continue",
+      "finished_at": "2026-09-21T08:01:41.743393Z",
+      "package": "W16",
+      "reason": "the case's declared prerequisite(s) are not established: bound_model, predecessor:W16_T019_chainA_steady (no model_ref is bound: every live step of this case depends on one; W16_T019_chainA_steady finished BLOCKED)",
+      "started_at": "2026-09-21T08:01:41.743369Z",
+      "status": "BLOCKED",
+      "subcase_count": 7,
+      "subcases": {
+        "derived_values_and_data_association_preserved": {
+          "acceptance": "T019 chain C derived values/associations",
+          "level": "live",
+          "reason": "dependency not established: bound_model, predecessor:W16_T019_chainA_steady",
+          "status": "NOT_RUN"
+        },
+        "manual_solver_preserved": {
+          "acceptance": "T019 chain C manual solver preserved",
+          "level": "live",
+          "reason": "dependency not established: bound_model, predecessor:W16_T019_chainA_steady",
+          "status": "NOT_RUN"
+        },
+        "non_target_nodes_preserved": {
+          "acceptance": "T019 chain C non-target nodes preserved",
+          "level": "live",
+          "reason": "dependency not established: bound_model, predecessor:W16_T019_chainA_steady",
+          "status": "NOT_RUN"
+        },
+        "solve_after_continuation": {
+          "acceptance": "T019 chain C solve after continuation",
+          "level": "live",
+          "reason": "dependency not established: bound_model, predecessor:W16_T019_chainA_steady",
+          "status": "NOT_RUN"
+        },
+        "static_chain_c_ops_availability": {
+          "acceptance": "T019 chain C continuation",
+          "level": "static",
+          "reason": "dependency not established: bound_model, predecessor:W16_T019_chainA_steady",
+          "status": "NOT_RUN"
+        },
+        "target_only_modified": {
+          "acceptance": "T019 chain C target-only modification",
+          "level": "live",
+          "reason": "dependency not established: bound_model, predecessor:W16_T019_chainA_steady",
+          "status": "NOT_RUN"
+        },
+        "user_style_model_available": {
+          "acceptance": "T019 chain C user-style model input",
+          "level": "fixture",
+          "reason": "dependency not established: bound_model, predecessor:W16_T019_chainA_steady",
+          "status": "NOT_RUN"
+        }
+      }
+    }
+  ],
+  "engine_reconciliations": [],
+  "execution_context": {
+    "active_models": {},
+    "auxiliary_rejections": [
+      "ambiguous_envelope",
+      "explicit_key_reuse"
+    ],
+    "dispatches": [],
+    "generation_replacements": [],
+    "model_states": [],
+    "negative_probes": [],
+    "note": "one execution context for the whole run: revisions and dirty flags are keyed by the full ModelRef (session/server epoch/tag/generation), every logical request carries its own run/case/step/sequence key, and every refusal is classified as stale_expected / external_observation / unknown_job / generation_mismatch",
+    "observations": [
+      {
+        "adopted": false,
+        "at": "2026-09-21T08:01:41.742025Z",
+        "dirty": null,
+        "error_code": "ENGINE_BUSY",
+        "job_id": "45c54970-f348-4b78-9231-9eed305668b4",
+        "model_ref": null,
+        "revision": null,
+        "source": {
+          "data": "structuredContent.data",
+          "error": "structuredContent.error",
+          "execution": "structuredContent.execution",
+          "job_id": "execution.job_id",
+          "success": "structuredContent.success"
+        },
+        "success": false,
+        "tool": "server_connect"
+      }
+    ],
+    "reader_errors": 0,
+    "rejection_counts": {
+      "ambiguous_envelope": 0,
+      "explicit_key_reuse": 0,
+      "external_observation": 0,
+      "generation_mismatch": 0,
+      "stale_expected": 0,
+      "unknown_job": 0
+    },
+    "rejection_reasons": [
+      "stale_expected",
+      "external_observation",
+      "unknown_job",
+      "generation_mismatch"
+    ],
+    "rejections": [],
+    "replans": [],
+    "replays": [],
+    "request_count": 0,
+    "requests": [],
+    "run": "20260921T080140Z-g3_1-chainAC-diag",
+    "unfinished_entries": [],
+    "unfinished_jobs": []
+  },
+  "first_cause": {
+    "classes": [
+      "DEPENDENCY_BLOCKED",
+      "HARNESS_FAILURE",
+      "IMPLEMENTATION_GAP",
+      "EXTERNAL_BLOCKER"
+    ],
+    "counts": {
+      "DEPENDENCY_BLOCKED": 2,
+      "EXTERNAL_BLOCKER": 0,
+      "HARNESS_FAILURE": 0,
+      "IMPLEMENTATION_GAP": 0
+    },
+    "note": "each case contributes at most one first cause; downstream subcases list DEPENDENCY_BLOCKED against it instead of becoming pseudo-independent defects",
+    "per_case": {
+      "W16_T019_chainA_steady": {
+        "case_id": "W16_T019_chainA_steady",
+        "class": "DEPENDENCY_BLOCKED",
+        "error_code": "DEPENDENCY_BLOCKED",
+        "reason": "the case's declared prerequisite(s) are not established: bound_model (no model_ref is bound: every live step of this case depends on one)",
+        "source": "declared"
+      },
+      "W16_T019_chainC_continue": {
+        "case_id": "W16_T019_chainC_continue",
+        "class": "DEPENDENCY_BLOCKED",
+        "error_code": "DEPENDENCY_BLOCKED",
+        "reason": "the case's declared prerequisite(s) are not established: bound_model, predecessor:W16_T019_chainA_steady (no model_ref is bound: every live step of this case depends on one; W16_T019_chainA_steady finished BLOCKED)",
+        "source": "declared"
+      }
+    }
+  },
+  "generated_at": "2026-09-21T08:01:41.792934Z",
+  "leak_scan": {
+    "credential_fixture_hits": [],
+    "credential_hits": [],
+    "credential_leak_hits": [],
+    "excluded_fixtures": [],
+    "private_home_scanned": null,
+    "private_path_hits": [],
+    "runtime_state_hits": [],
+    "scanned_files": 12
+  },
+  "model_bind": {
+    "model_label": null,
+    "model_origin": "connect_failed (ENGINE_BUSY)"
+  },
+  "run_dir": "$REPO/evidence/phase4_1/runs/20260921T080140Z-g3_1-chainAC-diag",
+  "slice": {
+    "live": true,
+    "note": "a slice is a documented run plan, not a weakened acceptance: every selected case still records its own subcases at their declared evidence level, and a stage subset never turns an unselected case into a pass",
+    "only": [
+      "W16_T019_chainA_steady",
+      "W16_T019_chainC_continue"
+    ],
+    "selected": [
+      "W16_T019_chainA_steady",
+      "W16_T019_chainC_continue"
+    ],
+    "stage": null,
+    "stages": {
+      "M0": [
+        "R01_LIVE",
+        "R03_LIVE",
+        "R_READBACK",
+        "W13_T048_selection_drift",
+        "W13_T016_2D_data",
+        "W14_T009_geometry_edit",
+        "W14_T034_local_paths",
+        "W15_T007_selections",
+        "W15_T017_material",
+        "W15_T042_license",
+        "W16_T018_mesh",
+        "W16_T019_chainC_continue",
+        "W16_T020_solver",
+        "GUARD_T035",
+        "GUARD_T038"
+      ],
+      "M1": [
+        "W13_T006_variables",
+        "W13_T015_units",
+        "R04_LIVE",
+        "GUARD_T010",
+        "GUARD_T005",
+        "GUARD_T033"
+      ],
+      "M2": [
+        "W16_T019_chainA_steady",
+        "W16_T019_chainB_transient"
+      ],
+      "M3": [
+        "R01_LIVE",
+        "R03_LIVE",
+        "R_READBACK",
+        "W13_T048_selection_drift",
+        "W13_T016_2D_data",
+        "W14_T009_geometry_edit",
+        "W14_T034_local_paths",
+        "W15_T007_selections",
+        "W15_T017_material",
+        "W15_T042_license",
+        "W16_T018_mesh",
+        "W16_T019_chainC_continue",
+        "W16_T020_solver",
+        "GUARD_T035",
+        "GUARD_T038"
+      ]
+    }
+  },
+  "startup_error": null,
+  "subcase_status_counts": {
+    "NOT_RUN": 21
+  },
+  "totals": {
+    "assertions": 10,
+    "subcases": 21
+  },
+  "unknown_job_ledger": {
+    "entries": [],
+    "gate_refusals": {
+      "by_tool": {},
+      "count": 0,
+      "first": null,
+      "last": null
+    },
+    "note": "the driver records every job id an envelope reported as UNKNOWN (no published read lists the unresolved jobs) and releases each one through the published job_reconcile read before it replays a refused call once",
+    "released_jobs": [],
+    "still_blocked": [],
+    "unresolved_jobs": []
+  }
+}

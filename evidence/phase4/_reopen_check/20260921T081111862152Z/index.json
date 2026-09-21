@@ -1,0 +1,302 @@
+{
+  "case_status_counts": {
+    "BLOCKED": 0,
+    "FAIL": 0,
+    "NOT_RUN": 0,
+    "PASS": 1
+  },
+  "cases": [
+    {
+      "acceptance": [
+        "G3 §8"
+      ],
+      "assertion_count": 6,
+      "assertions": {
+        "model_load": {
+          "error_code": null,
+          "has_structured_content": true,
+          "job_id": "ca11b848-c2d1-4a32-9d8f-b5987ac98486",
+          "operation_id": "3c8ed572-0a8c-4d7d-b226-44155cb55ea5",
+          "outer_isError": false,
+          "request_hash": "7bc14b31ed4a18e51ec7dd59a04b756c8a6835ec7670c4a5b259ec32f8e01d02",
+          "success": true
+        },
+        "model_load_probe": {
+          "available": false,
+          "effect": "WRITE",
+          "error_code": null,
+          "evaluation_policy": null,
+          "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+          "evaluation_policy_source": null,
+          "executable": false,
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "additionalProperties": false,
+            "properties": {
+              "artifact_id": {
+                "type": "string"
+              },
+              "idempotency_key": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "path_policy": {
+                "type": "object"
+              },
+              "project_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "idempotency_key",
+              "session_id",
+              "artifact_id"
+            ],
+            "title": "model.load input",
+            "type": "object"
+          },
+          "input_schema_properties": [
+            "artifact_id",
+            "idempotency_key",
+            "path_policy",
+            "project_id",
+            "request_id",
+            "session_id"
+          ],
+          "mcp_tool_name": "model_load",
+          "output_contract": true,
+          "probe_unreadable": null,
+          "remediation": null,
+          "required_products": null,
+          "route": "control plane",
+          "schema_is_object": true,
+          "wire_compatibility": {
+            "execution_fields": [
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "request_id",
+              "rpc_timeout_s",
+              "queue_timeout_s",
+              "execution_timeout_s"
+            ],
+            "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+            "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+            "result_fields": [
+              "success",
+              "data",
+              "error",
+              "execution"
+            ],
+            "transport": "MCP structuredContent plus text mirror; isError equals not success"
+          }
+        },
+        "mph": {
+          "bytes": 6415970,
+          "exists": true,
+          "path": "evidence/phase4_1/chain_c_fixture/chain_c_user_style.mph",
+          "sha256": "b497a6257cefe120db4a717f7e105f9052ff0ec8c89fc6ad6409bedb8cf0e043"
+        },
+        "reopen_values": {
+          "deviations": [],
+          "envelope": {
+            "error_code": null,
+            "has_structured_content": true,
+            "job_id": "0ffbd563-d5c3-440b-9f5b-ea261df91907",
+            "operation_id": "76ffbbbf-303b-4db7-b3c0-583c2b718c62",
+            "outer_isError": false,
+            "request_hash": "0899627c7824d92e2250f139767c528fe297d4a182fa0619a821838a9b5adc8e",
+            "success": true
+          },
+          "results": [
+            {
+              "data_mode": "dataset",
+              "dataset": "dset1",
+              "diagnosis": {
+                "attempts": [
+                  {
+                    "data": "dset1",
+                    "ok": true,
+                    "route": "results:EvalGlobal",
+                    "value_shape": [
+                      1,
+                      1
+                    ]
+                  }
+                ],
+                "binding": {
+                  "bind_error": null,
+                  "bound": "dset1",
+                  "bound_verified": true,
+                  "data_mode": "dataset",
+                  "dataset": "dset1",
+                  "dataset_type": null,
+                  "policy": "the evaluation feature's documented ``data`` property: a named dataset is set and read back when the model publishes one; when the engine's own readback proves that the model publishes no dataset, the documented value ``none`` is set and read back instead of leaving the *First compatible dataset* default in place",
+                  "solution": null
+                },
+                "data_mode": "dataset",
+                "dataset": "dset1",
+                "dataset_inventory": {
+                  "datasets": [
+                    {
+                      "error": "__call__() is not exposed by this engine handle",
+                      "solution": null,
+                      "tag": "dset1",
+                      "type": null
+                    }
+                  ],
+                  "readback": {
+                    "dataset_tags": [
+                      "dset1"
+                    ],
+                    "solution_tags": [
+                      "sol1"
+                    ]
+                  },
+                  "solutions": [
+                    "sol1"
+                  ],
+                  "source": "model.result().dataset().tags() + dataset getType()/getString('solution'); model.sol().tags()"
+                },
+                "engine_calls": [
+                  "result().numerical(<owned tag>).set('expr', ...)",
+                  "result().numerical(<owned tag>).set('data', 'dset1')",
+                  "result().numerical(<owned tag>).run()",
+                  "result().numerical(<owned tag>).getReal()"
+                ],
+                "result_source": "getReal",
+                "route": "results:EvalGlobal",
+                "solution": null
+              },
+              "expression": "293.15[K]",
+              "last_value": 293.15,
+              "name": "Tinit",
+              "ok": true,
+              "route": "results:EvalGlobal",
+              "shape": [
+                1,
+                1
+              ],
+              "solution": null,
+              "value": [
+                [
+                  293.15
+                ]
+              ]
+            }
+          ]
+        },
+        "structure": {
+          "component_count": 1,
+          "solutions": [
+            "sol1"
+          ],
+          "study_count": 1,
+          "tree_keys": [
+            "component_details",
+            "components",
+            "datasets",
+            "file_path",
+            "label",
+            "parameters",
+            "results",
+            "solutions",
+            "studies"
+          ]
+        },
+        "subcase_inventory": {
+          "levels": [
+            "fixture",
+            "live",
+            "numerical"
+          ],
+          "missing": [],
+          "planned": 0,
+          "recorded": 4
+        }
+      },
+      "case_id": "REOPEN_CHECK",
+      "finished_at": "2026-09-21T08:11:13.757781Z",
+      "package": "REOPEN",
+      "reason": null,
+      "started_at": "2026-09-21T08:11:11.862420Z",
+      "status": "PASS",
+      "subcase_count": 4,
+      "subcases": {
+        "fresh_process_and_private_home": {
+          "isolation_receipt_present": true,
+          "level": "live",
+          "pid": 66108,
+          "private_home": "$REPO/PRIVATE_REDACTED/phase4-acceptance/20260921T081111862152Z/reopen/mcp-home",
+          "server_command": [
+            "$REPO/.venv/bin/python",
+            "-m",
+            "comsol_mcp.mcp_server"
+          ],
+          "status": "PASS"
+        },
+        "mph_readable": {
+          "level": "fixture",
+          "sha256": "b497a6257cefe120db4a717f7e105f9052ff0ec8c89fc6ad6409bedb8cf0e043",
+          "status": "PASS"
+        },
+        "representative_values": {
+          "checked": 1,
+          "level": "numerical",
+          "status": "PASS"
+        },
+        "structure_readback": {
+          "component_count": 1,
+          "level": "live",
+          "solutions": [
+            "sol1"
+          ],
+          "status": "PASS",
+          "study_count": 1,
+          "tree_keys": [
+            "component_details",
+            "components",
+            "datasets",
+            "file_path",
+            "label",
+            "parameters",
+            "results",
+            "solutions",
+            "studies"
+          ]
+        }
+      }
+    }
+  ],
+  "generated_at": "2026-09-21T08:11:13.762243Z",
+  "mode": "reopen-check",
+  "mph": "evidence/phase4_1/chain_c_fixture/chain_c_user_style.mph",
+  "run_dir": "$REPO/evidence/phase4/_reopen_check/20260921T081111862152Z",
+  "subcase_status_counts": {
+    "PASS": 4
+  },
+  "totals": {
+    "assertions": 6,
+    "subcases": 4
+  }
+}

@@ -1,0 +1,1385 @@
+{
+  "case_id": "R03_LIVE",
+  "requests": [
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver5bphase4-describe-node-property_index_set",
+          "request_id": "phase4-driver5bphase4-describe-node-property_index_set"
+        },
+        "operation_id": "node.property_index_set"
+      },
+      "elapsed_s": 0.002914791984949261,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 1
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver5bphase4-describe-node-property_entry_set",
+          "request_id": "phase4-driver5bphase4-describe-node-property_entry_set"
+        },
+        "operation_id": "node.property_entry_set"
+      },
+      "elapsed_s": 0.002698333002626896,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 2
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver5bphase4-describe-node-property_get",
+          "request_id": "phase4-driver5bphase4-describe-node-property_get"
+        },
+        "operation_id": "node.property_get"
+      },
+      "elapsed_s": 0.00231441599316895,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 3
+    },
+    {
+      "arguments": {
+        "execution": {
+          "idempotency_key": "phase4-driver5bphase4-describe-transaction-preview",
+          "request_id": "phase4-driver5bphase4-describe-transaction-preview"
+        },
+        "operation_id": "transaction.preview"
+      },
+      "elapsed_s": 0.003136665967758745,
+      "operation": "operation_describe",
+      "outer_isError": false,
+      "sequence": 4
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "actions": [
+            {
+              "arguments": {
+                "indices": [],
+                "name": "phase4_probe",
+                "path": {
+                  "segments": []
+                },
+                "value": {
+                  "data": 1.0,
+                  "kind": "float64",
+                  "shape": []
+                }
+              },
+              "operation_id": "node.property_index_set"
+            },
+            {
+              "arguments": {
+                "name": "phase4_probe",
+                "path": {
+                  "segments": []
+                },
+                "value": {
+                  "data": 1.0,
+                  "kind": "float64",
+                  "shape": []
+                }
+              },
+              "operation_id": "node.property_entry_set"
+            }
+          ],
+          "invariants": [],
+          "project_id": "comsol-mcp-phase4"
+        },
+        "execution": {
+          "idempotency_key": "phase4-driver5br03-static-malformed",
+          "request_id": "phase4-driver5br03-static-malformed"
+        },
+        "operation_id": "transaction.preview"
+      },
+      "elapsed_s": 0.002854667021892965,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 5
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 0,
+          "limit": 200,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "query": {},
+          "root": {
+            "segments": []
+          },
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driver5bphase4-find-17",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bphase4-find-17",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.find"
+      },
+      "elapsed_s": 0.030502790992613882,
+      "operation": "operation_call",
+      "outer_isError": false,
+      "sequence": 6
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 0,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "path": {
+            "segments": []
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driver5bphase4-schema-18",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bphase4-schema-18",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_schema"
+      },
+      "elapsed_s": 0.009686875040642917,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 7
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 0,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "material",
+                "tag": "p4mat"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driver5bprobe-fixture-verify-19",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bprobe-fixture-verify",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_schema"
+      },
+      "elapsed_s": 0.01205295801628381,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 8
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "action": "create",
+          "expected_revision": 0,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "comp1"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driver5bprobe-component",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bprobe-component",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "definition.component_manage"
+      },
+      "elapsed_s": 0.0025950000272132456,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 9
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "component": "comp1",
+          "dimension": 3,
+          "expected_revision": 0,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "p4geom"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driver5bprobe-geometry",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bprobe-geometry",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "geometry.sequence_create"
+      },
+      "elapsed_s": 0.0019817500142380595,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 10
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 0,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "parent": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "geom",
+                "tag": "p4geom"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "properties": [
+            {
+              "name": "size",
+              "value": {
+                "data": [
+                  0.001,
+                  0.001,
+                  0.001
+                ],
+                "kind": "float64",
+                "shape": [
+                  3
+                ]
+              }
+            },
+            {
+              "name": "pos",
+              "value": {
+                "data": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "kind": "float64",
+                "shape": [
+                  3
+                ]
+              }
+            }
+          ],
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "p4blk",
+          "type_id": "Block"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driver5bprobe-block",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bprobe-block",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "geometry.feature_create"
+      },
+      "elapsed_s": 0.0026105419965460896,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 11
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "component": "comp1",
+          "expected_revision": 0,
+          "geometry": "p4geom",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "p4mesh"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driver5bprobe-mesh",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bprobe-mesh",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "mesh.create"
+      },
+      "elapsed_s": 0.002096374984830618,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 12
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 0,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "parent": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "mesh",
+                "tag": "p4mesh"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "properties": [
+            {
+              "name": "hauto",
+              "value": {
+                "data": 4,
+                "kind": "int32",
+                "shape": []
+              }
+            }
+          ],
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "p4size",
+          "type_id": "Size"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driver5bprobe-mesh_size",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bprobe-mesh_size",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "mesh.feature_create"
+      },
+      "elapsed_s": 0.0017890000017359853,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 13
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "component": "comp1",
+          "expected_revision": 0,
+          "geometry": "p4geom",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "p4ht",
+          "type_id": "HeatTransfer"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driver5bprobe-physics",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bprobe-physics",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "physics.create"
+      },
+      "elapsed_s": 0.0016069160192273557,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 14
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "entity_dimension": 2,
+          "expected_revision": 0,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "parent": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "physics",
+                "tag": "p4ht"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "properties": [
+            {
+              "name": "T0",
+              "value": {
+                "data": "300[K]",
+                "kind": "expression",
+                "shape": []
+              }
+            }
+          ],
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "p4temp1",
+          "type_id": "TemperatureBoundary"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driver5bprobe-temperature",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bprobe-temperature",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "physics.feature_create"
+      },
+      "elapsed_s": 0.001837707997765392,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 15
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "component": "comp1",
+          "definition": {
+            "properties": [
+              {
+                "name": "thermalconductivity",
+                "value": {
+                  "data": [
+                    [
+                      "10[W/(m*K)]",
+                      "0",
+                      "0"
+                    ],
+                    [
+                      "0",
+                      "10[W/(m*K)]",
+                      "0"
+                    ],
+                    [
+                      "0",
+                      "0",
+                      "10[W/(m*K)]"
+                    ]
+                  ],
+                  "kind": "expression",
+                  "shape": [
+                    3,
+                    3
+                  ],
+                  "unit": "W/(m*K)"
+                }
+              },
+              {
+                "name": "density",
+                "value": {
+                  "data": "1000[kg/m^3]",
+                  "kind": "expression",
+                  "shape": []
+                }
+              },
+              {
+                "name": "heatcapacity",
+                "value": {
+                  "data": "100[J/(kg*K)]",
+                  "kind": "expression",
+                  "shape": []
+                }
+              }
+            ]
+          },
+          "expected_revision": 0,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a",
+          "tag": "p4mat",
+          "type_id": "Common"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driver5bprobe-material",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bprobe-material",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "material.create"
+      },
+      "elapsed_s": 0.002121708996128291,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 16
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 0,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "material",
+                "tag": "p4mat"
+              },
+              {
+                "collection": "propertyGroup",
+                "tag": "def"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driver5bprobe-group-schema",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bprobe-group-schema",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_schema"
+      },
+      "elapsed_s": 0.0019939999911002815,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 17
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 0,
+          "limit": 200,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "query": {},
+          "root": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              }
+            ]
+          },
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driver5bphase4-find-20",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bphase4-find-20",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.find"
+      },
+      "elapsed_s": 0.01093633397249505,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 18
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 0,
+          "limit": 200,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "query": {},
+          "root": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "geom",
+                "tag": "p4geom"
+              }
+            ]
+          },
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driver5bphase4-find-21",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bphase4-find-21",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.find"
+      },
+      "elapsed_s": 0.013638667005579919,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 19
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 0,
+          "limit": 200,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "query": {},
+          "root": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "geom",
+                "tag": "p4geom"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4blk"
+              }
+            ]
+          },
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driver5bphase4-find-22",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bphase4-find-22",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.find"
+      },
+      "elapsed_s": 0.009737583983223885,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 20
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 0,
+          "limit": 200,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "query": {},
+          "root": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "mesh",
+                "tag": "p4mesh"
+              }
+            ]
+          },
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driver5bphase4-find-23",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bphase4-find-23",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.find"
+      },
+      "elapsed_s": 0.0097566670156084,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 21
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 0,
+          "limit": 200,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "query": {},
+          "root": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "mesh",
+                "tag": "p4mesh"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4size"
+              }
+            ]
+          },
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driver5bphase4-find-24",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bphase4-find-24",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.find"
+      },
+      "elapsed_s": 0.01070504100061953,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 22
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 0,
+          "limit": 200,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "query": {},
+          "root": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "physics",
+                "tag": "p4ht"
+              }
+            ]
+          },
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driver5bphase4-find-25",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bphase4-find-25",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.find"
+      },
+      "elapsed_s": 0.008865750045515597,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 23
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 0,
+          "limit": 200,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "query": {},
+          "root": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "physics",
+                "tag": "p4ht"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4temp1"
+              }
+            ]
+          },
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driver5bphase4-find-26",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bphase4-find-26",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.find"
+      },
+      "elapsed_s": 0.010002082970459014,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 24
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 0,
+          "limit": 200,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "project_id": "comsol-mcp-phase4",
+          "query": {},
+          "root": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "material",
+                "tag": "p4mat"
+              }
+            ]
+          },
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driver5bphase4-find-27",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bphase4-find-27",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.find"
+      },
+      "elapsed_s": 0.010236207977868617,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 25
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 0,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "geom",
+                "tag": "p4geom"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4blk"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driver5bprobe-node-schema-block-28",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bprobe-node-schema-block",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_schema"
+      },
+      "elapsed_s": 0.008970791008323431,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 26
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 0,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "mesh",
+                "tag": "p4mesh"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4size"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driver5bprobe-node-schema-mesh_size-29",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bprobe-node-schema-mesh_size",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_schema"
+      },
+      "elapsed_s": 0.010562916984781623,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 27
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 0,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "physics",
+                "tag": "p4ht"
+              },
+              {
+                "collection": "feature",
+                "tag": "p4temp1"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driver5bprobe-node-schema-temperature-30",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bprobe-node-schema-temperature",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_schema"
+      },
+      "elapsed_s": 0.008049833995755762,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 28
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 0,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "physics",
+                "tag": "p4ht"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driver5bprobe-node-schema-physics-31",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bprobe-node-schema-physics",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_schema"
+      },
+      "elapsed_s": 0.008982208033557981,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 29
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 0,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "material",
+                "tag": "p4mat"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driver5bprobe-node-schema-material-32",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bprobe-node-schema-material",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_schema"
+      },
+      "elapsed_s": 0.008131583977956325,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 30
+    },
+    {
+      "arguments": {
+        "arguments": {
+          "expected_revision": 0,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "geom",
+                "tag": "p4geom"
+              }
+            ]
+          },
+          "project_id": "comsol-mcp-phase4",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "execution": {
+          "expected_revision": 0,
+          "idempotency_key": "phase4-driver5bprobe-node-schema-geometry-33",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp2",
+            "schema_version": 1,
+            "server_instance_id": "f4f1b621734f9655b4f718b83f791318d1dd3a871b414c5aa1a14dcb96b56f00",
+            "session_id": "session-9f95c2e814acd5f99589961a"
+          },
+          "request_id": "phase4-driver5bprobe-node-schema-geometry",
+          "session_id": "session-9f95c2e814acd5f99589961a"
+        },
+        "operation_id": "node.property_schema"
+      },
+      "elapsed_s": 0.010331915982533246,
+      "operation": "operation_call",
+      "outer_isError": true,
+      "sequence": 31
+    }
+  ]
+}
