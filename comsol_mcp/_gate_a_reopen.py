@@ -55,8 +55,24 @@ def _read_derived_value_tags(model: Any) -> list[str] | None:
     than treating an unreadable list as a pass.
     """
     attribute = getattr(model, "derived_values", None)
-    if attribute is not None:
+    if attribute is not None and not callable(attribute):
+        # In-memory fakes expose the list directly; an empty list is a real answer
+        # (the negative control relies on it).
         return [str(tag) for tag in attribute]
+    if callable(attribute):
+        # A live adapter exposes a *method* under this name, which is why the
+        # delivered driver overwrote it with a list to satisfy its own check.
+        try:
+            called = attribute()
+        except Exception:
+            called = None
+        if called is not None:
+            try:
+                called_tags = [str(tag) for tag in list(called)]
+            except TypeError:
+                called_tags = []
+            if called_tags:
+                return called_tags
 
     readers = (
         lambda: model.result().numerical().tags(),

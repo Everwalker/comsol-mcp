@@ -19,6 +19,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import traceback
 from typing import Any, Mapping
 
 # Ensure repository root is on sys.path
@@ -131,6 +132,7 @@ class AcceptanceRunner:
         # §11/§12 evidence: the raw log of this run, the run's own server PID and
         # the engine-reported COMSOL version (read from the engine, not declared).
         self.log_lines: list[str] = []
+        self.aborts: list[dict[str, Any]] = []
         self.last_server_pid: int | None = None
         self.comsol_version: str | None = None
 
@@ -2135,6 +2137,36 @@ public final class C07Builder {
     # -----------------------------------------------------------------------
     # Master Execution
     # -----------------------------------------------------------------------
+    def run_case_guarded(self, run_case: Any) -> None:
+        """Run one acceptance case; an escaping exception is a FAIL, not a crash.
+
+        The delivered suite let a case exception abort the entire run (run_c03
+        re-raised), so a single failure produced no ledger at all.  A case that dies
+        must still appear in the ledger as FAIL, with its traceback, and the
+        remaining cases must still run.
+        """
+        case_id = run_case.__name__.removeprefix("run_").upper()
+        try:
+            run_case()
+        except Exception as exc:
+            self.log(f"{case_id} aborted: {type(exc).__name__}: {exc}")
+            aborted = {
+                "case_id": case_id,
+                "error_type": type(exc).__name__,
+                "error": str(exc),
+                "traceback": traceback.format_exc(),
+            }
+            self.aborts.append(aborted)
+            existing = self.cases.get(case_id)
+            if existing is None:
+                self.record_case(
+                    case_id, f"{case_id} (aborted before recording)", "FAIL", "protocol", {},
+                    error=f"{type(exc).__name__}: {exc}",
+                )
+            else:
+                existing["status"] = "FAIL"
+                existing["error"] = existing.get("error") or f"{type(exc).__name__}: {exc}"
+
     def run_all(self) -> None:
         start_time = time.monotonic()
         self.log("================================================================")
@@ -2144,35 +2176,38 @@ public final class C07Builder {
         try:
             self.start_isolated_server()
 
-            self.run_c00()
-            self.run_c01()
-            self.run_c02()
-            self.run_c03()
-            self.run_c04()
-            self.run_c05()
-            self.run_c06()
-            self.run_c07()
-            self.run_c08()
-            self.run_c09()
-            self.run_c10()
-            self.run_c11()
-            self.run_c12()
-            self.run_c13()
-            self.run_c14()
-            self.run_c15()
-            self.run_c16()
-            self.run_c17()
+            for run_case in (
+                self.run_c00,
+                self.run_c01,
+                self.run_c02,
+                self.run_c03,
+                self.run_c04,
+                self.run_c05,
+                self.run_c06,
+                self.run_c07,
+                self.run_c08,
+                self.run_c09,
+                self.run_c10,
+                self.run_c11,
+                self.run_c12,
+                self.run_c13,
+                self.run_c14,
+                self.run_c15,
+                self.run_c16,
+                self.run_c17,
+            ):
+                self.run_case_guarded(run_case)
 
         finally:
             if self.verifier_worker is not None:
                 try:
                     self.verifier_worker.client().disconnect()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    self.log(f"  cleanup disconnect failed: {type(exc).__name__}: {exc}")
                 try:
                     self.verifier_worker.close()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    self.log(f"  cleanup close failed: {type(exc).__name__}: {exc}")
                 self.verifier_worker = None
             self.stop_server()
 
@@ -2206,6 +2241,10 @@ public final class C07Builder {
             "runner_sha256": _sha256(runner_path),
             "runner_command": sys.argv,
             "total_cases": len(self.cases),
+            "aborted_cases": [
+                {"case_id": item["case_id"], "error_type": item["error_type"], "error": item["error"]}
+                for item in self.aborts
+            ],
             "passed_cases": sum(1 for c in self.cases.values() if c["status"] == "PASS"),
             "failed_cases": sum(1 for c in self.cases.values() if c["status"] != "PASS"),
             "scope": {
@@ -2227,6 +2266,7 @@ public final class C07Builder {
                     "run_id": self.run_id,
                     "generated_at": datetime.now(timezone.utc).isoformat(),
                     "source_manifest": source,
+                    "aborted_cases": self.aborts,
                     "assertions": [
                         {
                             "case_id": case["case_id"],
