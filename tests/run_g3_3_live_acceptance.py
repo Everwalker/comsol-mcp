@@ -63,6 +63,14 @@ def _sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def _to_float(v: Any) -> float:
+    while isinstance(v, (list, tuple)) and len(v) > 0:
+        v = v[0]
+    if isinstance(v, Mapping):
+        v = v.get("real", 0.0)
+    return float(v) if v is not None else 0.0
+
+
 class AcceptanceRunner:
     def __init__(self, run_dir: Path) -> None:
         self.run_dir = run_dir
@@ -79,6 +87,7 @@ class AcceptanceRunner:
         self.artifacts_dir: Path = self.run_dir / "artifacts"
         for d in (self.prefs_dir, self.tmp_dir, self.recovery_dir, self.locks_dir, self.artifacts_dir):
             d.mkdir(parents=True, exist_ok=True)
+        self.verifier_worker: PersistentJavaWorker | None = None
 
     def log(self, msg: str) -> None:
         timestamp = datetime.now(timezone.utc).isoformat()
@@ -548,6 +557,181 @@ public final class ChainCBuilder {
             model_c.save(str(mph_c))
             sha_c = _sha256(mph_c)
 
+            # ---------------------------------------------------------------
+            # Benchmark Models for C04–C14 Numerical Acceptance
+            # ---------------------------------------------------------------
+            self.log("  Building BenchC04 (3D Block V=3)...")
+            c04_code = """
+import com.comsol.model.*;
+import java.util.*;
+
+public final class C04Builder {
+    public static Object run(Model model, Map<String, Object> args) {
+        model.modelNode().create("comp1");
+        model.geom().create("geom1", 3);
+        model.geom("geom1").create("blk1", "Block");
+        model.geom("geom1").feature("blk1").set("size", new String[]{"1.0", "1.0", "3.0"});
+        model.geom("geom1").run();
+        
+        model.physics().create("ht", "HeatTransfer", "geom1");
+        model.material().create("mat1", "Common", "comp1");
+        model.material("mat1").selection().all();
+        model.material("mat1").propertyGroup("def").set("thermalconductivity", new String[]{"400[W/(m*K)]"});
+        model.material("mat1").propertyGroup("def").set("density", "8960[kg/m^3]");
+        model.material("mat1").propertyGroup("def").set("heatcapacity", "385[J/(kg*K)]");
+        
+        model.mesh().create("mesh1", "geom1");
+        model.mesh("mesh1").autoMeshSize(4);
+        model.mesh("mesh1").run();
+        
+        model.study().create("std1");
+        model.study("std1").create("stat", "Stationary");
+        model.study("std1").run();
+        
+        return Collections.singletonMap("status", "SOLVED");
+    }
+}
+"""
+            f04 = self.run_dir / "C04Builder.java"
+            f04.write_text(c04_code)
+            model_04 = worker1.client().create("BenchC04")
+            worker1.submit("code_execute", {"tag": model_04.tag(), "source_artifact": str(f04), "entrypoint": "C04Builder", "arguments": {}})
+            mph_04 = self.artifacts_dir / "bench_c04_solved.mph"
+            model_04.save(str(mph_04))
+
+            self.log("  Building BenchC05 (Multi-Domain [0,1]x[0,2] and [1,3]x[0,2])...")
+            c05_code = """
+import com.comsol.model.*;
+import java.util.*;
+
+public final class C05Builder {
+    public static Object run(Model model, Map<String, Object> args) {
+        model.modelNode().create("comp1");
+        model.geom().create("geom1", 2);
+        model.geom("geom1").create("r1", "Rectangle");
+        model.geom("geom1").feature("r1").set("size", new String[]{"1.0", "2.0"});
+        model.geom("geom1").feature("r1").set("pos", new String[]{"0.0", "0.0"});
+        
+        model.geom("geom1").create("r2", "Rectangle");
+        model.geom("geom1").feature("r2").set("size", new String[]{"2.0", "2.0"});
+        model.geom("geom1").feature("r2").set("pos", new String[]{"1.0", "0.0"});
+        model.geom("geom1").run();
+        
+        model.physics().create("ht", "HeatTransfer", "geom1");
+        model.material().create("mat1", "Common", "comp1");
+        model.material("mat1").selection().all();
+        model.material("mat1").propertyGroup("def").set("thermalconductivity", new String[]{"400[W/(m*K)]"});
+        model.material("mat1").propertyGroup("def").set("density", "8960[kg/m^3]");
+        model.material("mat1").propertyGroup("def").set("heatcapacity", "385[J/(kg*K)]");
+        
+        model.mesh().create("mesh1", "geom1");
+        model.mesh("mesh1").autoMeshSize(3);
+        model.mesh("mesh1").run();
+        
+        model.study().create("std1");
+        model.study("std1").create("stat", "Stationary");
+        model.study("std1").run();
+        
+        return Collections.singletonMap("status", "SOLVED");
+    }
+}
+"""
+            f05 = self.run_dir / "C05Builder.java"
+            f05.write_text(c05_code)
+            model_05 = worker1.client().create("BenchC05")
+            worker1.submit("code_execute", {"tag": model_05.tag(), "source_artifact": str(f05), "entrypoint": "C05Builder", "arguments": {}})
+            mph_05 = self.artifacts_dir / "bench_c05_solved.mph"
+            model_05.save(str(mph_05))
+
+            self.log("  Building BenchC06 (2D Rectangle [0,2]x[0,3])...")
+            c06_code = """
+import com.comsol.model.*;
+import java.util.*;
+
+public final class C06Builder {
+    public static Object run(Model model, Map<String, Object> args) {
+        model.modelNode().create("comp1");
+        model.geom().create("geom1", 2);
+        model.geom("geom1").create("r1", "Rectangle");
+        model.geom("geom1").feature("r1").set("size", new String[]{"2.0", "3.0"});
+        model.geom("geom1").feature("r1").set("pos", new String[]{"0.0", "0.0"});
+        model.geom("geom1").run();
+        
+        model.physics().create("ht", "HeatTransfer", "geom1");
+        model.physics("ht").create("temp1", "TemperatureBoundary", 1);
+        model.physics("ht").feature("temp1").selection().set(new int[]{1});
+        model.physics("ht").feature("temp1").set("T0", "300.0[K]");
+        
+        model.material().create("mat1", "Common", "comp1");
+        model.material("mat1").selection().all();
+        model.material("mat1").propertyGroup("def").set("thermalconductivity", new String[]{"400[W/(m*K)]"});
+        model.material("mat1").propertyGroup("def").set("density", "8960[kg/m^3]");
+        model.material("mat1").propertyGroup("def").set("heatcapacity", "385[J/(kg*K)]");
+        
+        model.mesh().create("mesh1", "geom1");
+        model.mesh("mesh1").autoMeshSize(3);
+        model.mesh("mesh1").run();
+        
+        model.study().create("std1");
+        model.study("std1").create("stat", "Stationary");
+        model.study("std1").run();
+        
+        return Collections.singletonMap("status", "SOLVED");
+    }
+}
+"""
+            f06 = self.run_dir / "C06Builder.java"
+            f06.write_text(c06_code)
+            model_06 = worker1.client().create("BenchC06")
+            worker1.submit("code_execute", {"tag": model_06.tag(), "source_artifact": str(f06), "entrypoint": "C06Builder", "arguments": {}})
+            mph_06 = self.artifacts_dir / "bench_c06_solved.mph"
+            model_06.save(str(mph_06))
+
+            self.log("  Building BenchC07 (2D Axisymmetric Cylinder R=2, H=3)...")
+            c07_code = """
+import com.comsol.model.*;
+import java.util.*;
+
+public final class C07Builder {
+    public static Object run(Model model, Map<String, Object> args) {
+        model.modelNode().create("comp1", false);
+        model.geom().create("geom1", 2);
+        model.geom("geom1").axisymmetric(true);
+        model.geom("geom1").create("r1", "Rectangle");
+        model.geom("geom1").feature("r1").set("size", new String[]{"2.0", "3.0"});
+        model.geom("geom1").feature("r1").set("pos", new String[]{"0.0", "0.0"});
+        model.geom("geom1").run();
+        
+        model.physics().create("ht", "HeatTransfer", "geom1");
+        model.physics("ht").create("temp1", "TemperatureBoundary", 1);
+        model.physics("ht").feature("temp1").selection().all();
+        model.physics("ht").feature("temp1").set("T0", "300.0[K]");
+        
+        model.material().create("mat1", "Common", "comp1");
+        model.material("mat1").selection().all();
+        model.material("mat1").propertyGroup("def").set("thermalconductivity", new String[]{"400[W/(m*K)]"});
+        model.material("mat1").propertyGroup("def").set("density", "8960[kg/m^3]");
+        model.material("mat1").propertyGroup("def").set("heatcapacity", "385[J/(kg*K)]");
+        
+        model.mesh().create("mesh1", "geom1");
+        model.mesh("mesh1").autoMeshSize(3);
+        model.mesh("mesh1").run();
+        
+        model.study().create("std1");
+        model.study("std1").create("stat", "Stationary");
+        model.study("std1").run();
+        
+        return Collections.singletonMap("status", "SOLVED");
+    }
+}
+"""
+            f07 = self.run_dir / "C07Builder.java"
+            f07.write_text(c07_code)
+            model_07 = worker1.client().create("BenchC07")
+            worker1.submit("code_execute", {"tag": model_07.tag(), "source_artifact": str(f07), "entrypoint": "C07Builder", "arguments": {}})
+            mph_07 = self.artifacts_dir / "bench_c07_solved.mph"
+            model_07.save(str(mph_07))
+
             # Close builder worker completely
             worker1.client().disconnect()
         finally:
@@ -632,7 +816,6 @@ public final class ChainCBuilder {
                     "T_mid": {"expected": pre_c["values"][0][0][0], "tolerance": 1e-3},
                 },
             }
-            # Attach derived_values readback attribute to reopened_c for verification
             num_tags = reopened_c._call("result")._call("numerical")._call("tags")
             reopened_c.derived_values = list(num_tags)
             report_c = verify_reopen(
@@ -642,6 +825,13 @@ public final class ChainCBuilder {
                 evaluator=lambda m, expr: pre_c["values"][0][0][0],
             )
             assert report_c["status"] == "PASS"
+
+            # Load benchmark models for C04–C14 in verifier worker
+            self.log("  Loading benchmark models in verifier worker...")
+            worker2.client().load(str(mph_04), "reopen_c04")
+            worker2.client().load(str(mph_05), "reopen_c05")
+            worker2.client().load(str(mph_06), "reopen_c06")
+            worker2.client().load(str(mph_07), "reopen_c07")
 
             # Independent re-solve check (separate case)
             self.log("  Running independent re-solve case on reopened model...")
@@ -707,6 +897,10 @@ public final class ChainCBuilder {
                     "chain_b_sha256": sha_b,
                     "chain_c_mph": str(mph_c),
                     "chain_c_sha256": sha_c,
+                    "bench_c04_mph": str(mph_04),
+                    "bench_c05_mph": str(mph_05),
+                    "bench_c06_mph": str(mph_06),
+                    "bench_c07_mph": str(mph_07),
                     "independent_resolve_verified": True,
                     "negative_controls_tested": [
                         "ARTIFACT_HASH_MISMATCH",
@@ -716,26 +910,43 @@ public final class ChainCBuilder {
                     ],
                 },
             )
-            worker2.client().disconnect()
-        finally:
+            # Retain worker2 as persistent verifier worker across C04–C15
+            self.verifier_worker = worker2
+        except Exception as exc:
             worker2.close()
+            raise exc
 
+    # -----------------------------------------------------------------------
     # -----------------------------------------------------------------------
     # Case C04: T013 Constant Field Statistics (f=2, V=3)
     # -----------------------------------------------------------------------
     def run_c04(self) -> None:
-        self.log("Executing C04: Constant field statistics (f=2, V=3)...")
+        self.log("Executing C04: Constant field statistics (f=2, V=3) on live COMSOL model...")
         try:
-            ms = MeasureSpec(entity_dim=2, is_axisymmetric=False)
-            integral = 6.0
-            measure = 3.0
-            avg = ms.compute_statistics(raw_val=integral, denominator=measure, mode="average")
-            std = ms.compute_statistics(raw_val=0.0, denominator=measure, mode="std", variance_integral=0.0)
-            rms = ms.compute_statistics(raw_val=12.0, denominator=measure, mode="rms", rms_integral=12.0)
+            eval_int = result_evaluate(self.verifier_worker, "reopen_c04", {
+                "spec": {"expressions": ["2"], "solution": {"dataset": "dset1"}, "aggregate": "integral"}
+            })
+            eval_avg = result_evaluate(self.verifier_worker, "reopen_c04", {
+                "spec": {"expressions": ["2"], "solution": {"dataset": "dset1"}, "aggregate": "average"}
+            })
+            eval_std = result_evaluate(self.verifier_worker, "reopen_c04", {
+                "spec": {"expressions": ["2"], "solution": {"dataset": "dset1"}, "aggregate": "std"}
+            })
+            eval_rms = result_evaluate(self.verifier_worker, "reopen_c04", {
+                "spec": {"expressions": ["2"], "solution": {"dataset": "dset1"}, "aggregate": "rms"}
+            })
 
-            assert abs(avg - 2.0) < 1e-12
-            assert abs(std - 0.0) < 1e-12
-            assert abs(rms - 2.0) < 1e-12
+            val_int = _to_float(eval_int["values"])
+            val_avg = _to_float(eval_avg["values"])
+            val_std = _to_float(eval_std["values"])
+            val_rms = _to_float(eval_rms["values"])
+            denom = eval_avg.get("denominator_measure")
+
+            assert abs(val_int - 6.0) < 1e-9
+            assert abs(val_avg - 2.0) < 1e-9
+            assert abs(val_std - 0.0) < 1e-9
+            assert abs(val_rms - 2.0) < 1e-9
+            assert abs(denom - 3.0) < 1e-9
 
             self.record_case(
                 "C04",
@@ -743,11 +954,11 @@ public final class ChainCBuilder {
                 "PASS",
                 "numerical",
                 {
-                    "formula_measure": measure,
-                    "formula_integral": integral,
-                    "computed_average": avg,
-                    "computed_std": std,
-                    "computed_rms": rms,
+                    "formula_measure": denom,
+                    "formula_integral": val_int,
+                    "computed_average": val_avg,
+                    "computed_std": val_std,
+                    "computed_rms": val_rms,
                     "denominator_verified_as_measure": True,
                 },
             )
@@ -758,54 +969,76 @@ public final class ChainCBuilder {
     # Case C05: T013 Multi-dimensional / Selection Support
     # -----------------------------------------------------------------------
     def run_c05(self) -> None:
-        self.log("Executing C05: Multi-dimensional and selection mapping...")
+        self.log("Executing C05: Multi-dimensional and selection mapping on live COMSOL model...")
         try:
-            ms_1d = MeasureSpec(entity_dim=1, space_dim=1)
-            ms_2d = MeasureSpec(entity_dim=2, space_dim=2)
-            ms_3d = MeasureSpec(entity_dim=3, space_dim=3)
-            assert ms_1d.integral_feature_type == "IntLine"
-            assert ms_2d.integral_feature_type == "IntSurface"
-            assert ms_3d.integral_feature_type == "IntVolume"
+            r_d1 = result_evaluate(self.verifier_worker, "reopen_c05", {
+                "spec": {"expressions": ["1"], "solution": {"dataset": "dset1"}, "aggregate": "integral", "selection": [1]}
+            })
+            r_d2 = result_evaluate(self.verifier_worker, "reopen_c05", {
+                "spec": {"expressions": ["1"], "solution": {"dataset": "dset1"}, "aggregate": "integral", "selection": [2]}
+            })
+            r_all = result_evaluate(self.verifier_worker, "reopen_c05", {
+                "spec": {"expressions": ["1"], "solution": {"dataset": "dset1"}, "aggregate": "integral", "selection": "all"}
+            })
+            val_d1 = _to_float(r_d1["values"])
+            val_d2 = _to_float(r_d2["values"])
+            val_all = _to_float(r_all["values"])
 
-            # Verify partial selection vs whole domain
-            ms_partial = MeasureSpec(entity_dim=2, selection=[1, 2])
-            ms_all = MeasureSpec(entity_dim=2, selection="all")
-            assert ms_partial.selection != ms_all.selection
+            assert (abs(val_d1 - 2.0) < 1e-6 and abs(val_d2 - 4.0) < 1e-6) or (abs(val_d1 - 4.0) < 1e-6 and abs(val_d2 - 2.0) < 1e-6)
+            assert abs(val_all - 6.0) < 1e-6
+            assert abs(val_d1 + val_d2 - val_all) < 1e-6
 
             self.record_case(
                 "C05",
                 "Multi-dimensional & Selection Support",
                 "PASS",
-                "protocol",
+                "numerical",
                 {
-                    "1d_feature": ms_1d.integral_feature_type,
-                    "2d_feature": ms_2d.integral_feature_type,
-                    "3d_feature": ms_3d.integral_feature_type,
-                    "partial_selection": ms_partial.selection,
+                    "domain_1_integral": val_d1,
+                    "domain_2_integral": val_d2,
+                    "all_domains_integral": val_all,
+                    "partition_conservation_verified": True,
                 },
             )
         except Exception as exc:
-            self.record_case("C05", "Multi-dimensional Support", "FAIL", "protocol", {}, error=str(exc))
+            self.record_case("C05", "Multi-dimensional Support", "FAIL", "numerical", {}, error=str(exc))
 
     # -----------------------------------------------------------------------
     # Case C06: T013 Non-Uniform Field on Rectangle [0,2]x[0,3], f=x+2y
     # -----------------------------------------------------------------------
     def run_c06(self) -> None:
-        self.log("Executing C06: Non-uniform field analytic comparison (f=x+2y)...")
+        self.log("Executing C06: Non-uniform field analytic comparison (f=x+2y) on live COMSOL model...")
         try:
-            ms = MeasureSpec(entity_dim=2, space_dim=2, is_axisymmetric=False)
-            avg = ms.compute_statistics(24.0, 6.0, "average")
-            std = ms.compute_statistics(0.0, 6.0, "std", variance_integral=20.0)
-            rms = ms.compute_statistics(0.0, 6.0, "rms", rms_integral=116.0)
+            r_int = result_evaluate(self.verifier_worker, "reopen_c06", {
+                "spec": {"expressions": ["x + 2*y"], "solution": {"dataset": "dset1"}, "aggregate": "integral"}
+            })
+            r_avg = result_evaluate(self.verifier_worker, "reopen_c06", {
+                "spec": {"expressions": ["x + 2*y"], "solution": {"dataset": "dset1"}, "aggregate": "average"}
+            })
+            r_std = result_evaluate(self.verifier_worker, "reopen_c06", {
+                "spec": {"expressions": ["x + 2*y"], "solution": {"dataset": "dset1"}, "aggregate": "std"}
+            })
+            r_rms = result_evaluate(self.verifier_worker, "reopen_c06", {
+                "spec": {"expressions": ["x + 2*y"], "solution": {"dataset": "dset1"}, "aggregate": "rms"}
+            })
+            val_int = _to_float(r_int["values"])
+            val_avg = _to_float(r_avg["values"])
+            val_std = _to_float(r_std["values"])
+            val_rms = _to_float(r_rms["values"])
+            denom = r_avg.get("denominator_measure")
 
+            expected_area = 6.0
+            expected_int = 24.0
             expected_avg = 4.0
             expected_var = 10.0 / 3.0
             expected_std = math.sqrt(10.0 / 3.0)
             expected_rms = math.sqrt(58.0 / 3.0)
 
-            assert abs(avg - expected_avg) < 1e-12
-            assert abs(std - expected_std) < 1e-12
-            assert abs(rms - expected_rms) < 1e-12
+            assert abs(denom - expected_area) < 1e-9
+            assert abs(val_int - expected_int) < 1e-9
+            assert abs(val_avg - expected_avg) < 1e-9
+            assert abs(val_std - expected_std) < 1e-9
+            assert abs(val_rms - expected_rms) < 1e-9
 
             self.record_case(
                 "C06",
@@ -813,15 +1046,17 @@ public final class ChainCBuilder {
                 "PASS",
                 "numerical",
                 {
-                    "analytic_area": 6.0,
-                    "analytic_integral": 24.0,
+                    "analytic_area": expected_area,
+                    "analytic_integral": expected_int,
                     "analytic_average": expected_avg,
                     "analytic_variance": expected_var,
                     "analytic_std": expected_std,
                     "analytic_rms": expected_rms,
-                    "computed_average": avg,
-                    "computed_std": std,
-                    "computed_rms": rms,
+                    "live_integral": val_int,
+                    "live_average": val_avg,
+                    "live_std": val_std,
+                    "live_rms": val_rms,
+                    "live_denominator_measure": denom,
                 },
             )
         except Exception as exc:
@@ -831,15 +1066,29 @@ public final class ChainCBuilder {
     # Case C07: T013 Axisymmetric Cylinder (R=2, H=3)
     # -----------------------------------------------------------------------
     def run_c07(self) -> None:
-        self.log("Executing C07: Axisymmetric cylinder weighting (R=2, H=3)...")
+        self.log("Executing C07: Axisymmetric cylinder weighting (R=2, H=3) on live COMSOL model...")
         try:
-            ms = MeasureSpec(entity_dim=2, space_dim=2, is_axisymmetric=True)
-            vol = 12.0 * math.pi
-            int_r = 16.0 * math.pi
-            avg_r = int_r / vol
+            r_vol = result_evaluate(self.verifier_worker, "reopen_c07", {
+                "spec": {"expressions": ["1"], "solution": {"dataset": "dset1"}, "aggregate": "integral"}
+            })
+            r_avgr = result_evaluate(self.verifier_worker, "reopen_c07", {
+                "spec": {"expressions": ["r"], "solution": {"dataset": "dset1"}, "aggregate": "average"}
+            })
+            val_vol = _to_float(r_vol["values"])
+            val_avgr = _to_float(r_avgr["values"])
+            revolved_m = r_avgr.get("revolved_measure")
+            cross_sec_m = r_avgr.get("cross_section_measure")
 
-            assert abs(avg_r - (4.0 / 3.0)) < 1e-12
-            assert abs(vol - (12.0 * math.pi)) < 1e-12
+            expected_vol = 12.0 * math.pi
+            expected_avgr = 4.0 / 3.0
+            expected_cross_section = 6.0
+
+            assert abs(val_vol - expected_vol) < 1e-6
+            assert abs(val_avgr - expected_avgr) < 1e-6
+            assert abs(revolved_m - expected_vol) < 1e-6
+            assert abs(cross_sec_m - expected_cross_section) < 1e-6
+            assert r_vol.get("axisymmetric") is True
+            assert r_vol.get("axisymmetric_applied_count") == 1
 
             self.record_case(
                 "C07",
@@ -849,12 +1098,14 @@ public final class ChainCBuilder {
                 {
                     "cylinder_radius": 2.0,
                     "cylinder_height": 3.0,
-                    "revolved_volume": vol,
-                    "expected_volume": 12.0 * math.pi,
-                    "average_r": avg_r,
-                    "expected_average_r": 4.0 / 3.0,
-                    "lateral_area": 12.0 * math.pi,
-                    "single_weighting_verified": True,
+                    "live_revolved_volume": val_vol,
+                    "expected_volume": expected_vol,
+                    "live_average_r": val_avgr,
+                    "expected_average_r": expected_avgr,
+                    "cross_section_measure": cross_sec_m,
+                    "expected_cross_section_measure": expected_cross_section,
+                    "axisymmetric_flag": r_vol.get("axisymmetric"),
+                    "axisymmetric_applied_count": r_vol.get("axisymmetric_applied_count"),
                 },
             )
         except Exception as exc:
@@ -864,21 +1115,26 @@ public final class ChainCBuilder {
     # Case C08: T021 Solution Axis Slicing & Shapes
     # -----------------------------------------------------------------------
     def run_c08(self) -> None:
-        self.log("Executing C08: Solution axis binding and multidimensional slicing...")
+        self.log("Executing C08: Solution axis binding and multidimensional slicing on live transient model...")
         try:
-            raw_data = [
-                [[10.0, 11.0, 12.0, 13.0], [20.0, 21.0, 22.0, 23.0], [30.0, 31.0, 32.0, 33.0]],
-                [[100.0, 101.0, 102.0, 103.0], [200.0, 201.0, 202.0, 203.0], [300.0, 301.0, 302.0, 303.0]],
-            ]
-            step2 = SolutionBinding.slice_solution_axis(raw_data, 2, num_expressions=2)
-            assert len(step2) == 2  # 2 expressions
-            assert step2[0] == [20.0, 21.0, 22.0, 23.0]
-            assert step2[1] == [200.0, 201.0, 202.0, 203.0]
+            res_pts = result_at_points(self.verifier_worker, "reopen_b", {
+                "spec": {"expressions": ["T", "x*T"], "solution": {"dataset": "dset1"}},
+                "points": [[0.0125, 0.005], [0.0250, 0.005], [0.0375, 0.005]],
+                "coordinate_unit": "m",
+                "frame": "spatial",
+            })
+            raw_vals = res_pts["values"]
+            assert len(raw_vals) == 2, f"Expected 2 expressions, got {len(raw_vals)}"
+            assert len(raw_vals[0]) >= 3, f"Expected at least 3 solutions, got {len(raw_vals[0])}"
+            assert len(raw_vals[0][0]) == 3, f"Expected 3 points, got {len(raw_vals[0][0])}"
 
-            # Verify negative / out-of-bounds index handling
+            step2 = SolutionBinding.slice_solution_axis(raw_vals, 2, num_expressions=2)
+            assert len(step2) == 2
+            assert len(step2[0]) == 3
+
             try:
-                SolutionBinding.slice_solution_axis(raw_data, 99, num_expressions=2)
-                raise AssertionError("Expected ExecutionContractError on step 99")
+                SolutionBinding.slice_solution_axis(raw_vals, 999, num_expressions=2)
+                raise AssertionError("Expected ExecutionContractError on step 999")
             except ExecutionContractError:
                 pass
 
@@ -886,38 +1142,65 @@ public final class ChainCBuilder {
                 "C08",
                 "Solution Axis Slicing & Metadata",
                 "PASS",
-                "protocol",
+                "numerical",
                 {
-                    "expressions_count": 2,
-                    "solutions_count": 3,
-                    "points_count": 4,
+                    "expressions_count": len(raw_vals),
+                    "solutions_count": len(raw_vals[0]),
+                    "points_count": len(raw_vals[0][0]),
                     "step2_sliced": step2,
                     "bounds_check_verified": True,
                 },
             )
         except Exception as exc:
-            self.record_case("C08", "Solution Axis Slicing", "FAIL", "protocol", {}, error=str(exc))
+            self.record_case("C08", "Solution Axis Slicing", "FAIL", "numerical", {}, error=str(exc))
 
     # -----------------------------------------------------------------------
     # Case C09: T014 Complex Field Transformations
     # -----------------------------------------------------------------------
     def run_c09(self) -> None:
-        self.log("Executing C09: Complex field transformations...")
+        self.log("Executing C09: Complex field transformations on live COMSOL model...")
         try:
-            # 3 + 4i
-            r_val = transform_complex_value(3.0, 4.0, "real")
-            i_val = transform_complex_value(3.0, 4.0, "imag")
-            a_val = transform_complex_value(3.0, 4.0, "abs")
-            p_val = transform_complex_value(3.0, 4.0, "phase")
-            p_res = transform_complex_value(3.0, 4.0, "preserve")
+            # 1. Constant complex expression 3 + 4*i on BenchC06 (area = 6.0)
+            r_pres = result_evaluate(self.verifier_worker, "reopen_c06", {
+                "spec": {"expressions": ["3 + 4*i"], "solution": {"dataset": "dset1"}, "aggregate": "integral", "complex_mode": "preserve"}
+            })
+            r_real = result_evaluate(self.verifier_worker, "reopen_c06", {
+                "spec": {"expressions": ["3 + 4*i"], "solution": {"dataset": "dset1"}, "aggregate": "integral", "complex_mode": "real"}
+            })
+            r_imag = result_evaluate(self.verifier_worker, "reopen_c06", {
+                "spec": {"expressions": ["3 + 4*i"], "solution": {"dataset": "dset1"}, "aggregate": "integral", "complex_mode": "imag"}
+            })
+            r_abs = result_evaluate(self.verifier_worker, "reopen_c06", {
+                "spec": {"expressions": ["3 + 4*i"], "solution": {"dataset": "dset1"}, "aggregate": "integral", "complex_mode": "abs"}
+            })
+            r_phase = result_evaluate(self.verifier_worker, "reopen_c06", {
+                "spec": {"expressions": ["3 + 4*i"], "solution": {"dataset": "dset1"}, "aggregate": "integral", "complex_mode": "phase"}
+            })
 
-            assert abs(r_val - 3.0) < 1e-12
-            assert abs(i_val - 4.0) < 1e-12
-            assert abs(a_val - 5.0) < 1e-12
-            assert abs(p_val - math.atan2(4.0, 3.0)) < 1e-12
-            assert p_res == {"real": 3.0, "imag": 4.0}
+            val_pres = r_pres["values"][0][0]
+            val_real = _to_float(r_real["values"])
+            val_imag = _to_float(r_imag["values"])
+            val_abs = _to_float(r_abs["values"])
+            val_phase = _to_float(r_phase["values"])
 
-            # Verify silent zero-padding is disallowed when complex field lacks imag data
+            assert abs(val_pres["real"] - 18.0) < 1e-6
+            assert abs(val_pres["imag"] - 24.0) < 1e-6
+            assert abs(val_real - 18.0) < 1e-6
+            assert abs(val_imag - 24.0) < 1e-6
+            assert abs(val_abs - 30.0) < 1e-6
+            assert abs(val_phase - math.atan2(24.0, 18.0)) < 1e-6
+
+            # 2. Spatially varying complex field (x + 2*y) + i*(2*x - y) at point (1, 1)
+            r_sp = result_at_points(self.verifier_worker, "reopen_c06", {
+                "spec": {"expressions": ["(x + 2*y) + i*(2*x - y)"], "solution": {"dataset": "dset1"}, "complex_mode": "preserve"},
+                "points": [[1.0, 1.0]],
+                "coordinate_unit": "m",
+            })
+            sp_val = r_sp["values"][0][0][0]
+            assert abs(sp_val["real"] - 3.0) < 1e-6
+            assert abs(sp_val["imag"] - 1.0) < 1e-6
+
+            # 3. Disallow silent zero-padding on complex field lacking imaginary data
             try:
                 transform_complex_data([1.0, 2.0], None, mode="preserve", is_complex=True)
                 raise AssertionError("Expected failure when imag data missing for complex field")
@@ -930,11 +1213,13 @@ public final class ChainCBuilder {
                 "PASS",
                 "numerical",
                 {
-                    "input": "3+4i",
-                    "real": r_val,
-                    "imag": i_val,
-                    "abs": a_val,
-                    "phase": p_val,
+                    "constant_complex": "3+4i",
+                    "integral_real": val_real,
+                    "integral_imag": val_imag,
+                    "integral_abs": val_abs,
+                    "integral_phase": val_phase,
+                    "spatial_point": [1.0, 1.0],
+                    "spatial_complex_value": sp_val,
                     "zero_padding_rejection_verified": True,
                 },
             )
@@ -945,37 +1230,111 @@ public final class ChainCBuilder {
     # Case C10: T015 Point Coordinates & Unit Scaling
     # -----------------------------------------------------------------------
     def run_c10(self) -> None:
-        self.log("Executing C10: Point coordinates unit scaling (m vs mm)...")
+        self.log("Executing C10: Point coordinates unit scaling (m vs mm) on live COMSOL model...")
         try:
-            # In result_at_points: [0.05, 0.02] m == [50.0, 20.0] mm
-            m_coords = [[0.05], [0.02]]
-            mm_coords = [[50.0], [20.0]]
-            # Scale factor for mm is 0.001
-            scaled_mm = [[x * 0.001 for x in row] for row in mm_coords]
-            assert abs(scaled_mm[0][0] - m_coords[0][0]) < 1e-12
-            assert abs(scaled_mm[1][0] - m_coords[1][0]) < 1e-12
+            pt_m = result_at_points(self.verifier_worker, "reopen_c06", {
+                "spec": {"expressions": ["x + 2*y"], "solution": {"dataset": "dset1"}},
+                "points": [[1.0, 1.5]],
+                "coordinate_unit": "m",
+            })
+            pt_mm = result_at_points(self.verifier_worker, "reopen_c06", {
+                "spec": {"expressions": ["x + 2*y"], "solution": {"dataset": "dset1"}},
+                "points": [[1000.0, 1500.0]],
+                "coordinate_unit": "mm",
+            })
+            val_m = _to_float(pt_m["values"])
+            val_mm = _to_float(pt_mm["values"])
+
+            assert abs(val_m - 4.0) < 1e-6, f"val_m expected 4.0, got {val_m}"
+            assert abs(val_mm - 4.0) < 1e-6, f"val_mm expected 4.0, got {val_mm}"
+            assert abs(val_m - val_mm) < 1e-6, f"val_m != val_mm: {val_m} vs {val_mm}"
+
+            # 1. Non-finite coordinate rejection
+            try:
+                result_at_points(self.verifier_worker, "reopen_c06", {
+                    "spec": {"expressions": ["x + 2*y"], "solution": {"dataset": "dset1"}},
+                    "points": [[float("nan"), 1.5]],
+                })
+                raise AssertionError("Expected non-finite coordinate rejection")
+            except ExecutionContractError as exc:
+                assert exc.code in ("INVALID_REQUEST", "COORDINATE_ERROR")
+
+            # 2. Space dimension mismatch rejection
+            try:
+                res_bad = result_at_points(self.verifier_worker, "reopen_c06", {
+                    "spec": {"expressions": ["x + 2*y"], "solution": {"dataset": "dset1"}},
+                    "points": [[1.0, 1.5, 0.0]],
+                })
+                if not res_bad.get("status", {}).get("ok", True):
+                    raise ExecutionContractError("DIMENSION_MISMATCH", "Dimension mismatch rejected")
+                raise AssertionError("Expected space dimension mismatch rejection")
+            except ExecutionContractError as exc:
+                assert exc.code in ("INVALID_REQUEST", "COORDINATE_ERROR", "DIMENSION_MISMATCH")
+
+            # 3. Jagged shape rejection
+            try:
+                result_at_points(self.verifier_worker, "reopen_c06", {
+                    "spec": {"expressions": ["x + 2*y"], "solution": {"dataset": "dset1"}},
+                    "points": [[1.0, 1.5], [1.0, 1.5, 2.0]],
+                })
+                raise AssertionError("Expected jagged point shape rejection")
+            except ExecutionContractError as exc:
+                assert exc.code in ("INVALID_REQUEST", "COORDINATE_ERROR", "DIMENSION_MISMATCH")
+
+            # 4. Unsupported frame rejection
+            try:
+                result_at_points(self.verifier_worker, "reopen_c06", {
+                    "spec": {"expressions": ["x + 2*y"], "solution": {"dataset": "dset1"}},
+                    "points": [[1.0, 1.5]],
+                    "frame": "material",
+                })
+                raise AssertionError("Expected unsupported frame rejection")
+            except ExecutionContractError as exc:
+                assert exc.code in ("INVALID_REQUEST", "API_UNSUPPORTED", "COORDINATE_ERROR")
 
             self.record_case(
                 "C10",
                 "Point Coordinates Scaling (m vs mm)",
                 "PASS",
-                "protocol",
+                "numerical",
                 {
-                    "m_coords": m_coords,
-                    "mm_coords": mm_coords,
-                    "scaled_mm": scaled_mm,
+                    "evaluated_point_m": [1.0, 1.5],
+                    "evaluated_point_mm": [1000.0, 1500.0],
+                    "value_m": val_m,
+                    "value_mm": val_mm,
                     "unit_equivalence_verified": True,
+                    "non_finite_rejection_verified": True,
+                    "dimension_mismatch_rejected": True,
+                    "unsupported_frame_rejected": True,
                 },
             )
         except Exception as exc:
-            self.record_case("C10", "Point Coordinates Scaling", "FAIL", "protocol", {}, error=str(exc))
+            import traceback
+            tb = traceback.format_exc()
+            self.log(f"C10 error: {tb}")
+            self.record_case("C10", "Point Coordinates Scaling", "FAIL", "numerical", {}, error=str(exc) or repr(exc))
 
     # -----------------------------------------------------------------------
     # Case C11: Dataset / Nodes Dependency Chains
     # -----------------------------------------------------------------------
     def run_c11(self) -> None:
-        self.log("Executing C11: Dataset graph and cycle detection...")
+        self.log("Executing C11: Dataset graph, CutPoint2D evaluation and cycle detection...")
         try:
+            raw_model = self.verifier_worker.client().model("reopen_c06")
+            try:
+                raw_model._call("result")._call("dataset")._call("create", "cpt1", "CutPoint2D")
+                raw_model._call("result")._call("dataset", "cpt1")._call("set", "data", "dset1")
+                raw_model._call("result")._call("dataset", "cpt1")._call("set", "pointx", "1.0")
+                raw_model._call("result")._call("dataset", "cpt1")._call("set", "pointy", "1.5")
+            except Exception:
+                pass
+
+            res_cpt = result_evaluate(self.verifier_worker, "reopen_c06", {
+                "spec": {"expressions": ["x + 2*y"], "solution": {"dataset": "cpt1"}}
+            })
+            val_cpt = _to_float(res_cpt["values"])
+            assert abs(val_cpt - 4.0) < 1e-9
+
             class MockDsetContainer:
                 def __init__(self, mapping: dict[str, str | None]) -> None:
                     self._m = mapping
@@ -1000,22 +1359,22 @@ public final class ChainCBuilder {
             except ExecutionContractError as exc:
                 assert exc.code == "DATASET_CYCLE_DETECTED"
                 cycle_detected = True
-
             assert cycle_detected
 
             self.record_case(
                 "C11",
-                "Dataset Dependency Graph & Cycle Detection",
+                "Dataset Dependency Graph & CutPoint2D",
                 "PASS",
-                "protocol",
+                "numerical",
                 {
+                    "cutpoint_dataset": "cpt1",
+                    "cutpoint_evaluated_value": val_cpt,
                     "acyclic_chain": chain,
                     "cycle_detected": cycle_detected,
-                    "fail_closed_verified": True,
                 },
             )
         except Exception as exc:
-            self.record_case("C11", "Dataset Graph & Cycle", "FAIL", "protocol", {}, error=str(exc))
+            self.record_case("C11", "Dataset Graph & CutPoint2D", "FAIL", "numerical", {}, error=str(exc))
 
     # -----------------------------------------------------------------------
     # Case C12: T035/T030 Export Security & Atomicity
@@ -1122,36 +1481,87 @@ public final class ChainCBuilder {
     # Case C14: Probe / Table Management
     # -----------------------------------------------------------------------
     def run_c14(self) -> None:
-        self.log("Executing C14: Model definitions probe and results separation...")
+        self.log("Executing C14: Model definitions probe and results separation on live COMSOL model...")
         try:
-            # Verify Model Definitions probe CRUD separation from Derived Values
+            # 1. Verify Model Definitions probe CRUD separation from Derived Values
             assert "DomainProbe" in SUPPORTED_PROBE_TYPES
             assert "BoundaryProbe" in SUPPORTED_PROBE_TYPES
             assert "PointProbe" in SUPPORTED_PROBE_TYPES
             assert "GlobalProbe" in SUPPORTED_PROBE_TYPES
 
-            # Verify validation error on unsupported probe
+            # 2. Verify validation error on unsupported probe
             from comsol_mcp._execution_contract import ExecutionContractError
             try:
-                probe_create(None, "m1", {"tag": "p1", "type_id": "UnknownProbe", "definition": {}})
+                probe_create(self.verifier_worker, "reopen_c06", {"tag": "p_bad", "type_id": "UnknownProbe", "definition": {}})
                 raise AssertionError("Expected API_UNSUPPORTED on UnknownProbe")
             except ExecutionContractError as exc:
                 assert exc.code == "API_UNSUPPORTED"
 
+            # 3. Create Model Definitions DomainProbe on live COMSOL model
+            created_probe = probe_create(self.verifier_worker, "reopen_c06", {
+                "tag": "prb1",
+                "type_id": "DomainProbe",
+                "definition": {"expr": "x + 2*y"},
+            })
+            assert created_probe["created"] is True
+
+            # 4. List probes and verify prb1 is registered under model/component probes
+            probes = probe_list(self.verifier_worker, "reopen_c06")
+            assert "prb1" in probes["tags"]
+
+            # 5. Verify probe is NOT in results derived values (model.result.numerical)
+            num_tags = list(self.verifier_worker.client().model("reopen_c06")._call("result")._call("numerical")._call("tags"))
+            assert "prb1" not in num_tags
+
+            # 6. Test User Table creation with live numeric data write and readback
+            created_table = result_table_manage(self.verifier_worker, "reopen_c06", {
+                "action": "create",
+                "path": "tbl1",
+                "definition": {
+                    "data": [[1.5, 2.5], [3.5, 4.5]],
+                },
+            })
+            assert created_table["created"] is True
+
+            # 7. Read back table data directly from COMSOL engine (no echo)
+            tbl_data = result_table_manage(self.verifier_worker, "reopen_c06", {
+                "action": "get",
+                "path": "tbl1",
+            })
+            read_vals = tbl_data.get("data")
+            assert read_vals is not None, "Table data should not be None after write"
+            assert abs(read_vals[0][0] - 1.5) < 1e-6
+            assert abs(read_vals[0][1] - 2.5) < 1e-6
+            assert abs(read_vals[1][0] - 3.5) < 1e-6
+            assert abs(read_vals[1][1] - 4.5) < 1e-6
+
+            # 8. Clean up created test entities
+            probe_remove(self.verifier_worker, "reopen_c06", {"tag": "prb1"})
+            plist_after = probe_list(self.verifier_worker, "reopen_c06")
+            assert "prb1" not in plist_after["tags"]
+
+            result_table_manage(self.verifier_worker, "reopen_c06", {
+                "action": "remove",
+                "path": "tbl1",
+            })
+
             self.record_case(
                 "C14",
-                "Definitions Probe vs Derived Values Separation",
+                "Definitions Probe vs Derived Values Separation & Table Management",
                 "PASS",
-                "protocol",
+                "numerical",
                 {
-                    "supported_probe_types": sorted(SUPPORTED_PROBE_TYPES),
-                    "probe_scope": "model_definitions (model.probe)",
-                    "derived_values_scope": "results (model.result.numerical)",
+                    "created_probe_tag": "prb1",
+                    "probe_type": "DomainProbe",
+                    "probe_scope": "component.probe (separated from result.numerical)",
+                    "table_created_tag": "tbl1",
+                    "table_written_data": [[1.5, 2.5], [3.5, 4.5]],
+                    "table_read_data": read_vals,
                     "validation_verified": True,
                 },
             )
         except Exception as exc:
-            self.record_case("C14", "Probe Separation", "FAIL", "protocol", {}, error=str(exc))
+            self.record_case("C14", "Probe Separation", "FAIL", "numerical", {}, error=str(exc))
 
     # -----------------------------------------------------------------------
     # Case C15: T010/T012/T027 Idempotency & Control Plane Responsiveness
@@ -1218,6 +1628,18 @@ public final class ChainCBuilder {
     def run_c17(self) -> None:
         self.log("Executing C17: Teardown and evidence finalization...")
         try:
+            # First disconnect and close persistent verifier worker
+            if self.verifier_worker is not None:
+                try:
+                    self.verifier_worker.client().disconnect()
+                except Exception:
+                    pass
+                try:
+                    self.verifier_worker.close()
+                except Exception:
+                    pass
+                self.verifier_worker = None
+
             # Stop isolated mphserver
             self.stop_server()
 
@@ -1270,6 +1692,16 @@ public final class ChainCBuilder {
             self.run_c17()
 
         finally:
+            if self.verifier_worker is not None:
+                try:
+                    self.verifier_worker.client().disconnect()
+                except Exception:
+                    pass
+                try:
+                    self.verifier_worker.close()
+                except Exception:
+                    pass
+                self.verifier_worker = None
             self.stop_server()
 
         elapsed = time.monotonic() - start_time

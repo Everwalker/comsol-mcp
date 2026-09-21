@@ -21,51 +21,96 @@ SUPPORTED_PROBE_TYPES = frozenset({
 })
 
 
-def _probe_container(model: Any, comp_tag: str | None = None) -> Any:
+def _probe_container(model: Any, comp_tag: str | None = None, type_id: str | None = None) -> Any:
     """Resolve probe container from model definition or component."""
     if comp_tag:
         comp_node = _call(model, "component", comp_tag)
         return _call(comp_node, "probe")
+    if type_id in ("DomainProbe", "BoundaryProbe", "PointProbe"):
+        try:
+            comps = list(_call(model, "modelNode").tags())
+            if comps:
+                return _call(_call(model, "component", comps[0]), "probe")
+        except Exception:
+            pass
     try:
         return _call(model, "probe")
     except Exception:
-        # If model.probe() is unavailable, check first component
-        try:
-            comps = _call(_call(model, "component"), "tags")
-            if comps:
-                comp_node = _call(model, "component", comps[0])
-                return _call(comp_node, "probe")
-        except Exception:
-            pass
-        raise ExecutionContractError("API_UNSUPPORTED", "Model does not support definition probe container")
+        pass
+    try:
+        comps = list(_call(model, "modelNode").tags())
+        if comps:
+            return _call(_call(model, "component", comps[0]), "probe")
+    except Exception:
+        pass
+    raise ExecutionContractError("API_UNSUPPORTED", "Model does not support definition probe container")
 
 
-def probe_list(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+def _probe_containers(model: Any) -> list[Any]:
+    """Collect all available probe containers in model and components."""
+    containers = []
+    try:
+        containers.append(_call(model, "probe"))
+    except Exception:
+        pass
+    try:
+        model_node = _call(model, "modelNode")
+        for comp_tag in list(_call(model_node, "tags")):
+            try:
+                comp = _call(model, "component", comp_tag)
+                containers.append(_call(comp, "probe"))
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return containers
+
+
+def probe_list(worker: Any, model_tag: str, arguments: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """List all model definition probes."""
+    arguments = arguments or {}
     model = bound_model(worker, model_tag)
-    container = _probe_container(model)
-    tags = list(_call(container, "tags"))
+    comp_tag = arguments.get("component")
+    if comp_tag:
+        containers = [_call(_call(model, "component", comp_tag), "probe")]
+    else:
+        containers = _probe_containers(model)
 
     items: list[dict[str, Any]] = []
-    for tag in tags:
+    all_tags: list[str] = []
+    for container in containers:
         try:
-            node = _call(container, "get", tag)
-            typ = str(_call(node, "getType")) if hasattr(node, "getType") else "Probe"
-            expr = str(_call(node, "getString", "expr")) if hasattr(node, "getString") else None
-            table = str(_call(node, "getString", "table")) if hasattr(node, "getString") else None
-            items.append({
-                "tag": tag,
-                "type_id": typ,
-                "expression": expr,
-                "table": table,
-            })
+            tags = list(_call(container, "tags"))
         except Exception:
-            items.append({"tag": tag, "type_id": "Probe"})
+            tags = []
+        for tag in tags:
+            all_tags.append(tag)
+            try:
+                node = _call(container, "get", tag)
+                typ = str(_call(node, "getType")) if hasattr(node, "getType") else "Probe"
+                expr = None
+                table = None
+                try:
+                    expr = str(_call(node, "getString", "expr"))
+                except Exception:
+                    pass
+                try:
+                    table = str(_call(node, "getString", "table"))
+                except Exception:
+                    pass
+                items.append({
+                    "tag": tag,
+                    "type_id": typ,
+                    "expression": expr,
+                    "table": table,
+                })
+            except Exception:
+                items.append({"tag": tag, "type_id": "Probe"})
 
     return {
         "probes": items,
         "count": len(items),
-        "tags": tags,
+        "tags": all_tags,
     }
 
 
@@ -82,12 +127,23 @@ def probe_create(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> d
         )
 
     model = bound_model(worker, model_tag)
-    container = _probe_container(model)
+    container = _probe_container(model, comp_tag=arguments.get("component"), type_id=type_id)
     tags = list(_call(container, "tags"))
     if tag in tags:
         raise ExecutionContractError("TAG_CONFLICT", f"Probe {tag!r} already exists")
 
-    node = _call(container, "create", tag, type_id)
+    PROBE_TYPE_MAP = {
+        "DomainProbe": "Domain",
+        "BoundaryProbe": "Boundary",
+        "PointProbe": "Point",
+        "GlobalProbe": "Global",
+        "Domain": "Domain",
+        "Boundary": "Boundary",
+        "Point": "Point",
+        "Global": "Global",
+    }
+    comsol_type = PROBE_TYPE_MAP.get(type_id, type_id)
+    node = _call(container, "create", tag, comsol_type)
 
     applied: list[str] = []
     failed: list[dict[str, Any]] = []
@@ -111,13 +167,27 @@ def probe_remove(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> d
     """Remove a model definition probe."""
     tag = require_string(arguments.get("tag"), "tag")
     model = bound_model(worker, model_tag)
-    container = _probe_container(model)
-    tags = list(_call(container, "tags"))
-    if tag not in tags:
+    comp_tag = arguments.get("component")
+    if comp_tag:
+        containers = [_call(_call(model, "component", comp_tag), "probe")]
+    else:
+        containers = _probe_containers(model)
+
+    target_container = None
+    for c in containers:
+        try:
+            tags = list(_call(c, "tags"))
+            if tag in tags:
+                target_container = c
+                break
+        except Exception:
+            pass
+
+    if target_container is None:
         raise ExecutionContractError("NODE_NOT_FOUND", f"Probe {tag!r} does not exist")
 
-    _call(container, "remove", tag)
-    remaining = list(_call(container, "tags"))
+    _call(target_container, "remove", tag)
+    remaining = list(_call(target_container, "tags"))
     return {
         "tag": tag,
         "removed": True,

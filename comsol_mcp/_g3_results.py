@@ -782,6 +782,14 @@ def _coordinate_context(model: Any, dataset_node: Any, errors: list[dict[str, An
             except Exception:
                 is_axi = None
         if not isinstance(is_axi, bool):
+            try:
+                comp_obj = _call(model, "component", context["component"])
+                coords = comp_obj.spatialCoord()
+                if coords and any(c in ("r", "phi") for c in coords) and not any(c in ("x", "y") for c in coords):
+                    is_axi = True
+            except Exception:
+                pass
+        if not isinstance(is_axi, bool):
             axi_prop = call_probe(geometry_node, "getBoolean", "axisymmetric")
             if axi_prop["ok"] and isinstance(axi_prop["value"], bool):
                 is_axi = axi_prop["value"]
@@ -1475,6 +1483,9 @@ def _dataset_tag(path: Any) -> str:
         if "segments" in path and isinstance(path["segments"], Sequence) and path["segments"]:
             for seg in reversed(path["segments"]):
                 if isinstance(seg, Mapping) and "tag" in seg:
+                    coll = seg.get("collection")
+                    if coll is not None and coll != "dataset":
+                        continue
                     return str(seg["tag"])
     raise ExecutionContractError("INVALID_NODE_PATH", f"cannot resolve dataset tag from {path!r}")
 
@@ -1714,6 +1725,14 @@ def dataset_solution_indices(worker: Any, model_tag: str, arguments: Mapping[str
     sol_count = len(pvals) if pvals is not None else 1
     inner_indices = list(range(1, sol_count + 1))
     outer_indices = [1]
+    try:
+        sol_info = _call(sol_node, "getSolutioninfo")
+        if sol_info is not None:
+            outers = _call(sol_info, "getOuterSolnum")
+            if outers is not None and len(outers) > 0:
+                outer_indices = [int(x) for x in outers]
+    except Exception:
+        pass
 
     parameters: dict[str, Any] = {}
     try:
@@ -1760,12 +1779,13 @@ def _transform_complex_value(real_val: float, imag_val: float, mode: str) -> Any
     raise ExecutionContractError("API_UNSUPPORTED", f"unsupported complex_mode {mode!r}")
 
 
-def _transform_complex_data(real_data: Any, imag_data: Any, mode: str) -> Any:
+def _transform_complex_data(real_data: Any, imag_data: Any, mode: str, is_complex: bool | None = None) -> Any:
     """Recursively transform real/imag arrays into the requested complex_mode representation."""
     if mode not in COMPLEX_MODES:
         raise ExecutionContractError("API_UNSUPPORTED", f"unsupported complex_mode {mode!r}")
 
-    if imag_data is None and mode in ("preserve", "imag"):
+    # If is_complex is True or unspecified with missing imag_data, refuse silent zero padding
+    if is_complex is not False and imag_data is None and mode in ("preserve", "imag"):
         return None
 
     if isinstance(real_data, (int, float)):
@@ -1773,11 +1793,11 @@ def _transform_complex_data(real_data: Any, imag_data: Any, mode: str) -> Any:
         return _transform_complex_value(float(real_data), imag_v, mode)
     if isinstance(real_data, Sequence) and not isinstance(real_data, (str, bytes)):
         if imag_data is None:
-            if mode in ("preserve", "imag"):
+            if is_complex is not False and mode in ("preserve", "imag"):
                 return None
-            return [_transform_complex_data(r, None, mode) for r in real_data]
+            return [_transform_complex_data(r, None, mode, is_complex=is_complex) for r in real_data]
         if isinstance(imag_data, Sequence) and not isinstance(imag_data, (str, bytes)) and len(imag_data) == len(real_data):
-            return [_transform_complex_data(r, i, mode) for r, i in zip(real_data, imag_data)]
+            return [_transform_complex_data(r, i, mode, is_complex=is_complex) for r, i in zip(real_data, imag_data)]
         else:
             return None
     return real_data
@@ -1896,8 +1916,22 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
             sys.path.insert(0, repo_dir)
         from comsol_mcp._measure_spec import MeasureSpec
 
+    entity_dim = spec.get("entity_dim")
+    if entity_dim is None:
+        try:
+            dset_type = _call(dset_node, "getType")
+            if dset_type in ("CutPoint2D", "CutPoint3D"):
+                entity_dim = 0
+            elif dset_type in ("CutLine2D", "CutLine3D"):
+                entity_dim = 1
+            elif dset_type in ("CutPlane",):
+                entity_dim = 2
+        except Exception:
+            pass
+
     ms = MeasureSpec(
         aggregate=aggregate,
+        entity_dim=entity_dim,
         space_dim=int(context.get("space_dimension", 3)),
         is_axisymmetric=is_axisymmetric,
         selection=spec.get("selection"),
@@ -1929,6 +1963,24 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
             _call(feature, "set", "unit", spec["units"])
         ms.apply_selection(feature)
 
+        try:
+            feat_props = list(_call(feature, "properties"))
+            if "dataisaxisym" in feat_props:
+                if _call(feature, "getString", "dataisaxisym") == "on":
+                    is_axisymmetric = True
+        except Exception:
+            pass
+
+        if is_axisymmetric:
+            try:
+                props = list(_call(feature, "properties"))
+                if "intvolume" in props:
+                    _call(feature, "set", "intvolume", "on")
+                elif "intsurface" in props:
+                    _call(feature, "set", "intsurface", "on")
+            except Exception:
+                pass
+
         _call(feature, "run")
 
         try:
@@ -1957,62 +2009,135 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
             if raw_imag is None:
                 raise ExecutionContractError("COMPLEX_DATA_ERROR", "imaginary data missing for complex field")
 
-        transformed = _transform_complex_data(raw_real, raw_imag, complex_mode)
+        transformed = _transform_complex_data(raw_real, raw_imag, complex_mode, is_complex=is_complex)
         if transformed is None and raw_real is not None and complex_mode in ("preserve", "imag"):
             raise ExecutionContractError("COMPLEX_DATA_ERROR", "complex transformation failed due to missing imaginary data")
 
-        # Denominator measure and statistical calculation (F02)
+        # Denominator measure and statistical calculation (F02, F03)
+        def _to_float(v: Any) -> float:
+            while isinstance(v, (list, tuple)) and len(v) > 0:
+                v = v[0]
+            if isinstance(v, Mapping):
+                v = v.get("real", 0.0)
+            return float(v) if v is not None else 0.0
+
         denominator_measure = None
+        cross_section_measure = None
         if aggregate in ("average", "std", "rms"):
             meas_tag = f"{ephemeral_tag}_meas"
             meas_feat = None
+            m_raw = None
             try:
                 meas_feat = _call(numerical_list, "create", meas_tag, ms.integral_feature_type)
                 _call(meas_feat, "set", "data", dataset_tag)
                 _call(meas_feat, "set", "expr", ["1"])
                 ms.apply_selection(meas_feat)
-                _call(meas_feat, "run")
-                m_raw = _call(meas_feat, "getData")
-                if isinstance(m_raw, list):
-                    while isinstance(m_raw, list) and len(m_raw) > 0:
-                        m_raw = m_raw[0]
-                denominator_measure = float(m_raw) if m_raw is not None else None
-            except Exception:
-                denominator_measure = None
-            finally:
-                if meas_feat is not None:
+                if is_axisymmetric:
                     try:
-                        _call(numerical_list, "remove", meas_tag)
+                        props = list(_call(meas_feat, "properties"))
+                        if "intvolume" in props:
+                            _call(meas_feat, "set", "intvolume", "on")
+                        elif "intsurface" in props:
+                            _call(meas_feat, "set", "intsurface", "on")
                     except Exception:
                         pass
+                _call(meas_feat, "run")
+                try:
+                    m_raw = _call(meas_feat, "getData")
+                except Exception:
+                    m_raw = _call(meas_feat, "getReal")
+            except Exception:
+                m_raw = None
 
-            if m_raw is not None and m_raw != raw_real:
-                denominator_measure = float(m_raw)
+            if is_axisymmetric and meas_feat is not None:
+                try:
+                    props = list(_call(meas_feat, "properties"))
+                    if "intvolume" in props:
+                        _call(meas_feat, "set", "intvolume", "off")
+                        _call(meas_feat, "run")
+                        try:
+                            cs_raw = _call(meas_feat, "getData")
+                        except Exception:
+                            cs_raw = _call(meas_feat, "getReal")
+                        cross_section_measure = _to_float(cs_raw)
+                        _call(meas_feat, "set", "intvolume", "on")
+                        _call(meas_feat, "run")
+                except Exception:
+                    pass
+
+            m_val = _to_float(m_raw) if m_raw is not None else None
+            if m_val is not None and m_val > 0.0:
+                denominator_measure = m_val
+            elif isinstance(spec.get("denominator_measure"), (int, float)):
+                denominator_measure = float(spec["denominator_measure"])
             else:
-                if isinstance(spec.get("denominator_measure"), (int, float)):
-                    denominator_measure = float(spec["denominator_measure"])
-                elif is_axisymmetric:
-                    denominator_measure = 12.0 * math.pi
-                else:
-                    denominator_measure = float(context.get("space_dimension", 3.0))
+                denominator_measure = float(spec.get("denominator_measure", 1.0))
+
+            if denominator_measure <= 0.0 or not math.isfinite(denominator_measure):
+                raise ExecutionContractError(
+                    "ZERO_OR_INVALID_MEASURE",
+                    f"spatial measure must be positive and finite, got {denominator_measure}",
+                )
 
             if aggregate == "average":
-                if isinstance(transformed, (int, float)):
-                    transformed = float(transformed) / denominator_measure
-                elif isinstance(transformed, list):
-                    transformed = [float(v) / denominator_measure if isinstance(v, (int, float)) else v for v in transformed]
+                if feat_type.startswith("Av") and m_raw is not None and m_val != _to_float(raw_real):
+                    pass
+                else:
+                    if isinstance(transformed, (int, float)):
+                        transformed = float(transformed) / denominator_measure
+                    elif isinstance(transformed, list):
+                        transformed = [float(v) / denominator_measure if isinstance(v, (int, float)) else v for v in transformed]
 
             elif aggregate == "std":
-                if isinstance(transformed, (int, float)):
+                mean_val = _to_float(transformed)
+                std_val = None
+                if meas_feat is not None and m_raw is not None:
+                    try:
+                        var_exprs = [f"({e} - ({mean_val}))^2" for e in expressions]
+                        _call(meas_feat, "set", "expr", var_exprs)
+                        _call(meas_feat, "run")
+                        try:
+                            v_raw = _call(meas_feat, "getData")
+                        except Exception:
+                            v_raw = _call(meas_feat, "getReal")
+                        var_int = _to_float(v_raw)
+                        var_val = max(0.0, var_int / denominator_measure)
+                        std_val = math.sqrt(var_val)
+                    except Exception:
+                        std_val = None
+
+                if std_val is not None:
+                    transformed = std_val
+                else:
                     transformed = 0.0
-                elif isinstance(transformed, list):
-                    transformed = [0.0 if isinstance(v, (int, float)) else v for v in transformed]
 
             elif aggregate == "rms":
-                if isinstance(transformed, (int, float)):
-                    transformed = abs(float(transformed) / denominator_measure)
-                elif isinstance(transformed, list):
-                    transformed = [abs(float(v) / denominator_measure) if isinstance(v, (int, float)) else v for v in transformed]
+                rms_val = None
+                if meas_feat is not None and m_raw is not None:
+                    try:
+                        sq_exprs = [f"({e})^2" for e in expressions]
+                        _call(meas_feat, "set", "expr", sq_exprs)
+                        _call(meas_feat, "run")
+                        try:
+                            s_raw = _call(meas_feat, "getData")
+                        except Exception:
+                            s_raw = _call(meas_feat, "getReal")
+                        sq_int = _to_float(s_raw)
+                        ms_val = max(0.0, sq_int / denominator_measure)
+                        rms_val = math.sqrt(ms_val)
+                    except Exception:
+                        rms_val = None
+
+                if rms_val is not None:
+                    transformed = rms_val
+                else:
+                    transformed = abs(_to_float(transformed))
+
+            if meas_feat is not None:
+                try:
+                    _call(numerical_list, "remove", meas_tag)
+                except Exception:
+                    pass
 
         # SolutionSpec index filtering (T021 / F04)
         inner_spec = solution_spec.get("inner")
@@ -2060,6 +2185,8 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
         "axisymmetric": is_axisymmetric,
         "axisymmetric_factor_applied": is_axisymmetric and aggregate in ("integral", "average", "std", "rms"),
         "axisymmetric_applied_count": 1 if (is_axisymmetric and aggregate in ("integral", "average", "std", "rms")) else 0,
+        "revolved_measure": denominator_measure if is_axisymmetric else None,
+        "cross_section_measure": cross_section_measure,
         "denominator_measure": denominator_measure if aggregate in ("average", "std", "rms") else None,
         "total_elements": total_elements,
         "cleanup": cleanup,
@@ -2093,17 +2220,41 @@ def result_at_points(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
     dim = len(points[0]) if isinstance(points[0], Sequence) else len(points[0].keys())
     point_count = len(points)
     coord_matrix: list[list[float]] = [[] for _ in range(dim)]
-    for pt in points:
+    for idx, pt in enumerate(points):
+        pt_dim = len(pt) if isinstance(pt, Sequence) else len(pt.keys())
+        if pt_dim != dim:
+            raise ExecutionContractError(
+                "COORDINATE_ERROR",
+                f"Point index {idx} has dimension {pt_dim}, expected {dim}",
+            )
         if isinstance(pt, Sequence):
             for d in range(dim):
-                coord_matrix[d].append(float(pt[d]))
+                v = float(pt[d])
+                if not math.isfinite(v):
+                    raise ExecutionContractError("INVALID_REQUEST", f"point coordinate must be finite, got {v}")
+                coord_matrix[d].append(v)
         elif isinstance(pt, Mapping):
             for d, k in enumerate(("x", "y", "z")[:dim]):
-                coord_matrix[d].append(float(pt[k]))
+                v = float(pt[k])
+                if not math.isfinite(v):
+                    raise ExecutionContractError("INVALID_REQUEST", f"point coordinate must be finite, got {v}")
+                coord_matrix[d].append(v)
 
     model = bound_model(worker, model_tag)
     results = _call(model, "result")
     numerical_list = _call(results, "numerical")
+    dataset_list = _call(results, "dataset")
+
+    if dataset_tag in tag_list(dataset_list):
+        dset_node = _call(dataset_list, "get", dataset_tag)
+        errs: list[dict[str, Any]] = []
+        ctx = _coordinate_context(model, dset_node, errs)
+        sdim = ctx.get("space_dimension")
+        if sdim is not None and dim != sdim:
+            raise ExecutionContractError(
+                "DIMENSION_MISMATCH",
+                f"Point space dimension {dim} does not match model space dimension {sdim}",
+            )
 
     ephemeral_tag = _unique_tag(tag_list(numerical_list))
     cleanup: dict[str, Any] = {
@@ -2330,7 +2481,16 @@ def result_table_manage(worker: Any, model_tag: str, arguments: Mapping[str, Any
             raise ExecutionContractError("TAG_CONFLICT", f"table {tag!r} already exists")
         node = _call(table_list, "create", tag, type_id)
         if "data" in definition:
-            _call(node, "setTableData", definition["data"])
+            data = definition["data"]
+            if isinstance(data, list):
+                try:
+                    _call(node, "setTableData", data, None)
+                except Exception:
+                    try:
+                        imag = [[0.0 for _ in row] for row in data] if data and isinstance(data[0], list) else None
+                        _call(node, "setTableData", data, imag)
+                    except Exception:
+                        _call(node, "setTableData", data)
         return {"action": "create", "tag": tag, "type_id": type_id, "created": True}
 
     tag = _dataset_tag(path)
@@ -2346,19 +2506,33 @@ def result_table_manage(worker: Any, model_tag: str, arguments: Mapping[str, Any
             pass
         data = None
         try:
-            data = _call(node, "getTableData")
+            data = _call(node, "getReal")
         except Exception:
             try:
-                data = _call(node, "getReal")
+                data = _call(node, "getTableData", True)
             except Exception:
-                pass
+                try:
+                    data = _call(node, "getTableData")
+                except Exception:
+                    pass
         return {"action": action, "tag": tag, "headers": headers, "data": data}
     elif action == "set":
         data = definition.get("data")
-        _call(node, "setTableData", data)
+        if data is not None and isinstance(data, list):
+            try:
+                _call(node, "setTableData", data, None)
+            except Exception:
+                try:
+                    imag = [[0.0 for _ in row] for row in data] if data and isinstance(data[0], list) else None
+                    _call(node, "setTableData", data, imag)
+                except Exception:
+                    _call(node, "setTableData", data)
         return {"action": "set", "tag": tag, "applied": True}
     elif action == "clear":
-        _call(node, "clearTableData")
+        try:
+            _call(node, "clearTableData", True)
+        except Exception:
+            _call(node, "clearTableData")
         return {"action": "clear", "tag": tag, "cleared": True}
     elif action == "remove":
         _call(table_list, "remove", tag)

@@ -110,27 +110,35 @@ class MeasureSpec:
             return "IntVolume"
 
     def apply_selection(self, feature: Any) -> None:
-        """Bind selection entities to the feature if specified."""
-        if self.selection is None:
-            return
-
+        """Bind selection entities to the feature if specified, or all entities if None."""
         try:
             sel_node = getattr(feature, "selection", None)
             if sel_node is None:
                 return
             target_sel = sel_node() if callable(sel_node) else sel_node
 
+            if self.selection is None or self.selection == "all":
+                if hasattr(target_sel, "all"):
+                    target_sel.all()
+                return
+
             if isinstance(self.selection, Mapping):
                 if "entities" in self.selection and hasattr(target_sel, "set"):
                     entities = [int(x) for x in self.selection["entities"]]
-                    target_sel.set(*entities)
+                    try:
+                        target_sel.set(entities)
+                    except Exception:
+                        target_sel.set(*entities)
                 elif "all" in self.selection and self.selection["all"] and hasattr(target_sel, "all"):
                     target_sel.all()
             elif isinstance(self.selection, (list, tuple)):
                 if hasattr(target_sel, "set"):
-                    target_sel.set(*[int(x) for x in self.selection])
+                    entities = [int(x) for x in self.selection]
+                    try:
+                        target_sel.set(entities)
+                    except Exception:
+                        target_sel.set(*entities)
         except Exception:
-            # If selection method fails on mock or node, pass through
             pass
 
     @staticmethod
