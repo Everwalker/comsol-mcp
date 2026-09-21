@@ -1,0 +1,358 @@
+{
+  "schema": "comsol-mcp-g3/phase4_3-acceptance/1",
+  "goal": "NEXT_GOAL.md: G3.3 clean-room recovery, evidence correction, and W17 verification",
+  "status": "G3_3_MAC_W17_VERIFIED_SCOPED",
+  "run_id": "g3_3_acceptance_20260921T135517Z_xbv6t0fl",
+  "generated_at": "2026-09-21T13:55:40.323574+00:00",
+  "elapsed_seconds": 23.127420083037578,
+  "platform": "darwin",
+  "python_version": "3.13.14 (main, Jun 11 2026, 03:58:32) [Clang 22.1.3 ]",
+  "comsol_version": "COMSOL Multiphysics 6.4 (Build 293)",
+  "total_cases": 18,
+  "passed_cases": 18,
+  "failed_cases": 0,
+  "scope": {
+    "verified_workstream": "W17",
+    "stop_boundary": "W17 (do not advance to W18-W26)",
+    "target_platform": "macOS-aarch64 (Apple Silicon commercial installation)",
+    "unverified_platforms": [
+      "windows",
+      "linux",
+      "intel-mac",
+      "comsol-6.3",
+      "gui"
+    ]
+  },
+  "cases": {
+    "C00": {
+      "case_id": "C00",
+      "name": "Clean Recovery & Wheel Verification",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "expected_commit": "2cb4627924d1a3240818ea7cd00453d4bd2d2da8",
+        "actual_head_or_parent": "2cb4627924d1a3240818ea7cd00453d4bd2d2da8",
+        "expected_tree": "dd3095e89c640c19aeb151cd0e8efe4af3c55802",
+        "tracked_files": 3580,
+        "wheel_path": "/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/g3_3_acceptance_20260921T135517Z_xbv6t0fl/wheel_dist/comsol_mcp-0.1.9-py3-none-any.whl",
+        "wheel_sha256": "60467596f659d37f95d81da70b08073e6f0c520e7afb496eae827fe34296cda0",
+        "out_of_tree_import": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/comsol_mcp/__init__.py"
+      },
+      "timestamp": "2026-09-21T13:55:25.687025+00:00"
+    },
+    "C01": {
+      "case_id": "C01",
+      "name": "Evidence Correction & Ledger Auditing",
+      "status": "PASS",
+      "evidence_level": "static",
+      "error": null,
+      "details": {
+        "phase4_1_sha256": "a2e91f37d021274c5a5f1321f03961c57271e1e614d17f23d3b0ef6627335278",
+        "phase4_2_sha256": "741e702cf019bfede8564cc032bccdbd30c83ee830ec46ce6a3e16356faa52c4",
+        "w17_acceptance_sha256": "53daf14f51720f59e5fb8ed731083cd851b80bd3392c4fdeb7fee4a89a225197",
+        "correction_ledger": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/w17_correction.json",
+        "baseline_review": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/BASELINE_REVIEW.json",
+        "reopen_test_level": "CONTROL_UNIT",
+        "w17_test_level": "UNIT_CONTRACT"
+      },
+      "timestamp": "2026-09-21T13:55:25.688097+00:00"
+    },
+    "C02": {
+      "case_id": "C02",
+      "name": "Dangerous States & Safe Refusal",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "cleanup_failure_outcome_state": "unknown",
+        "export_refusal_verified": true,
+        "fail_closed_verified": true
+      },
+      "timestamp": "2026-09-21T13:55:25.689635+00:00"
+    },
+    "C03": {
+      "case_id": "C03",
+      "name": "Gate A Reopen & Stored Solution Acceptance",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "chain_a_mph": "/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/g3_3_acceptance_20260921T135517Z_xbv6t0fl/artifacts/chain_a_solved.mph",
+        "chain_a_sha256": "bbf8209a9a5dc217aa30968b189edc941c1d65e9b71598e68eb8274ac4147f1d",
+        "chain_a_points_checked": 3,
+        "chain_a_gradient_values": [
+          308.1500000000069,
+          323.15000000001123,
+          338.15000000000975
+        ],
+        "chain_b_mph": "/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/g3_3_acceptance_20260921T135517Z_xbv6t0fl/artifacts/chain_b_solved.mph",
+        "chain_b_sha256": "61c653074582a077b799cb3aa026dfd7d17ca12323b488216f85e4447d3a0883",
+        "chain_c_mph": "/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/g3_3_acceptance_20260921T135517Z_xbv6t0fl/artifacts/chain_c_solved.mph",
+        "chain_c_sha256": "59298e5c0a584974491ca0c63c56d6abffefa4da6e58c2642d3739995ca7b181",
+        "independent_resolve_verified": true,
+        "negative_controls_tested": [
+          "ARTIFACT_HASH_MISMATCH",
+          "DATASET_NOT_FOUND",
+          "DERIVED_VALUES_MISSING",
+          "STORED_VALUE_MISMATCH"
+        ]
+      },
+      "timestamp": "2026-09-21T13:55:38.638565+00:00"
+    },
+    "C04": {
+      "case_id": "C04",
+      "name": "Constant Field Statistics (f=2, V=3)",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "formula_measure": 3.0,
+        "formula_integral": 6.0,
+        "computed_average": 2.0,
+        "computed_std": 0.0,
+        "computed_rms": 2.0,
+        "denominator_verified_as_measure": true
+      },
+      "timestamp": "2026-09-21T13:55:39.129660+00:00"
+    },
+    "C05": {
+      "case_id": "C05",
+      "name": "Multi-dimensional & Selection Support",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "1d_feature": "IntLine",
+        "2d_feature": "IntSurface",
+        "3d_feature": "IntVolume",
+        "partial_selection": [
+          1,
+          2
+        ]
+      },
+      "timestamp": "2026-09-21T13:55:39.129782+00:00"
+    },
+    "C06": {
+      "case_id": "C06",
+      "name": "Non-Uniform Field Analytical Verification",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "analytic_area": 6.0,
+        "analytic_integral": 24.0,
+        "analytic_average": 4.0,
+        "analytic_variance": 3.3333333333333335,
+        "analytic_std": 1.8257418583505538,
+        "analytic_rms": 4.396968652757639,
+        "computed_average": 4.0,
+        "computed_std": 1.8257418583505538,
+        "computed_rms": 4.396968652757639
+      },
+      "timestamp": "2026-09-21T13:55:39.129854+00:00"
+    },
+    "C07": {
+      "case_id": "C07",
+      "name": "Axisymmetric Cylinder Verification",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "cylinder_radius": 2.0,
+        "cylinder_height": 3.0,
+        "revolved_volume": 37.69911184307752,
+        "expected_volume": 37.69911184307752,
+        "average_r": 1.3333333333333333,
+        "expected_average_r": 1.3333333333333333,
+        "lateral_area": 37.69911184307752,
+        "single_weighting_verified": true
+      },
+      "timestamp": "2026-09-21T13:55:39.129906+00:00"
+    },
+    "C08": {
+      "case_id": "C08",
+      "name": "Solution Axis Slicing & Metadata",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "expressions_count": 2,
+        "solutions_count": 3,
+        "points_count": 4,
+        "step2_sliced": [
+          [
+            20.0,
+            21.0,
+            22.0,
+            23.0
+          ],
+          [
+            200.0,
+            201.0,
+            202.0,
+            203.0
+          ]
+        ],
+        "bounds_check_verified": true
+      },
+      "timestamp": "2026-09-21T13:55:39.130030+00:00"
+    },
+    "C09": {
+      "case_id": "C09",
+      "name": "Complex Field Transformations",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "input": "3+4i",
+        "real": 3.0,
+        "imag": 4.0,
+        "abs": 5.0,
+        "phase": 0.9272952180016122,
+        "zero_padding_rejection_verified": true
+      },
+      "timestamp": "2026-09-21T13:55:39.130129+00:00"
+    },
+    "C10": {
+      "case_id": "C10",
+      "name": "Point Coordinates Scaling (m vs mm)",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "m_coords": [
+          [
+            0.05
+          ],
+          [
+            0.02
+          ]
+        ],
+        "mm_coords": [
+          [
+            50.0
+          ],
+          [
+            20.0
+          ]
+        ],
+        "scaled_mm": [
+          [
+            0.05
+          ],
+          [
+            0.02
+          ]
+        ],
+        "unit_equivalence_verified": true
+      },
+      "timestamp": "2026-09-21T13:55:39.131529+00:00"
+    },
+    "C11": {
+      "case_id": "C11",
+      "name": "Dataset Dependency Graph & Cycle Detection",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "acyclic_chain": [
+          "dset1",
+          "dset2",
+          "dset3"
+        ],
+        "cycle_detected": true,
+        "fail_closed_verified": true
+      },
+      "timestamp": "2026-09-21T13:55:39.131939+00:00"
+    },
+    "C12": {
+      "case_id": "C12",
+      "name": "Export Path Traversal Protection & Atomic Rollback",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "traversal_rejected": true,
+        "atomic_rollback_verified": true,
+        "preserved_original_sha256": "1d545b940633ab0ee38f4a06a4bd3a199c4b7ec83373e0a56d8454f862399628"
+      },
+      "timestamp": "2026-09-21T13:55:39.134015+00:00"
+    },
+    "C13": {
+      "case_id": "C13",
+      "name": "Chunk Streaming & Bounded Memory",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "file_size": 16384,
+        "full_sha256": "26be3b677fd0f096138bfb442988329fa7fe166bfb933802b052f71be9eaf6ef",
+        "chunk1_size": 8192,
+        "chunk2_size": 8192,
+        "reconstructed_sha256": "26be3b677fd0f096138bfb442988329fa7fe166bfb933802b052f71be9eaf6ef",
+        "bounds_check_verified": true
+      },
+      "timestamp": "2026-09-21T13:55:39.135060+00:00"
+    },
+    "C14": {
+      "case_id": "C14",
+      "name": "Definitions Probe vs Derived Values Separation",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "supported_probe_types": [
+          "BoundaryProbe",
+          "DomainProbe",
+          "GlobalProbe",
+          "PointProbe"
+        ],
+        "probe_scope": "model_definitions (model.probe)",
+        "derived_values_scope": "results (model.result.numerical)",
+        "validation_verified": true
+      },
+      "timestamp": "2026-09-21T13:55:39.135181+00:00"
+    },
+    "C15": {
+      "case_id": "C15",
+      "name": "Idempotency & Control Responsiveness",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "worker_status": "HEALTHY",
+        "instance_id": "a332d53b-137a-4eea-b756-d4d1d08c7df9",
+        "control_responsive": true
+      },
+      "timestamp": "2026-09-21T13:55:40.179295+00:00"
+    },
+    "C16": {
+      "case_id": "C16",
+      "name": "Packaging & Dependencies Lock",
+      "status": "PASS",
+      "evidence_level": "static",
+      "error": null,
+      "details": {
+        "pyproject": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/pyproject.toml",
+        "wheel_file": "/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/g3_3_acceptance_20260921T135517Z_xbv6t0fl/wheel_dist/comsol_mcp-0.1.9-py3-none-any.whl",
+        "schema_contract_valid": true
+      },
+      "timestamp": "2026-09-21T13:55:40.181060+00:00"
+    },
+    "C17": {
+      "case_id": "C17",
+      "name": "Teardown & Verification Ledger Finalization",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "isolated_server_stopped": true,
+        "active_locks_count": 1,
+        "status_tag": "G3_3_MAC_W17_VERIFIED_SCOPED",
+        "stop_boundary": "W17 (not entering W18)"
+      },
+      "timestamp": "2026-09-21T13:55:40.323517+00:00"
+    }
+  }
+}

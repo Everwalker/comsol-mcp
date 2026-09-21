@@ -1338,3 +1338,50 @@ Implementation, tests and evidence published to `Everwalker/comsol-mcp:main` as 
 - **交付包**：`COMSOL_MCP_READY_328202c_DELIVERY_W17.zip`，sha256 `0f2a1414ee75e16b5c0dc47a9edd8bf1110bfc0fd524782390a4e898115343d7`（含固定 upstream、审计账本、变更补丁与真实测试记录）。
 - **资源边界**：共享 COMSOL Server（PID 5014）按 NEXT_GOAL §3 保留未动；webbridge `server.xml` 恢复至原 hash `95478d76…` 需明确授权后执行（G3 批准周期遗留项）。
 - 边界保持：Windows x64 / macOS Intel / COMSOL 6.3 / GUI / 未授权模块 = UNVERIFIED；不进入 W18。
+
+## G3.3 — 干净目录恢复、证据纠正与 W17 真实结果系统实机验收（Mac，2026-09-21）
+
+**状态：G3_3_MAC_W17_VERIFIED_SCOPED。** 目标 `NEXT_GOAL.md`；计划 `G3_3_PLAN.md`；审查根因 `G3_3_FINDINGS.md`；操作手册 `G3_3_OPERATIONS.md`；恢复指南 `RECOVERY.md`。
+
+本轮在全新目录完全脱离历史本地路径及旧 venv 环境下，基于 `PIN.json` 固定的源提交 `2cb46279...` (tree `dd3095e8...`)，完成了历史虚假测试证据纠正、W17 结果系统核心模块化重构、5 个 AST 反例清零、以及基于商业 COMSOL 6.4 (Build 293) 与 Amazon Corretto 11.0.31 的全新干净环境 18 项现场验收（C00–C17 全绿通过）。
+
+### 1. 历史证据账本与测试级别纠正 (M0)
+- **保留历史原件**：`phase4_1_acceptance.json` (`a2e91f37...`)、`phase4_2_acceptance.json` (`741e702c...`)、`w17_acceptance.json` (`53daf14f...`) 保持字节级完全一致，未做任何就地篡改。
+- **独立纠正台账**：创建 `evidence/w17_correction.json` 及 `evidence/phase4_3/BASELINE_REVIEW.json`。
+- **降级伪真实测试**：将历史以 `FakeReopenModel` 自比 SHA256 冒充真实重开的 `test_g3_gate_a2_f02_reopen.py` 明确降级为 `CONTROL_UNIT`；将依赖桩代码 `FWiredTree` 的 `test_g3_w17.py` 降级为 `UNIT_CONTRACT`，解除虚假 engine integration 标注。
+
+### 2. W17 结果系统模块化缺陷根治 (F01–F12, M1)
+- **测度与统计架构重构 (`_measure_spec.py`)**：映射几何实体维数（0D: `IntPoint`/`AvPoint`, 1D: `IntLine`/`IntEdge`, 2D: `IntSurface`/`AvSurface`, 3D: `IntVolume`/`AvVolume`），彻底消除一律发送 `IntVolume` 的缺陷；实现精确积分测度分母 $M = \int w\,d\mu$（严禁写死 1.0），以及总体方差、标准差和 RMS 公式。
+- **轴对称柱体加权 (`_measure_spec.py`)**：显式区分二维截面测度与三维旋转物理测度，严格核对原生 $2\pi r$ 因子，杜绝二次重复乘算。
+- **解轴切片与形状绑定 (`_solution_binding.py`, `FieldArray`)**：标准化 COMSOL 官方多维数组 `[expr][solnum][vertex]`，将 inner/time 切片严格绑定在解步轴（Axis 1），彻底纠正历史 `transformed[inner - 1]` 错误切片表达式轴（Axis 0）的严重索引缺陷；支持数据集依赖链环路检测（`DATASET_CYCLE_DETECTED`）。
+- **复场变换严格保真 (`_complex_transform.py`)**：对虚部读取失败或形状不符的复场实行 fail-closed 报错，严禁静默补 0 冒充实数。
+- **导出安全性与原子性 (`_artifact_store.py`)**：实施项目根路径 containment 校验与父目录 symlink 逃逸防范；上游评估失败或状态为 UNKNOWN 时严禁生成空文件或覆盖旧文件；采用 `.tmp` + `os.replace` 原子替换；提供上限 16MB 的有界内存分块流式读取与每块 SHA256 校验。
+- **定义探针与派生值分离 (`_probe_manage.py`)**：明确划分 `model.probe()` 与 `model.result().numerical()` 的 CRUD 边界。
+- **Gate A 统一生产检查服务 (`_gate_a_reopen.py`)**：抽离生产级 `verify_reopen` 校验器，正向链与负向控制统一调用。
+
+### 3. 软件测试与反例清零验证 (M2)
+- **AST 源码反例重测**：运行 `tools/reproduce_w17_findings.py`，历史 5 个缺陷反例重现数由 5 降为 **0 reproduced**。
+- **单元与契约回归**：`pytest` 运行 `test_g3_3_remediation.py`, `test_g3_gate_a2_f02_reopen.py`, `test_g3_results.py`, `test_g3_w17.py`, `test_java_worker.py` 全部通过：**166 passed, 1 skipped, 0 failed**。
+
+### 4. 真实 COMSOL 干净全量实机验收 (C00–C17, M3)
+在完全隔离的本地临时目录中拉起独立 `mphserver`（动态绑定端口，共享 private_prefs 免密凭据，完全规避对系统共享 PID 5014 的干扰），运行 `tests/run_g3_3_live_acceptance.py`：
+- **C00 (PASS)**: 提交、树哈希、3,580 跟踪文件校验，wheel 打包与干净 temp venv 源外安装导入验证。
+- **C01 (PASS)**: 历史 3 份台账字节哈希核对，纠正台账与基线审计验证。
+- **C02 (PASS)**: DomainOutcome 危险状态安全转移及导出拦截验证。
+- **C03 (PASS - Gate A Live Reopen)**:
+  - 链 A（稳态热传导）：建立、网格、求解、采集 3 个空间梯度点（`308.15K`, `323.15K`, `338.15K`），保存为 `chain_a_solved.mph`；完全关闭构建 Worker 后，由全新独立 Worker 重新打开该同一哈希 MPH 文件，**不重新求解直接回读数值**，3 个梯度点完全吻合（误差 $< 10^{-12}$）。
+  - 链 B（瞬态热传导）：建立、求解 5 个时间步、保存为 `chain_b_solved.mph`；全新 Worker 重开直接回读解序列完全吻合。
+  - 链 C（修改与派生值延续）：创建自定义派生值探针、保存为 `chain_c_solved.mph`；全新 Worker 重开验证派生值节点与场值完整保留。
+  - 独立重求解验证：作为独立用例在全新 Worker 中成功重解。
+  - 4 项阴性控制实测：调用生产 `verify_reopen`，成功捕获 `ARTIFACT_HASH_MISMATCH`, `DATASET_NOT_FOUND`, `DERIVED_VALUES_MISSING`, `STORED_VALUE_MISMATCH`。
+- **C04–C07 (PASS)**: 常量场积分与均值（$f=2, V=3$）、多维选区特征映射、非均匀场解析比对（$f=x+2y$）、轴对称圆柱（$R=2, H=3$）旋转物理测度验证。
+- **C08–C11 (PASS)**: 数组解轴切片与越界拦截、复数变换模/相/保真、坐标单位微米/毫米换算、数据集有向图环路检测。
+- **C12–C15 (PASS)**: 路径穿透防御与失败原子回滚、16KB 分块流式读取与 SHA 拼接、定义探针与派生值隔离、控制面探针 2.0s 响应。
+- **C16–C17 (PASS)**: 依赖锁定与规范校验、孤立 Server 优雅停机与锁完全释放。
+- 最终生成的验收总台账为 `evidence/phase4_3_acceptance.json`，运行过程所有求解产物与 SHA256 清单归档于 `evidence/phase4_3/runs/g3_3_acceptance_20260921T135517Z_xbv6t0fl/`。
+
+### 5. 严格边界与停机声明 (Stop Boundary)
+- **测试覆盖范围**：macOS aarch64 (Apple Silicon) / COMSOL 6.4 (Build 293) / Amazon Corretto 11.0.31 为当前唯一验证环境。
+- **未验证组合**：Windows x64、Linux、macOS Intel、COMSOL 6.3、GUI Desktop 交互保持 `UNVERIFIED`。
+- **严格停止边界**：本轮任务完成 W17 结果系统重构、历史证据纠正及真实 COMSOL 验收后，**明确停止在 W17，严禁自动推进至 W18–W26**。
+

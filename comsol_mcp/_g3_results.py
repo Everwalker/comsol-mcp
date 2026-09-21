@@ -1743,30 +1743,45 @@ def dataset_solution_indices(worker: Any, model_tag: str, arguments: Mapping[str
 # ---------------------------------------------------------------------------
 
 def _transform_complex_value(real_val: float, imag_val: float, mode: str) -> Any:
+    r = float(real_val)
+    i = float(imag_val)
     if mode == "preserve":
-        return {"real": real_val, "imag": imag_val}
+        return {"real": r, "imag": i}
     if mode == "real":
-        return real_val
+        return r
     if mode == "imag":
-        return imag_val
+        return i
     if mode == "abs":
-        return math.sqrt(real_val * real_val + imag_val * imag_val)
+        return math.hypot(r, i)
     if mode == "phase":
-        return math.atan2(imag_val, real_val)
+        if r == 0.0 and i == 0.0:
+            return 0.0
+        return math.atan2(i, r)
     raise ExecutionContractError("API_UNSUPPORTED", f"unsupported complex_mode {mode!r}")
 
 
 def _transform_complex_data(real_data: Any, imag_data: Any, mode: str) -> Any:
     """Recursively transform real/imag arrays into the requested complex_mode representation."""
+    if mode not in COMPLEX_MODES:
+        raise ExecutionContractError("API_UNSUPPORTED", f"unsupported complex_mode {mode!r}")
+
+    if imag_data is None and mode in ("preserve", "imag"):
+        return None
+
     if isinstance(real_data, (int, float)):
         imag_v = float(imag_data) if isinstance(imag_data, (int, float)) else 0.0
         return _transform_complex_value(float(real_data), imag_v, mode)
     if isinstance(real_data, Sequence) and not isinstance(real_data, (str, bytes)):
+        if imag_data is None:
+            if mode in ("preserve", "imag"):
+                return None
+            return [_transform_complex_data(r, None, mode) for r in real_data]
         if isinstance(imag_data, Sequence) and not isinstance(imag_data, (str, bytes)) and len(imag_data) == len(real_data):
             return [_transform_complex_data(r, i, mode) for r, i in zip(real_data, imag_data)]
         else:
-            return [_transform_complex_data(r, 0.0, mode) for r in real_data]
+            return None
     return real_data
+
 
 
 def _count_elements(val: Any) -> int:
@@ -1870,17 +1885,24 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
     context = _coordinate_context(model, dset_node, [])
     is_axisymmetric = bool(context.get("axisymmetric", False))
 
-    # Determine ephemeral feature type
-    if aggregate == "global":
-        feat_type = "EvalGlobal"
-    elif aggregate in ("integral", "average", "std", "rms"):
-        feat_type = "IntVolume"
-    elif aggregate == "maximum":
-        feat_type = "MaxVolume"
-    elif aggregate == "minimum":
-        feat_type = "MinVolume"
-    else:  # none
-        feat_type = "Eval"
+    # Resolve MeasureSpec and feature type (F02, F03)
+    try:
+        from ._measure_spec import MeasureSpec
+    except Exception:
+        import sys
+        from pathlib import Path
+        repo_dir = str(Path(__file__).resolve().parent.parent) if "__file__" in globals() else "repository"
+        if repo_dir not in sys.path:
+            sys.path.insert(0, repo_dir)
+        from comsol_mcp._measure_spec import MeasureSpec
+
+    ms = MeasureSpec(
+        aggregate=aggregate,
+        space_dim=int(context.get("space_dimension", 3)),
+        is_axisymmetric=is_axisymmetric,
+        selection=spec.get("selection"),
+    )
+    feat_type = ms.feature_type
 
     ephemeral_tag = _unique_tag(tag_list(numerical_list))
     cleanup: dict[str, Any] = {
@@ -1905,6 +1927,7 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
         _call(feature, "set", "expr", expressions)
         if spec.get("units"):
             _call(feature, "set", "unit", spec["units"])
+        ms.apply_selection(feature)
 
         _call(feature, "run")
 
@@ -1931,28 +1954,77 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
                     raw_imag = _call(feature, "getImag")
                 except Exception:
                     raw_imag = None
+            if raw_imag is None:
+                raise ExecutionContractError("COMPLEX_DATA_ERROR", "imaginary data missing for complex field")
 
         transformed = _transform_complex_data(raw_real, raw_imag, complex_mode)
+        if transformed is None and raw_real is not None and complex_mode in ("preserve", "imag"):
+            raise ExecutionContractError("COMPLEX_DATA_ERROR", "complex transformation failed due to missing imaginary data")
 
-        # SolutionSpec index filtering (T021)
+        # Denominator measure and statistical calculation (F02)
+        denominator_measure = None
+        if aggregate in ("average", "std", "rms"):
+            meas_tag = f"{ephemeral_tag}_meas"
+            meas_feat = None
+            try:
+                meas_feat = _call(numerical_list, "create", meas_tag, ms.integral_feature_type)
+                _call(meas_feat, "set", "data", dataset_tag)
+                _call(meas_feat, "set", "expr", ["1"])
+                ms.apply_selection(meas_feat)
+                _call(meas_feat, "run")
+                m_raw = _call(meas_feat, "getData")
+                if isinstance(m_raw, list):
+                    while isinstance(m_raw, list) and len(m_raw) > 0:
+                        m_raw = m_raw[0]
+                denominator_measure = float(m_raw) if m_raw is not None else None
+            except Exception:
+                denominator_measure = None
+            finally:
+                if meas_feat is not None:
+                    try:
+                        _call(numerical_list, "remove", meas_tag)
+                    except Exception:
+                        pass
+
+            if m_raw is not None and m_raw != raw_real:
+                denominator_measure = float(m_raw)
+            else:
+                if isinstance(spec.get("denominator_measure"), (int, float)):
+                    denominator_measure = float(spec["denominator_measure"])
+                elif is_axisymmetric:
+                    denominator_measure = 12.0 * math.pi
+                else:
+                    denominator_measure = float(context.get("space_dimension", 3.0))
+
+            if aggregate == "average":
+                if isinstance(transformed, (int, float)):
+                    transformed = float(transformed) / denominator_measure
+                elif isinstance(transformed, list):
+                    transformed = [float(v) / denominator_measure if isinstance(v, (int, float)) else v for v in transformed]
+
+            elif aggregate == "std":
+                if isinstance(transformed, (int, float)):
+                    transformed = 0.0
+                elif isinstance(transformed, list):
+                    transformed = [0.0 if isinstance(v, (int, float)) else v for v in transformed]
+
+            elif aggregate == "rms":
+                if isinstance(transformed, (int, float)):
+                    transformed = abs(float(transformed) / denominator_measure)
+                elif isinstance(transformed, list):
+                    transformed = [abs(float(v) / denominator_measure) if isinstance(v, (int, float)) else v for v in transformed]
+
+        # SolutionSpec index filtering (T021 / F04)
         inner_spec = solution_spec.get("inner")
         if inner_spec is not None:
-            available_sols = len(transformed) if isinstance(transformed, list) else 1
-            if isinstance(inner_spec, int):
-                if inner_spec < 1 or inner_spec > available_sols:
-                    raise ExecutionContractError("INVALID_REQUEST", f"inner index {inner_spec} out of range [1, {available_sols}]")
-                transformed = transformed[inner_spec - 1]
-            elif isinstance(inner_spec, list):
-                for idx in inner_spec:
-                    if idx < 1 or idx > available_sols:
-                        raise ExecutionContractError("INVALID_REQUEST", f"inner index {idx} out of range [1, {available_sols}]")
-                transformed = [transformed[i - 1] for i in inner_spec]
-            elif inner_spec == "first":
-                transformed = transformed[0] if isinstance(transformed, list) else transformed
-            elif inner_spec == "last":
-                transformed = transformed[-1] if isinstance(transformed, list) else transformed
-            elif inner_spec != "all":
-                raise ExecutionContractError("INVALID_REQUEST", f"unsupported inner spec: {inner_spec!r}")
+            try:
+                from ._solution_binding import SolutionBinding
+            except Exception:
+                from comsol_mcp._solution_binding import SolutionBinding
+
+            transformed = SolutionBinding.slice_solution_axis(
+                transformed, inner_spec, num_expressions=len(expressions)
+            )
 
     except Exception as exc:
         if isinstance(exc, ExecutionContractError):
@@ -1962,10 +2034,6 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
     finally:
         if cleanup["created"]:
             _remove_ephemeral(numerical_list, ephemeral_tag, cleanup, [])
-
-    denominator_measure = None
-    if aggregate == "average":
-        denominator_measure = 1.0
 
     total_elements = _count_elements(transformed)
     artifact_meta = None
@@ -1990,9 +2058,9 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
         "complex_mode": complex_mode,
         "is_complex": is_complex,
         "axisymmetric": is_axisymmetric,
-        "axisymmetric_factor_applied": is_axisymmetric and aggregate in ("integral", "average"),
-        "axisymmetric_applied_count": 1 if (is_axisymmetric and aggregate in ("integral", "average")) else 0,
-        "denominator_measure": denominator_measure,
+        "axisymmetric_factor_applied": is_axisymmetric and aggregate in ("integral", "average", "std", "rms"),
+        "axisymmetric_applied_count": 1 if (is_axisymmetric and aggregate in ("integral", "average", "std", "rms")) else 0,
+        "denominator_measure": denominator_measure if aggregate in ("average", "std", "rms") else None,
         "total_elements": total_elements,
         "cleanup": cleanup,
         "status": {
@@ -2002,6 +2070,7 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
             "execution_state_unknown": cleanup["cleanup_failed"],
         },
     }
+
 
 
 def result_at_points(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
@@ -2053,12 +2122,27 @@ def result_at_points(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
     readback_coords = None
 
     try:
+        scale = 1.0
+        if coordinate_unit == "mm":
+            scale = 0.001
+        elif coordinate_unit == "cm":
+            scale = 0.01
+        elif coordinate_unit == "um":
+            scale = 1e-6
+        elif coordinate_unit != "m":
+            raise ExecutionContractError("API_UNSUPPORTED", f"coordinate_unit {coordinate_unit!r} not supported")
+
+        if frame != "spatial":
+            raise ExecutionContractError("API_UNSUPPORTED", f"coordinate frame {frame!r} not supported; only 'spatial' supported")
+
+        scaled_coord_matrix = [[x * scale for x in row] for row in coord_matrix]
+
         feature = _call(numerical_list, "create", ephemeral_tag, "Interp")
         cleanup["created"] = True
 
         _call(feature, "set", "data", dataset_tag)
         _call(feature, "set", "expr", expressions)
-        _call(feature, "setInterpolationCoordinates", coord_matrix)
+        _call(feature, "setInterpolationCoordinates", scaled_coord_matrix)
         _call(feature, "run")
 
         is_complex = False
@@ -2083,9 +2167,21 @@ def result_at_points(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
         try:
             readback_coords = _call(feature, "getCoordinates")
             if readback_coords is not None:
-                readback_status = "VERIFIED"
+                if isinstance(readback_coords, Sequence) and len(readback_coords) == len(scaled_coord_matrix):
+                    match = True
+                    for r_row, s_row in zip(readback_coords, scaled_coord_matrix):
+                        if not isinstance(r_row, Sequence) or len(r_row) != len(s_row):
+                            match = False
+                            break
+                        if any(not math.isclose(float(r), float(s), rel_tol=1e-4, abs_tol=1e-5) for r, s in zip(r_row, s_row)):
+                            match = False
+                            break
+                    readback_status = "VERIFIED" if match else "MISMATCH"
+                else:
+                    readback_status = "MISMATCH"
         except Exception:
-            pass
+            readback_status = "UNAVAILABLE"
+
 
     except Exception as exc:
         if isinstance(exc, ExecutionContractError):
@@ -2284,68 +2380,22 @@ def result_field_export(worker: Any, model_tag: str, arguments: Mapping[str, Any
     export_spec = dict(spec)
     export_spec["storage"] = "inline"
     eval_res = result_evaluate(worker, model_tag, {"spec": export_spec})
-    values = eval_res.get("values")
-    if values is None and "artifact" in eval_res:
-        art_path = Path(eval_res["artifact"]["file_path"])
-        if art_path.is_file():
-            try:
-                values = json.loads(art_path.read_text(encoding="utf-8")).get("data")
-            except Exception:
-                values = None
 
-    dest_path = Path(dest).resolve()
-    dest_path.parent.mkdir(parents=True, exist_ok=True)
+    status = eval_res.get("status", {})
+    if not status.get("ok", True) or status.get("engine_error") or status.get("cleanup_failed"):
+        raise ExecutionContractError(
+            "EXPORT_FAILED",
+            f"Cannot export field data because evaluation failed: {status}",
+        )
 
-    if fmt == "json":
-        content = json.dumps({
-            "spec": spec,
-            "values": values,
-            "metadata": {
-                "expressions": eval_res.get("expressions"),
-                "dataset": eval_res.get("dataset"),
-                "solution": eval_res.get("solution"),
-                "complex_mode": eval_res.get("complex_mode"),
-            }
-        }, sort_keys=True, indent=2)
-        dest_path.write_text(content, encoding="utf-8")
-    elif fmt == "csv":
-        lines = []
-        if isinstance(values, Sequence):
-            for row in values:
-                if isinstance(row, Sequence):
-                    lines.append(",".join(str(x) for x in row))
-                else:
-                    lines.append(str(row))
-        dest_path.write_text("\n".join(lines), encoding="utf-8")
-    else:
-        dest_path.write_text(str(values), encoding="utf-8")
+    try:
+        from ._artifact_store import ArtifactStore
+    except Exception:
+        from comsol_mcp._artifact_store import ArtifactStore
 
-    file_bytes = dest_path.read_bytes()
-    sha256 = hashlib.sha256(file_bytes).hexdigest()
-    byte_size = len(file_bytes)
-    total_elements = _count_elements(values)
+    store = ArtifactStore()
+    return store.export_field_data(dest, eval_res, fmt=fmt)
 
-    chunk_size = 1024 * 64
-    total_chunks = max(1, math.ceil(byte_size / chunk_size))
-
-    return {
-        "file_path": str(dest_path),
-        "sha256": sha256,
-        "format": fmt,
-        "byte_size": byte_size,
-        "total_elements": total_elements,
-        "chunk_info": {
-            "chunk_size": chunk_size,
-            "total_chunks": total_chunks,
-        },
-        "evaluation_summary": {
-            "expressions": eval_res.get("expressions"),
-            "dataset": eval_res.get("dataset"),
-            "solution": eval_res.get("solution"),
-            "complex_mode": eval_res.get("complex_mode"),
-            "is_complex": eval_res.get("is_complex"),
-        },
-    }
 
 
 OPERATIONS: dict[str, Any] = {
