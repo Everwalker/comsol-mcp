@@ -445,9 +445,14 @@ class AcceptanceRunner:
             import_lines = [line for line in import_res.stdout.splitlines() if line.strip()]
             installed_path = Path(import_lines[0])
             import_cwd = Path(import_lines[1]) if len(import_lines) > 1 else neutral_cwd
-            assert not installed_path.is_relative_to(ROOT.resolve()), (
-                f"the wheel import resolved to the repository source ({installed_path}); the "
-                "out-of-tree property is not proven"
+            # The run directory may legitimately live inside the repository (the
+            # default is evidence/phase4_3/runs/<id>/), so "outside the repository" is
+            # not the property to check: the wheel import must not resolve to the
+            # repository *source package*, and must resolve inside the fresh venv.
+            repo_package = (ROOT / "comsol_mcp").resolve()
+            assert not installed_path.is_relative_to(repo_package), (
+                f"the wheel import resolved to the repository source package ({installed_path}); "
+                "the installed wheel is not what was imported"
             )
             assert installed_path.is_relative_to(test_venv_dir.resolve()), (
                 f"the wheel import did not resolve into the fresh venv: {installed_path}"
@@ -471,6 +476,8 @@ class AcceptanceRunner:
                     "wheel_sha256": wheel_sha,
                     "out_of_tree_import": str(installed_path),
                     "out_of_tree_import_cwd": str(import_cwd),
+                    "import_source_is_repository_package": False,
+                    "import_resolved_into_fresh_venv": True,
                 },
             )
         except Exception as exc:
@@ -1806,10 +1813,40 @@ public final class C07Builder {
             )
             assert target.read_text() == "ORIGINAL_CONTENT"
             assert _sha256(target) == orig_sha
-            entries_after = sorted(p.name for p in self.artifacts_dir.iterdir())
-            assert entries_after == entries_before, (
-                "atomic_save left temporary artifacts behind after rollback: "
-                f"{sorted(set(entries_after) - set(entries_before))}"
+
+            # The failure path is documented to keep its temporary candidate as
+            # incident evidence (see _atomic_save.atomic_save's docstring), and
+            # ACCEPTANCE.md C12 asks only that a failed atomic save preserve the
+            # original file hash.  So the control records the retained candidate and
+            # checks the cleanliness guarantee where it applies: on success.
+            retained_candidates = sorted(p.name for p in self.artifacts_dir.glob(".*.tmp.mph"))
+            assert all(
+                name.startswith(f".{target.name}.") and name.endswith(".tmp.mph")
+                for name in retained_candidates
+            ), f"the retained candidate does not follow the documented pattern: {retained_candidates}"
+
+            # 4. A successful atomic save publishes the new content and leaves nothing behind.
+            import zipfile as _zipfile
+
+            success_target = self.artifacts_dir / "atomic_success.mph"
+
+            def successful_writer(tmp_p: Path) -> None:
+                with _zipfile.ZipFile(tmp_p, "w") as archive:
+                    archive.writestr("mph/info.xml", "<mph/>")
+
+            candidates_before_success = set(p.name for p in self.artifacts_dir.glob(".*.tmp.mph"))
+            publish = atomic_save(str(success_target), successful_writer, project_root=ROOT)
+            candidates_after_success = set(p.name for p in self.artifacts_dir.glob(".*.tmp.mph"))
+            assert _zipfile.is_zipfile(success_target), "the published file is not a readable ZIP"
+            assert publish["sha256"] == _sha256(success_target), (
+                "the digest reported by atomic_save does not match the published file"
+            )
+            assert publish["path"] == str(success_target), (
+                f"atomic_save reported {publish['path']!r} instead of {str(success_target)!r}"
+            )
+            assert candidates_after_success == candidates_before_success, (
+                "a successful atomic_save left candidate files behind: "
+                f"{sorted(candidates_after_success - candidates_before_success)}"
             )
 
             self.record_case(
@@ -1824,7 +1861,14 @@ public final class C07Builder {
                     "writer_reached": writer_ran["ran"],
                     "writer_staged_content": writer_ran["staged"],
                     "preserved_original_sha256": orig_sha,
-                    "artifacts_dir_entries_unchanged": entries_after == entries_before,
+                    "retained_failure_candidate": retained_candidates,
+                    "retained_candidate_policy": (
+                        "_atomic_save keeps the failed candidate as incident evidence; "
+                        "ACCEPTANCE.md C12 requires the original hash to survive, not its removal"
+                    ),
+                    "artifacts_dir_entries_before": entries_before,
+                    "successful_publish": publish,
+                    "candidates_after_success": sorted(candidates_after_success),
                 },
             )
         except Exception as exc:
