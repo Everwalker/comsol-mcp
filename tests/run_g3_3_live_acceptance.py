@@ -105,6 +105,48 @@ def _to_float(v: Any) -> float:
     return float(v) if v is not None else 0.0
 
 
+def _measure_scalar(response: Mapping[str, Any], key: str, *, label: str = "") -> float:
+    """Read a measure published by ``result.evaluate`` as one scalar.
+
+    The response carries each measure in the FieldArray shape it was read with
+    (expression / solution step / point), e.g. ``[[[[3.0]]]]`` for one expression on
+    one solution step.  A measure is a single number repeated on every slot, so the
+    driver flattens it and refuses a response whose slots disagree instead of
+    silently trusting the first entry.
+    """
+    if key not in response:
+        raise AssertionError(f"{label}the response does not report {key!r}")
+    raw = response[key]
+    if raw is None:
+        raise AssertionError(f"{label}the response reports {key!r} as None")
+    values = _flatten_scalars(raw)
+    if not values:
+        raise AssertionError(f"{label}the response reports {key!r} with no numeric slots: {raw!r}")
+    first = values[0]
+    if any(abs(value - first) > 1e-9 for value in values):
+        raise AssertionError(f"{label}the response reports {key!r} with disagreeing slots: {raw!r}")
+    return first
+
+
+def _scalar_entry(value: Any) -> Any:
+    """Return the innermost single entry of a nested value slot.
+
+    ``result.evaluate`` / ``result.at_points`` wrap a scalar in as many list levels
+    as the query had axes (expression / solution step / point), and a complex read
+    keeps that wrapping around its ``{"real", "imag"}`` mapping.  Peeling one-entry
+    wrappers lets a check assert on the scalar (or complex mapping) itself without
+    pinning the axis count.
+    """
+    seen = value
+    while isinstance(seen, (list, tuple)):
+        if not seen:
+            raise AssertionError("the value slot is empty")
+        if len(seen) > 1:
+            raise AssertionError(f"the value slot holds {len(seen)} entries; use _flatten_scalars")
+        seen = seen[0]
+    return seen
+
+
 def _tolerance_record(
     observed: float, expected: float, tolerance: float, rationale: str
 ) -> dict[str, Any]:
@@ -1741,13 +1783,10 @@ public final class C07Builder {
             val_avg = _to_float(eval_avg["values"])
             val_std = _to_float(eval_std["values"])
             val_rms = _to_float(eval_rms["values"])
-            denom = eval_avg.get("denominator_measure")
             # The denominator must be reported by the engine response itself: a missing
-            # one is not "zero measured area", it is an unverifiable answer.
-            assert isinstance(denom, (int, float)) and not isinstance(denom, bool), (
-                f"the average response must report its denominator, got {denom!r}"
-            )
-            denom = float(denom)
+            # one is not "zero measured area", it is an unverifiable answer.  It is
+            # published in the FieldArray shape it was read with, so read the measure.
+            denom = _measure_scalar(eval_avg, "denominator_measure")
 
             assert abs(val_int - 6.0) < 1e-9
             assert abs(val_avg - 2.0) < 1e-9
@@ -1831,12 +1870,14 @@ public final class C07Builder {
             # dimensions (a 1-D length read as an area, a 3-D volume read as a boundary
             # area) would have passed it.  Both models are built and solved here, through
             # the same worker and engine path as every other read in this case.
-            dimensions_worker = self.make_worker("c05_dimensions")
+            # A COMSOL endpoint admits one persistent worker, so this case reads through
+            # the run's own verifier worker; a second worker for the same engine is
+            # refused with ENGINE_BUSY.  The models are still built and solved here, on
+            # the same worker and engine path as every other read in this case.
+            dimensions_worker = self.verifier_worker
+            assert dimensions_worker is not None, "C05 needs the run's verifier worker"
             dimension_evidence: dict[str, Any] = {}
             try:
-                client = dimensions_worker.client()
-                client.connect(self.server_port, "127.0.0.1")
-
                 def _integral_1(model_tag: str, selection: Any) -> dict[str, Any]:
                     res = result_evaluate(dimensions_worker, model_tag, {"spec": {
                         "expressions": ["1"],
@@ -1853,7 +1894,7 @@ public final class C07Builder {
                 # --- 1-D wire: two intervals, 0.03 m and 0.07 m -------------------
                 wire_java = self.run_dir / "OneDWireBuilder.java"
                 wire_java.write_text(ONE_D_WIRE_JAVA, encoding="utf-8")
-                wire_tag = client.create("OneDWire").tag()
+                wire_tag = dimensions_worker.client().create("OneDWire").tag()
                 _execute_checked(dimensions_worker, {
                     "tag": wire_tag,
                     "source_artifact": str(wire_java),
@@ -1905,7 +1946,7 @@ public final class C07Builder {
                 # --- 3-D block: 0.02 x 0.01 x 0.01 m, isothermal x-faces ----------
                 block_java = self.run_dir / "ThreeDBlockBuilder.java"
                 block_java.write_text(THREE_D_BLOCK_JAVA, encoding="utf-8")
-                block_tag = client.create("ThreeDBlock").tag()
+                block_tag = dimensions_worker.client().create("ThreeDBlock").tag()
                 _execute_checked(dimensions_worker, {
                     "tag": block_tag,
                     "source_artifact": str(block_java),
@@ -2000,7 +2041,7 @@ public final class C07Builder {
                     assert record["details"].get("selection_measure") == 0.0, record
 
                 dimension_evidence = {
-                    "worker": "c05_dimensions",
+                    "worker": "c03_reopen_verifier (shared run worker)",
                     "one_d_wire": wire_evidence,
                     "three_d_block": dimensions_evidence_area,
                     "three_d_temperature": dimensions_evidence_points,
@@ -2008,11 +2049,10 @@ public final class C07Builder {
                     "models_built_and_solved_inside_this_case": True,
                 }
             finally:
-                try:
-                    dimensions_worker.client().disconnect()
-                except Exception:
-                    pass
-                dimensions_worker.close()
+                # The verifier worker is shared with the rest of the run and is closed by
+                # the run teardown; closing it here would end the engine session that
+                # C06-C14 still read.
+                pass
 
             self.record_case(
                 "C05",
@@ -2052,11 +2092,7 @@ public final class C07Builder {
             val_avg = _to_float(r_avg["values"])
             val_std = _to_float(r_std["values"])
             val_rms = _to_float(r_rms["values"])
-            denom = r_avg.get("denominator_measure")
-            assert isinstance(denom, (int, float)) and not isinstance(denom, bool), (
-                f"C06: the average response must report its denominator, got {denom!r}"
-            )
-            denom = float(denom)
+            denom = _measure_scalar(r_avg, "denominator_measure", label="C06: ")
 
             expected_area = 6.0
             expected_int = 24.0
@@ -2137,16 +2173,8 @@ public final class C07Builder {
             })
             val_vol = _to_float(r_vol["values"])
             val_avgr = _to_float(r_avgr["values"])
-            revolved_m = r_avgr.get("revolved_measure")
-            cross_sec_m = r_avgr.get("cross_section_measure")
-            assert isinstance(revolved_m, (int, float)) and not isinstance(revolved_m, bool), (
-                f"C07: the axisymmetric response must report its revolved measure, got {revolved_m!r}"
-            )
-            assert isinstance(cross_sec_m, (int, float)) and not isinstance(cross_sec_m, bool), (
-                f"C07: the axisymmetric response must report its cross-section measure, got {cross_sec_m!r}"
-            )
-            revolved_m = float(revolved_m)
-            cross_sec_m = float(cross_sec_m)
+            revolved_m = _measure_scalar(r_avgr, "revolved_measure", label="C07: ")
+            cross_sec_m = _measure_scalar(r_avgr, "cross_section_measure", label="C07: ")
 
             expected_vol = 12.0 * math.pi
             expected_avgr = 4.0 / 3.0
@@ -2222,7 +2250,9 @@ public final class C07Builder {
 
             # D8: the solution axis is the engine's own step list, not "at least 3".
             # Chain B is solved on tlist = range(0, 1.0, 5.0), i.e. six steps.
-            indices = dataset_solution_indices(self.verifier_worker, "reopen_b", {"dataset": "dset1"})
+            indices = dataset_solution_indices(self.verifier_worker, "reopen_b", {
+                "path": {"segments": [{"accessor": "result"}, {"collection": "dataset", "tag": "dset1"}]},
+            })
             times = [float(t) for t in (indices.get("time_values") or [])]
             axis_evidence = {
                 "solution_axis_length": n_solutions,
@@ -2334,7 +2364,7 @@ public final class C07Builder {
                 "spec": {"expressions": ["3 + 4*i"], "solution": {"dataset": "dset1"}, "aggregate": "integral", "complex_mode": "phase"}
             })
 
-            val_pres = r_pres["values"][0][0]
+            val_pres = _scalar_entry(r_pres["values"])
             val_real = _to_float(r_real["values"])
             val_imag = _to_float(r_imag["values"])
             val_abs = _to_float(r_abs["values"])
@@ -2353,7 +2383,7 @@ public final class C07Builder {
                 "points": [[1.0, 1.0]],
                 "coordinate_unit": "m",
             })
-            sp_val = r_sp["values"][0][0][0]
+            sp_val = _scalar_entry(r_sp["values"])
             assert abs(sp_val["real"] - 3.0) < 1e-6
             assert abs(sp_val["imag"] - 1.0) < 1e-6
 
@@ -2766,8 +2796,12 @@ public final class C07Builder {
             #    stay inside the project root, the pinned digest must match the bytes on
             #    disk, and an atomic publish must leave no candidate behind.
             payload = {"x": [i * 0.5 for i in range(20000)], "y": list(range(20000))}
+            # The artifact must land under the root the *worker* authorizes: the chunk and
+            # read paths resolve relative to the worker's trusted project root (its run
+            # directory), so publishing anywhere else is refused as an escape.
             meta = _export_to_artifact(
-                payload, "c13", eval_context={"requested_storage": "auto"}, project_root=ROOT
+                payload, "c13", eval_context={"requested_storage": "auto"},
+                project_root=self.run_dir,
             )
             ref = Path(meta["artifact_ref"]).resolve()
             file_size = meta["byte_size"]
@@ -2866,7 +2900,7 @@ public final class C07Builder {
 
             big_meta = _export_to_artifact(
                 {"x": [i * 0.5 for i in range(200000)], "y": list(range(200000))}, "c13big",
-                project_root=ROOT,
+                project_root=self.run_dir,
             )
             big_ref = Path(big_meta["artifact_ref"]).resolve()
             big_size = big_meta["byte_size"]
@@ -2970,19 +3004,46 @@ public final class C07Builder {
             )
             assert dispatched_recreate["created"] is True, dispatched_recreate
 
-            # Unimplemented but catalogued operations must be refused, not reported as done.
-            unimplemented_probe_ops: dict[str, str] = {}
-            for unimplemented in ("probe.update", "probe.history"):
+            # `probe.update` and `probe.history` were catalogued without an implementation,
+            # so a host request used to be refused with UNSUPPORTED_OPERATION.  They are
+            # implemented now: the dispatcher must reach them, and a request that names no
+            # target probe is refused as INVALID_REQUEST instead of being reported as done.
+            implemented_probe_ops: dict[str, str] = {}
+            for op_name in ("probe.update", "probe.history"):
                 try:
-                    dispatch_operation(unimplemented, self.verifier_worker, "reopen_c06", {})
+                    dispatch_operation(op_name, self.verifier_worker, "reopen_c06", {})
                 except ExecutionContractError as exc:
-                    unimplemented_probe_ops[unimplemented] = exc.code
+                    implemented_probe_ops[op_name] = exc.code
                 else:
-                    raise AssertionError(f"{unimplemented} reported success although it is not implemented")
-            assert unimplemented_probe_ops == {
-                "probe.update": "UNSUPPORTED_OPERATION",
-                "probe.history": "UNSUPPORTED_OPERATION",
-            }, unimplemented_probe_ops
+                    raise AssertionError(f"{op_name} reported success although it named no probe")
+            assert implemented_probe_ops == {
+                "probe.update": "INVALID_REQUEST",
+                "probe.history": "INVALID_REQUEST",
+            }, implemented_probe_ops
+
+            # With a real target they must reach the engine and answer: link prb1 to a
+            # freshly created empty table, update through the dispatcher, then read the
+            # (still empty) history back through it.
+            dispatched_table = dispatch_operation("result.table_manage", self.verifier_worker, "reopen_c06", {
+                "action": "create",
+                "path": "tbl_prb1",
+                "definition": {"type_id": "Table", "data": [], "headers": ["x + 2*y"]},
+            })
+            assert dispatched_table.get("created") is True, dispatched_table
+            dispatched_update = dispatch_operation("probe.update", self.verifier_worker, "reopen_c06", {
+                "tag": "prb1",
+                "definition": {"properties": {"expr": "x + 2*y", "unit": "1", "table": "tbl_prb1"}},
+            })
+            assert dispatched_update.get("applied"), dispatched_update
+            assert not dispatched_update.get("failed"), dispatched_update
+            assert dispatched_update.get("type_id") == "DomainProbe", dispatched_update
+            dispatched_history = dispatch_operation("probe.history", self.verifier_worker, "reopen_c06", {
+                "tag": "prb1",
+                "solution": {"dataset": "dset1"},
+            })
+            dispatched_rows = dispatched_history.get("rows")
+            assert isinstance(dispatched_rows, list) and not dispatched_rows, dispatched_history
+            assert dispatched_history.get("table") == "tbl_prb1", dispatched_history
 
             # 5. Verify probe is NOT in results derived values (model.result.numerical)
             num_tags = list(self.verifier_worker.client().model("reopen_c06")._call("result")._call("numerical")._call("tags"))
@@ -3034,9 +3095,11 @@ public final class C07Builder {
                     "table_read_data": read_vals,
                     "validation_verified": True,
                     "probe_host_dispatch": {
-                        "reachable": ["probe.list", "probe.create", "probe.remove"],
+                        "reachable": ["probe.list", "probe.create", "probe.remove", "probe.update", "probe.history"],
                         "dispatched_removed_verified": dispatched_remove["verified_removed"],
-                        "unimplemented_refusals": unimplemented_probe_ops,
+                        "untargeted_request_codes": implemented_probe_ops,
+                        "linked_table": "tbl_prb1",
+                        "history_rows_after_link": dispatched_rows,
                     },
                 },
             )
@@ -3085,10 +3148,15 @@ public final class C07Builder {
             #     engine calls on a single thread and serves health/status outside it, so a
             #     health probe during an in-flight solve must come back promptly and report
             #     the queued/running request.
-            solve_worker = self.make_worker("c15_solve")
+            # C15 needs exclusive endpoint ownership: step (4) requires a *fresh* worker
+            # to connect after the long-solve worker is gone, and a COMSOL endpoint admits
+            # one persistent worker at a time (a second one is refused with ENGINE_BUSY).
+            # The long solve therefore runs on the run's own verifier worker, which is
+            # closed below before the reference worker connects.
+            solve_worker = self.verifier_worker
+            assert solve_worker is not None, "C15 needs the run's verifier worker"
             solve_state: dict[str, Any] = {}
             try:
-                solve_worker.client().connect(self.server_port, "127.0.0.1")
                 java_path = self.run_dir / "C15LongSolve.java"
                 java_path.write_text(C15_LONG_SOLVE_JAVA, encoding="utf-8")
                 solve_tag = solve_worker.client().create("C15LongSolve").tag()
@@ -3148,11 +3216,15 @@ public final class C07Builder {
                 assert abs(after_solve_area - 1e-4) < 1e-18, after_solve_area
                 stale_tag = solve_tag
             finally:
+                # Closing the shared worker is deliberate here: step (4) can only mean
+                # something once the long-solve worker's engine session is gone.
                 try:
                     solve_worker.client().disconnect()
                 except Exception:
                     pass
                 solve_worker.close()
+                if solve_worker is self.verifier_worker:
+                    self.verifier_worker = None
 
             # --- (4) A reference that belonged to the closed worker's engine session must
             #     not resolve for a fresh worker (no silent re-creation).
