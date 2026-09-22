@@ -1,0 +1,2644 @@
+{
+  "calls": [
+    {
+      "body_sha256": "db8da68e9da7c563cd0ba4bb85208ae2d3811daca7d50b0e42cb1b91c07c149e",
+      "idempotency_key": "g33-node-001-dataset-create-g33cpcutplane01",
+      "mode": "response",
+      "operation": "dataset.create",
+      "reconcile": false,
+      "request": "g33-node-dataset-create-g33cpcutplane01",
+      "require_model": true,
+      "response": {
+        "applied": [
+          {
+            "method": "result.dataset.create",
+            "requested": {
+              "tag": "g33cpcutplane01",
+              "type_id": "CutPlane"
+            },
+            "step": "create"
+          },
+          {
+            "property": "data",
+            "readback": {
+              "match": true,
+              "method": "getString",
+              "readable": true,
+              "value": "dset1"
+            },
+            "requested": "dset1",
+            "step": "property"
+          },
+          {
+            "property": "planetype",
+            "readback": {
+              "match": true,
+              "method": "getString",
+              "readable": true,
+              "value": "quick"
+            },
+            "requested": "quick",
+            "step": "property"
+          },
+          {
+            "property": "quickplane",
+            "readback": {
+              "match": true,
+              "method": "getString",
+              "readable": true,
+              "value": "xy"
+            },
+            "requested": "xy",
+            "step": "property"
+          },
+          {
+            "property": "quickx",
+            "readback": {
+              "match": true,
+              "method": "getDouble",
+              "readable": true,
+              "value": 0.0
+            },
+            "requested": 0.0,
+            "step": "property"
+          },
+          {
+            "property": "quicky",
+            "readback": {
+              "match": true,
+              "method": "getDouble",
+              "readable": true,
+              "value": 0.0
+            },
+            "requested": 0.0,
+            "step": "property"
+          },
+          {
+            "property": "quickz",
+            "readback": {
+              "match": true,
+              "method": "getDouble",
+              "readable": true,
+              "value": 0.005
+            },
+            "requested": 0.005,
+            "step": "property"
+          }
+        ],
+        "created": true,
+        "data_keys": [
+          "applied",
+          "applied_count",
+          "cleanup_failed",
+          "created",
+          "definition",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "failed",
+          "failed_count",
+          "isolation_proof",
+          "not_executed",
+          "not_executed_count",
+          "ok",
+          "partial_change",
+          "path",
+          "readback",
+          "readback_match",
+          "status",
+          "tag",
+          "type_id",
+          "verification_status"
+        ],
+        "domain_outcome": {
+          "applied_count": 7,
+          "cleanup_failed": false,
+          "details": {
+            "status_token": "APPLIED"
+          },
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "failed_count": 0,
+          "not_executed_count": 0,
+          "operation": "dataset.create",
+          "state": "succeeded",
+          "status_token": "APPLIED",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-cb1fdb93-2c77-4876-90e2-fc437924fe89"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "dataset",
+                "receiver": "h-e0690527-180a-4b69-b459-9bae06ae8b3f"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-377b03f3-f727-4609-a721-58988c51e6e6"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-cb1fdb93-2c77-4876-90e2-fc437924fe89"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "dataset",
+                "receiver": "h-dd57c277-5a44-435e-842e-483d599ea2c4"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-ccb43f38-e25f-49b2-8346-ebfa84875812"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-ccb43f38-e25f-49b2-8346-ebfa84875812"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-fac5b230-36d1-465a-83cc-a9dbec787e9d"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-fac5b230-36d1-465a-83cc-a9dbec787e9d"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "create",
+                "receiver": "h-377b03f3-f727-4609-a721-58988c51e6e6"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-377b03f3-f727-4609-a721-58988c51e6e6"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getDouble",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getDouble",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getDouble",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getDouble",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getDouble",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getDouble",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getType",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              }
+            ],
+            "engine_calls": 30,
+            "methods": [
+              "create",
+              "dataset",
+              "get",
+              "getDouble",
+              "getString",
+              "getType",
+              "result",
+              "set",
+              "tags"
+            ],
+            "mutation_issued": true,
+            "mutation_method": "create"
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-001-dataset-create-g33cpcutplane01",
+          "job_id": "38ca909f-7433-435b-8296-6cfebedc1b22",
+          "operation_id": "bf93edae-943b-4b6d-94c6-9f8682185831",
+          "request_id": "g33-node-dataset-create-g33cpcutplane01",
+          "revision": 2
+        },
+        "failed": [],
+        "not_executed": [],
+        "readback": {
+          "match": true,
+          "properties": [
+            {
+              "match": true,
+              "method": "getString",
+              "property": "data",
+              "readable": true,
+              "value": "dset1"
+            },
+            {
+              "match": true,
+              "method": "getString",
+              "property": "planetype",
+              "readable": true,
+              "value": "quick"
+            },
+            {
+              "match": true,
+              "method": "getString",
+              "property": "quickplane",
+              "readable": true,
+              "value": "xy"
+            },
+            {
+              "match": true,
+              "method": "getDouble",
+              "property": "quickx",
+              "readable": true,
+              "value": 0.0
+            },
+            {
+              "match": true,
+              "method": "getDouble",
+              "property": "quicky",
+              "readable": true,
+              "value": 0.0
+            },
+            {
+              "match": true,
+              "method": "getDouble",
+              "property": "quickz",
+              "readable": true,
+              "value": 0.005
+            }
+          ],
+          "readable": true,
+          "tags": [
+            "dset1",
+            "g33cpcutplane01"
+          ],
+          "type_id": "CutPlane"
+        },
+        "status": "APPLIED",
+        "success": true,
+        "tag": "g33cpcutplane01",
+        "type_id": "CutPlane",
+        "unknown": false
+      }
+    },
+    {
+      "body_sha256": "dfb0ec2781e784c01ccfddd809f63d791ba473063c3da3d1ec474337d476ae0f",
+      "idempotency_key": "g33-node-002-cutplane-inspect",
+      "mode": "response",
+      "operation": "dataset.inspect",
+      "reconcile": false,
+      "request": "g33-node-cutplane-inspect",
+      "require_model": true,
+      "response": {
+        "data_keys": [
+          "component",
+          "geometry",
+          "path",
+          "properties",
+          "solution",
+          "tag",
+          "type_id"
+        ],
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-002-cutplane-inspect",
+          "job_id": "39ec5c78-2ecf-47ea-a03a-7609a0a7b413",
+          "operation_id": "1301084a-b1a5-4e7b-bb2a-c70538b732f9",
+          "request_id": "g33-node-cutplane-inspect",
+          "revision": 2
+        },
+        "success": true,
+        "tag": "g33cpcutplane01",
+        "type_id": "CutPlane",
+        "unknown": false
+      }
+    },
+    {
+      "body_sha256": "dfb0ec2781e784c01ccfddd809f63d791ba473063c3da3d1ec474337d476ae0f",
+      "idempotency_key": "g33-node-003-C11-CutPlane-3D-solution-indices",
+      "mode": "response",
+      "operation": "dataset.solution_indices",
+      "reconcile": false,
+      "request": "g33-node-C11-CutPlane-3D-solution-indices",
+      "require_model": true,
+      "response": {
+        "data_keys": [
+          "axis_metadata_complete",
+          "axis_metadata_source",
+          "binding_complete",
+          "binding_source",
+          "dataset",
+          "dataset_binding",
+          "inner_indices",
+          "level_names",
+          "outer_indices",
+          "pair_mapping_complete",
+          "parameters",
+          "parameters_complete",
+          "parameters_source",
+          "read_errors",
+          "solnum_pairs",
+          "solution",
+          "solution_count",
+          "study",
+          "time_axis_source",
+          "time_values"
+        ],
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-003-C11-CutPlane-3D-solution-indices",
+          "job_id": "5c64650f-9ab6-4f98-b489-db5ea983435d",
+          "operation_id": "47637bde-4b48-4f65-9e86-098939eeef4c",
+          "request_id": "g33-node-C11-CutPlane-3D-solution-indices",
+          "revision": 2
+        },
+        "success": true,
+        "unknown": false
+      }
+    },
+    {
+      "body_sha256": "85d4e097a59703beb1630a183ce90caf5aad3ba43c513c30d4260b4192e93e5c",
+      "idempotency_key": "g33-node-004-C11-CutPlane-3D-area-evaluate",
+      "mode": "response",
+      "operation": "result.evaluate",
+      "reconcile": false,
+      "request": "g33-node-C11-CutPlane-3D-area-evaluate",
+      "require_model": true,
+      "response": {
+        "data_keys": [
+          "aggregate",
+          "axisymmetric",
+          "axisymmetric_applied_count",
+          "axisymmetric_factor_applied",
+          "axisymmetric_measure_evidence",
+          "cleanup",
+          "cleanup_failed",
+          "complex_mode",
+          "complex_transform_order",
+          "cross_section_measure",
+          "dataset",
+          "denominator_measure",
+          "denominator_source",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "evaluated_expressions",
+          "execution_state_unknown",
+          "expressions",
+          "field_array",
+          "is_complex",
+          "isolation_proof",
+          "partial_change",
+          "result_budget",
+          "revolved_measure",
+          "selection_measure",
+          "selection_measure_source",
+          "solution",
+          "solution_axes",
+          "status",
+          "storage",
+          "total_elements",
+          "values",
+          "verification_status"
+        ],
+        "domain_outcome": {
+          "cleanup_failed": false,
+          "details": {
+            "status_unexpected_keys": [
+              "cleanup_failed"
+            ]
+          },
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "operation": "result.evaluate",
+          "state": "succeeded",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-e18e464c-2606-4379-a292-16c1107ca9fd"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "numerical",
+                "receiver": "h-3548600b-6d50-4bc7-9e9d-9da69c7c8b9c"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "dataset",
+                "receiver": "h-3548600b-6d50-4bc7-9e9d-9da69c7c8b9c"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-c4d9aef9-5c8c-440e-aa62-1147be18429f"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-c4d9aef9-5c8c-440e-aa62-1147be18429f"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-e18e464c-2606-4379-a292-16c1107ca9fd"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "dataset",
+                "receiver": "h-c7c5a7ab-7570-4528-8c8f-f47cb8dfb8c4"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-60e6df26-c527-4ac9-b6e6-0308c9826c6f"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "sol",
+                "receiver": "h-e18e464c-2606-4379-a292-16c1107ca9fd"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-1b4a0ff8-53f7-4baf-947b-91ffb230390d"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-60e6df26-c527-4ac9-b6e6-0308c9826c6f"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getType",
+                "receiver": "h-6d9d47b0-d00a-48fa-8b94-46c520983ee7"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "properties",
+                "receiver": "h-6d9d47b0-d00a-48fa-8b94-46c520983ee7"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "properties",
+                "receiver": "h-6d9d47b0-d00a-48fa-8b94-46c520983ee7"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-6d9d47b0-d00a-48fa-8b94-46c520983ee7"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "properties",
+                "receiver": "h-6d9d47b0-d00a-48fa-8b94-46c520983ee7"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "properties",
+                "receiver": "h-6d9d47b0-d00a-48fa-8b94-46c520983ee7"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "properties",
+                "receiver": "h-6d9d47b0-d00a-48fa-8b94-46c520983ee7"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-60e6df26-c527-4ac9-b6e6-0308c9826c6f"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getType",
+                "receiver": "h-3531b50e-7ed1-4c63-8935-ee0731267edd"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "properties",
+                "receiver": "h-3531b50e-7ed1-4c63-8935-ee0731267edd"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-3531b50e-7ed1-4c63-8935-ee0731267edd"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "properties",
+                "receiver": "h-3531b50e-7ed1-4c63-8935-ee0731267edd"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "properties",
+                "receiver": "h-3531b50e-7ed1-4c63-8935-ee0731267edd"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "properties",
+                "receiver": "h-3531b50e-7ed1-4c63-8935-ee0731267edd"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-3531b50e-7ed1-4c63-8935-ee0731267edd"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "properties",
+                "receiver": "h-3531b50e-7ed1-4c63-8935-ee0731267edd"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-3531b50e-7ed1-4c63-8935-ee0731267edd"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "modelNode",
+                "receiver": "h-e18e464c-2606-4379-a292-16c1107ca9fd"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-3e71123b-7b3d-4d56-b68b-890117c07f24"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "component",
+                "receiver": "h-e18e464c-2606-4379-a292-16c1107ca9fd"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "geom",
+                "receiver": "h-92f7b3b1-fe4e-46f1-8066-98dd1e6ca030"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-cddfd6c1-a090-48bc-b0a9-48cd8785e809"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-cddfd6c1-a090-48bc-b0a9-48cd8785e809"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "sol",
+                "receiver": "h-e18e464c-2606-4379-a292-16c1107ca9fd"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-b6d776b9-03ac-4899-bfa8-ec897b79cee7"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-b6d776b9-03ac-4899-bfa8-ec897b79cee7"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getSolutioninfo",
+                "receiver": "h-898d9eba-47a6-4767-9d1f-e82608ba8db1"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getOuterSolnum",
+                "receiver": "h-bc31a038-edac-4bfa-a8cc-ffc63059a8dc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getSolnums",
+                "receiver": "h-bc31a038-edac-4bfa-a8cc-ffc63059a8dc"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getSolnum",
+                "receiver": "h-bc31a038-edac-4bfa-a8cc-ffc63059a8dc"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getSolnum",
+                "receiver": "h-bc31a038-edac-4bfa-a8cc-ffc63059a8dc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getPNames",
+                "receiver": "h-bc31a038-edac-4bfa-a8cc-ffc63059a8dc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getPvals",
+                "receiver": "h-bc31a038-edac-4bfa-a8cc-ffc63059a8dc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getUnits",
+                "receiver": "h-bc31a038-edac-4bfa-a8cc-ffc63059a8dc"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getLevelNames",
+                "receiver": "h-bc31a038-edac-4bfa-a8cc-ffc63059a8dc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "component",
+                "receiver": "h-e18e464c-2606-4379-a292-16c1107ca9fd"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "geom",
+                "receiver": "h-88fceadf-2a38-4137-85f0-340e0a90dc00"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "lengthUnit",
+                "receiver": "h-e5df9a4d-0581-4463-a1de-a0d0e598d6c0"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getSDim",
+                "receiver": "h-e5df9a4d-0581-4463-a1de-a0d0e598d6c0"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "isAxisymmetric",
+                "receiver": "h-e5df9a4d-0581-4463-a1de-a0d0e598d6c0"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getType",
+                "receiver": "h-4604cb3a-32f3-4e0e-87d6-1daf6044a652"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-d6c14123-0ccf-4bb4-8a98-9a64f7527e70"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "create",
+                "receiver": "h-d6c14123-0ccf-4bb4-8a98-9a64f7527e70"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-d58db0f9-4ddb-4ed3-a573-94b095cddb15"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-d58db0f9-4ddb-4ed3-a573-94b095cddb15"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "selection",
+                "receiver": "h-d58db0f9-4ddb-4ed3-a573-94b095cddb15"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": true,
+                "method": "all",
+                "receiver": "h-738fc6ad-7103-4678-84d1-64273d3e544b"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "properties",
+                "receiver": "h-d58db0f9-4ddb-4ed3-a573-94b095cddb15"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-d58db0f9-4ddb-4ed3-a573-94b095cddb15"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": true,
+                "method": "run",
+                "receiver": "h-d58db0f9-4ddb-4ed3-a573-94b095cddb15"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "isComplex",
+                "receiver": "h-d58db0f9-4ddb-4ed3-a573-94b095cddb15"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getReal",
+                "receiver": "h-d58db0f9-4ddb-4ed3-a573-94b095cddb15"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getStringArray",
+                "receiver": "h-d58db0f9-4ddb-4ed3-a573-94b095cddb15"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": true,
+                "method": "remove",
+                "receiver": "h-d6c14123-0ccf-4bb4-8a98-9a64f7527e70"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-d6c14123-0ccf-4bb4-8a98-9a64f7527e70"
+              }
+            ],
+            "engine_calls": 66,
+            "methods": [
+              "all",
+              "component",
+              "create",
+              "dataset",
+              "geom",
+              "get",
+              "getLevelNames",
+              "getOuterSolnum",
+              "getPNames",
+              "getPvals",
+              "getReal",
+              "getSDim",
+              "getSolnum",
+              "getSolnums",
+              "getSolutioninfo",
+              "getString",
+              "getStringArray",
+              "getType",
+              "getUnits",
+              "isAxisymmetric",
+              "isComplex",
+              "lengthUnit",
+              "modelNode",
+              "numerical",
+              "properties",
+              "remove",
+              "result",
+              "run",
+              "selection",
+              "set",
+              "sol",
+              "tags"
+            ],
+            "mutation_issued": true,
+            "mutation_method": "create"
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-004-C11-CutPlane-3D-area-evaluate",
+          "job_id": "99955a62-5f2c-4bf7-8cf4-ec87f3e8ac39",
+          "operation_id": "257095cf-11dc-492f-9bbe-65224ea90db0",
+          "request_id": "g33-node-C11-CutPlane-3D-area-evaluate",
+          "revision": 3
+        },
+        "status": {
+          "cleanup_failed": false,
+          "engine_error": null,
+          "execution_state_unknown": false,
+          "ok": true
+        },
+        "success": true,
+        "unknown": false
+      }
+    },
+    {
+      "body_sha256": "dfb0ec2781e784c01ccfddd809f63d791ba473063c3da3d1ec474337d476ae0f",
+      "idempotency_key": "g33-node-005-dataset-remove-g33cpcutplane01",
+      "mode": "response",
+      "operation": "dataset.remove",
+      "reconcile": false,
+      "request": "g33-node-dataset-remove-g33cpcutplane01",
+      "require_model": true,
+      "response": {
+        "applied": [
+          {
+            "step": "remove",
+            "tag": "g33cpcutplane01"
+          }
+        ],
+        "data_keys": [
+          "applied",
+          "applied_count",
+          "cleanup_failed",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "failed",
+          "failed_count",
+          "isolation_proof",
+          "not_executed",
+          "not_executed_count",
+          "ok",
+          "partial_change",
+          "path",
+          "readback",
+          "readback_match",
+          "remaining_datasets",
+          "removed",
+          "status",
+          "tag",
+          "verification_status",
+          "verified_removed"
+        ],
+        "domain_outcome": {
+          "applied_count": 1,
+          "cleanup_failed": false,
+          "details": {
+            "status_token": "APPLIED"
+          },
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "failed_count": 0,
+          "not_executed_count": 0,
+          "operation": "dataset.remove",
+          "state": "succeeded",
+          "status_token": "APPLIED",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-bf934349-76b4-4cca-a1cd-9080478720d4"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "dataset",
+                "receiver": "h-dba746be-c3ca-409e-980a-9418acbdad65"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-f5a18f28-763a-4b1b-ab33-4cfa498e977f"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "dataset",
+                "receiver": "h-66d62bae-af1e-4b66-9417-75e26c712f0f"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-65588789-67c7-495b-9f29-08bcdd785483"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-65588789-67c7-495b-9f29-08bcdd785483"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": true,
+                "method": "remove",
+                "receiver": "h-65588789-67c7-495b-9f29-08bcdd785483"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-65588789-67c7-495b-9f29-08bcdd785483"
+              }
+            ],
+            "engine_calls": 8,
+            "methods": [
+              "dataset",
+              "get",
+              "remove",
+              "result",
+              "tags"
+            ],
+            "mutation_issued": true,
+            "mutation_method": "remove"
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-005-dataset-remove-g33cpcutplane01",
+          "job_id": "07847330-0607-4797-8d34-35f4d842b3ae",
+          "operation_id": "1f6cd66f-4e0e-4e8c-8ec1-75adc45d6d4b",
+          "request_id": "g33-node-dataset-remove-g33cpcutplane01",
+          "revision": 4
+        },
+        "failed": [],
+        "not_executed": [],
+        "readback": {
+          "match": true,
+          "readable": true,
+          "tags": [
+            "dset1"
+          ]
+        },
+        "removed": true,
+        "status": "APPLIED",
+        "success": true,
+        "tag": "g33cpcutplane01",
+        "unknown": false
+      }
+    }
+  ],
+  "metadata": {
+    "bound_model": true,
+    "fixture_request": {
+      "execute_java_signature": "await execute_java(name, source, arguments=None)",
+      "kind": "temporary_solved_3d_cutplane_fixture",
+      "required_return": {
+        "component": "a component tag containing the dataset geometry",
+        "dataset": "a Solution dataset tag readable by dataset.list",
+        "fixture_ready": true,
+        "geometry": "optional geometry tag; if supplied it must be readable"
+      },
+      "safety": "root-owned fixture only; no existing Chain-A node may be relabelled"
+    },
+    "native_method_allowlist": {
+      "dataset": [
+        "DatasetFeatureList.create(String,String)",
+        "DatasetFeature.set(String,Object)",
+        "PropFeature.getString(String)",
+        "PropFeature.getDouble(String)",
+        "PropFeature.getDoubleArray(String)",
+        "PropFeature.getDoubleMatrix(String)",
+        "PropFeature.getStringArray(String)",
+        "PropFeature.getStringMatrix(String)",
+        "PropFeature.getType()",
+        "PropFeature.properties()"
+      ],
+      "probe": [
+        "ProbeFeatureList.create(String,String)",
+        "ProbeFeature.genResult(String)",
+        "ModelEntity.model(String)",
+        "ModelEntity.model()",
+        "PropFeature.set(String,Object)",
+        "PropFeature.getString(String)",
+        "PropFeature.getDouble(String)",
+        "PropFeature.getStringArray(String)",
+        "PropFeature.properties()"
+      ],
+      "table": [
+        "TableBaseFeature.setTableData(double[][])",
+        "TableBaseFeature.setTableData(double[][],double[][])",
+        "TableBaseFeature.setColumnHeaders(String[])",
+        "TableBaseFeature.getReal()",
+        "TableBaseFeature.getImag()",
+        "TableBaseFeature.getColumnHeaders()",
+        "TableBaseFeature.getRowHeaders()",
+        "TableBaseFeature.getTableData(boolean)",
+        "TableBaseFeature.isComplex()"
+      ]
+    },
+    "scope": "public_mcp_solved_3d_cutplane"
+  },
+  "overall": "PASS",
+  "rows": [
+    {
+      "assertions": {
+        "readback_match": true,
+        "readback_readable": true,
+        "status": "APPLIED",
+        "status_ok": true,
+        "success": true,
+        "type_match": true,
+        "unknown": false
+      },
+      "case": "dataset-create-g33cpcutplane01",
+      "idempotency_key": "g33-node-001-dataset-create-g33cpcutplane01",
+      "operation": "dataset.create",
+      "response": {
+        "applied": [
+          {
+            "method": "result.dataset.create",
+            "requested": {
+              "tag": "g33cpcutplane01",
+              "type_id": "CutPlane"
+            },
+            "step": "create"
+          },
+          {
+            "property": "data",
+            "readback": {
+              "match": true,
+              "method": "getString",
+              "readable": true,
+              "value": "dset1"
+            },
+            "requested": "dset1",
+            "step": "property"
+          },
+          {
+            "property": "planetype",
+            "readback": {
+              "match": true,
+              "method": "getString",
+              "readable": true,
+              "value": "quick"
+            },
+            "requested": "quick",
+            "step": "property"
+          },
+          {
+            "property": "quickplane",
+            "readback": {
+              "match": true,
+              "method": "getString",
+              "readable": true,
+              "value": "xy"
+            },
+            "requested": "xy",
+            "step": "property"
+          },
+          {
+            "property": "quickx",
+            "readback": {
+              "match": true,
+              "method": "getDouble",
+              "readable": true,
+              "value": 0.0
+            },
+            "requested": 0.0,
+            "step": "property"
+          },
+          {
+            "property": "quicky",
+            "readback": {
+              "match": true,
+              "method": "getDouble",
+              "readable": true,
+              "value": 0.0
+            },
+            "requested": 0.0,
+            "step": "property"
+          },
+          {
+            "property": "quickz",
+            "readback": {
+              "match": true,
+              "method": "getDouble",
+              "readable": true,
+              "value": 0.005
+            },
+            "requested": 0.005,
+            "step": "property"
+          }
+        ],
+        "created": true,
+        "data_keys": [
+          "applied",
+          "applied_count",
+          "cleanup_failed",
+          "created",
+          "definition",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "failed",
+          "failed_count",
+          "isolation_proof",
+          "not_executed",
+          "not_executed_count",
+          "ok",
+          "partial_change",
+          "path",
+          "readback",
+          "readback_match",
+          "status",
+          "tag",
+          "type_id",
+          "verification_status"
+        ],
+        "domain_outcome": {
+          "applied_count": 7,
+          "cleanup_failed": false,
+          "details": {
+            "status_token": "APPLIED"
+          },
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "failed_count": 0,
+          "not_executed_count": 0,
+          "operation": "dataset.create",
+          "state": "succeeded",
+          "status_token": "APPLIED",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-cb1fdb93-2c77-4876-90e2-fc437924fe89"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "dataset",
+                "receiver": "h-e0690527-180a-4b69-b459-9bae06ae8b3f"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-377b03f3-f727-4609-a721-58988c51e6e6"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-cb1fdb93-2c77-4876-90e2-fc437924fe89"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "dataset",
+                "receiver": "h-dd57c277-5a44-435e-842e-483d599ea2c4"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-ccb43f38-e25f-49b2-8346-ebfa84875812"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-ccb43f38-e25f-49b2-8346-ebfa84875812"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-fac5b230-36d1-465a-83cc-a9dbec787e9d"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-fac5b230-36d1-465a-83cc-a9dbec787e9d"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "create",
+                "receiver": "h-377b03f3-f727-4609-a721-58988c51e6e6"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-377b03f3-f727-4609-a721-58988c51e6e6"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getDouble",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getDouble",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getDouble",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getDouble",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getDouble",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getDouble",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getType",
+                "receiver": "h-b212c9a2-54ef-4883-92ba-c36ff6abdefc"
+              }
+            ],
+            "engine_calls": 30,
+            "methods": [
+              "create",
+              "dataset",
+              "get",
+              "getDouble",
+              "getString",
+              "getType",
+              "result",
+              "set",
+              "tags"
+            ],
+            "mutation_issued": true,
+            "mutation_method": "create"
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-001-dataset-create-g33cpcutplane01",
+          "job_id": "38ca909f-7433-435b-8296-6cfebedc1b22",
+          "operation_id": "bf93edae-943b-4b6d-94c6-9f8682185831",
+          "request_id": "g33-node-dataset-create-g33cpcutplane01",
+          "revision": 2
+        },
+        "failed": [],
+        "not_executed": [],
+        "readback": {
+          "match": true,
+          "properties": [
+            {
+              "match": true,
+              "method": "getString",
+              "property": "data",
+              "readable": true,
+              "value": "dset1"
+            },
+            {
+              "match": true,
+              "method": "getString",
+              "property": "planetype",
+              "readable": true,
+              "value": "quick"
+            },
+            {
+              "match": true,
+              "method": "getString",
+              "property": "quickplane",
+              "readable": true,
+              "value": "xy"
+            },
+            {
+              "match": true,
+              "method": "getDouble",
+              "property": "quickx",
+              "readable": true,
+              "value": 0.0
+            },
+            {
+              "match": true,
+              "method": "getDouble",
+              "property": "quicky",
+              "readable": true,
+              "value": 0.0
+            },
+            {
+              "match": true,
+              "method": "getDouble",
+              "property": "quickz",
+              "readable": true,
+              "value": 0.005
+            }
+          ],
+          "readable": true,
+          "tags": [
+            "dset1",
+            "g33cpcutplane01"
+          ],
+          "type_id": "CutPlane"
+        },
+        "status": "APPLIED",
+        "success": true,
+        "tag": "g33cpcutplane01",
+        "type_id": "CutPlane",
+        "unknown": false
+      },
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "properties_readable": true,
+        "type_id": "CutPlane"
+      },
+      "case": "C11-CutPlane-3D-readback",
+      "idempotency_key": "g33-node-002-cutplane-inspect",
+      "operation": "dataset.inspect",
+      "response": {
+        "data_keys": [
+          "component",
+          "geometry",
+          "path",
+          "properties",
+          "solution",
+          "tag",
+          "type_id"
+        ],
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-002-cutplane-inspect",
+          "job_id": "39ec5c78-2ecf-47ea-a03a-7609a0a7b413",
+          "operation_id": "1301084a-b1a5-4e7b-bb2a-c70538b732f9",
+          "request_id": "g33-node-cutplane-inspect",
+          "revision": 2
+        },
+        "success": true,
+        "tag": "g33cpcutplane01",
+        "type_id": "CutPlane",
+        "unknown": false
+      },
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "axis_metadata": true,
+        "binding_complete": true,
+        "binding_match": true,
+        "dataset_binding": {
+          "binding_complete": true,
+          "component": "comp1",
+          "dataset": "g33cpcutplane01",
+          "dataset_chain": [
+            "dset1",
+            "g33cpcutplane01"
+          ],
+          "dataset_edges": [
+            {
+              "from": "g33cpcutplane01",
+              "property": "data",
+              "to": "dset1"
+            }
+          ],
+          "dataset_type": "CutPlane",
+          "error": null,
+          "geometry": "geom1",
+          "properties": {
+            "data": "dset1"
+          },
+          "provenance": {
+            "dataset_tags": [
+              "dset1",
+              "g33cpcutplane01"
+            ],
+            "mutation_methods_called": [],
+            "read_only": true,
+            "solution_tags": [
+              "sol1"
+            ]
+          },
+          "read_errors": [],
+          "requested_solution": null,
+          "solution": "sol1",
+          "sources": {
+            "component": "upstream dataset reference(s): ['dset1']",
+            "geometry": "upstream dataset reference(s): ['dset1']",
+            "solution": "upstream dataset reference(s): ['dset1']"
+          }
+        },
+        "expected_component": "comp1",
+        "expected_geometry": "geom1",
+        "inner_indices": [
+          1
+        ],
+        "outer_indices": [
+          1
+        ],
+        "solnum_pairs": [
+          {
+            "inner": 1,
+            "outer": 1,
+            "solnum": 1
+          }
+        ],
+        "solution": "sol1"
+      },
+      "case": "C11-CutPlane-3D-solution-indices",
+      "idempotency_key": "g33-node-003-C11-CutPlane-3D-solution-indices",
+      "operation": "dataset.solution_indices",
+      "response": {
+        "data_keys": [
+          "axis_metadata_complete",
+          "axis_metadata_source",
+          "binding_complete",
+          "binding_source",
+          "dataset",
+          "dataset_binding",
+          "inner_indices",
+          "level_names",
+          "outer_indices",
+          "pair_mapping_complete",
+          "parameters",
+          "parameters_complete",
+          "parameters_source",
+          "read_errors",
+          "solnum_pairs",
+          "solution",
+          "solution_count",
+          "study",
+          "time_axis_source",
+          "time_values"
+        ],
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-003-C11-CutPlane-3D-solution-indices",
+          "job_id": "5c64650f-9ab6-4f98-b489-db5ea983435d",
+          "operation_id": "47637bde-4b48-4f65-9e86-098939eeef4c",
+          "request_id": "g33-node-C11-CutPlane-3D-solution-indices",
+          "revision": 2
+        },
+        "success": true,
+        "unknown": false
+      },
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "aggregate": "integral",
+        "dataset_echo": true,
+        "expected": 1.0,
+        "expression": "1",
+        "finite": true,
+        "numeric_values": [
+          1.0000000000000755
+        ],
+        "value_match": true,
+        "values": [
+          [
+            [
+              [
+                1.0000000000000755
+              ]
+            ]
+          ]
+        ]
+      },
+      "case": "C11-CutPlane-3D-area-evaluate",
+      "idempotency_key": "g33-node-004-C11-CutPlane-3D-area-evaluate",
+      "operation": "result.evaluate",
+      "response": {
+        "data_keys": [
+          "aggregate",
+          "axisymmetric",
+          "axisymmetric_applied_count",
+          "axisymmetric_factor_applied",
+          "axisymmetric_measure_evidence",
+          "cleanup",
+          "cleanup_failed",
+          "complex_mode",
+          "complex_transform_order",
+          "cross_section_measure",
+          "dataset",
+          "denominator_measure",
+          "denominator_source",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "evaluated_expressions",
+          "execution_state_unknown",
+          "expressions",
+          "field_array",
+          "is_complex",
+          "isolation_proof",
+          "partial_change",
+          "result_budget",
+          "revolved_measure",
+          "selection_measure",
+          "selection_measure_source",
+          "solution",
+          "solution_axes",
+          "status",
+          "storage",
+          "total_elements",
+          "values",
+          "verification_status"
+        ],
+        "domain_outcome": {
+          "cleanup_failed": false,
+          "details": {
+            "status_unexpected_keys": [
+              "cleanup_failed"
+            ]
+          },
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "operation": "result.evaluate",
+          "state": "succeeded",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-e18e464c-2606-4379-a292-16c1107ca9fd"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "numerical",
+                "receiver": "h-3548600b-6d50-4bc7-9e9d-9da69c7c8b9c"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "dataset",
+                "receiver": "h-3548600b-6d50-4bc7-9e9d-9da69c7c8b9c"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-c4d9aef9-5c8c-440e-aa62-1147be18429f"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-c4d9aef9-5c8c-440e-aa62-1147be18429f"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-e18e464c-2606-4379-a292-16c1107ca9fd"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "dataset",
+                "receiver": "h-c7c5a7ab-7570-4528-8c8f-f47cb8dfb8c4"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-60e6df26-c527-4ac9-b6e6-0308c9826c6f"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "sol",
+                "receiver": "h-e18e464c-2606-4379-a292-16c1107ca9fd"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-1b4a0ff8-53f7-4baf-947b-91ffb230390d"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-60e6df26-c527-4ac9-b6e6-0308c9826c6f"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getType",
+                "receiver": "h-6d9d47b0-d00a-48fa-8b94-46c520983ee7"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "properties",
+                "receiver": "h-6d9d47b0-d00a-48fa-8b94-46c520983ee7"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "properties",
+                "receiver": "h-6d9d47b0-d00a-48fa-8b94-46c520983ee7"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-6d9d47b0-d00a-48fa-8b94-46c520983ee7"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "properties",
+                "receiver": "h-6d9d47b0-d00a-48fa-8b94-46c520983ee7"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "properties",
+                "receiver": "h-6d9d47b0-d00a-48fa-8b94-46c520983ee7"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "properties",
+                "receiver": "h-6d9d47b0-d00a-48fa-8b94-46c520983ee7"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-60e6df26-c527-4ac9-b6e6-0308c9826c6f"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getType",
+                "receiver": "h-3531b50e-7ed1-4c63-8935-ee0731267edd"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "properties",
+                "receiver": "h-3531b50e-7ed1-4c63-8935-ee0731267edd"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-3531b50e-7ed1-4c63-8935-ee0731267edd"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "properties",
+                "receiver": "h-3531b50e-7ed1-4c63-8935-ee0731267edd"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "properties",
+                "receiver": "h-3531b50e-7ed1-4c63-8935-ee0731267edd"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "properties",
+                "receiver": "h-3531b50e-7ed1-4c63-8935-ee0731267edd"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-3531b50e-7ed1-4c63-8935-ee0731267edd"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "properties",
+                "receiver": "h-3531b50e-7ed1-4c63-8935-ee0731267edd"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-3531b50e-7ed1-4c63-8935-ee0731267edd"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "modelNode",
+                "receiver": "h-e18e464c-2606-4379-a292-16c1107ca9fd"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-3e71123b-7b3d-4d56-b68b-890117c07f24"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "component",
+                "receiver": "h-e18e464c-2606-4379-a292-16c1107ca9fd"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "geom",
+                "receiver": "h-92f7b3b1-fe4e-46f1-8066-98dd1e6ca030"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-cddfd6c1-a090-48bc-b0a9-48cd8785e809"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-cddfd6c1-a090-48bc-b0a9-48cd8785e809"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "sol",
+                "receiver": "h-e18e464c-2606-4379-a292-16c1107ca9fd"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-b6d776b9-03ac-4899-bfa8-ec897b79cee7"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-b6d776b9-03ac-4899-bfa8-ec897b79cee7"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getSolutioninfo",
+                "receiver": "h-898d9eba-47a6-4767-9d1f-e82608ba8db1"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getOuterSolnum",
+                "receiver": "h-bc31a038-edac-4bfa-a8cc-ffc63059a8dc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getSolnums",
+                "receiver": "h-bc31a038-edac-4bfa-a8cc-ffc63059a8dc"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getSolnum",
+                "receiver": "h-bc31a038-edac-4bfa-a8cc-ffc63059a8dc"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getSolnum",
+                "receiver": "h-bc31a038-edac-4bfa-a8cc-ffc63059a8dc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getPNames",
+                "receiver": "h-bc31a038-edac-4bfa-a8cc-ffc63059a8dc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getPvals",
+                "receiver": "h-bc31a038-edac-4bfa-a8cc-ffc63059a8dc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getUnits",
+                "receiver": "h-bc31a038-edac-4bfa-a8cc-ffc63059a8dc"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getLevelNames",
+                "receiver": "h-bc31a038-edac-4bfa-a8cc-ffc63059a8dc"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "component",
+                "receiver": "h-e18e464c-2606-4379-a292-16c1107ca9fd"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "geom",
+                "receiver": "h-88fceadf-2a38-4137-85f0-340e0a90dc00"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "lengthUnit",
+                "receiver": "h-e5df9a4d-0581-4463-a1de-a0d0e598d6c0"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getSDim",
+                "receiver": "h-e5df9a4d-0581-4463-a1de-a0d0e598d6c0"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "isAxisymmetric",
+                "receiver": "h-e5df9a4d-0581-4463-a1de-a0d0e598d6c0"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getType",
+                "receiver": "h-4604cb3a-32f3-4e0e-87d6-1daf6044a652"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-d6c14123-0ccf-4bb4-8a98-9a64f7527e70"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "create",
+                "receiver": "h-d6c14123-0ccf-4bb4-8a98-9a64f7527e70"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-d58db0f9-4ddb-4ed3-a573-94b095cddb15"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-d58db0f9-4ddb-4ed3-a573-94b095cddb15"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "selection",
+                "receiver": "h-d58db0f9-4ddb-4ed3-a573-94b095cddb15"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": true,
+                "method": "all",
+                "receiver": "h-738fc6ad-7103-4678-84d1-64273d3e544b"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "properties",
+                "receiver": "h-d58db0f9-4ddb-4ed3-a573-94b095cddb15"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-d58db0f9-4ddb-4ed3-a573-94b095cddb15"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": true,
+                "method": "run",
+                "receiver": "h-d58db0f9-4ddb-4ed3-a573-94b095cddb15"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "isComplex",
+                "receiver": "h-d58db0f9-4ddb-4ed3-a573-94b095cddb15"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getReal",
+                "receiver": "h-d58db0f9-4ddb-4ed3-a573-94b095cddb15"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getStringArray",
+                "receiver": "h-d58db0f9-4ddb-4ed3-a573-94b095cddb15"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": true,
+                "method": "remove",
+                "receiver": "h-d6c14123-0ccf-4bb4-8a98-9a64f7527e70"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-d6c14123-0ccf-4bb4-8a98-9a64f7527e70"
+              }
+            ],
+            "engine_calls": 66,
+            "methods": [
+              "all",
+              "component",
+              "create",
+              "dataset",
+              "geom",
+              "get",
+              "getLevelNames",
+              "getOuterSolnum",
+              "getPNames",
+              "getPvals",
+              "getReal",
+              "getSDim",
+              "getSolnum",
+              "getSolnums",
+              "getSolutioninfo",
+              "getString",
+              "getStringArray",
+              "getType",
+              "getUnits",
+              "isAxisymmetric",
+              "isComplex",
+              "lengthUnit",
+              "modelNode",
+              "numerical",
+              "properties",
+              "remove",
+              "result",
+              "run",
+              "selection",
+              "set",
+              "sol",
+              "tags"
+            ],
+            "mutation_issued": true,
+            "mutation_method": "create"
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-004-C11-CutPlane-3D-area-evaluate",
+          "job_id": "99955a62-5f2c-4bf7-8cf4-ec87f3e8ac39",
+          "operation_id": "257095cf-11dc-492f-9bbe-65224ea90db0",
+          "request_id": "g33-node-C11-CutPlane-3D-area-evaluate",
+          "revision": 3
+        },
+        "status": {
+          "cleanup_failed": false,
+          "engine_error": null,
+          "execution_state_unknown": false,
+          "ok": true
+        },
+        "success": true,
+        "unknown": false
+      },
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "constant_one_area": true,
+        "fixture": {
+          "component": "comp1",
+          "dataset": "dset1",
+          "fixture_ready": true,
+          "geometry": "geom1"
+        },
+        "solution_indices": true,
+        "typed_readback": true
+      },
+      "case": "C11-CutPlane-3D",
+      "idempotency_key": null,
+      "operation": null,
+      "response": null,
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "removed": true,
+        "verified_removed": true
+      },
+      "case": "dataset-cleanup-g33cpcutplane01",
+      "idempotency_key": "g33-node-005-dataset-remove-g33cpcutplane01",
+      "operation": "dataset.remove",
+      "response": {
+        "applied": [
+          {
+            "step": "remove",
+            "tag": "g33cpcutplane01"
+          }
+        ],
+        "data_keys": [
+          "applied",
+          "applied_count",
+          "cleanup_failed",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "failed",
+          "failed_count",
+          "isolation_proof",
+          "not_executed",
+          "not_executed_count",
+          "ok",
+          "partial_change",
+          "path",
+          "readback",
+          "readback_match",
+          "remaining_datasets",
+          "removed",
+          "status",
+          "tag",
+          "verification_status",
+          "verified_removed"
+        ],
+        "domain_outcome": {
+          "applied_count": 1,
+          "cleanup_failed": false,
+          "details": {
+            "status_token": "APPLIED"
+          },
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "failed_count": 0,
+          "not_executed_count": 0,
+          "operation": "dataset.remove",
+          "state": "succeeded",
+          "status_token": "APPLIED",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-bf934349-76b4-4cca-a1cd-9080478720d4"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "dataset",
+                "receiver": "h-dba746be-c3ca-409e-980a-9418acbdad65"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-f5a18f28-763a-4b1b-ab33-4cfa498e977f"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "dataset",
+                "receiver": "h-66d62bae-af1e-4b66-9417-75e26c712f0f"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-65588789-67c7-495b-9f29-08bcdd785483"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-65588789-67c7-495b-9f29-08bcdd785483"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": true,
+                "method": "remove",
+                "receiver": "h-65588789-67c7-495b-9f29-08bcdd785483"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-65588789-67c7-495b-9f29-08bcdd785483"
+              }
+            ],
+            "engine_calls": 8,
+            "methods": [
+              "dataset",
+              "get",
+              "remove",
+              "result",
+              "tags"
+            ],
+            "mutation_issued": true,
+            "mutation_method": "remove"
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-005-dataset-remove-g33cpcutplane01",
+          "job_id": "07847330-0607-4797-8d34-35f4d842b3ae",
+          "operation_id": "1f6cd66f-4e0e-4e8c-8ec1-75adc45d6d4b",
+          "request_id": "g33-node-dataset-remove-g33cpcutplane01",
+          "revision": 4
+        },
+        "failed": [],
+        "not_executed": [],
+        "readback": {
+          "match": true,
+          "readable": true,
+          "tags": [
+            "dset1"
+          ]
+        },
+        "removed": true,
+        "status": "APPLIED",
+        "success": true,
+        "tag": "g33cpcutplane01",
+        "unknown": false
+      },
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "all_body_hashes_recorded": true,
+        "all_reconcile_false": true,
+        "call_count": 5,
+        "unique_idempotency_keys": true
+      },
+      "case": "request-discipline",
+      "idempotency_key": null,
+      "operation": null,
+      "response": null,
+      "status": "PASS"
+    }
+  ],
+  "run_dir": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_cutplane_20260922T060929Z/cutplane",
+  "schema_version": 1,
+  "scope": "public_mcp_chain_a_c11_c14",
+  "summary": {
+    "BLOCKED": 0,
+    "FAIL": 0,
+    "NOT_RUN": 0,
+    "PASS": 7,
+    "UNVERIFIED": 0
+  },
+  "unknown_observations": []
+}

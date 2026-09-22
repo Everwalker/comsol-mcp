@@ -1,0 +1,1 @@
+import com.comsol.model.*; import java.util.*; public final class NegativeMutationModifiedField {public static Object run(Model model, Map<String,Object> args) {model.physics("ht").feature("temp1").set("T0", "303.15[K]"); model.sol("sol1").runAll();return Collections.singletonMap("mutation", args.get("name")); }}

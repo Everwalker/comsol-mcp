@@ -1,0 +1,77 @@
+{
+  "C04": {
+    "status": "PASS",
+    "scope": "LIVE_PUBLIC_MCP",
+    "expressions": 2
+  },
+  "C06": {
+    "status": "PASS",
+    "scope": "LIVE_PUBLIC_MCP",
+    "nonconstant_positive_weight": true
+  },
+  "C09": {
+    "status": "PASS",
+    "scope": "LIVE_PUBLIC_MCP",
+    "constant_and_spatial_complex_modes": "PASS",
+    "transform_before_statistics": "PASS",
+    "failure_injection_scope": "CONTROL tests separately required"
+  },
+  "C10": {
+    "status": "PARTIAL",
+    "scope": "LIVE_PUBLIC_MCP",
+    "unit_conversion": "PASS",
+    "remaining": [
+      "CONTROL nonfinite rejection and swapped-coordinate readback"
+    ]
+  },
+  "C05": {
+    "status": "PASS",
+    "scope": "LIVE_PUBLIC_MCP",
+    "dimensions": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "nondefault_component": "body",
+    "nondefault_geometry": "lineg"
+  },
+  "C07": {
+    "status": "PASS",
+    "scope": "LIVE_PUBLIC_MCP",
+    "independent_cylinder_oracle": {
+      "volume": 37.69911184307752,
+      "mean_radius": 1.3333333333333333,
+      "side_area": 37.69911184307752
+    }
+  },
+  "C08": {
+    "status": "PASS",
+    "scope": "LIVE_PUBLIC_MCP",
+    "shape": [
+      2,
+      4,
+      5,
+      3
+    ],
+    "parameter_pairs": [
+      [
+        1.0,
+        3.0
+      ],
+      [
+        1.0,
+        4.0
+      ],
+      [
+        2.0,
+        3.0
+      ],
+      [
+        2.0,
+        4.0
+      ]
+    ],
+    "analytic_expression": "100*p1+10*p2+t/1[s]+x/1[m]"
+  }
+}

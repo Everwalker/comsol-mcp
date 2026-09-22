@@ -4,6 +4,100 @@ Current status: **IMPLEMENTED_WITH_OPEN_ACCEPTANCE_DEFECTS**. Prior PASS text be
 
 Required repairs include real Probe update/history, complete solution axes, array-preserving statistics, fail-closed complex/selection handling, typed node writes, project-scoped artifacts and assertion coverage. Existing reports are retained; this correction is not a rewrite of their dates or claims.
 
+## 2026-09-22 clean-room re-run of the live matrix (this round closes the open defects above)
+
+Everything below was produced on the recovered repository by re-running the live groups from scratch in this
+round — no delivered PASS text was reused as evidence. All run directories live under
+`evidence/phase4_3/runs/` and carry their own `source_manifest.json`, `isolation_receipt.json`,
+`transcript.json`, request/reply trail and numeric evidence. Commits: `e14c946`, `cccf32e`, `54360a3`,
+`24dce36`, `65d1c51`, `06567cd` (the final freeze commit that the closing ledger is bound to).
+
+### Live matrix (frozen source, software venv, real COMSOL 6.4 build 293)
+
+| Group | Run directory | Verdict |
+|---|---|---|
+| C00–C17 main runner (19 cases) | `frozen_19case_20260922T060438Z` | **19/19 PASS, exit 0** (C00 clean-tree binding, C17 ledger) |
+| M1 single constant on a non-unit volume | `frozen_m1_*` | PASS |
+| C04–C10 numeric (measures, axis, complex, coordinates) | `frozen_numeric_*` | PASS |
+| C11 nodes / C14 Probe+Table | `frozen_nodes_*`, `frozen_probe_*` | 61 PASS / 29 PASS, 2 documented NOT_RUN each, both covered below |
+| C12/C13 export and chunked artifact reads | `frozen_export_*` | 16 PASS, 2 documented NOT_RUN |
+| C15 same-key retry, control plane during solve | `frozen_control_20260922T060857Z` | 5/5 PASS |
+| Native failing study (unknown state + no replay) | `frozen_study-fault_20260922T061214Z` | PASS |
+| C11-CutPlane (2D/3D) | `frozen_cutplane_20260922T060929Z` | 7/7 PASS (covers the `C11-CutPlane-3D` NOT_RUN of the nodes group) |
+| Gate A chains a/b/c + protocol | `frozen_chains_*` | PASS; `gate_a_negatives.json` carries 7 native negative controls |
+| Transient Probe history/axis | `frozen_probe-transient_*` | PASS (covers the `C14-history-axis-metadata` NOT_RUN of the static group) |
+| Native API observations (axis/coordinate/measure/join/shape/outer) | `frozen_*-probe_*` | exploratory by design (`axis_probe` docstring: "not a passing numerical gate"); exit 0 and raw native evidence written, not counted as gates |
+
+### Native API findings behind the repairs
+
+1. **Probe history tables record the solver's internal time steps, not the stored output times.** The isolated
+   native probe (`.hermes/cache/scratch/probe_probe_table_axis.py`, run against the same server) shows the
+   probe's `Table` rows follow the solver's own step list; the stored output times are what
+   `SolverSequence.getPVals()` reports. The verification therefore requires the recorded axis to *cover* the
+   stored span (`_axis_covers_stored_times`) instead of being equal to it.
+2. **`TableFeature` exposes no time getter.** The time column is only identifiable by its localized header
+   (`_is_time_header` recognizes the zh-CN/English labels), which is why the check is label-based.
+3. **`SolverSequence.study()` is a method, not a string property.** `getString("study")` always fails and had
+   silently classified transient datasets as stationary; the dataset study binding now reads the method result.
+4. **`getPVals()` is the stored output times** (`getPVals(1)` its first entry) — used as the published solution
+   time axis, never re-derived from array lengths.
+5. **The run's own mphserver can still serve a model created by a closed worker.** A post-close reference must
+   therefore be judged on data identity: the reopened model must reproduce the closed worker's own
+   solution-dependent integral, and a tag that was never created must be refused. A silent empty re-creation
+   cannot pass either branch.
+6. **`selection.set()` with entity ids the geometry does not expose raises `SelectionOutOfBoundsException` at
+   the engine.** It is now classified as `SELECTION_MATCHED_NO_ENTITIES` (nothing was selected, nothing was
+   measured) with the engine's own text preserved, instead of surfacing as a generic `SELECTION_APPLY_FAILED`
+   after a failed engine mutation.
+7. **A model whose stored solution was cleared exposes no datasets at all.** The cleared signature is therefore
+   "no datasets", reported as `SOLUTION_CLEARED_OR_EMPTY`; a genuinely missing dataset keeps
+   `DATASET_NOT_FOUND`.
+8. **A same-key retry of a quiescent job does not dispatch a second solve** and leaves the job log unchanged —
+   but only if the pre-retry snapshot is taken *after* quiescence. The earlier control compared a snapshot
+   captured while the solve was still running, which made a correct replay look like new work.
+9. **A native failing study reports `execution_state_unknown=true` with the cause code (`ENGINE_CALL_FAILED`),
+   `safe_retry=false` and a reconciliation demand**; the same-key retry replays the same job without
+   re-solving, and a refresh clears `dirty`. The case asserts that contract; a generic
+   `EXECUTION_STATE_UNKNOWN` code is not required where a concrete cause exists.
+
+### Resulting repairs (this round)
+
+- Product: `_measure_spec.py` empty-selection classification; `_gate_a_reopen.py` cleared-artifact signature;
+  `_g3_results.py` study binding, optional declared output times, finite-real scalar conversion,
+  `_probe_manage.py` root/component probe mirroring, `_g3_w14.py` worker allow-list reality, catalog
+  `probe.create.component`, `g33_node_probe_cases.py` success-status/quiescence/axis-coverage checks.
+- Driver/tools: the 19-case runner (project-root-scoped artifact publishes, chain-A flattening, measure reads,
+  canonical 4-axis step selection, table paths, complex-carrying cells, per-case traceback, `--only`) and the
+  protocol tool (`study_fault_case` contract assertions).
+- The full software suite is green after every change (final: see `evidence/phase4_3_acceptance.json`).
+
+### Provenance of the product hardening
+
+The product-side fixes above (result budget and shape bridge, ArtifactStore immutability, Probe/typed
+CRUD, numeric axis handling, semantic module review) were produced by the preceding acceptance session on this
+same workpack (Codex thread `01a0c690-c022-74d3-872d-539e1f5e035f`, 2026-09-22 00:43Z – 05:19Z, interrupted
+while validating the transient Probe history case). That session committed nothing; its worktree state was
+committed by the first commit of this session, `cccf32e`, together with this session's own fixes. Evidence it
+left behind is kept as-is: `audit/semantic_module_review.json` (165 files scanned: 58 production Python, 4
+production Java, 1 entrypoint, 78 tests, 24 tools; `reviewed_here=78`, `prior_review_only=7`,
+`not_reviewed=80` reported honestly, plus its `historical_missing_references` list),
+`evidence/phase4_3/runs/coverage_review_20260922T005512Z/coverage_review.md`,
+`evidence/phase4_3/runs/coverage_review_20260922T045221Z/coverage_review.md`,
+`evidence/phase4_3/runs/c13_final_20260922T034942Z/`,
+`evidence/phase4_3/runs/artifact_immutable_20260922T051143Z/` and
+`evidence/phase4_3/runs/full_software_wheel_20260922T051548Z/` (its wheel build succeeded; the pytest pass in
+that run still had two failures that later commits fixed — the suite is green in this round).
+
+### Machine state observed, not modified by this round
+
+The shared COMSOL installation's `bin/servers/webbridge/conf/server.xml` is currently in its
+RemoteAddrValve-applied form (`sha256 1a029e30…`, the tool's `EXPECTED_VALVE_SHA256`; mtime unchanged since
+2026-09-21 07:54) while the pristine bytes are preserved at
+`.phase1-private/g2-valve-proposal-webbridge-20260919T232153Z/server.original.xml` (`sha256 95478d76…`).
+This round's runs took that state as their isolation precondition and verified it; they did not write the file.
+Restoring it touches the shared installation and would invalidate the isolation precondition the live cases
+assert, so it is left for an explicit decision by the operator.
+
 # G3.3 Audit Findings and Technical Remediation (F01–F12)
 
 ## 1. Historical G3.2 Deficiencies Audit

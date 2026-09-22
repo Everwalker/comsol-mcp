@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import ast
 import copy
+from collections.abc import Mapping
 from datetime import datetime, timezone
 import asyncio
 import hashlib
@@ -357,7 +358,30 @@ public final class UnboundProbeNegative {
         "study": {"segments": [{"collection": "study", "tag": "std1"}]}}, reconcile=False)
     write_json(run / "study_fault_original.json", original)
     assert not protocol._success(original), original
-    assert (original.get("error") or {}).get("code") == "EXECUTION_STATE_UNKNOWN", original
+    # An unobservable engine state is reported as the contract field
+    # `execution_state_unknown` (G3_OPERATIONS: 引擎状态无法观测时记
+    # execution_state_unknown，绝不推断为"未发生"), not as a success-shaped envelope:
+    # the error vector names the cause, forbids a safe retry and asks for reconciliation.
+    fault_data = original.get("data") if isinstance(original.get("data"), Mapping) else {}
+    unknown_flag = (original.get("execution_state_unknown")
+                    if "execution_state_unknown" in original
+                    else fault_data.get("execution_state_unknown"))
+    error = original.get("error") or {}
+    assert unknown_flag is True, original
+    assert fault_data.get("ok") is False, original
+    assert fault_data.get("applied_count") == 1 and fault_data.get("failed_count") == 1, original
+    assert fault_data.get("not_executed_count") == 0, original
+    assert error.get("code") in {"ENGINE_CALL_FAILED", "EXECUTION_STATE_UNKNOWN"}, error
+    assert error.get("safe_retry") is False, error
+    # The reconciliation demand is published by the control daemon on the data mapping and,
+    # for an engine-side failure, by the worker's isolation proof; either one is the same
+    # demand, so the case records which source carried it.
+    reconciliation = fault_data.get("requires_model_reconciliation")
+    reconciliation_source = "data.requires_model_reconciliation"
+    if reconciliation is None:
+        reconciliation = (fault_data.get("isolation_proof") or {}).get("requires_model_reconciliation")
+        reconciliation_source = "data.isolation_proof.requires_model_reconciliation"
+    assert reconciliation is True, (reconciliation_source, original)
     execution = original["execution"]
     job, key = execution["job_id"], execution["idempotency_key"]
     observations, quiescent = {}, False
@@ -388,6 +412,7 @@ public final class UnboundProbeNegative {
     client._adopt_readback(refreshed)
     write_json(run / "study_fault_assertions.json", {"status": "PASS",
         "evidence_level": "LIVE_PUBLIC_MCP_NATIVE_STUDY_FAILURE", "original_unknown_preserved": True,
+        "unknown_flag_source": "execution_state_unknown", "reconciliation_source": reconciliation_source,
         "quiescent": quiescent, "retry_record": retry_record, "replay": replay,
         "before_log": before, "after_log": after, "refresh": refreshed})
 

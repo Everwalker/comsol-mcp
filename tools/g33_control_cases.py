@@ -685,6 +685,27 @@ async def run_control_cases(
         return _finish(ledger, bound_model=bound_model, solve_operation=solve_operation,
                        solve_body=body)
 
+    # Quiescence was proven by the reconcile gate above, so the pre-retry log is re-read
+    # here.  The polling snapshots were taken while the solve was still running: a
+    # completion event landing between them and the retry would say nothing about the
+    # retry, so the comparison must use a snapshot taken while the job was already
+    # quiescent.
+    _pre_log_key, pre_log_reply, pre_log_mode = await _call(
+        ledger, "job_log", {"job_id": job_id, "offset": 0, "limit": _JOB_LOG_LIMIT},
+        "retry-pre-job-log", require_model=False, _probe_unknown=False,
+    )
+    pre_log = _job_log_snapshot(pre_log_reply) if pre_log_mode == "response" else {
+        "present": False, "complete": False, "event_count": None,
+        "events_sha256": None, "limit": _JOB_LOG_LIMIT,
+    }
+    polling_log = next(
+        (dict(query.get("event_snapshot")) for query in reversed(queried.get("queries", []))
+         if query.get("operation") == "job_log"
+         and isinstance(query.get("event_snapshot"), Mapping)),
+        {"present": False, "complete": False, "event_count": None,
+         "events_sha256": None, "limit": _JOB_LOG_LIMIT},
+    )
+
     retry = getattr(client, "retry", None)
     if not callable(retry):
         ledger.add("same-key-retry", "BLOCKED", operation=solve_operation, key=solve_key,
@@ -723,13 +744,7 @@ async def run_control_cases(
         "present": False, "complete": False, "event_count": None,
         "events_sha256": None, "limit": _JOB_LOG_LIMIT,
     }
-    pre_logs = [query.get("event_snapshot") for query in queried.get("queries", [])
-                if query.get("operation") == "job_log"
-                and isinstance(query.get("event_snapshot"), Mapping)]
-    pre_log = dict(pre_logs[-1]) if pre_logs else {
-        "present": False, "complete": False, "event_count": None,
-        "events_sha256": None, "limit": _JOB_LOG_LIMIT,
-    }
+    pre_logs = []
     log_complete = pre_log.get("complete") is True and post_log.get("complete") is True
     log_unchanged = (log_complete
                      and pre_log.get("event_count") == post_log.get("event_count")
@@ -746,12 +761,13 @@ async def run_control_cases(
         key=solve_key,
         response=retry_reply if isinstance(retry_reply, Mapping) else None,
         assertions={"same_key": same_key, "same_body": same_body,
-                    "hashes_match": hashes_match, "quiescent": True,
+                    "hashes_match": hashes_match, "quiescent": queried["quiescent"],
                     "same_job": same_job, "same_operation": same_operation,
                     "job_id": job_id, "retry_job_id": _job_id(retry_reply),
                     "job_log_complete": log_complete,
                     "job_log_events_unchanged": log_unchanged,
                     "job_log_before": pre_log, "job_log_after": post_log,
+                    "polling_log_before_quiescence": polling_log,
                     "solve_dispatch_count": len(solve_calls),
                     "new_solve_dispatched": len(solve_calls) != 1},
         retry_record=record,

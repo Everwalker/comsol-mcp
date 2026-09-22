@@ -1,0 +1,555 @@
+{
+  "success": false,
+  "data": {},
+  "error": {
+    "code": "EXECUTION_STATE_UNKNOWN",
+    "message": "result.at_points failed with SOLUTION_MISMATCH (requested solution 'sol1' does not match resolved solution 'sol2'); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+    "safe_retry": false,
+    "stage": "post_dispatch",
+    "details": {
+      "dataset_binding": {
+        "dataset": "dset2",
+        "dataset_type": "Solution",
+        "solution": "sol2",
+        "component": "comp1",
+        "geometry": "geom1",
+        "dataset_chain": [
+          "dset2"
+        ],
+        "dataset_edges": [],
+        "binding_complete": false,
+        "sources": {
+          "solution": "dataset.solution -> model.sol().tags()",
+          "component": "dataset.comp -> modelNode.tags()/model.component()",
+          "geometry": "dataset.geom -> component.geom.tags()/getter"
+        },
+        "properties": {
+          "solution": "sol2",
+          "comp": "comp1",
+          "geom": "geom1"
+        },
+        "read_errors": [
+          {
+            "code": "SOLUTION_MISMATCH",
+            "message": "requested solution 'sol1' does not match resolved solution 'sol2'",
+            "path": "dataset:dset2.solution"
+          }
+        ],
+        "error": {
+          "code": "SOLUTION_MISMATCH",
+          "message": "requested solution 'sol1' does not match resolved solution 'sol2'",
+          "path": "dataset:dset2.solution"
+        },
+        "requested_solution": "sol1",
+        "provenance": {
+          "dataset_tags": [
+            "dset1",
+            "dset2"
+          ],
+          "solution_tags": [
+            "sol1",
+            "sol2",
+            "sol3",
+            "sol4",
+            "sol5",
+            "sol6"
+          ],
+          "read_only": true,
+          "mutation_methods_called": []
+        }
+      },
+      "dispatch_stage": "post_dispatch",
+      "witness": {
+        "engine_calls": 26,
+        "mutation_method": null,
+        "mutation_issued": false,
+        "methods": [
+          "component",
+          "dataset",
+          "geom",
+          "get",
+          "getString",
+          "getType",
+          "modelNode",
+          "numerical",
+          "properties",
+          "result",
+          "sol",
+          "tags"
+        ],
+        "dispatches": [
+          {
+            "command": "call",
+            "method": "result",
+            "args_count": 0,
+            "receiver": "h-3cfe29a0-43b7-4834-87e5-aa8411e1f73b",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "numerical",
+            "args_count": 0,
+            "receiver": "h-0cae4174-7dd9-4415-b3a6-b91cea20f506",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "dataset",
+            "args_count": 0,
+            "receiver": "h-0cae4174-7dd9-4415-b3a6-b91cea20f506",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-79bb539f-d964-420b-bcad-5a771182aa15",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "get",
+            "args_count": 1,
+            "receiver": "h-79bb539f-d964-420b-bcad-5a771182aa15",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "result",
+            "args_count": 0,
+            "receiver": "h-3cfe29a0-43b7-4834-87e5-aa8411e1f73b",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "dataset",
+            "args_count": 0,
+            "receiver": "h-498490d3-a630-4c59-b60d-5d957208318b",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-e6defc66-8d63-42d3-a32b-05effdd07f77",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "sol",
+            "args_count": 0,
+            "receiver": "h-3cfe29a0-43b7-4834-87e5-aa8411e1f73b",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-2db1ee3f-1b21-4d0a-b6fa-41fb964c4027",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "get",
+            "args_count": 1,
+            "receiver": "h-e6defc66-8d63-42d3-a32b-05effdd07f77",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getType",
+            "args_count": 0,
+            "receiver": "h-fd2d6a70-5c9b-48b5-a1e4-2525c689d01e",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "properties",
+            "args_count": 0,
+            "receiver": "h-fd2d6a70-5c9b-48b5-a1e4-2525c689d01e",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getString",
+            "args_count": 1,
+            "receiver": "h-fd2d6a70-5c9b-48b5-a1e4-2525c689d01e",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "properties",
+            "args_count": 0,
+            "receiver": "h-fd2d6a70-5c9b-48b5-a1e4-2525c689d01e",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "properties",
+            "args_count": 0,
+            "receiver": "h-fd2d6a70-5c9b-48b5-a1e4-2525c689d01e",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "properties",
+            "args_count": 0,
+            "receiver": "h-fd2d6a70-5c9b-48b5-a1e4-2525c689d01e",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getString",
+            "args_count": 1,
+            "receiver": "h-fd2d6a70-5c9b-48b5-a1e4-2525c689d01e",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "properties",
+            "args_count": 0,
+            "receiver": "h-fd2d6a70-5c9b-48b5-a1e4-2525c689d01e",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getString",
+            "args_count": 1,
+            "receiver": "h-fd2d6a70-5c9b-48b5-a1e4-2525c689d01e",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "modelNode",
+            "args_count": 0,
+            "receiver": "h-3cfe29a0-43b7-4834-87e5-aa8411e1f73b",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-40912d0e-a254-4277-8390-123cd7c31a14",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "component",
+            "args_count": 1,
+            "receiver": "h-3cfe29a0-43b7-4834-87e5-aa8411e1f73b",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "geom",
+            "args_count": 0,
+            "receiver": "h-a2e73a51-4c72-4c90-af43-294b212df7d0",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-e863c159-f913-41e5-9b00-8d2681b748eb",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "get",
+            "args_count": 1,
+            "receiver": "h-e863c159-f913-41e5-9b00-8d2681b748eb",
+            "is_mutation": false
+          }
+        ]
+      },
+      "unproven_pre_dispatch": false,
+      "cause_code": "SOLUTION_MISMATCH",
+      "cause_message": "requested solution 'sol1' does not match resolved solution 'sol2'"
+    }
+  },
+  "execution": {
+    "request_id": "frozen_numeric_20260922T061816Z-run-result-at_points-20",
+    "operation_id": "ee38e205-e4e4-4a1b-8509-aeec7580972d",
+    "request_hash": "8e37ebae55d019b3abc379d9a94ec400bdcfeebdbce0b54771e3b57751f9463b",
+    "idempotency_key": "frozen_numeric_20260922T061816Z-run-result-at_points-20",
+    "job_id": "6b800ff5-bd51-4f2c-b542-e79c5f1b6afc"
+  },
+  "_outer_isError": true,
+  "_structuredContent": {
+    "success": false,
+    "data": {},
+    "error": {
+      "code": "EXECUTION_STATE_UNKNOWN",
+      "message": "result.at_points failed with SOLUTION_MISMATCH (requested solution 'sol1' does not match resolved solution 'sol2'); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+      "safe_retry": false,
+      "stage": "post_dispatch",
+      "details": {
+        "dataset_binding": {
+          "dataset": "dset2",
+          "dataset_type": "Solution",
+          "solution": "sol2",
+          "component": "comp1",
+          "geometry": "geom1",
+          "dataset_chain": [
+            "dset2"
+          ],
+          "dataset_edges": [],
+          "binding_complete": false,
+          "sources": {
+            "solution": "dataset.solution -> model.sol().tags()",
+            "component": "dataset.comp -> modelNode.tags()/model.component()",
+            "geometry": "dataset.geom -> component.geom.tags()/getter"
+          },
+          "properties": {
+            "solution": "sol2",
+            "comp": "comp1",
+            "geom": "geom1"
+          },
+          "read_errors": [
+            {
+              "code": "SOLUTION_MISMATCH",
+              "message": "requested solution 'sol1' does not match resolved solution 'sol2'",
+              "path": "dataset:dset2.solution"
+            }
+          ],
+          "error": {
+            "code": "SOLUTION_MISMATCH",
+            "message": "requested solution 'sol1' does not match resolved solution 'sol2'",
+            "path": "dataset:dset2.solution"
+          },
+          "requested_solution": "sol1",
+          "provenance": {
+            "dataset_tags": [
+              "dset1",
+              "dset2"
+            ],
+            "solution_tags": [
+              "sol1",
+              "sol2",
+              "sol3",
+              "sol4",
+              "sol5",
+              "sol6"
+            ],
+            "read_only": true,
+            "mutation_methods_called": []
+          }
+        },
+        "dispatch_stage": "post_dispatch",
+        "witness": {
+          "engine_calls": 26,
+          "mutation_method": null,
+          "mutation_issued": false,
+          "methods": [
+            "component",
+            "dataset",
+            "geom",
+            "get",
+            "getString",
+            "getType",
+            "modelNode",
+            "numerical",
+            "properties",
+            "result",
+            "sol",
+            "tags"
+          ],
+          "dispatches": [
+            {
+              "command": "call",
+              "method": "result",
+              "args_count": 0,
+              "receiver": "h-3cfe29a0-43b7-4834-87e5-aa8411e1f73b",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "numerical",
+              "args_count": 0,
+              "receiver": "h-0cae4174-7dd9-4415-b3a6-b91cea20f506",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "dataset",
+              "args_count": 0,
+              "receiver": "h-0cae4174-7dd9-4415-b3a6-b91cea20f506",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-79bb539f-d964-420b-bcad-5a771182aa15",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "get",
+              "args_count": 1,
+              "receiver": "h-79bb539f-d964-420b-bcad-5a771182aa15",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "result",
+              "args_count": 0,
+              "receiver": "h-3cfe29a0-43b7-4834-87e5-aa8411e1f73b",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "dataset",
+              "args_count": 0,
+              "receiver": "h-498490d3-a630-4c59-b60d-5d957208318b",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-e6defc66-8d63-42d3-a32b-05effdd07f77",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "sol",
+              "args_count": 0,
+              "receiver": "h-3cfe29a0-43b7-4834-87e5-aa8411e1f73b",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-2db1ee3f-1b21-4d0a-b6fa-41fb964c4027",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "get",
+              "args_count": 1,
+              "receiver": "h-e6defc66-8d63-42d3-a32b-05effdd07f77",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getType",
+              "args_count": 0,
+              "receiver": "h-fd2d6a70-5c9b-48b5-a1e4-2525c689d01e",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "properties",
+              "args_count": 0,
+              "receiver": "h-fd2d6a70-5c9b-48b5-a1e4-2525c689d01e",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getString",
+              "args_count": 1,
+              "receiver": "h-fd2d6a70-5c9b-48b5-a1e4-2525c689d01e",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "properties",
+              "args_count": 0,
+              "receiver": "h-fd2d6a70-5c9b-48b5-a1e4-2525c689d01e",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "properties",
+              "args_count": 0,
+              "receiver": "h-fd2d6a70-5c9b-48b5-a1e4-2525c689d01e",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "properties",
+              "args_count": 0,
+              "receiver": "h-fd2d6a70-5c9b-48b5-a1e4-2525c689d01e",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getString",
+              "args_count": 1,
+              "receiver": "h-fd2d6a70-5c9b-48b5-a1e4-2525c689d01e",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "properties",
+              "args_count": 0,
+              "receiver": "h-fd2d6a70-5c9b-48b5-a1e4-2525c689d01e",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getString",
+              "args_count": 1,
+              "receiver": "h-fd2d6a70-5c9b-48b5-a1e4-2525c689d01e",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "modelNode",
+              "args_count": 0,
+              "receiver": "h-3cfe29a0-43b7-4834-87e5-aa8411e1f73b",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-40912d0e-a254-4277-8390-123cd7c31a14",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "component",
+              "args_count": 1,
+              "receiver": "h-3cfe29a0-43b7-4834-87e5-aa8411e1f73b",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "geom",
+              "args_count": 0,
+              "receiver": "h-a2e73a51-4c72-4c90-af43-294b212df7d0",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-e863c159-f913-41e5-9b00-8d2681b748eb",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "get",
+              "args_count": 1,
+              "receiver": "h-e863c159-f913-41e5-9b00-8d2681b748eb",
+              "is_mutation": false
+            }
+          ]
+        },
+        "unproven_pre_dispatch": false,
+        "cause_code": "SOLUTION_MISMATCH",
+        "cause_message": "requested solution 'sol1' does not match resolved solution 'sol2'"
+      }
+    },
+    "execution": {
+      "request_id": "frozen_numeric_20260922T061816Z-run-result-at_points-20",
+      "operation_id": "ee38e205-e4e4-4a1b-8509-aeec7580972d",
+      "request_hash": "8e37ebae55d019b3abc379d9a94ec400bdcfeebdbce0b54771e3b57751f9463b",
+      "idempotency_key": "frozen_numeric_20260922T061816Z-run-result-at_points-20",
+      "job_id": "6b800ff5-bd51-4f2c-b542-e79c5f1b6afc"
+    }
+  }
+}

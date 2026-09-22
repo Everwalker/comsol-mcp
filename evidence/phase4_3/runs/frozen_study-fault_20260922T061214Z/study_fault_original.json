@@ -1,0 +1,753 @@
+{
+  "success": false,
+  "data": {
+    "study": {
+      "segments": [
+        {
+          "collection": "study",
+          "tag": "std1"
+        }
+      ]
+    },
+    "study_tag": "std1",
+    "steps": [
+      "time"
+    ],
+    "duration_s": 0.998,
+    "requested_resources": null,
+    "requested_timeout_s": null,
+    "computation_before": {
+      "getLastComputationTime": 721,
+      "getLastComputationDate": 1790057555282,
+      "getLastComputationVersion": "COMSOL 6.4.0.293"
+    },
+    "computation_after": {
+      "getLastComputationTime": 721,
+      "getLastComputationDate": 1790057555282,
+      "getLastComputationVersion": "COMSOL 6.4.0.293"
+    },
+    "computation_timestamp_changed": false,
+    "solver_sequences": [
+      "sol1"
+    ],
+    "long_task_semantics": {
+      "owner": "control_plane",
+      "engine_call": "study(<tag>).run() is executed synchronously on the serial worker queue",
+      "caller_deadline": "timeout_s/rpc deadlines limit caller waiting only; an expired wait does not prove that COMSOL stopped computing, so the original job must be inspected rather than resubmitted",
+      "health": "the worker's health/status socket stays responsive during a solve"
+    },
+    "notes": [
+      "study.run() corresponds to Compute in the Desktop and regenerates the solver sequence for an unedited study",
+      "the timestamps are the study's own record of the last computation and are the only verified post-run evidence this layer can read back"
+    ],
+    "ok": false,
+    "status": "PARTIAL_FAILURE",
+    "partial_change": false,
+    "execution_state_unknown": true,
+    "applied": [
+      {
+        "step": "run",
+        "method": "study.run",
+        "duration_s": 0.998,
+        "timestamp_changed": false
+      }
+    ],
+    "failed": [
+      {
+        "code": "ENGINE_CALL_FAILED",
+        "message": "COMSOL run call failed: ExecutionContractError: COMSOL run call failed: JavaWorkerError: {\"completed_at_ms\": \"1790057556577\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: java.lang.NullPointerException: Cannot invoke \\\"com.comsol.model.dbimodel.ModelNode.getConverter()\\\" because the return value of \\\"com.comsol.model.dbimodel.ProbeFeature.getParentModel()\\\" is null (cause: UnexpectedServerException: java.lang.NullPointerException: Cannot invoke \\\"com.comsol.model.dbimodel.ModelNode.getConverter()\\\" because the return value of \\\"com.comsol.model.dbimodel.ProbeFeature.getParentModel()\\\" i\u2026(truncated)",
+        "allowlist_entry_required": null,
+        "execution_state_unknown": true
+      }
+    ],
+    "not_executed": [],
+    "readback": {
+      "state": {
+        "getLastComputationTime": 721,
+        "getLastComputationDate": 1790057555282,
+        "getLastComputationVersion": "COMSOL 6.4.0.293"
+      },
+      "errors": {},
+      "allowlist_entry_required": [],
+      "readable": true
+    },
+    "applied_count": 1,
+    "failed_count": 1,
+    "not_executed_count": 0,
+    "engine_error": {
+      "code": "ENGINE_CALL_FAILED",
+      "message": "COMSOL run call failed: ExecutionContractError: COMSOL run call failed: JavaWorkerError: {\"completed_at_ms\": \"1790057556577\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: java.lang.NullPointerException: Cannot invoke \\\"com.comsol.model.dbimodel.ModelNode.getConverter()\\\" because the return value of \\\"com.comsol.model.dbimodel.ProbeFeature.getParentModel()\\\" is null (cause: UnexpectedServerException: java.lang.NullPointerException: Cannot invoke \\\"com.comsol.model.dbimodel.ModelNode.getConverter()\\\" because the return value of \\\"com.comsol.model.dbimodel.ProbeFeature.getParentModel()\\\" i\u2026(truncated)",
+      "allowlist_entry_required": null,
+      "execution_state_unknown": true
+    },
+    "domain_state": "unknown",
+    "verification_status": "NOT_APPLICABLE",
+    "cleanup_failed": false,
+    "dispatch_stage": "post_dispatch",
+    "domain_outcome": {
+      "operation": "study.run",
+      "state": "unknown",
+      "verification_status": "NOT_APPLICABLE",
+      "cleanup_failed": false,
+      "execution_state_unknown": true,
+      "dispatch_stage": "post_dispatch",
+      "applied_count": 1,
+      "failed_count": 1,
+      "not_executed_count": 0,
+      "status_token": "PARTIAL_FAILURE",
+      "failure": {
+        "code": "ENGINE_CALL_FAILED",
+        "message": "COMSOL run call failed: ExecutionContractError: COMSOL run call failed: JavaWorkerError: {\"completed_at_ms\": \"1790057556577\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: java.lang.NullPointerException: Cannot invoke \\\"com.comsol.model.dbimodel.ModelNode.getConverter()\\\" because the return value of \\\"com.comsol.model.dbimodel.ProbeFeature.getParentModel()\\\" is null (cause: UnexpectedServerException: java.lang.NullPointerException: Cannot invoke \\\"com.comsol.model.dbimodel.ModelNode.getConverter()\\\" because the return value of \\\"com.comsol.model.dbimodel.ProbeFeature.getParentModel()\\\" i\u2026(truncated)",
+        "safe_retry": false
+      },
+      "engine_error": {
+        "code": "ENGINE_CALL_FAILED",
+        "message": "COMSOL run call failed: ExecutionContractError: COMSOL run call failed: JavaWorkerError: {\"completed_at_ms\": \"1790057556577\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: java.lang.NullPointerException: Cannot invoke \\\"com.comsol.model.dbimodel.ModelNode.getConverter()\\\" because the return value of \\\"com.comsol.model.dbimodel.ProbeFeature.getParentModel()\\\" is null (cause: UnexpectedServerException: java.lang.NullPointerException: Cannot invoke \\\"com.comsol.model.dbimodel.ModelNode.getConverter()\\\" because the return value of \\\"com.comsol.model.dbimodel.ProbeFeature.getParentModel()\\\" i\u2026(truncated)"
+      },
+      "witness": {
+        "engine_calls": 20,
+        "mutation_method": "run",
+        "mutation_issued": true,
+        "methods": [
+          "feature",
+          "get",
+          "getLastComputationDate",
+          "getLastComputationTime",
+          "getLastComputationVersion",
+          "getType",
+          "label",
+          "run",
+          "sol",
+          "study",
+          "tags"
+        ],
+        "dispatches": [
+          {
+            "command": "call",
+            "method": "study",
+            "args_count": 0,
+            "receiver": "h-7ddc4cdf-0eec-4fe1-aa5a-e0b2b79f3e10",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-537de161-895e-4971-ae47-ef7717587e36",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "study",
+            "args_count": 1,
+            "receiver": "h-3b450c19-df64-4db2-8fde-35a89c4104a2",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "feature",
+            "args_count": 0,
+            "receiver": "h-0696e8a5-f051-4f7d-92cc-529057ea960d",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-335021a8-50a4-46ad-9d48-1ce3b109ac77",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "get",
+            "args_count": 1,
+            "receiver": "h-335021a8-50a4-46ad-9d48-1ce3b109ac77",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getType",
+            "args_count": 0,
+            "receiver": "h-a7a507ab-7528-47eb-a71c-9833090f10fb",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "label",
+            "args_count": 0,
+            "receiver": "h-a7a507ab-7528-47eb-a71c-9833090f10fb",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "label",
+            "args_count": 0,
+            "receiver": "h-a7a507ab-7528-47eb-a71c-9833090f10fb",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getLastComputationTime",
+            "args_count": 0,
+            "receiver": "h-0696e8a5-f051-4f7d-92cc-529057ea960d",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getLastComputationDate",
+            "args_count": 0,
+            "receiver": "h-0696e8a5-f051-4f7d-92cc-529057ea960d",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getLastComputationVersion",
+            "args_count": 0,
+            "receiver": "h-0696e8a5-f051-4f7d-92cc-529057ea960d",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "run",
+            "args_count": 0,
+            "receiver": "h-0696e8a5-f051-4f7d-92cc-529057ea960d",
+            "is_mutation": true
+          },
+          {
+            "command": "call",
+            "method": "getLastComputationTime",
+            "args_count": 0,
+            "receiver": "h-0696e8a5-f051-4f7d-92cc-529057ea960d",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getLastComputationDate",
+            "args_count": 0,
+            "receiver": "h-0696e8a5-f051-4f7d-92cc-529057ea960d",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getLastComputationVersion",
+            "args_count": 0,
+            "receiver": "h-0696e8a5-f051-4f7d-92cc-529057ea960d",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "sol",
+            "args_count": 0,
+            "receiver": "h-c71b2cb3-4349-4f8d-94cd-6dc8af627403",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-e7c91eaf-defa-45f2-a965-5b5465446ed9",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "get",
+            "args_count": 1,
+            "receiver": "h-e7c91eaf-defa-45f2-a965-5b5465446ed9",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "study",
+            "args_count": 0,
+            "receiver": "h-9c5da2a0-3ded-4d1c-9ae8-9fcd942bb909",
+            "is_mutation": false
+          }
+        ]
+      },
+      "details": {
+        "status_token": "PARTIAL_FAILURE"
+      }
+    },
+    "effect": "compute",
+    "verified_outcome": "unknown",
+    "isolation_proof": {
+      "verified": true,
+      "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_study-fault_20260922T061214Z/isolation_receipt.json",
+      "pid": 94219,
+      "birth": "Tue Sep 22 14:12:15 2026",
+      "endpoint": "127.0.0.1:60104",
+      "listener": {
+        "pid": 94219,
+        "endpoint": "*:60104",
+        "local_endpoint": "*:60104",
+        "remote_endpoint": null,
+        "state": "LISTEN",
+        "raw": "java    94219 everwalker   59u  IPv6 0x74b7bafdbe462077      0t0  TCP *:60104 (LISTEN)"
+      },
+      "listener_binding": "wildcard",
+      "loopback_listener": false,
+      "worker_pid": 94325,
+      "established_client_pids": [
+        94219,
+        94325
+      ],
+      "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+      "config_inode": 14720294,
+      "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+      "api_probe": {
+        "probe_kind": "comsol_java_api",
+        "observed_at": "2026-09-22T06:12:28Z",
+        "loopback_address": "127.0.0.1",
+        "loopback_port": 60104,
+        "authenticated_api_success": true,
+        "nonloopback_address": "192.168.100.152",
+        "nonloopback_port": 60104,
+        "nonloopback_api_exception_http_status": null,
+        "denial_evidence_source": "server_access_log",
+        "server_access_log": {
+          "status": "PASS",
+          "phase": "java_connect_only",
+          "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_study-fault_20260922T061214Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+          "inode": 30044624,
+          "offset_before": 0,
+          "offset_after": 261,
+          "segment_sha256": "561109b7c8f2ac972ef75f495df0b1a4170dced8cd8597844d3dff8d988397bd",
+          "java_request_id": "g2-valve-nonloopback-connect",
+          "started_at": "2026-09-22T06:12:19Z",
+          "finished_at": "2026-09-22T06:12:28Z",
+          "entries": [
+            {
+              "peer": "127.0.0.1",
+              "method": "GET",
+              "route": "/webbridge/websocket",
+              "http_status": 101
+            },
+            {
+              "peer": "127.0.0.1",
+              "method": "GET",
+              "route": "/webbridge/websocket",
+              "http_status": 101
+            },
+            {
+              "peer": "192.168.100.152",
+              "method": "GET",
+              "route": "/webbridge/websocket",
+              "http_status": 403
+            }
+          ],
+          "parsed_nonloopback_entry": {
+            "peer": "192.168.100.152",
+            "method": "GET",
+            "route": "/webbridge/websocket",
+            "http_status": 403
+          },
+          "raw_probe_started_after_capture": true
+        }
+      },
+      "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer"
+    },
+    "requires_model_reconciliation": true
+  },
+  "error": {
+    "code": "ENGINE_CALL_FAILED",
+    "message": "COMSOL run call failed: ExecutionContractError: COMSOL run call failed: JavaWorkerError: {\"completed_at_ms\": \"1790057556577\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: java.lang.NullPointerException: Cannot invoke \\\"com.comsol.model.dbimodel.ModelNode.getConverter()\\\" because the return value of \\\"com.comsol.model.dbimodel.ProbeFeature.getParentModel()\\\" is null (cause: UnexpectedServerException: java.lang.NullPointerException: Cannot invoke \\\"com.comsol.model.dbimodel.ModelNode.getConverter()\\\" because the return value of \\\"com.comsol.model.dbimodel.ProbeFeature.getParentModel()\\\" i\u2026(truncated)",
+    "safe_retry": false
+  },
+  "execution": {
+    "session_id": "session-08d08ec7c597981412802f1a",
+    "model_ref": {
+      "schema_version": 1,
+      "session_id": "session-08d08ec7c597981412802f1a",
+      "server_instance_id": "14e018084d6501188b2e08ba5409b051e4519b1eca636791d875f40f28b063d2",
+      "model_tag": "mcp1",
+      "generation": 1
+    },
+    "revision": 3,
+    "dirty": true,
+    "server_ownership": "shared",
+    "model_ownership": "mcp_owned",
+    "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+    "request_id": "frozen_study-fault_20260922T061214Z-run-study-run-1",
+    "operation_id": "238cf7d5-2924-4343-83d3-21b864514831",
+    "request_hash": "8936a6917f71b832d8807450bbb40a9f8ed70f118f4f3ab5c91c785081c5d9c9",
+    "idempotency_key": "frozen_study-fault_20260922T061214Z-run-study-run-1",
+    "job_id": "bb0e50e0-4621-4917-9ee3-109b8420f8a5"
+  },
+  "_outer_isError": true,
+  "_structuredContent": {
+    "success": false,
+    "data": {
+      "study": {
+        "segments": [
+          {
+            "collection": "study",
+            "tag": "std1"
+          }
+        ]
+      },
+      "study_tag": "std1",
+      "steps": [
+        "time"
+      ],
+      "duration_s": 0.998,
+      "requested_resources": null,
+      "requested_timeout_s": null,
+      "computation_before": {
+        "getLastComputationTime": 721,
+        "getLastComputationDate": 1790057555282,
+        "getLastComputationVersion": "COMSOL 6.4.0.293"
+      },
+      "computation_after": {
+        "getLastComputationTime": 721,
+        "getLastComputationDate": 1790057555282,
+        "getLastComputationVersion": "COMSOL 6.4.0.293"
+      },
+      "computation_timestamp_changed": false,
+      "solver_sequences": [
+        "sol1"
+      ],
+      "long_task_semantics": {
+        "owner": "control_plane",
+        "engine_call": "study(<tag>).run() is executed synchronously on the serial worker queue",
+        "caller_deadline": "timeout_s/rpc deadlines limit caller waiting only; an expired wait does not prove that COMSOL stopped computing, so the original job must be inspected rather than resubmitted",
+        "health": "the worker's health/status socket stays responsive during a solve"
+      },
+      "notes": [
+        "study.run() corresponds to Compute in the Desktop and regenerates the solver sequence for an unedited study",
+        "the timestamps are the study's own record of the last computation and are the only verified post-run evidence this layer can read back"
+      ],
+      "ok": false,
+      "status": "PARTIAL_FAILURE",
+      "partial_change": false,
+      "execution_state_unknown": true,
+      "applied": [
+        {
+          "step": "run",
+          "method": "study.run",
+          "duration_s": 0.998,
+          "timestamp_changed": false
+        }
+      ],
+      "failed": [
+        {
+          "code": "ENGINE_CALL_FAILED",
+          "message": "COMSOL run call failed: ExecutionContractError: COMSOL run call failed: JavaWorkerError: {\"completed_at_ms\": \"1790057556577\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: java.lang.NullPointerException: Cannot invoke \\\"com.comsol.model.dbimodel.ModelNode.getConverter()\\\" because the return value of \\\"com.comsol.model.dbimodel.ProbeFeature.getParentModel()\\\" is null (cause: UnexpectedServerException: java.lang.NullPointerException: Cannot invoke \\\"com.comsol.model.dbimodel.ModelNode.getConverter()\\\" because the return value of \\\"com.comsol.model.dbimodel.ProbeFeature.getParentModel()\\\" i\u2026(truncated)",
+          "allowlist_entry_required": null,
+          "execution_state_unknown": true
+        }
+      ],
+      "not_executed": [],
+      "readback": {
+        "state": {
+          "getLastComputationTime": 721,
+          "getLastComputationDate": 1790057555282,
+          "getLastComputationVersion": "COMSOL 6.4.0.293"
+        },
+        "errors": {},
+        "allowlist_entry_required": [],
+        "readable": true
+      },
+      "applied_count": 1,
+      "failed_count": 1,
+      "not_executed_count": 0,
+      "engine_error": {
+        "code": "ENGINE_CALL_FAILED",
+        "message": "COMSOL run call failed: ExecutionContractError: COMSOL run call failed: JavaWorkerError: {\"completed_at_ms\": \"1790057556577\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: java.lang.NullPointerException: Cannot invoke \\\"com.comsol.model.dbimodel.ModelNode.getConverter()\\\" because the return value of \\\"com.comsol.model.dbimodel.ProbeFeature.getParentModel()\\\" is null (cause: UnexpectedServerException: java.lang.NullPointerException: Cannot invoke \\\"com.comsol.model.dbimodel.ModelNode.getConverter()\\\" because the return value of \\\"com.comsol.model.dbimodel.ProbeFeature.getParentModel()\\\" i\u2026(truncated)",
+        "allowlist_entry_required": null,
+        "execution_state_unknown": true
+      },
+      "domain_state": "unknown",
+      "verification_status": "NOT_APPLICABLE",
+      "cleanup_failed": false,
+      "dispatch_stage": "post_dispatch",
+      "domain_outcome": {
+        "operation": "study.run",
+        "state": "unknown",
+        "verification_status": "NOT_APPLICABLE",
+        "cleanup_failed": false,
+        "execution_state_unknown": true,
+        "dispatch_stage": "post_dispatch",
+        "applied_count": 1,
+        "failed_count": 1,
+        "not_executed_count": 0,
+        "status_token": "PARTIAL_FAILURE",
+        "failure": {
+          "code": "ENGINE_CALL_FAILED",
+          "message": "COMSOL run call failed: ExecutionContractError: COMSOL run call failed: JavaWorkerError: {\"completed_at_ms\": \"1790057556577\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: java.lang.NullPointerException: Cannot invoke \\\"com.comsol.model.dbimodel.ModelNode.getConverter()\\\" because the return value of \\\"com.comsol.model.dbimodel.ProbeFeature.getParentModel()\\\" is null (cause: UnexpectedServerException: java.lang.NullPointerException: Cannot invoke \\\"com.comsol.model.dbimodel.ModelNode.getConverter()\\\" because the return value of \\\"com.comsol.model.dbimodel.ProbeFeature.getParentModel()\\\" i\u2026(truncated)",
+          "safe_retry": false
+        },
+        "engine_error": {
+          "code": "ENGINE_CALL_FAILED",
+          "message": "COMSOL run call failed: ExecutionContractError: COMSOL run call failed: JavaWorkerError: {\"completed_at_ms\": \"1790057556577\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: java.lang.NullPointerException: Cannot invoke \\\"com.comsol.model.dbimodel.ModelNode.getConverter()\\\" because the return value of \\\"com.comsol.model.dbimodel.ProbeFeature.getParentModel()\\\" is null (cause: UnexpectedServerException: java.lang.NullPointerException: Cannot invoke \\\"com.comsol.model.dbimodel.ModelNode.getConverter()\\\" because the return value of \\\"com.comsol.model.dbimodel.ProbeFeature.getParentModel()\\\" i\u2026(truncated)"
+        },
+        "witness": {
+          "engine_calls": 20,
+          "mutation_method": "run",
+          "mutation_issued": true,
+          "methods": [
+            "feature",
+            "get",
+            "getLastComputationDate",
+            "getLastComputationTime",
+            "getLastComputationVersion",
+            "getType",
+            "label",
+            "run",
+            "sol",
+            "study",
+            "tags"
+          ],
+          "dispatches": [
+            {
+              "command": "call",
+              "method": "study",
+              "args_count": 0,
+              "receiver": "h-7ddc4cdf-0eec-4fe1-aa5a-e0b2b79f3e10",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-537de161-895e-4971-ae47-ef7717587e36",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "study",
+              "args_count": 1,
+              "receiver": "h-3b450c19-df64-4db2-8fde-35a89c4104a2",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "feature",
+              "args_count": 0,
+              "receiver": "h-0696e8a5-f051-4f7d-92cc-529057ea960d",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-335021a8-50a4-46ad-9d48-1ce3b109ac77",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "get",
+              "args_count": 1,
+              "receiver": "h-335021a8-50a4-46ad-9d48-1ce3b109ac77",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getType",
+              "args_count": 0,
+              "receiver": "h-a7a507ab-7528-47eb-a71c-9833090f10fb",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "label",
+              "args_count": 0,
+              "receiver": "h-a7a507ab-7528-47eb-a71c-9833090f10fb",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "label",
+              "args_count": 0,
+              "receiver": "h-a7a507ab-7528-47eb-a71c-9833090f10fb",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getLastComputationTime",
+              "args_count": 0,
+              "receiver": "h-0696e8a5-f051-4f7d-92cc-529057ea960d",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getLastComputationDate",
+              "args_count": 0,
+              "receiver": "h-0696e8a5-f051-4f7d-92cc-529057ea960d",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getLastComputationVersion",
+              "args_count": 0,
+              "receiver": "h-0696e8a5-f051-4f7d-92cc-529057ea960d",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "run",
+              "args_count": 0,
+              "receiver": "h-0696e8a5-f051-4f7d-92cc-529057ea960d",
+              "is_mutation": true
+            },
+            {
+              "command": "call",
+              "method": "getLastComputationTime",
+              "args_count": 0,
+              "receiver": "h-0696e8a5-f051-4f7d-92cc-529057ea960d",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getLastComputationDate",
+              "args_count": 0,
+              "receiver": "h-0696e8a5-f051-4f7d-92cc-529057ea960d",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getLastComputationVersion",
+              "args_count": 0,
+              "receiver": "h-0696e8a5-f051-4f7d-92cc-529057ea960d",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "sol",
+              "args_count": 0,
+              "receiver": "h-c71b2cb3-4349-4f8d-94cd-6dc8af627403",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-e7c91eaf-defa-45f2-a965-5b5465446ed9",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "get",
+              "args_count": 1,
+              "receiver": "h-e7c91eaf-defa-45f2-a965-5b5465446ed9",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "study",
+              "args_count": 0,
+              "receiver": "h-9c5da2a0-3ded-4d1c-9ae8-9fcd942bb909",
+              "is_mutation": false
+            }
+          ]
+        },
+        "details": {
+          "status_token": "PARTIAL_FAILURE"
+        }
+      },
+      "effect": "compute",
+      "verified_outcome": "unknown",
+      "isolation_proof": {
+        "verified": true,
+        "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_study-fault_20260922T061214Z/isolation_receipt.json",
+        "pid": 94219,
+        "birth": "Tue Sep 22 14:12:15 2026",
+        "endpoint": "127.0.0.1:60104",
+        "listener": {
+          "pid": 94219,
+          "endpoint": "*:60104",
+          "local_endpoint": "*:60104",
+          "remote_endpoint": null,
+          "state": "LISTEN",
+          "raw": "java    94219 everwalker   59u  IPv6 0x74b7bafdbe462077      0t0  TCP *:60104 (LISTEN)"
+        },
+        "listener_binding": "wildcard",
+        "loopback_listener": false,
+        "worker_pid": 94325,
+        "established_client_pids": [
+          94219,
+          94325
+        ],
+        "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+        "config_inode": 14720294,
+        "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+        "api_probe": {
+          "probe_kind": "comsol_java_api",
+          "observed_at": "2026-09-22T06:12:28Z",
+          "loopback_address": "127.0.0.1",
+          "loopback_port": 60104,
+          "authenticated_api_success": true,
+          "nonloopback_address": "192.168.100.152",
+          "nonloopback_port": 60104,
+          "nonloopback_api_exception_http_status": null,
+          "denial_evidence_source": "server_access_log",
+          "server_access_log": {
+            "status": "PASS",
+            "phase": "java_connect_only",
+            "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_study-fault_20260922T061214Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+            "inode": 30044624,
+            "offset_before": 0,
+            "offset_after": 261,
+            "segment_sha256": "561109b7c8f2ac972ef75f495df0b1a4170dced8cd8597844d3dff8d988397bd",
+            "java_request_id": "g2-valve-nonloopback-connect",
+            "started_at": "2026-09-22T06:12:19Z",
+            "finished_at": "2026-09-22T06:12:28Z",
+            "entries": [
+              {
+                "peer": "127.0.0.1",
+                "method": "GET",
+                "route": "/webbridge/websocket",
+                "http_status": 101
+              },
+              {
+                "peer": "127.0.0.1",
+                "method": "GET",
+                "route": "/webbridge/websocket",
+                "http_status": 101
+              },
+              {
+                "peer": "192.168.100.152",
+                "method": "GET",
+                "route": "/webbridge/websocket",
+                "http_status": 403
+              }
+            ],
+            "parsed_nonloopback_entry": {
+              "peer": "192.168.100.152",
+              "method": "GET",
+              "route": "/webbridge/websocket",
+              "http_status": 403
+            },
+            "raw_probe_started_after_capture": true
+          }
+        },
+        "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer"
+      },
+      "requires_model_reconciliation": true
+    },
+    "error": {
+      "code": "ENGINE_CALL_FAILED",
+      "message": "COMSOL run call failed: ExecutionContractError: COMSOL run call failed: JavaWorkerError: {\"completed_at_ms\": \"1790057556577\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: java.lang.NullPointerException: Cannot invoke \\\"com.comsol.model.dbimodel.ModelNode.getConverter()\\\" because the return value of \\\"com.comsol.model.dbimodel.ProbeFeature.getParentModel()\\\" is null (cause: UnexpectedServerException: java.lang.NullPointerException: Cannot invoke \\\"com.comsol.model.dbimodel.ModelNode.getConverter()\\\" because the return value of \\\"com.comsol.model.dbimodel.ProbeFeature.getParentModel()\\\" i\u2026(truncated)",
+      "safe_retry": false
+    },
+    "execution": {
+      "session_id": "session-08d08ec7c597981412802f1a",
+      "model_ref": {
+        "schema_version": 1,
+        "session_id": "session-08d08ec7c597981412802f1a",
+        "server_instance_id": "14e018084d6501188b2e08ba5409b051e4519b1eca636791d875f40f28b063d2",
+        "model_tag": "mcp1",
+        "generation": 1
+      },
+      "revision": 3,
+      "dirty": true,
+      "server_ownership": "shared",
+      "model_ownership": "mcp_owned",
+      "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+      "request_id": "frozen_study-fault_20260922T061214Z-run-study-run-1",
+      "operation_id": "238cf7d5-2924-4343-83d3-21b864514831",
+      "request_hash": "8936a6917f71b832d8807450bbb40a9f8ed70f118f4f3ab5c91c785081c5d9c9",
+      "idempotency_key": "frozen_study-fault_20260922T061214Z-run-study-run-1",
+      "job_id": "bb0e50e0-4621-4917-9ee3-109b8420f8a5"
+    }
+  }
+}
