@@ -128,6 +128,7 @@ import uuid
 
 from ._g2_contract import ExecutionContractError
 from ._g2_engine import _call
+from ._artifact_store import ArtifactStore
 from ._g3_common import (
     allowlist_rejected,
     bound_model,
@@ -169,6 +170,11 @@ ACCEPTED_SPEC_KEYS: tuple[str, ...] = (
 
 #: Accepted but not implemented: refused explicitly (§ "never approximate").
 REFUSED_SPEC_KEYS: tuple[str, ...] = ("inner", "outer", "time", "frequency", "parameters")
+
+#: ``storage="auto"`` keeps samples inline up to this element count and publishes a
+#: project-scoped artifact above it.  The delivered adapter hardcoded 1000 here; it
+#: is named now because the boundary is part of the answer the caller gets back.
+AUTO_ARTIFACT_ELEMENT_LIMIT = 1000
 
 #: ``spec.solution`` as an object is the published ``SolutionSpec``.
 ACCEPTED_SOLUTION_SPEC_KEYS: tuple[str, ...] = (
@@ -1875,29 +1881,37 @@ def _count_elements(val: Any) -> int:
     return 1
 
 
-def _export_to_artifact(data: Any, dataset_tag: str) -> dict[str, Any]:
-    artifact_dir = Path.cwd() / "g2_artifacts" / "results"
-    artifact_dir.mkdir(parents=True, exist_ok=True)
+def _export_to_artifact(
+    data: Any,
+    dataset_tag: str,
+    *,
+    eval_context: Mapping[str, Any] | None = None,
+    project_root: Path | None = None,
+) -> dict[str, Any]:
+    """Publish a large result payload as a project-scoped artifact.
+
+    The delivered version wrote straight into ``Path.cwd()/g2_artifacts/results``
+    with ``write_text``: no containment gate, so a host request could create files
+    wherever the process could write, and no atomic publish, so an interrupted
+    write left a truncated file that had already been announced.  It now goes
+    through the artifact store, which resolves the destination against the project
+    root (refusing escapes before any file exists) and publishes via a temporary
+    file plus ``os.replace``.
+    """
+    store = ArtifactStore(project_root=project_root)
     file_name = f"result_{dataset_tag}_{uuid.uuid4().hex[:8]}.json"
-    artifact_path = artifact_dir / file_name
-    content = json.dumps({"data": data}, sort_keys=True)
-    artifact_path.write_text(content, encoding="utf-8")
-    file_bytes = artifact_path.read_bytes()
-    sha256 = hashlib.sha256(file_bytes).hexdigest()
-    byte_size = len(file_bytes)
-    total_elems = _count_elements(data)
-    chunk_size = 1024 * 64
-    total_chunks = max(1, math.ceil(byte_size / chunk_size))
+    export = store.export_field_data(
+        f"g2_artifacts/results/{file_name}",
+        {"values": data, **(dict(eval_context or {}))},
+        "json",
+    )
     return {
-        "artifact_ref": str(artifact_path),
-        "sha256": sha256,
-        "byte_size": byte_size,
-        "total_elements": total_elems,
+        "artifact_ref": export["file_path"],
+        "sha256": export["sha256"],
+        "byte_size": export["byte_size"],
+        "total_elements": _count_elements(data),
         "storage": "artifact",
-        "chunk_info": {
-            "chunk_size": chunk_size,
-            "total_chunks": total_chunks,
-        },
+        "chunk_info": export["chunk_info"],
     }
 
 
@@ -2347,8 +2361,20 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
 
     total_elements = _count_elements(transformed)
     artifact_meta = None
-    if storage == "artifact" or (storage == "auto" and total_elements > 1000):
-        artifact_meta = _export_to_artifact(transformed, dataset_tag)
+    if storage == "artifact" or (storage == "auto" and total_elements > AUTO_ARTIFACT_ELEMENT_LIMIT):
+        artifact_meta = _export_to_artifact(
+            transformed,
+            dataset_tag,
+            eval_context={
+                "expressions": expressions,
+                "dataset": dataset_tag,
+                "solution": solution_tag,
+                "complex_mode": complex_mode,
+                "is_complex": is_complex,
+            },
+        )
+        artifact_meta["auto_artifact_element_limit"] = AUTO_ARTIFACT_ELEMENT_LIMIT
+        artifact_meta["requested_storage"] = storage
         result_payload = {
             "artifact": artifact_meta,
             "storage": "artifact",

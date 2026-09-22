@@ -72,6 +72,28 @@ def _to_float(v: Any) -> float:
     return float(v) if v is not None else 0.0
 
 
+def _tolerance_record(
+    observed: float, expected: float, tolerance: float, rationale: str
+) -> dict[str, Any]:
+    """Record an analytic comparison as measured, not as asserted.
+
+    ACCEPTANCE asks for the rationale behind each numerical tolerance; recording the
+    achieved absolute/relative error next to it is what lets a reader tell a tight
+    check from a vacuous one.  ``margin_factor`` is how many times the tolerance
+    exceeds the measured deviation (None when they are exactly equal).
+    """
+    abs_error = abs(observed - expected)
+    return {
+        "observed": observed,
+        "expected": expected,
+        "abs_error": abs_error,
+        "rel_error": (abs_error / abs(expected)) if expected else None,
+        "tolerance": tolerance,
+        "tolerance_rationale": rationale,
+        "margin_factor": (tolerance / abs_error) if abs_error else None,
+    }
+
+
 def _flatten_scalars(payload: Any) -> list[float]:
     """Flatten a ``result_at_points`` payload into a flat list of floats.
 
@@ -1275,6 +1297,12 @@ public final class C07Builder {
             val_std = _to_float(eval_std["values"])
             val_rms = _to_float(eval_rms["values"])
             denom = eval_avg.get("denominator_measure")
+            # The denominator must be reported by the engine response itself: a missing
+            # one is not "zero measured area", it is an unverifiable answer.
+            assert isinstance(denom, (int, float)) and not isinstance(denom, bool), (
+                f"the average response must report its denominator, got {denom!r}"
+            )
+            denom = float(denom)
 
             assert abs(val_int - 6.0) < 1e-9
             assert abs(val_avg - 2.0) < 1e-9
@@ -1293,7 +1321,36 @@ public final class C07Builder {
                     "computed_average": val_avg,
                     "computed_std": val_std,
                     "computed_rms": val_rms,
-                    "denominator_verified_as_measure": True,
+                    "denominator_verified_as_measure": abs(denom - 3.0) < 1e-9,
+                    "numeric_checks": {
+                        "integral": _tolerance_record(
+                            val_int, 6.0, 1e-9,
+                            "f=2 over a unit square: the integrand is constant, so the "
+                            "quadrature is exact up to binary64 roundoff (order 1e-16 "
+                            "relative); 1e-9 leaves about seven orders of margin.",
+                        ),
+                        "average": _tolerance_record(
+                            val_avg, 2.0, 1e-9,
+                            "integral/measure for a constant field is 2 exactly; same "
+                            "roundoff-only allowance as the integral.",
+                        ),
+                        "std": _tolerance_record(
+                            val_std, 0.0, 1e-9,
+                            "a constant field has zero variance; the tolerance is an "
+                            "absolute one because the expected value is zero.",
+                        ),
+                        "rms": _tolerance_record(
+                            val_rms, 2.0, 1e-9,
+                            "sqrt(measure-weighted mean of f^2) with f=2 is again exact "
+                            "up to roundoff.",
+                        ),
+                        "denominator": _tolerance_record(
+                            denom, 3.0, 1e-9,
+                            "the reported denominator must be the domain measure V=3, not "
+                            "the element count; both are integers here, so the check is "
+                            "exact.",
+                        ),
+                    },
                 },
             )
         except Exception as exc:
@@ -1360,6 +1417,10 @@ public final class C07Builder {
             val_std = _to_float(r_std["values"])
             val_rms = _to_float(r_rms["values"])
             denom = r_avg.get("denominator_measure")
+            assert isinstance(denom, (int, float)) and not isinstance(denom, bool), (
+                f"C06: the average response must report its denominator, got {denom!r}"
+            )
+            denom = float(denom)
 
             expected_area = 6.0
             expected_int = 24.0
@@ -1391,6 +1452,36 @@ public final class C07Builder {
                     "live_std": val_std,
                     "live_rms": val_rms,
                     "live_denominator_measure": denom,
+                    "numeric_checks": {
+                        "denominator": _tolerance_record(
+                            denom, expected_area, 1e-9,
+                            "the unit square has measure 1, but the field f=x+2y is "
+                            "defined on the y in [0,3] strip, so the reference area is 6; "
+                            "planar measure integration is exact up to roundoff.",
+                        ),
+                        "integral": _tolerance_record(
+                            val_int, expected_int, 1e-9,
+                            "integral of x+2y over the strip is 24 analytically; the "
+                            "integrand is degree 1, so COMSOL's quadrature is exact up to "
+                            "binary64 roundoff and 1e-9 leaves ~7 orders of margin.",
+                        ),
+                        "average": _tolerance_record(
+                            val_avg, expected_avg, 1e-9,
+                            "24/6 = 4 exactly; the tolerance covers division roundoff "
+                            "only.",
+                        ),
+                        "std": _tolerance_record(
+                            val_std, expected_std, 1e-9,
+                            "sqrt(10/3) comes from the analytic variance of x+2y over the "
+                            "strip; a square root adds at most a few ulp, so the same "
+                            "roundoff-only allowance applies.",
+                        ),
+                        "rms": _tolerance_record(
+                            val_rms, expected_rms, 1e-9,
+                            "sqrt(58/3) from the analytic second moment; same roundoff "
+                            "allowance as the std.",
+                        ),
+                    },
                 },
             )
         except Exception as exc:
@@ -1412,6 +1503,14 @@ public final class C07Builder {
             val_avgr = _to_float(r_avgr["values"])
             revolved_m = r_avgr.get("revolved_measure")
             cross_sec_m = r_avgr.get("cross_section_measure")
+            assert isinstance(revolved_m, (int, float)) and not isinstance(revolved_m, bool), (
+                f"C07: the axisymmetric response must report its revolved measure, got {revolved_m!r}"
+            )
+            assert isinstance(cross_sec_m, (int, float)) and not isinstance(cross_sec_m, bool), (
+                f"C07: the axisymmetric response must report its cross-section measure, got {cross_sec_m!r}"
+            )
+            revolved_m = float(revolved_m)
+            cross_sec_m = float(cross_sec_m)
 
             expected_vol = 12.0 * math.pi
             expected_avgr = 4.0 / 3.0
@@ -1440,6 +1539,26 @@ public final class C07Builder {
                     "expected_cross_section_measure": expected_cross_section,
                     "axisymmetric_flag": r_vol.get("axisymmetric"),
                     "axisymmetric_applied_count": r_vol.get("axisymmetric_applied_count"),
+                    "numeric_checks": {
+                        "revolved_volume": _tolerance_record(
+                            val_vol, expected_vol, 1e-6,
+                            "pi*r^2*h = 12*pi measures a revolved solid, so the volume "
+                            "comes from curved-boundary quadrature over a triangulated "
+                            "surface rather than an exact planar formula; 1e-6 is about "
+                            "four orders above the observed deviation and is the same "
+                            "allowance the axisymmetric measure has always used here.",
+                        ),
+                        "average_r": _tolerance_record(
+                            val_avgr, expected_avgr, 1e-6,
+                            "the volume-weighted mean radius of a solid cylinder is 4/3; "
+                            "it inherits the revolved-measure allowance.",
+                        ),
+                        "cross_section_measure": _tolerance_record(
+                            cross_sec_m, expected_cross_section, 1e-6,
+                            "the revolved 2-D cross-section measure must be 6 as well; "
+                            "same curved-quadrature allowance.",
+                        ),
+                    },
                 },
             )
         except Exception as exc:
@@ -1852,6 +1971,33 @@ public final class C07Builder {
                 f"{sorted(candidates_after_success - candidates_before_success)}"
             )
 
+            # 5. A host-requested export whose destination is outside the approved roots
+            #    must be refused before any file side effect.  The delivered control only
+            #    covered a relative traversal; an absolute destination was never tried, and
+            #    the store's policy admits the process temp tree as a second root, so the
+            #    probe has to aim outside both.
+            outside_root_probe = Path("/etc/g3_c12_export_probe.json")
+            assert not outside_root_probe.exists(), "probe destination must not pre-exist"
+            try:
+                store.export_field_data(str(outside_root_probe), {"values": [1, 2, 3]})
+            except ExecutionContractError as exc:
+                absolute_export_refusal: dict[str, Any] = {"rejected": True, "error_code": exc.code}
+            else:
+                raise AssertionError("export_field_data accepted a destination outside every approved root")
+            assert absolute_export_refusal.get("error_code") == "ACCESS_VIOLATION", absolute_export_refusal
+            assert not outside_root_probe.exists(), "a refused export created the destination anyway"
+
+            # 6. The published artifact of a host-requested evaluation is project-scoped and
+            #    atomically published (C13 completes the read side of the same contract).
+            from comsol_mcp._g3_results import _export_to_artifact
+
+            published = _export_to_artifact({"x": [1.0, 2.0, 3.0]}, "c12")
+            published_ref = Path(published["artifact_ref"]).resolve()
+            assert published_ref.is_relative_to(ROOT.resolve()), published_ref
+            assert _sha256(published_ref) == published["sha256"]
+            published_candidates = [p.name for p in published_ref.parent.iterdir() if p.name != published_ref.name]
+            assert published_candidates == [], published_candidates
+
             self.record_case(
                 "C12",
                 "Export Path Traversal Protection & Atomic Rollback",
@@ -1860,6 +2006,7 @@ public final class C07Builder {
                 {
                     "traversal_rejection": traversal_rejection,
                     "export_failure_rejection": export_refusal,
+                    "absolute_destination_rejection": absolute_export_refusal,
                     "atomic_rollback": rollback,
                     "writer_reached": writer_ran["ran"],
                     "writer_staged_content": writer_ran["staged"],
@@ -1872,6 +2019,18 @@ public final class C07Builder {
                     "artifacts_dir_entries_before": entries_before,
                     "successful_publish": publish,
                     "candidates_after_success": sorted(candidates_after_success),
+                    "published_artifact": {
+                        "file_path": str(published_ref),
+                        "sha256": published["sha256"],
+                        "byte_size": published["byte_size"],
+                        "inside_project_root": True,
+                        "candidates_left": published_candidates,
+                    },
+                    "export_root_policy": (
+                        "the delivered store admits the project root plus the process temp "
+                        "tree; anything else is refused with ACCESS_VIOLATION before a file "
+                        "is created"
+                    ),
                 },
             )
         except Exception as exc:
@@ -1883,23 +2042,146 @@ public final class C07Builder {
     def run_c13(self) -> None:
         self.log("Executing C13: Big array chunk streaming with SHA verification...")
         try:
-            test_file = self.artifacts_dir / "streaming_test.bin"
-            data = b"0123456789ABCDEF" * 1024  # 16 KB test payload
-            test_file.write_bytes(data)
-            full_sha = _sha256_bytes(data)
+            import base64 as _base64
+            import hashlib as _hashlib
+            import tracemalloc
 
-            store = ArtifactStore(project_root=ROOT)
-            chunk1 = store.read_chunk(str(test_file), offset=0, length=8192)
-            chunk2 = store.read_chunk(str(test_file), offset=8192, length=8192)
-            reconstructed = chunk1["data_bytes"] + chunk2["data_bytes"]
-            assert _sha256_bytes(reconstructed) == full_sha
+            from comsol_mcp._execution_contract import ExecutionContractError
+            from comsol_mcp._g3_ops import dispatch as dispatch_operation
+            from comsol_mcp._g3_results import _export_to_artifact
 
-            # Bounds check
-            try:
-                store.read_chunk(str(test_file), offset=20000, length=10)
-                raise AssertionError("Expected bounds rejection")
-            except (ExecutionContractError, ValueError):
-                pass
+            # 1. Publish an artifact the way the adapter does when a payload exceeds the
+            #    inline boundary, and pin its immutable digest.  The published path must
+            #    stay inside the project root, the pinned digest must match the bytes on
+            #    disk, and an atomic publish must leave no candidate behind.
+            payload = {"x": [i * 0.5 for i in range(20000)], "y": list(range(20000))}
+            meta = _export_to_artifact(payload, "c13", eval_context={"requested_storage": "auto"})
+            ref = Path(meta["artifact_ref"]).resolve()
+            file_size = meta["byte_size"]
+            pinned = meta["sha256"]
+            assert ref.is_relative_to(ROOT.resolve()), f"{ref} is not inside {ROOT}"
+            assert _sha256(ref) == pinned, "published digest does not match the file on disk"
+            leftovers = [p.name for p in ref.parent.iterdir() if p.name != ref.name]
+            assert leftovers == [], f"atomic publish left candidates behind: {leftovers}"
+
+            # 2. Reconstruct through the host-requested chunk read (the delivered suite
+            #    called ArtifactStore.read_chunk directly, so the operation a host can
+            #    actually request was never exercised).  Each chunk carries its own
+            #    digest, the rolling digest of the stream must equal the pinned digest of
+            #    the whole file -- a streaming hash, not a re-read compared with itself.
+            chunk_bytes = 32 * 1024
+            digest = _hashlib.sha256()
+            offset = 0
+            reads = 0
+            chunk_digests_ok = True
+            while offset < file_size:
+                out = dispatch_operation(
+                    "artifact.read",
+                    self.verifier_worker,
+                    "reopen_c06",
+                    {
+                        "artifact_id": str(ref),
+                        "offset": offset,
+                        "length": chunk_bytes,
+                        # pinning costs one bounded full pass, so pin the first chunk only
+                        "expected_sha256": pinned if reads == 0 else None,
+                    },
+                )
+                block = _base64.b64decode(out["data_base64"])
+                chunk_digests_ok &= out["chunk_sha256"] == _sha256_bytes(block)
+                digest.update(block)
+                offset += out["length"]
+                reads += 1
+                if out["eof"]:
+                    break
+            reconstructed_sha256 = digest.hexdigest()
+            assert reads > 1, f"the payload should span several chunks, got {reads}"
+            assert chunk_digests_ok, "a served chunk did not match its own digest"
+            assert reconstructed_sha256 == pinned, (reconstructed_sha256, pinned)
+
+            # 3. Refusals, with the code each case actually produced.
+            refusals: dict[str, str] = {}
+            for label, args in (
+                ("path_escape", {"path": "../../etc/passwd", "offset": 0, "length": 16}),
+                ("offset_out_of_range", {"artifact_id": str(ref), "offset": file_size + 1, "length": 16}),
+                ("forged_whole_digest", {"artifact_id": str(ref), "offset": 0, "length": 16, "expected_sha256": "0" * 64}),
+                ("forged_chunk_digest", {"artifact_id": str(ref), "offset": 0, "length": 16, "expected_chunk_sha256": "0" * 64}),
+            ):
+                try:
+                    dispatch_operation("artifact.read", self.verifier_worker, "reopen_c06", args)
+                except ExecutionContractError as exc:
+                    refusals[label] = exc.code
+                else:
+                    raise AssertionError(f"{label} was served instead of refused")
+            assert refusals == {
+                "path_escape": "ACCESS_VIOLATION",
+                "offset_out_of_range": "INVALID_CHUNK_RANGE",
+                "forged_whole_digest": "ARTIFACT_HASH_MISMATCH",
+                "forged_chunk_digest": "CHUNK_HASH_MISMATCH",
+            }, refusals
+
+            # 4. Peak memory: NEXT_GOAL refuses "read the whole file, then call it
+            #    paging".  Measure a streaming consumer (which folds chunks into a
+            #    rolling digest and keeps nothing) against read_bytes() on two files
+            #    whose size differs by ~10x: the stream must stay flat, the full read
+            #    must track the file.
+            def _stream_peak(artifact_ref: Path, size: int, pin: str | None) -> float:
+                rolling = _hashlib.sha256()
+                off = 0
+                tracemalloc.start()
+                while off < size:
+                    args: dict[str, Any] = {"artifact_id": str(artifact_ref), "offset": off, "length": chunk_bytes}
+                    if pin is not None:
+                        args["expected_sha256"] = pin
+                    result = dispatch_operation("artifact.read", self.verifier_worker, "reopen_c06", args)
+                    rolling.update(_base64.b64decode(result["data_base64"]))
+                    off += result["length"]
+                    if result["eof"]:
+                        break
+                _cur, peak = tracemalloc.get_traced_memory()
+                tracemalloc.stop()
+                return peak / 1024
+
+            def _full_read_peak(artifact_ref: Path) -> float:
+                tracemalloc.start()
+                blob = artifact_ref.read_bytes()
+                _hashlib.sha256(blob).hexdigest()
+                _cur, peak = tracemalloc.get_traced_memory()
+                tracemalloc.stop()
+                del blob
+                return peak / 1024
+
+            big_meta = _export_to_artifact(
+                {"x": [i * 0.5 for i in range(200000)], "y": list(range(200000))}, "c13big"
+            )
+            big_ref = Path(big_meta["artifact_ref"]).resolve()
+            big_size = big_meta["byte_size"]
+            peaks: dict[str, Any] = {
+                "small_bytes": file_size,
+                "big_bytes": big_size,
+                "small_stream_no_pin_kib": round(_stream_peak(ref, file_size, None), 1),
+                "small_stream_pinned_kib": round(_stream_peak(ref, file_size, pinned), 1),
+                "small_full_read_kib": round(_full_read_peak(ref), 1),
+                "big_stream_no_pin_kib": round(_stream_peak(big_ref, big_size, None), 1),
+                "big_stream_pinned_kib": round(_stream_peak(big_ref, big_size, big_meta["sha256"]), 1),
+                "big_full_read_kib": round(_full_read_peak(big_ref), 1),
+            }
+            peaks["stream_is_size_independent"] = (
+                peaks["big_stream_no_pin_kib"] / peaks["small_stream_no_pin_kib"] < 1.6
+            )
+            peaks["pinned_stream_is_size_independent"] = (
+                peaks["big_stream_pinned_kib"] / peaks["small_stream_pinned_kib"] < 1.6
+            )
+            peaks["full_read_tracks_file_size"] = peaks["big_full_read_kib"] / peaks["small_full_read_kib"] > 3.0
+            peaks["file_size_ratio"] = round(big_size / file_size, 2)
+            assert peaks["stream_is_size_independent"], peaks
+            assert peaks["pinned_stream_is_size_independent"], peaks
+            assert peaks["full_read_tracks_file_size"], peaks
+            peaks["instrument"] = "tracemalloc peak python allocations (KiB)"
+            peaks["note"] = (
+                "a pinned expected_sha256 costs one bounded 1 MiB-block pass per call; "
+                "the measured peak is therefore block-bounded, not file-bounded"
+            )
 
             self.record_case(
                 "C13",
@@ -1907,12 +2189,15 @@ public final class C07Builder {
                 "PASS",
                 "protocol",
                 {
-                    "file_size": len(data),
-                    "full_sha256": full_sha,
-                    "chunk1_size": len(chunk1["data_bytes"]),
-                    "chunk2_size": len(chunk2["data_bytes"]),
-                    "reconstructed_sha256": _sha256_bytes(reconstructed),
-                    "bounds_check_verified": True,
+                    "file_size": file_size,
+                    "full_sha256": pinned,
+                    "chunk_bytes": chunk_bytes,
+                    "chunk_reads": reads,
+                    "reconstructed_sha256": reconstructed_sha256,
+                    "chunk_digests_verified": chunk_digests_ok,
+                    "host_dispatch_operation": "artifact.read",
+                    "refusals": refusals,
+                    "peak_memory": peaks,
                 },
             )
         except Exception as exc:

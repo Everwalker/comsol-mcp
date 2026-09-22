@@ -6,9 +6,16 @@ Provides:
 - Atomic file publishing (temporary file + atomic os.replace).
 - Bounded-memory chunk streaming reader (offset + length) without full-file RAM buffering.
 - Strict format serialization: refuses non-finite JSON and unsupported formats.
+
+The chunk reader is published as ``artifact.read_chunk`` so a host can request
+bounded reads instead of receiving a whole array: NEXT_GOAL requires a real,
+host-requestable artifact/chunk contract that pins the file's immutable hash,
+size, offset, length and format, and explicitly rejects calling a
+"read everything into memory and split it afterwards" implementation streaming.
 """
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import math
@@ -251,3 +258,133 @@ class ArtifactStore:
             "data_bytes": chunk_data,
             "eof": (offset + len(chunk_data)) >= file_size,
         }
+
+
+def _require_string(arguments: Mapping[str, Any], key: str) -> str:
+    value = arguments.get(key)
+    if not isinstance(value, str) or not value.strip():
+        raise ExecutionContractError(
+            "INVALID_REQUEST", f"artifact.read requires a non-empty string {key!r}"
+        )
+    return value
+
+
+def artifact_read(
+    worker: Any, model_tag: str | None, arguments: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Read one bounded chunk of a published artifact.
+
+    This publishes the catalogue's ``artifact.read`` (effect READ, scope project,
+    signature ``artifact_id, offset?, length?``) rather than inventing a sibling
+    name: the design catalogue is the source of truth for effects, and an operation
+    whose effect came from a private table would break that invariant.
+
+    ``worker`` and ``model_tag`` are accepted for signature compatibility with the
+    other G3 operations and are intentionally unused: an artifact read never touches
+    the engine, so it cannot mutate model state.  ``project_id`` and ``request_id``
+    are part of the published request schema and are accepted-and-ignored; ``path``
+    is accepted as an alias for ``artifact_id``.
+
+    Two extra optional keys carry the integrity pins ACCEPTANCE C13 needs
+    (``expected_sha256`` for the whole file, ``expected_chunk_sha256`` for the served
+    chunk).  A catalogue-only caller that omits them still gets a per-chunk digest
+    plus the file's reported digest and size.
+
+    The destination is gated by the project-root containment check *before* any file
+    is opened (a request cannot widen the root, because the root comes from the
+    process and never from the request body), the pinned whole-file digest is verified
+    before the chunk is handed out, and each chunk carries its own digest.  Bytes
+    travel base64 encoded because the operation response is JSON.
+
+    Memory bound: one chunk read allocates at most ``length`` payload bytes (capped
+    at 16 MiB) plus the base64 wire copy, and never buffers the whole file -- the
+    store seeks and reads exactly ``length`` bytes.  Verifying a pinned
+    ``expected_sha256`` costs one extra sequential pass with a 1 MiB block buffer, so
+    it is bounded by the block size rather than the file size; pinning it on the first
+    chunk of a session is enough, and later reads may omit it and rely on the
+    per-chunk digests.
+    """
+    if not isinstance(arguments.get("artifact_id"), str) or not arguments["artifact_id"].strip():
+        # ``path`` stays accepted as an alias so the export-side reference can be passed
+        # through unchanged.
+        path = _require_string(arguments, "path")
+    else:
+        path = arguments["artifact_id"]
+    offset = arguments.get("offset", 0)
+    length = arguments.get("length", 1024 * 64)
+    if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0:
+        raise ExecutionContractError("INVALID_REQUEST", f"offset must be a non-negative integer, got {offset!r}")
+    if not isinstance(length, int) or isinstance(length, bool) or length <= 0:
+        raise ExecutionContractError("INVALID_REQUEST", f"length must be a positive integer, got {length!r}")
+
+    store = ArtifactStore()
+    resolved = store.resolve_safe_path(path)
+    # The store's containment policy admits the process temp directory (delivered
+    # behaviour, kept as-is for exports); a *read* request has no reason to reach
+    # outside the project, so this operation is the stricter scope.
+    if not resolved.is_relative_to(store.project_root):
+        raise ExecutionContractError(
+            "ACCESS_VIOLATION",
+            f"Artifact reads are limited to the project root {store.project_root}; "
+            f"{resolved} is outside it",
+        )
+    if not resolved.is_file():
+        raise ExecutionContractError("ARTIFACT_NOT_FOUND", f"Artifact file not found: {resolved}")
+
+    file_size = resolved.stat().st_size
+    whole_sha256: str | None = None
+    expected_whole = arguments.get("expected_sha256")
+    if expected_whole is not None:
+        digest = hashlib.sha256()
+        with resolved.open("rb") as handle:
+            for block in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(block)
+        whole_sha256 = digest.hexdigest()
+        if whole_sha256.lower() != str(expected_whole).lower():
+            raise ExecutionContractError(
+                "ARTIFACT_HASH_MISMATCH",
+                f"Artifact {resolved} hashes to {whole_sha256}, not the pinned {expected_whole}",
+                details={
+                    "path": str(resolved),
+                    "actual_sha256": whole_sha256,
+                    "expected_sha256": str(expected_whole),
+                },
+            )
+
+    chunk = ArtifactStore.read_chunk(str(resolved), offset=offset, length=length)
+    expected_chunk = arguments.get("expected_chunk_sha256")
+    if expected_chunk is not None and chunk["chunk_sha256"].lower() != str(expected_chunk).lower():
+        raise ExecutionContractError(
+            "CHUNK_HASH_MISMATCH",
+            f"Chunk at offset {chunk['offset']} hashes to {chunk['chunk_sha256']}, "
+            f"not the expected {expected_chunk}",
+            details={
+                "path": str(resolved),
+                "offset": chunk["offset"],
+                "actual_sha256": chunk["chunk_sha256"],
+                "expected_sha256": str(expected_chunk),
+            },
+        )
+
+    return {
+        "file_path": str(resolved),
+        "file_size": file_size,
+        "format": resolved.suffix.lstrip(".") or None,
+        "whole_file_sha256": whole_sha256,
+        "whole_file_sha256_pinned": expected_whole is not None,
+        "offset": chunk["offset"],
+        "length": chunk["length"],
+        "eof": chunk["eof"],
+        "chunk_sha256": chunk["chunk_sha256"],
+        "encoding": "base64",
+        "data_base64": base64.b64encode(chunk["data_bytes"]).decode("ascii"),
+    }
+
+
+#: Host-requestable surface.  ``artifact.read`` is the catalogue's own operation for a
+#: bounded chunk read (effect READ, scope project, gate G4); publishing it is what
+#: ACCEPTANCE C13's chunk contract needs.  Its effect comes from the catalogue, so the
+#: operations surface keeps a single source of truth for effects.
+OPERATIONS: dict[str, Any] = {
+    "artifact.read": artifact_read,
+}
