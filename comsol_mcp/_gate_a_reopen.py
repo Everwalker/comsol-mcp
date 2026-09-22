@@ -150,6 +150,19 @@ def verify_reopen(
             raise ReopenVerificationError("DATASET_QUERY_FAILED", str(exc)) from exc
 
         if expected_dset not in dataset_tags:
+            if not dataset_tags:
+                # Live COMSOL 6.4 build 293: removing the solution node of a copy leaves
+                # the artifact with no datasets at all, so a *cleared* artifact reaches
+                # this check before the stored-value read can.  A model that exposes no
+                # datasets is the cleared/empty signature, not a mismatched name; a real
+                # name mismatch keeps DATASET_NOT_FOUND because its other datasets are
+                # still listed.
+                raise ReopenVerificationError(
+                    "SOLUTION_CLEARED_OR_EMPTY",
+                    f"Expected dataset {expected_dset!r} is absent: the model exposes no datasets, "
+                    "which is what clearing the stored solution leaves behind",
+                    {"expected_dataset": expected_dset, "available_datasets": dataset_tags},
+                )
             raise ReopenVerificationError(
                 "DATASET_NOT_FOUND",
                 f"Expected dataset {expected_dset!r} not found in model datasets {dataset_tags}",

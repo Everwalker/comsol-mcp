@@ -395,3 +395,34 @@ def test_nested_numeric_result_still_uses_the_first_number():
     with pytest.raises(ReopenVerificationError) as exc_info:
         verify_reopen(model, receipt, evaluator=lambda _m, _e: [[[309.15]]])
     assert exc_info.value.code == "STORED_VALUE_MISMATCH"
+
+
+def test_cleared_artifact_with_no_datasets_is_the_cleared_signature():
+    """A copy whose stored solution was cleared lists no datasets at all.
+
+    Live COMSOL 6.4 build 293 removes the solution node and the dataset with it, so
+    the dataset check runs before the stored-value read.  That model state is the
+    cleared/empty signature; a receipt naming a *different* dataset on a model that
+    still lists other datasets stays DATASET_NOT_FOUND.
+    """
+    cleared = FakeReopenModel(sha256="fake_sha", stored_solutions={})
+    # Empty the dataset collection in place: the fake list holds the same mapping.
+    cleared.dataset_dict.clear()
+    receipt = {
+        "model_sha256": "fake_sha",
+        "dataset": "dset1",
+        "expectations": {"T_x025": {"expected": 308.15}},
+    }
+    with pytest.raises(ReopenVerificationError) as exc_info:
+        verify_reopen(cleared, receipt)
+    assert exc_info.value.code == "SOLUTION_CLEARED_OR_EMPTY"
+    assert exc_info.value.details["available_datasets"] == []
+
+    mismatched = FakeReopenModel(
+        sha256="fake_sha",
+        stored_solutions={},
+        datasets={"dset2": FakeDatasetFeature("dset2", "Solution", "sol1")},
+    )
+    with pytest.raises(ReopenVerificationError) as exc_info:
+        verify_reopen(mismatched, receipt)
+    assert exc_info.value.code == "DATASET_NOT_FOUND"
