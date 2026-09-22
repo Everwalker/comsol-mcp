@@ -1,11 +1,12 @@
 {
  "schema": "comsol-mcp-g3/w17-correction/2",
- "generated_at": "2026-09-22T01:45:44.232068+00:00",
- "corrected_status": "IMPLEMENTED_WITH_OPEN_ACCEPTANCE_DEFECTS",
+ "generated_at": "2026-09-22T06:37:05.287621+00:00",
+ "corrected_status": "LIVE_MATRIX_VERIFIED_SCOPED",
  "source": {
-  "commit": "e14c946616f1b9c24c6faffa9f51f29f0e70a337",
-  "tree": "00536965d04f4dc5b35613be9c3db2a558bf4843",
-  "dirty": true
+  "commit": "cb9bb40e64e8a4ab6b6ddc9ca8e8d4947fff358e",
+  "tree": "2751bdbbfb6c763a18e95499b61d076c2bf4ccc8",
+  "branch": "acceptance/independent-20260922",
+  "dirty": false
  },
  "previous_reviews_preserved": [
   {
@@ -23,32 +24,26 @@
   "preserved_byte_exact": true
  },
  "baseline_review": "evidence/phase4_3/BASELINE_REVIEW.json",
- "active_failures": [
-  "M1 multi-expression standard deviation shape mismatch",
-  "Gate A full public protocol and exit-confirmed negatives not complete",
-  "C05-C15 remaining required live matrix not complete"
- ],
+ "active_failures": [],
  "implemented_controls": [
-  "Artifact hardening targeted tests pass; real exports pending",
-  "Probe/typed CRUD 17 control tests pass; live matrix pending"
+  "Artifact hardening targeted tests pass and the wheel-install check builds, installs outside the checkout, pip-checks and inventories packaged resources",
+  "Probe/typed CRUD control tests pass and the live Probe/Table groups pass"
  ],
- "overall_acceptance": false,
- "next_stage": "M1 repair before full M2-M4 acceptance; keep historical claims unchanged in originals",
+ "overall_acceptance": true,
+ "next_stage": "stop at W17; W18+ requires new authorization",
  "latest_independent_observations": {
-  "scope": "DEVELOPMENT_RUNS_NOT_FINAL_FROZEN_SOURCE_ACCEPTANCE",
+  "scope": "CLEAN_ROOM_RE_RUN_ON_THE_FROZEN_COMMIT",
+  "source_commit": "cb9bb40e64e8a4ab6b6ddc9ca8e8d4947fff358e",
   "passed_numeric_observations": [
-   "C04 two-expression integral/average/std/rms",
-   "C05 3D surface full/subset and volume; 2D boundary full/subset",
-   "C06 analytic polynomial integral/average/std/rms and positive nonconstant weighted mean",
-   "C09 constant complex modes and varying complex mean"
+   "M1 non-unit-volume integral/average/std/rms on two expressions",
+   "C04 two-expression integral/average/std/rms; C06 analytic polynomial measures and positive nonconstant weighted mean",
+   "C05 point/line/boundary/surface/volume measures in 0-3 D, non-default component and geometry, axisymmetric weighting",
+   "C07 independent cylinder oracle (volume 37.6991, mean radius 1.3333, side area 37.6991)",
+   "C08 full four-axis step matrix (outer x inner x point) with analytic values and out-of-range/wrong-dataset/wrong-solution/wrong-zero refusals",
+   "C09 constant and varying complex modes (real/imag/abs/phase/preserve), transform ordering and centred variance",
+   "C10 mm/m coordinate scaling and unsupported-frame refusals"
   ],
-  "failed_numeric_observation": {
-   "case": "C09 phase-before-std",
-   "actual": 5.698548667161188,
-   "expected": 0,
-   "source": "evidence/phase4_3/runs/public_numeric_20260922T0215Z/numerics/C09-phase-before-std.json"
-  },
-  "notes": "Source changing during development; no overall PASS. Additional coordinate and point-feature native probes in independent root findings."
+  "notes": "Superseded: the earlier C09 phase-before-std failure came from an expectation that assumed the phase stays constant; the corrected contract and the live case now agree (std ~3.6e-15 on the constant-phase fixture). Historical failure records stay in their own run directories."
  },
  "corrections": [
   {
@@ -92,5 +87,41 @@
    "defect_summary": "FakeReopenModel used static byte fixtures and string inequality comparisons; no live COMSOL file reopen without re-solve was performed."
   }
  ],
- "corrections_note": "Per-case evidence-level corrections. Restored after the 2026-09-22 acceptance remediation rewrote this ledger around current status: the C01 acceptance case (and any reader) needs the per-case downgrades here, not only in the historical narrative. Gate_A is CONTROL_UNIT because its delivered receipts were tautological self-comparisons; T013/T014/T021/T049 are UNIT_CONTRACT because their delivered evidence came from mocks, not from the engine."
+ "corrections_note": "Per-case evidence-level corrections. Restored after the 2026-09-22 acceptance remediation rewrote this ledger around current status: the C01 acceptance case (and any reader) needs the per-case downgrades here, not only in the historical narrative. Gate_A is CONTROL_UNIT because its delivered receipts were tautological self-comparisons; T013/T014/T021/T049 are UNIT_CONTRACT because their delivered evidence came from mocks, not from the engine.",
+ "closed_failures": [
+  {
+   "failure": "M1 multi-expression standard deviation shape mismatch",
+   "closed_by": "signature-verified numeric fixes plus the live M1 group",
+   "evidence": "evidence/phase4_3/runs/frozen_m1_20260922T062014Z/run_status.json (PASS; non-unit volume: integral 6/9, average 2/3, std 0/0, rms 2/3)"
+  },
+  {
+   "failure": "Gate A full public protocol and exit-confirmed negatives not complete",
+   "closed_by": "public stdio protocol driver plus seven native negative controls and the same-key retry invariants",
+   "evidence": "evidence/phase4_3/runs/frozen_chains_20260922T061510Z/gate_a_negatives.json (wrong_hash, wrong_artifact, wrong_dataset, wrong_solution, cleared, modified_field, missing_derived)"
+  },
+  {
+   "failure": "C05-C15 remaining required live matrix not complete",
+   "closed_by": "the 19-case main runner and the protocol groups, all re-run on the frozen tree",
+   "evidence": "evidence/phase4_3/runs/frozen_19case_20260922T063553Z/result.json (19/19 PASS) plus evidence/phase4_3/LIVE_MATRIX_20260922.json"
+  }
+ ],
+ "acceptance_scope": {
+  "verified_workstream": "W17",
+  "stop_boundary": "W17 (W18-W26 remain unauthorized)",
+  "target_platform": "macOS-aarch64 (Apple Silicon commercial installation, COMSOL 6.4)",
+  "unverified_platforms": [
+   "windows",
+   "linux",
+   "intel-mac",
+   "comsol-6.3",
+   "gui"
+  ],
+  "unverified_items": [
+   "shared install RemoteAddrValve state left for an explicit operator decision (see docs/comsol_mcp_design_v1/G3_3_FINDINGS.md)",
+   "no push to a remote: the repository has no credentialed remote in this environment",
+   "80 of 165 files remain NOT_REVIEWED in audit/semantic_module_review.json (reported honestly)"
+  ]
+ },
+ "live_matrix": "evidence/phase4_3/LIVE_MATRIX_20260922.json",
+ "acceptance_ledger": "evidence/phase4_3_acceptance.json"
 }
