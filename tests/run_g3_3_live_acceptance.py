@@ -36,6 +36,7 @@ from comsol_mcp._g3_results import (
     result_field_export,
     result_numerical_manage,
     result_table_manage,
+    dataset_solution_indices,
 )
 from comsol_mcp._measure_spec import MeasureSpec
 from comsol_mcp._complex_transform import transform_complex_value, transform_complex_data
@@ -62,6 +63,29 @@ def _sha256(path: Path) -> str:
 
 def _sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def git_blob_map_digest(commit: str = "HEAD") -> str:
+    """Aggregate digest of a commit's blob map: path + mode/type/blob per entry.
+
+    One algorithm, used by the ledger's ``source_manifest``, by the pack-level source
+    identity the dependency lock binds (D6) and by the archive builder (D4/D5) -- the
+    reviewed defect was partly that several places described the "source identity" with
+    their own slightly different computation.
+    """
+    digest = hashlib.sha256()
+    raw = subprocess.check_output(
+        ["git", "-c", "core.quotePath=false", "ls-tree", "-r", "-z", commit], cwd=ROOT
+    )
+    for entry in raw.split(b"\0"):
+        if not entry:
+            continue
+        meta, path = entry.split(b"\t", 1)
+        digest.update(path)
+        digest.update(b"\0")
+        digest.update(meta)
+        digest.update(b"\n")
+    return digest.hexdigest()
 
 
 def _to_float(v: Any) -> float:
@@ -120,6 +144,49 @@ def _tail(values: list[float], count: int) -> list[float]:
     return values[-count:]
 
 
+#: Detail keys that carry numeric evidence, collected into ``numeric.json`` (§11/D7).
+NUMERIC_DETAIL_KEYS: tuple[str, ...] = (
+    "numeric_checks",
+    "comparisons",
+    "peak_memory",
+    "refusals",
+    "chunk_reads",
+    "reconstructed_sha256",
+    "full_sha256",
+    "self_test_details",
+)
+
+#: Java used by the Gate A negative controls (D9): clear the stored solution, and modify
+#: the stored field values by re-solving at a different boundary temperature.  Both run
+#: against a *copy* of the chain-A artifact, so the positive case's model stays intact.
+CLEAR_STORED_SOLUTION_JAVA = """
+import com.comsol.model.*;
+import java.util.*;
+
+public final class ClearStoredSolution {
+    public static Object run(Model model, Map<String, Object> args) {
+        model.sol("sol1").clearSolutionData();
+        model.save((String) args.get("path"));
+        return Collections.singletonMap("status", "CLEARED");
+    }
+}
+"""
+
+MUTATE_FIELD_VALUES_JAVA = """
+import com.comsol.model.*;
+import java.util.*;
+
+public final class MutateFieldValues {
+    public static Object run(Model model, Map<String, Object> args) {
+        model.physics("ht").feature("temp2").set("T0", "363.15[K]");
+        model.study("std1").run();
+        model.save((String) args.get("path"));
+        return Collections.singletonMap("status", "MUTATED");
+    }
+}
+"""
+
+
 def _reopen_evaluator(values: list[float], prefix: str) -> Any:
     """Index an already-read value list by expectation name, e.g. ``T_p2`` -> values[1].
 
@@ -132,6 +199,88 @@ def _reopen_evaluator(values: list[float], prefix: str) -> Any:
         assert len(parts) == 2, f"expectation {expr!r} does not carry the {prefix!r} index"
         return values[int(parts[1]) - 1]
     return evaluate
+
+
+# D8: C05 only ever read two domains of one 2-D geometry, so a selection bug that mixes
+# up entity dimensions (a 1-D length read as an area, a 3-D volume read as a boundary
+# area) would have passed it.  These two models are built and solved inside C05 itself:
+# a two-interval 1-D wire and a 0.02 x 0.01 x 0.01 3-D block whose x-faces (entities 1 and
+# 6 -- the block's face numbering puts the two 1e-4 faces there, verified by their areas)
+# carry the two isothermal boundary conditions, so the temperature field is the exact
+# linear profile 293.15 K + x/0.02 * 60 K.
+ONE_D_WIRE_JAVA = """
+import com.comsol.model.*;
+import java.util.*;
+
+public final class OneDWireBuilder {
+    public static Object run(Model model, Map<String, Object> args) {
+        model.modelNode().create("comp1");
+        model.geom().create("geom1", 1);
+        model.geom("geom1").create("i1", "Interval");
+        model.geom("geom1").feature("i1").set("coord", new String[]{"0", "0.03"});
+        model.geom("geom1").create("i2", "Interval");
+        model.geom("geom1").feature("i2").set("coord", new String[]{"0.03", "0.10"});
+        model.geom("geom1").run();
+
+        model.physics().create("ht", "HeatTransfer", "geom1");
+        model.physics("ht").create("temp1", "TemperatureBoundary", 0);
+        model.physics("ht").feature("temp1").selection().set(new int[]{1});
+        model.physics("ht").feature("temp1").set("T0", "293.15[K]");
+        model.physics("ht").create("temp2", "TemperatureBoundary", 0);
+        model.physics("ht").feature("temp2").selection().set(new int[]{3});
+        model.physics("ht").feature("temp2").set("T0", "353.15[K]");
+
+        model.material().create("mat1", "Common", "comp1");
+        model.material("mat1").selection().all();
+        model.material("mat1").propertyGroup("def").set("thermalconductivity", new String[]{"400[W/(m*K)]"});
+        model.material("mat1").propertyGroup("def").set("density", "8960[kg/m^3]");
+        model.material("mat1").propertyGroup("def").set("heatcapacity", "385[J/(kg*K)]");
+
+        model.mesh().create("mesh1", "geom1");
+        model.mesh("mesh1").run();
+        model.study().create("std1");
+        model.study("std1").create("stat", "Stationary");
+        model.study("std1").run();
+        return Collections.singletonMap("status", "SOLVED");
+    }
+}
+"""
+
+THREE_D_BLOCK_JAVA = """
+import com.comsol.model.*;
+import java.util.*;
+
+public final class ThreeDBlockBuilder {
+    public static Object run(Model model, Map<String, Object> args) {
+        model.modelNode().create("comp1");
+        model.geom().create("geom1", 3);
+        model.geom("geom1").create("blk1", "Block");
+        model.geom("geom1").feature("blk1").set("size", new String[]{"0.02", "0.01", "0.01"});
+        model.geom("geom1").run();
+
+        model.physics().create("ht", "HeatTransfer", "geom1");
+        model.physics("ht").create("temp1", "TemperatureBoundary", 2);
+        model.physics("ht").feature("temp1").selection().set(new int[]{1});
+        model.physics("ht").feature("temp1").set("T0", "293.15[K]");
+        model.physics("ht").create("temp2", "TemperatureBoundary", 2);
+        model.physics("ht").feature("temp2").selection().set(new int[]{6});
+        model.physics("ht").feature("temp2").set("T0", "353.15[K]");
+
+        model.material().create("mat1", "Common", "comp1");
+        model.material("mat1").selection().all();
+        model.material("mat1").propertyGroup("def").set("thermalconductivity", new String[]{"400[W/(m*K)]"});
+        model.material("mat1").propertyGroup("def").set("density", "8960[kg/m^3]");
+        model.material("mat1").propertyGroup("def").set("heatcapacity", "385[J/(kg*K)]");
+
+        model.mesh().create("mesh1", "geom1");
+        model.mesh("mesh1").run();
+        model.study().create("std1");
+        model.study("std1").create("stat", "Stationary");
+        model.study("std1").run();
+        return Collections.singletonMap("status", "SOLVED");
+    }
+}
+"""
 
 
 class AcceptanceRunner:
@@ -157,6 +306,42 @@ class AcceptanceRunner:
         self.aborts: list[dict[str, Any]] = []
         self.last_server_pid: int | None = None
         self.comsol_version: str | None = None
+        # §11/D7: a durable request/reply trail and the numeric evidence, both written
+        # into the run's evidence directory next to the ledger.  The delivered run kept
+        # neither, so the review could not see what had actually been asked of the
+        # engine or which numbers the verdict rested on.
+        self.exchanges: list[dict[str, Any]] = []
+        self.exchange_cap = 20000
+        self.exchange_truncated = False
+        #: D6: the pack-level identity of the tree under test, written before the cases run.
+        self.source_identity: dict[str, Any] | None = None
+
+    def record_exchange(self, worker_label: str, event: Mapping[str, Any]) -> None:
+        """Append one worker request/reply event to the run's durable trail (D7, §11).
+
+        The worker reports each engine request at least twice -- ``submitted`` and then
+        ``observed``, or ``unknown``/``unresponsive`` when no reply arrived.  Keeping
+        every phase means a request that never produced a reply stays visible instead of
+        being silently absent from the record.
+        """
+        if len(self.exchanges) >= self.exchange_cap:
+            self.exchange_truncated = True
+            return
+        self.exchanges.append(
+            {
+                "at": datetime.now(timezone.utc).isoformat(),
+                "worker": worker_label,
+                "phase": event.get("phase"),
+                "request_id": event.get("request_id"),
+                "kind": event.get("kind"),
+                "operation_id": event.get("operation_id"),
+                "request_hash": event.get("request_hash"),
+                "status": event.get("status"),
+                "request": event.get("metadata"),
+                "reply": event.get("reply"),
+                "error": event.get("error"),
+            }
+        )
 
     def log(self, msg: str) -> None:
         timestamp = datetime.now(timezone.utc).isoformat()
@@ -295,18 +480,12 @@ class AcceptanceRunner:
             if path.startswith(source_roots) or ("/" not in path and path.endswith(".py"))
         )
         dirty = tracked_dirty + untracked
-        digest = hashlib.sha256()
         tracked = 0
         # -z + core.quotePath=false: names are raw, so non-ASCII paths (this tree
         # has Chinese-named files) compare and resolve like any other path.
         for entry in git_bytes("ls-tree", "-r", "-z", "HEAD").split(b"\0"):
             if not entry:
                 continue
-            meta, path = entry.split(b"\t", 1)
-            digest.update(path)
-            digest.update(b"\0")
-            digest.update(meta)
-            digest.update(b"\n")
             tracked += 1
         listed = [p for p in git_bytes("ls-files", "-z").split(b"\0") if p]
         present = sum(1 for path in listed if (ROOT / path.decode("utf-8", "surrogateescape")).exists())
@@ -321,9 +500,41 @@ class AcceptanceRunner:
             "tracked_files": tracked,
             "tracked_files_listed": len(listed),
             "tracked_files_present_in_worktree": present,
-            "source_blob_map_sha256": digest.hexdigest(),
+            # The digest comes from the shared helper, so the ledger, the pack-level source
+            # identity and the archive manifest cannot disagree about what "this tree" is.
+            "source_blob_map_sha256": git_blob_map_digest("HEAD"),
             "captured_at": datetime.now(timezone.utc).isoformat(),
         }
+
+    def write_source_identity(self) -> dict[str, Any]:
+        """Record the tree under test next to the pack, for the dependency lock (D6).
+
+        The lock inside the repository installs *this* tree (``-e .``), and this file is
+        what a recovering agent compares its clone against.  It is regenerated at the start
+        of every run, so it always names the commit the ledger binds, and it lives at the
+        pack root -- outside the repository -- so it never becomes part of the digest it
+        records.  The aggregate digest is the same ``source_blob_map_sha256`` the ledger
+        carries, computed by the same code path.
+        """
+        manifest = self.source_manifest()
+        identity = {
+            "repository": "Everwalker/comsol-mcp (delivered source workpack)",
+            "commit": manifest["head"],
+            "tree": manifest["tree"],
+            "branch": manifest["branch"],
+            "tracked_files": manifest["tracked_files"],
+            "source_blob_map_sha256": manifest["source_blob_map_sha256"],
+            "lock": "repository/constraints-macos-arm64-py313.txt installs this tree via '-e .'",
+            "how_to_check": (
+                "In the recovered clone: git rev-parse HEAD == commit, "
+                "git rev-parse 'HEAD^{tree}' == tree, git ls-files | wc -l == tracked_files"
+            ),
+            "regenerated": "written at the start of every acceptance run; records the commit under test",
+        }
+        path = ROOT.parent / "SOURCE_TREE_IDENTITY.json"
+        path.write_text(json.dumps(identity, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        self.log(f"Source identity recorded: {path} (commit {identity['commit'][:12]})")
+        return identity
 
     def check_locks_released(self) -> dict[str, Any]:
         """§12: a remaining lock *file* is inert; the assertion is that no OS lock is held.
@@ -375,7 +586,11 @@ class AcceptanceRunner:
             project_root=self.run_dir,
             global_lock_root=self.locks_dir,
         )
-        worker = PersistentJavaWorker(paths, state_dir=state_dir)
+        worker = PersistentJavaWorker(
+            paths,
+            state_dir=state_dir,
+            on_request_event=lambda event: self.record_exchange(label, event),
+        )
         worker.start()
         return worker
 
@@ -1173,6 +1388,103 @@ public final class C07Builder {
             except ReopenVerificationError as exc:
                 assert exc.code == "STORED_VALUE_MISMATCH"
 
+            # Neg 5 (D9): the stored solution is cleared inside the artifact.  The delivered
+            # suite had no such control.  D19's lesson applies: the evaluator has to read the
+            # *mutated* artifact through the engine, because an evaluator that replays
+            # captured numbers would pass no matter what happened to the file.
+            cleared_mph = self.artifacts_dir / "chain_a_cleared.mph"
+            shutil.copy2(mph_a, cleared_mph)
+            clear_java = self.run_dir / "ClearStoredSolution.java"
+            clear_java.write_text(CLEAR_STORED_SOLUTION_JAVA)
+            cleared_model = worker2.client().load(str(cleared_mph), "reopen_a_cleared")
+            worker2.submit("code_execute", {
+                "tag": cleared_model.tag(),
+                "source_artifact": str(clear_java),
+                "entrypoint": "ClearStoredSolution",
+                "arguments": {"path": str(cleared_mph)},
+            })
+            cleared_sha = _sha256(cleared_mph)
+            cleared_receipt = dict(receipt_a, model_sha256=cleared_sha)
+
+            def _cleared_artifact_read(_model: Any, _expr: str) -> Any:
+                read = result_at_points(worker2, "reopen_a_cleared", {
+                    "spec": {"expressions": ["T"], "solution": {"dataset": "dset1"}},
+                    "points": [[0.0125, 0.005]],
+                    "coordinate_unit": "m",
+                    "frame": "spatial",
+                })
+                return read["values"][0][0][0]
+
+            try:
+                verify_reopen(
+                    cleared_model, cleared_receipt, mph_path=cleared_mph,
+                    evaluator=_cleared_artifact_read,
+                )
+                raise AssertionError("Expected SOLUTION_CLEARED_OR_EMPTY")
+            except ReopenVerificationError as exc:
+                assert exc.code == "SOLUTION_CLEARED_OR_EMPTY", (exc.code, exc.message)
+            cleared_control = {
+                "expected_code": "SOLUTION_CLEARED_OR_EMPTY",
+                "observed_code": "SOLUTION_CLEARED_OR_EMPTY",
+                "artifact_sha256": cleared_sha,
+                "artifact_is_a_copy": True,
+            }
+
+            # Neg 6 (D9): the field values are modified inside the artifact.  The copy is
+            # re-solved at a different boundary temperature (293.15 K -> 363.15 K on the cold
+            # side, so the profile shifts by ~2.5-7.5 K) and its new digest goes into the
+            # receipt: the hash check passes, and only the numeric comparison can catch it.
+            mutated_mph = self.artifacts_dir / "chain_a_mutated.mph"
+            shutil.copy2(mph_a, mutated_mph)
+            mutate_java = self.run_dir / "MutateFieldValues.java"
+            mutate_java.write_text(MUTATE_FIELD_VALUES_JAVA)
+            mutated_model = worker2.client().load(str(mutated_mph), "reopen_a_mutated")
+            worker2.submit("code_execute", {
+                "tag": mutated_model.tag(),
+                "source_artifact": str(mutate_java),
+                "entrypoint": "MutateFieldValues",
+                "arguments": {"path": str(mutated_mph)},
+            })
+            mutated_sha = _sha256(mutated_mph)
+            assert mutated_sha != sha_a, "the mutated artifact must not keep the original digest"
+
+            def _mutated_artifact_read(_model: Any, _expr: str) -> Any:
+                read = result_at_points(worker2, "reopen_a_mutated", {
+                    "spec": {"expressions": ["T"], "solution": {"dataset": "dset1"}},
+                    "points": [[0.0125, 0.005]],
+                    "coordinate_unit": "m",
+                    "frame": "spatial",
+                })
+                return read["values"][0][0][0]
+
+            mutated_receipt = {
+                "model_sha256": mutated_sha,
+                "dataset": "dset1",
+                "expectations": {"T_x0125": {"expected": 308.15, "tolerance": 1e-3}},
+            }
+            try:
+                verify_reopen(
+                    mutated_model, mutated_receipt, mph_path=mutated_mph,
+                    evaluator=_mutated_artifact_read,
+                )
+                raise AssertionError("Expected STORED_VALUE_MISMATCH after modifying the field values")
+            except ReopenVerificationError as exc:
+                assert exc.code == "STORED_VALUE_MISMATCH", (exc.code, exc.message)
+                mutated_control = {
+                    "expected_code": "STORED_VALUE_MISMATCH",
+                    "observed_code": exc.code,
+                    "artifact_sha256": mutated_sha,
+                    "artifact_is_a_copy": True,
+                    "receipt_sha256_matches_mutated_artifact": True,
+                    "deviation": {
+                        "expected": exc.details.get("expected"),
+                        "actual": exc.details.get("actual"),
+                        "abs_diff": exc.details.get("abs_diff"),
+                        "effective_abs_window": exc.details.get("effective_abs_window"),
+                    },
+                }
+                assert (mutated_control["deviation"]["abs_diff"] or 0.0) > 1e-3, mutated_control
+
             self.record_case(
                 "C03",
                 "Gate A Reopen & Stored Solution Acceptance",
@@ -1204,8 +1516,14 @@ public final class C07Builder {
                         "ARTIFACT_HASH_MISMATCH",
                         "DATASET_NOT_FOUND",
                         "DERIVED_VALUES_MISSING",
-                        "STORED_VALUE_MISMATCH",
+                        "STORED_VALUE_MISMATCH (wrong expected value)",
+                        "SOLUTION_CLEARED_OR_EMPTY (stored solution cleared in a copy)",
+                        "STORED_VALUE_MISMATCH (field values modified in a copy, digest updated)",
                     ],
+                    "negative_control_details": {
+                        "cleared_stored_solution": cleared_control,
+                        "modified_field_values": mutated_control,
+                    },
                 },
             )
             # ---------------------------------------------------------------
@@ -1379,6 +1697,196 @@ public final class C07Builder {
             assert abs(val_all - 6.0) < 1e-6
             assert abs(val_d1 + val_d2 - val_all) < 1e-6
 
+            # ------------------------------------------------------------------
+            # D8: 1-D and 3-D measures, boundary/volume reads on a 3-D block, and the
+            # refusal of a selection that matches no entity.  The delivered case only read
+            # two domains of one 2-D geometry, so a selection bug that mixes entity
+            # dimensions (a 1-D length read as an area, a 3-D volume read as a boundary
+            # area) would have passed it.  Both models are built and solved here, through
+            # the same worker and engine path as every other read in this case.
+            dimensions_worker = self.make_worker("c05_dimensions")
+            dimension_evidence: dict[str, Any] = {}
+            try:
+                client = dimensions_worker.client()
+                client.connect(self.server_port, "127.0.0.1")
+
+                def _integral_1(model_tag: str, selection: Any) -> dict[str, Any]:
+                    res = result_evaluate(dimensions_worker, model_tag, {"spec": {
+                        "expressions": ["1"],
+                        "solution": {"dataset": "dset1"},
+                        "aggregate": "integral",
+                        "selection": selection,
+                    }})
+                    return {
+                        "value": _to_float(res["values"]),
+                        "selection_measure": res.get("selection_measure"),
+                        "feature_type": res.get("cleanup", {}).get("type_id"),
+                    }
+
+                # --- 1-D wire: two intervals, 0.03 m and 0.07 m -------------------
+                wire_java = self.run_dir / "OneDWireBuilder.java"
+                wire_java.write_text(ONE_D_WIRE_JAVA, encoding="utf-8")
+                wire_tag = client.create("OneDWire").tag()
+                dimensions_worker.submit("code_execute", {
+                    "tag": wire_tag,
+                    "source_artifact": str(wire_java),
+                    "entrypoint": "OneDWireBuilder",
+                    "arguments": {},
+                })
+                seg_1 = _integral_1(wire_tag, [1])
+                seg_2 = _integral_1(wire_tag, [2])
+                seg_all = _integral_1(wire_tag, "all")
+                geometry_rationale = (
+                    "a 1-D integral of 1 over an interval is that interval's length; the "
+                    "values come from the engine measure, not from the geometry model, and "
+                    "the intervals are 0.03 m and 0.07 m by construction, so only double "
+                    "rounding remains"
+                )
+                wire_evidence = {
+                    "interval_1": _tolerance_record(seg_1["value"], 0.03, 1e-12, geometry_rationale),
+                    "interval_2": _tolerance_record(seg_2["value"], 0.07, 1e-12, geometry_rationale),
+                    "all_intervals": _tolerance_record(seg_all["value"], 0.10, 1e-12, geometry_rationale),
+                    "partition_delta": abs(seg_1["value"] + seg_2["value"] - seg_all["value"]),
+                    "feature_type": seg_1["feature_type"],
+                    "selection_measure_recorded": seg_1["selection_measure"] is not None,
+                }
+                assert wire_evidence["interval_1"]["abs_error"] < 1e-12, wire_evidence
+                assert wire_evidence["interval_2"]["abs_error"] < 1e-12, wire_evidence
+                assert wire_evidence["all_intervals"]["abs_error"] < 1e-12, wire_evidence
+                assert wire_evidence["partition_delta"] < 1e-12, wire_evidence
+
+                wire_points = result_at_points(dimensions_worker, wire_tag, {
+                    "spec": {"expressions": ["T"], "solution": {"dataset": "dset1"}},
+                    "points": [[0.0], [0.10]],
+                    "coordinate_unit": "m",
+                    "frame": "spatial",
+                })
+                wire_temps = _flatten_scalars(wire_points.get("values"))
+                assert len(wire_temps) == 2, wire_points.get("values")
+                bc_rationale = (
+                    "both 1-D endpoints carry a Dirichlet temperature; a point read exactly "
+                    "on the boundary returns the prescribed value, so the only error is the "
+                    "engine's own double rounding (observed |delta| ~1e-13 K)"
+                )
+                wire_evidence["endpoint_temperature"] = {
+                    "at_x_0": _tolerance_record(wire_temps[0], 293.15, 1e-9, bc_rationale),
+                    "at_x_0_10": _tolerance_record(wire_temps[1], 353.15, 1e-9, bc_rationale),
+                }
+                assert wire_evidence["endpoint_temperature"]["at_x_0"]["abs_error"] < 1e-9, wire_evidence
+                assert wire_evidence["endpoint_temperature"]["at_x_0_10"]["abs_error"] < 1e-9, wire_evidence
+
+                # --- 3-D block: 0.02 x 0.01 x 0.01 m, isothermal x-faces ----------
+                block_java = self.run_dir / "ThreeDBlockBuilder.java"
+                block_java.write_text(THREE_D_BLOCK_JAVA, encoding="utf-8")
+                block_tag = client.create("ThreeDBlock").tag()
+                dimensions_worker.submit("code_execute", {
+                    "tag": block_tag,
+                    "source_artifact": str(block_java),
+                    "entrypoint": "ThreeDBlockBuilder",
+                    "arguments": {},
+                })
+                volume = _integral_1(block_tag, "all")
+                face_areas = {
+                    entity: _integral_1(block_tag, {"entities": [entity], "entity_dim": 2})["value"]
+                    for entity in range(1, 7)
+                }
+                # The block's two 1e-4 m^2 faces are the x-faces (entities 1 and 6) and the
+                # other four are 2e-4 m^2; the total surface is 1e-3 m^2.  This is what makes
+                # the temperature field the exact linear profile used below.
+                area_rationale = (
+                    "boundary integrals of 1 over the block's faces give their areas: the two "
+                    "x-faces bound the 0.01 x 0.01 cross-section (1e-4 m^2), the four others "
+                    "are 0.02 x 0.01 (2e-4 m^2); both are exact by construction"
+                )
+                dimensions_evidence_area: dict[str, Any] = {
+                    "volume": _tolerance_record(volume["value"], 2e-6, 1e-15, (
+                        "the 3-D integral of 1 over the block is its volume 0.02*0.01*0.01 = "
+                        "2e-6 m^3; the measure comes from the engine, the geometry is exact"
+                    )),
+                    "face_1_area": _tolerance_record(sorted(face_areas.values())[0], 1e-4, 1e-15, area_rationale),
+                    "face_6_area": _tolerance_record(sorted(face_areas.values())[1], 1e-4, 1e-15, area_rationale),
+                    "face_2_area": _tolerance_record(sorted(face_areas.values())[2], 2e-4, 1e-15, area_rationale),
+                    "total_surface_area": _tolerance_record(sum(face_areas.values()), 1e-3, 1e-15, area_rationale),
+                    "face_areas_by_entity": face_areas,
+                    "feature_type": volume["feature_type"],
+                }
+                assert dimensions_evidence_area["volume"]["abs_error"] < 1e-15, dimensions_evidence_area
+                assert abs(face_areas[1] - 1e-4) < 1e-15 and abs(face_areas[6] - 1e-4) < 1e-15, face_areas
+                assert all(abs(face_areas[e] - 2e-4) < 1e-15 for e in (2, 3, 4, 5)), face_areas
+                assert abs(sum(face_areas.values()) - 1e-3) < 1e-15, face_areas
+
+                block_points = result_at_points(dimensions_worker, block_tag, {
+                    "spec": {"expressions": ["T"], "solution": {"dataset": "dset1"}},
+                    "points": [[0.0, 0.005, 0.005], [0.02, 0.005, 0.005], [0.01, 0.005, 0.005]],
+                    "coordinate_unit": "m",
+                    "frame": "spatial",
+                })
+                block_temps = _flatten_scalars(block_points.get("values"))
+                assert len(block_temps) == 3, block_points.get("values")
+                linear_rationale = (
+                    "with the two x-faces held at 293.15 K and 353.15 K and the other faces "
+                    "adiabatic, the steady solution of the homogeneous block is exactly "
+                    "linear in x, so the centre is (293.15+353.15)/2 = 323.15 K and the "
+                    "boundary reads equal the prescribed values; a linear field is "
+                    "reproduced exactly by the FEM up to solver tolerance"
+                )
+                dimensions_evidence_points = {
+                    "x_0_face_centre": _tolerance_record(block_temps[0], 293.15, 1e-6, linear_rationale),
+                    "x_0_02_face_centre": _tolerance_record(block_temps[1], 353.15, 1e-6, linear_rationale),
+                    "centre": _tolerance_record(block_temps[2], 323.15, 1e-6, linear_rationale),
+                }
+                for name, record in dimensions_evidence_points.items():
+                    assert record["abs_error"] < 1e-6, (name, record)
+
+                # --- negative controls: selections that match no entity -----------
+                def _expect_no_entity_refusal(label: str, model_tag: str, selection: Any) -> dict[str, Any]:
+                    try:
+                        res = result_evaluate(dimensions_worker, model_tag, {"spec": {
+                            "expressions": ["1"],
+                            "solution": {"dataset": "dset1"},
+                            "aggregate": "integral",
+                            "selection": selection,
+                        }})
+                    except ExecutionContractError as exc:
+                        return {
+                            "label": label,
+                            "refused": True,
+                            "code": exc.code,
+                            "message": str(exc)[:240],
+                            "details": dict(exc.details),
+                        }
+                    return {
+                        "label": label,
+                        "refused": False,
+                        "returned": res.get("values"),
+                        "status": res.get("status"),
+                    }
+
+                refusals = [
+                    _expect_no_entity_refusal("1-D domain 99 (geometry has 2)", wire_tag, [99]),
+                    _expect_no_entity_refusal("3-D boundary 7 (block has 6 faces)", block_tag,
+                                              {"entities": [7], "entity_dim": 2}),
+                ]
+                for record in refusals:
+                    assert record["refused"] is True, record
+                    assert record["code"] == "SELECTION_MATCHED_NO_ENTITIES", record
+                    assert record["details"].get("selection_measure") == 0.0, record
+
+                dimension_evidence = {
+                    "worker": "c05_dimensions",
+                    "one_d_wire": wire_evidence,
+                    "three_d_block": dimensions_evidence_area,
+                    "three_d_temperature": dimensions_evidence_points,
+                    "empty_selection_refusals": refusals,
+                    "models_built_and_solved_inside_this_case": True,
+                }
+            finally:
+                try:
+                    dimensions_worker.client().disconnect()
+                except Exception:
+                    pass
+                dimensions_worker.close()
+
             self.record_case(
                 "C05",
                 "Multi-dimensional & Selection Support",
@@ -1388,7 +1896,8 @@ public final class C07Builder {
                     "domain_1_integral": val_d1,
                     "domain_2_integral": val_d2,
                     "all_domains_integral": val_all,
-                    "partition_conservation_verified": True,
+                    "partition_delta_2d": abs(val_d1 + val_d2 - val_all),
+                    "dimension_coverage": dimension_evidence,
                 },
             )
         except Exception as exc:
@@ -1570,26 +2079,89 @@ public final class C07Builder {
     def run_c08(self) -> None:
         self.log("Executing C08: Solution axis binding and multidimensional slicing on live transient model...")
         try:
+            xs = [0.0125, 0.0250, 0.0375, 0.0500, 0.0]
+            points = [[x, 0.005] for x in xs]
             res_pts = result_at_points(self.verifier_worker, "reopen_b", {
                 "spec": {"expressions": ["T", "x*T"], "solution": {"dataset": "dset1"}},
-                "points": [[0.0125, 0.005], [0.0250, 0.005], [0.0375, 0.005]],
+                "points": points,
                 "coordinate_unit": "m",
                 "frame": "spatial",
             })
             raw_vals = res_pts["values"]
             assert len(raw_vals) == 2, f"Expected 2 expressions, got {len(raw_vals)}"
-            assert len(raw_vals[0]) >= 3, f"Expected at least 3 solutions, got {len(raw_vals[0])}"
-            assert len(raw_vals[0][0]) == 3, f"Expected 3 points, got {len(raw_vals[0][0])}"
+            n_solutions = len(raw_vals[0])
+            n_points = len(raw_vals[0][0])
+            assert n_points == len(points), f"Expected {len(points)} points, got {n_points}"
 
-            step2 = SolutionBinding.slice_solution_axis(raw_vals, 2, num_expressions=2)
-            assert len(step2) == 2
-            assert len(step2[0]) == 3
+            # D8: the solution axis is the engine's own step list, not "at least 3".
+            # Chain B is solved on tlist = range(0, 1.0, 5.0), i.e. six steps.
+            indices = dataset_solution_indices(self.verifier_worker, "reopen_b", {"dataset": "dset1"})
+            times = [float(t) for t in (indices.get("time_values") or [])]
+            axis_evidence = {
+                "solution_axis_length": n_solutions,
+                "engine_time_values": times,
+                "binding_complete": indices.get("binding_complete"),
+                "expected_time_values": [0.0, 1.0, 2.0, 3.0, 4.0, 5.0],
+            }
+            assert indices.get("binding_complete") is True, indices
+            assert n_solutions == 6, axis_evidence
+            assert len(times) == n_solutions, axis_evidence
+            assert [round(t, 9) for t in times] == axis_evidence["expected_time_values"], axis_evidence
 
+            # Every step is sliceable and the slice is that step's own row.
+            slice_checks: dict[str, Any] = {}
+            for index in (1, n_solutions):
+                sliced = SolutionBinding.slice_solution_axis(raw_vals, index, num_expressions=2)
+                assert len(sliced) == 2, sliced
+                for expr_index in (0, 1):
+                    assert sliced[expr_index] == raw_vals[expr_index][index - 1], (index, expr_index)
+                slice_checks[f"step_{index}"] = {"expressions": len(sliced), "points": len(sliced[0])}
+            subset_steps = [1, 4, 6]
+            subset = SolutionBinding.slice_solution_axis(raw_vals, subset_steps, num_expressions=2)
+            assert subset[0] == [raw_vals[0][i - 1] for i in subset_steps], subset
+            assert subset[1] == [raw_vals[1][i - 1] for i in subset_steps], subset
+
+            # The second expression is x*T, so the point axis is only right if x_j * T_j
+            # reproduces it at every step and every point (the sampled x values differ, so a
+            # shuffled point axis cannot pass this).
+            product_deviation = 0.0
+            product_checks = 0
+            for step in range(n_solutions):
+                for point_index, x in enumerate(xs):
+                    t_value = _to_float(raw_vals[0][step][point_index])
+                    xt_value = _to_float(raw_vals[1][step][point_index])
+                    expected = x * t_value
+                    product_deviation = max(
+                        product_deviation, abs(xt_value - expected) / max(abs(expected), 1e-12)
+                    )
+                    product_checks += 1
+            assert product_checks == n_solutions * len(xs), (product_checks, n_solutions, len(xs))
+            assert product_deviation < 1e-9, product_deviation
+
+            # Out-of-range steps are refused with the real code and the real bounds text.
+            refusals = []
+            for bad in (0, -1, n_solutions + 1, 999):
+                try:
+                    SolutionBinding.slice_solution_axis(raw_vals, bad, num_expressions=2)
+                except ExecutionContractError as exc:
+                    refusals.append({
+                        "step": bad, "refused": True, "code": exc.code, "message": str(exc)[:160],
+                    })
+                else:
+                    raise AssertionError(f"slice_solution_axis accepted out-of-range step {bad}")
+            for record in refusals:
+                assert record["code"] == "INVALID_REQUEST", record
+                assert f"out of range [1, {n_solutions}]" in record["message"], record
+
+            # A declared expression count that does not match the array must be refused
+            # rather than sliced as a "general list of expressions".
             try:
-                SolutionBinding.slice_solution_axis(raw_vals, 999, num_expressions=2)
-                raise AssertionError("Expected ExecutionContractError on step 999")
-            except ExecutionContractError:
-                pass
+                SolutionBinding.slice_solution_axis(raw_vals, 2, num_expressions=3)
+            except ExecutionContractError as exc:
+                mismatch = {"refused": True, "code": exc.code, "message": str(exc)[:200]}
+            else:
+                raise AssertionError("a declared expression count of 3 silently sliced a 2-expression array")
+            assert mismatch["code"] == "INVALID_REQUEST", mismatch
 
             self.record_case(
                 "C08",
@@ -1598,10 +2170,15 @@ public final class C07Builder {
                 "numerical",
                 {
                     "expressions_count": len(raw_vals),
-                    "solutions_count": len(raw_vals[0]),
-                    "points_count": len(raw_vals[0][0]),
-                    "step2_sliced": step2,
-                    "bounds_check_verified": True,
+                    "solutions_count": n_solutions,
+                    "points_count": n_points,
+                    "solution_axis": axis_evidence,
+                    "slice_identity": slice_checks,
+                    "subset_checked_steps": subset_steps,
+                    "expression_product_max_rel_deviation": product_deviation,
+                    "expression_product_checks": product_checks,
+                    "out_of_range_refusals": refusals,
+                    "declared_expression_mismatch_refusal": mismatch,
                 },
             )
         except Exception as exc:
@@ -2377,6 +2954,46 @@ public final class C07Builder {
             absent_locks = [str(p.name) for p in lock_files if not p.is_file()]
             assert not absent_locks, f"dependency lock files missing: {absent_locks}"
 
+            # D6: the lock has to bind the tree being verified, not a remote commit.  The
+            # delivered file pointed at the pre-remediation GitHub commit, so following the
+            # recovery guide installed a different source tree than the one under test.
+            lock_text = (ROOT / "constraints-macos-arm64-py313.txt").read_text(encoding="utf-8")
+            assert "\n-e .\n" in lock_text, (
+                "the dependency lock does not install the delivered tree (expected a '-e .' entry)"
+            )
+            assert "git+https://github.com/Everwalker/comsol-mcp.git@" not in lock_text, (
+                "the lock still pins a remote commit instead of the delivered tree"
+            )
+            identity_path = ROOT.parent / "SOURCE_TREE_IDENTITY.json"
+            assert identity_path.is_file(), (
+                f"the pack-level source identity is missing at {identity_path}; the lock's "
+                "binding cannot be checked against it"
+            )
+            identity = json.loads(identity_path.read_text(encoding="utf-8"))
+            head_now = subprocess.run(
+                ["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True, check=True
+            ).stdout.strip()
+            tree_now = subprocess.run(
+                ["git", "rev-parse", "HEAD^{tree}"], cwd=ROOT, capture_output=True, text=True, check=True
+            ).stdout.strip()
+            identity_bound = {
+                "path": str(identity_path),
+                "commit": identity.get("commit"),
+                "tree": identity.get("tree"),
+                "tracked_files": identity.get("tracked_files"),
+                "source_blob_map_sha256": identity.get("source_blob_map_sha256"),
+                "head_matches": identity.get("commit") == head_now,
+                "tree_matches": identity.get("tree") == tree_now,
+                "lock_installs_delivered_tree": True,
+            }
+            assert identity_bound["head_matches"], identity_bound
+            assert identity_bound["tree_matches"], identity_bound
+            identity_bound["matches_the_ledger_manifest"] = (
+                identity_bound["source_blob_map_sha256"]
+                == (getattr(self, "source_identity", None) or {}).get("source_blob_map_sha256")
+            )
+            assert identity_bound["matches_the_ledger_manifest"], identity_bound
+
             wheel_dir = self.run_dir / "wheel_dist"
             wheels = sorted(wheel_dir.glob("*.whl"))
             if not wheels:
@@ -2440,6 +3057,7 @@ public final class C07Builder {
                     "dependency_lock_files": {
                         p.name: _sha256(p) for p in lock_files
                     },
+                    "lock_binds_delivered_tree": identity_bound,
                     "wheel_file": str(wheel_path),
                     "wheel_sha256": _sha256(wheel_path),
                     "wheel_resource_manifest_source": "read out of the built wheel with zipfile",
@@ -2558,6 +3176,10 @@ public final class C07Builder {
         self.log("================================================================")
 
         try:
+            # D6: the pack-level source identity is written before the cases run, so C16's
+            # check compares the lock's target against the live commit rather than a file
+            # left over from an earlier run.
+            self.source_identity = self.write_source_identity()
             self.start_isolated_server()
 
             for run_case in (
@@ -2622,9 +3244,46 @@ public final class C07Builder {
             ),
             # §11/§12: the ledger is bound to the source it was produced from.
             "source_manifest": source,
+            "source_identity": {
+                **(self.source_identity or {}),
+                "file": str(ROOT.parent / "SOURCE_TREE_IDENTITY.json"),
+                "file_sha256": (
+                    _sha256(ROOT.parent / "SOURCE_TREE_IDENTITY.json")
+                    if (ROOT.parent / "SOURCE_TREE_IDENTITY.json").is_file()
+                    else None
+                ),
+                "note": (
+                    "D6: the dependency lock installs this tree; this file is what a "
+                    "recovering agent compares a fresh clone against"
+                ),
+            },
             "runner_sha256": _sha256(runner_path),
             "runner_command": sys.argv,
             "total_cases": len(self.cases),
+            "request_reply_trail": {
+                "file": "request_reply_trail.jsonl",
+                "records": len(self.exchanges),
+                "truncated": self.exchange_truncated,
+                "note": (
+                    "one record per worker request event: the 'submitted' request and the "
+                    "matching 'observed' reply (or 'unknown'/'unresponsive' when none "
+                    "arrived), each with the redacted payload and a request hash.  §11 asks "
+                    "for a per-run request/reply record; the in-process operation calls the "
+                    "runner makes are in assertions.json."
+                ),
+            },
+            "numeric_evidence": {
+                "file": "numeric.json",
+                "cases": sorted(
+                    case_id
+                    for case_id, case in self.cases.items()
+                    if case["evidence_level"] == "numerical"
+                ),
+                "note": (
+                    "numeric checks, comparisons, tolerances and peak-memory records "
+                    "extracted from the case details"
+                ),
+            },
             "aborted_cases": [
                 {"case_id": item["case_id"], "error_type": item["error_type"], "error": item["error"]}
                 for item in self.aborts
@@ -2706,6 +3365,16 @@ public final class C07Builder {
             "ledger it writes is always bound to a commit.\n",
             encoding="utf-8",
         )
+        with (self.evidence_dir / "RUN_NOTES.md").open("a", encoding="utf-8") as notes:
+            notes.write(
+                "- `request_reply_trail.jsonl` -- the engine request/reply trail (§11): one\n"
+                "  record per worker request event (submitted / observed / unknown /\n"
+                "  unresponsive) with the redacted payload and a request hash, so a request\n"
+                "  that never got a reply stays visible as such;\n"
+                "- `numeric.json` -- the numeric evidence per case: analytic expectations,\n"
+                "  absolute and relative errors, the tolerance with its rationale, the\n"
+                "  achieved margin, and the peak-memory records.\n"
+            )
         (self.evidence_dir / "source_manifest.json").write_text(
             json.dumps(source, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
         )
@@ -2728,6 +3397,41 @@ public final class C07Builder {
                 indent=2,
             ) + "\n",
             encoding="utf-8",
+        )
+
+        # §11/D7: the request/reply trail and the numeric evidence.  Both are written
+        # before SHA256SUMS so their digests are covered by it like any other evidence.
+        trail_lines = [
+            json.dumps(record, ensure_ascii=False, sort_keys=True) for record in self.exchanges
+        ]
+        (self.evidence_dir / "request_reply_trail.jsonl").write_text(
+            ("\n".join(trail_lines) + "\n") if trail_lines else "", encoding="utf-8"
+        )
+        numeric: dict[str, Any] = {}
+        for case_id, case in self.cases.items():
+            details = case["details"]
+            picked = {
+                key: value
+                for key, value in details.items()
+                if key in NUMERIC_DETAIL_KEYS
+                or key.startswith("analytic_")
+                or key.startswith("live_")
+                or key.startswith("expected_")
+            }
+            if picked or case["evidence_level"] == "numerical":
+                numeric[case_id] = {
+                    "name": case["name"],
+                    "status": case["status"],
+                    "evidence_level": case["evidence_level"],
+                    "numeric": picked,
+                }
+        numeric["tolerance_policy"] = (
+            "Case-level tolerances and their rationale are recorded per comparison in "
+            "numeric_checks; the reopen checker refuses a receipt expectation that states "
+            "no tolerance and records the effective absolute window it applied."
+        )
+        (self.evidence_dir / "numeric.json").write_text(
+            json.dumps(numeric, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
         )
 
         # SHA256SUMS covers the run artifacts *and* the evidence written above, so
@@ -2756,7 +3460,11 @@ def main() -> None:
 
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     if args.run_dir:
+        # D11: a relative --run-dir used to reach the worker/lock machinery unresolved and
+        # came back as a security rejection instead of a path that works.  Resolve it here
+        # and say what it resolved to, so the run directory in the ledger is unambiguous.
         run_dir = Path(args.run_dir).expanduser().resolve()
+        print(f"[main] --run-dir {args.run_dir!r} resolved to {run_dir}")
     else:
         # §11: run evidence lives inside the repository, so the ledger's run_id,
         # its per-run directory and the SHA256SUMS digests all resolve in-tree.

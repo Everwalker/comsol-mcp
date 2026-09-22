@@ -4,7 +4,13 @@ attrs==26.1.0
 certifi==2026.7.22
 cffi==2.1.1
 click==8.5.0
--e git+https://github.com/Everwalker/comsol-mcp.git@2cb4627924d1a3240818ea7cd00453d4bd2d2da8#egg=comsol_mcp
+# The delivered lock pinned the *pre-remediation* remote commit
+# (git+https://github.com/Everwalker/comsol-mcp.git@2cb4627924d1a3240818ea7cd00453d4bd2d2da8),
+# so following RECOVERY.md installed a source tree other than the one being verified.
+# It now binds the tree that ships with this workpack itself: run this file from the
+# repository root.  The tree's identity (commit, tree, file count, blob-map digest) is
+# recorded in ../SOURCE_TREE_IDENTITY.json, next to the pack.
+-e .
 cryptography==50.0.1
 h11==0.16.0
 httpcore==1.0.9

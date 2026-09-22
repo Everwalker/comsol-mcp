@@ -1915,25 +1915,41 @@ def _export_to_artifact(
     }
 
 
-def verify_artifact_chunks(file_path: str, chunk_size: int = 1024 * 64) -> tuple[bool, str]:
-    """Verify that reading a file in chunks reproduces the full file and SHA256 (T049)."""
+def verify_artifact_chunks(
+    file_path: str,
+    chunk_size: int = 1024 * 64,
+    expected_sha256: str | None = None,
+) -> tuple[bool, str]:
+    """Verify a file by streaming it in chunks, without ever holding the whole file.
+
+    The delivered version read the file twice with ``read_bytes`` and then joined a
+    list of all chunks in memory -- exactly the shape NEXT_GOAL refuses to call
+    chunked.  It now folds chunks into a rolling digest with a buffer of one chunk,
+    and it compares against a *pinned* digest when the caller supplies one; the
+    ``expected_sha256`` argument is the difference between a real verification and
+    hashing a file twice and noticing the two hashes agree.
+    """
     p = Path(file_path)
     if not p.is_file():
         return False, f"file not found: {file_path}"
-    full_bytes = p.read_bytes()
-    expected_hash = hashlib.sha256(full_bytes).hexdigest()
+    size = p.stat().st_size
 
-    chunks: list[bytes] = []
-    with p.open("rb") as f:
+    digest = hashlib.sha256()
+    total = 0
+    with p.open("rb") as handle:
         while True:
-            chunk = f.read(chunk_size)
-            if not chunk:
+            block = handle.read(chunk_size)
+            if not block:
                 break
-            chunks.append(chunk)
+            digest.update(block)
+            total += len(block)
+    actual_hash = digest.hexdigest()
 
-    reconstructed = b"".join(chunks)
-    actual_hash = hashlib.sha256(reconstructed).hexdigest()
-    return (actual_hash == expected_hash and len(reconstructed) == len(full_bytes)), actual_hash
+    if total != size:
+        return False, actual_hash
+    if expected_sha256 is not None:
+        return (actual_hash == str(expected_sha256).lower()), actual_hash
+    return True, actual_hash
 
 
 # ---------------------------------------------------------------------------
@@ -2060,6 +2076,11 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
     denominator_measure = None
     cross_section_measure = None
     denominator_source = None
+    # §3/C05: measured by the empty-selection guard below; pre-initialized because the
+    # response is built on the failure path too.
+    selection_measure = None
+    selection_measure_source = None
+    selection_measure_error = None
 
     try:
         feature = _call(numerical_list, "create", ephemeral_tag, feat_type)
@@ -2128,6 +2149,69 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
             if isinstance(v, Mapping):
                 v = v.get("real", 0.0)
             return float(v) if v is not None else 0.0
+
+        # ------------------------------------------------------------------
+        # §3/C05: an explicitly pinned selection that matches no entity is refused.
+        # COMSOL answers an out-of-range entity index with a healthy status and an empty
+        # aggregate, so an integral over domain 99 of a two-interval geometry came back as
+        # 0.0 with ``ok: true`` -- a vacuous success instead of a measure, and exactly the
+        # class of silent fallback this contract refuses.  The measure of the pinned
+        # selection is read from the engine and a zero measure fails the call; the
+        # statistical aggregates below already read their own measure and refuse zero.
+        selection_measure: float | None = None
+        selection_measure_source: str | None = None
+        selection_measure_error: str | None = None
+        selection = ms.selection
+        _pinned_selection = selection not in (None, "all") and not (
+            isinstance(selection, Mapping)
+            and bool(selection.get("all"))
+            and "entities" not in selection
+        )
+        if _pinned_selection and ms.entity_dim >= 0 and aggregate in ("integral", "maximum", "minimum"):
+            guard_tag = f"{ephemeral_tag}_selmeasure"
+            guard_feat = None
+            try:
+                guard_feat = _call(numerical_list, "create", guard_tag, ms.integral_feature_type)
+                _call(guard_feat, "set", "data", dataset_tag)
+                _call(guard_feat, "set", "expr", ["1"])
+                ms.apply_selection(guard_feat)
+                _call(guard_feat, "run")
+                try:
+                    guard_raw = _call(guard_feat, "getData")
+                except Exception:
+                    guard_raw = _call(guard_feat, "getReal")
+                selection_measure = _to_float(guard_raw)
+                selection_measure_source = (
+                    "engine integral of 1 over the pinned selection "
+                    f"({ms.integral_feature_type})"
+                )
+            except Exception as exc:
+                selection_measure_error = f"{type(exc).__name__}: {exc}"
+            finally:
+                if guard_feat is not None:
+                    try:
+                        _call(numerical_list, "remove", guard_tag)
+                    except Exception:
+                        pass
+            if (
+                selection_measure is None
+                or not math.isfinite(selection_measure)
+                or selection_measure <= 0.0
+            ):
+                raise ExecutionContractError(
+                    "SELECTION_MATCHED_NO_ENTITIES",
+                    f"selection {selection!r} matches no entity of the dataset's geometry: the "
+                    f"engine measure of that selection is {selection_measure!r} "
+                    f"(read error {selection_measure_error!r}), so the aggregate would be a "
+                    f"vacuous 0 rather than a measure",
+                    details={
+                        "selection": selection,
+                        "aggregate": aggregate,
+                        "entity_dim": ms.entity_dim,
+                        "selection_measure": selection_measure,
+                        "selection_measure_error": selection_measure_error,
+                    },
+                )
 
         if aggregate in ("average", "std", "rms") or weight_expression:
             meas_tag = f"{ephemeral_tag}_meas"
@@ -2399,6 +2483,8 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
         "revolved_measure": denominator_measure if is_axisymmetric else None,
         "cross_section_measure": cross_section_measure,
         "denominator_measure": denominator_measure if aggregate in ("average", "std", "rms") else None,
+        "selection_measure": selection_measure,
+        "selection_measure_source": selection_measure_source,
         "denominator_source": denominator_source,
         "total_elements": total_elements,
         "cleanup": cleanup,
@@ -2763,6 +2849,14 @@ def result_field_export(worker: Any, model_tag: str, arguments: Mapping[str, Any
     fmt = require_string(arguments.get("format", "json"), "format").lower()
     dest = require_string(arguments.get("destination"), "destination")
 
+    # Resolve the destination *before* doing any work: the delivered version ran the
+    # whole evaluation first and only then discovered that the destination escapes the
+    # approved roots, so a refused export had already spent engine time and told the
+    # caller nothing until the end.  Containment is checked here, and the resolved path
+    # is what the store publishes.
+    store = ArtifactStore()
+    planned_destination = store.resolve_safe_path(dest)
+
     export_spec = dict(spec)
     export_spec["storage"] = "inline"
     eval_res = result_evaluate(worker, model_tag, {"spec": export_spec})
@@ -2774,13 +2868,7 @@ def result_field_export(worker: Any, model_tag: str, arguments: Mapping[str, Any
             f"Cannot export field data because evaluation failed: {status}",
         )
 
-    try:
-        from ._artifact_store import ArtifactStore
-    except Exception:
-        from comsol_mcp._artifact_store import ArtifactStore
-
-    store = ArtifactStore()
-    return store.export_field_data(dest, eval_res, fmt=fmt)
+    return store.export_field_data(str(planned_destination), eval_res, fmt=fmt)
 
 
 

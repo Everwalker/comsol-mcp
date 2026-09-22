@@ -127,6 +127,28 @@ def test_solution_axis_slicing_multi_expression() -> None:
     assert exc.value.code == "INVALID_REQUEST"
 
 
+def test_solution_axis_slicing_refuses_a_misdeclared_expression_count() -> None:
+    """D8: the declared expression count must match the array, or nothing is sliced.
+
+    ``slice_solution_axis`` used to fall through to its "general list of expressions"
+    branch whenever the declared count did not match, so a caller that declared three
+    expressions for a two-expression array got a plausible-looking slice of the wrong
+    axis.  The mismatch is now a refused request.
+    """
+    raw = [
+        [[11, 12], [21, 22], [31, 32]],
+        [[111, 112], [121, 122], [131, 132]],
+    ]
+    with pytest.raises(ExecutionContractError) as exc:
+        SolutionBinding.slice_solution_axis(raw, 2, num_expressions=3)
+    assert exc.value.code == "INVALID_REQUEST"
+    assert "2 expression rows but 3 expressions were declared" in str(exc.value)
+
+    # A single-expression array with the matching declaration still slices.
+    single = [[11, 12], [21, 22], [31, 32]]
+    assert SolutionBinding.slice_solution_axis(single, 2, num_expressions=1) == [21, 22]
+
+
 # ---------------------------------------------------------------------------
 # F05: Strict Complex Transformation
 # ---------------------------------------------------------------------------

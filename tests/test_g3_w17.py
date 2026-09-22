@@ -604,6 +604,54 @@ def test_result_evaluate_measures_and_axisymmetric() -> None:
     assert res_max["cleanup"]["type_id"] == "MaxVolume"
 
 
+def test_pinned_selection_without_entities_is_refused() -> None:
+    """C05/§3: a selection that matches no entity must not come back as a vacuous 0.
+
+    COMSOL answers an out-of-range entity index with a healthy status and an empty
+    aggregate, so an integral over domain 99 of a two-interval geometry used to arrive as
+    ``0.0`` with ``ok: true`` -- a number that looks like a measurement but is not.  The
+    adapter now reads the measure of the pinned selection and fails the call; the same
+    read is recorded when the selection is real, so the receipt carries the measure.
+    """
+    tree = FWiredTree(sdim=1, is_axisymmetric=False, numerical_real=150.0)
+
+    def factory(tag: str, *args: Any) -> Any:
+        empty_guard = tag.endswith("_selmeasure")
+        return FNumericalFeature(
+            tag=tag,
+            type_id=str(args[0]) if args else "EvalGlobal",
+            real_data=0.0 if empty_guard else 150.0,
+        )
+
+    tree.numerical_list.factory = factory
+    spec = {
+        "expressions": ["1"],
+        "solution": {"dataset": "dset1"},
+        "aggregate": "integral",
+        "complex_mode": "real",
+        "selection": [99],
+    }
+    with pytest.raises(ExecutionContractError) as info:
+        dispatch("result.evaluate", tree.worker, "Model", {"spec": dict(spec)})
+    assert info.value.code == "SELECTION_MATCHED_NO_ENTITIES"
+    assert info.value.details["selection"] == [99]
+    assert info.value.details["aggregate"] == "integral"
+
+    # A real selection is not refused, and its engine measure is part of the receipt.
+    tree_ok = FWiredTree(sdim=1, is_axisymmetric=False, numerical_real=150.0)
+    res = dispatch("result.evaluate", tree_ok.worker, "Model", {
+        "spec": {
+            "expressions": ["1"],
+            "solution": {"dataset": "dset1"},
+            "aggregate": "integral",
+            "complex_mode": "real",
+            "selection": [1],
+        }
+    })
+    assert res["selection_measure"] == 150.0
+    assert res["selection_measure_source"].startswith("engine integral of 1 over the pinned selection")
+
+
 def test_result_evaluate_solution_spec_indices() -> None:
     """T021: SolutionSpec inner/outer index selection and error bounds checking."""
     # Multi-solution array: 3 solutions

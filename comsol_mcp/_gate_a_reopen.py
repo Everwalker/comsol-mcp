@@ -247,8 +247,8 @@ def verify_reopen(
     for name, exp_data in expectations.items():
         expr = exp_data.get("expression", name)
         expected_val = exp_data["expected"]
-        tol = exp_data.get("tolerance", 1e-3)
-        rel_tol = exp_data.get("rel_tolerance", 1e-3)
+        tol = exp_data.get("tolerance")
+        rel_tol = exp_data.get("rel_tolerance")
 
         try:
             raw_res = eval_fn(model, expr)
@@ -290,7 +290,33 @@ def verify_reopen(
         abs_diff = abs(actual_val - expected_val)
         rel_diff = abs_diff / max(abs(expected_val), 1e-12)
 
-        if abs_diff > tol and rel_diff > rel_tol:
+        # A receipt has to state the window it accepts.  The delivered checker defaulted
+        # both tolerances to 1e-3 and passed when *either* held, so Chain A's stated
+        # 1e-3 absolute tolerance was silently widened to max(1e-3, 1e-3*|expected|) --
+        # about 0.338 K at 338 K.  A missing window is refused rather than substituted;
+        # the refusal is raised here, after the evaluation, so that a receipt's identity
+        # checks and a cleared or empty stored solution are still reported as themselves.
+        if tol is None and rel_tol is None:
+            raise ReopenVerificationError(
+                "MISSING_TOLERANCE",
+                f"Receipt expectation {name!r} states neither 'tolerance' nor "
+                "'rel_tolerance'; refusing to substitute a default window",
+                {
+                    "expectation": name,
+                    "expression": expr,
+                    "expected": expected_val,
+                    "actual": actual_val,
+                },
+            )
+
+        within_abs = tol is not None and abs_diff <= float(tol)
+        within_rel = rel_tol is not None and rel_diff <= float(rel_tol)
+        effective_abs_window = max(
+            float(tol) if tol is not None else 0.0,
+            (float(rel_tol) * abs(expected_val)) if rel_tol is not None else 0.0,
+        )
+
+        if not (within_abs or within_rel):
             raise ReopenVerificationError(
                 "STORED_VALUE_MISMATCH",
                 f"Value for {expr!r} deviated: expected {expected_val}, got {actual_val} "
@@ -303,6 +329,7 @@ def verify_reopen(
                     "rel_diff": rel_diff,
                     "tolerance": tol,
                     "rel_tolerance": rel_tol,
+                    "effective_abs_window": effective_abs_window,
                 },
             )
 
@@ -312,8 +339,17 @@ def verify_reopen(
             "actual": actual_val,
             "abs_diff": abs_diff,
             "rel_diff": rel_diff,
+            "tolerance": tol,
+            "rel_tolerance": rel_tol,
+            "effective_abs_window": effective_abs_window,
+            "decided_by": "absolute" if within_abs else "relative",
             "status": "PASS",
         }
 
+    report["tolerance_policy"] = (
+        "each receipt expectation must state 'tolerance' and/or 'rel_tolerance'; the "
+        "checker applies exactly those windows and records the effective absolute window "
+        "per comparison instead of substituting a default"
+    )
     report["status"] = "PASS"
     return report

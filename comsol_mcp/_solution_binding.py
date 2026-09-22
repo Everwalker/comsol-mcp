@@ -118,7 +118,17 @@ class SolutionBinding:
         # When num_expressions > 1 or len(data) matches expression count:
         if num_expressions > 1 and len(data) == num_expressions:
             return [_slice_one_expr(expr_data) for expr_data in data]
-        elif num_expressions == 1:
+        if num_expressions > 1:
+            # A declared expression count that does not match the array is a caller error:
+            # slicing it as a "general list of expressions" would silently map rows to the
+            # wrong expressions.  Fail closed instead of guessing.
+            raise ExecutionContractError(
+                "INVALID_REQUEST",
+                f"the value array carries {len(data)} expression rows but {num_expressions} "
+                "expressions were declared; the solution axis cannot be sliced without "
+                "knowing which axis is which",
+            )
+        if num_expressions == 1:
             # Single expression: data can be [solnum][vertex] or [[solnum][vertex]]
             if len(data) == 1 and isinstance(data[0], list):
                 return [_slice_one_expr(data[0])]
