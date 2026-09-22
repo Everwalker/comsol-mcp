@@ -1,0 +1,33 @@
+{
+  "status": "OPEN_IMPLEMENTATION_DEFECTS",
+  "findings": [
+    {
+      "id": "R10",
+      "scope": "LIVE_NATIVE_API_OBSERVATION",
+      "finding": "Interp coord and getCoordinates use geometry lengthUnit; mm geometry requires mm numerical coordinates. Default x/y expression output unit is mm.",
+      "evidence": "../native_coordinate_units_20260922T0154Z/native_coordinates.json",
+      "impact": "Coordinate conversion must input unit to geometry unit, then independent expected temperature check."
+    },
+    {
+      "id": "R11",
+      "scope": "LIVE_NATIVE_API_OBSERVATION",
+      "finding": "IntPoint AvPoint MaxPoint MinPoint creation rejected; EvalPoint getReal rows flatten expression then selected point, getData unsupported.",
+      "evidence": "../native_measure_types_20260922T0158Z/native_measure_types.json",
+      "impact": "Use verified EvalPoint counting measure for dimension0; do not label nonnative types implemented."
+    },
+    {
+      "id": "R12",
+      "scope": "LIVE_PUBLIC_MCP_FAIL",
+      "finding": "Initial field_export failed FIELD_ARRAY_SHAPE_MISMATCH point-coordinate count. Wrapper missed nested failed summary and exited0; separate correction preserves original.",
+      "evidence": "../public_export_20260922T0200Z/correction.json",
+      "impact": "Numerical defect must FAIL, no overall acceptance, driver now asserts helper summary."
+    },
+    {
+      "id": "R13",
+      "scope": "LIVE_PUBLIC_MCP_NUMERICAL_FAIL",
+      "finding": "std of x*(3+4*i) with phase mode returned success and 5.698548667161188 instead of zero constant-phase spread. Mean was transformed but second moment used original complex field.",
+      "evidence": "../public_numeric_20260922T0215Z/numerics/C09-phase-before-std.json",
+      "impact": "Use declared coherent complex transform order for every statistical term and report transformed units; do not widen tolerance."
+    }
+  ]
+}

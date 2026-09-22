@@ -1,0 +1,28 @@
+Compiled from "SourceFile"
+public interface com.comsol.model.TableBaseFeature extends com.comsol.model.ResultBaseFeature {
+  public abstract void clearTableData();
+  public abstract java.lang.String[] getColumnHeaders();
+  public abstract double[][] getImag();
+  public abstract double[][] getImag(int, int);
+  public abstract double[] getImagRow(int);
+  public abstract int getNRows();
+  public abstract double[][] getReal();
+  public abstract double[][] getReal(int, int);
+  public abstract double[] getRealRow(int);
+  public abstract java.lang.String[] getRowHeaders();
+  public abstract java.lang.String[][] getTableData(boolean);
+  public abstract java.lang.String[][] getTableData(int, int, boolean);
+  public abstract java.lang.String[] getTableRow(int, boolean);
+  public abstract boolean isComplex();
+  public abstract void removeColumn(int);
+  public abstract void removeRow(int);
+  public abstract void removeRows(int[]);
+  public abstract void save(java.lang.String);
+  public abstract void save(java.lang.String, boolean);
+  public abstract void saveFile(java.lang.String);
+  public abstract void saveFile(java.lang.String, java.lang.String, java.lang.String, boolean, boolean);
+  public abstract void saveFile(java.lang.String, boolean, java.lang.String, java.lang.String, boolean, boolean);
+  public abstract void setColumnHeaders(java.lang.String[]);
+  public abstract void setTableData(double[][]);
+  public abstract void setTableData(double[][], double[][]);
+}

@@ -1,0 +1,199 @@
+FFFF.FFF                                                                 [100%]
+=================================== FAILURES ===================================
+_____________ test_artifact_store_requires_a_trusted_project_root ______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1076cbe10>
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-801/test_artifact_store_requires_a0')
+
+    def test_artifact_store_requires_a_trusted_project_root(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        monkeypatch.chdir(tmp_path)
+>       with pytest.raises(ExecutionContractError) as excinfo:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ExecutionContractError
+
+/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tests/test_g3_artifact_hardening.py:27: Failed
+_________ test_nested_symlink_is_refused_even_when_target_stays_inside _________
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-801/test_nested_symlink_is_refused0')
+
+    def test_nested_symlink_is_refused_even_when_target_stays_inside(tmp_path: Path) -> None:
+        real = tmp_path / "real"
+        real.mkdir()
+        (tmp_path / "link").symlink_to(real, target_is_directory=True)
+>       with pytest.raises(ExecutionContractError) as excinfo:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ExecutionContractError
+
+tests/test_g3_artifact_hardening.py:36: Failed
+________ test_export_does_not_overwrite_without_explicit_authorization _________
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-801/test_export_does_not_overwrite0')
+
+    def test_export_does_not_overwrite_without_explicit_authorization(tmp_path: Path) -> None:
+        target = tmp_path / "out.json"
+        target.write_text("original\n", encoding="utf-8")
+        store = ArtifactStore(tmp_path)
+>       with pytest.raises(ExecutionContractError) as excinfo:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ExecutionContractError
+
+tests/test_g3_artifact_hardening.py:45: Failed
+____________ test_field_export_checks_destination_before_evaluation ____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107eb4d60>
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-801/test_field_export_checks_desti0')
+
+    def test_field_export_checks_destination_before_evaluation(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        called = False
+    
+        def fail_if_called(*_args, **_kwargs):
+            nonlocal called
+            called = True
+            raise AssertionError("evaluation must not run for a refused destination")
+    
+        monkeypatch.setattr(results, "result_evaluate", fail_if_called)
+        worker = _Worker(tmp_path)
+        outside = tmp_path.parent / "outside-result.json"
+        with pytest.raises(ExecutionContractError) as excinfo:
+>           results.result_field_export(worker, "model", {
+                "spec": {"expressions": ["T"]}, "format": "json", "destination": str(outside),
+            })
+
+tests/test_g3_artifact_hardening.py:65: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+comsol_mcp/_g3_results.py:2862: in result_field_export
+    eval_res = result_evaluate(worker, model_tag, {"spec": export_spec})
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+_args = (<tests.test_g3_artifact_hardening._Worker object at 0x107d42270>, 'model', {'spec': {'expressions': ['T'], 'storage': 'inline'}})
+_kwargs = {}
+
+    def fail_if_called(*_args, **_kwargs):
+        nonlocal called
+        called = True
+>       raise AssertionError("evaluation must not run for a refused destination")
+E       AssertionError: evaluation must not run for a refused destination
+
+tests/test_g3_artifact_hardening.py:59: AssertionError
+__________ test_empty_and_nonfinite_values_are_refused_before_publish __________
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-801/test_empty_and_nonfinite_value0')
+
+    def test_empty_and_nonfinite_values_are_refused_before_publish(tmp_path: Path) -> None:
+        store = ArtifactStore(tmp_path)
+        for values in ([], {}, [float("nan")], [{"real": 1.0, "imag": float("inf")}]):
+            target = tmp_path / f"{len(list(tmp_path.iterdir()))}.json"
+>           with pytest.raises(ExecutionContractError) as excinfo:
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           Failed: DID NOT RAISE ExecutionContractError
+
+tests/test_g3_artifact_hardening.py:93: Failed
+________________ test_csv_has_explicit_axes_and_complex_columns ________________
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-801/test_csv_has_explicit_axes_and0')
+
+    def test_csv_has_explicit_axes_and_complex_columns(tmp_path: Path) -> None:
+        target = tmp_path / "values.csv"
+        result = ArtifactStore(tmp_path).export_field_data(
+            str(target),
+            {"status": {"ok": True}, "values": [[{"real": 3.0, "imag": 4.0}]],
+             "expressions": ["E"], "expression_units": ["V/m"], "dataset": "d", "solution": "s"},
+            fmt="csv",
+        )
+        assert result["format"] == "csv"
+        header = target.read_text(encoding="utf-8").splitlines()[0].split(",")
+        for name in ("axis", "expr", "outer", "inner", "point", "real", "imag", "unit", "coord_0"):
+>           assert name in header
+E           assert 'axis' in ["{'real': 3.0", " 'imag': 4.0}"]
+
+tests/test_g3_artifact_hardening.py:110: AssertionError
+_________ test_artifact_read_binds_worker_root_and_returns_whole_hash __________
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-801/test_artifact_read_binds_worke0')
+
+    def test_artifact_read_binds_worker_root_and_returns_whole_hash(tmp_path: Path) -> None:
+        target = tmp_path / "payload.json"
+        target.write_text(json.dumps({"x": list(range(20))}), encoding="utf-8")
+        worker = _Worker(tmp_path)
+>       out = artifact_read(worker, None, {"path": str(target), "offset": 0, "length": 8})
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_g3_artifact_hardening.py:119: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+worker = <tests.test_g3_artifact_hardening._Worker object at 0x107e95310>
+model_tag = None
+arguments = {'path': '/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-801/test_artifact_read_binds_worke0/payload.json', 'offset': 0, 'length': 8}
+
+    def artifact_read(
+        worker: Any, model_tag: str | None, arguments: Mapping[str, Any]
+    ) -> dict[str, Any]:
+        """Read one bounded chunk of a published artifact.
+    
+        This publishes the catalogue's ``artifact.read`` (effect READ, scope project,
+        signature ``artifact_id, offset?, length?``) rather than inventing a sibling
+        name: the design catalogue is the source of truth for effects, and an operation
+        whose effect came from a private table would break that invariant.
+    
+        ``worker`` and ``model_tag`` are accepted for signature compatibility with the
+        other G3 operations and are intentionally unused: an artifact read never touches
+        the engine, so it cannot mutate model state.  ``project_id`` and ``request_id``
+        are part of the published request schema and are accepted-and-ignored; ``path``
+        is accepted as an alias for ``artifact_id``.
+    
+        Two extra optional keys carry the integrity pins ACCEPTANCE C13 needs
+        (``expected_sha256`` for the whole file, ``expected_chunk_sha256`` for the served
+        chunk).  A catalogue-only caller that omits them still gets a per-chunk digest
+        plus the file's reported digest and size.
+    
+        The destination is gated by the project-root containment check *before* any file
+        is opened (a request cannot widen the root, because the root comes from the
+        process and never from the request body), the pinned whole-file digest is verified
+        before the chunk is handed out, and each chunk carries its own digest.  Bytes
+        travel base64 encoded because the operation response is JSON.
+    
+        Memory bound: one chunk read allocates at most ``length`` payload bytes (capped
+        at 16 MiB) plus the base64 wire copy, and never buffers the whole file -- the
+        store seeks and reads exactly ``length`` bytes.  Verifying a pinned
+        ``expected_sha256`` costs one extra sequential pass with a 1 MiB block buffer, so
+        it is bounded by the block size rather than the file size; pinning it on the first
+        chunk of a session is enough, and later reads may omit it and rely on the
+        per-chunk digests.
+        """
+        if not isinstance(arguments.get("artifact_id"), str) or not arguments["artifact_id"].strip():
+            # ``path`` stays accepted as an alias so the export-side reference can be passed
+            # through unchanged.
+            path = _require_string(arguments, "path")
+        else:
+            path = arguments["artifact_id"]
+        offset = arguments.get("offset", 0)
+        length = arguments.get("length", 1024 * 64)
+        if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0:
+            raise ExecutionContractError("INVALID_REQUEST", f"offset must be a non-negative integer, got {offset!r}")
+        if not isinstance(length, int) or isinstance(length, bool) or length <= 0:
+            raise ExecutionContractError("INVALID_REQUEST", f"length must be a positive integer, got {length!r}")
+    
+        store = ArtifactStore()
+        resolved = store.resolve_safe_path(path)
+        # The store's containment policy admits the process temp directory (delivered
+        # behaviour, kept as-is for exports); a *read* request has no reason to reach
+        # outside the project, so this operation is the stricter scope.
+        if not resolved.is_relative_to(store.project_root):
+>           raise ExecutionContractError(
+                "ACCESS_VIOLATION",
+                f"Artifact reads are limited to the project root {store.project_root}; "
+                f"{resolved} is outside it",
+            )
+E           comsol_mcp._execution_contract.ExecutionContractError: Artifact reads are limited to the project root /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository; /private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-801/test_artifact_read_binds_worke0/payload.json is outside it
+
+comsol_mcp/_artifact_store.py:326: ExecutionContractError
+=========================== short test summary info ============================
+FAILED tests/test_g3_artifact_hardening.py::test_artifact_store_requires_a_trusted_project_root
+FAILED tests/test_g3_artifact_hardening.py::test_nested_symlink_is_refused_even_when_target_stays_inside
+FAILED tests/test_g3_artifact_hardening.py::test_export_does_not_overwrite_without_explicit_authorization
+FAILED tests/test_g3_artifact_hardening.py::test_field_export_checks_destination_before_evaluation
+FAILED tests/test_g3_artifact_hardening.py::test_empty_and_nonfinite_values_are_refused_before_publish
+FAILED tests/test_g3_artifact_hardening.py::test_csv_has_explicit_axes_and_complex_columns
+FAILED tests/test_g3_artifact_hardening.py::test_artifact_read_binds_worker_root_and_returns_whole_hash
+7 failed, 1 passed in 0.15s

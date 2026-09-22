@@ -240,6 +240,11 @@ class FModel(FNode):
     def study(self, *args: Any) -> Any:
         return self._collection("study", args)
 
+    def modelNode(self, *args: Any) -> Any:
+        # Solution binding validates explicit component names against the
+        # native modelNode tag collection before resolving component geometry.
+        return self._collection("modelNode", args)
+
 
 class FResults(FNode):
     def dataset(self, *args: Any) -> Any:
@@ -348,6 +353,10 @@ def build_tree(*, times: Sequence[float] | None = None, feature_times: Any = Non
                               props={"lengthUnit": length_unit, "getSDim": sdim}))
     geometry.getSDim = lambda *args: geometry._guard("getSDim", args) or sdim  # type: ignore[assignment]
     geometry.lengthUnit = lambda *args: geometry._guard("lengthUnit", args) or length_unit  # type: ignore[assignment]
+    # COMSOL 6.4's verified geometry truth accessor is required by the result
+    # adapter; the fixture publishes the same read instead of relying on a
+    # guessed coordinate-name fallback.
+    geometry.isAxisymmetric = lambda *args: geometry._guard("isAxisymmetric", args) or False  # type: ignore[assignment]
 
     geometries = register(FList())
     geometries.items["geom1"] = geometry
@@ -356,6 +365,9 @@ def build_tree(*, times: Sequence[float] | None = None, feature_times: Any = Non
     components = register(FList(factory=lambda tag, *args: component))
     for tag in component_tags:
         components.items[tag] = component
+    model_nodes = register(FList())
+    for tag in component_tags:
+        model_nodes.items[tag] = component
 
     solver = register(FSolver(tag=solution_tag, type_id="SolverSequence",
                               props={"getPVals": solver_values}, unavailable=solver_unavailable))
@@ -393,7 +405,8 @@ def build_tree(*, times: Sequence[float] | None = None, feature_times: Any = Non
     results_node = register(FResults(tag="results", type_id="Results",
                                      collections={"dataset": datasets, "numerical": numerical}))
     model = register(FModel(tag="Model", type_id="Model", collections={
-        "result": results_node, "component": components, "sol": solvers, "study": studies,
+        "result": results_node, "component": components, "modelNode": model_nodes,
+        "sol": solvers, "study": studies,
     }))
 
     tree = Tree(model=model, results_node=results_node, datasets=datasets, numerical=numerical,
@@ -730,12 +743,14 @@ def test_a_dataset_without_solution_property_needs_an_explicit_solution() -> Non
     assert info.value.code == "INVALID_REQUEST"
 
 
-def test_dataset_without_solution_property_uses_an_explicit_solution() -> None:
+def test_dataset_without_solution_property_rejects_even_an_explicit_solution() -> None:
+    """A requested solution tag cannot prove which solution a dataset uses."""
     tree = build_tree(dataset_props={"comp": "comp1", "geom": "geom1"}, study_steps=(("stat", "Stationary"),))
     with install_values(tree_values(tree)):
-        data = call_sample(tree, arguments(samples=3))
-    assert data["solution"] == "sol1"
-    assert data["sample_count"] == 3
+        with pytest.raises(ExecutionContractError) as info:
+            call_sample(tree, arguments(samples=3))
+    assert info.value.code == "NODE_NOT_FOUND"
+    assert tree.numerical.calls == []
 
 
 def test_component_and_geometry_fall_back_to_the_single_component() -> None:
@@ -1484,7 +1499,7 @@ def test_binding_block_binds_dataset_solution_geometry_and_the_stored_solution_a
 
 
 def test_binding_records_the_content_context_that_resolved_component_and_geometry() -> None:
-    tree = build_tree(dataset_props={"comp": None, "geom": None})
+    tree = build_tree(dataset_props={"solution": "sol1", "comp": None, "geom": None})
     with install_values(tree_values(tree)):
         data = call_sample(tree, samples=3)
     assert data["binding"]["component"] == "comp1" and data["binding"]["geometry"] == "geom1"

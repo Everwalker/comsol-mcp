@@ -76,14 +76,6 @@ def test_probe_operations_are_reachable_from_host_dispatch():
 
     from comsol_mcp._g3_ops import dispatch as dispatch_operation
 
-    for operation_id in ("probe.list", "probe.create", "probe.remove"):
+    for operation_id in ("probe.list", "probe.create", "probe.update", "probe.remove", "probe.history"):
         assert operation_id in IMPLEMENTED_OPERATIONS, operation_id
         assert OPERATION_ORIGINS[operation_id] == "_probe_manage"
-
-    # Declared by the catalogue but not implemented: the host path must refuse them
-    # with a structured error rather than reporting a success that never happened.
-    for unimplemented in ("probe.update", "probe.history"):
-        assert unimplemented not in IMPLEMENTED_OPERATIONS, unimplemented
-        with pytest.raises(ExecutionContractError) as exc:
-            dispatch_operation(unimplemented, None, "Model", {})
-        assert exc.value.code == "UNSUPPORTED_OPERATION"

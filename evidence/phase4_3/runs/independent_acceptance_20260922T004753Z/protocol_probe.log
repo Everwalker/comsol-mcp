@@ -1,0 +1,43 @@
+[2026-09-22T01:06:23.290776+00:00] Starting dedicated clean-room COMSOL mphserver...
+[2026-09-22T01:06:26.054443+00:00] COMSOL mphserver PID 68540 listening on port 54605
+[2026-09-22T01:06:42.827994+00:00] Stopping isolated mphserver PID 68540...
+  + Exception Group Traceback (most recent call last):
+  |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tools/g3_3_protocol_acceptance.py", line 142, in <module>
+  |     main()
+  |     ~~~~^^
+  |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tools/g3_3_protocol_acceptance.py", line 136, in main
+  |     asyncio.run(exercise(args, run))
+  |     ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  |   File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 205, in run
+  |     return runner.run(main)
+  |            ~~~~~~~~~~^^^^^^
+  |   File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 128, in run
+  |     return self._loop.run_until_complete(task)
+  |            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  |   File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 720, in run_until_complete
+  |     return future.result()
+  |            ~~~~~~~~~~~~~^^
+  |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tools/g3_3_protocol_acceptance.py", line 81, in exercise
+  |     async with OwnedHost(args, run, transcript, label="builder", private_home=run / "private/builder", run_state=state) as host:
+  |                ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tools/g3_3_protocol_acceptance.py", line 39, in __aexit__
+  |     await self.transport.__aexit__(*exc)
+  |   File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/contextlib.py", line 235, in __aexit__
+  |     await self.gen.athrow(value)
+  |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/lib/python3.14/site-packages/mcp/client/stdio/__init__.py", line 183, in stdio_client
+  |     anyio.create_task_group() as tg,
+  |     ~~~~~~~~~~~~~~~~~~~~~~~^^
+  |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/lib/python3.14/site-packages/anyio/_backends/_asyncio.py", line 847, in __aexit__
+  |     raise BaseExceptionGroup(
+  |         "unhandled errors in a TaskGroup", self._exceptions
+  |     ) from None
+  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/lib/python3.14/site-packages/mcp/client/stdio/__init__.py", line 189, in stdio_client
+    |     yield read_stream, write_stream
+    |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tools/g3_3_protocol_acceptance.py", line 97, in exercise
+    |     assert protocol._success(result), result
+    |            ~~~~~~~~~~~~~~~~~^^^^^^^^
+    | AssertionError: {'success': False, 'data': {}, 'error': {'code': 'INVALID_REQUEST', 'message': 'result.at_points.points[0] must be an object', 'safe_retry': False}, 'execution': {'request_id': 'protocol_probe_20260922T0120Z-run-result-at_points-1', 'operation_id': 'e20efc48-7772-4d46-9ab8-bae0cde68474', 'request_hash': 'dc10f06b2ab1e265cd75fcc602e720b063bbed2709af6123592931ab2095af77', 'idempotency_key': 'protocol_probe_20260922T0120Z-run-result-at_points-1', 'job_id': 'e7626292-ead9-40b3-8d54-3ab455441540'}, '_outer_isError': True, '_structuredContent': {'success': False, 'data': {}, 'error': {'code': 'INVALID_REQUEST', 'message': 'result.at_points.points[0] must be an object', 'safe_retry': False}, 'execution': {'request_id': 'protocol_probe_20260922T0120Z-run-result-at_points-1', 'operation_id': 'e20efc48-7772-4d46-9ab8-bae0cde68474', 'request_hash': 'dc10f06b2ab1e265cd75fcc602e720b063bbed2709af6123592931ab2095af77', 'idempotency_key': 'protocol_probe_20260922T0120Z-run-result-at_points-1', 'job_id': 'e7626292-ead9-40b3-8d54-3ab455441540'}}}
+    +------------------------------------

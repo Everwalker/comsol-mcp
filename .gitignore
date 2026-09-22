@@ -62,3 +62,16 @@ evidence/phase4_3/runs/*/neutral_cwd/
 evidence/phase4_3/runs/*/*.java
 evidence/phase4_3/runs/*/server.port
 evidence/phase4_3/runs/*/mphserver.log
+
+# Independent acceptance: local runtime, credentials, interpreters and binaries.
+# Public command/results summaries retain hashes of excluded raw artifacts.
+evidence/phase4_3/runs/*/private/
+evidence/phase4_3/runs/*/software_venv/
+evidence/phase4_3/runs/*/wheel_venv/
+evidence/phase4_3/runs/*/java_classes/
+evidence/phase4_3/runs/*/javac_classes/
+release/
+evidence/phase4_3/runs/*/control-private/
+# Disposable packaging source copies retain their own manifests locally.
+# Do not publish duplicated historical binaries/evidence from wheel staging.
+evidence/phase4_3/runs/*/source_stage/

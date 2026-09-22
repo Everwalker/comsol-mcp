@@ -1,0 +1,207 @@
+........................................................................ [  4%]
+........................................................................ [  8%]
+........................................................................ [ 12%]
+........................................................................ [ 16%]
+........................................................................ [ 20%]
+........................................................................ [ 24%]
+........................................................................ [ 28%]
+........................................................................ [ 32%]
+........................................................................ [ 36%]
+........................................................................ [ 40%]
+........................................................................ [ 44%]
+........................................................................ [ 48%]
+........................................................................ [ 52%]
+........................................................................ [ 56%]
+....................................................F................... [ 60%]
+........................................................................ [ 64%]
+........................................................................ [ 68%]
+........................................................................ [ 72%]
+........................................................................ [ 76%]
+........................................................................ [ 80%]
+.....................................................................s.. [ 84%]
+........................................................................ [ 88%]
+........................................................................ [ 92%]
+.........................F.............................................. [ 96%]
+..........................................................               [100%]
+=================================== FAILURES ===================================
+_ TestWorkerAllowListReality.test_unavailable_methods_are_still_absent_from_the_java_allow_list _
+
+self = <tests.test_g3_w14.TestWorkerAllowListReality object at 0x10bb68a50>
+
+    def test_unavailable_methods_are_still_absent_from_the_java_allow_list(self):
+        methods = self._worker_methods()
+        overlap = sorted(w14.WORKER_UNAVAILABLE_METHODS & methods)
+>       assert overlap == [], (
+            f"the worker allow-list now contains {overlap}; the W14 refusal table "
+            f"(WORKER_UNAVAILABLE_METHODS) must be repaired to use those methods"
+        )
+E       AssertionError: the worker allow-list now contains ['isAxisymmetric']; the W14 refusal table (WORKER_UNAVAILABLE_METHODS) must be repaired to use those methods
+E       assert ['isAxisymmetric'] == []
+E         
+E         Left contains one more item: 'isAxisymmetric'
+E         Use -v to get more diff
+
+tests/test_g3_w14.py:849: AssertionError
+_________ test_probe_producer_emits_comsol_java_api_shape_for_consumer _________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10bee5f60>
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-949/test_probe_producer_emits_coms0')
+
+    def test_probe_producer_emits_comsol_java_api_shape_for_consumer(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+        access_log = tmp_path / "mphserverlocalhost_access_log.2026-09-20.txt"
+        access_log.write_text(
+            '127.0.0.1 - - [20/Sep/2026:08:21:07 +0800] "GET /webbridge/websocket HTTP/1.1" 101 -\n',
+            encoding="utf-8",
+        )
+    
+        class FakeWorker:
+            instances: list["FakeWorker"] = []
+    
+            def __init__(self, _paths, *, state_dir):
+                self.state_dir = state_dir
+                self.address = ""
+                self.connected = False
+                self.pid = 456 if state_dir.name.endswith("loopback") else 457
+                self.__class__.instances.append(self)
+    
+            def start(self, **_kwargs):
+                return {"status": "HEALTHY"}
+    
+            def client(self):
+                return self
+    
+            def connect(self, _port, address, **_kwargs):
+                self.address = address
+                if address != "127.0.0.1":
+                    with access_log.open("a", encoding="utf-8") as handle:
+                        handle.write(
+                            '192.168.100.152 - - [20/Sep/2026:08:21:08 +0800] "GET /webbridge/websocket HTTP/1.1" 403 -\n'
+                        )
+                    raise runtime.JavaWorkerError(
+                        "rejected", reply={"failure": {"code": "HTTP_403"}}
+                    )
+                self.connected = True
+                return {"ok": True}
+    
+            def runtime_metadata(self):
+                return {
+                    "pid": self.pid,
+                    "connected": self.connected,
+                    "server": f"{self.address}:{PORT}",
+                    "status": "HEALTHY",
+                }
+    
+            def disconnect(self, **_kwargs):
+                self.connected = False
+                return {"status": "DISCONNECTED"}
+    
+            def close(self):
+                self.connected = False
+    
+        local_rows = _socket_rows(server_pid=123, worker_pid=456)
+        monkeypatch.setattr(runtime, "PersistentJavaWorker", FakeWorker)
+        monkeypatch.setattr(runtime, "_current_nonloopback_ipv4", lambda: "192.168.100.152")
+        monkeypatch.setattr(runtime, "_access_log_path", lambda _run_dir: access_log)
+        monkeypatch.setattr(runtime, "_socket_rows", lambda: local_rows if len(FakeWorker.instances) == 1 else [local_rows[0]])
+        monkeypatch.setattr(
+            runtime,
+            "_websocket_api_probe",
+            lambda address, **_kwargs: {
+                "status": "HTTP_RESPONSE",
+                "address": address,
+                "route": runtime.API_ROUTE,
+                "source_bind_requested": address,
+                "local_endpoint": {"host": address, "port": 49000},
+                "peer_endpoint": {"host": address, "port": PORT},
+                "http_status": 101 if address == "127.0.0.1" else 403,
+            },
+        )
+        monkeypatch.setattr(runtime.base, "_process_snapshot", lambda _pid: {"birth": "birth-1"})
+    
+>       proof = runtime._probe_api(tmp_path, 123)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_phase3_remote_addr_valve_runtime.py:379: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tools/phase3_remote_addr_valve_runtime.py:636: in _probe_api
+    loopback_worker = _worker_probe(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+run_dir = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-949/test_probe_producer_emits_coms0')
+paths = JavaWorkerPaths(comsol_root=PosixPath('/Applications/COMSOL64/Multiphysics'), jdk_home=PosixPath('/Library/Java/JavaVi...osixPath('/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository'), global_lock_root=None, platform_name=None)
+label = 'loopback', address = '127.0.0.1', server_pid = 123
+expect_loopback = True
+
+    def _worker_probe(
+        run_dir: Path,
+        paths: JavaWorkerPaths,
+        *,
+        label: str,
+        address: str,
+        server_pid: int,
+        expect_loopback: bool,
+    ) -> dict[str, Any]:
+        """Run one fresh Worker probe and capture lsof before disconnect/close."""
+        worker = PersistentJavaWorker(
+            paths,
+            state_dir=run_dir / "control-private" / f"worker-{label}",
+        )
+        result: dict[str, Any] = {
+            "status": "NOT_RUN",
+            "address": address,
+            "port": PORT,
+            "authenticated": False,
+            "socket_rows_before_disconnect": [],
+            "credentials_source": "fresh Worker with the run-owned private prefs; credential material not recorded",
+        }
+        connected = False
+        worker_pid: int | None = None
+        connect_request_id = f"g2-valve-{label}-connect"
+        result["java_request_id"] = connect_request_id
+        try:
+            started = worker.start(startup_timeout_s=30.0)
+            result["worker_start_status"] = started.get("status") if isinstance(started, dict) else None
+            try:
+                worker.client().connect(PORT, address, request_id=connect_request_id)
+                metadata = worker.runtime_metadata()
+                worker_pid = metadata.get("pid") if type(metadata.get("pid")) is int else None
+                connected = bool(metadata.get("connected"))
+                result.update({
+                    "authenticated": connected,
+                    "worker_pid": worker_pid,
+                    "server_reported_endpoint": metadata.get("server"),
+                })
+                if connected and metadata.get("server") == f"{address}:{PORT}":
+                    result["status"] = "PASS" if expect_loopback else "UNEXPECTED_SUCCESS"
+                else:
+                    result["status"] = "FAIL"
+                    result["failure_class"] = "ENDPOINT_IDENTITY_MISMATCH"
+            except JavaWorkerError as exc:
+                failure = _worker_failure_record(exc)
+                result.update(failure)
+                result["status"] = "FAIL" if expect_loopback else "REJECTED"
+            except Exception as exc:
+                result.update({"status": "ERROR", "failure_class": type(exc).__name__})
+        except JavaWorkerError as exc:
+            result.update({"status": "ERROR", "worker_start": _worker_failure_record(exc)})
+        finally:
+            try:
+>               rows = _socket_rows(PORT)
+                       ^^^^^^^^^^^^^^^^^^
+E               TypeError: test_probe_producer_emits_comsol_java_api_shape_for_consumer.<locals>.<lambda>() takes 0 positional arguments but 1 was given
+
+tools/phase3_remote_addr_valve_runtime.py:463: TypeError
+=============================== warnings summary ===============================
+tests/test_g3_phase4_driver.py:205
+  /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tests/test_g3_phase4_driver.py:205: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+tests/test_g3_phase4_m1_fixes.py:1060
+  /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tests/test_g3_phase4_m1_fixes.py:1060: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_g3_w14.py::TestWorkerAllowListReality::test_unavailable_methods_are_still_absent_from_the_java_allow_list
+FAILED tests/test_phase3_remote_addr_valve_runtime.py::test_probe_producer_emits_comsol_java_api_shape_for_consumer
+2 failed, 1783 passed, 1 skipped, 2 warnings in 18.25s

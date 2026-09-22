@@ -1,0 +1,105 @@
+{
+  "commands": [
+    {
+      "argv": [
+        "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/bin/python",
+        "-m",
+        "py_compile",
+        "tools/g33_control_cases.py",
+        "tests/test_g33_control_cases.py",
+        "tools/g33_export_cases.py",
+        "tests/test_g33_export_cases.py"
+      ],
+      "exit_code": 0,
+      "name": "py_compile",
+      "stderr": "py_compile.stderr",
+      "stdout": "py_compile.stdout"
+    },
+    {
+      "argv": [
+        "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_g33_control_cases.py",
+        "tests/test_g33_export_cases.py"
+      ],
+      "exit_code": 0,
+      "name": "pytest",
+      "stderr": "pytest.stderr",
+      "stdout": "pytest.stdout"
+    }
+  ],
+  "cwd": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository",
+  "interpreter": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/bin/python",
+  "live_comsol": "NOT_RUN",
+  "output_manifest": [
+    {
+      "path": "py_compile.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "py_compile.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "py_compile.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "size": 2
+    },
+    {
+      "path": "pytest.stdout",
+      "sha256": "ae476c44df701617872cb7fc32388fa38a452053c346e4ac7abef0ccad6abb66",
+      "size": 98
+    },
+    {
+      "path": "pytest.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "pytest.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "size": 2
+    }
+  ],
+  "overall": "PASS",
+  "platform": "macOS-27.0-arm64-arm-64bit-Mach-O",
+  "python_version": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.3.34.2)]",
+  "results": {
+    "pytest_summary": ".........                                                                [100%]\n9 passed in 0.25s",
+    "test_count": 9
+  },
+  "schema_version": 1,
+  "scope": "offline_public_helper_contract",
+  "source_manifest": [
+    {
+      "path": "tools/g33_control_cases.py",
+      "sha256": "05fdc4738a2da7c692d6880f9bedaaa20d091112e24d09e584675ab79946c182",
+      "size": 31911
+    },
+    {
+      "path": "tests/test_g33_control_cases.py",
+      "sha256": "3d3e946999fd4616226423e3611c65463d2690f8e13aa2bfb516a4f70c3f0e06",
+      "size": 8822
+    },
+    {
+      "path": "tools/g33_export_cases.py",
+      "sha256": "0e42556fbc4186e132de754257715c1a48b0e6cc80048733844785cd0fb86be3",
+      "size": 43703
+    },
+    {
+      "path": "tests/test_g33_export_cases.py",
+      "sha256": "ca463ebf95110bc158b288a1c5caca455fcee4c45caf59dbc55c7abafa75262e",
+      "size": 12317
+    },
+    {
+      "path": "tools/phase4_run_mcp.py",
+      "sha256": "423fa3e1c743e0a669d1a85ae7261f731cca3d638eb3ca01703d5ec0c274cd58",
+      "size": 707805
+    }
+  ],
+  "status": "PASS"
+}

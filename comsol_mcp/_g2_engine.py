@@ -150,6 +150,38 @@ def _worker_failure_code(exc: BaseException) -> str | None:
     return None
 
 
+def _worker_failure_unknown(exc: BaseException) -> bool:
+    """Read an explicit unknown-state signal from a worker failure chain.
+
+    The Java worker can return a normal engine error code together with
+    ``execution_state_unknown=true`` when the engine may have started the
+    operation.  Callers must preserve that bit even when a later readback is
+    readable; the readback describes the observation, not whether the failed
+    operation completed.  This helper only consumes structured fields (or the
+    explicit ``EXECUTION_STATE_UNKNOWN`` code), never exception class names or
+    human-readable messages.
+    """
+    seen: set[int] = set()
+    cause: BaseException | None = exc
+    while cause is not None and id(cause) not in seen:
+        seen.add(id(cause))
+        if getattr(cause, "code", None) == "EXECUTION_STATE_UNKNOWN":
+            return True
+        if getattr(cause, "execution_state_unknown", None) is True:
+            return True
+        for name in ("failure", "reply", "details"):
+            value = getattr(cause, name, None)
+            if isinstance(value, Mapping):
+                if value.get("execution_state_unknown") is True:
+                    return True
+                if value.get("engine_state_unknown") is True:
+                    return True
+                if value.get("code") == "EXECUTION_STATE_UNKNOWN":
+                    return True
+        cause = cause.__cause__
+    return False
+
+
 def _unsupported_collection(exc: ExecutionContractError) -> bool:
     """True when the node simply does not expose the probed accessor."""
     if exc.code == "API_UNSUPPORTED":

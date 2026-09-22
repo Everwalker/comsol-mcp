@@ -34,6 +34,7 @@ from comsol_mcp._domain_outcome import (
     VERIFICATION_NOT_RUN,
     classify,
     classify_envelope,
+    is_mutation_call,
     is_mutation_method,
     witness_scope,
 )
@@ -401,6 +402,18 @@ def test_the_worker_funnel_feeds_the_witness_with_real_method_names(tmp_path):
     assert is_mutation_method("create") is True
 
 
+@pytest.mark.parametrize("method", [
+    "getLastComputationTime", "getLastComputationDate", "getLastComputationVersion",
+])
+def test_study_computation_metadata_getters_are_read_only(method):
+    assert is_mutation_call(method, args=()) is False
+
+
+def test_model_is_a_getter_without_arguments_and_setter_with_model_argument():
+    assert is_mutation_call("model", args=()) is False
+    assert is_mutation_call("model", args=("comp1",)) is True
+
+
 # ---------------------------------------------------------------------------
 # the four entry points share one rule
 # ---------------------------------------------------------------------------
@@ -582,3 +595,12 @@ def test_the_matrix_states_are_the_only_states_published(tmp_path, monkeypatch):
     assert {STATE_SUCCEEDED, STATE_PARTIAL, STATE_FAILED, STATE_UNKNOWN} == {
         STATE_SUCCEEDED, STATE_PARTIAL, STATE_FAILED, STATE_UNKNOWN}
     assert VERIFICATION_FAILED == "FAILED"
+
+
+def test_modelnode_navigation_is_read_but_creation_remains_mutating():
+    """Model.modelNode() and modelNode(String) navigate; create remains a write."""
+    from comsol_mcp._domain_outcome import is_mutation_call
+    assert not is_mutation_call("modelNode", ())
+    assert not is_mutation_call("modelNode", ("comp1",))
+    assert is_mutation_call("create", ("comp2", True))
+    assert is_mutation_call("unverifiedMethod", ())

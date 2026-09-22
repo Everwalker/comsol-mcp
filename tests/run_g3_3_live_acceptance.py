@@ -66,6 +66,14 @@ def _sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def _execute_checked(worker: PersistentJavaWorker, payload: Mapping[str, Any]) -> dict[str, Any]:
+    """Fail at the actual compile/runtime error before inspecting an unchanged model."""
+    reply = worker.submit("code_execute", payload)
+    if reply.get("ok") is not True or reply.get("status") != "SUCCEEDED":
+        raise AssertionError(f"Java fixture operation failed: {reply!r}")
+    return reply
+
+
 def git_blob_map_digest(commit: str = "HEAD") -> str:
     """Aggregate digest of a commit's blob map: path + mode/type/blob per entry.
 
@@ -165,7 +173,7 @@ import com.comsol.model.*;
 import java.util.*;
 
 public final class ClearStoredSolution {
-    public static Object run(Model model, Map<String, Object> args) {
+    public static Object run(Model model, Map<String, Object> args) throws Exception {
         // Make the artifact genuinely solution-free.  clearSolutionData() alone was not
         // enough in COMSOL 6.4 (build 293): the "cleared" copy still answered a point read
         // with the stored field value, so that control proved nothing.  The solution data
@@ -191,7 +199,7 @@ import com.comsol.model.*;
 import java.util.*;
 
 public final class MutateFieldValues {
-    public static Object run(Model model, Map<String, Object> args) {
+    public static Object run(Model model, Map<String, Object> args) throws Exception {
         model.physics("ht").feature("temp2").set("T0", "363.15[K]");
         model.study("std1").run();
         model.save((String) args.get("path"));
@@ -957,7 +965,7 @@ public final class ChainABuilder {
             ca_file.write_text(chain_a_code)
             model_a = worker1.client().create("ChainA")
             tag_a = model_a.tag()
-            worker1.submit("code_execute", {
+            _execute_checked(worker1, {
                 "tag": tag_a,
                 "source_artifact": str(ca_file),
                 "entrypoint": "ChainABuilder",
@@ -1023,7 +1031,7 @@ public final class ChainBBuilder {
             cb_file.write_text(chain_b_code)
             model_b = worker1.client().create("ChainB")
             tag_b = model_b.tag()
-            worker1.submit("code_execute", {
+            _execute_checked(worker1, {
                 "tag": tag_b,
                 "source_artifact": str(cb_file),
                 "entrypoint": "ChainBBuilder",
@@ -1091,7 +1099,7 @@ public final class ChainCBuilder {
             cc_file.write_text(chain_c_code)
             model_c = worker1.client().create("ChainC")
             tag_c = model_c.tag()
-            worker1.submit("code_execute", {
+            _execute_checked(worker1, {
                 "tag": tag_c,
                 "source_artifact": str(cc_file),
                 "entrypoint": "ChainCBuilder",
@@ -1146,7 +1154,7 @@ public final class C04Builder {
             f04 = self.run_dir / "C04Builder.java"
             f04.write_text(c04_code)
             model_04 = worker1.client().create("BenchC04")
-            worker1.submit("code_execute", {"tag": model_04.tag(), "source_artifact": str(f04), "entrypoint": "C04Builder", "arguments": {}})
+            _execute_checked(worker1, {"tag": model_04.tag(), "source_artifact": str(f04), "entrypoint": "C04Builder", "arguments": {}})
             mph_04 = self.artifacts_dir / "bench_c04_solved.mph"
             model_04.save(str(mph_04))
 
@@ -1190,7 +1198,7 @@ public final class C05Builder {
             f05 = self.run_dir / "C05Builder.java"
             f05.write_text(c05_code)
             model_05 = worker1.client().create("BenchC05")
-            worker1.submit("code_execute", {"tag": model_05.tag(), "source_artifact": str(f05), "entrypoint": "C05Builder", "arguments": {}})
+            _execute_checked(worker1, {"tag": model_05.tag(), "source_artifact": str(f05), "entrypoint": "C05Builder", "arguments": {}})
             mph_05 = self.artifacts_dir / "bench_c05_solved.mph"
             model_05.save(str(mph_05))
 
@@ -1234,7 +1242,7 @@ public final class C06Builder {
             f06 = self.run_dir / "C06Builder.java"
             f06.write_text(c06_code)
             model_06 = worker1.client().create("BenchC06")
-            worker1.submit("code_execute", {"tag": model_06.tag(), "source_artifact": str(f06), "entrypoint": "C06Builder", "arguments": {}})
+            _execute_checked(worker1, {"tag": model_06.tag(), "source_artifact": str(f06), "entrypoint": "C06Builder", "arguments": {}})
             mph_06 = self.artifacts_dir / "bench_c06_solved.mph"
             model_06.save(str(mph_06))
 
@@ -1279,7 +1287,7 @@ public final class C07Builder {
             f07 = self.run_dir / "C07Builder.java"
             f07.write_text(c07_code)
             model_07 = worker1.client().create("BenchC07")
-            worker1.submit("code_execute", {"tag": model_07.tag(), "source_artifact": str(f07), "entrypoint": "C07Builder", "arguments": {}})
+            _execute_checked(worker1, {"tag": model_07.tag(), "source_artifact": str(f07), "entrypoint": "C07Builder", "arguments": {}})
             mph_07 = self.artifacts_dir / "bench_c07_solved.mph"
             model_07.save(str(mph_07))
 
@@ -1488,7 +1496,7 @@ public final class C07Builder {
             clear_java = self.run_dir / "ClearStoredSolution.java"
             clear_java.write_text(CLEAR_STORED_SOLUTION_JAVA)
             cleared_model = worker2.client().load(str(cleared_mph), "reopen_a_cleared")
-            clear_report = worker2.submit("code_execute", {
+            clear_report = _execute_checked(worker2, {
                 "tag": cleared_model.tag(),
                 "source_artifact": str(clear_java),
                 "entrypoint": "ClearStoredSolution",
@@ -1553,7 +1561,7 @@ public final class C07Builder {
             mutate_java = self.run_dir / "MutateFieldValues.java"
             mutate_java.write_text(MUTATE_FIELD_VALUES_JAVA)
             mutated_model = worker2.client().load(str(mutated_mph), "reopen_a_mutated")
-            worker2.submit("code_execute", {
+            _execute_checked(worker2, {
                 "tag": mutated_model.tag(),
                 "source_artifact": str(mutate_java),
                 "entrypoint": "MutateFieldValues",
@@ -1841,7 +1849,7 @@ public final class C07Builder {
                 wire_java = self.run_dir / "OneDWireBuilder.java"
                 wire_java.write_text(ONE_D_WIRE_JAVA, encoding="utf-8")
                 wire_tag = client.create("OneDWire").tag()
-                dimensions_worker.submit("code_execute", {
+                _execute_checked(dimensions_worker, {
                     "tag": wire_tag,
                     "source_artifact": str(wire_java),
                     "entrypoint": "OneDWireBuilder",
@@ -1893,7 +1901,7 @@ public final class C07Builder {
                 block_java = self.run_dir / "ThreeDBlockBuilder.java"
                 block_java.write_text(THREE_D_BLOCK_JAVA, encoding="utf-8")
                 block_tag = client.create("ThreeDBlock").tag()
-                dimensions_worker.submit("code_execute", {
+                _execute_checked(dimensions_worker, {
                     "tag": block_tag,
                     "source_artifact": str(block_java),
                     "entrypoint": "ThreeDBlockBuilder",
@@ -3079,7 +3087,7 @@ public final class C07Builder {
 
                 def _run_long_solve() -> None:
                     try:
-                        solve_worker.submit("code_execute", {
+                        _execute_checked(solve_worker, {
                             "tag": solve_tag,
                             "source_artifact": str(java_path),
                             "entrypoint": "C15LongSolve",

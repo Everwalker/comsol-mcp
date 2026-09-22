@@ -1,87 +1,60 @@
-# G3.3 Operations Guide: Live Acceptance and Clean-room Procedures
+# G3.3 independent acceptance operations
 
-## 1. Environment & Prerequisites
+This is a procedure, not a passing certificate. Current status is in
+`evidence/w17_correction.json` and `evidence/phase4_3/BASELINE_REVIEW.json`.
+The independent development runs have exposed numerical defects; W18 is not authorized.
+Prior operations text is preserved in the independent run's `prior_state/` directory.
 
-### Certified Stack
-- **OS:** macOS 15.x / Darwin 24.x (Apple Silicon aarch64)
-- **COMSOL:** COMSOL Multiphysics 6.4 (Build 293), installed at `/Applications/COMSOL64/Multiphysics`
-- **JDK:** Amazon Corretto JDK 11 (11.0.31), installed at `/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home`
-- **Python:** Python 3.13.14 with virtual environment at `.venv`
+## Fresh environment and runtime
 
----
+The current independent software environment uses CPython 3.14.7. The historical
+`constraints-macos-arm64-py313.txt` name is not evidence that this run used Python 3.13.
+Commercial COMSOL 6.4 and JDK 11 must already be legitimately installed. Source restore,
+unit tests and wheel import do not establish a usable license or engine.
 
-## 2. Clean-room Isolated Server Operations
+`tools/g3_3_protocol_acceptance.py` uses public stdio MCP requests to construct new
+fixtures and query results. It creates a task-owned server with a fresh ephemeral port,
+auto-login preferences, temporary files and recovery directory under its new run path.
+It reads the existing RemoteAddrValve configuration and verifies actual authenticated
+loopback access and remote denial. It does not edit COMSOL installation configuration.
+Do not copy an old isolation receipt, credential directory, model or process identity.
 
-To prevent interference with any external shared COMSOL server (e.g. PID 5014), G3.3 live acceptance spawns a dedicated, fully isolated `mphserver` instance:
+## Running a bounded group
+
+From this repository root, using the newly installed environment's Python:
 
 ```bash
-# Command line executed by runner
-/Applications/COMSOL64/Multiphysics/bin/comsol mphserver \
-  -port 0 \
-  -login auto \
-  -silent \
-  -multi on \
-  -prefsdir <run_dir>/prefs \
-  -tmpdir <run_dir>/tmp \
-  -recoverydir <run_dir>/recovery
+python tools/g3_3_protocol_acceptance.py --m1-only --run-dir evidence/phase4_3/runs/<new-run-id>
+python tools/g3_3_protocol_acceptance.py --numeric-only --run-dir evidence/phase4_3/runs/<another-new-run-id>
+python tools/g3_3_protocol_acceptance.py --nodes-only --run-dir evidence/phase4_3/runs/<another-new-run-id>
+python tools/g3_3_protocol_acceptance.py --export-only --run-dir evidence/phase4_3/runs/<another-new-run-id>
+python tools/g3_3_protocol_acceptance.py --run-dir evidence/phase4_3/runs/<another-new-run-id>
 ```
 
-### Essential Parameters
-1. `-port 0`: Tells the OS kernel to bind an available ephemeral port dynamically.
-2. `login auto` & `-prefsdir`: Shares the exact private preferences directory with `PersistentJavaWorker` (`-Dcs.prefsdir`), allowing seamless authentication without manual credentials.
-3. `-multi on`: Allows multiple Java client connections (e.g. Model Builder followed by Fresh-Worker Reopen Verifier).
+Use one command at a time and a never-used directory for each run. The default command
+is the three-chain stored-solution reopen group and negative controls, not all W17 cases.
+Native `--axis-probe-only`, `--coordinate-probe-only` and `--measure-probe-only`
+produce API observations; their completion does not certify numerical acceptance.
 
----
+Every run records source hashes, commit/tree/dirty state, actual UTC times, public
+request/reply transcripts and process cleanup. Any source drift invalidates the run as
+final frozen-source acceptance. A zero process exit code is insufficient: inspect all
+nested case statuses and independently recompute numerical assertions. Failed original
+records remain unchanged; a correction is a separate record.
 
-## 3. Worker Configuration & Scoping
+## Safety and evidence
 
-The worker path configuration must set `project_root` to ensure that model saves and artifact exports remain strictly contained:
+UNKNOWN requests must be observed through their original job status/result/reconcile
+before any later mutation. Quiescence can be in `data.metadata.reconciled_quiescent`;
+UNKNOWN itself does not prove either active execution or safe completion. Same-key
+retries must preserve the exact original wire body. Observation requests use new keys.
 
-```python
-from comsol_mcp._java_worker import JavaWorkerPaths, PersistentJavaWorker
+Before a fresh Worker reopen, confirm the previous task-owned Worker and control daemon
+have exited. The public lifecycle route does not grant permission to disconnect a shared
+server. Cleanup is limited to verified owned process identities; no PID from old logs
+is reused. The user's separate cleanup authorization allowed the inventoried prior
+server/orphans to be terminated; it does not turn an arbitrary PID into an owned one.
 
-paths = JavaWorkerPaths(
-    comsol_root=Path("/Applications/COMSOL64/Multiphysics"),
-    jdk_home=Path("/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home"),
-    private_prefs=run_dir / "prefs",
-    project_root=run_dir,
-    global_lock_root=run_dir / "locks",
-)
-worker = PersistentJavaWorker(paths, state_dir=run_dir / "worker_state")
-worker.start()
-worker.client().connect(server_port, "127.0.0.1")
-```
-
----
-
-## 4. Acceptance Test Execution
-
-### Running the Full Live Acceptance Suite (C00–C17)
-```bash
-# In repository directory:
-.venv/bin/python tests/run_g3_3_live_acceptance.py
-```
-This executes:
-- **C00:** Commit/tree hash verification against `PIN.json`, wheel building and out-of-tree installation in a clean temp venv.
-- **C01:** Historical ledger SHA256 preservation and correction ledger validation.
-- **C02:** DomainOutcome state transitions and export refusal on failure.
-- **C03:** Gate A live reopen: solves Chain A (steady), Chain B (transient), Chain C (continuation); shuts down builder; reopens in fresh worker without solving; verifies spatial gradient points; executes 4 negative controls.
-- **C04–C07:** Analytical measures, multi-dimensional feature mapping, non-uniform fields, and axisymmetric cylindrical weighting.
-- **C08–C11:** Solution axis slicing, complex transforms, coordinate unit scaling, and dataset cycle detection.
-- **C12–C15:** Export path traversal protection, chunk streaming, probe management, and worker health responsiveness.
-- **C16–C17:** Packaging checks, isolated server teardown, and ledger writing to `evidence/phase4_3_acceptance.json`.
-
-### Running Unit Test Suites
-```bash
-.venv/bin/pytest tests/test_g3_3_remediation.py \
-                 tests/test_g3_gate_a2_f02_reopen.py \
-                 tests/test_g3_results.py \
-                 tests/test_g3_w17.py \
-                 tests/test_java_worker.py
-```
-
-### Running Counterexample Verification
-```bash
-.venv/bin/python ../tools/reproduce_w17_findings.py --repo . --output ../review/reproduce_w17.json
-```
-Expected output: `{"counterexamples": 5, "reproduced": 0, "live_comsol_run": false}`.
+Private preferences, tokens, endpoint credentials, venvs, installed JARs and licensed
+manuals must stay out of publication. Publish a scrubbed, hash-traceable evidence subset
+and reconstruction instructions. Preserve scientific files and failure evidence.

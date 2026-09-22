@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-09-22T04:46:16.778806+00:00",
+  "entries": [
+    {
+      "path": "comsol_mcp/_gate_a_reopen.py",
+      "reviewed_ranges": [
+        "1-EOF"
+      ],
+      "responsibility": "Production same-artifact stored-solution checker shared by positives and negative controls.",
+      "findings": [
+        "File-based check now requires a pre-save hash; actual file bytes are hashed in streaming blocks.",
+        "Dataset and solution tags are queried; detailed binding is enforced by the public numerical reader used by the acceptance driver, not by tag membership alone.",
+        "Missing structured solver settings or unreadable required Derived Values fail closed.",
+        "Scalar expectations reject empty, multiple, nonfinite and nonnumeric values; explicit receipt tolerances are used without widening defaults.",
+        "A generic evaluation exception is classified as missing/empty stored solution; this classification alone does not prove engine causality. Live negative evidence separately records the actual clearSolutionData mutation and public read failure."
+      ],
+      "limits": [
+        "Direct fake model attributes remain supported for CONTROL_UNIT. Only a traceable engine snapshot can supply LIVE evidence."
+      ],
+      "sha256": "f3f028fc619c6bc61914c1b6468da0bae1fffd65f4473decc66a58566878ad4c",
+      "status": "STATIC_REVIEW_ONLY",
+      "reviewed_here": true
+    },
+    {
+      "path": "tools/g3_3_protocol_acceptance.py",
+      "reviewed_ranges": [
+        "25-525",
+        "830-EOF"
+      ],
+      "responsibility": "Fresh isolated public MCP fixture construction, saved-file reopen, negative controls and owned lifecycle.",
+      "findings": [
+        "Server is launched with run-local prefs and ephemeral port; no existing PID is adopted. Loopback authenticated API and LAN denial are checked against read-only existing configuration.",
+        "OwnedHost observes original UNKNOWN jobs before teardown, retains unresolved runtime, and checks PID birth/command identity before terminating private children.",
+        "A/B/C receipts bind artifact bytes and actual presave field readbacks; builder and reopen hosts have distinct private homes and model identities. Reopen performs readback without solving.",
+        "Seven negative controls invoke the same production checker; cleared solution, changed field and removed Derived Values use saved mutated native models and new-worker reload.",
+        "Idempotency assertion originally compared redacted transcript data with raw retry data. Corrected to compare original and retry raw data, retaining same job/operation and unchanged event checks; public_m3_20260922T0503Z passes.",
+        "Source start/end manifests include additions/deletions; any drift prevents final-source acceptance even when assertions pass."
+      ],
+      "limits": [
+        "Probe helper implementations and numeric/node/export helper modules are covered separately; this entry does not claim every exploratory probe branch was reread.",
+        "Local absolute default application/JDK paths are overridable via environment and describe this Mac runtime only."
+      ],
+      "sha256": "5149bb544eaee5e59d7fc825932c056d5650fe347eee5a940351081900b75ac5",
+      "status": "STATIC_REVIEW_ONLY",
+      "reviewed_here": true
+    }
+  ]
+}

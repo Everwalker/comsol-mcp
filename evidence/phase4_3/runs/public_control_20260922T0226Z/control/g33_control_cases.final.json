@@ -1,0 +1,100 @@
+{
+  "bound_model": {
+    "generation": 1,
+    "model_tag": "mcp1",
+    "present": true,
+    "server_instance_id": "8256f393a45456186382dedabf36114051935934cffb85801ca3a7bebf127dd3",
+    "session_id": "session-6ff8957557fa97a3ed733c76"
+  },
+  "calls": [
+    {
+      "body_sha256": "a0a09a802ae7a318f9ddb86665afb3f06ef3b6bbda5b87a1a8d32a5e9e0d11b5",
+      "elapsed_s": 0.05649520899169147,
+      "idempotency_key": "g33-control-001-solve",
+      "mode": "response",
+      "operation": "study.run",
+      "reconcile": false,
+      "request": "g33-control-solve",
+      "require_model": true,
+      "response": {
+        "data_keys": [
+          "job_id",
+          "rpc_wait_expired",
+          "status"
+        ],
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-control-001-solve",
+          "job_id": "84e504e3-0ecc-4b9e-8f3f-a35cb93a6375",
+          "operation_id": "191780c3-bf19-4a48-8fd3-215ddaf9399c",
+          "request_id": "g33-control-solve"
+        },
+        "job_id": "84e504e3-0ecc-4b9e-8f3f-a35cb93a6375",
+        "status": "RUNNING",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": 0.05,
+      "sequence": 1
+    }
+  ],
+  "needs_retained_runtime": false,
+  "overall": "BLOCKED",
+  "rows": [
+    {
+      "assertions": {
+        "active_observed": false,
+        "unknown_response": false
+      },
+      "case": "solve-active-window",
+      "idempotency_key": "g33-control-001-solve",
+      "operation": "study.run",
+      "reason": "solve completed before a public control observation",
+      "response": {
+        "data_keys": [
+          "job_id",
+          "rpc_wait_expired",
+          "status"
+        ],
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-control-001-solve",
+          "job_id": "84e504e3-0ecc-4b9e-8f3f-a35cb93a6375",
+          "operation_id": "191780c3-bf19-4a48-8fd3-215ddaf9399c",
+          "request_id": "g33-control-solve"
+        },
+        "job_id": "84e504e3-0ecc-4b9e-8f3f-a35cb93a6375",
+        "status": "RUNNING",
+        "success": true,
+        "unknown": null
+      },
+      "status": "NOT_RUN"
+    },
+    {
+      "assertions": {
+        "new_solve_dispatched": false
+      },
+      "case": "same-key-retry",
+      "idempotency_key": "g33-control-001-solve",
+      "operation": "study.run",
+      "reason": "same-key retry is only evaluated after an UNKNOWN job is queried",
+      "response": null,
+      "status": "NOT_RUN"
+    }
+  ],
+  "run_dir": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_control_20260922T0226Z/control",
+  "schema_version": 1,
+  "scope": "public_mcp_chain_b_control",
+  "solve": {
+    "body_sha256": "a0a09a802ae7a318f9ddb86665afb3f06ef3b6bbda5b87a1a8d32a5e9e0d11b5",
+    "operation": "study.run",
+    "rpc_timeout_s": 0.05
+  },
+  "summary": {
+    "BLOCKED": 0,
+    "FAIL": 0,
+    "NOT_RUN": 2,
+    "PASS": 0,
+    "UNVERIFIED": 0
+  }
+}

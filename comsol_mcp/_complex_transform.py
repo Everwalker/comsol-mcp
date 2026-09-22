@@ -15,11 +15,47 @@ from ._execution_contract import ExecutionContractError
 
 COMPLEX_MODES = frozenset({"preserve", "real", "imag", "abs", "phase"})
 
+_ENGINE_TRANSFORM_FUNCTIONS = {
+    "real": "real",
+    "imag": "imag",
+    "abs": "abs",
+    "phase": "arg",
+}
+
+
+def effective_engine_expression(expression: str, mode: str) -> str:
+    """Return the COMSOL expression for a pre-statistics complex transform.
+
+    Result statistics must use one scalar field consistently for the mean,
+    second moment, RMS, and extrema.  Applying ``phase`` (or another mode)
+    after an average would compute ``arg(mean(f))`` rather than
+    ``mean(arg(f))``.  The engine has native real/imag/abs/arg expression
+    functions, so the caller can bind this expression to every numerical
+    feature participating in one aggregate.
+
+    ``preserve`` deliberately returns the requested expression unchanged;
+    preserve-mode statistics retain the complex field and use ``|f|²`` for
+    their population second moment.
+    """
+    if not isinstance(expression, str) or not expression.strip():
+        raise ExecutionContractError("INVALID_REQUEST", "expression must be a non-empty string")
+    if mode not in COMPLEX_MODES:
+        raise ExecutionContractError("API_UNSUPPORTED", f"unsupported complex_mode {mode!r}")
+    if mode == "preserve":
+        return expression
+    function = _ENGINE_TRANSFORM_FUNCTIONS[mode]
+    return f"{function}(({expression}))"
+
 
 def transform_complex_value(real_val: float, imag_val: float, mode: str) -> Any:
     """Transform a single complex scalar according to the requested mode."""
-    r = float(real_val)
-    i = float(imag_val)
+    try:
+        r = float(real_val)
+        i = float(imag_val)
+    except (TypeError, ValueError) as exc:
+        raise ExecutionContractError("COMPLEX_DATA_ERROR", "complex components must be numeric") from exc
+    if not math.isfinite(r) or not math.isfinite(i):
+        raise ExecutionContractError("COMPLEX_DATA_ERROR", "complex components must be finite")
     if mode == "preserve":
         return {"real": r, "imag": i}
     elif mode == "real":
@@ -40,7 +76,7 @@ def transform_complex_data(
     imag_data: Any,
     mode: str,
     *,
-    is_complex: bool = False,
+    is_complex: bool | None = None,
     allow_real_fallback: bool = False,
 ) -> Any:
     """Recursively transform real/imag arrays into the requested complex_mode representation.
@@ -51,16 +87,17 @@ def transform_complex_data(
     if mode not in COMPLEX_MODES:
         raise ExecutionContractError("API_UNSUPPORTED", f"unsupported complex_mode {mode!r}")
 
-    # Scalar case
-    if isinstance(real_data, (int, float)):
+    # Scalar case.  ``is_complex=None`` means the engine status was not read;
+    # it is not equivalent to a confirmed real field.
+    if isinstance(real_data, (int, float)) and not isinstance(real_data, bool):
         if imag_data is None:
-            if is_complex and not allow_real_fallback:
+            if is_complex is not False:
                 raise ExecutionContractError(
                     "COMPLEX_DATA_ERROR",
-                    "imaginary component missing for complex field evaluation",
+                    "imaginary component is unavailable while complex status is unknown or complex",
                 )
             imag_v = 0.0
-        elif isinstance(imag_data, (int, float)):
+        elif isinstance(imag_data, (int, float)) and not isinstance(imag_data, bool):
             imag_v = float(imag_data)
         else:
             raise ExecutionContractError(
@@ -72,10 +109,10 @@ def transform_complex_data(
     # Sequence case
     if isinstance(real_data, Sequence) and not isinstance(real_data, (str, bytes)):
         if imag_data is None:
-            if is_complex or not allow_real_fallback:
+            if is_complex is not False:
                 raise ExecutionContractError(
                     "COMPLEX_DATA_ERROR",
-                    "imaginary component sequence missing for complex field evaluation",
+                    "imaginary component sequence is unavailable while complex status is unknown or complex",
                 )
             return [
                 transform_complex_data(r, None, mode, is_complex=False, allow_real_fallback=True)
@@ -99,4 +136,4 @@ def transform_complex_data(
             for r, i in zip(real_data, imag_data)
         ]
 
-    return real_data
+    raise ExecutionContractError("COMPLEX_DATA_ERROR", f"real component has unsupported type {type(real_data).__name__}")

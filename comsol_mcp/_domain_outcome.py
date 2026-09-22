@@ -187,7 +187,7 @@ SELECTION_MUTATION_METHODS = frozenset({
 
 #: Overloaded methods that are getters with 0 args, setters with 1+ args
 OVERLOADED_SETTER_METHODS = frozenset({
-    "label", "active", "lengthUnit", "comments", "name", "tag",
+    "label", "active", "lengthUnit", "comments", "name", "tag", "model",
 })
 
 #: Pure accessor / query methods that never mutate the model
@@ -195,15 +195,20 @@ KNOWN_READ_METHODS = frozenset({
     "tags", "uniquetag", "getComsolVersion", "getFilePath",
     "getType", "getString", "getDouble", "getInt", "getBoolean",
     "getStringArray", "getDoubleArray", "getIntArray",
-    "getReal", "getImag", "getComplex", "getCoordinates",
+    "getReal", "getImag", "getComplex", "getCoordinates", "getCoordinatesShape",
     "getValue", "getData", "getEntryKeys", "getEntryKeyIndex", "getEntryTypes",
     "index", "ndims", "size", "hasField", "isInheriting", "isActive", "hasProduct",
-    "param", "variable", "component", "physics", "material", "study", "sol",
+    "param", "variable", "component", "modelNode", "physics", "material", "study", "sol",
     "mesh", "result", "numerical", "plot", "export", "field", "prop", "dataset",
     "feature", "selection", "measure", "cminpack", "batch", "func", "probe",
     "table", "node", "get", "problems", "getNData", "getTableData",
     "getColumnHeaders", "getRowHeaders", "getNRows", "getFilledReal",
     "getFilledImag", "getImagData", "getPVals",
+    "getLastComputationTime", "getLastComputationDate", "getLastComputationVersion",
+    "isComplex", "isAxisymmetric", "getSDim", "getSolutioninfo",
+    "getOuterSolnum", "getMaxInner", "getLevelNames", "getSolnum", "getSolnums",
+    "properties", "getPNames", "getPvals", "getUnits", "getUnit", "getPNamesOuter", "getPUnitsOuter",
+    "getSolverSequence",
 })
 
 

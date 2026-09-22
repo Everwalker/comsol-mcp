@@ -1,0 +1,76 @@
+{
+  "scope": "owned g33 export helper, offline contract test, and fresh artifact regression evidence",
+  "files": [
+    {
+      "path": "tools/g33_export_cases.py",
+      "bytes": 33116,
+      "sha256": "70276a6726b8faaa9670e482b7a19fa42e87520d9129b7a8fe6b38d056860929",
+      "forbidden_extension": false,
+      "secret_pattern_line_numbers": []
+    },
+    {
+      "path": "tests/test_g33_export_cases.py",
+      "bytes": 7322,
+      "sha256": "7e1031155121a00f6e6b6bceb397e039a236db48258597b586b9dfe43ebce1fd",
+      "forbidden_extension": false,
+      "secret_pattern_line_numbers": []
+    },
+    {
+      "path": "evidence/phase4_3/runs/artifact_regression_20260922T014543Z/interpreter",
+      "bytes": 149,
+      "sha256": "6e977affe098b46a3dbb38bdfbec327a25351963b7a2ddef179d9ac899be5e5a",
+      "forbidden_extension": false,
+      "secret_pattern_line_numbers": []
+    },
+    {
+      "path": "evidence/phase4_3/runs/artifact_regression_20260922T014543Z/stdout",
+      "bytes": 99,
+      "sha256": "4580ddeff467a2c9d8e5cb919b5ac01c67b12bf1df7cd5832cd60a51a6255df1",
+      "forbidden_extension": false,
+      "secret_pattern_line_numbers": []
+    },
+    {
+      "path": "evidence/phase4_3/runs/artifact_regression_20260922T014543Z/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "forbidden_extension": false,
+      "secret_pattern_line_numbers": []
+    },
+    {
+      "path": "evidence/phase4_3/runs/artifact_regression_20260922T014543Z/exit_code",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "forbidden_extension": false,
+      "secret_pattern_line_numbers": []
+    },
+    {
+      "path": "evidence/phase4_3/runs/artifact_regression_20260922T014543Z/manifest.json",
+      "bytes": 2468,
+      "sha256": "2c2056cc91bcab4c34e05a468d3020b30d526551a48cd56913ee1ef1b1fc1fb5",
+      "forbidden_extension": false,
+      "secret_pattern_line_numbers": []
+    },
+    {
+      "path": "evidence/phase4_3/runs/artifact_regression_20260922T014543Z/command",
+      "bytes": 377,
+      "sha256": "24baa4c1d6f5dce0baf7faf58c4d1c0cbba3147e299ee1409dfb267603104b1f",
+      "forbidden_extension": false,
+      "secret_pattern_line_numbers": []
+    },
+    {
+      "path": "evidence/phase4_3/runs/artifact_regression_20260922T014543Z/cwd",
+      "bytes": 64,
+      "sha256": "11e38c06e9d3ea3a84868e03b751f894294788adbd7897ad977a36f4d52cd176",
+      "forbidden_extension": false,
+      "secret_pattern_line_numbers": []
+    }
+  ],
+  "publication_exclusion_rules": [
+    "exclude credentials and secret-bearing files by content/path",
+    "exclude private key/certificate/env files and any token-bearing logs",
+    "exclude .partial/temp/reconstruction files",
+    "exclude COMSOL model/runtime receipts and server identifiers unless separately authorized",
+    "publish only command metadata, bounded test output, ledger assertions, and source hashes"
+  ],
+  "result": "PASS"
+}

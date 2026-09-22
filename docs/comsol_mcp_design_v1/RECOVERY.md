@@ -1,73 +1,60 @@
-# G3.3 Clean-room Recovery and Continuation Guide
+# G3.3 clean-room recovery and continuation
 
-## 1. Overview & Objective
+## Current recovery boundary
 
-This document specifies how an incoming agent or auditor can independently recover, verify, and continue the `Everwalker/comsol-mcp` project starting in an empty environment without access to previous local virtual environments, temporary folders, or shell sessions.
+The original workpack independently restores source at commit
+`2cb4627924d1a3240818ea7cd00453d4bd2d2da8`, tree
+`dd3095e89c640c19aeb151cd0e8efe4af3c55802` over the network. This has been rechecked in a
+new directory in the current session. It does not contain or restore commercial COMSOL,
+a license, credentials, private models, or the uncommitted repairs in this working tree.
+A final source workpack and published repair SHA are still pending acceptance; do not
+claim that the fixed PIN reproduces these current uncommitted changes.
 
----
+## Restore the fixed baseline
 
-## 2. Step-by-Step Clean Recovery Procedure
+Read the workpack's START_HERE.md, NEXT_GOAL.md, PIN.json, REVIEW.md, RESTORE.md and
+ACCEPTANCE.md. From the workpack root, choose a destination that does not exist:
 
-### Step 1: Environment Readiness Check
-Verify commercial installation paths:
-- **COMSOL 6.4:** `/Applications/COMSOL64/Multiphysics`
-- **JDK 11:** `/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home`
-- **Python:** Python 3.12+ (tested on Python 3.13.14)
-
-### Step 2: Bootstrap Repository
-From the root of the workpack:
 ```bash
-python3 tools/bootstrap.py
-```
-This script:
-1. Clones from `Everwalker/comsol-mcp` over the network.
-2. Checks out the exact pinned commit `2cb4627924d1a3240818ea7cd00453d4bd2d2da8`.
-3. Verifies git tree hash `dd3095e89c640c19aeb151cd0e8efe4af3c55802`.
-4. Creates working branch `handoff/g3_3`.
-
-### Step 3: Setup Virtual Environment
-```bash
-cd repository
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r constraints-macos-arm64-py313.txt
-pip install -e .
+python3 tools/bootstrap.py --destination <new-empty-destination>
+python3 tools/audit_repository.py --repo <new-empty-destination> --output <new-review-json>
 ```
 
-### Step 4: Verify Historical Ledgers Integrity
-Ensure historical evidence files match expected byte-exact hashes:
-- `evidence/phase4_1_acceptance.json`: `a2e91f37d021274c5a5f1321f03961c57271e1e614d17f23d3b0ef6627335278`
-- `evidence/phase4_2_acceptance.json`: `741e702cf019bfede8564cc032bccdbd30c83ee830ec46ce6a3e16356faa52c4`
-- `evidence/w17_acceptance.json`: `53daf14f51720f59e5fb8ed731083cd851b80bd3392c4fdeb7fee4a89a225197`
+Verify the restore receipt's commit/tree and per-file blob/hash checks. Do not silently
+track main or copy an old local checkout. Read the recovered AGENTS.md and original design
+specifications before implementation. The all-file inventory is not a semantic audit.
+The historical `audit/semantic_review.json` reference is missing; retain that fact.
 
-Correction details reside in `evidence/w17_correction.json` and `evidence/phase4_3/BASELINE_REVIEW.json`.
+Create a new branch and new virtual environment in the recovered source directory.
+The historical dependency file is used as a requirements file (it includes `-e .`):
 
-### Step 5: Verify AST Counterexamples
 ```bash
-.venv/bin/python ../tools/reproduce_w17_findings.py --repo . --output ../review/reproduce_w17.json
+python3 -m venv .venv-new
+.venv-new/bin/python -m pip install -r constraints-macos-arm64-py313.txt
+.venv-new/bin/python -m pip check
+.venv-new/bin/python -m pytest -q
 ```
-Verify that `reproduced` equals `0`.
 
-### Step 6: Execute Unit Tests
-```bash
-.venv/bin/pytest tests/test_g3_3_remediation.py \
-                 tests/test_g3_gate_a2_f02_reopen.py \
-                 tests/test_g3_results.py \
-                 tests/test_g3_w17.py \
-                 tests/test_java_worker.py
-```
-Expected result: 166 passed, 1 skipped.
+Record the actual interpreter and full freeze; the filename does not certify Python 3.13.
+The current fresh baseline used Python 3.14.7. Final repairs need their own machine lock,
+full tests and source-outside wheel install before publication. A missing external license
+is separate from a software defect and must not hide one.
 
-### Step 7: Execute Live COMSOL Acceptance Suite
-```bash
-.venv/bin/python tests/run_g3_3_live_acceptance.py
-```
-Expected result: All 18 cases C00 through C17 pass with zero failures. Output ledger is updated at `evidence/phase4_3_acceptance.json`.
+## Continue the current repairs
 
----
+Consult the latest correction ledger, baseline review and independent run findings.
+Historical phase4_1, phase4_2 and w17 files are protected; 600 current historical files
+were freshly compared against the network-restored PIN with no mismatches. Original
+failed development runs must remain available. New evidence must bind new source hashes.
 
-## 3. Strict Boundary & Stop Rule
+Follow G3_3_OPERATIONS.md for bounded public-MCP runs. Rebuild all test fixtures through
+new authorized MCP operations. Stored-solution acceptance loads the identical saved MPH
+hash in a fresh Worker and does not solve again; independent re-solving is another case.
+Use the same production checker for all negative controls. Treat source audits and fake
+control tests as their own evidence levels.
 
-> [!CAUTION]
-> **STOPPING CONDITION:** Workstream W17 is verified and certified under tag `G3_3_MAC_W17_VERIFIED_SCOPED`.
-> Do **NOT** advance into W18–W26 (Geometry mutation, physics generation, automated study chaining, etc.) without explicit instruction from the user.
+Before declaring completion, finish all locally executable required W17 cases, three-chain
+Gate A, dependency-based G2/G3 regressions, wheel resource/import checks, a clean-path
+restore of the final repaired source, publication scrub/hash audit and ordinary non-force
+synchronization with recorded SHAs. Until then keep overall acceptance false and do not
+enter W18. Windows, Intel Mac, COMSOL 6.3 and GUI remain unverified unless separately run.

@@ -76,6 +76,7 @@ from ._g2_engine import (
     _model as _bound_model,
     _typed_readback_comparison,
     _worker_failure_code,
+    _worker_failure_unknown,
 )
 
 # ---------------------------------------------------------------------------
@@ -828,10 +829,12 @@ def describe_engine_failure(exc: BaseException, method: str) -> dict[str, Any]:
     detail = str(exc)
     if len(detail) > 600:
         detail = detail[:600] + "…(truncated)"
+    unknown = _worker_failure_unknown(exc) or error_code_of(exc) == "EXECUTION_STATE_UNKNOWN"
     return {
         "code": error_code_of(exc),
         "message": f"COMSOL {method} call failed: {type(exc).__name__}: {detail}",
         "allowlist_entry_required": method if allowlist_rejected(exc) else None,
+        "execution_state_unknown": unknown,
     }
 
 

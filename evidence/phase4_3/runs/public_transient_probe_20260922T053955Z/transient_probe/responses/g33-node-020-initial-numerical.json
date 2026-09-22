@@ -1,0 +1,317 @@
+{
+  "_outer_isError": false,
+  "_structuredContent": {
+    "data": {
+      "action": "list",
+      "cleanup_failed": false,
+      "count": 0,
+      "dispatch_stage": "post_dispatch",
+      "domain_outcome": {
+        "cleanup_failed": false,
+        "dispatch_stage": "post_dispatch",
+        "execution_state_unknown": false,
+        "operation": "result.numerical_manage",
+        "state": "succeeded",
+        "verification_status": "NOT_APPLICABLE",
+        "witness": {
+          "dispatches": [
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "result",
+              "receiver": "h-3bfc0625-e1ba-4e9d-a469-e871f2035aab"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "numerical",
+              "receiver": "h-9a602375-3961-45c9-988e-a3eedb4e4f0b"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "tags",
+              "receiver": "h-6185a161-9f54-4b14-8a84-c3bdd25f8d6a"
+            }
+          ],
+          "engine_calls": 3,
+          "methods": [
+            "numerical",
+            "result",
+            "tags"
+          ],
+          "mutation_issued": false,
+          "mutation_method": null
+        }
+      },
+      "domain_state": "succeeded",
+      "effect": "project_write",
+      "execution_state_unknown": false,
+      "features": [],
+      "isolation_proof": {
+        "api_probe": {
+          "authenticated_api_success": true,
+          "denial_evidence_source": "server_access_log",
+          "loopback_address": "127.0.0.1",
+          "loopback_port": 60775,
+          "nonloopback_address": "192.168.100.152",
+          "nonloopback_api_exception_http_status": null,
+          "nonloopback_port": 60775,
+          "observed_at": "2026-09-22T05:40:09Z",
+          "probe_kind": "comsol_java_api",
+          "server_access_log": {
+            "entries": [
+              {
+                "http_status": 101,
+                "method": "GET",
+                "peer": "127.0.0.1",
+                "route": "/webbridge/websocket"
+              },
+              {
+                "http_status": 101,
+                "method": "GET",
+                "peer": "127.0.0.1",
+                "route": "/webbridge/websocket"
+              },
+              {
+                "http_status": 403,
+                "method": "GET",
+                "peer": "192.168.100.152",
+                "route": "/webbridge/websocket"
+              }
+            ],
+            "finished_at": "2026-09-22T05:40:09Z",
+            "inode": 29985320,
+            "java_request_id": "g2-valve-nonloopback-connect",
+            "offset_after": 261,
+            "offset_before": 0,
+            "parsed_nonloopback_entry": {
+              "http_status": 403,
+              "method": "GET",
+              "peer": "192.168.100.152",
+              "route": "/webbridge/websocket"
+            },
+            "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_transient_probe_20260922T053955Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+            "phase": "java_connect_only",
+            "raw_probe_started_after_capture": true,
+            "segment_sha256": "a40314811468495c33d53081bf85e304d727444f072d3f688a1738056dec772f",
+            "started_at": "2026-09-22T05:40:00Z",
+            "status": "PASS"
+          }
+        },
+        "birth": "Tue Sep 22 13:39:56 2026",
+        "config_inode": 14720294,
+        "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+        "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+        "endpoint": "127.0.0.1:60775",
+        "established_client_pids": [
+          83667,
+          83768
+        ],
+        "listener": {
+          "endpoint": "*:60775",
+          "local_endpoint": "*:60775",
+          "pid": 83667,
+          "raw": "java    83667 everwalker   59u  IPv6 0x637a181757690705      0t0  TCP *:60775 (LISTEN)",
+          "remote_endpoint": null,
+          "state": "LISTEN"
+        },
+        "listener_binding": "wildcard",
+        "loopback_listener": false,
+        "pid": 83667,
+        "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+        "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_transient_probe_20260922T053955Z/isolation_receipt.json",
+        "verified": true,
+        "worker_pid": 83768
+      },
+      "partial_change": false,
+      "readback": {
+        "readable": true,
+        "source": "engine.tags/get"
+      },
+      "tags": [],
+      "verification_status": "NOT_APPLICABLE"
+    },
+    "error": null,
+    "execution": {
+      "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+      "dirty": false,
+      "idempotency_key": "g33-node-020-initial-numerical",
+      "job_id": "48f418eb-6a3a-4dab-a619-d278c01cb887",
+      "model_ownership": "mcp_owned",
+      "model_ref": {
+        "generation": 1,
+        "model_tag": "mcp1",
+        "schema_version": 1,
+        "server_instance_id": "60936c2a9590639999e700ce05aa60383541ae64d65a4b45638b087717394bbd",
+        "session_id": "session-c19aea31e440ede7ac9e01f3"
+      },
+      "operation_id": "bd78a2f3-235b-4dc8-9509-281ba2368c3e",
+      "request_hash": "121f2801f968844d5d8b9b49788c86f7f43afd2f22ab5adfa7efb4300661f05d",
+      "request_id": "g33-node-initial-numerical",
+      "revision": 10,
+      "server_ownership": "shared",
+      "session_id": "session-c19aea31e440ede7ac9e01f3"
+    },
+    "success": true
+  },
+  "data": {
+    "action": "list",
+    "cleanup_failed": false,
+    "count": 0,
+    "dispatch_stage": "post_dispatch",
+    "domain_outcome": {
+      "cleanup_failed": false,
+      "dispatch_stage": "post_dispatch",
+      "execution_state_unknown": false,
+      "operation": "result.numerical_manage",
+      "state": "succeeded",
+      "verification_status": "NOT_APPLICABLE",
+      "witness": {
+        "dispatches": [
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "result",
+            "receiver": "h-3bfc0625-e1ba-4e9d-a469-e871f2035aab"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "numerical",
+            "receiver": "h-9a602375-3961-45c9-988e-a3eedb4e4f0b"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "tags",
+            "receiver": "h-6185a161-9f54-4b14-8a84-c3bdd25f8d6a"
+          }
+        ],
+        "engine_calls": 3,
+        "methods": [
+          "numerical",
+          "result",
+          "tags"
+        ],
+        "mutation_issued": false,
+        "mutation_method": null
+      }
+    },
+    "domain_state": "succeeded",
+    "effect": "project_write",
+    "execution_state_unknown": false,
+    "features": [],
+    "isolation_proof": {
+      "api_probe": {
+        "authenticated_api_success": true,
+        "denial_evidence_source": "server_access_log",
+        "loopback_address": "127.0.0.1",
+        "loopback_port": 60775,
+        "nonloopback_address": "192.168.100.152",
+        "nonloopback_api_exception_http_status": null,
+        "nonloopback_port": 60775,
+        "observed_at": "2026-09-22T05:40:09Z",
+        "probe_kind": "comsol_java_api",
+        "server_access_log": {
+          "entries": [
+            {
+              "http_status": 101,
+              "method": "GET",
+              "peer": "127.0.0.1",
+              "route": "/webbridge/websocket"
+            },
+            {
+              "http_status": 101,
+              "method": "GET",
+              "peer": "127.0.0.1",
+              "route": "/webbridge/websocket"
+            },
+            {
+              "http_status": 403,
+              "method": "GET",
+              "peer": "192.168.100.152",
+              "route": "/webbridge/websocket"
+            }
+          ],
+          "finished_at": "2026-09-22T05:40:09Z",
+          "inode": 29985320,
+          "java_request_id": "g2-valve-nonloopback-connect",
+          "offset_after": 261,
+          "offset_before": 0,
+          "parsed_nonloopback_entry": {
+            "http_status": 403,
+            "method": "GET",
+            "peer": "192.168.100.152",
+            "route": "/webbridge/websocket"
+          },
+          "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_transient_probe_20260922T053955Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+          "phase": "java_connect_only",
+          "raw_probe_started_after_capture": true,
+          "segment_sha256": "a40314811468495c33d53081bf85e304d727444f072d3f688a1738056dec772f",
+          "started_at": "2026-09-22T05:40:00Z",
+          "status": "PASS"
+        }
+      },
+      "birth": "Tue Sep 22 13:39:56 2026",
+      "config_inode": 14720294,
+      "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+      "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+      "endpoint": "127.0.0.1:60775",
+      "established_client_pids": [
+        83667,
+        83768
+      ],
+      "listener": {
+        "endpoint": "*:60775",
+        "local_endpoint": "*:60775",
+        "pid": 83667,
+        "raw": "java    83667 everwalker   59u  IPv6 0x637a181757690705      0t0  TCP *:60775 (LISTEN)",
+        "remote_endpoint": null,
+        "state": "LISTEN"
+      },
+      "listener_binding": "wildcard",
+      "loopback_listener": false,
+      "pid": 83667,
+      "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+      "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_transient_probe_20260922T053955Z/isolation_receipt.json",
+      "verified": true,
+      "worker_pid": 83768
+    },
+    "partial_change": false,
+    "readback": {
+      "readable": true,
+      "source": "engine.tags/get"
+    },
+    "tags": [],
+    "verification_status": "NOT_APPLICABLE"
+  },
+  "error": null,
+  "execution": {
+    "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+    "dirty": false,
+    "idempotency_key": "g33-node-020-initial-numerical",
+    "job_id": "48f418eb-6a3a-4dab-a619-d278c01cb887",
+    "model_ownership": "mcp_owned",
+    "model_ref": {
+      "generation": 1,
+      "model_tag": "mcp1",
+      "schema_version": 1,
+      "server_instance_id": "60936c2a9590639999e700ce05aa60383541ae64d65a4b45638b087717394bbd",
+      "session_id": "session-c19aea31e440ede7ac9e01f3"
+    },
+    "operation_id": "bd78a2f3-235b-4dc8-9509-281ba2368c3e",
+    "request_hash": "121f2801f968844d5d8b9b49788c86f7f43afd2f22ab5adfa7efb4300661f05d",
+    "request_id": "g33-node-initial-numerical",
+    "revision": 10,
+    "server_ownership": "shared",
+    "session_id": "session-c19aea31e440ede7ac9e01f3"
+  },
+  "success": true
+}

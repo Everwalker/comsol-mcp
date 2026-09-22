@@ -1,0 +1,25 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+____ TestWorkerAllowlist.test_every_dispatched_engine_method_is_allowlisted ____
+
+self = <tests.test_java_worker.TestWorkerAllowlist object at 0x10963f390>
+
+    def test_every_dispatched_engine_method_is_allowlisted(self):
+        methods = _allowlist_block("METHODS")
+        model_util = _allowlist_block("MODEL_UTIL")
+        dispatched = _dispatched_engine_methods()
+        missing = {name: sorted(where)[:3] for name, where in dispatched.items()
+                   if name not in methods | model_util
+                   and name not in KNOWN_NON_API_PROBES
+                   and name not in WITHHELD_PENDING_TABLE_REPAIR}
+>       assert not missing, (
+            "these engine methods are dispatched by the G3 modules but the worker allow-list would reject "
+            f"them with METHOD_REJECTED: {missing}"
+        )
+E       AssertionError: these engine methods are dispatched by the G3 modules but the worker allow-list would reject them with METHOD_REJECTED: {'setColumnHeaders': ['_g3_results.py:4288']}
+E       assert not {'setColumnHeaders': ['_g3_results.py:4288']}
+
+tests/test_java_worker.py:582: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_java_worker.py::TestWorkerAllowlist::test_every_dispatched_engine_method_is_allowlisted
+1 failed, 29 deselected in 0.04s

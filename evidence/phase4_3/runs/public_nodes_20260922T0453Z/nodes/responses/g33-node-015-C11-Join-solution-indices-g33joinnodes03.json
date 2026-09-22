@@ -1,0 +1,259 @@
+{
+  "_outer_isError": false,
+  "_structuredContent": {
+    "data": {
+      "axis_metadata_complete": true,
+      "axis_metadata_source": "SolutionInfo.getSolnum(outer, strict) + getPNames/getPvals/getUnits",
+      "binding_complete": true,
+      "binding_source": "dataset property 'solution'/'data' resolved against model.sol().tags(); SolutionInfo.getSolnum(outer, strict)",
+      "dataset": "g33joinnodes03",
+      "dataset_binding": {
+        "binding_complete": true,
+        "component": "comp1",
+        "dataset": "g33joinnodes03",
+        "dataset_chain": [
+          "dset1",
+          "g33joinnodes03"
+        ],
+        "dataset_edges": [
+          {
+            "from": "g33joinnodes03",
+            "property": "data",
+            "to": "dset1"
+          },
+          {
+            "from": "g33joinnodes03",
+            "property": "data2",
+            "to": "dset1"
+          }
+        ],
+        "dataset_type": "Join",
+        "error": null,
+        "geometry": "geom1",
+        "properties": {
+          "data": "dset1",
+          "data2": "dset1"
+        },
+        "provenance": {
+          "dataset_tags": [
+            "dset1",
+            "g33cptnodes01",
+            "g33linenodes02",
+            "g33joinnodes03"
+          ],
+          "mutation_methods_called": [],
+          "read_only": true,
+          "solution_tags": [
+            "sol1"
+          ]
+        },
+        "read_errors": [],
+        "requested_solution": null,
+        "solution": "sol1",
+        "sources": {
+          "component": "upstream dataset reference(s): ['dset1', 'dset1']",
+          "geometry": "upstream dataset reference(s): ['dset1', 'dset1']",
+          "solution": "upstream dataset reference(s): ['dset1', 'dset1']"
+        }
+      },
+      "inner_indices": [
+        1
+      ],
+      "level_names": [],
+      "outer_indices": [
+        1
+      ],
+      "pair_mapping_complete": true,
+      "parameters": {
+        "by_pair": {
+          "1:1": {
+            "names": [],
+            "solnum": 1,
+            "units": [],
+            "values": []
+          }
+        }
+      },
+      "parameters_complete": false,
+      "parameters_source": "SolutionInfo.getPNames(int[][])/getPvals(int[][])/getUnits(int[][])",
+      "read_errors": [
+        {
+          "code": "SOLUTION_METADATA_ERROR",
+          "message": "{\"completed_at_ms\": \"1790051825242\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1790051825241\", \"request_id\": \"wrk-52a5b994-1c9a-4f7d-8bb9-92269856def7\", \"started_at_ms\": \"1790051825241\", \"status\": \"FAILED\", \"type\": \"call\"}",
+          "method": "getPNames"
+        },
+        {
+          "code": "SOLUTION_METADATA_ERROR",
+          "message": "{\"completed_at_ms\": \"1790051825243\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1790051825242\", \"request_id\": \"wrk-0c8cc160-bf2e-4518-aa08-9d6399dff21f\", \"started_at_ms\": \"1790051825242\", \"status\": \"FAILED\", \"type\": \"call\"}",
+          "method": "getPvals"
+        },
+        {
+          "code": "SOLUTION_METADATA_ERROR",
+          "message": "{\"completed_at_ms\": \"1790051825244\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1790051825243\", \"request_id\": \"wrk-5abbb380-f4d1-4598-a52d-85e58aa2703d\", \"started_at_ms\": \"1790051825243\", \"status\": \"FAILED\", \"type\": \"call\"}",
+          "method": "getUnits"
+        }
+      ],
+      "solnum_pairs": [
+        {
+          "inner": 1,
+          "outer": 1,
+          "solnum": 1
+        }
+      ],
+      "solution": "sol1",
+      "solution_count": 1,
+      "study": null,
+      "time_axis_source": "steady: no time axis",
+      "time_values": []
+    },
+    "error": null,
+    "execution": {
+      "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+      "dirty": false,
+      "idempotency_key": "g33-node-015-C11-Join-solution-indices-g33joinnodes03",
+      "job_id": "f1838d1c-e748-4a02-9889-e99e61599e8f",
+      "model_ownership": "mcp_owned",
+      "model_ref": {
+        "generation": 1,
+        "model_tag": "mcp1",
+        "schema_version": 1,
+        "server_instance_id": "5e1d0909eb16dbad4e31c62dd19f0b746bc7ba5a5cadea64ff3d0708ce1bbe7a",
+        "session_id": "session-d276ca0ec5b8a51f7e0aac34"
+      },
+      "operation_id": "e517a142-99e2-4666-8c02-636e7d6dc831",
+      "request_hash": "70c6a629e3a65e81da7293bf3fc4685fa4a5ef048c1ffdc9f8cf56e5536da4a6",
+      "request_id": "g33-node-C11-Join-solution-indices-g33joinnodes03",
+      "revision": 8,
+      "server_ownership": "shared",
+      "session_id": "session-d276ca0ec5b8a51f7e0aac34"
+    },
+    "success": true
+  },
+  "data": {
+    "axis_metadata_complete": true,
+    "axis_metadata_source": "SolutionInfo.getSolnum(outer, strict) + getPNames/getPvals/getUnits",
+    "binding_complete": true,
+    "binding_source": "dataset property 'solution'/'data' resolved against model.sol().tags(); SolutionInfo.getSolnum(outer, strict)",
+    "dataset": "g33joinnodes03",
+    "dataset_binding": {
+      "binding_complete": true,
+      "component": "comp1",
+      "dataset": "g33joinnodes03",
+      "dataset_chain": [
+        "dset1",
+        "g33joinnodes03"
+      ],
+      "dataset_edges": [
+        {
+          "from": "g33joinnodes03",
+          "property": "data",
+          "to": "dset1"
+        },
+        {
+          "from": "g33joinnodes03",
+          "property": "data2",
+          "to": "dset1"
+        }
+      ],
+      "dataset_type": "Join",
+      "error": null,
+      "geometry": "geom1",
+      "properties": {
+        "data": "dset1",
+        "data2": "dset1"
+      },
+      "provenance": {
+        "dataset_tags": [
+          "dset1",
+          "g33cptnodes01",
+          "g33linenodes02",
+          "g33joinnodes03"
+        ],
+        "mutation_methods_called": [],
+        "read_only": true,
+        "solution_tags": [
+          "sol1"
+        ]
+      },
+      "read_errors": [],
+      "requested_solution": null,
+      "solution": "sol1",
+      "sources": {
+        "component": "upstream dataset reference(s): ['dset1', 'dset1']",
+        "geometry": "upstream dataset reference(s): ['dset1', 'dset1']",
+        "solution": "upstream dataset reference(s): ['dset1', 'dset1']"
+      }
+    },
+    "inner_indices": [
+      1
+    ],
+    "level_names": [],
+    "outer_indices": [
+      1
+    ],
+    "pair_mapping_complete": true,
+    "parameters": {
+      "by_pair": {
+        "1:1": {
+          "names": [],
+          "solnum": 1,
+          "units": [],
+          "values": []
+        }
+      }
+    },
+    "parameters_complete": false,
+    "parameters_source": "SolutionInfo.getPNames(int[][])/getPvals(int[][])/getUnits(int[][])",
+    "read_errors": [
+      {
+        "code": "SOLUTION_METADATA_ERROR",
+        "message": "{\"completed_at_ms\": \"1790051825242\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1790051825241\", \"request_id\": \"wrk-52a5b994-1c9a-4f7d-8bb9-92269856def7\", \"started_at_ms\": \"1790051825241\", \"status\": \"FAILED\", \"type\": \"call\"}",
+        "method": "getPNames"
+      },
+      {
+        "code": "SOLUTION_METADATA_ERROR",
+        "message": "{\"completed_at_ms\": \"1790051825243\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1790051825242\", \"request_id\": \"wrk-0c8cc160-bf2e-4518-aa08-9d6399dff21f\", \"started_at_ms\": \"1790051825242\", \"status\": \"FAILED\", \"type\": \"call\"}",
+        "method": "getPvals"
+      },
+      {
+        "code": "SOLUTION_METADATA_ERROR",
+        "message": "{\"completed_at_ms\": \"1790051825244\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1790051825243\", \"request_id\": \"wrk-5abbb380-f4d1-4598-a52d-85e58aa2703d\", \"started_at_ms\": \"1790051825243\", \"status\": \"FAILED\", \"type\": \"call\"}",
+        "method": "getUnits"
+      }
+    ],
+    "solnum_pairs": [
+      {
+        "inner": 1,
+        "outer": 1,
+        "solnum": 1
+      }
+    ],
+    "solution": "sol1",
+    "solution_count": 1,
+    "study": null,
+    "time_axis_source": "steady: no time axis",
+    "time_values": []
+  },
+  "error": null,
+  "execution": {
+    "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+    "dirty": false,
+    "idempotency_key": "g33-node-015-C11-Join-solution-indices-g33joinnodes03",
+    "job_id": "f1838d1c-e748-4a02-9889-e99e61599e8f",
+    "model_ownership": "mcp_owned",
+    "model_ref": {
+      "generation": 1,
+      "model_tag": "mcp1",
+      "schema_version": 1,
+      "server_instance_id": "5e1d0909eb16dbad4e31c62dd19f0b746bc7ba5a5cadea64ff3d0708ce1bbe7a",
+      "session_id": "session-d276ca0ec5b8a51f7e0aac34"
+    },
+    "operation_id": "e517a142-99e2-4666-8c02-636e7d6dc831",
+    "request_hash": "70c6a629e3a65e81da7293bf3fc4685fa4a5ef048c1ffdc9f8cf56e5536da4a6",
+    "request_id": "g33-node-C11-Join-solution-indices-g33joinnodes03",
+    "revision": 8,
+    "server_ownership": "shared",
+    "session_id": "session-d276ca0ec5b8a51f7e0aac34"
+  },
+  "success": true
+}

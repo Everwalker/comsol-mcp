@@ -1,0 +1,18 @@
+{
+  "run_id": "c13_allowlist_regression_20260922T034816Z",
+  "created_at_utc": "2026-09-22T03:48:39.660249+00:00",
+  "scope": "read-only current-tree regression; no COMSOL worker or server started",
+  "command": [
+    "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "tests/test_java_worker.py",
+    "-k",
+    "every_dispatched_engine_method_is_allowlisted"
+  ],
+  "exit_code": 1,
+  "status": "FAIL",
+  "failure": "current _g3_results.py dispatches setColumnHeaders at the reported line, but PersistentComsolWorker.METHODS does not contain setColumnHeaders; this is outside this C13 change and no source was modified to hide it",
+  "related_scope": "C13 shape bridge compile and targeted tests are recorded separately in c13_shape_bridge_20260922T034659Z"
+}

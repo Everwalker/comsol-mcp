@@ -1,0 +1,96 @@
+{
+  "recorded_at": "2026-09-22T03:58:38.510312+00:00",
+  "overall_acceptance": false,
+  "runs": [
+    {
+      "run": "public_control_20260922T0334Z",
+      "scope": "C15 active control and same-key replay subset",
+      "status": {
+        "status": "PASS",
+        "started_at": "2026-09-22T03:33:49.711594+00:00",
+        "scope": "LIVE_PUBLIC_MCP_DEVELOPMENT_ACCEPTANCE",
+        "cases_requested": [
+          "C15"
+        ],
+        "exit_code": 0,
+        "finished_at": "2026-09-22T03:34:16.558360+00:00",
+        "elapsed_seconds": 26.84671274991706,
+        "changed_source_files": [],
+        "final_source_acceptance_eligible": true
+      },
+      "run_status_sha256": "8ae305ae8c9cd5e264e748f4530d376d315c0a772076076b95f938b3c15fa04f",
+      "not_final_release_acceptance": true
+    },
+    {
+      "run": "public_probe_20260922T0354Z",
+      "scope": "C14 isolated probe subset",
+      "status": {
+        "status": "FAIL",
+        "started_at": "2026-09-22T03:53:05.295106+00:00",
+        "scope": "LIVE_PUBLIC_MCP_DEVELOPMENT_ACCEPTANCE",
+        "cases_requested": [
+          "C14"
+        ],
+        "exit_code": 1,
+        "error_type": "ExceptionGroup",
+        "error": "unhandled errors in a TaskGroup (1 sub-exception)",
+        "finished_at": "2026-09-22T03:53:32.411362+00:00",
+        "elapsed_seconds": 27.116212917026132,
+        "changed_source_files": [],
+        "final_source_acceptance_eligible": true
+      },
+      "run_status_sha256": "eb3a1f2f2b6a52cf995bd11ffd9b902be809c444c2f4edf8219d7398cbfa83e2",
+      "not_final_release_acceptance": true
+    },
+    {
+      "run": "public_cutplane_20260922T0357Z",
+      "scope": "C11 CutPlane subset",
+      "status": {
+        "status": "FAIL",
+        "started_at": "2026-09-22T03:54:59.192477+00:00",
+        "scope": "LIVE_PUBLIC_MCP_DEVELOPMENT_ACCEPTANCE",
+        "cases_requested": [
+          "C11-CutPlane"
+        ],
+        "exit_code": 1,
+        "error_type": "ExceptionGroup",
+        "error": "unhandled errors in a TaskGroup (1 sub-exception)",
+        "finished_at": "2026-09-22T03:55:25.758208+00:00",
+        "elapsed_seconds": 26.565681917010807,
+        "changed_source_files": [
+          "comsol_mcp/worker_java/PersistentComsolWorker.java"
+        ],
+        "final_source_acceptance_eligible": false
+      },
+      "run_status_sha256": "a42cb5d53404ba9f736fbac8eabaace3295e62fd837fa81609219ffd2c46c263",
+      "not_final_release_acceptance": true
+    },
+    {
+      "run": "public_m1_20260922T0359Z",
+      "scope": "M1 C04 constant nonunit volume",
+      "status": {
+        "status": "PASS",
+        "started_at": "2026-09-22T03:56:52.639954+00:00",
+        "scope": "LIVE_PUBLIC_MCP_DEVELOPMENT_ACCEPTANCE",
+        "cases_requested": [
+          "C04"
+        ],
+        "exit_code": 0,
+        "finished_at": "2026-09-22T03:57:18.783588+00:00",
+        "elapsed_seconds": 26.14354695903603,
+        "changed_source_files": [],
+        "final_source_acceptance_eligible": true
+      },
+      "run_status_sha256": "a06b6a45c9583748bb68f61dcd46ddf8e4c378f896dfc6fb4ace9195f711770a",
+      "not_final_release_acceptance": true
+    }
+  ],
+  "open": [
+    "C14 table header allowlist and prevalidation fixed but need fresh live rerun",
+    "C11 CutPlane invalid comp property needs correction",
+    "Full numeric central variance, axes, coordinate gates pending",
+    "C13 budget integration and live export pending",
+    "Gate A final source reopen and negative controls pending",
+    "Final software, packaging, semantic audit and publish pending"
+  ]
+}

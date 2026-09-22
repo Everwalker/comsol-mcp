@@ -1,0 +1,12 @@
+{
+  "scope": "OFFICIAL_DOCUMENTATION_REFERENCE_NOT_RUNTIME_EVIDENCE",
+  "title": "COMSOL Programming Reference Manual",
+  "version": "6.4.0.293",
+  "document_path": "doc/pdf/COMSOL_Multiphysics/COMSOL_ProgrammingReferenceManual.pdf",
+  "page": 181,
+  "source_sha256": "5b7f23ad2eae77f59d71935f4f6c9b6b9ede380dc34da065181841e512bbc105",
+  "finding": "A probe is created via model.probe().create(tag,type), then model.probe(tag).model(component_tag) assigns its model component. genResult takes a solver sequence tag and is required explicitly for API-driven solves. GlobalVariable is listed as a supported probe type on page182; its name does not establish component-free solver use.",
+  "local_api_check": "ModelEntity javap confirms model() getter and model(String) setter. TableBaseFeature exposes column headers and real/imag matrices but no time getters.",
+  "runtime_failure_reference": "../public_transient_probe_20260922T0525Z/transcript.json",
+  "copy_policy": "Reference metadata and paraphrase only; no vendor documentation corpus or jar included."
+}

@@ -12149,7 +12149,7 @@
       "mcp_tool_name": "result_field_export",
       "domain": "result",
       "purpose": "导出大复场/解向量及坐标、单位、hash",
-      "arguments_signature": "spec:EvaluationSpec,format:str,destination:str",
+      "arguments_signature": "spec:EvaluationSpec,format:str,destination:str,overwrite:bool?",
       "effect": "FILE_WRITE",
       "scope": "model",
       "gate": "G4",
@@ -12192,6 +12192,10 @@
           },
           "destination": {
             "type": "string"
+          },
+          "overwrite": {
+            "type": "boolean",
+            "default": false
           }
         },
         "required": [
@@ -12329,7 +12333,7 @@
       "mcp_tool_name": "probe_create",
       "domain": "probe",
       "purpose": "创建probe、表达式、选区与表",
-      "arguments_signature": "tag:str,type_id:str,definition:object",
+      "arguments_signature": "tag:str,type_id:str,definition:object,component:str?",
       "effect": "WRITE",
       "scope": "model",
       "gate": "G4",
@@ -12369,6 +12373,10 @@
           },
           "type_id": {
             "type": "string"
+          },
+          "component": {
+            "type": "string",
+            "minLength": 1
           },
           "definition": {
             "type": "object"
@@ -15610,7 +15618,7 @@
       "mcp_tool_name": "artifact_read",
       "domain": "artifact",
       "purpose": "分块读取授权Artifact；保留完整文件",
-      "arguments_signature": "artifact_id:str,offset:int?,length:int?",
+      "arguments_signature": "artifact_id:str,offset:int?,length:int?,expected_sha256:str?,expected_chunk_sha256:str?",
       "effect": "READ",
       "scope": "project",
       "gate": "G4",
@@ -15637,6 +15645,14 @@
           },
           "length": {
             "type": "integer"
+          },
+          "expected_sha256": {
+            "type": "string",
+            "pattern": "^[A-Fa-f0-9]{64}$"
+          },
+          "expected_chunk_sha256": {
+            "type": "string",
+            "pattern": "^[A-Fa-f0-9]{64}$"
           }
         },
         "required": [

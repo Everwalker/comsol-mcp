@@ -1,0 +1,129 @@
+{
+  "generated_at": "2026-09-22T04:49:43.555252+00:00",
+  "status": "FINAL_VALIDATION_PENDING",
+  "scope": "Impact matrix for current G3.3 changes; full software suite additionally covers unchanged G0-G3 contracts.",
+  "groups": [
+    {
+      "area": "result numerical semantics",
+      "production_paths": [
+        "comsol_mcp/_g3_results.py",
+        "comsol_mcp/_measure_spec.py",
+        "comsol_mcp/_solution_binding.py",
+        "comsol_mcp/_complex_transform.py",
+        "comsol_mcp/_dataset_binding.py"
+      ],
+      "required_control_tests": [
+        "tests/test_g3_results.py",
+        "tests/test_g3_w17.py",
+        "tests/test_g3_wiring.py",
+        "tests/test_dataset_binding.py",
+        "tests/test_g3_3_core_numeric_contracts.py"
+      ],
+      "required_live_cases": [
+        "C04",
+        "C05",
+        "C06",
+        "C07",
+        "C08",
+        "C09",
+        "C10",
+        "C11",
+        "C03"
+      ],
+      "reason": "Result values, axes and provenance affect both new evaluations and persisted-solution reads."
+    },
+    {
+      "area": "typed node and definitions probe writes",
+      "production_paths": [
+        "comsol_mcp/_g3_results.py",
+        "comsol_mcp/_probe_manage.py"
+      ],
+      "required_control_tests": [
+        "tests/test_results_typed_crud.py",
+        "tests/test_probe_semantics.py",
+        "tests/test_g33_node_probe_cases.py"
+      ],
+      "required_live_cases": [
+        "C11",
+        "C14"
+      ],
+      "reason": "Preflight and setter failures must preserve dispatch witnesses, real applied state and user nodes."
+    },
+    {
+      "area": "artifact serialization and bounded access",
+      "production_paths": [
+        "comsol_mcp/_artifact_store.py",
+        "comsol_mcp/_result_budget.py"
+      ],
+      "required_control_tests": [
+        "tests/test_g3_d17_artifact_service.py",
+        "tests/test_g3_artifact_hardening.py",
+        "tests/test_result_budget.py",
+        "tests/test_g33_export_cases.py"
+      ],
+      "required_live_cases": [
+        "C12",
+        "C13"
+      ],
+      "reason": "Export uses result semantics and must propagate UNKNOWN/cleanup failure before atomic publication."
+    },
+    {
+      "area": "dispatch and native bridge",
+      "production_paths": [
+        "comsol_mcp/_domain_outcome.py",
+        "comsol_mcp/worker_java/PersistentComsolWorker.java"
+      ],
+      "required_control_tests": [
+        "tests/test_g3_domain_outcome.py",
+        "tests/test_execution_state_propagation.py",
+        "tests/test_java_worker.py",
+        "tests/test_coordinates_shape_bridge.py",
+        "tests/test_tool_classification.py",
+        "tests/test_execution_contract.py"
+      ],
+      "required_live_cases": [
+        "C02",
+        "C15"
+      ],
+      "reason": "Read/write classification and native getter aliases affect witnesses and original-job state."
+    },
+    {
+      "area": "saved model checker",
+      "production_paths": [
+        "comsol_mcp/_gate_a_reopen.py"
+      ],
+      "required_control_tests": [
+        "tests/test_g3_gate_a2_f02_reopen.py",
+        "tests/test_g3_gate_a_tolerance_semantics.py",
+        "tests/test_g33_reopen_fail_closed.py",
+        "tests/test_atomic_save.py"
+      ],
+      "required_live_cases": [
+        "C03"
+      ],
+      "reason": "Strict hash, scalar shape and settings checks require fresh same-file readback plus real negative models."
+    },
+    {
+      "area": "public schemas and packaging",
+      "production_paths": [
+        "comsol_mcp/data/g2/02_ACTION_CATALOG.json",
+        "comsol_mcp/data/g2/common.schema.json"
+      ],
+      "required_control_tests": [
+        "tests/test_g2_registry_packaging.py",
+        "tests/test_registration.py",
+        "tests/test_g2_w08_w12.py",
+        "tests/test_mcp_gateway.py"
+      ],
+      "required_live_cases": [
+        "C16"
+      ],
+      "reason": "Catalog arguments and packaged resources must agree with actual public field export/chunk operations."
+    }
+  ],
+  "not_claimed": [
+    "Unchanged historical live G2/G3 reports do not certify modified result or save/binding paths.",
+    "Windows/6.3/Intel/GUI remain UNVERIFIED."
+  ],
+  "final_evidence": null
+}

@@ -1,0 +1,509 @@
+{
+  "model_sha256": "a1a3213e5bbbc691d8d214952de56b5f2eb1e0f9bbe8aa89b0768a255f9acc73",
+  "byte_size": 1738734,
+  "dataset": "dset1",
+  "solution": "sol1",
+  "initial_state": {
+    "datasets": [
+      "dset1"
+    ],
+    "solutions": [
+      "sol1"
+    ],
+    "derived_values": [],
+    "material_k": [
+      "400[W/(m*K)]"
+    ],
+    "left_T": "293.15[K]",
+    "right_T": "353.15[K]",
+    "solver_features": [
+      "st1",
+      "v1",
+      "t1"
+    ],
+    "study_tlist": "range(0, 0.5, 2.0)",
+    "solver_tlist": "range(0, 0.5, 2.0)",
+    "solver_rtol": "0.01"
+  },
+  "solver_settings": {
+    "datasets": [
+      "dset1"
+    ],
+    "solutions": [
+      "sol1"
+    ],
+    "derived_values": [],
+    "material_k": [
+      "400[W/(m*K)]"
+    ],
+    "left_T": "293.15[K]",
+    "right_T": "353.15[K]",
+    "solver_features": [
+      "st1",
+      "v1",
+      "t1"
+    ],
+    "study_tlist": "range(0, 0.5, 2.0)",
+    "solver_tlist": "range(0, 0.5, 2.0)",
+    "solver_rtol": "0.01"
+  },
+  "derived_values": [],
+  "builder_model_ref": {
+    "schema_version": 1,
+    "session_id": "session-16c02e40abf129bd537fd990",
+    "server_instance_id": "d675c26c4a4918ca8a3a453cdb958cad141dd2a3352d00a5dcf5352a49a1662f",
+    "model_tag": "mcp2",
+    "generation": 1
+  },
+  "point_readback": {
+    "values": [
+      [
+        [
+          293.1499999999978,
+          293.1500000011541,
+          293.15001296154196
+        ],
+        [
+          293.27411927033944,
+          294.70068776489126,
+          306.9005043736273
+        ],
+        [
+          294.22506680583274,
+          299.1022967213646,
+          316.69880809545685
+        ],
+        [
+          295.858256490612,
+          303.5689550042192,
+          322.46338003179017
+        ],
+        [
+          297.74128924098557,
+          307.4843865655843,
+          326.37255575551274
+        ]
+      ]
+    ],
+    "points": [
+      {
+        "x": 0.0125,
+        "y": 0.005
+      },
+      {
+        "x": 0.025,
+        "y": 0.005
+      },
+      {
+        "x": 0.0375,
+        "y": 0.005
+      }
+    ],
+    "point_count": 3,
+    "expressions": [
+      "T"
+    ],
+    "coordinate_unit": "m",
+    "frame": "spatial",
+    "coordinate_readback": {
+      "status": "VERIFIED",
+      "coordinates": [
+        [
+          0.0125,
+          0.025,
+          0.0375
+        ],
+        [
+          0.005,
+          0.005,
+          0.005
+        ]
+      ]
+    },
+    "complex_mode": "real",
+    "cleanup": {
+      "tag": "cmssp1",
+      "type_id": "Interp",
+      "created": true,
+      "removed": true,
+      "cleanup_failed": false,
+      "error": null,
+      "verified_removed": true
+    },
+    "status": {
+      "ok": true,
+      "engine_error": null,
+      "cleanup_failed": false
+    },
+    "domain_state": "succeeded",
+    "verification_status": "NOT_APPLICABLE",
+    "execution_state_unknown": false,
+    "partial_change": false,
+    "cleanup_failed": false,
+    "dispatch_stage": "post_dispatch",
+    "domain_outcome": {
+      "operation": "result.at_points",
+      "state": "succeeded",
+      "verification_status": "NOT_APPLICABLE",
+      "cleanup_failed": false,
+      "execution_state_unknown": false,
+      "dispatch_stage": "post_dispatch",
+      "witness": {
+        "engine_calls": 26,
+        "mutation_method": "getSDim",
+        "mutation_issued": true,
+        "methods": [
+          "component",
+          "create",
+          "dataset",
+          "geom",
+          "get",
+          "getBoolean",
+          "getCoordinates",
+          "getData",
+          "getSDim",
+          "getString",
+          "isAxisymmetric",
+          "isComplex",
+          "lengthUnit",
+          "numerical",
+          "remove",
+          "result",
+          "run",
+          "set",
+          "setInterpolationCoordinates",
+          "spatialCoord",
+          "tags"
+        ],
+        "dispatches": [
+          {
+            "command": "call",
+            "method": "result",
+            "args_count": 0,
+            "receiver": "h-6f598b42-249c-4406-ac3e-c65e26a11cf2",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "numerical",
+            "args_count": 0,
+            "receiver": "h-4cda0c41-ea34-4126-b4cc-91f3e9921298",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "dataset",
+            "args_count": 0,
+            "receiver": "h-4cda0c41-ea34-4126-b4cc-91f3e9921298",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-5bef1862-4cd6-4f23-aa8a-985285712266",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "get",
+            "args_count": 1,
+            "receiver": "h-5bef1862-4cd6-4f23-aa8a-985285712266",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getString",
+            "args_count": 1,
+            "receiver": "h-cc9c9c1f-aabb-4bd1-bac9-0dc4e37d1661",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getString",
+            "args_count": 1,
+            "receiver": "h-cc9c9c1f-aabb-4bd1-bac9-0dc4e37d1661",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "component",
+            "args_count": 1,
+            "receiver": "h-6f598b42-249c-4406-ac3e-c65e26a11cf2",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "geom",
+            "args_count": 1,
+            "receiver": "h-62fdc2d8-b52e-4c5a-9470-516a2a659373",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "lengthUnit",
+            "args_count": 0,
+            "receiver": "h-edb9528f-8669-444c-b5d1-e4be24373cfc",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getSDim",
+            "args_count": 0,
+            "receiver": "h-edb9528f-8669-444c-b5d1-e4be24373cfc",
+            "is_mutation": true
+          },
+          {
+            "command": "call",
+            "method": "isAxisymmetric",
+            "args_count": 0,
+            "receiver": "h-edb9528f-8669-444c-b5d1-e4be24373cfc",
+            "is_mutation": true
+          },
+          {
+            "command": "call",
+            "method": "component",
+            "args_count": 1,
+            "receiver": "h-6f598b42-249c-4406-ac3e-c65e26a11cf2",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "spatialCoord",
+            "args_count": 0,
+            "receiver": "h-5056caf7-3066-4b94-abef-a154b3b78499",
+            "is_mutation": true
+          },
+          {
+            "command": "call",
+            "method": "getBoolean",
+            "args_count": 1,
+            "receiver": "h-edb9528f-8669-444c-b5d1-e4be24373cfc",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-01c466d9-3fc8-496f-be09-23db93c31b9a",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "create",
+            "args_count": 2,
+            "receiver": "h-01c466d9-3fc8-496f-be09-23db93c31b9a",
+            "is_mutation": true
+          },
+          {
+            "command": "call",
+            "method": "set",
+            "args_count": 2,
+            "receiver": "h-2113d971-5d51-430b-ba07-4044d091acc9",
+            "is_mutation": true
+          },
+          {
+            "command": "call",
+            "method": "set",
+            "args_count": 2,
+            "receiver": "h-2113d971-5d51-430b-ba07-4044d091acc9",
+            "is_mutation": true
+          },
+          {
+            "command": "call",
+            "method": "setInterpolationCoordinates",
+            "args_count": 1,
+            "receiver": "h-2113d971-5d51-430b-ba07-4044d091acc9",
+            "is_mutation": true
+          },
+          {
+            "command": "call",
+            "method": "run",
+            "args_count": 0,
+            "receiver": "h-2113d971-5d51-430b-ba07-4044d091acc9",
+            "is_mutation": true
+          },
+          {
+            "command": "call",
+            "method": "isComplex",
+            "args_count": 0,
+            "receiver": "h-2113d971-5d51-430b-ba07-4044d091acc9",
+            "is_mutation": true
+          },
+          {
+            "command": "call",
+            "method": "getData",
+            "args_count": 0,
+            "receiver": "h-2113d971-5d51-430b-ba07-4044d091acc9",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getCoordinates",
+            "args_count": 0,
+            "receiver": "h-2113d971-5d51-430b-ba07-4044d091acc9",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "remove",
+            "args_count": 1,
+            "receiver": "h-01c466d9-3fc8-496f-be09-23db93c31b9a",
+            "is_mutation": true
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-01c466d9-3fc8-496f-be09-23db93c31b9a",
+            "is_mutation": false
+          }
+        ]
+      },
+      "details": {
+        "status_unexpected_keys": [
+          "cleanup_failed"
+        ]
+      }
+    },
+    "effect": "evaluate",
+    "isolation_proof": {
+      "verified": true,
+      "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/protocol_gate_a_20260922T0116Z/isolation_receipt.json",
+      "pid": 69532,
+      "birth": "Tue Sep 22 09:12:37 2026",
+      "endpoint": "127.0.0.1:55318",
+      "listener": {
+        "pid": 69532,
+        "endpoint": "*:55318",
+        "local_endpoint": "*:55318",
+        "remote_endpoint": null,
+        "state": "LISTEN",
+        "raw": "java    69532 everwalker   59u  IPv6 0x1d83899c6c737499      0t0  TCP *:55318 (LISTEN)"
+      },
+      "listener_binding": "wildcard",
+      "loopback_listener": false,
+      "worker_pid": 69647,
+      "established_client_pids": [
+        69532,
+        69647
+      ],
+      "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+      "config_inode": 14720294,
+      "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+      "api_probe": {
+        "probe_kind": "comsol_java_api",
+        "observed_at": "2026-09-22T01:12:50Z",
+        "loopback_address": "127.0.0.1",
+        "loopback_port": 55318,
+        "authenticated_api_success": true,
+        "nonloopback_address": "192.168.100.152",
+        "nonloopback_port": 55318,
+        "nonloopback_api_exception_http_status": null,
+        "denial_evidence_source": "server_access_log",
+        "server_access_log": {
+          "status": "PASS",
+          "phase": "java_connect_only",
+          "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/protocol_gate_a_20260922T0116Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+          "inode": 29850795,
+          "offset_before": 0,
+          "offset_after": 261,
+          "segment_sha256": "b73573763d9a6c00219761596f647413ed9a96b315a32f207a98f9aaf6ab1ca6",
+          "java_request_id": "g2-valve-nonloopback-connect",
+          "started_at": "2026-09-22T01:12:41Z",
+          "finished_at": "2026-09-22T01:12:50Z",
+          "entries": [
+            {
+              "peer": "127.0.0.1",
+              "method": "GET",
+              "route": "/webbridge/websocket",
+              "http_status": 101
+            },
+            {
+              "peer": "127.0.0.1",
+              "method": "GET",
+              "route": "/webbridge/websocket",
+              "http_status": 101
+            },
+            {
+              "peer": "192.168.100.152",
+              "method": "GET",
+              "route": "/webbridge/websocket",
+              "http_status": 403
+            }
+          ],
+          "parsed_nonloopback_entry": {
+            "peer": "192.168.100.152",
+            "method": "GET",
+            "route": "/webbridge/websocket",
+            "http_status": 403
+          },
+          "raw_probe_started_after_capture": true
+        }
+      },
+      "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer"
+    }
+  },
+  "expectations": {
+    "sample_0": {
+      "expected": 293.1499999999978,
+      "tolerance": 0.001
+    },
+    "sample_1": {
+      "expected": 293.1500000011541,
+      "tolerance": 0.001
+    },
+    "sample_2": {
+      "expected": 293.15001296154196,
+      "tolerance": 0.001
+    },
+    "sample_3": {
+      "expected": 293.27411927033944,
+      "tolerance": 0.001
+    },
+    "sample_4": {
+      "expected": 294.70068776489126,
+      "tolerance": 0.001
+    },
+    "sample_5": {
+      "expected": 306.9005043736273,
+      "tolerance": 0.001
+    },
+    "sample_6": {
+      "expected": 294.22506680583274,
+      "tolerance": 0.001
+    },
+    "sample_7": {
+      "expected": 299.1022967213646,
+      "tolerance": 0.001
+    },
+    "sample_8": {
+      "expected": 316.69880809545685,
+      "tolerance": 0.001
+    },
+    "sample_9": {
+      "expected": 295.858256490612,
+      "tolerance": 0.001
+    },
+    "sample_10": {
+      "expected": 303.5689550042192,
+      "tolerance": 0.001
+    },
+    "sample_11": {
+      "expected": 322.46338003179017,
+      "tolerance": 0.001
+    },
+    "sample_12": {
+      "expected": 297.74128924098557,
+      "tolerance": 0.001
+    },
+    "sample_13": {
+      "expected": 307.4843865655843,
+      "tolerance": 0.001
+    },
+    "sample_14": {
+      "expected": 326.37255575551274,
+      "tolerance": 0.001
+    }
+  }
+}

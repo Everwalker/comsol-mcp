@@ -28,17 +28,18 @@ from comsol_mcp import _probe_manage as probe_manage
 # ---------------------------------------------------------------------------
 
 def test_measure_spec_dimension_mapping() -> None:
-    # 0D point
+    # 0D point: COMSOL exposes point evaluation through EvalPoint; there is
+    # no IntPoint/AvPoint integration feature in the supported API.
     m0 = MeasureSpec(aggregate="integral", space_dim=3, entity_dim=0)
-    assert m0.feature_type == "IntPoint"
+    assert m0.feature_type == "EvalPoint"
     m0_avg = MeasureSpec(aggregate="average", space_dim=3, entity_dim=0)
-    assert m0_avg.feature_type == "AvPoint"
+    assert m0_avg.feature_type == "EvalPoint"
 
-    # 1D line/edge
+    # 1D line: COMSOL's native feature is IntLine/AvLine.
     m1 = MeasureSpec(aggregate="integral", space_dim=3, entity_dim=1)
-    assert m1.feature_type == "IntEdge"
+    assert m1.feature_type == "IntLine"
     m1_avg = MeasureSpec(aggregate="average", space_dim=3, entity_dim=1)
-    assert m1_avg.feature_type == "AvEdge"
+    assert m1_avg.feature_type == "AvLine"
 
     # 2D surface/boundary
     m2 = MeasureSpec(aggregate="integral", space_dim=3, entity_dim=2)

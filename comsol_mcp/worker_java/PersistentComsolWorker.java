@@ -2,6 +2,7 @@ package comsol_mcp.worker_java;
 
 import com.sun.security.auth.module.NTSystem;
 import com.comsol.model.Model;
+import com.comsol.model.NumericalFeature;
 import com.comsol.model.util.ModelChangeInfo;
 import com.comsol.model.util.ModelChangedHandler;
 import com.comsol.model.util.ModelUtil;
@@ -91,10 +92,16 @@ public final class PersistentComsolWorker {
       //   ModelNode.func() -> com.comsol.model.FunctionFeatureList
       "stat", "isGeometry", "objects", "object", "func", "table", "export",
       // G3 sampling: minimal API methods for Interp result extraction
-      // (NumericalFeature.setInterpolationCoordinates, getCoordinates, getNData)
-      "setInterpolationCoordinates", "getCoordinates", "getNData",
+      // (NumericalFeature.setInterpolationCoordinates, getCoordinates, getNData).
+      // getCoordinatesShape is a Worker adapter: it calls the native getter but
+      // returns only a validated [dimension, point_count] shape, never the
+      // coordinate matrix itself.
+      "setInterpolationCoordinates", "getCoordinates", "getCoordinatesShape", "getNData",
       // W17: result, numerical and table API methods javap-verified
-      "getImagData", "clearTableData", "getColumnHeaders", "getRowHeaders",
+      // TableBaseFeature.setColumnHeaders(String[]) is present in the local
+      // COMSOL 6.4 API probe; keep the setter reachable with its readback
+      // getter so table header writes cannot fail at the worker gate.
+      "getImagData", "clearTableData", "getColumnHeaders", "setColumnHeaders", "getRowHeaders",
       "getTableData", "getNRows", "setTableData", "addRow", "addRows",
       "setResult", "appendResult", "getFilledReal", "getFilledImag",
       // G3.3 §4 (F04): the SolutionInfo route for real stored-solution
@@ -106,7 +113,12 @@ public final class PersistentComsolWorker {
       //   SolutionInfo.getLevelNames() -> java.lang.String[]
       // Published here so dataset.solution_indices reads the outer/inner axes
       // from the engine instead of fabricating outer_indices=[1].
-      "getSolutioninfo", "getOuterSolnum", "getMaxInner", "getLevelNames"));
+      "getSolutioninfo", "getOuterSolnum", "getMaxInner", "getLevelNames",
+      // G3.3 independent 6.4 javap verification: native geometry and per-solution metadata.
+      "isAxisymmetric", "getSolnum", "getSolnums", "getPvals", "getUnits", "getUnit",
+      "getPNamesOuter", "getPUnitsOuter", "getSolverSequence",
+      // ProbeFeature.genResult(String): explicit write, never history-read preparation.
+      "genResult"));
   private static final Set<String> MODEL_UTIL = new HashSet<>(Arrays.asList(
       "create", "load", "model", "remove", "tags", "uniquetag", "modelsUsedByOtherClients",
       "getComsolVersion",
@@ -496,7 +508,69 @@ public final class PersistentComsolWorker {
     String handle = string(request.get("handle")); Object target = handles.get(handle);
     if (target == null) throw new IllegalArgumentException("UNKNOWN_WORKER_HANDLE");
     String method = string(request.get("method")); if (!METHODS.contains(method)) throw new SecurityException("METHOD_REJECTED");
-    return invoke(target, target.getClass(), method, list(request.get("args")));
+    List<Object> args = list(request.get("args"));
+    if ("getCoordinatesShape".equals(method)) {
+      if (!args.isEmpty()) throw new IllegalArgumentException("getCoordinatesShape takes no arguments");
+      return getCoordinatesShape(target);
+    }
+    return invoke(target, target.getClass(), method, args);
+  }
+
+  /**
+   * Return a native NumericalFeature coordinate shape without putting the
+   * coordinate values on the worker wire.  This is intentionally a special
+   * call rather than a generic reflection alias: the budget guard needs the
+   * point count before getData(), while a full getCoordinates() response would
+   * itself materialize and transport the array it is meant to bound.
+   */
+  private Object getCoordinatesShape(Object target) throws Exception {
+    if (!(target instanceof NumericalFeature)) {
+      throw new WorkerFailure("COORDINATES_SHAPE_TARGET_INVALID",
+          "getCoordinatesShape is only valid for a NumericalFeature handle");
+    }
+    double[][] coordinates = ((NumericalFeature) target).getCoordinates();
+    if (coordinates == null) {
+      throw new WorkerFailure("COORDINATES_SHAPE_NULL",
+          "NumericalFeature.getCoordinates() returned null");
+    }
+    if (coordinates.length == 0) {
+      throw new WorkerFailure("COORDINATES_SHAPE_EMPTY",
+          "NumericalFeature.getCoordinates() returned zero coordinate dimensions");
+    }
+    int pointCount = -1;
+    for (int dimension = 0; dimension < coordinates.length; dimension++) {
+      double[] row = coordinates[dimension];
+      if (row == null) {
+        throw new WorkerFailure("COORDINATES_SHAPE_NULL_ROW",
+            "NumericalFeature.getCoordinates() returned a null coordinate row",
+            map("dimension", (long) dimension));
+      }
+      if (pointCount < 0) pointCount = row.length;
+      if (row.length != pointCount) {
+        throw new WorkerFailure("COORDINATES_SHAPE_RAGGED",
+            "NumericalFeature.getCoordinates() returned a ragged matrix",
+            map("dimension", (long) dimension, "expected_point_count", (long) pointCount,
+                "actual_point_count", (long) row.length));
+      }
+      for (double value : row) {
+        if (!Double.isFinite(value)) {
+          throw new WorkerFailure("COORDINATES_SHAPE_NONFINITE",
+              "NumericalFeature.getCoordinates() returned a non-finite coordinate",
+              map("dimension", (long) dimension));
+        }
+      }
+    }
+    if (pointCount <= 0) {
+      throw new WorkerFailure("COORDINATES_SHAPE_EMPTY",
+          "NumericalFeature.getCoordinates() returned zero points");
+    }
+    return map("kind", "coordinates_shape",
+        "shape", Arrays.asList((long) coordinates.length, (long) pointCount),
+        "dimension", (long) coordinates.length,
+        "point_count", (long) pointCount,
+        "source", "native NumericalFeature.getCoordinates()",
+        "values_transmitted", false,
+        "wire_payload", "shape-only");
   }
 
   // ---- G3 R02: batch collection discovery and a deterministic tree walk ----

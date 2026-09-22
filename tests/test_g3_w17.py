@@ -20,6 +20,7 @@ import hashlib
 import json
 import math
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Mapping, Sequence
 
 import pytest
@@ -34,6 +35,11 @@ from comsol_mcp._g3_ops import (
     REQUIRES_ISOLATION,
     dispatch,
 )
+
+
+def _result_node_path(collection: str, tag: str) -> dict[str, Any]:
+    """Return the typed path used by result/dataset node operations."""
+    return {"segments": [{"accessor": "result"}, {"collection": collection, "tag": tag}]}
 
 
 # ---------------------------------------------------------------------------
@@ -57,6 +63,25 @@ class FEntity:
         self.calls.append((name, args))
         if name in self.unavailable:
             raise FakeEngineError(f"SecurityException: METHOD_REJECTED ({name})", code="METHOD_REJECTED")
+
+
+class FSelection:
+    """Minimal native selection object used by explicit numerical selections."""
+
+    def __init__(self) -> None:
+        self.entities: list[int] = []
+        self.named_tag: str | None = None
+
+    def set(self, *entities: Any) -> None:
+        if len(entities) == 1 and isinstance(entities[0], Sequence) and not isinstance(entities[0], (str, bytes)):
+            entities = tuple(entities[0])
+        self.entities = [int(value) for value in entities]
+
+    def all(self) -> None:
+        self.entities = []
+
+    def named(self, tag: str) -> None:
+        self.named_tag = str(tag)
 
 
 class FList(FEntity):
@@ -150,33 +175,146 @@ class FNumericalFeature(FNode):
         self.is_complex_flag = is_complex
         self.coordinates = coordinates
         self.fail_cleanup = fail_cleanup
+        self.selection_node = FSelection()
+        self.selection = lambda: self.selection_node
 
     def run(self) -> None:
         self._guard("run", ())
 
-    def isComplex(self) -> bool:
-        self._guard("isComplex", ())
+    def isComplex(self, *args: Any) -> bool:
+        self._guard("isComplex", args)
         return self.is_complex_flag
 
     def getData(self) -> Any:
         self._guard("getData", ())
+        values = self.real_data
+        expr = self.props.get("expr")
+        expression_count = len(expr) if isinstance(expr, Sequence) and not isinstance(expr, (str, bytes)) else 1
+        if "coord" in self.props:
+            point_count = len(self.props["coord"][0]) if self.props["coord"] else 0
+            if isinstance(values, Sequence) and not isinstance(values, (str, bytes)):
+                point_values = list(values)
+                inner_count = len(point_values) or 1
+            else:
+                point_values = [values for _ in range(point_count)]
+                inner_count = 3
+            return [[list(point_values) for _ in range(inner_count)]]
+        if expression_count > 1 and isinstance(values, Sequence) and not isinstance(values, (str, bytes)):
+            expression_rows: list[Any] = []
+            inner_count = len(values) or 1
+            for row in values:
+                if isinstance(row, Sequence) and not isinstance(row, (str, bytes)):
+                    row_values = list(row)
+                    if len(row_values) == inner_count:
+                        expression_rows.append(row_values)
+                    elif len(row_values) == 1:
+                        expression_rows.append(row_values * inner_count)
+                    else:
+                        expression_rows.append([row_values[0] for _ in range(inner_count)])
+                else:
+                    expression_rows.append([row for _ in range(inner_count)])
+            return expression_rows
+        if isinstance(values, Sequence) and not isinstance(values, (str, bytes)):
+            return [list(values)]
+        return [[values for _ in range(3)]]
+
+    def getReal(self, *args: Any) -> Any:
+        self._guard("getReal", args)
+        if len(args) == 2:
+            values = self.real_data
+            expr = self.props.get("expr")
+            expression_count = len(expr) if isinstance(expr, Sequence) and not isinstance(expr, (str, bytes)) else 1
+            if expression_count > 1 and isinstance(values, Sequence) and not isinstance(values, (str, bytes)):
+                inner_count = len(values) or 1
+                rows: list[Any] = []
+                for row in values:
+                    if isinstance(row, Sequence) and not isinstance(row, (str, bytes)):
+                        row_values = list(row)
+                        scalar = row_values[0] if row_values else 0.0
+                        if isinstance(scalar, Sequence) and not isinstance(scalar, (str, bytes)):
+                            scalar = list(scalar)[0] if list(scalar) else 0.0
+                        rows.append([scalar for _ in range(inner_count)])
+                    else:
+                        rows.append([row for _ in range(inner_count)])
+                return rows
+            if isinstance(values, Sequence) and not isinstance(values, (str, bytes)):
+                if values and isinstance(values[0], Sequence) and not isinstance(values[0], (str, bytes)):
+                    return values
+                return [list(values)]
+            inner_count = 3
+            return [[values for _ in range(inner_count)]]
         return self.real_data
 
-    def getReal(self) -> Any:
-        self._guard("getReal", ())
-        return self.real_data
-
-    def getImag(self) -> Any:
-        self._guard("getImag", ())
+    def getImag(self, *args: Any) -> Any:
+        self._guard("getImag", args)
+        if len(args) == 1:
+            values = self.imag_data
+            expr = self.props.get("expr")
+            expression_count = len(expr) if isinstance(expr, Sequence) and not isinstance(expr, (str, bytes)) else 1
+            if expression_count > 1 and isinstance(values, Sequence) and not isinstance(values, (str, bytes)):
+                inner_count = len(values) or 1
+                rows: list[Any] = []
+                for row in values:
+                    if isinstance(row, Sequence) and not isinstance(row, (str, bytes)):
+                        row_values = list(row)
+                        scalar = row_values[0] if row_values else 0.0
+                        if isinstance(scalar, Sequence) and not isinstance(scalar, (str, bytes)):
+                            scalar = list(scalar)[0] if list(scalar) else 0.0
+                        rows.append([scalar for _ in range(inner_count)])
+                    else:
+                        rows.append([row for _ in range(inner_count)])
+                return rows
+            if isinstance(values, Sequence) and not isinstance(values, (str, bytes)):
+                if values and isinstance(values[0], Sequence) and not isinstance(values[0], (str, bytes)):
+                    return values
+                return [list(values)]
+            inner_count = 3
+            return [[values for _ in range(inner_count)]]
         return self.imag_data
 
     def getImagData(self) -> Any:
         self._guard("getImagData", ())
-        return self.imag_data
+        values = self.imag_data
+        expr = self.props.get("expr")
+        expression_count = len(expr) if isinstance(expr, Sequence) and not isinstance(expr, (str, bytes)) else 1
+        if "coord" in self.props:
+            point_count = len(self.props["coord"][0]) if self.props["coord"] else 0
+            if isinstance(values, Sequence) and not isinstance(values, (str, bytes)):
+                point_values = list(values)
+                inner_count = len(point_values) or 1
+            else:
+                point_values = [values for _ in range(point_count)]
+                inner_count = 3
+            return [[list(point_values) for _ in range(inner_count)]]
+        if expression_count > 1 and isinstance(values, Sequence) and not isinstance(values, (str, bytes)):
+            expression_rows: list[Any] = []
+            inner_count = len(values) or 1
+            for row in values:
+                if isinstance(row, Sequence) and not isinstance(row, (str, bytes)):
+                    row_values = list(row)
+                    if len(row_values) == inner_count:
+                        expression_rows.append(row_values)
+                    elif len(row_values) == 1:
+                        expression_rows.append(row_values * inner_count)
+                    else:
+                        expression_rows.append([row_values[0] for _ in range(inner_count)])
+                else:
+                    expression_rows.append([row for _ in range(inner_count)])
+            return expression_rows
+        if isinstance(values, Sequence) and not isinstance(values, (str, bytes)):
+            return [list(values)]
+        return [[values for _ in range(3)]]
 
     def getCoordinates(self) -> Any:
         self._guard("getCoordinates", ())
         return self.coordinates
+
+    def getCoordinatesShape(self) -> dict[str, Any]:
+        self._guard("getCoordinatesShape", ())
+        if not isinstance(self.coordinates, Sequence) or not self.coordinates:
+            return {"shape": [0, 0], "point_count": 0}
+        point_count = len(self.coordinates[0]) if isinstance(self.coordinates[0], Sequence) else 1
+        return {"shape": [len(self.coordinates), point_count], "point_count": point_count}
 
     def setInterpolationCoordinates(self, coords: Any) -> None:
         self._guard("setInterpolationCoordinates", (coords,))
@@ -229,9 +367,15 @@ class FWiredTree:
 
         # Solver and Study
         self.solver = FNode(tag="sol1", type_id="SolverSequence",
-                            props={"study": "std1", "getPVals": [0.0, 0.1, 0.2],
+                            props={"getPVals": [0.0, 0.1, 0.2],
                                    "getParamNames": ["p1", "p2"], "getParamVals": [[1.0, 2.0], [10.0, 20.0]]})
         self.solver.getPVals = lambda *args: self.solver._guard("getPVals", args) or self.solver.props["getPVals"]
+        # ``SolverSequence.study()`` is a *method* on the live engine
+        # (``model.sol("sol1").study()`` -> ``"std1"``); the fake deliberately
+        # does not publish it as a ``getString`` property, because the pre-fix
+        # implementation read it that way and then classified every dataset as
+        # steady, publishing no time axis for a solved transient solution.
+        self.solver.study = lambda *args: self.solver._guard("study", args) or "std1"
         self.solver.getParamNames = lambda *args: self.solver._guard("getParamNames", args) or self.solver.props["getParamNames"]
         self.solver.getParamVals = lambda *args: self.solver._guard("getParamVals", args) or self.solver.props["getParamVals"]
 
@@ -244,6 +388,29 @@ class FWiredTree:
         self.solution_info.getOuterSolnum = lambda *args: self.solution_info._guard("getOuterSolnum", args) or self.solution_info.props["getOuterSolnum"]
         self.solution_info.getMaxInner = lambda *args: self.solution_info._guard("getMaxInner", args) or self.solution_info.props["getMaxInner"]
         self.solution_info.getLevelNames = lambda *args: self.solution_info._guard("getLevelNames", args) or self.solution_info.props["getLevelNames"]
+        def _inner_count() -> int:
+            configured = int(self.solution_info.props["getMaxInner"])
+            values = numerical_real
+            if isinstance(values, Sequence) and not isinstance(values, (str, bytes)):
+                return len(values) if values else configured
+            return configured
+
+        self.solution_info.getSolnum = lambda outer, strict: (
+            self.solution_info._guard("getSolnum", (outer, strict))
+            or list(range(1, _inner_count() + 1))
+        )
+        self.solution_info.getPNames = lambda pairs: (
+            self.solution_info._guard("getPNames", (pairs,))
+            or [["p1", "p2", "t"] for _ in pairs]
+        )
+        self.solution_info.getPvals = lambda pairs: (
+            self.solution_info._guard("getPvals", (pairs,))
+            or [[1.0, 2.0, (float(pair[1]) - 1.0) * 0.1] for pair in pairs]
+        )
+        self.solution_info.getUnits = lambda pairs: (
+            self.solution_info._guard("getUnits", (pairs,))
+            or [["1", "1", "s"] for _ in pairs]
+        )
         self.solver.getSolutioninfo = lambda *args: self.solver._guard("getSolutioninfo", args) or self.solution_info
 
         self.study_step = FNode(tag="time", type_id="Transient", props={"tlist": "range(0,0.1,0.2)", "tunit": "s"})
@@ -266,6 +433,10 @@ class FWiredTree:
                 tag=tag, type_id=feat_type,
                 real_data=numerical_real, imag_data=numerical_imag,
                 is_complex=is_complex, coordinates=[[0.0, 0.01], [0.0, 0.01], [0.0, 0.01]],
+                props=(
+                    {"intvolume": "off", "intsurface": "off"}
+                    if is_axisymmetric else {}
+                ),
                 fail_cleanup=self.fail_numerical_remove,
             )
 
@@ -301,6 +472,7 @@ class FWiredTree:
             collections={
                 "result": self.results,
                 "component": FList(node_type="Component"),
+                "modelNode": FList(node_type="ModelNode"),
                 "sol": FList(node_type="SolverSequence"),
                 "study": FList(node_type="Study"),
             }
@@ -308,6 +480,8 @@ class FWiredTree:
         self.model.result = lambda *args: self.results
         self.model.collections["component"].items["comp1"] = self.component
         self.model.component = lambda *args: self.model._collection("component", args)
+        self.model.collections["modelNode"].items["comp1"] = self.component
+        self.model.modelNode = lambda *args: self.model._collection("modelNode", args)
         self.model.collections["sol"].items["sol1"] = self.solver
         self.model.sol = lambda *args: self.model._collection("sol", args)
         self.model.collections["study"].items["std1"] = self.study
@@ -408,26 +582,26 @@ def test_dataset_crud_lifecycle() -> None:
 
     # 6. inspect non-existent dataset -> NODE_NOT_FOUND
     with pytest.raises(ExecutionContractError) as exc_info:
-        dispatch("dataset.inspect", worker, "Model", {"path": "nonexistent_dset"})
+        dispatch("dataset.inspect", worker, "Model", {"path": _result_node_path("dataset", "nonexistent_dset")})
     assert exc_info.value.code == "NODE_NOT_FOUND"
 
     # 7. update
     update_res = dispatch("dataset.update", worker, "Model", {
-        "path": "cpt1",
+        "path": _result_node_path("dataset", "cpt1"),
         "definition": {"pointx": 0.008},
     })
-    assert "set(pointx)" in update_res["applied"]
-    assert update_res["readback"]["pointx"] == 0.008
+    assert any(step.get("property") == "pointx" for step in update_res["applied"])
+    assert update_res["readback"]["properties"][0]["value"] == 0.008
 
     # 8. remove
-    remove_res = dispatch("dataset.remove", worker, "Model", {"path": "cpt1"})
+    remove_res = dispatch("dataset.remove", worker, "Model", {"path": _result_node_path("dataset", "cpt1")})
     assert remove_res["removed"] is True
     assert remove_res["verified_removed"] is True
     assert "cpt1" not in tree.dataset_list.tags()
 
     # 9. remove non-existent dataset -> NODE_NOT_FOUND
     with pytest.raises(ExecutionContractError) as exc_info:
-        dispatch("dataset.remove", worker, "Model", {"path": "cpt1"})
+        dispatch("dataset.remove", worker, "Model", {"path": _result_node_path("dataset", "cpt1")})
     assert exc_info.value.code == "NODE_NOT_FOUND"
 
 
@@ -440,14 +614,23 @@ def test_dataset_solution_indices() -> None:
     assert data["binding_complete"] is True
     assert data["solution"] == "sol1"
     assert data["time_values"] == [0.0, 0.1, 0.2]
+    assert data["time_axis_source"] == "stored output times from SolverSequence.getPVals()"
+    assert data["study"] == "std1"
     assert data["inner_indices"] == [1, 2, 3]
     assert "p1" in data["parameters"]
+
+    # The associated study is read through the engine's ``study()`` method; a
+    # solution that only publishes that method must still yield its stored times.
+    refused = {entry.get("method") for entry in data["read_errors"]}
+    assert "study" not in refused, data["read_errors"]
 
     # Unbound dataset
     unbound_dset = FNode(tag="dset_unbound", type_id="Solution", props={})
     tree.dataset_list.items["dset_unbound"] = unbound_dset
     unbound_res = dispatch("dataset.solution_indices", worker, "Model", {"path": "dset_unbound"})
-    assert unbound_res["binding_complete"] is True or unbound_res["solution"] == "sol1"
+    assert unbound_res["binding_complete"] is False
+    assert unbound_res["solution"] is None
+    assert any(error["code"] == "SOLUTION_NOT_FOUND" for error in unbound_res["read_errors"])
 
 
 def test_solution_indices_never_invents_an_axis_when_the_engine_refuses_it() -> None:
@@ -508,46 +691,189 @@ def test_result_evaluate_complex_field_modes() -> None:
     })
     assert pres_res["is_complex"] is True
     assert pres_res["complex_mode"] == "preserve"
-    assert pres_res["values"][0][0] == {"real": 3.0, "imag": 4.0}
-    assert pres_res["values"][0][1] == {"real": 6.0, "imag": 8.0}
+    assert pres_res["values"][0][0][0][0] == {"real": 3.0, "imag": 4.0}
+    assert pres_res["values"][0][0][0][1] == {"real": 6.0, "imag": 8.0}
 
     # 2. real mode
     real_res = dispatch("result.evaluate", worker, "Model", {
         "spec": {**base_spec, "complex_mode": "real"},
     })
-    assert real_res["values"][0][0] == 3.0
+    assert real_res["values"][0][0][0][0] == 3.0
 
     # 3. imag mode
     imag_res = dispatch("result.evaluate", worker, "Model", {
         "spec": {**base_spec, "complex_mode": "imag"},
     })
-    assert imag_res["values"][0][0] == 4.0
+    assert imag_res["values"][0][0][0][0] == 4.0
 
     # 4. abs mode
     abs_res = dispatch("result.evaluate", worker, "Model", {
         "spec": {**base_spec, "complex_mode": "abs"},
     })
-    assert abs_res["values"][0][0] == 5.0
-    assert abs_res["values"][0][1] == 10.0
+    assert abs_res["values"][0][0][0][0] == 5.0
+    assert abs_res["values"][0][0][0][1] == 10.0
 
     # 5. phase mode
     phase_res = dispatch("result.evaluate", worker, "Model", {
         "spec": {**base_spec, "complex_mode": "phase"},
     })
     expected_phase = math.atan2(4.0, 3.0)
-    assert math.isclose(phase_res["values"][0][0], expected_phase, rel_tol=1e-7)
+    assert math.isclose(phase_res["values"][0][0][0][0], expected_phase, rel_tol=1e-7)
 
     # 6. Mathematical Consistency Verification
-    r00 = real_res["values"][0][0]
-    i00 = imag_res["values"][0][0]
-    a00 = abs_res["values"][0][0]
-    p00 = phase_res["values"][0][0]
+    r00 = real_res["values"][0][0][0][0]
+    i00 = imag_res["values"][0][0][0][0]
+    a00 = abs_res["values"][0][0][0][0]
+    p00 = phase_res["values"][0][0][0][0]
     # abs^2 == real^2 + imag^2
     assert math.isclose(a00 ** 2, r00 ** 2 + i00 ** 2, rel_tol=1e-7)
     # real == abs * cos(phase)
     assert math.isclose(r00, a00 * math.cos(p00), rel_tol=1e-7)
     # imag == abs * sin(phase)
     assert math.isclose(i00, a00 * math.sin(p00), rel_tol=1e-7)
+
+
+def test_result_evaluate_does_not_dereference_null_binding_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A complete resolver result legitimately carries ``error: None``.
+
+    The solution mismatch guard must inspect that optional field only after
+    proving it is a mapping; the old ``binding.get("error", {}).get(...)``
+    expression raised ``AttributeError`` for an otherwise valid C04 request.
+    """
+    tree = FWiredTree(numerical_real=[[[2.0]], [[3.0]]])
+    monkeypatch.setattr(
+        results,
+        "_resolve_dataset_binding",
+        lambda *_args, **_kwargs: {
+            "dataset": "dset1",
+            "dataset_type": "Solution",
+            "solution": "sol1",
+            "component": "comp1",
+            "geometry": "geom1",
+            "binding_complete": True,
+            "error": None,
+            "read_errors": [],
+        },
+    )
+
+    result = dispatch("result.evaluate", tree.worker, "Model", {
+        "spec": {
+            "expressions": ["2", "3"],
+            "solution": {"dataset": "dset1"},
+            "aggregate": "integral",
+            "complex_mode": "real",
+        }
+    })
+
+    assert result["values"] == [[[[2.0], [2.0]]], [[[3.0], [3.0]]]]
+
+
+def test_result_evaluate_join_raw_is_refused_before_numerical_create(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Raw Eval is not a valid Join route and must not fall back upstream."""
+    tree = FWiredTree()
+    tree.dataset_list.items["join1"] = FNode(
+        tag="join1",
+        type_id="Join",
+        props={"data": "dset1", "data2": "dset1"},
+    )
+    monkeypatch.setattr(
+        results,
+        "_resolve_dataset_binding",
+        lambda *_args, **_kwargs: {
+            "dataset": "join1",
+            "dataset_type": "Join",
+            "solution": "sol1",
+            "component": "comp1",
+            "geometry": "geom1",
+            "binding_complete": True,
+            "error": None,
+            "read_errors": [],
+        },
+    )
+
+    with pytest.raises(ExecutionContractError) as exc_info:
+        dispatch("result.evaluate", tree.worker, "Model", {
+            "spec": {
+                "expressions": ["T"],
+                "solution": {"dataset": "join1"},
+                "aggregate": "none",
+                "complex_mode": "real",
+            }
+        })
+    assert exc_info.value.code == "API_UNSUPPORTED"
+    assert exc_info.value.details["mutation_issued"] is False
+    assert tree.numerical_list.items == {}
+
+
+def test_complex_phase_std_transforms_before_statistics() -> None:
+    """A constant phase field has zero std when arg(f) is the measured field."""
+    theta = math.atan2(4.0, 3.0)
+    tree = FWiredTree()
+    original_factory = tree.numerical_list.factory
+    created: list[Any] = []
+
+    class _ExpressionAwareFeature(FNumericalFeature):
+        def _expression(self) -> str:
+            expr = self.props.get("expr")
+            if isinstance(expr, Sequence) and expr:
+                return str(expr[0])
+            return str(expr or "")
+
+        def isComplex(self, *args: Any) -> bool:
+            expression = self._expression()
+            return not any(token in expression for token in ("real(", "imag(", "abs(", "arg(", "1"))
+
+        def getData(self) -> Any:
+            expression = self._expression()
+            if expression == "1":
+                return 2.0
+            if "arg(" in expression and "^2" in expression:
+                # The centered native expression evaluates to zero for this
+                # constant-phase field.  A raw second moment would be
+                # proportional to theta^2 and is intentionally not accepted.
+                return 0.0 if "-0.927295218001612" in expression else 2.0 * theta * theta
+            if "arg(" in expression:
+                return theta
+            if "^2" in expression:
+                # The pre-fix implementation used abs(Ez)^2 here, mixing the
+                # original complex field with the phase mean.
+                return 50.0
+            return 3.0
+
+        def getReal(self, *args: Any) -> Any:
+            value = self.getData()
+            return [[value, value, value]] if args else value
+
+        def getImag(self, *args: Any) -> Any:
+            return [[4.0, 4.0, 4.0]] if args else 4.0
+
+    def factory(tag: str, *args: Any) -> Any:
+        feature_type = str(args[0]) if args else "EvalGlobal"
+        feature = _ExpressionAwareFeature(
+            tag=tag,
+            type_id=feature_type,
+            real_data=3.0,
+            imag_data=4.0,
+            is_complex=True,
+        )
+        created.append(feature)
+        return feature
+
+    tree.numerical_list.factory = factory
+    result = dispatch("result.evaluate", tree.worker, "Model", {
+        "spec": {
+            "expressions": ["Ez"],
+            "solution": {"dataset": "dset1"},
+            "aggregate": "std",
+            "complex_mode": "phase",
+        }
+    })
+    assert result["values"] == [[[[0.0], [0.0], [0.0]]]]
+    assert result["complex_transform_order"] == "before"
+    assert any("arg((Ez))" in str(feature.props.get("expr")) for feature in created)
+    assert any("arg((Ez))" in str(feature.props.get("expr")) and "^2" in str(feature.props.get("expr")) for feature in created)
 
 
 def test_result_evaluate_measures_and_axisymmetric() -> None:
@@ -564,7 +890,7 @@ def test_result_evaluate_measures_and_axisymmetric() -> None:
     })
     assert res_3d["axisymmetric"] is False
     assert res_3d["axisymmetric_factor_applied"] is False
-    assert res_3d["values"] == 150.0
+    assert res_3d["values"] == [[[[150.0], [150.0], [150.0]]]]
 
     # 2. Axisymmetric Volume Integral (2*pi*r factor applied exactly once)
     tree_axi = FWiredTree(sdim=2, is_axisymmetric=True, numerical_real=300.0)
@@ -648,7 +974,7 @@ def test_pinned_selection_without_entities_is_refused() -> None:
             "selection": [1],
         }
     })
-    assert res["selection_measure"] == 150.0
+    assert res["selection_measure"] == [[[[150.0], [150.0], [150.0]]]]
     assert res["selection_measure_source"].startswith("engine integral of 1 over the pinned selection")
 
 
@@ -669,25 +995,25 @@ def test_result_evaluate_solution_spec_indices() -> None:
     res_first = dispatch("result.evaluate", worker, "Model", {
         "spec": {**base_spec, "solution": {"dataset": "dset1", "inner": "first"}},
     })
-    assert res_first["values"] == 10.0
+    assert res_first["values"] == [[[[10.0]]]]
 
     # 2. inner = "last"
     res_last = dispatch("result.evaluate", worker, "Model", {
         "spec": {**base_spec, "solution": {"dataset": "dset1", "inner": "last"}},
     })
-    assert res_last["values"] == 30.0
+    assert res_last["values"] == [[[[30.0]]]]
 
     # 3. inner = 2 (explicit 1-based index)
     res_idx2 = dispatch("result.evaluate", worker, "Model", {
         "spec": {**base_spec, "solution": {"dataset": "dset1", "inner": 2}},
     })
-    assert res_idx2["values"] == 20.0
+    assert res_idx2["values"] == [[[[20.0]]]]
 
     # 4. inner = [1, 3] (subset selection)
     res_sub = dispatch("result.evaluate", worker, "Model", {
         "spec": {**base_spec, "solution": {"dataset": "dset1", "inner": [1, 3]}},
     })
-    assert res_sub["values"] == [10.0, 30.0]
+    assert res_sub["values"] == [[[[10.0], [30.0]]]]
 
     # 5. Out of bounds index (inner = 0 or 99) -> INVALID_REQUEST
     with pytest.raises(ExecutionContractError) as exc_info:
@@ -720,9 +1046,116 @@ def test_result_at_points_and_coordinate_readback() -> None:
         "frame": "spatial",
     })
     assert res["point_count"] == 2
+    assert res["dataset"] == "dset1"
+    assert res["solution"] == "sol1"
+    assert res["binding_source"] == "resolve_dataset_binding(model, dataset_tag)"
+    assert res["dataset_binding"]["binding_complete"] is True
+    assert res["dataset_binding"]["solution"] == "sol1"
+    assert res["dataset_binding"]["component"] == "comp1"
+    assert res["dataset_binding"]["geometry"] == "geom1"
+    assert res["feature_readback"] == {
+        "data": "dset1",
+        "data_status": "VERIFIED",
+        "source": "NumericalFeature.getString('data') after set('data')",
+    }
     assert res["coordinate_readback"]["status"] == "VERIFIED"
     assert res["cleanup"]["type_id"] == "Interp"
     assert res["cleanup"]["removed"] is True
+
+
+def test_result_at_points_rejects_aggregate_getreal_for_multiple_points(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An aggregate getReal read cannot be published as per-point data.
+
+    NumericalFeature.getData/getImagData are the only documented getters that
+    carry a point axis.  If a backend exposes only getReal/getImag, attaching
+    all requested interpolation coordinates to its singleton point axis would
+    manufacture a false FieldArray shape.
+    """
+    tree = FWiredTree(numerical_real=[[42.0]])
+    original = tree.numerical_list.factory
+
+    class _AggregateOnlyFeature(FNumericalFeature):
+        def getData(self) -> Any:
+            raise FakeEngineError("getData is unavailable", code="API_UNSUPPORTED")
+
+        def getReal(self) -> Any:
+            return [[42.0]]
+
+    def factory(tag: str, *args: Any) -> Any:
+        base = original(tag, *args)
+        return _AggregateOnlyFeature(
+            tag=base.tag_,
+            type_id=base.type_id,
+            real_data=base.real_data,
+            imag_data=base.imag_data,
+            is_complex=base.is_complex_flag,
+            coordinates=base.coordinates,
+        )
+
+    tree.numerical_list.factory = factory
+    binding = {
+        "binding_source": "SolutionInfo.getSolnum(outer, strict)",
+        "pair_mapping_complete": True,
+        "outer_indices": [1],
+        "inner_indices": [1],
+        "inner_indices_by_outer": {1: [1]},
+        "solnum_pairs": [{"outer": 1, "inner": 1, "solnum": 1}],
+    }
+    monkeypatch.setattr(results, "_result_solution_binding", lambda *_args: binding)
+
+    with pytest.raises(ExecutionContractError) as exc_info:
+        dispatch("result.at_points", tree.worker, "Model", {
+            "spec": {
+                "expressions": ["T"],
+                "solution": {"dataset": "dset1"},
+                "complex_mode": "real",
+            },
+            "points": [[0.0, 0.0, 0.0], [0.01, 0.01, 0.01]],
+            "coordinate_unit": "m",
+            "frame": "spatial",
+        })
+    assert exc_info.value.code == "FIELD_ARRAY_SHAPE_MISMATCH"
+
+
+def test_result_at_points_refuses_an_ignored_dataset_setter_and_cleans_up() -> None:
+    """The Interp ``data`` target must be read back before native evaluation."""
+    tree = FWiredTree()
+    original = tree.numerical_list.factory
+
+    class _IgnoredDataFeature(FNumericalFeature):
+        def set(self, name: str, value: Any) -> None:
+            self._guard("set", (name, value))
+            if name != "data":
+                self.props[name] = value
+
+    def factory(tag: str, *args: Any) -> Any:
+        base = original(tag, *args)
+        return _IgnoredDataFeature(
+            tag=base.tag_,
+            type_id=base.type_id,
+            real_data=base.real_data,
+            imag_data=base.imag_data,
+            is_complex=base.is_complex_flag,
+            coordinates=base.coordinates,
+            props=base.props,
+        )
+
+    tree.numerical_list.factory = factory
+    with pytest.raises(ExecutionContractError) as exc_info:
+        dispatch("result.at_points", tree.worker, "Model", {
+            "spec": {
+                "expressions": ["T"],
+                "solution": {"dataset": "dset1"},
+                "complex_mode": "real",
+            },
+            "points": [[0.0, 0.0, 0.0]],
+            "coordinate_unit": "m",
+            "frame": "spatial",
+        })
+    assert exc_info.value.code == "EXECUTION_STATE_UNKNOWN"
+    assert tree.numerical_list.tags() == []
 
 
 def test_result_numerical_and_table_management(tmp_path: Path) -> None:
@@ -733,7 +1166,7 @@ def test_result_numerical_and_table_management(tmp_path: Path) -> None:
     # 1. Numerical manage: create, list, run, remove
     num_create = dispatch("result.numerical_manage", worker, "Model", {
         "action": "create",
-        "path": "num1",
+        "path": _result_node_path("numerical", "num1"),
         "definition": {"type_id": "EvalGlobal", "expr": ["T"]},
     })
     assert num_create["created"] is True
@@ -745,14 +1178,14 @@ def test_result_numerical_and_table_management(tmp_path: Path) -> None:
 
     num_rem = dispatch("result.numerical_manage", worker, "Model", {
         "action": "remove",
-        "path": "num1",
+        "path": _result_node_path("numerical", "num1"),
     })
     assert num_rem["removed"] is True
 
     # 2. Table manage: create, set, get, clear, remove
     tbl_create = dispatch("result.table_manage", worker, "Model", {
         "action": "create",
-        "path": "tbl1",
+        "path": _result_node_path("table", "tbl1"),
         "definition": {"type_id": "Table"},
     })
     assert tbl_create["created"] is True
@@ -760,20 +1193,20 @@ def test_result_numerical_and_table_management(tmp_path: Path) -> None:
 
     dispatch("result.table_manage", worker, "Model", {
         "action": "set",
-        "path": "tbl1",
+        "path": _result_node_path("table", "tbl1"),
         "definition": {"data": [[1.0, 2.0], [3.0, 4.0]]},
     })
     tbl_get = dispatch("result.table_manage", worker, "Model", {
         "action": "get",
-        "path": "tbl1",
+        "path": _result_node_path("table", "tbl1"),
     })
     assert tbl_get["data"] == [[1.0, 2.0], [3.0, 4.0]]
 
-    dispatch("result.table_manage", worker, "Model", {"action": "clear", "path": "tbl1"})
-    tbl_cleared = dispatch("result.table_manage", worker, "Model", {"action": "get", "path": "tbl1"})
+    dispatch("result.table_manage", worker, "Model", {"action": "clear", "path": _result_node_path("table", "tbl1")})
+    tbl_cleared = dispatch("result.table_manage", worker, "Model", {"action": "get", "path": _result_node_path("table", "tbl1")})
     assert tbl_cleared["data"] == []
 
-    dispatch("result.table_manage", worker, "Model", {"action": "remove", "path": "tbl1"})
+    dispatch("result.table_manage", worker, "Model", {"action": "remove", "path": _result_node_path("table", "tbl1")})
     assert "tbl1" not in tree.table_list.tags()
 
 
@@ -801,6 +1234,7 @@ def test_field_export_large_data_and_chunk_verification(tmp_path: Path) -> None:
     large_data = [float(i) * 1.5 for i in range(1500)]
     tree = FWiredTree(numerical_real=large_data)
     worker = tree.worker
+    worker.paths = SimpleNamespace(project_root=tmp_path)
 
     dest_file = tmp_path / "exported_field.json"
     export_res = dispatch("result.field_export", worker, "Model", {
@@ -825,7 +1259,7 @@ def test_field_export_large_data_and_chunk_verification(tmp_path: Path) -> None:
 
     # Verify JSON content sort_keys
     content = json.loads(dest_file.read_text(encoding="utf-8"))
-    assert content["values"] == large_data
+    assert content["values"] == [[[[value] for value in large_data]]]
     assert content["metadata"]["dataset"] == "dset1"
 
 
@@ -872,16 +1306,27 @@ def test_a_caller_supplied_denominator_is_refused() -> None:
     assert "denominator_measure" in str(exc_info.value)
 
 
-def test_unimplemented_solution_selections_are_refused_not_ignored() -> None:
-    """§4: unsupported per-solution selection keys raise instead of being ignored."""
+def test_solution_selections_honor_supported_axes_and_refuse_unknown_matching() -> None:
+    """§4: supported inner/outer axes select data; unknown matching keys raise."""
     tree = FWiredTree()
-    for key in ("outer", "time", "frequency", "parameters"):
+    for key in ("time", "frequency", "parameters"):
         with pytest.raises(ExecutionContractError) as exc_info:
             dispatch("result.evaluate", tree.worker, "Model", {
                 "spec": {"expressions": ["T"], "solution": {"dataset": "dset1", key: 1}},
             })
         assert exc_info.value.code == "API_UNSUPPORTED", key
         assert key in str(exc_info.value)
+
+    outer = dispatch("result.evaluate", tree.worker, "Model", {
+        "spec": {"expressions": ["T"], "solution": {"dataset": "dset1", "outer": 1}},
+    })
+    inner = dispatch("result.evaluate", tree.worker, "Model", {
+        "spec": {"expressions": ["T"], "solution": {"dataset": "dset1", "inner": 2}},
+    })
+    assert outer["field_array"]["axes"] == ["expression", "outer", "inner", "point"]
+    assert inner["field_array"]["axes"] == ["expression", "outer", "inner", "point"]
+    assert len(outer["values"][0]) == 1
+    assert len(inner["values"][0][0]) == 1
 
 
 def test_std_and_rms_fail_instead_of_degrading_to_zero_or_abs_mean() -> None:
@@ -900,9 +1345,9 @@ def test_std_and_rms_fail_instead_of_degrading_to_zero_or_abs_mean() -> None:
                 self._refuse()
                 return super().getData()
 
-            def getReal(self) -> Any:
+            def getReal(self, *args: Any) -> Any:
                 self._refuse()
-                return super().getReal()
+                return super().getReal(*args)
 
         def factory(tag: str, *args: Any, _original: Any = original) -> Any:
             feat = _original(tag, *args)
@@ -917,7 +1362,7 @@ def test_std_and_rms_fail_instead_of_degrading_to_zero_or_abs_mean() -> None:
                 "spec": {"expressions": ["T"], "solution": {"dataset": "dset1"},
                          "aggregate": aggregate, "complex_mode": "real"},
             })
-        assert exc_info.value.code in {"ENGINE_CALL_FAILED", "INVALID_RESULT"}, (aggregate, exc_info.value)
+        assert exc_info.value.code in {"ENGINE_CALL_FAILED", "INVALID_RESULT", "ZERO_OR_INVALID_MEASURE"}, (aggregate, exc_info.value)
 
 
 def test_weighted_average_uses_the_weighted_measure_and_numerator() -> None:
@@ -943,10 +1388,12 @@ def test_weighted_average_uses_the_weighted_measure_and_numerator() -> None:
     numerator = next(feat for tag, feat in created if tag.endswith("_num"))
     # The measure integrates w (not 1) and the numerator integrates w*f.
     assert measure.props["expr"] == ["2"]
-    assert numerator.props["expr"] == ["(2)*(T)"]
+    # Aggregates default to the native pre-statistics transform so the same
+    # scalar field feeds the numerator, mean, and any second moment.
+    assert numerator.props["expr"] == ["(2)*(real((T)))"]
     # The fake returns 150.0 for both integrals, so ∫w·f/∫w = 1.0.
-    assert math.isclose(data["values"], 1.0, rel_tol=1e-12)
-    assert data["denominator_measure"] == 150.0
+    assert data["values"] == [[[[1.0], [1.0], [1.0]]]]
+    assert data["denominator_measure"] == [[[[150.0], [150.0], [150.0]]]]
     assert "w='2'" in (data["denominator_source"] or "")
 
 
@@ -965,7 +1412,6 @@ def test_weighted_average_differs_from_the_unweighted_one() -> None:
     })
     # Unweighted: the Av* feature already returns the mean (150.0).  Weighted:
     # ∫w·f/∫w = 1.0 with this fixture, so the two paths are distinguishable.
-    assert unweighted_avg["values"] == 150.0
-    assert weighted_avg["values"] == 1.0
+    assert unweighted_avg["values"] == [[[[150.0], [150.0], [150.0]]]]
+    assert weighted_avg["values"] == [[[[1.0], [1.0], [1.0]]]]
     assert unweighted_avg["denominator_source"] == "engine integral of 1 over the selection"
-

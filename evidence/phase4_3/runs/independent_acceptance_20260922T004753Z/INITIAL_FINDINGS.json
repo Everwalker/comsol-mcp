@@ -1,0 +1,41 @@
+{
+  "status": "IMPLEMENTED_WITH_OPEN_ACCEPTANCE_DEFECTS",
+  "source_commit": "e14c946616f1b9c24c6faffa9f51f29f0e70a337",
+  "scope": "Independent fresh verification against package NEXT_GOAL.md; prior PASS reports are not accepted as proof",
+  "findings": [
+    {
+      "id": "R1",
+      "file": "comsol_mcp/_probe_manage.py",
+      "defect": "probe.update/history absent; live C14 treats rejection as PASS contrary to required W17 implementation"
+    },
+    {
+      "id": "R2",
+      "file": "comsol_mcp/_g3_results.py",
+      "defect": "std/rms collapse expressions/solutions with _to_float; rms squares field without complex magnitude"
+    },
+    {
+      "id": "R3",
+      "file": "comsol_mcp/_g3_results.py",
+      "defect": "isComplex exceptions become false; explicit outer/time/frequency/parameter selections remain unsupported"
+    },
+    {
+      "id": "R4",
+      "file": "comsol_mcp/_measure_spec.py",
+      "defect": "selection exceptions swallowed; named or invalid selection can silently remain unbound"
+    },
+    {
+      "id": "R5",
+      "file": "comsol_mcp/_g3_results.py",
+      "defect": "dataset property loop continues after failure; auxiliary statistic node cleanup failures swallowed"
+    }
+  ],
+  "prior_file_hashes": {
+    "evidence/phase4_3_acceptance.json": "c97e757b7cc6e0515229ece47052704402a9f9ff06127f9bbd4b31833d7220f7",
+    "docs/comsol_mcp_design_v1/G3_3_PLAN.md": "6bfc31fbb46a13c23ece5ac0d98848fe93c11d274521ebcc8c9e7f42cca02949",
+    "docs/comsol_mcp_design_v1/G3_3_FINDINGS.md": "d5ac944b726b37ee88abc61d6dbbf047896723adc1abfdba53ad8b6dee563c22",
+    "docs/comsol_mcp_design_v1/G3_3_OPERATIONS.md": "431c0257bc3a7d972b13f08fef784fa9e718987078f37090d6a476d00e90dc51",
+    "docs/comsol_mcp_design_v1/RECOVERY.md": "29e434717d57d572abd5c1a1cdac980f55bd80f0c3b35e0fa8bd7d4e556cb751",
+    "docs/comsol_mcp_design_v1/PROGRESS.md": "bd671df0b9ea6f137a1cd60c1428b7414156ff488c0a17d7bac079231a0bb680"
+  },
+  "created_at": "2026-09-22T00:47:53.719899+00:00"
+}

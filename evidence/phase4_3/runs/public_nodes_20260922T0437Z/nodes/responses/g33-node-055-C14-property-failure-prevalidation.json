@@ -1,0 +1,311 @@
+{
+  "_outer_isError": true,
+  "_structuredContent": {
+    "data": {
+      "cleanup_failed": false,
+      "dispatch_stage": "validation",
+      "domain_outcome": {
+        "cleanup_failed": false,
+        "details": {
+          "status_token": "REFUSED"
+        },
+        "dispatch_stage": "validation",
+        "execution_state_unknown": false,
+        "failure": {
+          "code": "INVALID_REQUEST",
+          "message": "definition has unsupported probe properties: ['__g33_unknown_property__']; use a documented COMSOL property",
+          "safe_retry": false
+        },
+        "operation": "probe.update",
+        "state": "failed",
+        "status_token": "REFUSED",
+        "verification_status": "NOT_APPLICABLE",
+        "witness": {
+          "dispatches": [],
+          "engine_calls": 0,
+          "methods": [],
+          "mutation_issued": false,
+          "mutation_method": null
+        }
+      },
+      "domain_state": "failed",
+      "effect": "project_write",
+      "execution_state_unknown": false,
+      "isolation_proof": {
+        "api_probe": {
+          "authenticated_api_success": true,
+          "denial_evidence_source": "server_access_log",
+          "loopback_address": "127.0.0.1",
+          "loopback_port": 56338,
+          "nonloopback_address": "192.168.100.152",
+          "nonloopback_api_exception_http_status": null,
+          "nonloopback_port": 56338,
+          "observed_at": "2026-09-22T04:22:36Z",
+          "probe_kind": "comsol_java_api",
+          "server_access_log": {
+            "entries": [
+              {
+                "http_status": 101,
+                "method": "GET",
+                "peer": "127.0.0.1",
+                "route": "/webbridge/websocket"
+              },
+              {
+                "http_status": 101,
+                "method": "GET",
+                "peer": "127.0.0.1",
+                "route": "/webbridge/websocket"
+              },
+              {
+                "http_status": 403,
+                "method": "GET",
+                "peer": "192.168.100.152",
+                "route": "/webbridge/websocket"
+              }
+            ],
+            "finished_at": "2026-09-22T04:22:36Z",
+            "inode": 29917449,
+            "java_request_id": "g2-valve-nonloopback-connect",
+            "offset_after": 261,
+            "offset_before": 0,
+            "parsed_nonloopback_entry": {
+              "http_status": 403,
+              "method": "GET",
+              "peer": "192.168.100.152",
+              "route": "/webbridge/websocket"
+            },
+            "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_nodes_20260922T0437Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+            "phase": "java_connect_only",
+            "raw_probe_started_after_capture": true,
+            "segment_sha256": "e7504ed4aeb1a068abf87e1890e38316243a09a824e96a8b6aedbbe2fb9e79b6",
+            "started_at": "2026-09-22T04:22:27Z",
+            "status": "PASS"
+          }
+        },
+        "birth": "Tue Sep 22 12:22:23 2026",
+        "config_inode": 14720294,
+        "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+        "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+        "endpoint": "127.0.0.1:56338",
+        "established_client_pids": [
+          59061,
+          59177
+        ],
+        "listener": {
+          "endpoint": "*:56338",
+          "local_endpoint": "*:56338",
+          "pid": 59061,
+          "raw": "java    59061 everwalker   59u  IPv6 0x1e95b9b5687385fa      0t0  TCP *:56338 (LISTEN)",
+          "remote_endpoint": null,
+          "state": "LISTEN"
+        },
+        "listener_binding": "wildcard",
+        "loopback_listener": false,
+        "pid": 59061,
+        "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+        "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_nodes_20260922T0437Z/isolation_receipt.json",
+        "verified": true,
+        "worker_pid": 59177
+      },
+      "operation": "probe.update",
+      "partial_change": false,
+      "refusal": {
+        "code": "INVALID_REQUEST",
+        "message": "definition has unsupported probe properties: ['__g33_unknown_property__']; use a documented COMSOL property",
+        "safe_retry": false,
+        "stage": "validation"
+      },
+      "refused": true,
+      "status": "REFUSED",
+      "verification_status": "NOT_APPLICABLE",
+      "verified_outcome": "failed",
+      "witness": {
+        "dispatches": [],
+        "engine_calls": 0,
+        "methods": [],
+        "mutation_issued": false,
+        "mutation_method": null
+      }
+    },
+    "error": {
+      "code": "INVALID_REQUEST",
+      "message": "definition has unsupported probe properties: ['__g33_unknown_property__']; use a documented COMSOL property",
+      "safe_retry": false,
+      "stage": "validation"
+    },
+    "execution": {
+      "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+      "dirty": false,
+      "idempotency_key": "g33-node-055-C14-property-failure-prevalidation",
+      "job_id": "ba878f25-5b56-4dcf-9df4-6183c19d91e4",
+      "model_ownership": "mcp_owned",
+      "model_ref": {
+        "generation": 1,
+        "model_tag": "mcp1",
+        "schema_version": 1,
+        "server_instance_id": "5c111f4b1794ddb13abb3be2a533d0f738f36267547b9e71bc4b144df549102a",
+        "session_id": "session-1c51d8d6a5f41192011b5904"
+      },
+      "operation_id": "b51d7cf2-5264-497b-bdf1-07d909f339c1",
+      "request_hash": "b4dec1fdef881f05f88fc3b6b0a341a2ba7a045b55d5fb869fdabb7725a2424f",
+      "request_id": "g33-node-C14-property-failure-prevalidation",
+      "revision": 24,
+      "server_ownership": "shared",
+      "session_id": "session-1c51d8d6a5f41192011b5904"
+    },
+    "success": false
+  },
+  "data": {
+    "cleanup_failed": false,
+    "dispatch_stage": "validation",
+    "domain_outcome": {
+      "cleanup_failed": false,
+      "details": {
+        "status_token": "REFUSED"
+      },
+      "dispatch_stage": "validation",
+      "execution_state_unknown": false,
+      "failure": {
+        "code": "INVALID_REQUEST",
+        "message": "definition has unsupported probe properties: ['__g33_unknown_property__']; use a documented COMSOL property",
+        "safe_retry": false
+      },
+      "operation": "probe.update",
+      "state": "failed",
+      "status_token": "REFUSED",
+      "verification_status": "NOT_APPLICABLE",
+      "witness": {
+        "dispatches": [],
+        "engine_calls": 0,
+        "methods": [],
+        "mutation_issued": false,
+        "mutation_method": null
+      }
+    },
+    "domain_state": "failed",
+    "effect": "project_write",
+    "execution_state_unknown": false,
+    "isolation_proof": {
+      "api_probe": {
+        "authenticated_api_success": true,
+        "denial_evidence_source": "server_access_log",
+        "loopback_address": "127.0.0.1",
+        "loopback_port": 56338,
+        "nonloopback_address": "192.168.100.152",
+        "nonloopback_api_exception_http_status": null,
+        "nonloopback_port": 56338,
+        "observed_at": "2026-09-22T04:22:36Z",
+        "probe_kind": "comsol_java_api",
+        "server_access_log": {
+          "entries": [
+            {
+              "http_status": 101,
+              "method": "GET",
+              "peer": "127.0.0.1",
+              "route": "/webbridge/websocket"
+            },
+            {
+              "http_status": 101,
+              "method": "GET",
+              "peer": "127.0.0.1",
+              "route": "/webbridge/websocket"
+            },
+            {
+              "http_status": 403,
+              "method": "GET",
+              "peer": "192.168.100.152",
+              "route": "/webbridge/websocket"
+            }
+          ],
+          "finished_at": "2026-09-22T04:22:36Z",
+          "inode": 29917449,
+          "java_request_id": "g2-valve-nonloopback-connect",
+          "offset_after": 261,
+          "offset_before": 0,
+          "parsed_nonloopback_entry": {
+            "http_status": 403,
+            "method": "GET",
+            "peer": "192.168.100.152",
+            "route": "/webbridge/websocket"
+          },
+          "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_nodes_20260922T0437Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+          "phase": "java_connect_only",
+          "raw_probe_started_after_capture": true,
+          "segment_sha256": "e7504ed4aeb1a068abf87e1890e38316243a09a824e96a8b6aedbbe2fb9e79b6",
+          "started_at": "2026-09-22T04:22:27Z",
+          "status": "PASS"
+        }
+      },
+      "birth": "Tue Sep 22 12:22:23 2026",
+      "config_inode": 14720294,
+      "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+      "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+      "endpoint": "127.0.0.1:56338",
+      "established_client_pids": [
+        59061,
+        59177
+      ],
+      "listener": {
+        "endpoint": "*:56338",
+        "local_endpoint": "*:56338",
+        "pid": 59061,
+        "raw": "java    59061 everwalker   59u  IPv6 0x1e95b9b5687385fa      0t0  TCP *:56338 (LISTEN)",
+        "remote_endpoint": null,
+        "state": "LISTEN"
+      },
+      "listener_binding": "wildcard",
+      "loopback_listener": false,
+      "pid": 59061,
+      "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+      "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_nodes_20260922T0437Z/isolation_receipt.json",
+      "verified": true,
+      "worker_pid": 59177
+    },
+    "operation": "probe.update",
+    "partial_change": false,
+    "refusal": {
+      "code": "INVALID_REQUEST",
+      "message": "definition has unsupported probe properties: ['__g33_unknown_property__']; use a documented COMSOL property",
+      "safe_retry": false,
+      "stage": "validation"
+    },
+    "refused": true,
+    "status": "REFUSED",
+    "verification_status": "NOT_APPLICABLE",
+    "verified_outcome": "failed",
+    "witness": {
+      "dispatches": [],
+      "engine_calls": 0,
+      "methods": [],
+      "mutation_issued": false,
+      "mutation_method": null
+    }
+  },
+  "error": {
+    "code": "INVALID_REQUEST",
+    "message": "definition has unsupported probe properties: ['__g33_unknown_property__']; use a documented COMSOL property",
+    "safe_retry": false,
+    "stage": "validation"
+  },
+  "execution": {
+    "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+    "dirty": false,
+    "idempotency_key": "g33-node-055-C14-property-failure-prevalidation",
+    "job_id": "ba878f25-5b56-4dcf-9df4-6183c19d91e4",
+    "model_ownership": "mcp_owned",
+    "model_ref": {
+      "generation": 1,
+      "model_tag": "mcp1",
+      "schema_version": 1,
+      "server_instance_id": "5c111f4b1794ddb13abb3be2a533d0f738f36267547b9e71bc4b144df549102a",
+      "session_id": "session-1c51d8d6a5f41192011b5904"
+    },
+    "operation_id": "b51d7cf2-5264-497b-bdf1-07d909f339c1",
+    "request_hash": "b4dec1fdef881f05f88fc3b6b0a341a2ba7a045b55d5fb869fdabb7725a2424f",
+    "request_id": "g33-node-C14-property-failure-prevalidation",
+    "revision": 24,
+    "server_ownership": "shared",
+    "session_id": "session-1c51d8d6a5f41192011b5904"
+  },
+  "success": false
+}

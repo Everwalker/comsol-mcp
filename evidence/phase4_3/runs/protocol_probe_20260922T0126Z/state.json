@@ -1,0 +1,101 @@
+{
+  "model_create_probe": {
+    "available": false,
+    "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+    "executable": false,
+    "probe_unreadable": null,
+    "mcp_tool_name": "model_create",
+    "effect": "WRITE",
+    "route": "control plane",
+    "error_code": null,
+    "schema_is_object": true,
+    "input_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "model.create input",
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "idempotency_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "request_id": {
+          "type": "string"
+        },
+        "session_id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "dimension": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "project_id",
+        "idempotency_key",
+        "session_id",
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "output_contract": true,
+    "input_schema_properties": [
+      "dimension",
+      "idempotency_key",
+      "label",
+      "project_id",
+      "request_id",
+      "session_id"
+    ],
+    "wire_compatibility": {
+      "transport": "MCP structuredContent plus text mirror; isError equals not success",
+      "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+      "execution_fields": [
+        "session_id",
+        "model_ref",
+        "expected_revision",
+        "idempotency_key",
+        "request_id",
+        "rpc_timeout_s",
+        "queue_timeout_s",
+        "execution_timeout_s"
+      ],
+      "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+      "result_fields": [
+        "success",
+        "data",
+        "error",
+        "execution"
+      ]
+    },
+    "execution_fields": [
+      "session_id",
+      "model_ref",
+      "expected_revision",
+      "idempotency_key",
+      "request_id",
+      "rpc_timeout_s",
+      "queue_timeout_s",
+      "execution_timeout_s"
+    ],
+    "evaluation_policy": null,
+    "evaluation_policy_source": null,
+    "evaluation_policy_note": "not published: neither the input schema nor the describe payload declares it",
+    "required_products": null,
+    "remediation": null
+  },
+  "ref": {
+    "schema_version": 1,
+    "session_id": "session-a31344684e69f483696da559",
+    "server_instance_id": "e0c83eb8cf3a2f289bb43f4e47ccd8e942bd971a7edaccd3802d0b7bb7c49aa3",
+    "model_tag": "mcp1",
+    "generation": 1
+  },
+  "revision": 2,
+  "model_label": "G33FreshProtocolA"
+}

@@ -1,0 +1,5643 @@
+{
+  "calls": [
+    {
+      "body_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "idempotency_key": "g33-node-001-initial-datasets",
+      "mode": "response",
+      "operation": "dataset.list",
+      "reconcile": false,
+      "request": "g33-node-initial-datasets",
+      "require_model": true,
+      "response": {
+        "data_keys": [
+          "count",
+          "datasets",
+          "read_errors",
+          "tags"
+        ],
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-001-initial-datasets",
+          "job_id": "8c923ae0-dd8a-430a-b0c6-8a98644ed185",
+          "operation_id": "dc1ee891-caee-453a-8446-7fab21abf96b",
+          "request_id": "g33-node-initial-datasets",
+          "revision": 1
+        },
+        "success": true,
+        "unknown": false
+      }
+    },
+    {
+      "body_sha256": "584e7600815c4c752e42f8f3c00aa4bf1597f13bb08ed5de443b33097e1a1751",
+      "idempotency_key": "g33-node-002-initial-numerical",
+      "mode": "response",
+      "operation": "result.numerical_manage",
+      "reconcile": false,
+      "request": "g33-node-initial-numerical",
+      "require_model": true,
+      "response": {
+        "data_keys": [
+          "action",
+          "cleanup_failed",
+          "count",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "features",
+          "isolation_proof",
+          "partial_change",
+          "readback",
+          "tags",
+          "verification_status"
+        ],
+        "domain_outcome": {
+          "cleanup_failed": false,
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "operation": "result.numerical_manage",
+          "state": "succeeded",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-563cdc12-f9f9-44b8-ac49-6d2165b6535f"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "numerical",
+                "receiver": "h-c24d1cdb-0513-476a-9dc5-8822ef8bae85"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-41466bcc-f7c3-48b1-a6e5-b7f7b1b478cd"
+              }
+            ],
+            "engine_calls": 3,
+            "methods": [
+              "numerical",
+              "result",
+              "tags"
+            ],
+            "mutation_issued": false,
+            "mutation_method": null
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-002-initial-numerical",
+          "job_id": "a92ab4be-c78a-45fc-8d25-b51af0ba453c",
+          "operation_id": "55503777-0180-4e9d-8cfd-72844f3cac46",
+          "request_id": "g33-node-initial-numerical",
+          "revision": 2
+        },
+        "readback": {
+          "readable": true,
+          "source": "engine.tags/get"
+        },
+        "success": true,
+        "unknown": false
+      }
+    },
+    {
+      "body_sha256": "584e7600815c4c752e42f8f3c00aa4bf1597f13bb08ed5de443b33097e1a1751",
+      "idempotency_key": "g33-node-003-initial-tables",
+      "mode": "response",
+      "operation": "result.table_manage",
+      "reconcile": false,
+      "request": "g33-node-initial-tables",
+      "require_model": true,
+      "response": {
+        "data_keys": [
+          "action",
+          "cleanup_failed",
+          "count",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "isolation_proof",
+          "partial_change",
+          "readback",
+          "tables",
+          "tags",
+          "verification_status"
+        ],
+        "domain_outcome": {
+          "cleanup_failed": false,
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "operation": "result.table_manage",
+          "state": "succeeded",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-6846f0e9-849f-4976-b562-03fd931f0362"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-440c75f6-ab6c-41aa-adea-64ae2f7503b2"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-dc25ef90-63b4-4e6c-b942-e6a3763b3266"
+              }
+            ],
+            "engine_calls": 3,
+            "methods": [
+              "result",
+              "table",
+              "tags"
+            ],
+            "mutation_issued": false,
+            "mutation_method": null
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-003-initial-tables",
+          "job_id": "50ca68d5-cc6f-41fc-8aab-94bc03ab240a",
+          "operation_id": "9764b9c3-809c-4d23-bbde-08a13037ca7d",
+          "request_id": "g33-node-initial-tables",
+          "revision": 3
+        },
+        "readback": {
+          "readable": true,
+          "source": "engine.tags/get"
+        },
+        "success": true,
+        "unknown": false
+      }
+    },
+    {
+      "body_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "idempotency_key": "g33-node-004-initial-probes",
+      "mode": "response",
+      "operation": "probe.list",
+      "reconcile": false,
+      "request": "g33-node-initial-probes",
+      "require_model": true,
+      "response": {
+        "data_keys": [
+          "count",
+          "probes",
+          "readback",
+          "tags"
+        ],
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-004-initial-probes",
+          "job_id": "e00a049a-bf23-4b94-a46a-0b86f3527a2d",
+          "operation_id": "f1f882e4-b77a-431a-bc6e-cf348c9ad2de",
+          "request_id": "g33-node-initial-probes",
+          "revision": 3
+        },
+        "readback": {
+          "readable": true,
+          "source": "engine.tags/get"
+        },
+        "success": true,
+        "unknown": false
+      }
+    },
+    {
+      "body_sha256": "0e89505064f48e9eb921e61a2e8c898ce0c97bfc80fd01e608899cd04d0304cc",
+      "idempotency_key": "g33-node-005-C14-complex-table-sentinel-create",
+      "mode": "response",
+      "operation": "result.table_manage",
+      "reconcile": false,
+      "request": "g33-node-C14-complex-table-sentinel-create",
+      "require_model": true,
+      "response": {
+        "applied": [
+          {
+            "requested": {
+              "tag": "g33sentinelnodes01",
+              "type_id": "Table"
+            },
+            "step": "create"
+          },
+          {
+            "readback": {
+              "data": [
+                [
+                  {
+                    "imag": 0.1,
+                    "real": 1.0
+                  },
+                  {
+                    "imag": 0.2,
+                    "real": 2.0
+                  }
+                ],
+                [
+                  {
+                    "imag": 0.3,
+                    "real": 3.0
+                  },
+                  {
+                    "imag": 0.4,
+                    "real": 4.0
+                  }
+                ]
+              ],
+              "data_readback": null,
+              "header_readback": null,
+              "headers": [
+                "",
+                ""
+              ],
+              "imaginary": [
+                [
+                  0.1,
+                  0.2
+                ],
+                [
+                  0.3,
+                  0.4
+                ]
+              ],
+              "match": true,
+              "readable": true
+            },
+            "requested_rows": 2,
+            "step": "data"
+          },
+          {
+            "readback": [
+              "T",
+              "u"
+            ],
+            "requested": [
+              "T",
+              "u"
+            ],
+            "step": "headers"
+          }
+        ],
+        "created": true,
+        "data_keys": [
+          "action",
+          "applied",
+          "applied_count",
+          "cleanup_failed",
+          "created",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "failed",
+          "failed_count",
+          "isolation_proof",
+          "not_executed",
+          "not_executed_count",
+          "ok",
+          "partial_change",
+          "path",
+          "readback",
+          "readback_match",
+          "status",
+          "tag",
+          "type_id",
+          "verification_status"
+        ],
+        "domain_outcome": {
+          "applied_count": 3,
+          "cleanup_failed": false,
+          "details": {
+            "status_token": "APPLIED"
+          },
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "failed_count": 0,
+          "not_executed_count": 0,
+          "operation": "result.table_manage",
+          "state": "succeeded",
+          "status_token": "APPLIED",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-6bb3a855-0b13-4b3a-8884-37997ef90126"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-3a9b0b57-b61f-43bc-920d-07efac37d87f"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-cf51e478-7734-4040-a8f2-1bc431adb353"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "create",
+                "receiver": "h-cf51e478-7734-4040-a8f2-1bc431adb353"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-cf51e478-7734-4040-a8f2-1bc431adb353"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "setTableData",
+                "receiver": "h-7efc1ef3-a1a5-46ea-a9e8-bc4d6d39f6ab"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getColumnHeaders",
+                "receiver": "h-7efc1ef3-a1a5-46ea-a9e8-bc4d6d39f6ab"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getReal",
+                "receiver": "h-7efc1ef3-a1a5-46ea-a9e8-bc4d6d39f6ab"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getImag",
+                "receiver": "h-7efc1ef3-a1a5-46ea-a9e8-bc4d6d39f6ab"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": true,
+                "method": "setColumnHeaders",
+                "receiver": "h-7efc1ef3-a1a5-46ea-a9e8-bc4d6d39f6ab"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getColumnHeaders",
+                "receiver": "h-7efc1ef3-a1a5-46ea-a9e8-bc4d6d39f6ab"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getReal",
+                "receiver": "h-7efc1ef3-a1a5-46ea-a9e8-bc4d6d39f6ab"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getImag",
+                "receiver": "h-7efc1ef3-a1a5-46ea-a9e8-bc4d6d39f6ab"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getColumnHeaders",
+                "receiver": "h-7efc1ef3-a1a5-46ea-a9e8-bc4d6d39f6ab"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getReal",
+                "receiver": "h-7efc1ef3-a1a5-46ea-a9e8-bc4d6d39f6ab"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getImag",
+                "receiver": "h-7efc1ef3-a1a5-46ea-a9e8-bc4d6d39f6ab"
+              }
+            ],
+            "engine_calls": 16,
+            "methods": [
+              "create",
+              "getColumnHeaders",
+              "getImag",
+              "getReal",
+              "result",
+              "setColumnHeaders",
+              "setTableData",
+              "table",
+              "tags"
+            ],
+            "mutation_issued": true,
+            "mutation_method": "create"
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-005-C14-complex-table-sentinel-create",
+          "job_id": "50bae301-da30-4ebc-9bc7-762fea1fe267",
+          "operation_id": "a0475deb-569b-4af7-826e-0b8ea06daa66",
+          "request_id": "g33-node-C14-complex-table-sentinel-create",
+          "revision": 4
+        },
+        "failed": [],
+        "not_executed": [],
+        "readback": {
+          "data": [
+            [
+              {
+                "imag": 0.1,
+                "real": 1.0
+              },
+              {
+                "imag": 0.2,
+                "real": 2.0
+              }
+            ],
+            [
+              {
+                "imag": 0.3,
+                "real": 3.0
+              },
+              {
+                "imag": 0.4,
+                "real": 4.0
+              }
+            ]
+          ],
+          "data_readback": null,
+          "header_readback": null,
+          "headers": [
+            "T",
+            "u"
+          ],
+          "imaginary": [
+            [
+              0.1,
+              0.2
+            ],
+            [
+              0.3,
+              0.4
+            ]
+          ],
+          "match": true,
+          "readable": true
+        },
+        "status": "APPLIED",
+        "success": true,
+        "tag": "g33sentinelnodes01",
+        "type_id": "Table",
+        "unknown": false
+      }
+    },
+    {
+      "body_sha256": "6e82673e172114e4dec3d499330f490af326f8cc3facd0c221bba7ca8d991e35",
+      "idempotency_key": "g33-node-006-C14-complex-table-sentinel-get",
+      "mode": "response",
+      "operation": "result.table_manage",
+      "reconcile": false,
+      "request": "g33-node-C14-complex-table-sentinel-get",
+      "require_model": true,
+      "response": {
+        "data_keys": [
+          "action",
+          "cleanup_failed",
+          "data",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "headers",
+          "imaginary",
+          "isolation_proof",
+          "partial_change",
+          "path",
+          "readback",
+          "tag",
+          "verification_status"
+        ],
+        "domain_outcome": {
+          "cleanup_failed": false,
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "operation": "result.table_manage",
+          "state": "succeeded",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-377110d8-0cf5-4317-a855-d2ec85e0e80c"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-14af4143-50e3-470c-8427-b7cf90182392"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-0a49961a-f711-4730-a342-49c9c22e36a4"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-56436e89-bc34-4f8c-a1f0-51cfa00775f6"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-109f4ba0-8568-4f41-90b2-f50fe56432d0"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-4dd381f5-26f4-43cb-8883-37f84dd06682"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-1da55387-065e-4449-94e7-9fcf79685ad6"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-2838cf46-c466-4ab2-9be4-6b1efec6c337"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-2838cf46-c466-4ab2-9be4-6b1efec6c337"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getColumnHeaders",
+                "receiver": "h-c88f6746-aa5d-4943-beb8-3425bd373ce3"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getReal",
+                "receiver": "h-c88f6746-aa5d-4943-beb8-3425bd373ce3"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getImag",
+                "receiver": "h-c88f6746-aa5d-4943-beb8-3425bd373ce3"
+              }
+            ],
+            "engine_calls": 12,
+            "methods": [
+              "get",
+              "getColumnHeaders",
+              "getImag",
+              "getReal",
+              "result",
+              "table",
+              "tags"
+            ],
+            "mutation_issued": false,
+            "mutation_method": null
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-006-C14-complex-table-sentinel-get",
+          "job_id": "aca02ee0-39ed-42a6-8323-150ad0d47318",
+          "operation_id": "8627d014-0b3a-4b88-898c-105a601156af",
+          "request_id": "g33-node-C14-complex-table-sentinel-get",
+          "revision": 5
+        },
+        "headers": [
+          "T",
+          "u"
+        ],
+        "readback": {
+          "data": [
+            [
+              {
+                "imag": 0.1,
+                "real": 1.0
+              },
+              {
+                "imag": 0.2,
+                "real": 2.0
+              }
+            ],
+            [
+              {
+                "imag": 0.3,
+                "real": 3.0
+              },
+              {
+                "imag": 0.4,
+                "real": 4.0
+              }
+            ]
+          ],
+          "data_readback": null,
+          "header_readback": null,
+          "headers": [
+            "T",
+            "u"
+          ],
+          "imaginary": [
+            [
+              0.1,
+              0.2
+            ],
+            [
+              0.3,
+              0.4
+            ]
+          ],
+          "match": true,
+          "readable": true
+        },
+        "success": true,
+        "tag": "g33sentinelnodes01",
+        "unknown": false
+      }
+    },
+    {
+      "body_sha256": "1eddfc74e9071de614314265d5f562171788a44cc8cc613bf66751c06778c632",
+      "idempotency_key": "g33-node-007-C14-probe-history-table-create-empty",
+      "mode": "response",
+      "operation": "result.table_manage",
+      "reconcile": false,
+      "request": "g33-node-C14-probe-history-table-create-empty",
+      "require_model": true,
+      "response": {
+        "applied": [
+          {
+            "requested": {
+              "tag": "g33histnodes01",
+              "type_id": "Table"
+            },
+            "step": "create"
+          },
+          {
+            "readback": {
+              "data": [],
+              "data_readback": null,
+              "header_readback": null,
+              "headers": null,
+              "imaginary": [],
+              "match": true,
+              "readable": true
+            },
+            "requested_rows": 0,
+            "step": "data"
+          },
+          {
+            "readback": [
+              "T"
+            ],
+            "requested": [
+              "T"
+            ],
+            "step": "headers"
+          }
+        ],
+        "created": true,
+        "data_keys": [
+          "action",
+          "applied",
+          "applied_count",
+          "cleanup_failed",
+          "created",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "failed",
+          "failed_count",
+          "isolation_proof",
+          "not_executed",
+          "not_executed_count",
+          "ok",
+          "partial_change",
+          "path",
+          "readback",
+          "readback_match",
+          "status",
+          "tag",
+          "type_id",
+          "verification_status"
+        ],
+        "domain_outcome": {
+          "applied_count": 3,
+          "cleanup_failed": false,
+          "details": {
+            "status_token": "APPLIED"
+          },
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "failed_count": 0,
+          "not_executed_count": 0,
+          "operation": "result.table_manage",
+          "state": "succeeded",
+          "status_token": "APPLIED",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-bdce45b1-76b7-452a-8810-7450671f604d"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-ca36fa6e-bd46-45ab-be6f-6c45bc8f09d5"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-df8027dd-2701-43a8-95e3-1b8f07424dd9"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "create",
+                "receiver": "h-df8027dd-2701-43a8-95e3-1b8f07424dd9"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-df8027dd-2701-43a8-95e3-1b8f07424dd9"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": true,
+                "method": "setTableData",
+                "receiver": "h-6c6a39b3-d1f8-4c75-804f-7dd72349fad8"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getColumnHeaders",
+                "receiver": "h-6c6a39b3-d1f8-4c75-804f-7dd72349fad8"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getReal",
+                "receiver": "h-6c6a39b3-d1f8-4c75-804f-7dd72349fad8"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getImag",
+                "receiver": "h-6c6a39b3-d1f8-4c75-804f-7dd72349fad8"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": true,
+                "method": "setColumnHeaders",
+                "receiver": "h-6c6a39b3-d1f8-4c75-804f-7dd72349fad8"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getColumnHeaders",
+                "receiver": "h-6c6a39b3-d1f8-4c75-804f-7dd72349fad8"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getReal",
+                "receiver": "h-6c6a39b3-d1f8-4c75-804f-7dd72349fad8"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getImag",
+                "receiver": "h-6c6a39b3-d1f8-4c75-804f-7dd72349fad8"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getColumnHeaders",
+                "receiver": "h-6c6a39b3-d1f8-4c75-804f-7dd72349fad8"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getReal",
+                "receiver": "h-6c6a39b3-d1f8-4c75-804f-7dd72349fad8"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getImag",
+                "receiver": "h-6c6a39b3-d1f8-4c75-804f-7dd72349fad8"
+              }
+            ],
+            "engine_calls": 16,
+            "methods": [
+              "create",
+              "getColumnHeaders",
+              "getImag",
+              "getReal",
+              "result",
+              "setColumnHeaders",
+              "setTableData",
+              "table",
+              "tags"
+            ],
+            "mutation_issued": true,
+            "mutation_method": "create"
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-007-C14-probe-history-table-create-empty",
+          "job_id": "c1ead6fc-0970-43b6-a9a3-ae0af523d618",
+          "operation_id": "3e3560a6-759d-4ec9-a766-5ae4f6fb6589",
+          "request_id": "g33-node-C14-probe-history-table-create-empty",
+          "revision": 6
+        },
+        "failed": [],
+        "not_executed": [],
+        "readback": {
+          "data": [],
+          "data_readback": null,
+          "header_readback": null,
+          "headers": [
+            "T"
+          ],
+          "imaginary": [],
+          "match": true,
+          "readable": true
+        },
+        "status": "APPLIED",
+        "success": true,
+        "tag": "g33histnodes01",
+        "type_id": "Table",
+        "unknown": false
+      }
+    },
+    {
+      "body_sha256": "2d68490a74ca15583a5b549c74ff915ffb34ea36f11f8f1326e10a959bc41630",
+      "idempotency_key": "g33-node-008-C14-domain-probe-create",
+      "mode": "response",
+      "operation": "probe.create",
+      "reconcile": false,
+      "request": "g33-node-C14-domain-probe-create",
+      "require_model": true,
+      "response": {
+        "applied": [
+          {
+            "method": "probe.create",
+            "requested": {
+              "tag": "g33probenodes01",
+              "type_id": "Domain"
+            },
+            "step": "create"
+          },
+          {
+            "property": "expr",
+            "readback": {
+              "match": true,
+              "method": "getString",
+              "readable": true,
+              "value": "T"
+            },
+            "requested": "T",
+            "step": "property"
+          },
+          {
+            "property": "unit",
+            "readback": {
+              "match": true,
+              "method": "getString",
+              "readable": true,
+              "value": "K"
+            },
+            "requested": "K",
+            "step": "property"
+          },
+          {
+            "property": "table",
+            "readback": {
+              "match": true,
+              "method": "getString",
+              "readable": true,
+              "value": "g33histnodes01"
+            },
+            "requested": "g33histnodes01",
+            "step": "property"
+          },
+          {
+            "applied": [
+              {
+                "entities": [
+                  1
+                ],
+                "method": "geom/set",
+                "readback": [
+                  1
+                ]
+              }
+            ],
+            "entity_state": {
+              "dimension": 2,
+              "entities": [
+                1
+              ],
+              "entities_error": null,
+              "geometry": "geom1",
+              "is_inheriting": false,
+              "named": "",
+              "named_error": null
+            },
+            "kind": "explicit",
+            "model_binding": null,
+            "step": "selection"
+          }
+        ],
+        "created": true,
+        "data_keys": [
+          "applied",
+          "applied_count",
+          "cleanup_failed",
+          "created",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "failed",
+          "failed_count",
+          "isolation_proof",
+          "native_type",
+          "not_executed",
+          "not_executed_count",
+          "ok",
+          "partial_change",
+          "path",
+          "readback",
+          "readback_match",
+          "status",
+          "table",
+          "tag",
+          "type_id",
+          "verification_status"
+        ],
+        "domain_outcome": {
+          "applied_count": 5,
+          "cleanup_failed": false,
+          "details": {
+            "status_token": "APPLIED"
+          },
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "failed_count": 0,
+          "not_executed_count": 0,
+          "operation": "probe.create",
+          "state": "succeeded",
+          "status_token": "APPLIED",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-69b4071d-9275-4923-b56a-cff9893af393"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-4d621aca-4ba6-4765-8184-e4c0522cba7a"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-671bf2f0-4c46-4ec5-a265-19cf744c90c7"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "component",
+                "receiver": "h-69b4071d-9275-4923-b56a-cff9893af393"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "probe",
+                "receiver": "h-4c319898-8c25-442a-bef2-07b61a2cf71c"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-5fd43cb1-8528-486d-8ef2-e5c09463c6d0"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "create",
+                "receiver": "h-5fd43cb1-8528-486d-8ef2-e5c09463c6d0"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-5fd43cb1-8528-486d-8ef2-e5c09463c6d0"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "selection",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": true,
+                "method": "model",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "geom",
+                "receiver": "h-178976d4-3b90-463e-8302-88dfadac1769"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-178976d4-3b90-463e-8302-88dfadac1769"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": true,
+                "method": "entities",
+                "receiver": "h-178976d4-3b90-463e-8302-88dfadac1769"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": true,
+                "method": "named",
+                "receiver": "h-178976d4-3b90-463e-8302-88dfadac1769"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "isInheriting",
+                "receiver": "h-178976d4-3b90-463e-8302-88dfadac1769"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": true,
+                "method": "entities",
+                "receiver": "h-178976d4-3b90-463e-8302-88dfadac1769"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": true,
+                "method": "dim",
+                "receiver": "h-178976d4-3b90-463e-8302-88dfadac1769"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "geom",
+                "receiver": "h-178976d4-3b90-463e-8302-88dfadac1769"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getType",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getType",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "selection",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": true,
+                "method": "named",
+                "receiver": "h-b5d9e212-1d37-440c-96e3-08c882f711ab"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "isInheriting",
+                "receiver": "h-b5d9e212-1d37-440c-96e3-08c882f711ab"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": true,
+                "method": "entities",
+                "receiver": "h-b5d9e212-1d37-440c-96e3-08c882f711ab"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": true,
+                "method": "dim",
+                "receiver": "h-b5d9e212-1d37-440c-96e3-08c882f711ab"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "geom",
+                "receiver": "h-b5d9e212-1d37-440c-96e3-08c882f711ab"
+              }
+            ],
+            "engine_calls": 35,
+            "methods": [
+              "component",
+              "create",
+              "dim",
+              "entities",
+              "geom",
+              "getString",
+              "getType",
+              "isInheriting",
+              "model",
+              "named",
+              "probe",
+              "result",
+              "selection",
+              "set",
+              "table",
+              "tags"
+            ],
+            "mutation_issued": true,
+            "mutation_method": "create"
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-008-C14-domain-probe-create",
+          "job_id": "4cd0a90c-5116-4634-85bb-c940130e9f08",
+          "operation_id": "e544caae-1bd1-4ab9-87dc-8fc028ec311d",
+          "request_id": "g33-node-C14-domain-probe-create",
+          "revision": 7
+        },
+        "failed": [],
+        "not_executed": [],
+        "readback": {
+          "match": true,
+          "properties": [
+            {
+              "match": true,
+              "method": "getString",
+              "property": "expr",
+              "readable": true,
+              "value": "T"
+            },
+            {
+              "match": true,
+              "method": "getString",
+              "property": "unit",
+              "readable": true,
+              "value": "K"
+            },
+            {
+              "match": true,
+              "method": "getString",
+              "property": "table",
+              "readable": true,
+              "value": "g33histnodes01"
+            }
+          ],
+          "readable": true,
+          "selection": {
+            "dimension": 2,
+            "entities": [
+              1
+            ],
+            "entities_error": null,
+            "geometry": "geom1",
+            "is_inheriting": false,
+            "named": "",
+            "named_error": null
+          },
+          "table": "g33histnodes01",
+          "tags": [
+            "g33probenodes01"
+          ],
+          "type": "Domain"
+        },
+        "status": "APPLIED",
+        "success": true,
+        "table": "g33histnodes01",
+        "tag": "g33probenodes01",
+        "type_id": "DomainProbe",
+        "unknown": false
+      }
+    },
+    {
+      "body_sha256": "17162520c0525c4cb9d62c4bc391449cfa0dd52452629b68e02dffc64127e4ac",
+      "idempotency_key": "g33-node-009-C14-probe-update-gen-result",
+      "mode": "response",
+      "operation": "probe.update",
+      "reconcile": false,
+      "request": "g33-node-C14-probe-update-gen-result",
+      "require_model": true,
+      "response": {
+        "applied": [
+          {
+            "property": "expr",
+            "readback": {
+              "match": true,
+              "method": "getString",
+              "readable": true,
+              "value": "T"
+            },
+            "requested": "T",
+            "step": "property"
+          },
+          {
+            "property": "table",
+            "readback": {
+              "match": true,
+              "method": "getString",
+              "readable": true,
+              "value": "g33histnodes01"
+            },
+            "requested": "g33histnodes01",
+            "step": "property"
+          },
+          {
+            "readback": {
+              "called": true
+            },
+            "solver": "sol1",
+            "step": "genResult"
+          }
+        ],
+        "data_keys": [
+          "applied",
+          "applied_count",
+          "cleanup_failed",
+          "component",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "failed",
+          "failed_count",
+          "isolation_proof",
+          "not_executed",
+          "not_executed_count",
+          "ok",
+          "partial_change",
+          "path",
+          "readback",
+          "readback_match",
+          "status",
+          "tag",
+          "type_id",
+          "updated",
+          "verification_status"
+        ],
+        "domain_outcome": {
+          "applied_count": 3,
+          "cleanup_failed": false,
+          "details": {
+            "status_token": "APPLIED"
+          },
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "failed_count": 0,
+          "not_executed_count": 0,
+          "operation": "probe.update",
+          "state": "succeeded",
+          "status_token": "APPLIED",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "component",
+                "receiver": "h-3024f733-d0ad-4489-a3a7-c969ae83db41"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "probe",
+                "receiver": "h-186838a1-d648-4eef-a252-d48eba22a481"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "probe",
+                "receiver": "h-20f22f1f-a59e-4cb0-ab21-71ed5895a537"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": true,
+                "method": "modelNode",
+                "receiver": "h-20f22f1f-a59e-4cb0-ab21-71ed5895a537"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-dfb24f8f-50ce-4f7a-8ec3-66ba879d6d7d"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "component",
+                "receiver": "h-20f22f1f-a59e-4cb0-ab21-71ed5895a537"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "probe",
+                "receiver": "h-b608e3b0-0e4b-41f8-b894-676566384113"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-519f2cff-7c8d-45b5-9606-13fff4b19a1d"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-519f2cff-7c8d-45b5-9606-13fff4b19a1d"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-0bb65590-c064-430c-af73-0dc2a1e7bbc4"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-0bb65590-c064-430c-af73-0dc2a1e7bbc4"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-587b210d-69ac-49a7-b566-3da8ba310a21"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-40b91b6c-084e-41a3-97da-68b0a7a8ae22"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-316645d2-bccd-431b-b446-1c78d42943b9"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-8f9aa25f-fc66-4a9d-b08a-a8b9aa4d519e"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-8f9aa25f-fc66-4a9d-b08a-a8b9aa4d519e"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-8f9aa25f-fc66-4a9d-b08a-a8b9aa4d519e"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-8f9aa25f-fc66-4a9d-b08a-a8b9aa4d519e"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": true,
+                "method": "genResult",
+                "receiver": "h-8f9aa25f-fc66-4a9d-b08a-a8b9aa4d519e"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-8f9aa25f-fc66-4a9d-b08a-a8b9aa4d519e"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-8f9aa25f-fc66-4a9d-b08a-a8b9aa4d519e"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getType",
+                "receiver": "h-8f9aa25f-fc66-4a9d-b08a-a8b9aa4d519e"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getType",
+                "receiver": "h-8f9aa25f-fc66-4a9d-b08a-a8b9aa4d519e"
+              }
+            ],
+            "engine_calls": 23,
+            "methods": [
+              "component",
+              "genResult",
+              "get",
+              "getString",
+              "getType",
+              "modelNode",
+              "probe",
+              "result",
+              "set",
+              "table",
+              "tags"
+            ],
+            "mutation_issued": true,
+            "mutation_method": "modelNode"
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-009-C14-probe-update-gen-result",
+          "job_id": "7acfdfec-0dab-4e39-850b-7737e7a5c656",
+          "operation_id": "242f8670-e798-4ba1-999f-cdbaa49e217e",
+          "request_id": "g33-node-C14-probe-update-gen-result",
+          "revision": 8
+        },
+        "failed": [],
+        "not_executed": [],
+        "readback": {
+          "match": true,
+          "properties": [
+            {
+              "match": true,
+              "method": "getString",
+              "property": "expr",
+              "readable": true,
+              "value": "T"
+            },
+            {
+              "match": true,
+              "method": "getString",
+              "property": "table",
+              "readable": true,
+              "value": "g33histnodes01"
+            }
+          ],
+          "readable": true,
+          "table": "g33histnodes01",
+          "type": "Domain"
+        },
+        "status": "APPLIED",
+        "success": true,
+        "tag": "g33probenodes01",
+        "type_id": "Domain",
+        "unknown": false,
+        "updated": true
+      }
+    },
+    {
+      "body_sha256": "bd7a881502e9f040372cc792c5b15f8d3dfc5da9f2ab34b1a9456eee091eb760",
+      "idempotency_key": "g33-node-010-C14-probe-history",
+      "mode": "response",
+      "operation": "probe.history",
+      "reconcile": false,
+      "request": "g33-node-C14-probe-history",
+      "require_model": true,
+      "response": {
+        "data_keys": [],
+        "error_code": "INVALID_REQUEST",
+        "execution": {
+          "idempotency_key": "g33-node-010-C14-probe-history",
+          "job_id": "28511a40-3dec-44ac-b456-b325fddade60",
+          "operation_id": "399f3141-a53f-4fb9-85f1-98fff324472d",
+          "request_id": "g33-node-C14-probe-history"
+        },
+        "success": false,
+        "unknown": false
+      }
+    },
+    {
+      "body_sha256": "6e82673e172114e4dec3d499330f490af326f8cc3facd0c221bba7ca8d991e35",
+      "idempotency_key": "g33-node-011-C14-complex-table-sentinel-preservation",
+      "mode": "response",
+      "operation": "result.table_manage",
+      "reconcile": false,
+      "request": "g33-node-C14-complex-table-sentinel-preservation",
+      "require_model": true,
+      "response": {
+        "data_keys": [
+          "action",
+          "cleanup_failed",
+          "data",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "headers",
+          "imaginary",
+          "isolation_proof",
+          "partial_change",
+          "path",
+          "readback",
+          "tag",
+          "verification_status"
+        ],
+        "domain_outcome": {
+          "cleanup_failed": false,
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "operation": "result.table_manage",
+          "state": "succeeded",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-7d7a2085-ae69-4138-a7ed-2badb4c4fa95"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-6c419b06-cb81-46cb-a18d-bd32427f5cde"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-7cffd846-1500-4316-a1e5-da80eccd8626"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-f22519d0-3918-4b03-a36c-d55913dcf724"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-a110ae4b-81b4-43da-ae5c-50fd8785951c"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-c6ed1d4a-0cc1-48bf-890b-f23574a12304"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-d851c58c-d79f-4b04-a1e3-0643bb3f92fa"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-59692347-0dc6-49a7-b7e8-d9885810749a"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-59692347-0dc6-49a7-b7e8-d9885810749a"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getColumnHeaders",
+                "receiver": "h-1b4754fb-14e3-4fb3-aee0-da436c3887c7"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getReal",
+                "receiver": "h-1b4754fb-14e3-4fb3-aee0-da436c3887c7"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getImag",
+                "receiver": "h-1b4754fb-14e3-4fb3-aee0-da436c3887c7"
+              }
+            ],
+            "engine_calls": 12,
+            "methods": [
+              "get",
+              "getColumnHeaders",
+              "getImag",
+              "getReal",
+              "result",
+              "table",
+              "tags"
+            ],
+            "mutation_issued": false,
+            "mutation_method": null
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-011-C14-complex-table-sentinel-preservation",
+          "job_id": "2fa40eae-e950-4b1b-b7eb-b44cf8963ace",
+          "operation_id": "d328f91f-94ba-427f-ad69-9390e6f3f658",
+          "request_id": "g33-node-C14-complex-table-sentinel-preservation",
+          "revision": 9
+        },
+        "headers": [
+          "T",
+          "u"
+        ],
+        "readback": {
+          "data": [
+            [
+              {
+                "imag": 0.1,
+                "real": 1.0
+              },
+              {
+                "imag": 0.2,
+                "real": 2.0
+              }
+            ],
+            [
+              {
+                "imag": 0.3,
+                "real": 3.0
+              },
+              {
+                "imag": 0.4,
+                "real": 4.0
+              }
+            ]
+          ],
+          "data_readback": null,
+          "header_readback": null,
+          "headers": [
+            "T",
+            "u"
+          ],
+          "imaginary": [
+            [
+              0.1,
+              0.2
+            ],
+            [
+              0.3,
+              0.4
+            ]
+          ],
+          "match": true,
+          "readable": true
+        },
+        "success": true,
+        "tag": "g33sentinelnodes01",
+        "unknown": false
+      }
+    },
+    {
+      "body_sha256": "4a4fa59a678bb6e7d7e3f0788812d2cb494f664589ef6d451a7c7943c9aec488",
+      "idempotency_key": "g33-node-012-C14-property-failure-prevalidation",
+      "mode": "response",
+      "operation": "probe.update",
+      "reconcile": false,
+      "request": "g33-node-C14-property-failure-prevalidation",
+      "require_model": true,
+      "response": {
+        "data_keys": [
+          "cleanup_failed",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "isolation_proof",
+          "operation",
+          "partial_change",
+          "refusal",
+          "refused",
+          "status",
+          "verification_status",
+          "verified_outcome",
+          "witness"
+        ],
+        "domain_outcome": {
+          "cleanup_failed": false,
+          "details": {
+            "status_token": "REFUSED"
+          },
+          "dispatch_stage": "validation",
+          "execution_state_unknown": false,
+          "failure": {
+            "code": "INVALID_REQUEST",
+            "message": "definition has unsupported probe properties: ['__g33_unknown_property__']; use a documented COMSOL property",
+            "safe_retry": false
+          },
+          "operation": "probe.update",
+          "state": "failed",
+          "status_token": "REFUSED",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [],
+            "engine_calls": 0,
+            "methods": [],
+            "mutation_issued": false,
+            "mutation_method": null
+          }
+        },
+        "error_code": "INVALID_REQUEST",
+        "execution": {
+          "idempotency_key": "g33-node-012-C14-property-failure-prevalidation",
+          "job_id": "cd1d6a8c-8049-446e-9671-956d8850c24e",
+          "operation_id": "92a6e88b-6d93-4b1f-9a2d-1a1417e96c60",
+          "request_id": "g33-node-C14-property-failure-prevalidation",
+          "revision": 9
+        },
+        "status": "REFUSED",
+        "success": false,
+        "unknown": false
+      }
+    },
+    {
+      "body_sha256": "df2828df51b9cc33a99dbd381fa6cf998f0183c9797819b831a8225b31e10761",
+      "idempotency_key": "g33-node-013-probe-remove-g33probenodes01",
+      "mode": "response",
+      "operation": "probe.remove",
+      "reconcile": false,
+      "request": "g33-node-probe-remove-g33probenodes01",
+      "require_model": true,
+      "response": {
+        "applied": [
+          {
+            "step": "remove",
+            "tag": "g33probenodes01"
+          }
+        ],
+        "data_keys": [
+          "applied",
+          "applied_count",
+          "cleanup_failed",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "failed",
+          "failed_count",
+          "isolation_proof",
+          "not_executed",
+          "not_executed_count",
+          "ok",
+          "partial_change",
+          "path",
+          "readback",
+          "readback_match",
+          "removed",
+          "status",
+          "tag",
+          "verification_status",
+          "verified_removed"
+        ],
+        "domain_outcome": {
+          "applied_count": 1,
+          "cleanup_failed": false,
+          "details": {
+            "status_token": "APPLIED"
+          },
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "failed_count": 0,
+          "not_executed_count": 0,
+          "operation": "probe.remove",
+          "state": "succeeded",
+          "status_token": "APPLIED",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "component",
+                "receiver": "h-3821a558-bd28-4cb1-a126-0c1e7ef2f816"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "probe",
+                "receiver": "h-c8a2272b-3b3c-4e11-94a3-afccacc76717"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "probe",
+                "receiver": "h-5fd563eb-35af-485e-b440-ca72864895da"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": true,
+                "method": "modelNode",
+                "receiver": "h-5fd563eb-35af-485e-b440-ca72864895da"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-f7531150-42a4-4bbd-9120-60e4d73c4708"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "component",
+                "receiver": "h-5fd563eb-35af-485e-b440-ca72864895da"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "probe",
+                "receiver": "h-dd75e954-3d44-4a5f-bc72-e02e7e5fa5e0"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-6a056fd3-fd25-4b48-87b2-d8d8f4dedbb8"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-6a056fd3-fd25-4b48-87b2-d8d8f4dedbb8"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-4a391192-f88f-44d9-8c08-39a78e4c08a4"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-4a391192-f88f-44d9-8c08-39a78e4c08a4"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": true,
+                "method": "remove",
+                "receiver": "h-4a391192-f88f-44d9-8c08-39a78e4c08a4"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-4a391192-f88f-44d9-8c08-39a78e4c08a4"
+              }
+            ],
+            "engine_calls": 13,
+            "methods": [
+              "component",
+              "get",
+              "modelNode",
+              "probe",
+              "remove",
+              "tags"
+            ],
+            "mutation_issued": true,
+            "mutation_method": "modelNode"
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-013-probe-remove-g33probenodes01",
+          "job_id": "a7013d4f-d13d-4832-b0c1-bd95cc1fe705",
+          "operation_id": "df4787f4-4733-44b4-8386-76a6d9b60e85",
+          "request_id": "g33-node-probe-remove-g33probenodes01",
+          "revision": 10
+        },
+        "failed": [],
+        "not_executed": [],
+        "readback": {
+          "match": true,
+          "readable": true,
+          "tags": []
+        },
+        "removed": true,
+        "status": "APPLIED",
+        "success": true,
+        "tag": "g33probenodes01",
+        "unknown": false
+      }
+    },
+    {
+      "body_sha256": "892b19a195dc13daa6ebd58d8ab87336194810743dbd9172d9039f5a904608e4",
+      "idempotency_key": "g33-node-014-table-remove-g33histnodes01",
+      "mode": "response",
+      "operation": "result.table_manage",
+      "reconcile": false,
+      "request": "g33-node-table-remove-g33histnodes01",
+      "require_model": true,
+      "response": {
+        "data_keys": [
+          "cleanup_failed",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "isolation_proof",
+          "operation",
+          "partial_change",
+          "refusal",
+          "refused",
+          "status",
+          "verification_status",
+          "verified_outcome",
+          "witness"
+        ],
+        "domain_outcome": {
+          "cleanup_failed": false,
+          "details": {
+            "status_token": "REFUSED"
+          },
+          "dispatch_stage": "validation",
+          "execution_state_unknown": false,
+          "failure": {
+            "code": "NODE_NOT_FOUND",
+            "message": "could not resolve node path segment table:g33histnodes01; the engine reports table=['g33sentinelnodes01'] for this node",
+            "safe_retry": false
+          },
+          "operation": "result.table_manage",
+          "state": "failed",
+          "status_token": "REFUSED",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-29017bdc-4742-4277-ab6c-22db87158086"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-ca7fb754-09ea-432d-a89d-102f7ffd307b"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-dffe8890-777a-4331-9afe-6ca11e684787"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-7b05d6a1-0cf5-4875-8221-734d9d805d11"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-58e36e45-24ff-4693-8307-e6c343e03361"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-58e36e45-24ff-4693-8307-e6c343e03361"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-94b197d9-5412-440d-aa71-555396cb5865"
+              }
+            ],
+            "engine_calls": 7,
+            "methods": [
+              "result",
+              "table",
+              "tags"
+            ],
+            "mutation_issued": false,
+            "mutation_method": null
+          }
+        },
+        "error_code": "NODE_NOT_FOUND",
+        "execution": {
+          "idempotency_key": "g33-node-014-table-remove-g33histnodes01",
+          "job_id": "15ee8be2-98d5-439c-bb4d-9c722a4131d9",
+          "operation_id": "150a55f5-3f43-4cba-b86e-3a800bb9c5de",
+          "request_id": "g33-node-table-remove-g33histnodes01",
+          "revision": 10
+        },
+        "status": "REFUSED",
+        "success": false,
+        "unknown": false
+      }
+    },
+    {
+      "body_sha256": "b09684616f82def14afcba1eeaa3378238e3fefd29278dd5cc2ba0875d5b4ae8",
+      "idempotency_key": "g33-node-015-table-remove-g33sentinelnodes01",
+      "mode": "response",
+      "operation": "result.table_manage",
+      "reconcile": false,
+      "request": "g33-node-table-remove-g33sentinelnodes01",
+      "require_model": true,
+      "response": {
+        "applied": [
+          {
+            "step": "remove",
+            "tag": "g33sentinelnodes01"
+          }
+        ],
+        "data_keys": [
+          "action",
+          "applied",
+          "applied_count",
+          "cleanup_failed",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "failed",
+          "failed_count",
+          "isolation_proof",
+          "not_executed",
+          "not_executed_count",
+          "ok",
+          "partial_change",
+          "path",
+          "readback",
+          "readback_match",
+          "removed",
+          "status",
+          "tag",
+          "verification_status",
+          "verified_removed"
+        ],
+        "domain_outcome": {
+          "applied_count": 1,
+          "cleanup_failed": false,
+          "details": {
+            "status_token": "APPLIED"
+          },
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "failed_count": 0,
+          "not_executed_count": 0,
+          "operation": "result.table_manage",
+          "state": "succeeded",
+          "status_token": "APPLIED",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-fef50f4d-41a4-486f-a86d-1eee707b654e"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-a48797f7-2783-4427-9d1f-ccefcb847dac"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-f7075697-711b-4933-8aa9-9b666ec94e8b"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-0e0d3800-5072-45bf-bc19-3a4b88650bdf"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-ebff7ec4-6072-4327-b3ae-43edf5f40e3a"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-d1c1217a-9f3c-40b7-8815-e6652331b831"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-04eb45c8-4abd-4e71-8105-101b25d23247"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-d582116b-5ba8-4988-94ad-5c81f7ffb235"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-d582116b-5ba8-4988-94ad-5c81f7ffb235"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": true,
+                "method": "remove",
+                "receiver": "h-d582116b-5ba8-4988-94ad-5c81f7ffb235"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-d582116b-5ba8-4988-94ad-5c81f7ffb235"
+              }
+            ],
+            "engine_calls": 11,
+            "methods": [
+              "get",
+              "remove",
+              "result",
+              "table",
+              "tags"
+            ],
+            "mutation_issued": true,
+            "mutation_method": "remove"
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-015-table-remove-g33sentinelnodes01",
+          "job_id": "0b8fcbfb-60ce-48e1-9f65-26091e880fcc",
+          "operation_id": "624bc6a0-7a4c-4f19-9a14-b1efb77764fa",
+          "request_id": "g33-node-table-remove-g33sentinelnodes01",
+          "revision": 11
+        },
+        "failed": [],
+        "not_executed": [],
+        "readback": {
+          "match": true,
+          "readable": true,
+          "tags": []
+        },
+        "removed": true,
+        "status": "APPLIED",
+        "success": true,
+        "tag": "g33sentinelnodes01",
+        "unknown": false
+      }
+    },
+    {
+      "body_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "idempotency_key": "g33-node-016-initial-datasets",
+      "mode": "response",
+      "operation": "dataset.list",
+      "reconcile": false,
+      "request": "g33-node-initial-datasets",
+      "require_model": true,
+      "response": {
+        "data_keys": [
+          "count",
+          "datasets",
+          "read_errors",
+          "tags"
+        ],
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-016-initial-datasets",
+          "job_id": "1859d5d1-6d3f-481a-88bd-29136cdb3d7d",
+          "operation_id": "4d8810cf-a9f9-4ad9-a108-f11c9376ccc2",
+          "request_id": "g33-node-initial-datasets",
+          "revision": 11
+        },
+        "success": true,
+        "unknown": false
+      }
+    },
+    {
+      "body_sha256": "584e7600815c4c752e42f8f3c00aa4bf1597f13bb08ed5de443b33097e1a1751",
+      "idempotency_key": "g33-node-017-initial-numerical",
+      "mode": "response",
+      "operation": "result.numerical_manage",
+      "reconcile": false,
+      "request": "g33-node-initial-numerical",
+      "require_model": true,
+      "response": {
+        "data_keys": [
+          "action",
+          "cleanup_failed",
+          "count",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "features",
+          "isolation_proof",
+          "partial_change",
+          "readback",
+          "tags",
+          "verification_status"
+        ],
+        "domain_outcome": {
+          "cleanup_failed": false,
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "operation": "result.numerical_manage",
+          "state": "succeeded",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-e93a097a-486b-4efa-b639-6c9ae9e5eb81"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "numerical",
+                "receiver": "h-2603fd17-916c-4131-a023-9b9fb368ce66"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-f6e4f949-57fe-4dc6-9870-c20fd7459170"
+              }
+            ],
+            "engine_calls": 3,
+            "methods": [
+              "numerical",
+              "result",
+              "tags"
+            ],
+            "mutation_issued": false,
+            "mutation_method": null
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-017-initial-numerical",
+          "job_id": "764594b8-7441-491d-a93f-a94ec13a8db0",
+          "operation_id": "ba6f1376-89c8-479b-953a-3d0d025d5497",
+          "request_id": "g33-node-initial-numerical",
+          "revision": 12
+        },
+        "readback": {
+          "readable": true,
+          "source": "engine.tags/get"
+        },
+        "success": true,
+        "unknown": false
+      }
+    },
+    {
+      "body_sha256": "584e7600815c4c752e42f8f3c00aa4bf1597f13bb08ed5de443b33097e1a1751",
+      "idempotency_key": "g33-node-018-initial-tables",
+      "mode": "response",
+      "operation": "result.table_manage",
+      "reconcile": false,
+      "request": "g33-node-initial-tables",
+      "require_model": true,
+      "response": {
+        "data_keys": [
+          "action",
+          "cleanup_failed",
+          "count",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "isolation_proof",
+          "partial_change",
+          "readback",
+          "tables",
+          "tags",
+          "verification_status"
+        ],
+        "domain_outcome": {
+          "cleanup_failed": false,
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "operation": "result.table_manage",
+          "state": "succeeded",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-f49b38fc-a58c-4a38-bb96-20b99bb356b5"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-c0c75a27-001f-4743-9d5a-3425c2c393c1"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-23595f08-3548-4d99-893d-c4b41eba4583"
+              }
+            ],
+            "engine_calls": 3,
+            "methods": [
+              "result",
+              "table",
+              "tags"
+            ],
+            "mutation_issued": false,
+            "mutation_method": null
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-018-initial-tables",
+          "job_id": "c48fa1e4-4764-463d-8028-9340f1ce9306",
+          "operation_id": "d2d4e6cd-8d26-4176-9e55-fad63254b2c4",
+          "request_id": "g33-node-initial-tables",
+          "revision": 13
+        },
+        "readback": {
+          "readable": true,
+          "source": "engine.tags/get"
+        },
+        "success": true,
+        "unknown": false
+      }
+    },
+    {
+      "body_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "idempotency_key": "g33-node-019-initial-probes",
+      "mode": "response",
+      "operation": "probe.list",
+      "reconcile": false,
+      "request": "g33-node-initial-probes",
+      "require_model": true,
+      "response": {
+        "data_keys": [
+          "count",
+          "probes",
+          "readback",
+          "tags"
+        ],
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-019-initial-probes",
+          "job_id": "d1b9363a-f619-4ad6-9883-4f18bad99969",
+          "operation_id": "29439635-cfd8-4dee-b76c-937dcad1932a",
+          "request_id": "g33-node-initial-probes",
+          "revision": 13
+        },
+        "readback": {
+          "readable": true,
+          "source": "engine.tags/get"
+        },
+        "success": true,
+        "unknown": false
+      }
+    }
+  ],
+  "metadata": {
+    "bound_model": true,
+    "cutplane_fixture_request": {
+      "execute_java_signature": "await execute_java(name, source, arguments=None)",
+      "kind": "temporary_solved_3d_cutplane_fixture",
+      "required_return": {
+        "component": "a component tag containing the dataset geometry",
+        "dataset": "a Solution dataset tag readable by dataset.list",
+        "fixture_ready": true,
+        "geometry": "optional geometry tag; if supplied it must be readable"
+      },
+      "safety": "root-owned fixture only; no existing Chain-A node may be relabelled"
+    },
+    "execute_java_supplied": false,
+    "include_c11": false,
+    "inventory_ok": true,
+    "native_method_allowlist": {
+      "dataset": [
+        "DatasetFeatureList.create(String,String)",
+        "DatasetFeature.set(String,Object)",
+        "PropFeature.getString(String)",
+        "PropFeature.getDouble(String)",
+        "PropFeature.getDoubleArray(String)",
+        "PropFeature.getDoubleMatrix(String)",
+        "PropFeature.getStringArray(String)",
+        "PropFeature.getStringMatrix(String)",
+        "PropFeature.getType()",
+        "PropFeature.properties()"
+      ],
+      "probe": [
+        "ProbeFeatureList.create(String,String)",
+        "ProbeFeature.genResult(String)",
+        "PropFeature.set(String,Object)",
+        "PropFeature.getString(String)",
+        "PropFeature.getDouble(String)",
+        "PropFeature.getStringArray(String)",
+        "PropFeature.properties()"
+      ],
+      "table": [
+        "TableBaseFeature.setTableData(double[][])",
+        "TableBaseFeature.setTableData(double[][],double[][])",
+        "TableBaseFeature.setColumnHeaders(String[])",
+        "TableBaseFeature.getReal()",
+        "TableBaseFeature.getImag()",
+        "TableBaseFeature.getColumnHeaders()",
+        "TableBaseFeature.getRowHeaders()",
+        "TableBaseFeature.getTableData(boolean)",
+        "TableBaseFeature.isComplex()"
+      ]
+    }
+  },
+  "overall": "FAIL",
+  "rows": [
+    {
+      "assertions": {
+        "count": 1,
+        "readable": true,
+        "tags": [
+          "dset1"
+        ]
+      },
+      "case": "initial-inventory-datasets",
+      "idempotency_key": "g33-node-001-initial-datasets",
+      "operation": "dataset.list",
+      "response": {
+        "data_keys": [
+          "count",
+          "datasets",
+          "read_errors",
+          "tags"
+        ],
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-001-initial-datasets",
+          "job_id": "8c923ae0-dd8a-430a-b0c6-8a98644ed185",
+          "operation_id": "dc1ee891-caee-453a-8446-7fab21abf96b",
+          "request_id": "g33-node-initial-datasets",
+          "revision": 1
+        },
+        "success": true,
+        "unknown": false
+      },
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "count": 0,
+        "readable": true,
+        "tags": []
+      },
+      "case": "initial-inventory-numerical",
+      "idempotency_key": "g33-node-002-initial-numerical",
+      "operation": "result.numerical_manage",
+      "response": {
+        "data_keys": [
+          "action",
+          "cleanup_failed",
+          "count",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "features",
+          "isolation_proof",
+          "partial_change",
+          "readback",
+          "tags",
+          "verification_status"
+        ],
+        "domain_outcome": {
+          "cleanup_failed": false,
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "operation": "result.numerical_manage",
+          "state": "succeeded",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-563cdc12-f9f9-44b8-ac49-6d2165b6535f"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "numerical",
+                "receiver": "h-c24d1cdb-0513-476a-9dc5-8822ef8bae85"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-41466bcc-f7c3-48b1-a6e5-b7f7b1b478cd"
+              }
+            ],
+            "engine_calls": 3,
+            "methods": [
+              "numerical",
+              "result",
+              "tags"
+            ],
+            "mutation_issued": false,
+            "mutation_method": null
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-002-initial-numerical",
+          "job_id": "a92ab4be-c78a-45fc-8d25-b51af0ba453c",
+          "operation_id": "55503777-0180-4e9d-8cfd-72844f3cac46",
+          "request_id": "g33-node-initial-numerical",
+          "revision": 2
+        },
+        "readback": {
+          "readable": true,
+          "source": "engine.tags/get"
+        },
+        "success": true,
+        "unknown": false
+      },
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "count": 0,
+        "readable": true,
+        "tags": []
+      },
+      "case": "initial-inventory-tables",
+      "idempotency_key": "g33-node-003-initial-tables",
+      "operation": "result.table_manage",
+      "response": {
+        "data_keys": [
+          "action",
+          "cleanup_failed",
+          "count",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "isolation_proof",
+          "partial_change",
+          "readback",
+          "tables",
+          "tags",
+          "verification_status"
+        ],
+        "domain_outcome": {
+          "cleanup_failed": false,
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "operation": "result.table_manage",
+          "state": "succeeded",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-6846f0e9-849f-4976-b562-03fd931f0362"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-440c75f6-ab6c-41aa-adea-64ae2f7503b2"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-dc25ef90-63b4-4e6c-b942-e6a3763b3266"
+              }
+            ],
+            "engine_calls": 3,
+            "methods": [
+              "result",
+              "table",
+              "tags"
+            ],
+            "mutation_issued": false,
+            "mutation_method": null
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-003-initial-tables",
+          "job_id": "50ca68d5-cc6f-41fc-8aab-94bc03ab240a",
+          "operation_id": "9764b9c3-809c-4d23-bbde-08a13037ca7d",
+          "request_id": "g33-node-initial-tables",
+          "revision": 3
+        },
+        "readback": {
+          "readable": true,
+          "source": "engine.tags/get"
+        },
+        "success": true,
+        "unknown": false
+      },
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "count": 0,
+        "readable": true,
+        "tags": []
+      },
+      "case": "initial-inventory-probes",
+      "idempotency_key": "g33-node-004-initial-probes",
+      "operation": "probe.list",
+      "response": {
+        "data_keys": [
+          "count",
+          "probes",
+          "readback",
+          "tags"
+        ],
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-004-initial-probes",
+          "job_id": "e00a049a-bf23-4b94-a46a-0b86f3527a2d",
+          "operation_id": "f1f882e4-b77a-431a-bc6e-cf348c9ad2de",
+          "request_id": "g33-node-initial-probes",
+          "revision": 3
+        },
+        "readback": {
+          "readable": true,
+          "source": "engine.tags/get"
+        },
+        "success": true,
+        "unknown": false
+      },
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "dset1_present": true,
+        "type_id": "Solution"
+      },
+      "case": "C11-precondition-dset1-solution",
+      "idempotency_key": null,
+      "operation": null,
+      "response": null,
+      "status": "PASS"
+    },
+    {
+      "assertions": {},
+      "case": "C11",
+      "idempotency_key": null,
+      "operation": null,
+      "reason": "include_c11=False; C14 is being run in an independent model scope",
+      "response": null,
+      "status": "NOT_RUN"
+    },
+    {
+      "assertions": {
+        "readback_match": true,
+        "readback_readable": true,
+        "status": "APPLIED",
+        "status_ok": true,
+        "success": true,
+        "type_match": true,
+        "unknown": false
+      },
+      "case": "C14-complex-table-sentinel-create",
+      "idempotency_key": "g33-node-005-C14-complex-table-sentinel-create",
+      "operation": "result.table_manage",
+      "response": {
+        "applied": [
+          {
+            "requested": {
+              "tag": "g33sentinelnodes01",
+              "type_id": "Table"
+            },
+            "step": "create"
+          },
+          {
+            "readback": {
+              "data": [
+                [
+                  {
+                    "imag": 0.1,
+                    "real": 1.0
+                  },
+                  {
+                    "imag": 0.2,
+                    "real": 2.0
+                  }
+                ],
+                [
+                  {
+                    "imag": 0.3,
+                    "real": 3.0
+                  },
+                  {
+                    "imag": 0.4,
+                    "real": 4.0
+                  }
+                ]
+              ],
+              "data_readback": null,
+              "header_readback": null,
+              "headers": [
+                "",
+                ""
+              ],
+              "imaginary": [
+                [
+                  0.1,
+                  0.2
+                ],
+                [
+                  0.3,
+                  0.4
+                ]
+              ],
+              "match": true,
+              "readable": true
+            },
+            "requested_rows": 2,
+            "step": "data"
+          },
+          {
+            "readback": [
+              "T",
+              "u"
+            ],
+            "requested": [
+              "T",
+              "u"
+            ],
+            "step": "headers"
+          }
+        ],
+        "created": true,
+        "data_keys": [
+          "action",
+          "applied",
+          "applied_count",
+          "cleanup_failed",
+          "created",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "failed",
+          "failed_count",
+          "isolation_proof",
+          "not_executed",
+          "not_executed_count",
+          "ok",
+          "partial_change",
+          "path",
+          "readback",
+          "readback_match",
+          "status",
+          "tag",
+          "type_id",
+          "verification_status"
+        ],
+        "domain_outcome": {
+          "applied_count": 3,
+          "cleanup_failed": false,
+          "details": {
+            "status_token": "APPLIED"
+          },
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "failed_count": 0,
+          "not_executed_count": 0,
+          "operation": "result.table_manage",
+          "state": "succeeded",
+          "status_token": "APPLIED",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-6bb3a855-0b13-4b3a-8884-37997ef90126"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-3a9b0b57-b61f-43bc-920d-07efac37d87f"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-cf51e478-7734-4040-a8f2-1bc431adb353"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "create",
+                "receiver": "h-cf51e478-7734-4040-a8f2-1bc431adb353"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-cf51e478-7734-4040-a8f2-1bc431adb353"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "setTableData",
+                "receiver": "h-7efc1ef3-a1a5-46ea-a9e8-bc4d6d39f6ab"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getColumnHeaders",
+                "receiver": "h-7efc1ef3-a1a5-46ea-a9e8-bc4d6d39f6ab"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getReal",
+                "receiver": "h-7efc1ef3-a1a5-46ea-a9e8-bc4d6d39f6ab"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getImag",
+                "receiver": "h-7efc1ef3-a1a5-46ea-a9e8-bc4d6d39f6ab"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": true,
+                "method": "setColumnHeaders",
+                "receiver": "h-7efc1ef3-a1a5-46ea-a9e8-bc4d6d39f6ab"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getColumnHeaders",
+                "receiver": "h-7efc1ef3-a1a5-46ea-a9e8-bc4d6d39f6ab"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getReal",
+                "receiver": "h-7efc1ef3-a1a5-46ea-a9e8-bc4d6d39f6ab"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getImag",
+                "receiver": "h-7efc1ef3-a1a5-46ea-a9e8-bc4d6d39f6ab"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getColumnHeaders",
+                "receiver": "h-7efc1ef3-a1a5-46ea-a9e8-bc4d6d39f6ab"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getReal",
+                "receiver": "h-7efc1ef3-a1a5-46ea-a9e8-bc4d6d39f6ab"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getImag",
+                "receiver": "h-7efc1ef3-a1a5-46ea-a9e8-bc4d6d39f6ab"
+              }
+            ],
+            "engine_calls": 16,
+            "methods": [
+              "create",
+              "getColumnHeaders",
+              "getImag",
+              "getReal",
+              "result",
+              "setColumnHeaders",
+              "setTableData",
+              "table",
+              "tags"
+            ],
+            "mutation_issued": true,
+            "mutation_method": "create"
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-005-C14-complex-table-sentinel-create",
+          "job_id": "50bae301-da30-4ebc-9bc7-762fea1fe267",
+          "operation_id": "a0475deb-569b-4af7-826e-0b8ea06daa66",
+          "request_id": "g33-node-C14-complex-table-sentinel-create",
+          "revision": 4
+        },
+        "failed": [],
+        "not_executed": [],
+        "readback": {
+          "data": [
+            [
+              {
+                "imag": 0.1,
+                "real": 1.0
+              },
+              {
+                "imag": 0.2,
+                "real": 2.0
+              }
+            ],
+            [
+              {
+                "imag": 0.3,
+                "real": 3.0
+              },
+              {
+                "imag": 0.4,
+                "real": 4.0
+              }
+            ]
+          ],
+          "data_readback": null,
+          "header_readback": null,
+          "headers": [
+            "T",
+            "u"
+          ],
+          "imaginary": [
+            [
+              0.1,
+              0.2
+            ],
+            [
+              0.3,
+              0.4
+            ]
+          ],
+          "match": true,
+          "readable": true
+        },
+        "status": "APPLIED",
+        "success": true,
+        "tag": "g33sentinelnodes01",
+        "type_id": "Table",
+        "unknown": false
+      },
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "finite": true,
+        "headers": [
+          "T",
+          "u"
+        ],
+        "independent_real_imag_readback": true
+      },
+      "case": "C14-complex-table-sentinel-get",
+      "idempotency_key": "g33-node-006-C14-complex-table-sentinel-get",
+      "operation": "result.table_manage",
+      "response": {
+        "data_keys": [
+          "action",
+          "cleanup_failed",
+          "data",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "headers",
+          "imaginary",
+          "isolation_proof",
+          "partial_change",
+          "path",
+          "readback",
+          "tag",
+          "verification_status"
+        ],
+        "domain_outcome": {
+          "cleanup_failed": false,
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "operation": "result.table_manage",
+          "state": "succeeded",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-377110d8-0cf5-4317-a855-d2ec85e0e80c"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-14af4143-50e3-470c-8427-b7cf90182392"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-0a49961a-f711-4730-a342-49c9c22e36a4"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-56436e89-bc34-4f8c-a1f0-51cfa00775f6"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-109f4ba0-8568-4f41-90b2-f50fe56432d0"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-4dd381f5-26f4-43cb-8883-37f84dd06682"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-1da55387-065e-4449-94e7-9fcf79685ad6"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-2838cf46-c466-4ab2-9be4-6b1efec6c337"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-2838cf46-c466-4ab2-9be4-6b1efec6c337"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getColumnHeaders",
+                "receiver": "h-c88f6746-aa5d-4943-beb8-3425bd373ce3"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getReal",
+                "receiver": "h-c88f6746-aa5d-4943-beb8-3425bd373ce3"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getImag",
+                "receiver": "h-c88f6746-aa5d-4943-beb8-3425bd373ce3"
+              }
+            ],
+            "engine_calls": 12,
+            "methods": [
+              "get",
+              "getColumnHeaders",
+              "getImag",
+              "getReal",
+              "result",
+              "table",
+              "tags"
+            ],
+            "mutation_issued": false,
+            "mutation_method": null
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-006-C14-complex-table-sentinel-get",
+          "job_id": "aca02ee0-39ed-42a6-8323-150ad0d47318",
+          "operation_id": "8627d014-0b3a-4b88-898c-105a601156af",
+          "request_id": "g33-node-C14-complex-table-sentinel-get",
+          "revision": 5
+        },
+        "headers": [
+          "T",
+          "u"
+        ],
+        "readback": {
+          "data": [
+            [
+              {
+                "imag": 0.1,
+                "real": 1.0
+              },
+              {
+                "imag": 0.2,
+                "real": 2.0
+              }
+            ],
+            [
+              {
+                "imag": 0.3,
+                "real": 3.0
+              },
+              {
+                "imag": 0.4,
+                "real": 4.0
+              }
+            ]
+          ],
+          "data_readback": null,
+          "header_readback": null,
+          "headers": [
+            "T",
+            "u"
+          ],
+          "imaginary": [
+            [
+              0.1,
+              0.2
+            ],
+            [
+              0.3,
+              0.4
+            ]
+          ],
+          "match": true,
+          "readable": true
+        },
+        "success": true,
+        "tag": "g33sentinelnodes01",
+        "unknown": false
+      },
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "readback_match": true,
+        "readback_readable": true,
+        "status": "APPLIED",
+        "status_ok": true,
+        "success": true,
+        "type_match": true,
+        "unknown": false
+      },
+      "case": "C14-probe-history-table-create-empty",
+      "idempotency_key": "g33-node-007-C14-probe-history-table-create-empty",
+      "operation": "result.table_manage",
+      "response": {
+        "applied": [
+          {
+            "requested": {
+              "tag": "g33histnodes01",
+              "type_id": "Table"
+            },
+            "step": "create"
+          },
+          {
+            "readback": {
+              "data": [],
+              "data_readback": null,
+              "header_readback": null,
+              "headers": null,
+              "imaginary": [],
+              "match": true,
+              "readable": true
+            },
+            "requested_rows": 0,
+            "step": "data"
+          },
+          {
+            "readback": [
+              "T"
+            ],
+            "requested": [
+              "T"
+            ],
+            "step": "headers"
+          }
+        ],
+        "created": true,
+        "data_keys": [
+          "action",
+          "applied",
+          "applied_count",
+          "cleanup_failed",
+          "created",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "failed",
+          "failed_count",
+          "isolation_proof",
+          "not_executed",
+          "not_executed_count",
+          "ok",
+          "partial_change",
+          "path",
+          "readback",
+          "readback_match",
+          "status",
+          "tag",
+          "type_id",
+          "verification_status"
+        ],
+        "domain_outcome": {
+          "applied_count": 3,
+          "cleanup_failed": false,
+          "details": {
+            "status_token": "APPLIED"
+          },
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "failed_count": 0,
+          "not_executed_count": 0,
+          "operation": "result.table_manage",
+          "state": "succeeded",
+          "status_token": "APPLIED",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-bdce45b1-76b7-452a-8810-7450671f604d"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-ca36fa6e-bd46-45ab-be6f-6c45bc8f09d5"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-df8027dd-2701-43a8-95e3-1b8f07424dd9"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "create",
+                "receiver": "h-df8027dd-2701-43a8-95e3-1b8f07424dd9"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-df8027dd-2701-43a8-95e3-1b8f07424dd9"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": true,
+                "method": "setTableData",
+                "receiver": "h-6c6a39b3-d1f8-4c75-804f-7dd72349fad8"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getColumnHeaders",
+                "receiver": "h-6c6a39b3-d1f8-4c75-804f-7dd72349fad8"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getReal",
+                "receiver": "h-6c6a39b3-d1f8-4c75-804f-7dd72349fad8"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getImag",
+                "receiver": "h-6c6a39b3-d1f8-4c75-804f-7dd72349fad8"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": true,
+                "method": "setColumnHeaders",
+                "receiver": "h-6c6a39b3-d1f8-4c75-804f-7dd72349fad8"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getColumnHeaders",
+                "receiver": "h-6c6a39b3-d1f8-4c75-804f-7dd72349fad8"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getReal",
+                "receiver": "h-6c6a39b3-d1f8-4c75-804f-7dd72349fad8"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getImag",
+                "receiver": "h-6c6a39b3-d1f8-4c75-804f-7dd72349fad8"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getColumnHeaders",
+                "receiver": "h-6c6a39b3-d1f8-4c75-804f-7dd72349fad8"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getReal",
+                "receiver": "h-6c6a39b3-d1f8-4c75-804f-7dd72349fad8"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getImag",
+                "receiver": "h-6c6a39b3-d1f8-4c75-804f-7dd72349fad8"
+              }
+            ],
+            "engine_calls": 16,
+            "methods": [
+              "create",
+              "getColumnHeaders",
+              "getImag",
+              "getReal",
+              "result",
+              "setColumnHeaders",
+              "setTableData",
+              "table",
+              "tags"
+            ],
+            "mutation_issued": true,
+            "mutation_method": "create"
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-007-C14-probe-history-table-create-empty",
+          "job_id": "c1ead6fc-0970-43b6-a9a3-ae0af523d618",
+          "operation_id": "3e3560a6-759d-4ec9-a766-5ae4f6fb6589",
+          "request_id": "g33-node-C14-probe-history-table-create-empty",
+          "revision": 6
+        },
+        "failed": [],
+        "not_executed": [],
+        "readback": {
+          "data": [],
+          "data_readback": null,
+          "header_readback": null,
+          "headers": [
+            "T"
+          ],
+          "imaginary": [],
+          "match": true,
+          "readable": true
+        },
+        "status": "APPLIED",
+        "success": true,
+        "tag": "g33histnodes01",
+        "type_id": "Table",
+        "unknown": false
+      },
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "readback_match": true,
+        "readback_readable": true,
+        "status": "APPLIED",
+        "status_ok": true,
+        "success": true,
+        "type_match": true,
+        "unknown": false
+      },
+      "case": "C14-domain-probe-create",
+      "idempotency_key": "g33-node-008-C14-domain-probe-create",
+      "operation": "probe.create",
+      "response": {
+        "applied": [
+          {
+            "method": "probe.create",
+            "requested": {
+              "tag": "g33probenodes01",
+              "type_id": "Domain"
+            },
+            "step": "create"
+          },
+          {
+            "property": "expr",
+            "readback": {
+              "match": true,
+              "method": "getString",
+              "readable": true,
+              "value": "T"
+            },
+            "requested": "T",
+            "step": "property"
+          },
+          {
+            "property": "unit",
+            "readback": {
+              "match": true,
+              "method": "getString",
+              "readable": true,
+              "value": "K"
+            },
+            "requested": "K",
+            "step": "property"
+          },
+          {
+            "property": "table",
+            "readback": {
+              "match": true,
+              "method": "getString",
+              "readable": true,
+              "value": "g33histnodes01"
+            },
+            "requested": "g33histnodes01",
+            "step": "property"
+          },
+          {
+            "applied": [
+              {
+                "entities": [
+                  1
+                ],
+                "method": "geom/set",
+                "readback": [
+                  1
+                ]
+              }
+            ],
+            "entity_state": {
+              "dimension": 2,
+              "entities": [
+                1
+              ],
+              "entities_error": null,
+              "geometry": "geom1",
+              "is_inheriting": false,
+              "named": "",
+              "named_error": null
+            },
+            "kind": "explicit",
+            "model_binding": null,
+            "step": "selection"
+          }
+        ],
+        "created": true,
+        "data_keys": [
+          "applied",
+          "applied_count",
+          "cleanup_failed",
+          "created",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "failed",
+          "failed_count",
+          "isolation_proof",
+          "native_type",
+          "not_executed",
+          "not_executed_count",
+          "ok",
+          "partial_change",
+          "path",
+          "readback",
+          "readback_match",
+          "status",
+          "table",
+          "tag",
+          "type_id",
+          "verification_status"
+        ],
+        "domain_outcome": {
+          "applied_count": 5,
+          "cleanup_failed": false,
+          "details": {
+            "status_token": "APPLIED"
+          },
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "failed_count": 0,
+          "not_executed_count": 0,
+          "operation": "probe.create",
+          "state": "succeeded",
+          "status_token": "APPLIED",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-69b4071d-9275-4923-b56a-cff9893af393"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-4d621aca-4ba6-4765-8184-e4c0522cba7a"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-671bf2f0-4c46-4ec5-a265-19cf744c90c7"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "component",
+                "receiver": "h-69b4071d-9275-4923-b56a-cff9893af393"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "probe",
+                "receiver": "h-4c319898-8c25-442a-bef2-07b61a2cf71c"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-5fd43cb1-8528-486d-8ef2-e5c09463c6d0"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "create",
+                "receiver": "h-5fd43cb1-8528-486d-8ef2-e5c09463c6d0"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-5fd43cb1-8528-486d-8ef2-e5c09463c6d0"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "selection",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": true,
+                "method": "model",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "geom",
+                "receiver": "h-178976d4-3b90-463e-8302-88dfadac1769"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-178976d4-3b90-463e-8302-88dfadac1769"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": true,
+                "method": "entities",
+                "receiver": "h-178976d4-3b90-463e-8302-88dfadac1769"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": true,
+                "method": "named",
+                "receiver": "h-178976d4-3b90-463e-8302-88dfadac1769"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "isInheriting",
+                "receiver": "h-178976d4-3b90-463e-8302-88dfadac1769"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": true,
+                "method": "entities",
+                "receiver": "h-178976d4-3b90-463e-8302-88dfadac1769"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": true,
+                "method": "dim",
+                "receiver": "h-178976d4-3b90-463e-8302-88dfadac1769"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "geom",
+                "receiver": "h-178976d4-3b90-463e-8302-88dfadac1769"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getType",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getType",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "selection",
+                "receiver": "h-c413be41-8b46-4ff9-ab5a-50b1b62b1a04"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": true,
+                "method": "named",
+                "receiver": "h-b5d9e212-1d37-440c-96e3-08c882f711ab"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "isInheriting",
+                "receiver": "h-b5d9e212-1d37-440c-96e3-08c882f711ab"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": true,
+                "method": "entities",
+                "receiver": "h-b5d9e212-1d37-440c-96e3-08c882f711ab"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": true,
+                "method": "dim",
+                "receiver": "h-b5d9e212-1d37-440c-96e3-08c882f711ab"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "geom",
+                "receiver": "h-b5d9e212-1d37-440c-96e3-08c882f711ab"
+              }
+            ],
+            "engine_calls": 35,
+            "methods": [
+              "component",
+              "create",
+              "dim",
+              "entities",
+              "geom",
+              "getString",
+              "getType",
+              "isInheriting",
+              "model",
+              "named",
+              "probe",
+              "result",
+              "selection",
+              "set",
+              "table",
+              "tags"
+            ],
+            "mutation_issued": true,
+            "mutation_method": "create"
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-008-C14-domain-probe-create",
+          "job_id": "4cd0a90c-5116-4634-85bb-c940130e9f08",
+          "operation_id": "e544caae-1bd1-4ab9-87dc-8fc028ec311d",
+          "request_id": "g33-node-C14-domain-probe-create",
+          "revision": 7
+        },
+        "failed": [],
+        "not_executed": [],
+        "readback": {
+          "match": true,
+          "properties": [
+            {
+              "match": true,
+              "method": "getString",
+              "property": "expr",
+              "readable": true,
+              "value": "T"
+            },
+            {
+              "match": true,
+              "method": "getString",
+              "property": "unit",
+              "readable": true,
+              "value": "K"
+            },
+            {
+              "match": true,
+              "method": "getString",
+              "property": "table",
+              "readable": true,
+              "value": "g33histnodes01"
+            }
+          ],
+          "readable": true,
+          "selection": {
+            "dimension": 2,
+            "entities": [
+              1
+            ],
+            "entities_error": null,
+            "geometry": "geom1",
+            "is_inheriting": false,
+            "named": "",
+            "named_error": null
+          },
+          "table": "g33histnodes01",
+          "tags": [
+            "g33probenodes01"
+          ],
+          "type": "Domain"
+        },
+        "status": "APPLIED",
+        "success": true,
+        "table": "g33histnodes01",
+        "tag": "g33probenodes01",
+        "type_id": "DomainProbe",
+        "unknown": false
+      },
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "genResult_applied": true,
+        "readback_match": true,
+        "readback_readable": true,
+        "status": "APPLIED",
+        "status_ok": true,
+        "success": true,
+        "type_match": true,
+        "unknown": false
+      },
+      "case": "C14-probe-update-gen-result",
+      "idempotency_key": "g33-node-009-C14-probe-update-gen-result",
+      "operation": "probe.update",
+      "response": {
+        "applied": [
+          {
+            "property": "expr",
+            "readback": {
+              "match": true,
+              "method": "getString",
+              "readable": true,
+              "value": "T"
+            },
+            "requested": "T",
+            "step": "property"
+          },
+          {
+            "property": "table",
+            "readback": {
+              "match": true,
+              "method": "getString",
+              "readable": true,
+              "value": "g33histnodes01"
+            },
+            "requested": "g33histnodes01",
+            "step": "property"
+          },
+          {
+            "readback": {
+              "called": true
+            },
+            "solver": "sol1",
+            "step": "genResult"
+          }
+        ],
+        "data_keys": [
+          "applied",
+          "applied_count",
+          "cleanup_failed",
+          "component",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "failed",
+          "failed_count",
+          "isolation_proof",
+          "not_executed",
+          "not_executed_count",
+          "ok",
+          "partial_change",
+          "path",
+          "readback",
+          "readback_match",
+          "status",
+          "tag",
+          "type_id",
+          "updated",
+          "verification_status"
+        ],
+        "domain_outcome": {
+          "applied_count": 3,
+          "cleanup_failed": false,
+          "details": {
+            "status_token": "APPLIED"
+          },
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "failed_count": 0,
+          "not_executed_count": 0,
+          "operation": "probe.update",
+          "state": "succeeded",
+          "status_token": "APPLIED",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "component",
+                "receiver": "h-3024f733-d0ad-4489-a3a7-c969ae83db41"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "probe",
+                "receiver": "h-186838a1-d648-4eef-a252-d48eba22a481"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "probe",
+                "receiver": "h-20f22f1f-a59e-4cb0-ab21-71ed5895a537"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": true,
+                "method": "modelNode",
+                "receiver": "h-20f22f1f-a59e-4cb0-ab21-71ed5895a537"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-dfb24f8f-50ce-4f7a-8ec3-66ba879d6d7d"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "component",
+                "receiver": "h-20f22f1f-a59e-4cb0-ab21-71ed5895a537"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "probe",
+                "receiver": "h-b608e3b0-0e4b-41f8-b894-676566384113"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-519f2cff-7c8d-45b5-9606-13fff4b19a1d"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-519f2cff-7c8d-45b5-9606-13fff4b19a1d"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-0bb65590-c064-430c-af73-0dc2a1e7bbc4"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-0bb65590-c064-430c-af73-0dc2a1e7bbc4"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-587b210d-69ac-49a7-b566-3da8ba310a21"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-40b91b6c-084e-41a3-97da-68b0a7a8ae22"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-316645d2-bccd-431b-b446-1c78d42943b9"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-8f9aa25f-fc66-4a9d-b08a-a8b9aa4d519e"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-8f9aa25f-fc66-4a9d-b08a-a8b9aa4d519e"
+              },
+              {
+                "args_count": 2,
+                "command": "call",
+                "is_mutation": true,
+                "method": "set",
+                "receiver": "h-8f9aa25f-fc66-4a9d-b08a-a8b9aa4d519e"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-8f9aa25f-fc66-4a9d-b08a-a8b9aa4d519e"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": true,
+                "method": "genResult",
+                "receiver": "h-8f9aa25f-fc66-4a9d-b08a-a8b9aa4d519e"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-8f9aa25f-fc66-4a9d-b08a-a8b9aa4d519e"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getString",
+                "receiver": "h-8f9aa25f-fc66-4a9d-b08a-a8b9aa4d519e"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getType",
+                "receiver": "h-8f9aa25f-fc66-4a9d-b08a-a8b9aa4d519e"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getType",
+                "receiver": "h-8f9aa25f-fc66-4a9d-b08a-a8b9aa4d519e"
+              }
+            ],
+            "engine_calls": 23,
+            "methods": [
+              "component",
+              "genResult",
+              "get",
+              "getString",
+              "getType",
+              "modelNode",
+              "probe",
+              "result",
+              "set",
+              "table",
+              "tags"
+            ],
+            "mutation_issued": true,
+            "mutation_method": "modelNode"
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-009-C14-probe-update-gen-result",
+          "job_id": "7acfdfec-0dab-4e39-850b-7737e7a5c656",
+          "operation_id": "242f8670-e798-4ba1-999f-cdbaa49e217e",
+          "request_id": "g33-node-C14-probe-update-gen-result",
+          "revision": 8
+        },
+        "failed": [],
+        "not_executed": [],
+        "readback": {
+          "match": true,
+          "properties": [
+            {
+              "match": true,
+              "method": "getString",
+              "property": "expr",
+              "readable": true,
+              "value": "T"
+            },
+            {
+              "match": true,
+              "method": "getString",
+              "property": "table",
+              "readable": true,
+              "value": "g33histnodes01"
+            }
+          ],
+          "readable": true,
+          "table": "g33histnodes01",
+          "type": "Domain"
+        },
+        "status": "APPLIED",
+        "success": true,
+        "tag": "g33probenodes01",
+        "type_id": "Domain",
+        "unknown": false,
+        "updated": true
+      },
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "expected_temperature": 323.15,
+        "finite_rows": true,
+        "gen_result_called": null,
+        "headers": null,
+        "history_table": null,
+        "numeric_values": [],
+        "parameters": null,
+        "real_table_readback": null,
+        "rows_nonempty": false,
+        "sentinel_table": "g33sentinelnodes01",
+        "temperature_match": false,
+        "time": null,
+        "unit": null
+      },
+      "case": "C14-probe-history-real-table",
+      "idempotency_key": "g33-node-010-C14-probe-history",
+      "operation": "probe.history",
+      "reason": "history did not prove native generated rows for the separate linked table at T=323.15 K; NO_HISTORY/seeded data is not success",
+      "response": {
+        "data_keys": [],
+        "error_code": "INVALID_REQUEST",
+        "execution": {
+          "idempotency_key": "g33-node-010-C14-probe-history",
+          "job_id": "28511a40-3dec-44ac-b456-b325fddade60",
+          "operation_id": "399f3141-a53f-4fb9-85f1-98fff324472d",
+          "request_id": "g33-node-C14-probe-history"
+        },
+        "success": false,
+        "unknown": false
+      },
+      "status": "FAIL"
+    },
+    {
+      "assertions": {
+        "history_table_distinct": true,
+        "preserved": true,
+        "table": "g33sentinelnodes01"
+      },
+      "case": "C14-complex-table-sentinel-preservation",
+      "idempotency_key": "g33-node-011-C14-complex-table-sentinel-preservation",
+      "operation": "result.table_manage",
+      "response": {
+        "data_keys": [
+          "action",
+          "cleanup_failed",
+          "data",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "headers",
+          "imaginary",
+          "isolation_proof",
+          "partial_change",
+          "path",
+          "readback",
+          "tag",
+          "verification_status"
+        ],
+        "domain_outcome": {
+          "cleanup_failed": false,
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "operation": "result.table_manage",
+          "state": "succeeded",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-7d7a2085-ae69-4138-a7ed-2badb4c4fa95"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-6c419b06-cb81-46cb-a18d-bd32427f5cde"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-7cffd846-1500-4316-a1e5-da80eccd8626"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-f22519d0-3918-4b03-a36c-d55913dcf724"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-a110ae4b-81b4-43da-ae5c-50fd8785951c"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-c6ed1d4a-0cc1-48bf-890b-f23574a12304"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-d851c58c-d79f-4b04-a1e3-0643bb3f92fa"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-59692347-0dc6-49a7-b7e8-d9885810749a"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-59692347-0dc6-49a7-b7e8-d9885810749a"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getColumnHeaders",
+                "receiver": "h-1b4754fb-14e3-4fb3-aee0-da436c3887c7"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getReal",
+                "receiver": "h-1b4754fb-14e3-4fb3-aee0-da436c3887c7"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "getImag",
+                "receiver": "h-1b4754fb-14e3-4fb3-aee0-da436c3887c7"
+              }
+            ],
+            "engine_calls": 12,
+            "methods": [
+              "get",
+              "getColumnHeaders",
+              "getImag",
+              "getReal",
+              "result",
+              "table",
+              "tags"
+            ],
+            "mutation_issued": false,
+            "mutation_method": null
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-011-C14-complex-table-sentinel-preservation",
+          "job_id": "2fa40eae-e950-4b1b-b7eb-b44cf8963ace",
+          "operation_id": "d328f91f-94ba-427f-ad69-9390e6f3f658",
+          "request_id": "g33-node-C14-complex-table-sentinel-preservation",
+          "revision": 9
+        },
+        "headers": [
+          "T",
+          "u"
+        ],
+        "readback": {
+          "data": [
+            [
+              {
+                "imag": 0.1,
+                "real": 1.0
+              },
+              {
+                "imag": 0.2,
+                "real": 2.0
+              }
+            ],
+            [
+              {
+                "imag": 0.3,
+                "real": 3.0
+              },
+              {
+                "imag": 0.4,
+                "real": 4.0
+              }
+            ]
+          ],
+          "data_readback": null,
+          "header_readback": null,
+          "headers": [
+            "T",
+            "u"
+          ],
+          "imaginary": [
+            [
+              0.1,
+              0.2
+            ],
+            [
+              0.3,
+              0.4
+            ]
+          ],
+          "match": true,
+          "readable": true
+        },
+        "success": true,
+        "tag": "g33sentinelnodes01",
+        "unknown": false
+      },
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "actual_code": "INVALID_REQUEST",
+        "expected_codes": [
+          "INVALID_REQUEST"
+        ],
+        "rejected": true,
+        "validation_witness": true
+      },
+      "case": "C14-property-failure-prevalidation",
+      "dispatch_witness": {
+        "observed_stage": "dispatched_without_mutation",
+        "product": {
+          "cause_code": "INVALID_REQUEST",
+          "cause_message": "definition has unsupported probe properties: ['__g33_unknown_property__']; use a documented COMSOL property",
+          "dispatch_stage": "dispatched_without_mutation",
+          "engine_calls": 0,
+          "methods": [],
+          "mutation_issued": false,
+          "mutation_method": null,
+          "proves_not_executed": true,
+          "source": "data.refused",
+          "stage": "validation",
+          "stage_known": true,
+          "unproven_pre_dispatch": null
+        },
+        "proves_not_executed": true
+      },
+      "idempotency_key": "g33-node-012-C14-property-failure-prevalidation",
+      "operation": "probe.update",
+      "response": {
+        "data_keys": [
+          "cleanup_failed",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "isolation_proof",
+          "operation",
+          "partial_change",
+          "refusal",
+          "refused",
+          "status",
+          "verification_status",
+          "verified_outcome",
+          "witness"
+        ],
+        "domain_outcome": {
+          "cleanup_failed": false,
+          "details": {
+            "status_token": "REFUSED"
+          },
+          "dispatch_stage": "validation",
+          "execution_state_unknown": false,
+          "failure": {
+            "code": "INVALID_REQUEST",
+            "message": "definition has unsupported probe properties: ['__g33_unknown_property__']; use a documented COMSOL property",
+            "safe_retry": false
+          },
+          "operation": "probe.update",
+          "state": "failed",
+          "status_token": "REFUSED",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [],
+            "engine_calls": 0,
+            "methods": [],
+            "mutation_issued": false,
+            "mutation_method": null
+          }
+        },
+        "error_code": "INVALID_REQUEST",
+        "execution": {
+          "idempotency_key": "g33-node-012-C14-property-failure-prevalidation",
+          "job_id": "cd1d6a8c-8049-446e-9671-956d8850c24e",
+          "operation_id": "92a6e88b-6d93-4b1f-9a2d-1a1417e96c60",
+          "request_id": "g33-node-C14-property-failure-prevalidation",
+          "revision": 9
+        },
+        "status": "REFUSED",
+        "success": false,
+        "unknown": false
+      },
+      "status": "PASS"
+    },
+    {
+      "assertions": {},
+      "case": "C14-history-axis-metadata",
+      "idempotency_key": null,
+      "operation": null,
+      "reason": "Chain-A is steady; time/parameter axes are preserved as absent. Use a separately solved Chain-B fixture for nonempty axes",
+      "response": null,
+      "status": "NOT_RUN"
+    },
+    {
+      "assertions": {
+        "complex_table_sentinel_create": true,
+        "complex_table_sentinel_get": true,
+        "complex_table_sentinel_preserved": true,
+        "domain_probe_create": true,
+        "probe_history": false,
+        "probe_history_table_create_empty": true,
+        "probe_update": true
+      },
+      "case": "C14",
+      "idempotency_key": null,
+      "operation": null,
+      "response": null,
+      "status": "FAIL"
+    },
+    {
+      "assertions": {
+        "removed": true,
+        "verified_removed": true
+      },
+      "case": "probe-cleanup-g33probenodes01",
+      "idempotency_key": "g33-node-013-probe-remove-g33probenodes01",
+      "operation": "probe.remove",
+      "response": {
+        "applied": [
+          {
+            "step": "remove",
+            "tag": "g33probenodes01"
+          }
+        ],
+        "data_keys": [
+          "applied",
+          "applied_count",
+          "cleanup_failed",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "failed",
+          "failed_count",
+          "isolation_proof",
+          "not_executed",
+          "not_executed_count",
+          "ok",
+          "partial_change",
+          "path",
+          "readback",
+          "readback_match",
+          "removed",
+          "status",
+          "tag",
+          "verification_status",
+          "verified_removed"
+        ],
+        "domain_outcome": {
+          "applied_count": 1,
+          "cleanup_failed": false,
+          "details": {
+            "status_token": "APPLIED"
+          },
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "failed_count": 0,
+          "not_executed_count": 0,
+          "operation": "probe.remove",
+          "state": "succeeded",
+          "status_token": "APPLIED",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "component",
+                "receiver": "h-3821a558-bd28-4cb1-a126-0c1e7ef2f816"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "probe",
+                "receiver": "h-c8a2272b-3b3c-4e11-94a3-afccacc76717"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "probe",
+                "receiver": "h-5fd563eb-35af-485e-b440-ca72864895da"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": true,
+                "method": "modelNode",
+                "receiver": "h-5fd563eb-35af-485e-b440-ca72864895da"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-f7531150-42a4-4bbd-9120-60e4d73c4708"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "component",
+                "receiver": "h-5fd563eb-35af-485e-b440-ca72864895da"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "probe",
+                "receiver": "h-dd75e954-3d44-4a5f-bc72-e02e7e5fa5e0"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-6a056fd3-fd25-4b48-87b2-d8d8f4dedbb8"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-6a056fd3-fd25-4b48-87b2-d8d8f4dedbb8"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-4a391192-f88f-44d9-8c08-39a78e4c08a4"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-4a391192-f88f-44d9-8c08-39a78e4c08a4"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": true,
+                "method": "remove",
+                "receiver": "h-4a391192-f88f-44d9-8c08-39a78e4c08a4"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-4a391192-f88f-44d9-8c08-39a78e4c08a4"
+              }
+            ],
+            "engine_calls": 13,
+            "methods": [
+              "component",
+              "get",
+              "modelNode",
+              "probe",
+              "remove",
+              "tags"
+            ],
+            "mutation_issued": true,
+            "mutation_method": "modelNode"
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-013-probe-remove-g33probenodes01",
+          "job_id": "a7013d4f-d13d-4832-b0c1-bd95cc1fe705",
+          "operation_id": "df4787f4-4733-44b4-8386-76a6d9b60e85",
+          "request_id": "g33-node-probe-remove-g33probenodes01",
+          "revision": 10
+        },
+        "failed": [],
+        "not_executed": [],
+        "readback": {
+          "match": true,
+          "readable": true,
+          "tags": []
+        },
+        "removed": true,
+        "status": "APPLIED",
+        "success": true,
+        "tag": "g33probenodes01",
+        "unknown": false
+      },
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "removed": null,
+        "verified_removed": null
+      },
+      "case": "table-cleanup-g33histnodes01",
+      "idempotency_key": "g33-node-014-table-remove-g33histnodes01",
+      "operation": "result.table_manage",
+      "reason": "created table cleanup was not verified",
+      "response": {
+        "data_keys": [
+          "cleanup_failed",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "isolation_proof",
+          "operation",
+          "partial_change",
+          "refusal",
+          "refused",
+          "status",
+          "verification_status",
+          "verified_outcome",
+          "witness"
+        ],
+        "domain_outcome": {
+          "cleanup_failed": false,
+          "details": {
+            "status_token": "REFUSED"
+          },
+          "dispatch_stage": "validation",
+          "execution_state_unknown": false,
+          "failure": {
+            "code": "NODE_NOT_FOUND",
+            "message": "could not resolve node path segment table:g33histnodes01; the engine reports table=['g33sentinelnodes01'] for this node",
+            "safe_retry": false
+          },
+          "operation": "result.table_manage",
+          "state": "failed",
+          "status_token": "REFUSED",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-29017bdc-4742-4277-ab6c-22db87158086"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-ca7fb754-09ea-432d-a89d-102f7ffd307b"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-dffe8890-777a-4331-9afe-6ca11e684787"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-7b05d6a1-0cf5-4875-8221-734d9d805d11"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-58e36e45-24ff-4693-8307-e6c343e03361"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-58e36e45-24ff-4693-8307-e6c343e03361"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-94b197d9-5412-440d-aa71-555396cb5865"
+              }
+            ],
+            "engine_calls": 7,
+            "methods": [
+              "result",
+              "table",
+              "tags"
+            ],
+            "mutation_issued": false,
+            "mutation_method": null
+          }
+        },
+        "error_code": "NODE_NOT_FOUND",
+        "execution": {
+          "idempotency_key": "g33-node-014-table-remove-g33histnodes01",
+          "job_id": "15ee8be2-98d5-439c-bb4d-9c722a4131d9",
+          "operation_id": "150a55f5-3f43-4cba-b86e-3a800bb9c5de",
+          "request_id": "g33-node-table-remove-g33histnodes01",
+          "revision": 10
+        },
+        "status": "REFUSED",
+        "success": false,
+        "unknown": false
+      },
+      "status": "FAIL"
+    },
+    {
+      "assertions": {
+        "removed": true,
+        "verified_removed": true
+      },
+      "case": "table-cleanup-g33sentinelnodes01",
+      "idempotency_key": "g33-node-015-table-remove-g33sentinelnodes01",
+      "operation": "result.table_manage",
+      "response": {
+        "applied": [
+          {
+            "step": "remove",
+            "tag": "g33sentinelnodes01"
+          }
+        ],
+        "data_keys": [
+          "action",
+          "applied",
+          "applied_count",
+          "cleanup_failed",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "failed",
+          "failed_count",
+          "isolation_proof",
+          "not_executed",
+          "not_executed_count",
+          "ok",
+          "partial_change",
+          "path",
+          "readback",
+          "readback_match",
+          "removed",
+          "status",
+          "tag",
+          "verification_status",
+          "verified_removed"
+        ],
+        "domain_outcome": {
+          "applied_count": 1,
+          "cleanup_failed": false,
+          "details": {
+            "status_token": "APPLIED"
+          },
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "failed_count": 0,
+          "not_executed_count": 0,
+          "operation": "result.table_manage",
+          "state": "succeeded",
+          "status_token": "APPLIED",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-fef50f4d-41a4-486f-a86d-1eee707b654e"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-a48797f7-2783-4427-9d1f-ccefcb847dac"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-f7075697-711b-4933-8aa9-9b666ec94e8b"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-0e0d3800-5072-45bf-bc19-3a4b88650bdf"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-ebff7ec4-6072-4327-b3ae-43edf5f40e3a"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-d1c1217a-9f3c-40b7-8815-e6652331b831"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-04eb45c8-4abd-4e71-8105-101b25d23247"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-d582116b-5ba8-4988-94ad-5c81f7ffb235"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": false,
+                "method": "get",
+                "receiver": "h-d582116b-5ba8-4988-94ad-5c81f7ffb235"
+              },
+              {
+                "args_count": 1,
+                "command": "call",
+                "is_mutation": true,
+                "method": "remove",
+                "receiver": "h-d582116b-5ba8-4988-94ad-5c81f7ffb235"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-d582116b-5ba8-4988-94ad-5c81f7ffb235"
+              }
+            ],
+            "engine_calls": 11,
+            "methods": [
+              "get",
+              "remove",
+              "result",
+              "table",
+              "tags"
+            ],
+            "mutation_issued": true,
+            "mutation_method": "remove"
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-015-table-remove-g33sentinelnodes01",
+          "job_id": "0b8fcbfb-60ce-48e1-9f65-26091e880fcc",
+          "operation_id": "624bc6a0-7a4c-4f19-9a14-b1efb77764fa",
+          "request_id": "g33-node-table-remove-g33sentinelnodes01",
+          "revision": 11
+        },
+        "failed": [],
+        "not_executed": [],
+        "readback": {
+          "match": true,
+          "readable": true,
+          "tags": []
+        },
+        "removed": true,
+        "status": "APPLIED",
+        "success": true,
+        "tag": "g33sentinelnodes01",
+        "unknown": false
+      },
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "count": 1,
+        "readable": true,
+        "tags": [
+          "dset1"
+        ]
+      },
+      "case": "initial-inventory-datasets",
+      "idempotency_key": "g33-node-016-initial-datasets",
+      "operation": "dataset.list",
+      "response": {
+        "data_keys": [
+          "count",
+          "datasets",
+          "read_errors",
+          "tags"
+        ],
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-016-initial-datasets",
+          "job_id": "1859d5d1-6d3f-481a-88bd-29136cdb3d7d",
+          "operation_id": "4d8810cf-a9f9-4ad9-a108-f11c9376ccc2",
+          "request_id": "g33-node-initial-datasets",
+          "revision": 11
+        },
+        "success": true,
+        "unknown": false
+      },
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "count": 0,
+        "readable": true,
+        "tags": []
+      },
+      "case": "initial-inventory-numerical",
+      "idempotency_key": "g33-node-017-initial-numerical",
+      "operation": "result.numerical_manage",
+      "response": {
+        "data_keys": [
+          "action",
+          "cleanup_failed",
+          "count",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "features",
+          "isolation_proof",
+          "partial_change",
+          "readback",
+          "tags",
+          "verification_status"
+        ],
+        "domain_outcome": {
+          "cleanup_failed": false,
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "operation": "result.numerical_manage",
+          "state": "succeeded",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-e93a097a-486b-4efa-b639-6c9ae9e5eb81"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "numerical",
+                "receiver": "h-2603fd17-916c-4131-a023-9b9fb368ce66"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-f6e4f949-57fe-4dc6-9870-c20fd7459170"
+              }
+            ],
+            "engine_calls": 3,
+            "methods": [
+              "numerical",
+              "result",
+              "tags"
+            ],
+            "mutation_issued": false,
+            "mutation_method": null
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-017-initial-numerical",
+          "job_id": "764594b8-7441-491d-a93f-a94ec13a8db0",
+          "operation_id": "ba6f1376-89c8-479b-953a-3d0d025d5497",
+          "request_id": "g33-node-initial-numerical",
+          "revision": 12
+        },
+        "readback": {
+          "readable": true,
+          "source": "engine.tags/get"
+        },
+        "success": true,
+        "unknown": false
+      },
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "count": 0,
+        "readable": true,
+        "tags": []
+      },
+      "case": "initial-inventory-tables",
+      "idempotency_key": "g33-node-018-initial-tables",
+      "operation": "result.table_manage",
+      "response": {
+        "data_keys": [
+          "action",
+          "cleanup_failed",
+          "count",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "effect",
+          "execution_state_unknown",
+          "isolation_proof",
+          "partial_change",
+          "readback",
+          "tables",
+          "tags",
+          "verification_status"
+        ],
+        "domain_outcome": {
+          "cleanup_failed": false,
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "operation": "result.table_manage",
+          "state": "succeeded",
+          "verification_status": "NOT_APPLICABLE",
+          "witness": {
+            "dispatches": [
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "result",
+                "receiver": "h-f49b38fc-a58c-4a38-bb96-20b99bb356b5"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "table",
+                "receiver": "h-c0c75a27-001f-4743-9d5a-3425c2c393c1"
+              },
+              {
+                "args_count": 0,
+                "command": "call",
+                "is_mutation": false,
+                "method": "tags",
+                "receiver": "h-23595f08-3548-4d99-893d-c4b41eba4583"
+              }
+            ],
+            "engine_calls": 3,
+            "methods": [
+              "result",
+              "table",
+              "tags"
+            ],
+            "mutation_issued": false,
+            "mutation_method": null
+          }
+        },
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-018-initial-tables",
+          "job_id": "c48fa1e4-4764-463d-8028-9340f1ce9306",
+          "operation_id": "d2d4e6cd-8d26-4176-9e55-fad63254b2c4",
+          "request_id": "g33-node-initial-tables",
+          "revision": 13
+        },
+        "readback": {
+          "readable": true,
+          "source": "engine.tags/get"
+        },
+        "success": true,
+        "unknown": false
+      },
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "count": 0,
+        "readable": true,
+        "tags": []
+      },
+      "case": "initial-inventory-probes",
+      "idempotency_key": "g33-node-019-initial-probes",
+      "operation": "probe.list",
+      "response": {
+        "data_keys": [
+          "count",
+          "probes",
+          "readback",
+          "tags"
+        ],
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-node-019-initial-probes",
+          "job_id": "d1b9363a-f619-4ad6-9883-4f18bad99969",
+          "operation_id": "29439635-cfd8-4dee-b76c-937dcad1932a",
+          "request_id": "g33-node-initial-probes",
+          "revision": 13
+        },
+        "readback": {
+          "readable": true,
+          "source": "engine.tags/get"
+        },
+        "success": true,
+        "unknown": false
+      },
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "final": [
+          "dset1"
+        ],
+        "initial": [
+          "dset1"
+        ],
+        "subset": true
+      },
+      "case": "preserve-user-datasets",
+      "idempotency_key": null,
+      "operation": null,
+      "response": null,
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "final": [],
+        "initial": [],
+        "subset": true
+      },
+      "case": "preserve-user-numerical",
+      "idempotency_key": null,
+      "operation": null,
+      "response": null,
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "final": [],
+        "initial": [],
+        "subset": true
+      },
+      "case": "preserve-user-tables",
+      "idempotency_key": null,
+      "operation": null,
+      "response": null,
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "final": [],
+        "initial": [],
+        "subset": true
+      },
+      "case": "preserve-user-probes",
+      "idempotency_key": null,
+      "operation": null,
+      "response": null,
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "all_body_hashes_recorded": true,
+        "all_reconcile_false": true,
+        "call_count": 19,
+        "unique_idempotency_keys": true
+      },
+      "case": "request-discipline",
+      "idempotency_key": null,
+      "operation": null,
+      "response": null,
+      "status": "PASS"
+    }
+  ],
+  "run_dir": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_probe_20260922T0403Z/nodes",
+  "schema_version": 1,
+  "scope": "public_mcp_chain_a_c11_c14",
+  "summary": {
+    "BLOCKED": 0,
+    "FAIL": 3,
+    "NOT_RUN": 2,
+    "PASS": 23,
+    "UNVERIFIED": 0
+  },
+  "unknown_observations": []
+}

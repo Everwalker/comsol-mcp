@@ -1,0 +1,69 @@
+{
+  "calls": [
+    {
+      "body_sha256": "c4e2dd537d8d306f741ca434b0dd297567867be22ee3ff05ec44daf3857f5245",
+      "idempotency_key": "g33-export-001-json-initial",
+      "operation": "result.field_export",
+      "reconcile": false,
+      "request": "g33-export-json-initial",
+      "require_model": true,
+      "rpc_timeout_s": null
+    }
+  ],
+  "rows": [
+    {
+      "assertions": {},
+      "case": "json-success",
+      "idempotency_key": "g33-export-001-json-initial",
+      "operation": "result.field_export",
+      "reason": "valid Chain-A JSON export did not succeed",
+      "response": {
+        "data_keys": [],
+        "error_code": "EXECUTION_STATE_UNKNOWN",
+        "execution": {
+          "idempotency_key": "g33-export-001-json-initial",
+          "job_id": "6037e130-fca1-4f5f-8c68-abc9a14fe30f",
+          "operation_id": "4de292f8-b1c3-45dc-ae35-0e2b3a16a557",
+          "request_id": "g33-export-json-initial"
+        },
+        "success": false,
+        "unknown": {
+          "error_code": "EXECUTION_STATE_UNKNOWN",
+          "gate": false,
+          "job_id": "6037e130-fca1-4f5f-8c68-abc9a14fe30f",
+          "message": "result.field_export failed with FIELD_ARRAY_SHAPE_MISMATCH (coordinate count for point does not match axis length); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+          "unknown": true
+        }
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "assertions": {},
+      "case": "unknown-outcome",
+      "idempotency_key": null,
+      "operation": null,
+      "reason": "no live export root was established",
+      "response": null,
+      "status": "NOT_RUN"
+    },
+    {
+      "assertions": {},
+      "case": "cleanup-failure",
+      "idempotency_key": null,
+      "operation": null,
+      "reason": "no public cleanup fault injector was used",
+      "response": null,
+      "status": "NOT_RUN"
+    }
+  ],
+  "run_dir": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_export_20260922T0200Z",
+  "schema_version": 1,
+  "scope": "public_mcp_chain_a_export_artifact",
+  "summary": {
+    "BLOCKED": 1,
+    "FAIL": 0,
+    "NOT_RUN": 2,
+    "PASS": 0,
+    "UNVERIFIED": 0
+  }
+}

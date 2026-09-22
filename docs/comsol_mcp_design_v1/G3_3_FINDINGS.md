@@ -1,3 +1,9 @@
+## 2026-09-22 independent acceptance supersedes prior G3.3 claims
+
+Current status: **IMPLEMENTED_WITH_OPEN_ACCEPTANCE_DEFECTS**. Prior PASS text below is historical and cannot certify current W17 behavior. Independent audit: `evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/INITIAL_FINDINGS.json`. Fresh engine run `independent_live_baseline_20260922T0052Z` failed; its request/reply trail shows the cleared-solution negative control never executed because its Java source failed compilation, and the runner ignored the failed response. The preserved software baseline is 1648 passed / 1 skipped after rerunning outside the sandbox; software success does not resolve the engine or semantic defects. W18 remains unauthorized.
+
+Required repairs include real Probe update/history, complete solution axes, array-preserving statistics, fail-closed complex/selection handling, typed node writes, project-scoped artifacts and assertion coverage. Existing reports are retained; this correction is not a rewrite of their dates or claims.
+
 # G3.3 Audit Findings and Technical Remediation (F01–F12)
 
 ## 1. Historical G3.2 Deficiencies Audit
@@ -30,3 +36,11 @@ An independent clean-room audit of the pinned G3.2 commit (`2cb46279...`) identi
    - **Correction (2026-09-22 independent recheck, D2/D3):** that figure is a hand-picked module subset, not the repository suite. The full `pytest` run on the same worktree was **6 failed, 1617 passed, 1 skipped** at delivery (`fix_20260922/logs/baseline_full_pytest.txt`). On the fix branch the full suite is **1646 passed, 1 skipped, 0 failed**.
 3. **Live Acceptance (C00–C17):** 18 passed, 0 failed in clean-room live suite run `g3_3_acceptance_20260921T135429Z_9dozr6l_`.
    - **Correction (2026-09-22, D14):** the delivered run recorded the C03 chain-A re-solve as verified while the driver called `solve("std1")` at line 838 with no assertion and hardcoded `independent_resolve_verified: True` at line 904. The re-solve is now its own case (C03R) that asserts the reopened model's staleness, re-solves and compares against independently computed expectations, so the live suite has 19 cases.
+
+## Independent review: transient Probe and immutable artifact reads
+
+New run `public_transient_probe_20260922T0525Z` created a GlobalVariable probe but its solve raised a native null-parent-model error. COMSOL 6.4 Programming Reference Manual p181 requires assigning the component using `model.probe(tag).model(component_tag)`; the previous assumption that a GlobalVariable must forbid a component was incorrect. The reference SHA and local API inspection are recorded in the independent run's `probe_api_reference.json`. Creation alone is not an operational probe acceptance. Nonempty native transient table/time readback remains pending until the corrected implementation passes a new run.
+
+The same failure exposed a second boundary: study.run retained a native execution-state-unknown error only in text and returned a known partial failure because timestamp readback was readable. Timestamp availability cannot override an explicit engine uncertainty witness; structured uncertainty propagation is under correction.
+
+Final review also found that artifact.read hashed one open file and reopened the pathname to read the chunk. A same-size replacement could pair an old digest with new bytes. The correction hashes and reads through one descriptor and verifies fd/path identity; no-overwrite export uses atomic no-clobber publication. Fresh race regression and public chunk rerun are required before closure.

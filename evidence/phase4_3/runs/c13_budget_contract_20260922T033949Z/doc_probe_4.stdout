@@ -1,0 +1,12 @@
+{
+  "doc_id": 4332,
+  "title": "COMSOL 6.4 - Accessing Mesh Data",
+  "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_mesh.49.036.html",
+  "sha256": "61381c7186fee5f54a11364f5717b2dd4869872bdede6b7f24f8802ad9ed8cfc",
+  "page": null,
+  "chunk_id": 17080,
+  "total_chars": 1927,
+  "offset": 0,
+  "next_offset": null,
+  "text": "Accessing Mesh Data\n\nTo get the number of mesh vertices, use\n\nint model.component(<ctag>).mesh(<tag>).getNumVertex();\n\nTo get the coordinates of the mesh vertices, use\n\ndouble[][] model.component(<ctag>).mesh(<tag>).getVertex();\n\nwhich gives you a matrix where each column corresponds to a mesh vertex.\n\nTo get the element types in the mesh, use\n\nString[] model.component(<ctag>).mesh(<tag>).getTypes();\n\nThe following table lists the possible types. See Mesh Element Numbering Conventions for an explanation of each type.\n\nTable 4-6: Mesh element types.\n\nString\n\n|\n\nElement\n\n|\n\ndimension\n\n|\n\nNumber of Nodes\n\n|\n\nvtx\n\n|\n\nVertex element\n\n|\n\n0\n\n|\n\n1\n\n|\n\nedg\n\n|\n\nEdge element\n\n|\n\n1\n\n|\n\n2\n\n|\n\ntri\n\n|\n\nTriangular element\n\n|\n\n2\n\n|\n\n3\n\n|\n\nquad\n\n|\n\nQuadrilateral element\n\n|\n\n2\n\n|\n\n4\n\n|\n\ntet\n\n|\n\nTetrahedral element\n\n|\n\n3\n\n|\n\n4\n\n|\n\npyr\n\n|\n\nPyramid element\n\n|\n\n3\n\n|\n\n5\n\n|\n\nprism\n\n|\n\nPrism element\n\n|\n\n3\n\n|\n\n6\n\n|\n\nhex\n\n|\n\nHexahedral element\n\n|\n\n3\n\n|\n\n8\n\n|\n\nTo get the number of elements of a specific type, use\n\nint model.component(<ctag>).mesh(<tag>).getNumElem(type);\n\nTo get the elements for a specific type, use\n\nint[][] model.component(<ctag>).mesh(<tag>).getElem(type);\n\nwhich gives you a matrix where each column contains the mesh vertex indices of an element’s corners.\n\nTo get the geometric entity number for the elements of a specific type, use\n\nint[] model.component(<ctag>).mesh(<tag>).getElemEntity(type);\n\nTo return the tags of imported mesh selections, use\n\nString[] outputSelection();\n\nThe tag for the corresponding selection feature can then be derived by adding component tag and feature tag in front of the mesh selection tag. For example, if a mesh selection feature is imported by a feature imp1 in component comp1, and its tag (returned by the function outputSelection()) is mytag, the tag of the selection feature is comp1_imp1_mytag.\n\n[IMAGE: images/comsol_api_mesh.49.036.1.png ]\n\n|\n\nInformation and Statistics\n\n|"
+}

@@ -1,0 +1,45 @@
+  + Exception Group Traceback (most recent call last):
+  |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tools/g3_3_protocol_acceptance.py", line 918, in <module>
+  |     main()
+  |     ~~~~^^
+  |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tools/g3_3_protocol_acceptance.py", line 885, in main
+  |     asyncio.run(shape_probe(args, run) if args.shape_probe_only else
+  |     ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |                 join_probe(args, run) if args.join_probe_only else
+  |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |     ...<2 lines>...
+  |                 axis_probe(args, run) if args.axis_probe_only else
+  |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |                 numerical_suite(args, run) if args.numeric_only or args.export_only or args.m1_only or args.nodes_only or args.probe_only or args.control_only or args.cutplane_only else exercise(args, run))
+  |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 205, in run
+  |     return runner.run(main)
+  |            ~~~~~~~~~~^^^^^^
+  |   File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 128, in run
+  |     return self._loop.run_until_complete(task)
+  |            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  |   File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 720, in run_until_complete
+  |     return future.result()
+  |            ~~~~~~~~~~~~~^^
+  |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tools/g3_3_protocol_acceptance.py", line 531, in numerical_suite
+  |     async with OwnedHost(args, run, transcript, label="numerics", private_home=run / "private/numerics", run_state=state) as host:
+  |                ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tools/g3_3_protocol_acceptance.py", line 109, in __aexit__
+  |     await self.session.__aexit__(*exc)
+  |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/lib/python3.14/site-packages/mcp/shared/session.py", line 238, in __aexit__
+  |     return await self._task_group.__aexit__(exc_type, exc_val, exc_tb)
+  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/lib/python3.14/site-packages/anyio/_backends/_asyncio.py", line 847, in __aexit__
+  |     raise BaseExceptionGroup(
+  |         "unhandled errors in a TaskGroup", self._exceptions
+  |     ) from None
+  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/lib/python3.14/site-packages/mcp/client/stdio/__init__.py", line 189, in stdio_client
+    |     yield read_stream, write_stream
+    |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tools/g3_3_protocol_acceptance.py", line 574, in numerical_suite
+    |     assert not any(export_report["summary"].get(key, 0) for key in ("FAIL", "BLOCKED")), export_report["summary"]
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    | AssertionError: {'BLOCKED': 1, 'FAIL': 3, 'NOT_RUN': 2, 'PASS': 10, 'UNVERIFIED': 0}
+    +------------------------------------

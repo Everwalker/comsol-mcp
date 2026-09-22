@@ -1,0 +1,47 @@
+{
+  "C04": {
+    "integral": [
+      6.0,
+      9.0
+    ],
+    "average": [
+      2.0,
+      3.0
+    ],
+    "std": [
+      0.0,
+      0.0
+    ],
+    "rms": [
+      2.0,
+      3.0
+    ]
+  },
+  "C06": {
+    "integral": [
+      24.0
+    ],
+    "average": [
+      4.0
+    ],
+    "std": [
+      1.8257418583505538
+    ],
+    "rms": [
+      4.396968652757639
+    ]
+  },
+  "C06_centered_variance": {
+    "expression": "1e6[m]+x",
+    "std": 0.5773502691896258,
+    "tolerance": 1e-08,
+    "reason": "Centered variance avoids large-offset cancellation; tolerance exceeds the binary64 ulp of the shifted field."
+  },
+  "C07": {
+    "volume": 37.69911184307752,
+    "mean_radius": 1.3333333333333333,
+    "side_area": 37.69911184307752
+  },
+  "tolerance": 1e-09,
+  "reason": "Analytical polynomial/constant integrands, exact native quadrature to binary64 roundoff; tolerances fixed before execution."
+}

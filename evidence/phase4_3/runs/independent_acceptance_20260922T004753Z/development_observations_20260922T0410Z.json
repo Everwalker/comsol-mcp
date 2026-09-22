@@ -1,0 +1,135 @@
+{
+  "overall_acceptance": false,
+  "runs": [
+    {
+      "run": "public_m1_20260922T0359Z",
+      "run_status": {
+        "status": "PASS",
+        "started_at": "2026-09-22T03:56:52.639954+00:00",
+        "scope": "LIVE_PUBLIC_MCP_DEVELOPMENT_ACCEPTANCE",
+        "cases_requested": [
+          "C04"
+        ],
+        "exit_code": 0,
+        "finished_at": "2026-09-22T03:57:18.783588+00:00",
+        "elapsed_seconds": 26.14354695903603,
+        "changed_source_files": [],
+        "final_source_acceptance_eligible": true
+      },
+      "sha256": "a06b6a45c9583748bb68f61dcd46ddf8e4c378f896dfc6fb4ace9195f711770a"
+    },
+    {
+      "run": "public_numeric_20260922T0407Z",
+      "run_status": {
+        "status": "FAIL",
+        "started_at": "2026-09-22T04:02:25.889149+00:00",
+        "scope": "LIVE_PUBLIC_MCP_DEVELOPMENT_ACCEPTANCE",
+        "cases_requested": [
+          "C04",
+          "C05",
+          "C06",
+          "C07",
+          "C08",
+          "C09",
+          "C10"
+        ],
+        "exit_code": 1,
+        "error_type": "ExceptionGroup",
+        "error": "unhandled errors in a TaskGroup (1 sub-exception)",
+        "finished_at": "2026-09-22T04:03:04.192265+00:00",
+        "elapsed_seconds": 38.303033290896565,
+        "changed_source_files": [],
+        "final_source_acceptance_eligible": true
+      },
+      "sha256": "9298d549da57ebc8fad584bd461a15b250025096e0481ac699feb9e41c0845ce"
+    },
+    {
+      "run": "public_cutplane_20260922T0405Z",
+      "run_status": {
+        "status": "PASS",
+        "started_at": "2026-09-22T04:01:27.155905+00:00",
+        "scope": "LIVE_PUBLIC_MCP_DEVELOPMENT_ACCEPTANCE",
+        "cases_requested": [
+          "C11-CutPlane"
+        ],
+        "exit_code": 0,
+        "finished_at": "2026-09-22T04:01:52.473234+00:00",
+        "elapsed_seconds": 25.31727633299306,
+        "changed_source_files": [],
+        "final_source_acceptance_eligible": true
+      },
+      "sha256": "a847c025ca2c8b164edc3f74bb2a78e29266b2aa92c4e4d6a182e755972f2007"
+    },
+    {
+      "run": "public_probe_20260922T0418Z",
+      "run_status": {
+        "status": "FAIL",
+        "started_at": "2026-09-22T04:08:24.191868+00:00",
+        "scope": "LIVE_PUBLIC_MCP_DEVELOPMENT_ACCEPTANCE",
+        "cases_requested": [
+          "C14"
+        ],
+        "exit_code": 1,
+        "error_type": "ExceptionGroup",
+        "error": "unhandled errors in a TaskGroup (1 sub-exception)",
+        "finished_at": "2026-09-22T04:08:50.042008+00:00",
+        "elapsed_seconds": 25.850091416039504,
+        "changed_source_files": [],
+        "final_source_acceptance_eligible": true
+      },
+      "sha256": "62a6fc51e4057d90f603966afa55d82d3c63f0b3fdeff5517cabb9f0e371697e"
+    },
+    {
+      "run": "public_export_20260922T0421Z",
+      "run_status": {
+        "status": "FAIL",
+        "started_at": "2026-09-22T04:09:45.419470+00:00",
+        "scope": "LIVE_PUBLIC_MCP_DEVELOPMENT_ACCEPTANCE",
+        "cases_requested": [
+          "C12",
+          "C13"
+        ],
+        "exit_code": 1,
+        "error_type": "ExceptionGroup",
+        "error": "unhandled errors in a TaskGroup (1 sub-exception)",
+        "finished_at": "2026-09-22T04:10:10.972993+00:00",
+        "elapsed_seconds": 25.553472749888897,
+        "changed_source_files": [],
+        "final_source_acceptance_eligible": true
+      },
+      "sha256": "031493651a0c97bdd53e6aabc6a66354e59a507b10db153142a28a71eafa9d90"
+    },
+    {
+      "run": "native_outer_aggregate_20260922T0415Z",
+      "run_status": {
+        "status": "PASS",
+        "started_at": "2026-09-22T04:06:32.405171+00:00",
+        "scope": "API_PROBE",
+        "cases_requested": [
+          "b"
+        ],
+        "exit_code": 0,
+        "finished_at": "2026-09-22T04:06:59.015847+00:00",
+        "elapsed_seconds": 26.61032470909413,
+        "changed_source_files": [],
+        "final_source_acceptance_eligible": true
+      },
+      "sha256": "3b826b98141ae691a67fc8db4f614286db88acfc35ca635c5a24bc518c98b9f2"
+    }
+  ],
+  "findings": {
+    "C08": "default aggregate getters return outer 1 despite outersolnum setting; explicit outer getters independently proven",
+    "C14": "genResult creates nodes but does not populate table; real public solve still required",
+    "C12_C13": "real Eval and JSON export successful; public chunk helper/schema and pure prevalidation still failing"
+  },
+  "unit_verification": {
+    "command": "evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/bin/python -m pytest -q tests/test_g3_domain_outcome.py",
+    "result": "26 passed",
+    "log": "modelnode_domain_regression.log",
+    "scope": "CONTROL_UNIT",
+    "files": {
+      "comsol_mcp/_domain_outcome.py": "e9bff73df3a38db67725b09bcbe85c5ae69191555b8bd52cd21e04cd863ebc08",
+      "tests/test_g3_domain_outcome.py": "d38f977f8c18a3513433af05841c7f2cb9003c947cf364029055fd724a096394"
+    }
+  }
+}

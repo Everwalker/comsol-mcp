@@ -1,0 +1,44 @@
+  + Exception Group Traceback (most recent call last):
+  |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tools/g3_3_protocol_acceptance.py", line 754, in <module>
+  |     main()
+  |     ~~~~^^
+  |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tools/g3_3_protocol_acceptance.py", line 723, in main
+  |     asyncio.run(measure_probe(args, run) if args.measure_probe_only else
+  |     ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |                 coordinate_probe(args, run) if args.coordinate_probe_only else
+  |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |                 axis_probe(args, run) if args.axis_probe_only else
+  |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |                 numerical_suite(args, run) if args.numeric_only or args.export_only or args.m1_only or args.nodes_only or args.control_only else exercise(args, run))
+  |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 205, in run
+  |     return runner.run(main)
+  |            ~~~~~~~~~~^^^^^^
+  |   File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 128, in run
+  |     return self._loop.run_until_complete(task)
+  |            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  |   File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 720, in run_until_complete
+  |     return future.result()
+  |            ~~~~~~~~~~~~~^^
+  |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tools/g3_3_protocol_acceptance.py", line 490, in numerical_suite
+  |     async with OwnedHost(args, run, transcript, label="numerics", private_home=run / "private/numerics", run_state=state) as host:
+  |                ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tools/g3_3_protocol_acceptance.py", line 68, in __aexit__
+  |     await self.session.__aexit__(*exc)
+  |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/lib/python3.14/site-packages/mcp/shared/session.py", line 238, in __aexit__
+  |     return await self._task_group.__aexit__(exc_type, exc_val, exc_tb)
+  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/lib/python3.14/site-packages/anyio/_backends/_asyncio.py", line 847, in __aexit__
+  |     raise BaseExceptionGroup(
+  |         "unhandled errors in a TaskGroup", self._exceptions
+  |     ) from None
+  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/lib/python3.14/site-packages/mcp/client/stdio/__init__.py", line 189, in stdio_client
+    |     yield read_stream, write_stream
+    |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tools/g3_3_protocol_acceptance.py", line 516, in numerical_suite
+    |     assert report["overall"] == "PASS", report
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    | AssertionError: {'schema_version': 1, 'scope': 'public_mcp_chain_b_control', 'run_dir': '/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_control_20260922T0226Z/control', 'bound_model': {'present': True, 'session_id': 'session-6ff8957557fa97a3ed733c76', 'server_instance_id': '8256f393a45456186382dedabf36114051935934cffb85801ca3a7bebf127dd3', 'model_tag': 'mcp1', 'generation': 1}, 'solve': {'operation': 'study.run', 'body_sha256': 'a0a09a802ae7a318f9ddb86665afb3f06ef3b6bbda5b87a1a8d32a5e9e0d11b5', 'rpc_timeout_s': 0.05}, 'calls': [{'sequence': 1, 'operation': 'study.run', 'idempotency_key': 'g33-control-001-solve', 'request': 'g33-control-solve', 'body_sha256': 'a0a09a802ae7a318f9ddb86665afb3f06ef3b6bbda5b87a1a8d32a5e9e0d11b5', 'reconcile': False, 'require_model': True, 'rpc_timeout_s': 0.05, 'elapsed_s': 0.05649520899169147, 'mode': 'response', 'response': {'success': True, 'error_code': None, 'unknown': None, 'data_keys': ['job_id', 'rpc_wait_expired', 'status'], 'job_id': '84e504e3-0ecc-4b9e-8f3f-a35cb93a6375', 'status': 'RUNNING', 'execution': {'operation_id': '191780c3-bf19-4a48-8fd3-215ddaf9399c', 'job_id': '84e504e3-0ecc-4b9e-8f3f-a35cb93a6375', 'request_id': 'g33-control-solve', 'idempotency_key': 'g33-control-001-solve'}}}], 'rows': [{'case': 'solve-active-window', 'status': 'NOT_RUN', 'operation': 'study.run', 'idempotency_key': 'g33-control-001-solve', 'response': {'success': True, 'error_code': None, 'unknown': None, 'data_keys': ['job_id', 'rpc_wait_expired', 'status'], 'job_id': '84e504e3-0ecc-4b9e-8f3f-a35cb93a6375', 'status': 'RUNNING', 'execution': {'operation_id': '191780c3-bf19-4a48-8fd3-215ddaf9399c', 'job_id': '84e504e3-0ecc-4b9e-8f3f-a35cb93a6375', 'request_id': 'g33-control-solve', 'idempotency_key': 'g33-control-001-solve'}}, 'assertions': {'unknown_response': False, 'active_observed': False}, 'reason': 'solve completed before a public control observation'}, {'case': 'same-key-retry', 'status': 'NOT_RUN', 'operation': 'study.run', 'idempotency_key': 'g33-control-001-solve', 'response': None, 'assertions': {'new_solve_dispatched': False}, 'reason': 'same-key retry is only evaluated after an UNKNOWN job is queried'}], 'summary': {'BLOCKED': 0, 'FAIL': 0, 'NOT_RUN': 2, 'PASS': 0, 'UNVERIFIED': 0}, 'overall': 'BLOCKED', 'needs_retained_runtime': False}
+    +------------------------------------

@@ -1,100 +1,127 @@
 {
-  "schema": "comsol-mcp-g3/baseline-review/1",
-  "generated_at": "2026-09-21T12:35:00Z",
-  "review_target": {
-    "repository": "Everwalker/comsol-mcp",
-    "commit": "2cb4627924d1a3240818ea7cd00453d4bd2d2da8",
-    "tree": "dd3095e89c640c19aeb151cd0e8efe4af3c55802"
+  "schema": "comsol-mcp-g3/baseline-review/2",
+  "generated_at": "2026-09-22T01:45:44.232068+00:00",
+  "current_status": "IMPLEMENTED_WITH_OPEN_ACCEPTANCE_DEFECTS",
+  "source": {
+    "commit": "e14c946616f1b9c24c6faffa9f51f29f0e70a337",
+    "tree": "00536965d04f4dc5b35613be9c3db2a558bf4843",
+    "dirty": true
   },
-  "historical_ledgers_preserved": [
+  "previous_reviews_preserved": [
     {
-      "path": "evidence/phase4_1_acceptance.json",
-      "sha256": "a2e91f37d021274c5a5f1321f03961c57271e1e614d17f23d3b0ef6627335278",
-      "bytes": 4609,
-      "byte_exact_preserved": true
+      "path": "evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/prior_state/BASELINE_REVIEW.json",
+      "sha256": "037830c38c3eb05ae72249b360c499578f3e420729d8aba3934e647666a40b63"
     },
     {
-      "path": "evidence/phase4_2_acceptance.json",
-      "sha256": "741e702cf019bfede8564cc032bccdbd30c83ee830ec46ce6a3e16356faa52c4",
-      "bytes": 6768,
-      "byte_exact_preserved": true
-    },
-    {
-      "path": "evidence/w17_acceptance.json",
-      "sha256": "53daf14f51720f59e5fb8ed731083cd851b80bd3392c4fdeb7fee4a89a225197",
-      "bytes": 4244,
-      "byte_exact_preserved": true
+      "path": "evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/prior_state/w17_correction.json",
+      "sha256": "82db0acafff143744f54b47edecffa38d5bdb46e3c03b6ccef815220b8866cb7"
     }
   ],
-  "missing_historical_references": [
+  "claims": [
     {
-      "reference": "audit/semantic_review.json",
-      "status": "MISSING",
-      "note": "Referenced in historical ledgers, but no audit directory exists in Git tree dd3095e89c640c19aeb151cd0e8efe4af3c55802."
+      "case_id": "C00",
+      "subcase_id": "fixed_source_restore",
+      "scope": "SOURCE_RESTORATION",
+      "evidence_level": "FRESH_NETWORK_HASH_AUDIT",
+      "status": "PASS",
+      "source": "evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/fresh_restore/history_preservation_audit.json",
+      "fact": "3580 pinned source files independently match commit/tree/blob/sha256/size; no latest-main substitution."
     },
     {
-      "reference": ".phase1-private/g2-valve-proposal-webbridge-20260919T232153Z/server.remote_addr_valve.xml",
-      "status": "MISSING_PRIVATE_DATA",
-      "note": "Referenced in 5 phase3 owned runtime tests; gitignored private proposals not part of public git tree."
-    }
-  ],
-  "baseline_test_execution": {
-    "command": ".venv/bin/pytest -rA --tb=short",
-    "cwd": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository",
-    "interpreter": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/.venv/bin/python",
-    "interpreter_version": "Python 3.13.14",
-    "exit_code": 1,
-    "summary": "1611 passed, 5 failed, 1 skipped, 2 warnings",
-    "log_path": "evidence/phase4_3/baseline_test_run.txt"
-  },
-  "claims_audit": [
+      "case_id": "C00",
+      "subcase_id": "historical_bytes",
+      "scope": "HISTORICAL_PRESERVATION_ONLY",
+      "evidence_level": "FRESH_COMPARISON",
+      "status": "PASS",
+      "source": "evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/current_history_vs_fresh_pin.json",
+      "fact": "600 historical files in current repository equal freshly restored PIN bytes; their PASS claims remain historical claims."
+    },
     {
-      "claim_id": "CLAIM_G3_2_GATE_A_REOPEN",
-      "historical_statement": "Identical-SHA reopen for chains A/B/C verified in phase4_2_acceptance.json",
-      "actual_evidence_source": "tests/test_g3_gate_a2_f02_reopen.py",
+      "case_id": "C03",
+      "subcase_id": "fake_reopen_test",
+      "scope": "UNIT",
       "evidence_level": "CONTROL_UNIT",
-      "correction": "Uses FakeReopenModel, hardcoded byte strings (b'CHAIN_A_STEADY_SOLVED_MPH_CONTENT_V1'), and dictionary lookups. Negative control compares two constant strings. Does NOT prove real COMSOL engine save/reopen or numerical preservation.",
-      "remediation_required": "Must execute real Gate A on live COMSOL server with saved MPH files, distinct workers, and negative controls."
+      "status": "NOT_LIVE_EVIDENCE",
+      "source": "tests/test_g3_gate_a2_f02_reopen.py",
+      "fact": "FakeReopenModel and test-created bytes cannot establish COMSOL reopen or physical acceptance."
     },
     {
-      "claim_id": "CLAIM_W17_MEASURES_AND_AXISYMMETRIC",
-      "historical_statement": "1D/2D/3D spatial measures verified. Axisymmetric factor (2*pi*r) applied exactly once with axisymmetric_applied_count=1 in w17_acceptance.json",
-      "actual_evidence_source": "tests/test_g3_w17.py::test_result_evaluate_measures_and_axisymmetric",
+      "case_id": "C04-C14",
+      "subcase_id": "fwired_tree_tests",
+      "scope": "UNIT",
       "evidence_level": "UNIT_CONTRACT",
-      "correction": "FWiredTree mock returns pre-set values. result_evaluate maps all aggregates to IntVolume, average denominator is hardcoded to 1.0, and axisymmetric_applied_count is a boolean reflection rather than computed algorithm. Std and RMS formulas are not implemented.",
-      "remediation_required": "Refactor to MeasureSpec, map by dimension (point/edge/surface/volume), compute actual integrals M = int w dmu, average = int w f dmu / M, std = sqrt(int w (f - mean)^2 dmu / M), RMS = sqrt(int w |f|^2 dmu / M), verify native axisymmetric 2*pi*r."
+      "status": "NOT_LIVE_EVIDENCE",
+      "source": "tests/test_g3_w17.py",
+      "fact": "FWiredTree tests remain control/contract checks, not numerical engine acceptance."
     },
     {
-      "claim_id": "CLAIM_W17_COMPLEX_MODES",
-      "historical_statement": "Complex Field Transformation Modes verified in w17_acceptance.json",
-      "actual_evidence_source": "tests/test_g3_w17.py::test_result_evaluate_complex_field_modes",
-      "evidence_level": "UNIT_CONTRACT",
-      "correction": "_transform_complex_data pads 0.0 when imag is missing or shape mismatches, masking engine errors as valid real results.",
-      "remediation_required": "Strict validation: if data is declared complex and imaginary extraction fails or shape mismatches, must raise ExecutionContractError."
+      "case_id": "C00",
+      "subcase_id": "software_baseline",
+      "scope": "SOFTWARE_ONLY",
+      "evidence_level": "FRESH_EXECUTION",
+      "status": "PASS_WITH_SKIP",
+      "source": "evidence/phase4_3/runs/software_validation_20260922T004801Z",
+      "fact": "New environment: 1648 passed, 1 skipped; prior sandbox socket failures retained separately. This is not W17 live acceptance."
     },
     {
-      "claim_id": "CLAIM_W17_SOLUTION_SPEC_INDICES",
-      "historical_statement": "Inner and outer parameter scanning index extraction verified in w17_acceptance.json",
-      "actual_evidence_source": "tests/test_g3_w17.py::test_dataset_solution_indices, test_result_evaluate_solution_spec_indices",
-      "evidence_level": "UNIT_CONTRACT",
-      "correction": "NumericalFeature getData returns [expr][solnum][vertex]. Code sliced transformed[inner - 1], effectively slicing expressions instead of solution steps. dataset_solution_indices hardcoded outer_indices=[1].",
-      "remediation_required": "Implement SolutionBinding and FieldArray with explicit named axes (expression, outer, inner, coordinate). Handle multi-parameter grids."
+      "case_id": "C03",
+      "subcase_id": "independent_live_baseline",
+      "scope": "LIVE_COMSOL",
+      "evidence_level": "FRESH_EXECUTION",
+      "status": "FAIL",
+      "source": "evidence/phase4_3/runs/independent_live_baseline_20260922T0052Z",
+      "fact": "Negative fixture Java compile failure was ignored; C03 failed and dependent cases cascaded. No overall acceptance."
     },
     {
-      "claim_id": "CLAIM_W17_EXPORT_AND_CHUNKS",
-      "historical_statement": "verify_artifact_chunks verifies pagination byte-for-byte with exact hash match in w17_acceptance.json",
-      "actual_evidence_source": "tests/test_g3_w17.py::test_field_export_large_data_and_chunk_verification",
-      "evidence_level": "UNIT_CONTRACT",
-      "correction": "Path(dest).resolve() does not check containment or symlink escape. Writes occur before evaluating outcome; failed evaluations still write. verify_artifact_chunks reads entire file into memory before splitting. No server-side pagination resource contract.",
-      "remediation_required": "Implement ArtifactStore with containment validation, atomic publishing, failure abort, and bounded-memory chunk streaming."
+      "case_id": "C03",
+      "subcase_id": "protocol_chain_c_development",
+      "scope": "LIVE_PUBLIC_MCP",
+      "evidence_level": "FRESH_EXECUTION",
+      "status": "PARTIAL",
+      "source": "evidence/phase4_3/runs/protocol_c_20260922T0124Z",
+      "fact": "27 stored values and structural continuation readbacks match fresh worker; incomplete worker exit confirmation prevents full Gate A promotion."
     },
     {
-      "claim_id": "CLAIM_W17_PROBE_MANAGEMENT",
-      "historical_statement": "result.numerical_manage handles Derived Values and probes interchangeably",
-      "actual_evidence_source": "comsol_mcp/_g3_results.py",
-      "evidence_level": "INCOMPLETE_SCOPE",
-      "correction": "NumericalFeature under result.numerical manages Derived Values. Model Definitions Probe (model.probe / model.component.probe) is a separate feature tree with table links and history.",
-      "remediation_required": "Explicitly distinguish Probe from Derived Values, provide Probe management and clear scope separation."
+      "case_id": "C04",
+      "subcase_id": "two_expression_constant",
+      "scope": "LIVE_PUBLIC_MCP",
+      "evidence_level": "FRESH_EXECUTION",
+      "status": "FAIL",
+      "source": "evidence/phase4_3/runs/numeric_m1_20260922T0145Z",
+      "fact": "Volume=3; integral/average for constants [2,3] correct; std fails numerator/denominator axis shape. M1 not passed."
+    },
+    {
+      "case_id": "C08",
+      "subcase_id": "native_solution_api_probe",
+      "scope": "API_ADAPTER_DIAGNOSIS",
+      "evidence_level": "FRESH_LIVE_PROBE",
+      "status": "OBSERVED_NOT_ACCEPTANCE",
+      "source": "evidence/phase4_3/runs/native_outer_20260922T0140Z",
+      "fact": "Fresh two-parameter transient model exposes dset2/sol2 four outer values and five inner times. Native parameter metadata recorded; production FieldArray acceptance remains open."
     }
-  ]
+  ],
+  "missing_references": [
+    {
+      "path": "audit/semantic_review.json",
+      "status": "MISSING",
+      "source": "fresh restored PIN inventory"
+    }
+  ],
+  "gate_policy": "No fixture/control/source audit can satisfy live required gates. No W18 work authorized.",
+  "latest_independent_observations": {
+    "scope": "DEVELOPMENT_RUNS_NOT_FINAL_FROZEN_SOURCE_ACCEPTANCE",
+    "passed_numeric_observations": [
+      "C04 two-expression integral/average/std/rms",
+      "C05 3D surface full/subset and volume; 2D boundary full/subset",
+      "C06 analytic polynomial integral/average/std/rms and positive nonconstant weighted mean",
+      "C09 constant complex modes and varying complex mean"
+    ],
+    "failed_numeric_observation": {
+      "case": "C09 phase-before-std",
+      "actual": 5.698548667161188,
+      "expected": 0,
+      "source": "evidence/phase4_3/runs/public_numeric_20260922T0215Z/numerics/C09-phase-before-std.json"
+    },
+    "notes": "Source changing during development; no overall PASS. Additional coordinate and point-feature native probes in independent root findings."
+  }
 }

@@ -1,0 +1,1087 @@
+{
+  "success": true,
+  "data": {
+    "job_id": "9839ab74-f482-4323-bb2c-27e68eb4af24",
+    "operation_id": "0fef69c8-1b2e-4189-94df-ce127fd0a34e",
+    "status": "FAILED",
+    "metadata": {
+      "arguments": {
+        "arguments": {
+          "arguments": {},
+          "entrypoint": "TableAxisInspector",
+          "expected_revision": 1,
+          "mode": "trusted",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp1",
+            "schema_version": 1,
+            "server_instance_id": "c78d5967f9ede84d4c8483d3ebabf1df72de8a948c8eb469525f398c71cd924b",
+            "session_id": "session-0d252cf91a569836f7593221"
+          },
+          "project_id": "probe-axis-api_probe_probe_axis_20260922T053553Z",
+          "session_id": "session-0d252cf91a569836f7593221",
+          "source_artifact": "evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java"
+        },
+        "operation_id": "code.execute_java"
+      },
+      "engine_started_at": 1790055373.965419,
+      "execution": {
+        "expected_revision": 1,
+        "idempotency_key": "api_probe_probe_axis_20260922T053553Z-run-code-execute_java-2",
+        "model_ref": {
+          "generation": 1,
+          "model_tag": "mcp1",
+          "schema_version": 1,
+          "server_instance_id": "c78d5967f9ede84d4c8483d3ebabf1df72de8a948c8eb469525f398c71cd924b",
+          "session_id": "session-0d252cf91a569836f7593221"
+        },
+        "request_id": "api_probe_probe_axis_20260922T053553Z-run-code-execute_java-2",
+        "session_id": "session-0d252cf91a569836f7593221"
+      },
+      "finished_observed_at": 1790055374.1054668,
+      "operation": "operation_call",
+      "queue_wait_s": 3.0499999411404133e-05
+    },
+    "created_at": "2026-09-22 05:36:13",
+    "started_at": "2026-09-22 05:36:13",
+    "finished_at": "2026-09-22 05:36:14",
+    "effective_timeouts": {
+      "execution_timeout_s": null,
+      "no_progress_warning_s": null,
+      "queue_timeout_s": null,
+      "rpc_timeout_s": 30.0
+    },
+    "operation": {
+      "operation_id": "0fef69c8-1b2e-4189-94df-ce127fd0a34e",
+      "request_id": "api_probe_probe_axis_20260922T053553Z-run-code-execute_java-2",
+      "idempotency_key": "api_probe_probe_axis_20260922T053553Z-run-code-execute_java-2",
+      "request_hash": "2665c52d493df54653b55adae9e2ee07c346135d081cdb1a562fb8bf6bb183d7",
+      "operation": "operation_call",
+      "status": "FAILED",
+      "result": {
+        "data": {
+          "after": {
+            "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+            "changed_tags": [],
+            "external_event_counter": 0,
+            "fingerprint": "a9e373f60d1af587f092d979ceb31b7f99ee47edbae1d08fb278c651229b1d88",
+            "fingerprint_scope": [
+              "tag",
+              "label",
+              "file_path",
+              "time_modified",
+              "parameters"
+            ],
+            "generation": 2,
+            "instance_id": "99734100-6fde-42f1-b145-7394e35cd28b",
+            "model_tag": "mcp1",
+            "server_instance_id": "127.0.0.1:59334",
+            "tag": "mcp1",
+            "worker_instance_id": "99734100-6fde-42f1-b145-7394e35cd28b"
+          },
+          "before": {
+            "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+            "changed_tags": [],
+            "external_event_counter": 0,
+            "fingerprint": "a9e373f60d1af587f092d979ceb31b7f99ee47edbae1d08fb278c651229b1d88",
+            "fingerprint_scope": [
+              "tag",
+              "label",
+              "file_path",
+              "time_modified",
+              "parameters"
+            ],
+            "generation": 2,
+            "instance_id": "99734100-6fde-42f1-b145-7394e35cd28b",
+            "model_tag": "mcp1",
+            "server_instance_id": "127.0.0.1:59334",
+            "tag": "mcp1",
+            "worker_instance_id": "99734100-6fde-42f1-b145-7394e35cd28b"
+          },
+          "cleanup_failed": false,
+          "dispatch_stage": "post_dispatch",
+          "domain_outcome": {
+            "cleanup_failed": false,
+            "dispatch_stage": "post_dispatch",
+            "execution_state_unknown": false,
+            "failure": {
+              "code": "ENGINE_CALL_FAILED",
+              "message": "{'ok': False, 'code': 'COMPILE_ERROR', 'message': 'Java compilation failed', 'source_sha256': 'bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf', 'entrypoint': 'TableAxisInspector', 'diagnostics': [{'kind': 'ERROR', 'source': '/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java', 'line': 17, 'column': 53, 'start': 980, 'end': 981, 'message': 'incompatible types: int cannot be converted to int[]'}, {'kind': 'ERROR', 'source': '/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java', 'line': 20, 'column': 34, 'start': 1154, 'end': 1166, 'message': 'method getVals in interface com.comsol.model.SolutionInfo cannot be applied to given types;\\n  required: int,int[]\\n  found: java.lang.String\\n  reason: actual and formal argument lists differ in length'}, {'kind': 'NOTE', 'source': '', 'line': -1, 'column': -1, 'start': -1, 'end': -1, 'message': 'Some messages have been simplified; recompile with -Xdiags:verbose to get full output'}], 'artifact': '/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-mcp-java-code-9539315581027162494/bd1bb35cf6e1b00cb6b9bc3e'}",
+              "safe_retry": false
+            },
+            "operation": "",
+            "state": "failed",
+            "verification_status": "NOT_APPLICABLE"
+          },
+          "domain_state": "failed",
+          "effect": "project_write",
+          "entrypoint": "TableAxisInspector",
+          "execution_state_unknown": false,
+          "isolation_proof": {
+            "api_probe": {
+              "authenticated_api_success": true,
+              "denial_evidence_source": "server_access_log",
+              "loopback_address": "127.0.0.1",
+              "loopback_port": 59334,
+              "nonloopback_address": "192.168.100.152",
+              "nonloopback_api_exception_http_status": null,
+              "nonloopback_port": 59334,
+              "observed_at": "2026-09-22T05:36:06Z",
+              "probe_kind": "comsol_java_api",
+              "server_access_log": {
+                "entries": [
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 403,
+                    "method": "GET",
+                    "peer": "192.168.100.152",
+                    "route": "/webbridge/websocket"
+                  }
+                ],
+                "finished_at": "2026-09-22T05:36:06Z",
+                "inode": 29978812,
+                "java_request_id": "g2-valve-nonloopback-connect",
+                "offset_after": 261,
+                "offset_before": 0,
+                "parsed_nonloopback_entry": {
+                  "http_status": 403,
+                  "method": "GET",
+                  "peer": "192.168.100.152",
+                  "route": "/webbridge/websocket"
+                },
+                "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+                "phase": "java_connect_only",
+                "raw_probe_started_after_capture": true,
+                "segment_sha256": "2b82edc171639b6d9bc20786c16615bc9adb8feb970c650f56c74233d573b97b",
+                "started_at": "2026-09-22T05:35:58Z",
+                "status": "PASS"
+              }
+            },
+            "birth": "Tue Sep 22 13:35:54 2026",
+            "config_inode": 14720294,
+            "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+            "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+            "endpoint": "127.0.0.1:59334",
+            "established_client_pids": [
+              82005,
+              82103
+            ],
+            "listener": {
+              "endpoint": "*:59334",
+              "local_endpoint": "*:59334",
+              "pid": 82005,
+              "raw": "java    82005 everwalker   59u  IPv6 0x96e5cc272a0e2e32      0t0  TCP *:59334 (LISTEN)",
+              "remote_endpoint": null,
+              "state": "LISTEN"
+            },
+            "listener_binding": "wildcard",
+            "loopback_listener": false,
+            "pid": 82005,
+            "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+            "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/isolation_receipt.json",
+            "verified": true,
+            "worker_pid": 82103
+          },
+          "operation": "code.execute_java",
+          "partial_change": false,
+          "readback": {},
+          "source_sha256": "bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf",
+          "verification_status": "NOT_APPLICABLE",
+          "verified_outcome": "failed",
+          "worker": {
+            "completed_at_ms": "1790055374094",
+            "failure": {
+              "artifact": "/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-mcp-java-code-9539315581027162494/bd1bb35cf6e1b00cb6b9bc3e",
+              "code": "COMPILE_ERROR",
+              "diagnostics": [
+                {
+                  "column": 53,
+                  "end": 981,
+                  "kind": "ERROR",
+                  "line": 17,
+                  "message": "incompatible types: int cannot be converted to int[]",
+                  "source": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java",
+                  "start": 980
+                },
+                {
+                  "column": 34,
+                  "end": 1166,
+                  "kind": "ERROR",
+                  "line": 20,
+                  "message": "method getVals in interface com.comsol.model.SolutionInfo cannot be applied to given types;\n  required: int,int[]\n  found: java.lang.String\n  reason: actual and formal argument lists differ in length",
+                  "source": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java",
+                  "start": 1154
+                },
+                {
+                  "column": -1,
+                  "end": -1,
+                  "kind": "NOTE",
+                  "line": -1,
+                  "message": "Some messages have been simplified; recompile with -Xdiags:verbose to get full output",
+                  "source": "",
+                  "start": -1
+                }
+              ],
+              "entrypoint": "TableAxisInspector",
+              "message": "Java compilation failed",
+              "ok": false,
+              "source_sha256": "bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf"
+            },
+            "ok": false,
+            "queued_at_ms": "1790055374017",
+            "request_id": "0fef69c8-1b2e-4189-94df-ce127fd0a34e",
+            "started_at_ms": "1790055374017",
+            "status": "FAILED",
+            "type": "code_execute"
+          }
+        },
+        "error": {
+          "code": "ENGINE_CALL_FAILED",
+          "engine_state": "IDLE",
+          "message": "{'ok': False, 'code': 'COMPILE_ERROR', 'message': 'Java compilation failed', 'source_sha256': 'bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf', 'entrypoint': 'TableAxisInspector', 'diagnostics': [{'kind': 'ERROR', 'source': '/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java', 'line': 17, 'column': 53, 'start': 980, 'end': 981, 'message': 'incompatible types: int cannot be converted to int[]'}, {'kind': 'ERROR', 'source': '/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java', 'line': 20, 'column': 34, 'start': 1154, 'end': 1166, 'message': 'method getVals in interface com.comsol.model.SolutionInfo cannot be applied to given types;\\n  required: int,int[]\\n  found: java.lang.String\\n  reason: actual and formal argument lists differ in length'}, {'kind': 'NOTE', 'source': '', 'line': -1, 'column': -1, 'start': -1, 'end': -1, 'message': 'Some messages have been simplified; recompile with -Xdiags:verbose to get full output'}], 'artifact': '/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-mcp-java-code-9539315581027162494/bd1bb35cf6e1b00cb6b9bc3e'}",
+          "partial_changes": false,
+          "phase": "execute",
+          "safe_retry": false
+        },
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "api_probe_probe_axis_20260922T053553Z-run-code-execute_java-2",
+          "job_id": "9839ab74-f482-4323-bb2c-27e68eb4af24",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp1",
+            "schema_version": 1,
+            "server_instance_id": "c78d5967f9ede84d4c8483d3ebabf1df72de8a948c8eb469525f398c71cd924b",
+            "session_id": "session-0d252cf91a569836f7593221"
+          },
+          "operation_id": "0fef69c8-1b2e-4189-94df-ce127fd0a34e",
+          "request_hash": "2665c52d493df54653b55adae9e2ee07c346135d081cdb1a562fb8bf6bb183d7",
+          "request_id": "api_probe_probe_axis_20260922T053553Z-run-code-execute_java-2",
+          "revision": 1,
+          "server_ownership": "shared",
+          "session_id": "session-0d252cf91a569836f7593221"
+        },
+        "success": false
+      },
+      "metadata": {
+        "arguments": {
+          "arguments": {
+            "arguments": {},
+            "entrypoint": "TableAxisInspector",
+            "expected_revision": 1,
+            "mode": "trusted",
+            "model_ref": {
+              "generation": 1,
+              "model_tag": "mcp1",
+              "schema_version": 1,
+              "server_instance_id": "c78d5967f9ede84d4c8483d3ebabf1df72de8a948c8eb469525f398c71cd924b",
+              "session_id": "session-0d252cf91a569836f7593221"
+            },
+            "project_id": "probe-axis-api_probe_probe_axis_20260922T053553Z",
+            "session_id": "session-0d252cf91a569836f7593221",
+            "source_artifact": "evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java"
+          },
+          "operation_id": "code.execute_java"
+        },
+        "execution": {
+          "expected_revision": 1,
+          "idempotency_key": "api_probe_probe_axis_20260922T053553Z-run-code-execute_java-2",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp1",
+            "schema_version": 1,
+            "server_instance_id": "c78d5967f9ede84d4c8483d3ebabf1df72de8a948c8eb469525f398c71cd924b",
+            "session_id": "session-0d252cf91a569836f7593221"
+          },
+          "request_id": "api_probe_probe_axis_20260922T053553Z-run-code-execute_java-2",
+          "session_id": "session-0d252cf91a569836f7593221"
+        },
+        "operation": "operation_call"
+      },
+      "created_at": "2026-09-22 05:36:13",
+      "started_at": "2026-09-22 05:36:13",
+      "finished_at": "2026-09-22 05:36:14",
+      "effective_timeouts": {
+        "execution_timeout_s": null,
+        "no_progress_warning_s": null,
+        "queue_timeout_s": null,
+        "rpc_timeout_s": 30.0
+      }
+    },
+    "result": {
+      "data": {
+        "after": {
+          "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+          "changed_tags": [],
+          "external_event_counter": 0,
+          "fingerprint": "a9e373f60d1af587f092d979ceb31b7f99ee47edbae1d08fb278c651229b1d88",
+          "fingerprint_scope": [
+            "tag",
+            "label",
+            "file_path",
+            "time_modified",
+            "parameters"
+          ],
+          "generation": 2,
+          "instance_id": "99734100-6fde-42f1-b145-7394e35cd28b",
+          "model_tag": "mcp1",
+          "server_instance_id": "127.0.0.1:59334",
+          "tag": "mcp1",
+          "worker_instance_id": "99734100-6fde-42f1-b145-7394e35cd28b"
+        },
+        "before": {
+          "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+          "changed_tags": [],
+          "external_event_counter": 0,
+          "fingerprint": "a9e373f60d1af587f092d979ceb31b7f99ee47edbae1d08fb278c651229b1d88",
+          "fingerprint_scope": [
+            "tag",
+            "label",
+            "file_path",
+            "time_modified",
+            "parameters"
+          ],
+          "generation": 2,
+          "instance_id": "99734100-6fde-42f1-b145-7394e35cd28b",
+          "model_tag": "mcp1",
+          "server_instance_id": "127.0.0.1:59334",
+          "tag": "mcp1",
+          "worker_instance_id": "99734100-6fde-42f1-b145-7394e35cd28b"
+        },
+        "cleanup_failed": false,
+        "dispatch_stage": "post_dispatch",
+        "domain_outcome": {
+          "cleanup_failed": false,
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": false,
+          "failure": {
+            "code": "ENGINE_CALL_FAILED",
+            "message": "{'ok': False, 'code': 'COMPILE_ERROR', 'message': 'Java compilation failed', 'source_sha256': 'bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf', 'entrypoint': 'TableAxisInspector', 'diagnostics': [{'kind': 'ERROR', 'source': '/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java', 'line': 17, 'column': 53, 'start': 980, 'end': 981, 'message': 'incompatible types: int cannot be converted to int[]'}, {'kind': 'ERROR', 'source': '/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java', 'line': 20, 'column': 34, 'start': 1154, 'end': 1166, 'message': 'method getVals in interface com.comsol.model.SolutionInfo cannot be applied to given types;\\n  required: int,int[]\\n  found: java.lang.String\\n  reason: actual and formal argument lists differ in length'}, {'kind': 'NOTE', 'source': '', 'line': -1, 'column': -1, 'start': -1, 'end': -1, 'message': 'Some messages have been simplified; recompile with -Xdiags:verbose to get full output'}], 'artifact': '/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-mcp-java-code-9539315581027162494/bd1bb35cf6e1b00cb6b9bc3e'}",
+            "safe_retry": false
+          },
+          "operation": "",
+          "state": "failed",
+          "verification_status": "NOT_APPLICABLE"
+        },
+        "domain_state": "failed",
+        "effect": "project_write",
+        "entrypoint": "TableAxisInspector",
+        "execution_state_unknown": false,
+        "isolation_proof": {
+          "api_probe": {
+            "authenticated_api_success": true,
+            "denial_evidence_source": "server_access_log",
+            "loopback_address": "127.0.0.1",
+            "loopback_port": 59334,
+            "nonloopback_address": "192.168.100.152",
+            "nonloopback_api_exception_http_status": null,
+            "nonloopback_port": 59334,
+            "observed_at": "2026-09-22T05:36:06Z",
+            "probe_kind": "comsol_java_api",
+            "server_access_log": {
+              "entries": [
+                {
+                  "http_status": 101,
+                  "method": "GET",
+                  "peer": "127.0.0.1",
+                  "route": "/webbridge/websocket"
+                },
+                {
+                  "http_status": 101,
+                  "method": "GET",
+                  "peer": "127.0.0.1",
+                  "route": "/webbridge/websocket"
+                },
+                {
+                  "http_status": 403,
+                  "method": "GET",
+                  "peer": "192.168.100.152",
+                  "route": "/webbridge/websocket"
+                }
+              ],
+              "finished_at": "2026-09-22T05:36:06Z",
+              "inode": 29978812,
+              "java_request_id": "g2-valve-nonloopback-connect",
+              "offset_after": 261,
+              "offset_before": 0,
+              "parsed_nonloopback_entry": {
+                "http_status": 403,
+                "method": "GET",
+                "peer": "192.168.100.152",
+                "route": "/webbridge/websocket"
+              },
+              "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+              "phase": "java_connect_only",
+              "raw_probe_started_after_capture": true,
+              "segment_sha256": "2b82edc171639b6d9bc20786c16615bc9adb8feb970c650f56c74233d573b97b",
+              "started_at": "2026-09-22T05:35:58Z",
+              "status": "PASS"
+            }
+          },
+          "birth": "Tue Sep 22 13:35:54 2026",
+          "config_inode": 14720294,
+          "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+          "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+          "endpoint": "127.0.0.1:59334",
+          "established_client_pids": [
+            82005,
+            82103
+          ],
+          "listener": {
+            "endpoint": "*:59334",
+            "local_endpoint": "*:59334",
+            "pid": 82005,
+            "raw": "java    82005 everwalker   59u  IPv6 0x96e5cc272a0e2e32      0t0  TCP *:59334 (LISTEN)",
+            "remote_endpoint": null,
+            "state": "LISTEN"
+          },
+          "listener_binding": "wildcard",
+          "loopback_listener": false,
+          "pid": 82005,
+          "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+          "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/isolation_receipt.json",
+          "verified": true,
+          "worker_pid": 82103
+        },
+        "operation": "code.execute_java",
+        "partial_change": false,
+        "readback": {},
+        "source_sha256": "bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf",
+        "verification_status": "NOT_APPLICABLE",
+        "verified_outcome": "failed",
+        "worker": {
+          "completed_at_ms": "1790055374094",
+          "failure": {
+            "artifact": "/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-mcp-java-code-9539315581027162494/bd1bb35cf6e1b00cb6b9bc3e",
+            "code": "COMPILE_ERROR",
+            "diagnostics": [
+              {
+                "column": 53,
+                "end": 981,
+                "kind": "ERROR",
+                "line": 17,
+                "message": "incompatible types: int cannot be converted to int[]",
+                "source": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java",
+                "start": 980
+              },
+              {
+                "column": 34,
+                "end": 1166,
+                "kind": "ERROR",
+                "line": 20,
+                "message": "method getVals in interface com.comsol.model.SolutionInfo cannot be applied to given types;\n  required: int,int[]\n  found: java.lang.String\n  reason: actual and formal argument lists differ in length",
+                "source": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java",
+                "start": 1154
+              },
+              {
+                "column": -1,
+                "end": -1,
+                "kind": "NOTE",
+                "line": -1,
+                "message": "Some messages have been simplified; recompile with -Xdiags:verbose to get full output",
+                "source": "",
+                "start": -1
+              }
+            ],
+            "entrypoint": "TableAxisInspector",
+            "message": "Java compilation failed",
+            "ok": false,
+            "source_sha256": "bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf"
+          },
+          "ok": false,
+          "queued_at_ms": "1790055374017",
+          "request_id": "0fef69c8-1b2e-4189-94df-ce127fd0a34e",
+          "started_at_ms": "1790055374017",
+          "status": "FAILED",
+          "type": "code_execute"
+        }
+      },
+      "error": {
+        "code": "ENGINE_CALL_FAILED",
+        "engine_state": "IDLE",
+        "message": "{'ok': False, 'code': 'COMPILE_ERROR', 'message': 'Java compilation failed', 'source_sha256': 'bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf', 'entrypoint': 'TableAxisInspector', 'diagnostics': [{'kind': 'ERROR', 'source': '/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java', 'line': 17, 'column': 53, 'start': 980, 'end': 981, 'message': 'incompatible types: int cannot be converted to int[]'}, {'kind': 'ERROR', 'source': '/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java', 'line': 20, 'column': 34, 'start': 1154, 'end': 1166, 'message': 'method getVals in interface com.comsol.model.SolutionInfo cannot be applied to given types;\\n  required: int,int[]\\n  found: java.lang.String\\n  reason: actual and formal argument lists differ in length'}, {'kind': 'NOTE', 'source': '', 'line': -1, 'column': -1, 'start': -1, 'end': -1, 'message': 'Some messages have been simplified; recompile with -Xdiags:verbose to get full output'}], 'artifact': '/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-mcp-java-code-9539315581027162494/bd1bb35cf6e1b00cb6b9bc3e'}",
+        "partial_changes": false,
+        "phase": "execute",
+        "safe_retry": false
+      },
+      "execution": {
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "dirty": false,
+        "idempotency_key": "api_probe_probe_axis_20260922T053553Z-run-code-execute_java-2",
+        "job_id": "9839ab74-f482-4323-bb2c-27e68eb4af24",
+        "model_ownership": "mcp_owned",
+        "model_ref": {
+          "generation": 1,
+          "model_tag": "mcp1",
+          "schema_version": 1,
+          "server_instance_id": "c78d5967f9ede84d4c8483d3ebabf1df72de8a948c8eb469525f398c71cd924b",
+          "session_id": "session-0d252cf91a569836f7593221"
+        },
+        "operation_id": "0fef69c8-1b2e-4189-94df-ce127fd0a34e",
+        "request_hash": "2665c52d493df54653b55adae9e2ee07c346135d081cdb1a562fb8bf6bb183d7",
+        "request_id": "api_probe_probe_axis_20260922T053553Z-run-code-execute_java-2",
+        "revision": 1,
+        "server_ownership": "shared",
+        "session_id": "session-0d252cf91a569836f7593221"
+      },
+      "success": false
+    }
+  },
+  "_outer_isError": false,
+  "_structuredContent": {
+    "success": true,
+    "data": {
+      "job_id": "9839ab74-f482-4323-bb2c-27e68eb4af24",
+      "operation_id": "0fef69c8-1b2e-4189-94df-ce127fd0a34e",
+      "status": "FAILED",
+      "metadata": {
+        "arguments": {
+          "arguments": {
+            "arguments": {},
+            "entrypoint": "TableAxisInspector",
+            "expected_revision": 1,
+            "mode": "trusted",
+            "model_ref": {
+              "generation": 1,
+              "model_tag": "mcp1",
+              "schema_version": 1,
+              "server_instance_id": "c78d5967f9ede84d4c8483d3ebabf1df72de8a948c8eb469525f398c71cd924b",
+              "session_id": "session-0d252cf91a569836f7593221"
+            },
+            "project_id": "probe-axis-api_probe_probe_axis_20260922T053553Z",
+            "session_id": "session-0d252cf91a569836f7593221",
+            "source_artifact": "evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java"
+          },
+          "operation_id": "code.execute_java"
+        },
+        "engine_started_at": 1790055373.965419,
+        "execution": {
+          "expected_revision": 1,
+          "idempotency_key": "api_probe_probe_axis_20260922T053553Z-run-code-execute_java-2",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp1",
+            "schema_version": 1,
+            "server_instance_id": "c78d5967f9ede84d4c8483d3ebabf1df72de8a948c8eb469525f398c71cd924b",
+            "session_id": "session-0d252cf91a569836f7593221"
+          },
+          "request_id": "api_probe_probe_axis_20260922T053553Z-run-code-execute_java-2",
+          "session_id": "session-0d252cf91a569836f7593221"
+        },
+        "finished_observed_at": 1790055374.1054668,
+        "operation": "operation_call",
+        "queue_wait_s": 3.0499999411404133e-05
+      },
+      "created_at": "2026-09-22 05:36:13",
+      "started_at": "2026-09-22 05:36:13",
+      "finished_at": "2026-09-22 05:36:14",
+      "effective_timeouts": {
+        "execution_timeout_s": null,
+        "no_progress_warning_s": null,
+        "queue_timeout_s": null,
+        "rpc_timeout_s": 30.0
+      },
+      "operation": {
+        "operation_id": "0fef69c8-1b2e-4189-94df-ce127fd0a34e",
+        "request_id": "api_probe_probe_axis_20260922T053553Z-run-code-execute_java-2",
+        "idempotency_key": "api_probe_probe_axis_20260922T053553Z-run-code-execute_java-2",
+        "request_hash": "2665c52d493df54653b55adae9e2ee07c346135d081cdb1a562fb8bf6bb183d7",
+        "operation": "operation_call",
+        "status": "FAILED",
+        "result": {
+          "data": {
+            "after": {
+              "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+              "changed_tags": [],
+              "external_event_counter": 0,
+              "fingerprint": "a9e373f60d1af587f092d979ceb31b7f99ee47edbae1d08fb278c651229b1d88",
+              "fingerprint_scope": [
+                "tag",
+                "label",
+                "file_path",
+                "time_modified",
+                "parameters"
+              ],
+              "generation": 2,
+              "instance_id": "99734100-6fde-42f1-b145-7394e35cd28b",
+              "model_tag": "mcp1",
+              "server_instance_id": "127.0.0.1:59334",
+              "tag": "mcp1",
+              "worker_instance_id": "99734100-6fde-42f1-b145-7394e35cd28b"
+            },
+            "before": {
+              "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+              "changed_tags": [],
+              "external_event_counter": 0,
+              "fingerprint": "a9e373f60d1af587f092d979ceb31b7f99ee47edbae1d08fb278c651229b1d88",
+              "fingerprint_scope": [
+                "tag",
+                "label",
+                "file_path",
+                "time_modified",
+                "parameters"
+              ],
+              "generation": 2,
+              "instance_id": "99734100-6fde-42f1-b145-7394e35cd28b",
+              "model_tag": "mcp1",
+              "server_instance_id": "127.0.0.1:59334",
+              "tag": "mcp1",
+              "worker_instance_id": "99734100-6fde-42f1-b145-7394e35cd28b"
+            },
+            "cleanup_failed": false,
+            "dispatch_stage": "post_dispatch",
+            "domain_outcome": {
+              "cleanup_failed": false,
+              "dispatch_stage": "post_dispatch",
+              "execution_state_unknown": false,
+              "failure": {
+                "code": "ENGINE_CALL_FAILED",
+                "message": "{'ok': False, 'code': 'COMPILE_ERROR', 'message': 'Java compilation failed', 'source_sha256': 'bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf', 'entrypoint': 'TableAxisInspector', 'diagnostics': [{'kind': 'ERROR', 'source': '/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java', 'line': 17, 'column': 53, 'start': 980, 'end': 981, 'message': 'incompatible types: int cannot be converted to int[]'}, {'kind': 'ERROR', 'source': '/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java', 'line': 20, 'column': 34, 'start': 1154, 'end': 1166, 'message': 'method getVals in interface com.comsol.model.SolutionInfo cannot be applied to given types;\\n  required: int,int[]\\n  found: java.lang.String\\n  reason: actual and formal argument lists differ in length'}, {'kind': 'NOTE', 'source': '', 'line': -1, 'column': -1, 'start': -1, 'end': -1, 'message': 'Some messages have been simplified; recompile with -Xdiags:verbose to get full output'}], 'artifact': '/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-mcp-java-code-9539315581027162494/bd1bb35cf6e1b00cb6b9bc3e'}",
+                "safe_retry": false
+              },
+              "operation": "",
+              "state": "failed",
+              "verification_status": "NOT_APPLICABLE"
+            },
+            "domain_state": "failed",
+            "effect": "project_write",
+            "entrypoint": "TableAxisInspector",
+            "execution_state_unknown": false,
+            "isolation_proof": {
+              "api_probe": {
+                "authenticated_api_success": true,
+                "denial_evidence_source": "server_access_log",
+                "loopback_address": "127.0.0.1",
+                "loopback_port": 59334,
+                "nonloopback_address": "192.168.100.152",
+                "nonloopback_api_exception_http_status": null,
+                "nonloopback_port": 59334,
+                "observed_at": "2026-09-22T05:36:06Z",
+                "probe_kind": "comsol_java_api",
+                "server_access_log": {
+                  "entries": [
+                    {
+                      "http_status": 101,
+                      "method": "GET",
+                      "peer": "127.0.0.1",
+                      "route": "/webbridge/websocket"
+                    },
+                    {
+                      "http_status": 101,
+                      "method": "GET",
+                      "peer": "127.0.0.1",
+                      "route": "/webbridge/websocket"
+                    },
+                    {
+                      "http_status": 403,
+                      "method": "GET",
+                      "peer": "192.168.100.152",
+                      "route": "/webbridge/websocket"
+                    }
+                  ],
+                  "finished_at": "2026-09-22T05:36:06Z",
+                  "inode": 29978812,
+                  "java_request_id": "g2-valve-nonloopback-connect",
+                  "offset_after": 261,
+                  "offset_before": 0,
+                  "parsed_nonloopback_entry": {
+                    "http_status": 403,
+                    "method": "GET",
+                    "peer": "192.168.100.152",
+                    "route": "/webbridge/websocket"
+                  },
+                  "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+                  "phase": "java_connect_only",
+                  "raw_probe_started_after_capture": true,
+                  "segment_sha256": "2b82edc171639b6d9bc20786c16615bc9adb8feb970c650f56c74233d573b97b",
+                  "started_at": "2026-09-22T05:35:58Z",
+                  "status": "PASS"
+                }
+              },
+              "birth": "Tue Sep 22 13:35:54 2026",
+              "config_inode": 14720294,
+              "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+              "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+              "endpoint": "127.0.0.1:59334",
+              "established_client_pids": [
+                82005,
+                82103
+              ],
+              "listener": {
+                "endpoint": "*:59334",
+                "local_endpoint": "*:59334",
+                "pid": 82005,
+                "raw": "java    82005 everwalker   59u  IPv6 0x96e5cc272a0e2e32      0t0  TCP *:59334 (LISTEN)",
+                "remote_endpoint": null,
+                "state": "LISTEN"
+              },
+              "listener_binding": "wildcard",
+              "loopback_listener": false,
+              "pid": 82005,
+              "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+              "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/isolation_receipt.json",
+              "verified": true,
+              "worker_pid": 82103
+            },
+            "operation": "code.execute_java",
+            "partial_change": false,
+            "readback": {},
+            "source_sha256": "bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf",
+            "verification_status": "NOT_APPLICABLE",
+            "verified_outcome": "failed",
+            "worker": {
+              "completed_at_ms": "1790055374094",
+              "failure": {
+                "artifact": "/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-mcp-java-code-9539315581027162494/bd1bb35cf6e1b00cb6b9bc3e",
+                "code": "COMPILE_ERROR",
+                "diagnostics": [
+                  {
+                    "column": 53,
+                    "end": 981,
+                    "kind": "ERROR",
+                    "line": 17,
+                    "message": "incompatible types: int cannot be converted to int[]",
+                    "source": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java",
+                    "start": 980
+                  },
+                  {
+                    "column": 34,
+                    "end": 1166,
+                    "kind": "ERROR",
+                    "line": 20,
+                    "message": "method getVals in interface com.comsol.model.SolutionInfo cannot be applied to given types;\n  required: int,int[]\n  found: java.lang.String\n  reason: actual and formal argument lists differ in length",
+                    "source": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java",
+                    "start": 1154
+                  },
+                  {
+                    "column": -1,
+                    "end": -1,
+                    "kind": "NOTE",
+                    "line": -1,
+                    "message": "Some messages have been simplified; recompile with -Xdiags:verbose to get full output",
+                    "source": "",
+                    "start": -1
+                  }
+                ],
+                "entrypoint": "TableAxisInspector",
+                "message": "Java compilation failed",
+                "ok": false,
+                "source_sha256": "bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf"
+              },
+              "ok": false,
+              "queued_at_ms": "1790055374017",
+              "request_id": "0fef69c8-1b2e-4189-94df-ce127fd0a34e",
+              "started_at_ms": "1790055374017",
+              "status": "FAILED",
+              "type": "code_execute"
+            }
+          },
+          "error": {
+            "code": "ENGINE_CALL_FAILED",
+            "engine_state": "IDLE",
+            "message": "{'ok': False, 'code': 'COMPILE_ERROR', 'message': 'Java compilation failed', 'source_sha256': 'bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf', 'entrypoint': 'TableAxisInspector', 'diagnostics': [{'kind': 'ERROR', 'source': '/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java', 'line': 17, 'column': 53, 'start': 980, 'end': 981, 'message': 'incompatible types: int cannot be converted to int[]'}, {'kind': 'ERROR', 'source': '/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java', 'line': 20, 'column': 34, 'start': 1154, 'end': 1166, 'message': 'method getVals in interface com.comsol.model.SolutionInfo cannot be applied to given types;\\n  required: int,int[]\\n  found: java.lang.String\\n  reason: actual and formal argument lists differ in length'}, {'kind': 'NOTE', 'source': '', 'line': -1, 'column': -1, 'start': -1, 'end': -1, 'message': 'Some messages have been simplified; recompile with -Xdiags:verbose to get full output'}], 'artifact': '/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-mcp-java-code-9539315581027162494/bd1bb35cf6e1b00cb6b9bc3e'}",
+            "partial_changes": false,
+            "phase": "execute",
+            "safe_retry": false
+          },
+          "execution": {
+            "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+            "dirty": false,
+            "idempotency_key": "api_probe_probe_axis_20260922T053553Z-run-code-execute_java-2",
+            "job_id": "9839ab74-f482-4323-bb2c-27e68eb4af24",
+            "model_ownership": "mcp_owned",
+            "model_ref": {
+              "generation": 1,
+              "model_tag": "mcp1",
+              "schema_version": 1,
+              "server_instance_id": "c78d5967f9ede84d4c8483d3ebabf1df72de8a948c8eb469525f398c71cd924b",
+              "session_id": "session-0d252cf91a569836f7593221"
+            },
+            "operation_id": "0fef69c8-1b2e-4189-94df-ce127fd0a34e",
+            "request_hash": "2665c52d493df54653b55adae9e2ee07c346135d081cdb1a562fb8bf6bb183d7",
+            "request_id": "api_probe_probe_axis_20260922T053553Z-run-code-execute_java-2",
+            "revision": 1,
+            "server_ownership": "shared",
+            "session_id": "session-0d252cf91a569836f7593221"
+          },
+          "success": false
+        },
+        "metadata": {
+          "arguments": {
+            "arguments": {
+              "arguments": {},
+              "entrypoint": "TableAxisInspector",
+              "expected_revision": 1,
+              "mode": "trusted",
+              "model_ref": {
+                "generation": 1,
+                "model_tag": "mcp1",
+                "schema_version": 1,
+                "server_instance_id": "c78d5967f9ede84d4c8483d3ebabf1df72de8a948c8eb469525f398c71cd924b",
+                "session_id": "session-0d252cf91a569836f7593221"
+              },
+              "project_id": "probe-axis-api_probe_probe_axis_20260922T053553Z",
+              "session_id": "session-0d252cf91a569836f7593221",
+              "source_artifact": "evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java"
+            },
+            "operation_id": "code.execute_java"
+          },
+          "execution": {
+            "expected_revision": 1,
+            "idempotency_key": "api_probe_probe_axis_20260922T053553Z-run-code-execute_java-2",
+            "model_ref": {
+              "generation": 1,
+              "model_tag": "mcp1",
+              "schema_version": 1,
+              "server_instance_id": "c78d5967f9ede84d4c8483d3ebabf1df72de8a948c8eb469525f398c71cd924b",
+              "session_id": "session-0d252cf91a569836f7593221"
+            },
+            "request_id": "api_probe_probe_axis_20260922T053553Z-run-code-execute_java-2",
+            "session_id": "session-0d252cf91a569836f7593221"
+          },
+          "operation": "operation_call"
+        },
+        "created_at": "2026-09-22 05:36:13",
+        "started_at": "2026-09-22 05:36:13",
+        "finished_at": "2026-09-22 05:36:14",
+        "effective_timeouts": {
+          "execution_timeout_s": null,
+          "no_progress_warning_s": null,
+          "queue_timeout_s": null,
+          "rpc_timeout_s": 30.0
+        }
+      },
+      "result": {
+        "data": {
+          "after": {
+            "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+            "changed_tags": [],
+            "external_event_counter": 0,
+            "fingerprint": "a9e373f60d1af587f092d979ceb31b7f99ee47edbae1d08fb278c651229b1d88",
+            "fingerprint_scope": [
+              "tag",
+              "label",
+              "file_path",
+              "time_modified",
+              "parameters"
+            ],
+            "generation": 2,
+            "instance_id": "99734100-6fde-42f1-b145-7394e35cd28b",
+            "model_tag": "mcp1",
+            "server_instance_id": "127.0.0.1:59334",
+            "tag": "mcp1",
+            "worker_instance_id": "99734100-6fde-42f1-b145-7394e35cd28b"
+          },
+          "before": {
+            "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+            "changed_tags": [],
+            "external_event_counter": 0,
+            "fingerprint": "a9e373f60d1af587f092d979ceb31b7f99ee47edbae1d08fb278c651229b1d88",
+            "fingerprint_scope": [
+              "tag",
+              "label",
+              "file_path",
+              "time_modified",
+              "parameters"
+            ],
+            "generation": 2,
+            "instance_id": "99734100-6fde-42f1-b145-7394e35cd28b",
+            "model_tag": "mcp1",
+            "server_instance_id": "127.0.0.1:59334",
+            "tag": "mcp1",
+            "worker_instance_id": "99734100-6fde-42f1-b145-7394e35cd28b"
+          },
+          "cleanup_failed": false,
+          "dispatch_stage": "post_dispatch",
+          "domain_outcome": {
+            "cleanup_failed": false,
+            "dispatch_stage": "post_dispatch",
+            "execution_state_unknown": false,
+            "failure": {
+              "code": "ENGINE_CALL_FAILED",
+              "message": "{'ok': False, 'code': 'COMPILE_ERROR', 'message': 'Java compilation failed', 'source_sha256': 'bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf', 'entrypoint': 'TableAxisInspector', 'diagnostics': [{'kind': 'ERROR', 'source': '/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java', 'line': 17, 'column': 53, 'start': 980, 'end': 981, 'message': 'incompatible types: int cannot be converted to int[]'}, {'kind': 'ERROR', 'source': '/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java', 'line': 20, 'column': 34, 'start': 1154, 'end': 1166, 'message': 'method getVals in interface com.comsol.model.SolutionInfo cannot be applied to given types;\\n  required: int,int[]\\n  found: java.lang.String\\n  reason: actual and formal argument lists differ in length'}, {'kind': 'NOTE', 'source': '', 'line': -1, 'column': -1, 'start': -1, 'end': -1, 'message': 'Some messages have been simplified; recompile with -Xdiags:verbose to get full output'}], 'artifact': '/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-mcp-java-code-9539315581027162494/bd1bb35cf6e1b00cb6b9bc3e'}",
+              "safe_retry": false
+            },
+            "operation": "",
+            "state": "failed",
+            "verification_status": "NOT_APPLICABLE"
+          },
+          "domain_state": "failed",
+          "effect": "project_write",
+          "entrypoint": "TableAxisInspector",
+          "execution_state_unknown": false,
+          "isolation_proof": {
+            "api_probe": {
+              "authenticated_api_success": true,
+              "denial_evidence_source": "server_access_log",
+              "loopback_address": "127.0.0.1",
+              "loopback_port": 59334,
+              "nonloopback_address": "192.168.100.152",
+              "nonloopback_api_exception_http_status": null,
+              "nonloopback_port": 59334,
+              "observed_at": "2026-09-22T05:36:06Z",
+              "probe_kind": "comsol_java_api",
+              "server_access_log": {
+                "entries": [
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 101,
+                    "method": "GET",
+                    "peer": "127.0.0.1",
+                    "route": "/webbridge/websocket"
+                  },
+                  {
+                    "http_status": 403,
+                    "method": "GET",
+                    "peer": "192.168.100.152",
+                    "route": "/webbridge/websocket"
+                  }
+                ],
+                "finished_at": "2026-09-22T05:36:06Z",
+                "inode": 29978812,
+                "java_request_id": "g2-valve-nonloopback-connect",
+                "offset_after": 261,
+                "offset_before": 0,
+                "parsed_nonloopback_entry": {
+                  "http_status": 403,
+                  "method": "GET",
+                  "peer": "192.168.100.152",
+                  "route": "/webbridge/websocket"
+                },
+                "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+                "phase": "java_connect_only",
+                "raw_probe_started_after_capture": true,
+                "segment_sha256": "2b82edc171639b6d9bc20786c16615bc9adb8feb970c650f56c74233d573b97b",
+                "started_at": "2026-09-22T05:35:58Z",
+                "status": "PASS"
+              }
+            },
+            "birth": "Tue Sep 22 13:35:54 2026",
+            "config_inode": 14720294,
+            "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+            "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+            "endpoint": "127.0.0.1:59334",
+            "established_client_pids": [
+              82005,
+              82103
+            ],
+            "listener": {
+              "endpoint": "*:59334",
+              "local_endpoint": "*:59334",
+              "pid": 82005,
+              "raw": "java    82005 everwalker   59u  IPv6 0x96e5cc272a0e2e32      0t0  TCP *:59334 (LISTEN)",
+              "remote_endpoint": null,
+              "state": "LISTEN"
+            },
+            "listener_binding": "wildcard",
+            "loopback_listener": false,
+            "pid": 82005,
+            "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+            "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/isolation_receipt.json",
+            "verified": true,
+            "worker_pid": 82103
+          },
+          "operation": "code.execute_java",
+          "partial_change": false,
+          "readback": {},
+          "source_sha256": "bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf",
+          "verification_status": "NOT_APPLICABLE",
+          "verified_outcome": "failed",
+          "worker": {
+            "completed_at_ms": "1790055374094",
+            "failure": {
+              "artifact": "/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-mcp-java-code-9539315581027162494/bd1bb35cf6e1b00cb6b9bc3e",
+              "code": "COMPILE_ERROR",
+              "diagnostics": [
+                {
+                  "column": 53,
+                  "end": 981,
+                  "kind": "ERROR",
+                  "line": 17,
+                  "message": "incompatible types: int cannot be converted to int[]",
+                  "source": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java",
+                  "start": 980
+                },
+                {
+                  "column": 34,
+                  "end": 1166,
+                  "kind": "ERROR",
+                  "line": 20,
+                  "message": "method getVals in interface com.comsol.model.SolutionInfo cannot be applied to given types;\n  required: int,int[]\n  found: java.lang.String\n  reason: actual and formal argument lists differ in length",
+                  "source": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java",
+                  "start": 1154
+                },
+                {
+                  "column": -1,
+                  "end": -1,
+                  "kind": "NOTE",
+                  "line": -1,
+                  "message": "Some messages have been simplified; recompile with -Xdiags:verbose to get full output",
+                  "source": "",
+                  "start": -1
+                }
+              ],
+              "entrypoint": "TableAxisInspector",
+              "message": "Java compilation failed",
+              "ok": false,
+              "source_sha256": "bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf"
+            },
+            "ok": false,
+            "queued_at_ms": "1790055374017",
+            "request_id": "0fef69c8-1b2e-4189-94df-ce127fd0a34e",
+            "started_at_ms": "1790055374017",
+            "status": "FAILED",
+            "type": "code_execute"
+          }
+        },
+        "error": {
+          "code": "ENGINE_CALL_FAILED",
+          "engine_state": "IDLE",
+          "message": "{'ok': False, 'code': 'COMPILE_ERROR', 'message': 'Java compilation failed', 'source_sha256': 'bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf', 'entrypoint': 'TableAxisInspector', 'diagnostics': [{'kind': 'ERROR', 'source': '/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java', 'line': 17, 'column': 53, 'start': 980, 'end': 981, 'message': 'incompatible types: int cannot be converted to int[]'}, {'kind': 'ERROR', 'source': '/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z/java_sources/bd1bb35cf6e1b00cb6b9bc3e250c9d1fe30a430634d94c1892b05510e6ee0faf/TableAxisInspector.java', 'line': 20, 'column': 34, 'start': 1154, 'end': 1166, 'message': 'method getVals in interface com.comsol.model.SolutionInfo cannot be applied to given types;\\n  required: int,int[]\\n  found: java.lang.String\\n  reason: actual and formal argument lists differ in length'}, {'kind': 'NOTE', 'source': '', 'line': -1, 'column': -1, 'start': -1, 'end': -1, 'message': 'Some messages have been simplified; recompile with -Xdiags:verbose to get full output'}], 'artifact': '/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-mcp-java-code-9539315581027162494/bd1bb35cf6e1b00cb6b9bc3e'}",
+          "partial_changes": false,
+          "phase": "execute",
+          "safe_retry": false
+        },
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "api_probe_probe_axis_20260922T053553Z-run-code-execute_java-2",
+          "job_id": "9839ab74-f482-4323-bb2c-27e68eb4af24",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp1",
+            "schema_version": 1,
+            "server_instance_id": "c78d5967f9ede84d4c8483d3ebabf1df72de8a948c8eb469525f398c71cd924b",
+            "session_id": "session-0d252cf91a569836f7593221"
+          },
+          "operation_id": "0fef69c8-1b2e-4189-94df-ce127fd0a34e",
+          "request_hash": "2665c52d493df54653b55adae9e2ee07c346135d081cdb1a562fb8bf6bb183d7",
+          "request_id": "api_probe_probe_axis_20260922T053553Z-run-code-execute_java-2",
+          "revision": 1,
+          "server_ownership": "shared",
+          "session_id": "session-0d252cf91a569836f7593221"
+        },
+        "success": false
+      }
+    }
+  }
+}

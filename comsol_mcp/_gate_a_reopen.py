@@ -42,28 +42,6 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _first_number(value: Any) -> float | None:
-    """Return the first finite number inside an arbitrarily nested list, or None.
-
-    The engine answers with the expression/point nesting it used, and a cleared solution
-    can be empty at any depth; booleans are not numbers here.
-    """
-    if isinstance(value, bool):
-        return None
-    if isinstance(value, (int, float)):
-        try:
-            number = float(value)
-        except (TypeError, ValueError):
-            return None
-        return number if math.isfinite(number) else None
-    if isinstance(value, (list, tuple)):
-        for item in value:
-            found = _first_number(item)
-            if found is not None:
-                return found
-    return None
-
-
 def _read_derived_value_tags(model: Any) -> list[str] | None:
     """List the derived-value (result/numerical) node tags of a reopened model.
 
@@ -81,21 +59,6 @@ def _read_derived_value_tags(model: Any) -> list[str] | None:
         # In-memory fakes expose the list directly; an empty list is a real answer
         # (the negative control relies on it).
         return [str(tag) for tag in attribute]
-    if callable(attribute):
-        # A live adapter exposes a *method* under this name, which is why the
-        # delivered driver overwrote it with a list to satisfy its own check.
-        try:
-            called = attribute()
-        except Exception:
-            called = None
-        if called is not None:
-            try:
-                called_tags = [str(tag) for tag in list(called)]
-            except TypeError:
-                called_tags = []
-            if called_tags:
-                return called_tags
-
     readers = (
         lambda: model.result().numerical().tags(),
         lambda: model._call("result")._call("numerical")._call("tags"),
@@ -155,6 +118,8 @@ def verify_reopen(
 
     # 1. Artifact hash verification (if mph_path is provided)
     expected_sha = receipt.get("model_sha256")
+    if mph_path is not None and expected_sha is None:
+        raise ReopenVerificationError("ARTIFACT_HASH_REQUIRED", "A file-based reopen check requires its pre-save receipt hash")
     if mph_path is not None and expected_sha is not None:
         actual_sha = _sha256(mph_path)
         if actual_sha.lower() != expected_sha.lower():
@@ -202,7 +167,7 @@ def verify_reopen(
         except Exception as exc:
             raise ReopenVerificationError("SOLUTION_QUERY_FAILED", str(exc)) from exc
 
-        if sol_tags and expected_sol not in sol_tags:
+        if expected_sol not in sol_tags:
             raise ReopenVerificationError(
                 "SOLUTION_NOT_FOUND",
                 f"Expected solution {expected_sol!r} not found in model solutions {sol_tags}",
@@ -212,9 +177,12 @@ def verify_reopen(
 
     # 3. Solver settings verification
     expected_solver = receipt.get("solver_settings")
-    if expected_solver and hasattr(model, "solver_settings"):
+    if expected_solver:
+        settings = getattr(model, "solver_settings", None)
+        if not isinstance(settings, Mapping):
+            raise ReopenVerificationError("SOLVER_SETTINGS_UNREADABLE", "Expected solver settings require an actual structured readback")
         for key, val in expected_solver.items():
-            actual = model.solver_settings.get(key)
+            actual = settings.get(key)
             if actual != val:
                 raise ReopenVerificationError(
                     "SOLVER_SETTINGS_MISMATCH",
@@ -247,7 +215,7 @@ def verify_reopen(
                 "status": "PASS",
                 "expected": list(expected_dv),
                 "available": list(actual_dv),
-                "source": "model attribute, else model.result().numerical().tags() from the engine",
+                "source": "structured control fixture attribute or model.result().numerical().tags() from the engine",
             }
         )
 
@@ -281,11 +249,21 @@ def verify_reopen(
                 {"expression": expr, "error": str(exc)},
             ) from exc
 
-        # Extract scalar value from result.  The engine nests the answer by expression and
-        # by point, and a cleared solution can come back empty at any depth ([[[]]] on
-        # COMSOL 6.4 build 293); scanning for the first number keeps a deeper empty from
-        # crashing the verifier with a TypeError instead of the contract's error code.
-        actual_val: float | None = _first_number(raw_res)
+        # A scalar expectation may contain singleton nesting, but must not discard
+        # additional expression, solution, or point values. Empty nesting means no data.
+        numbers: list[float] = []
+        def collect(value: Any) -> None:
+            if isinstance(value, (list, tuple)):
+                for child in value:
+                    collect(child)
+            elif isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value):
+                numbers.append(float(value))
+            else:
+                raise ReopenVerificationError("UNEXPECTED_DATA_SHAPE", "Stored scalar read contains a non-finite or nonnumeric value")
+        collect(raw_res)
+        if len(numbers) > 1:
+            raise ReopenVerificationError("UNEXPECTED_DATA_SHAPE", "Scalar expectation received multiple values; select an explicit solution and point", {"count": len(numbers)})
+        actual_val = numbers[0] if numbers else None
         if actual_val is None:
             if isinstance(raw_res, (list, tuple)):
                 raise ReopenVerificationError(

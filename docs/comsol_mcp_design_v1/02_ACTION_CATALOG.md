@@ -326,7 +326,7 @@ JSON 附件为每个动作提供顶层输入 schema；类型见 common.schema.js
 | 拟议 MCP 工具 | 主要参数（除共同字段） | 完成动作 | 风险 / 阶段 |
 |---|---|---|---|
 | `probe_list` | `filter:object?` | 读取global/point/boundary/domain探针 | READ / G4 |
-| `probe_create` | `tag:str,type_id:str,definition:object` | 创建probe、表达式、选区与表 | WRITE / G4 |
+| `probe_create` | `tag:str,type_id:str,definition:object,component:str?` | 创建probe、表达式、选区与表；组件由原生model()绑定 | WRITE / G4 |
 | `probe_update` | `path:NodePath,definition:object` | 修改probe配置 | WRITE / G4 |
 | `probe_remove` | `path:NodePath` | 移除probe，不删除无关结果 | WRITE / G4 |
 | `probe_history` | `path:NodePath,solution:SolutionSpec?,cursor:str?` | 返回记录的probe历史、时间/参数和单位 | READ / G4 |
@@ -419,7 +419,7 @@ JSON 附件为每个动作提供顶层输入 schema；类型见 common.schema.js
 | `artifact_register` | `path:str,role:str,classification:str` | 将批准的文件导入项目并计算hash | FILE_WRITE / G3 |
 | `artifact_list` | `filter:object?,cursor:str?,limit:int?` | 分页列出项目Artifact，不扫描整机 | READ / G3 |
 | `artifact_inspect` | `artifact_id:str` | 读取大小、类型、hash、版本、生成作业 | READ / G3 |
-| `artifact_read` | `artifact_id:str,offset:int?,length:int?` | 分块读取授权Artifact；保留完整文件 | READ / G4 |
+| `artifact_read` | `artifact_id:str,offset:int?,length:int?,expected_sha256:str?,expected_chunk_sha256:str?` | 分块读取授权Artifact；保留完整文件并校验整体/分块哈希 | READ / G4 |
 | `artifact_preview` | `artifact_id:str,options:object?` | 返回图像/数据预览并声明下采样 | READ / G4 |
 | `artifact_publish` | `artifact_ids:strings,destination_ref:str,authorization_ref:str` | 按明确外发授权向host交付文件/图像 | HOST_CONTROL / G4 |
 | `artifact_verify` | `artifact_id:str` | 校验包内文件hash、缺失依赖和目标格式 | READ / G6 |

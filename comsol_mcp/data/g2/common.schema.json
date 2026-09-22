@@ -298,6 +298,11 @@
         "selection": {
           "$ref": "#/$defs/SelectionSpec"
         },
+        "entity_dim": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
         "aggregate": {
           "enum": [
             "none",
@@ -306,7 +311,8 @@
             "average",
             "minimum",
             "maximum",
-            "std"
+            "std",
+            "rms"
           ]
         },
         "complex_mode": {
@@ -317,6 +323,13 @@
             "abs",
             "phase"
           ]
+        },
+        "complex_transform_order": {
+          "enum": [
+            "before",
+            "after"
+          ],
+          "default": "before"
         },
         "units": {
           "type": "array",
@@ -340,9 +353,7 @@
       },
       "required": [
         "expressions",
-        "solution",
-        "aggregate",
-        "complex_mode"
+        "solution"
       ],
       "additionalProperties": false
     }

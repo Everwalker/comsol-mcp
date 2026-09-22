@@ -495,6 +495,9 @@ def test_two_workers_cannot_own_the_same_global_endpoint_lock(tmp_path):
 # ---------------------------------------------------------------------------
 
 WORKER_SOURCE = Path(java_worker.__file__).resolve().parent / "worker_java" / "PersistentComsolWorker.java"
+TABLE_API_JAVAP = (Path(__file__).resolve().parents[1]
+                   / "evidence" / "phase4_3" / "runs"
+                   / "independent_acceptance_20260922T004753Z" / "api_probe_table.javap.txt")
 
 #: Names that would give a caller a global, cross-model side effect.  They must
 #: never appear in MODEL_UTIL (the ModelUtil surface the worker exposes).
@@ -587,6 +590,15 @@ class TestWorkerAllowlist:
         # dispatch has to be resolved by the allow-list, never by adding it here.
         assert set(KNOWN_NON_API_PROBES) <= set(dispatched)
         assert set(WITHHELD_PENDING_TABLE_REPAIR) <= set(dispatched)
+
+    def test_table_column_header_setter_is_javap_verified_and_allowlisted(self):
+        """The typed table header mutation reaches the reviewed COMSOL API."""
+        methods = _allowlist_block("METHODS")
+        assert "setColumnHeaders" in methods
+        assert TABLE_API_JAVAP.is_file()
+        assert "public abstract void setColumnHeaders(java.lang.String[]);" in TABLE_API_JAVAP.read_text()
+        source = WORKER_SOURCE.read_text()
+        assert "TableBaseFeature.setColumnHeaders(String[])" in source
 
     def test_the_c06_merge_entries_are_present_with_their_api_evidence(self):
         methods = _allowlist_block("METHODS")

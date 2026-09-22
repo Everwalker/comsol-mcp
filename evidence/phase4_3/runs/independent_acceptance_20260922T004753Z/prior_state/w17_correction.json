@@ -1,0 +1,54 @@
+{
+  "schema": "comsol-mcp-g3/w17-correction/1",
+  "generated_at": "2026-09-21T12:36:00Z",
+  "historical_ledger": {
+    "path": "evidence/w17_acceptance.json",
+    "sha256": "53daf14f51720f59e5fb8ed731083cd851b80bd3392c4fdeb7fee4a89a225197",
+    "status_in_historical_ledger": "W17_RESULT_SYSTEM_PASS",
+    "preserved_byte_exact": true
+  },
+  "corrected_status": "CORRECTED_PENDING_G3_3_REMEDIATION",
+  "correction_rationale": "Historical PASS ratings cited unit mock tests (FWiredTree / FakeReopenModel) rather than live COMSOL engine execution. Production code contained critical numerical and indexing defects (F01-F12) that returned incorrect values under unit stubs.",
+  "corrections": [
+    {
+      "case_id": "T013",
+      "name": "Measures & Axisymmetric 2*pi*r Weighting",
+      "historical_status": "PASS",
+      "corrected_status": "DEFECTIVE_IN_G3_2",
+      "corrected_evidence_level": "UNIT_CONTRACT",
+      "defect_summary": "All aggregates mapped to IntVolume regardless of geometric dimension; average denominator hardcoded to 1.0; std and rms formulas unimplemented; axisymmetric count boolean reflection only."
+    },
+    {
+      "case_id": "T014",
+      "name": "Complex Field Transformation Modes",
+      "historical_status": "PASS",
+      "corrected_status": "DEFECTIVE_IN_G3_2",
+      "corrected_evidence_level": "UNIT_CONTRACT",
+      "defect_summary": "_transform_complex_data silently padded 0.0 when imag extraction failed, masking complex data errors as real numbers."
+    },
+    {
+      "case_id": "T021",
+      "name": "SolutionSpec Inner/Outer & Time Indexing",
+      "historical_status": "PASS",
+      "corrected_status": "DEFECTIVE_IN_G3_2",
+      "corrected_evidence_level": "UNIT_CONTRACT",
+      "defect_summary": "Sliced outer array [expr][solnum][vertex] as inner-1, mistakenly slicing expression axis instead of solution step; hardcoded outer_indices=[1]."
+    },
+    {
+      "case_id": "T049",
+      "name": "Large Array Export & Chunk Pagination",
+      "historical_status": "PASS",
+      "corrected_status": "DEFECTIVE_IN_G3_2",
+      "corrected_evidence_level": "UNIT_CONTRACT",
+      "defect_summary": "Path(dest).resolve() unconstrained; failed evaluations exported successful empty files; verify_artifact_chunks loaded entire file in RAM; no bounded memory chunk stream."
+    },
+    {
+      "case_id": "Gate_A",
+      "name": "Identical-SHA Model Reopen",
+      "historical_status": "PASS",
+      "corrected_status": "MOCK_CONTROL_ONLY_IN_G3_2",
+      "corrected_evidence_level": "CONTROL_UNIT",
+      "defect_summary": "FakeReopenModel used static byte fixtures and string inequality comparisons; no live COMSOL file reopen without re-solve was performed."
+    }
+  ]
+}
