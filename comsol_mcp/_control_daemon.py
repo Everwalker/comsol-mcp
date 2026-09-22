@@ -32,11 +32,18 @@ def configure_remote_backend(worker):
 
 
 class ControlDaemon:
-    def __init__(self, home, *, service=None, registry=None, worker=None):
+    def __init__(self, home, *, service=None, registry=None, worker=None, project_root=None):
         self.home = Path(home)
         self.home.mkdir(mode=0o700, parents=True, exist_ok=True)
         self.store = OperationStore(self.home / "operations.sqlite3")
-        self.backend = ManagedBackend(self.home, self.store, service=service, registry=registry, worker=worker)
+        self.backend = ManagedBackend(
+            self.home,
+            self.store,
+            service=service,
+            registry=registry,
+            worker=worker,
+            project_root=project_root,
+        )
         self.queue = ThreadPoolExecutor(max_workers=1, thread_name_prefix="comsol-engine-queue")
         self.lock = threading.RLock()
         self.running = {}

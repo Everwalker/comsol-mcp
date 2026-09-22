@@ -1,0 +1,72 @@
+!SESSION 2026-09-22 20:14:26.237 -----------------------------------------------
+eclipse.buildId=unknown
+java.version=21.0.7
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=macosx, ARCH=x86_64, WS=cocoa, NL=zh_CN_#Hans
+Framework arguments:  server
+Command-line arguments:  server
+
+!ENTRY com.comsol.bridge 4 0 2026-09-22 20:14:35.118
+!MESSAGE 
+!STACK 0
+Exception:
+	com.comsol.nativeutil.properties.InvalidPropertyValueException: 属性值无效。
+Messages:
+	Invalid property value
+	- Property: sourceobject (对象)
+
+	“对象”为字符串。
+	- : 源的引用
+
+Stack trace:
+at com.comsol.nativeutil.properties.Property.c(SourceFile:1351)
+	at com.comsol.nativeutil.properties.Property.c(SourceFile:1070)
+	at com.comsol.nativeutil.properties.en.a(SourceFile:52)
+	at com.comsol.nativeutil.properties.es.set(SourceFile:302)
+	at com.comsol.model.method.PropValueUtil.propertySet(SourceFile:408)
+	at com.comsol.model.data.primitive.PropValuePrim.set(SourceFile:2041)
+	at com.comsol.model.dbmodel.PropFeatureDb.c(SourceFile:1704)
+	at com.comsol.model.dbmodel.PropFeatureDb.b(SourceFile:1534)
+	at com.comsol.model.dbmodel.PropFeatureDb.set(SourceFile:711)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(Unknown Source)
+	at java.base/java.lang.reflect.Method.invoke(Unknown Source)
+	at com.comsol.bridge.command.b.a(SourceFile:161)
+	at com.comsol.bridge.command.b.run(SourceFile:103)
+	at com.comsol.bridge.command.k.c(SourceFile:227)
+	at com.comsol.bridge.command.k$1.run(SourceFile:100)
+	at com.comsol.util.thread.SuspendableTasks$1.run(SourceFile:111)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(Unknown Source)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(Unknown Source)
+	at java.base/java.lang.Thread.run(Unknown Source)
+!ENTRY com.comsol.bridge 4 0 2026-09-22 20:14:35.225
+!MESSAGE 
+!STACK 0
+Exception:
+	com.comsol.nativeutil.properties.InvalidPropertyValueException: 属性值无效。
+Messages:
+	Invalid property value
+	- Property: size (预设)
+
+	“预设”为字符串。
+	- : "current", "manualweb", "manualprint", "presentation"
+
+Stack trace:
+at com.comsol.nativeutil.properties.Property.c(SourceFile:1351)
+	at com.comsol.nativeutil.properties.Property.c(SourceFile:1070)
+	at com.comsol.nativeutil.properties.en.a(SourceFile:52)
+	at com.comsol.nativeutil.properties.es.set(SourceFile:302)
+	at com.comsol.model.method.PropValueUtil.propertySet(SourceFile:408)
+	at com.comsol.model.data.primitive.PropValuePrim.set(SourceFile:2041)
+	at com.comsol.model.dbmodel.PropFeatureDb.c(SourceFile:1704)
+	at com.comsol.model.dbmodel.PropFeatureDb.b(SourceFile:1534)
+	at com.comsol.model.dbmodel.PropFeatureDb.set(SourceFile:711)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(Unknown Source)
+	at java.base/java.lang.reflect.Method.invoke(Unknown Source)
+	at com.comsol.bridge.command.b.a(SourceFile:161)
+	at com.comsol.bridge.command.b.run(SourceFile:103)
+	at com.comsol.bridge.command.k.c(SourceFile:227)
+	at com.comsol.bridge.command.k$1.run(SourceFile:100)
+	at com.comsol.util.thread.SuspendableTasks$1.run(SourceFile:111)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(Unknown Source)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(Unknown Source)
+	at java.base/java.lang.Thread.run(Unknown Source)

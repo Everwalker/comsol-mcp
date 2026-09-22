@@ -88,7 +88,17 @@ class JavaWorkerPaths:
 
     @property
     def resolved_project_root(self) -> Path:
-        return (self.project_root or Path(__file__).resolve().parents[1]).resolve()
+        if self.project_root is not None:
+            return Path(self.project_root).resolve()
+        env_root = os.environ.get("COMSOL_PROJECT_ROOT")
+        if env_root:
+            return Path(env_root).resolve()
+        fallback = Path(__file__).resolve().parents[1]
+        if any(p in fallback.parts for p in ("site-packages", "dist-packages")):
+            raise JavaWorkerError(
+                "COMSOL_PROJECT_ROOT or explicit project_root is required when running from site-packages; site-packages is not an authorized project root"
+            )
+        return fallback.resolve()
 
     @property
     def resolved_global_lock_root(self) -> Path:

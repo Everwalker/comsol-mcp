@@ -1,0 +1,140 @@
+{
+  "schema": "comsol-mcp-g3/phase4_4-acceptance/1",
+  "goal": "NEXT_GOAL.md: Gate A (R01-R05) fixes and W18 real plotting & MCP ImageContent return",
+  "verdict": "PASS",
+  "run_id": "g3_4_w18_acceptance_20260922T121424Z",
+  "generated_at": "2026-09-22T12:14:36.504593+00:00",
+  "elapsed_seconds": 11.817,
+  "commit_head": "31152904205834125776524f92288e18ba93b853",
+  "platform": "darwin",
+  "python_version": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.3.34.2)]",
+  "comsol_version": "COMSOL 6.4",
+  "scope": {
+    "verified_workstream": "Gate A (R01-R05) + W18",
+    "stop_boundary": "W18 completed; do not advance to W19-W26",
+    "target_platform": "macOS-aarch64 (Apple Silicon commercial installation)",
+    "live_engine": "COMSOL Multiphysics 6.4"
+  },
+  "cases": {
+    "R01_PROJECT_ROOT": {
+      "status": "PASS",
+      "elapsed_s": 0.0,
+      "details": {
+        "status": "verified",
+        "site_packages_rejected": true
+      },
+      "timestamp": "2026-09-22T12:14:28.161615+00:00"
+    },
+    "R02_ARTIFACT_SECURITY": {
+      "status": "PASS",
+      "elapsed_s": 0.0,
+      "details": {
+        "rejected_paths": [
+          ".phase1-private/secret.xml",
+          ".g3-private/model.mph",
+          ".git/config",
+          "tokens.json"
+        ]
+      },
+      "timestamp": "2026-09-22T12:14:28.161972+00:00"
+    },
+    "R03_CSV_FOUR_AXIS": {
+      "status": "PASS",
+      "elapsed_s": 0.002,
+      "details": {
+        "csv_rows": 8,
+        "roundtrip_shape": [
+          2,
+          1,
+          2,
+          2
+        ]
+      },
+      "timestamp": "2026-09-22T12:14:28.163878+00:00"
+    },
+    "R04_EVAL_BUDGET": {
+      "status": "PASS",
+      "elapsed_s": 0.001,
+      "details": {
+        "artifact_has_field_array_metadata": true
+      },
+      "timestamp": "2026-09-22T12:14:28.165152+00:00"
+    },
+    "W18_LIVE_PLOT_GRAPHICS": {
+      "status": "PASS",
+      "elapsed_s": 7.331,
+      "details": {
+        "model_tag": "mcp1",
+        "render_bytes": 3873,
+        "render_sha256": "368ee220bf96adeb27a18d899935b818c09b8104f49a188e6516d917718e2fae",
+        "geom_bytes": 67,
+        "mcp_image_content_verified": true,
+        "export_lifecycle_verified": true
+      },
+      "timestamp": "2026-09-22T12:14:35.496485+00:00"
+    }
+  },
+  "artifacts_generated": [
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/r04_eval.json",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/r03_test.csv",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/server.port",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/mphserver.log",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/W18LiveBuilder.java",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/comsol.recoveries",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/login.properties",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/comsol.prefs",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/locks/endpoint-0f614504e012c80ff4c09daefa31e05d2c4706bce7a591f1d5e3ef73faf61118.lock",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/worker/worker.stderr.log",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/worker/worker_endpoint.json",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/plots/export_test.png",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/plots/live_temp_plot.png",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/plots/live_geom.png",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/worker/classes/9d372aa121830ebaa442/.compiled",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/worker/classes/9d372aa121830ebaa442/comsol_mcp/worker_java/PersistentComsolWorker$Json.class",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/worker/classes/9d372aa121830ebaa442/comsol_mcp/worker_java/PersistentComsolWorker$Conversion.class",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/worker/classes/9d372aa121830ebaa442/comsol_mcp/worker_java/PersistentComsolWorker$WorkerFailure.class",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/worker/classes/9d372aa121830ebaa442/comsol_mcp/worker_java/PersistentComsolWorker$Json$NonFiniteJsonValue.class",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/worker/classes/9d372aa121830ebaa442/comsol_mcp/worker_java/PersistentComsolWorker$DuplicateTagFixture.class",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/worker/classes/9d372aa121830ebaa442/comsol_mcp/worker_java/PersistentComsolWorker$Json$Parser.class",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/worker/classes/9d372aa121830ebaa442/comsol_mcp/worker_java/PersistentComsolWorker$SourceSpec.class",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/worker/classes/9d372aa121830ebaa442/comsol_mcp/worker_java/PersistentComsolWorker$HasProductFixture.class",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/worker/classes/9d372aa121830ebaa442/comsol_mcp/worker_java/PersistentComsolWorker$CompiledArtifact.class",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/worker/classes/9d372aa121830ebaa442/comsol_mcp/worker_java/PersistentComsolWorker$TaggableA.class",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/worker/classes/9d372aa121830ebaa442/comsol_mcp/worker_java/PersistentComsolWorker$RequestState.class",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/worker/classes/9d372aa121830ebaa442/comsol_mcp/worker_java/PersistentComsolWorker$ChangeHandler.class",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/worker/classes/9d372aa121830ebaa442/comsol_mcp/worker_java/PersistentComsolWorker.class",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/worker/classes/9d372aa121830ebaa442/comsol_mcp/worker_java/PersistentComsolWorker$TaggableB.class",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/logs/mphserver1.log",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/logs/mphserver1_render.log",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/icons/3dx_pivot.png",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/icons/logo_small_3d.png",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/icons/3dx_pivot_locked.png",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/icons/work_plane_gizmo_24.png",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/icons/3dx_pivot_manual.png",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/icons/logo_small_2d.png",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/workspace/comsol/.metadata/.log",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/workspace/comsol/.metadata/.plugins/org.eclipse.core.resources/.root/.indexes/properties.version",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/workspace/comsol/.metadata/.plugins/org.eclipse.core.runtime/.settings/org.eclipse.core.resources.prefs",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/tomcat/logs/mphservercatalina.2026-09-22.log",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/tomcat/logs/mphserverlocalhost.2026-09-22.log",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/configuration/comsol/org.eclipse.update/platform.xml",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/configuration/comsol/org.eclipse.update/last.config.stamp",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/configuration/comsol/org.eclipse.core.runtime/.orphans16024484183665887900.new",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/configuration/comsol/org.eclipse.core.runtime/.contributions7486917589747416044.new",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/configuration/comsol/org.eclipse.core.runtime/.mainData2991897005293144281.new",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/configuration/comsol/org.eclipse.core.runtime/.contributors17328205551107955118.new",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/configuration/comsol/org.eclipse.core.runtime/.extraData6824723314675699937.new",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/configuration/comsol/org.eclipse.core.runtime/.table10852241905517103726.new",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/configuration/comsol/org.eclipse.core.runtime/.namespaces16808753557463191717.new",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/configuration/comsol/org.eclipse.osgi/framework.info.1",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/configuration/comsol/org.eclipse.equinox.launcher/org.eclipse.equinox.launcher.cocoa.macosx.x86_64_1.2.1300.v20250331-1702/eclipse_11911.so",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/configuration/comsol/org.eclipse.equinox.app/.manager/.fileTableLock",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/configuration/comsol/org.eclipse.osgi/.manager/.fileTableLock",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/configuration/comsol/org.eclipse.osgi/.manager/.fileTable.2",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/configuration/comsol/org.eclipse.osgi/.manager/.fileTable.1",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/configuration/comsol/org.eclipse.core.runtime/.manager/.fileTableLock",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/configuration/comsol/org.eclipse.core.runtime/.manager/.fileTable.6",
+    "evidence/phase4_4/runs/g3_4_w18_acceptance_20260922T121424Z/comsol_prefs/configuration/comsol/org.eclipse.core.runtime/.manager/.fileTable.7"
+  ]
+}

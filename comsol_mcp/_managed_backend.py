@@ -157,10 +157,27 @@ def collect_legacy_registry():
 
 
 class ManagedBackend:
-    def __init__(self, home, store, *, service=None, registry=None, worker=None):
+    def __init__(self, home, store, *, service=None, registry=None, worker=None, project_root=None):
         self.home, self.store = Path(home), store
         self.home.mkdir(mode=0o700, parents=True, exist_ok=True)
-        self.project_root = Path(__file__).resolve().parents[1]
+        self.package_resource_root = Path(__file__).resolve().parent
+        self.private_control_root = self.home
+
+        if project_root is not None:
+            self.project_root = Path(project_root).resolve()
+        else:
+            env_project = os.environ.get("COMSOL_PROJECT_ROOT")
+            if env_project:
+                self.project_root = Path(env_project).resolve()
+            else:
+                fallback = Path(__file__).resolve().parents[1]
+                if any(p in fallback.parts for p in ("site-packages", "dist-packages")):
+                    raise ExecutionContractError(
+                        "RUNTIME_CONFIGURATION_REQUIRED",
+                        "COMSOL_PROJECT_ROOT or explicit project_root is required when running from site-packages; site-packages is not an authorized project root",
+                    )
+                self.project_root = fallback
+
         help_roots = default_comsol_help_roots(self.project_root)
         self.docs_index = OfflineDocsIndex(self.home / "docs_index.sqlite3", allowed_roots=help_roots)
         self.transactions = TransactionStore(self.home / "transactions.json")

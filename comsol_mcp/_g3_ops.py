@@ -45,6 +45,7 @@ _MODULES = (
     "_g3_results",
     "_probe_manage",
     "_artifact_store",
+    "_g3_w18",
 )
 
 #: Effects for operations the design catalogue does not (yet) describe.  Every
@@ -93,13 +94,26 @@ _FALLBACK_EFFECTS: dict[str, str] = {
     "result.numerical_manage": "DYNAMIC",
     "result.table_manage": "DYNAMIC",
     "result.field_export": "FILE_WRITE",
+    "plot.list": "READ",
+    "plot.group_create": "WRITE",
+    "plot.feature_create": "WRITE",
+    "plot.update": "WRITE",
+    "plot.remove": "WRITE",
+    "plot.render": "COMPUTE",
+    "plot.geometry_render": "COMPUTE",
+    "plot.view_manage": "DYNAMIC",
+    "export.list": "READ",
+    "export.create": "WRITE",
+    "export.update": "WRITE",
+    "export.run": "COMPUTE",
+    "export.remove": "WRITE",
 }
 
 #: Effects that are not a pure model read and therefore need the isolated
 #: execution path.  ``EVALUATE`` is included: it may create or mutate ephemeral
 #: nodes (the catalogue says so explicitly) and the measurement tool's
 #: selection state is such a transient.
-NON_READ_EFFECTS = frozenset({"WRITE", "FILE_WRITE", "DYNAMIC", "EVALUATE"})
+NON_READ_EFFECTS = frozenset({"WRITE", "FILE_WRITE", "DYNAMIC", "EVALUATE", "COMPUTE"})
 
 
 def _load_modules() -> tuple[dict[str, Callable[..., dict[str, Any]]], dict[str, str], list[dict[str, str]]]:

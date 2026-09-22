@@ -117,6 +117,8 @@ public final class PersistentComsolWorker {
       // G3.3 independent 6.4 javap verification: native geometry and per-solution metadata.
       "isAxisymmetric", "getSolnum", "getSolnums", "getPvals", "getUnits", "getUnit",
       "getPNamesOuter", "getPUnitsOuter", "getSolverSequence",
+      // W18: plot group and export inspection/execution
+      "isPlotGroup", "axis", "camera", "showFrame",
       // ProbeFeature.genResult(String): explicit write, never history-read preparation.
       "genResult"));
   private static final Set<String> MODEL_UTIL = new HashSet<>(Arrays.asList(

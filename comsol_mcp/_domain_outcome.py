@@ -205,7 +205,7 @@ KNOWN_READ_METHODS = frozenset({
     "getColumnHeaders", "getRowHeaders", "getNRows", "getFilledReal",
     "getFilledImag", "getImagData", "getPVals",
     "getLastComputationTime", "getLastComputationDate", "getLastComputationVersion",
-    "isComplex", "isAxisymmetric", "getSDim", "getSolutioninfo",
+    "isComplex", "isAxisymmetric", "isPlotGroup", "getSDim", "getSolutioninfo",
     "getOuterSolnum", "getMaxInner", "getLevelNames", "getSolnum", "getSolnums",
     "properties", "getPNames", "getPvals", "getUnits", "getUnit", "getPNamesOuter", "getPUnitsOuter",
     "getSolverSequence",

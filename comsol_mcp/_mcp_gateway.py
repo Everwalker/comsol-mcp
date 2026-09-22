@@ -10,7 +10,7 @@ import inspect
 import json
 from typing import Any, Callable, get_type_hints
 
-from mcp.types import CallToolResult, TextContent
+from mcp.types import CallToolResult, ImageContent, TextContent
 
 from ._g2_registry import current_tool_profile, is_tool_published
 
@@ -24,10 +24,34 @@ def mcp_result(value: str | dict[str, Any]) -> CallToolResult:
             payload = {"success": False, "error": "Invalid backend result", "data": {}}
     else:
         payload = value
-    if not isinstance(payload, dict) or not isinstance(payload.get("success"), bool):
+
+    if isinstance(payload, dict) and "success" not in payload:
+        payload = {"success": True, "data": payload}
+    elif not isinstance(payload, dict) or not isinstance(payload.get("success"), bool):
         payload = {"success": False, "error": "Missing backend success status", "data": {}}
+
+    contents: list[TextContent | ImageContent] = []
+    data = payload.get("data")
+    image_b64 = None
+    mime_type = "image/png"
+    if isinstance(data, dict):
+        if "image_base64" in data and isinstance(data["image_base64"], str) and data["image_base64"]:
+            image_b64 = data["image_base64"]
+            mime_type = str(data.get("image_mime_type") or "image/png")
+            text_payload = json.loads(json.dumps(payload))
+            text_payload["data"]["image_base64"] = f"<embedded base64 image ({len(image_b64)} chars)>"
+        else:
+            text_payload = payload
+    else:
+        text_payload = payload
+
+    if image_b64 is not None:
+        contents.append(ImageContent(type="image", data=image_b64, mimeType=mime_type))
+
+    contents.append(TextContent(type="text", text=json.dumps(text_payload, ensure_ascii=False, default=str)))
+
     return CallToolResult(
-        content=[TextContent(type="text", text=json.dumps(payload, ensure_ascii=False, default=str))],
+        content=contents,
         structuredContent=payload,
         isError=not payload["success"],
     )

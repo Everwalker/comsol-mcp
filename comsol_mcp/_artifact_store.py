@@ -177,26 +177,167 @@ def _json_payload(eval_result: Mapping[str, Any]) -> dict[str, Any]:
 
 def _row_for_leaf(path: tuple[Any, ...], value: Any, eval_result: Mapping[str, Any]) -> list[Any]:
     metadata = value if isinstance(value, Mapping) else {}
-    if isinstance(value, Mapping) and ("real" in value or "imag" in value):
+
+    field_info = eval_result.get("field_array")
+    field_coords: dict[str, Any] = {}
+    field_axes: list[str] = []
+    field_units: dict[str, Any] = {}
+    if isinstance(field_info, Mapping):
+        field_coords = dict(field_info.get("coords") or {})
+        field_axes = list(field_info.get("axes") or [])
+        raw_units = field_info.get("units")
+        field_units = dict(raw_units) if isinstance(raw_units, Mapping) else {}
+    elif hasattr(field_info, "coords"):
+        field_coords = dict(getattr(field_info, "coords", None) or {})
+        field_axes = list(getattr(field_info, "axes", None) or [])
+        raw_units = getattr(field_info, "units", None)
+        field_units = dict(raw_units) if isinstance(raw_units, Mapping) else {}
+
+    if not field_axes:
+        if len(path) == 4:
+            field_axes = ["expression", "outer", "inner", "point"]
+        elif len(path) == 3:
+            field_axes = ["expression", "outer", "inner"]
+        elif len(path) == 2:
+            field_axes = ["expression", "point"]
+        elif len(path) == 1:
+            field_axes = ["expression"]
+
+    # Real and imag separation
+    if isinstance(value, complex):
+        real, imag = value.real, value.imag
+    elif isinstance(value, Mapping) and ("real" in value or "imag" in value):
         real, imag = value.get("real", ""), value.get("imag", "")
     elif isinstance(value, Mapping) and "value" in value:
-        real, imag = value.get("value", ""), ""
+        val = value["value"]
+        if isinstance(val, complex):
+            real, imag = val.real, val.imag
+        else:
+            real, imag = val, ""
     else:
         real, imag = value, ""
-    exprs = eval_result.get("expressions")
-    expr_index = path[0] if path and isinstance(path[0], int) else None
-    expr = metadata.get("expr", exprs[expr_index] if isinstance(expr_index, int) and isinstance(exprs, Sequence) and expr_index < len(exprs) else "")
-    units = eval_result.get("expression_units")
-    unit = metadata.get("unit", units[expr_index] if isinstance(expr_index, int) and isinstance(units, Sequence) and expr_index < len(units) else "")
-    coords = metadata.get("coords", eval_result.get("coordinates", ()))
+
+    # Expression resolution
+    expr = metadata.get("expr")
+    expr_idx = None
+    if "expression" in field_axes:
+        pos = field_axes.index("expression")
+        if pos < len(path) and isinstance(path[pos], int):
+            expr_idx = path[pos]
+    elif path and isinstance(path[0], int):
+        expr_idx = path[0]
+
+    if not expr:
+        expr_coords = field_coords.get("expression") or eval_result.get("expressions")
+        if isinstance(expr_coords, Sequence) and expr_idx is not None and expr_idx < len(expr_coords):
+            expr = expr_coords[expr_idx]
+        elif expr_idx is not None:
+            expr = expr_idx
+        else:
+            expr = ""
+
+    # Outer axis label
+    outer = metadata.get("outer")
+    if outer is None or outer == "":
+        if "outer" in field_axes:
+            pos = field_axes.index("outer")
+            if pos < len(path) and isinstance(path[pos], int):
+                outer_idx = path[pos]
+                outer_coords = field_coords.get("outer")
+                if isinstance(outer_coords, Sequence) and outer_idx < len(outer_coords):
+                    outer = outer_coords[outer_idx]
+                else:
+                    outer = outer_idx
+            else:
+                outer = ""
+        else:
+            outer = ""
+
+    # Inner axis label
+    inner = metadata.get("inner")
+    if inner is None or inner == "":
+        if "inner" in field_axes:
+            pos = field_axes.index("inner")
+            if pos < len(path) and isinstance(path[pos], int):
+                inner_idx = path[pos]
+                inner_coords = field_coords.get("inner")
+                if isinstance(inner_coords, Sequence) and inner_idx < len(inner_coords):
+                    inner = inner_coords[inner_idx]
+                else:
+                    inner = inner_idx
+            else:
+                inner = ""
+        else:
+            inner = ""
+
+    # Point axis label
+    point = metadata.get("point")
+    point_idx = None
+    if point is None or point == "":
+        if "point" in field_axes:
+            pos = field_axes.index("point")
+            if pos < len(path) and isinstance(path[pos], int):
+                point_idx = path[pos]
+                point_coords = field_coords.get("point")
+                if isinstance(point_coords, Sequence) and point_idx < len(point_coords):
+                    point = point_coords[point_idx]
+                else:
+                    point = point_idx + 1
+            else:
+                point = ""
+        elif path and isinstance(path[-1], int):
+            point_idx = path[-1]
+            point = point_idx + 1
+        else:
+            point = ""
+    elif "point" in field_axes:
+        pos = field_axes.index("point")
+        if pos < len(path) and isinstance(path[pos], int):
+            point_idx = path[pos]
+
+    # Unit resolution
+    unit = metadata.get("unit")
+    if unit is None or unit == "":
+        unit_val = None
+        if field_units:
+            expr_units = field_units.get("expression")
+            if isinstance(expr_units, Mapping) and expr in expr_units:
+                unit_val = expr_units[expr]
+            elif isinstance(expr_units, Sequence) and expr_idx is not None and expr_idx < len(expr_units):
+                unit_val = expr_units[expr_idx]
+            elif expr in field_units:
+                unit_val = field_units[expr]
+        if unit_val is None:
+            raw_eval_units = eval_result.get("expression_units")
+            if isinstance(raw_eval_units, Mapping) and expr in raw_eval_units:
+                unit_val = raw_eval_units[expr]
+            elif isinstance(raw_eval_units, Sequence) and expr_idx is not None and expr_idx < len(raw_eval_units):
+                unit_val = raw_eval_units[expr_idx]
+        unit = unit_val if unit_val is not None else ""
+
+    # Spatial coordinates
+    coords = metadata.get("coords")
+    if not coords or not isinstance(coords, Sequence):
+        spatial = field_coords.get("spatial")
+        if isinstance(spatial, Sequence) and point_idx is not None and point_idx < len(spatial):
+            coords = spatial[point_idx]
+        else:
+            coords = eval_result.get("coordinates", ())
     if not isinstance(coords, Sequence) or isinstance(coords, (str, bytes)):
         coords = ()
+
     return [
-        metadata.get("axis", "values"), expr, metadata.get("outer", ""),
-        metadata.get("inner", path[1] if len(path) > 1 and isinstance(path[1], int) else ""),
-        metadata.get("point", path[-1] if path and isinstance(path[-1], int) else ""),
-        real, imag, unit,
-        coords[0] if len(coords) > 0 else "", coords[1] if len(coords) > 1 else "", coords[2] if len(coords) > 2 else "",
+        metadata.get("axis", "values"),
+        expr,
+        outer,
+        inner,
+        point,
+        real,
+        imag,
+        unit,
+        coords[0] if len(coords) > 0 else "",
+        coords[1] if len(coords) > 1 else "",
+        coords[2] if len(coords) > 2 else "",
     ]
 
 
@@ -329,6 +470,9 @@ def _assert_pinned_artifact_stable(path: Path, before: os.stat_result, after: os
         raise _artifact_changed(path, "pathname no longer names the opened file")
 
 
+_WHOLE_FILE_HASH_CACHE: dict[tuple[int, int, int, int, int], str] = {}
+
+
 def _read_pinned_chunk(path: Path, offset: int, length: int) -> dict[str, Any]:
     """Hash and read one chunk from the same opened descriptor.
 
@@ -346,13 +490,22 @@ def _read_pinned_chunk(path: Path, offset: int, length: int) -> dict[str, Any]:
                 f"Offset {offset} is out of bounds for file of size {file_size}",
             )
 
-        digest = hashlib.sha256()
-        hashed_size = 0
-        for block in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(block)
-            hashed_size += len(block)
-        if hashed_size != file_size:
-            raise _artifact_changed(path, f"size changed while hashing ({file_size} -> {hashed_size})")
+        identity = _file_identity(before)
+        cached_hash = _WHOLE_FILE_HASH_CACHE.get(identity)
+        if cached_hash is not None:
+            whole_sha256 = cached_hash
+        else:
+            digest = hashlib.sha256()
+            hashed_size = 0
+            for block in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(block)
+                hashed_size += len(block)
+            if hashed_size != file_size:
+                raise _artifact_changed(path, f"size changed while hashing ({file_size} -> {hashed_size})")
+            whole_sha256 = digest.hexdigest()
+            if len(_WHOLE_FILE_HASH_CACHE) > 1024:
+                _WHOLE_FILE_HASH_CACHE.clear()
+            _WHOLE_FILE_HASH_CACHE[identity] = whole_sha256
 
         handle.seek(offset)
         chunk_data = handle.read(length)
@@ -363,7 +516,7 @@ def _read_pinned_chunk(path: Path, offset: int, length: int) -> dict[str, Any]:
         return {
             "file_path": str(path),
             "file_size": file_size,
-            "whole_file_sha256": digest.hexdigest(),
+            "whole_file_sha256": whole_sha256,
             "offset": offset,
             "length": len(chunk_data),
             "chunk_sha256": chunk_sha256,
@@ -423,17 +576,54 @@ class ArtifactStore:
         # would hide a symlink that points back inside the root.
         candidate = Path(os.path.abspath(os.fspath(candidate)))
         try:
-            candidate.relative_to(self.project_root)
+            rel = candidate.relative_to(self.project_root)
         except ValueError as exc:
             raise _contract_error(
                 "ACCESS_VIOLATION",
                 f"Export destination {dest!r} escapes authorized project root {self.project_root}",
             ) from exc
 
+        _PROTECTED_DIR_PREFIXES = (
+            ".phase1-private",
+            ".g3-private",
+            ".git",
+            ".env",
+            ".credentials",
+            ".token",
+            ".secret",
+        )
+        _PROTECTED_TOKENS = {
+            "token",
+            "tokens",
+            "token.json",
+            "tokens.json",
+            "credential",
+            "credentials",
+            "secret",
+            "secrets",
+            "id_rsa",
+            "id_dsa",
+            "id_ecdsa",
+            "id_ed25519",
+            "master.key",
+            "auth_token",
+        }
+        for part in rel.parts:
+            part_lower = part.lower()
+            if (
+                part.startswith(".")
+                or any(part_lower.startswith(prefix) for prefix in _PROTECTED_DIR_PREFIXES)
+                or part_lower in _PROTECTED_TOKENS
+            ):
+                raise _contract_error(
+                    "ACCESS_VIOLATION",
+                    f"Destination {dest!r} enters protected or private path component {part!r}",
+                )
+
         _assert_no_symlink_components(candidate, field="destination")
         resolved = candidate.resolve(strict=False)
         try:
-            resolved.relative_to(self.project_root)
+            rel_resolved = resolved.relative_to(self.project_root)
         except ValueError as exc:
             # Protect the race where a component appeared as a symlink between the
             # lexical check and the first resolve.
@@ -441,6 +631,19 @@ class ArtifactStore:
                 "ACCESS_VIOLATION",
                 f"Export destination {dest!r} escapes authorized project root {self.project_root}",
             ) from exc
+
+        for part in rel_resolved.parts:
+            part_lower = part.lower()
+            if (
+                part.startswith(".")
+                or any(part_lower.startswith(prefix) for prefix in _PROTECTED_DIR_PREFIXES)
+                or part_lower in _PROTECTED_TOKENS
+            ):
+                raise _contract_error(
+                    "ACCESS_VIOLATION",
+                    f"Resolved destination {resolved!r} enters protected or private path component {part!r}",
+                )
+
         _assert_no_symlink_components(candidate, field="destination")
 
         if resolved.exists():
@@ -456,6 +659,25 @@ class ArtifactStore:
                 )
 
         return resolved
+
+    _REGISTERED_ARTIFACTS: set[str] = set()
+
+    @classmethod
+    def register_artifact(cls, path_or_id: str | Path) -> str:
+        resolved_str = str(Path(path_or_id).resolve())
+        cls._REGISTERED_ARTIFACTS.add(resolved_str)
+        cls._REGISTERED_ARTIFACTS.add(str(path_or_id))
+        return resolved_str
+
+    @classmethod
+    def is_registered_artifact(cls, path_or_id: str | Path) -> bool:
+        p_str = str(path_or_id)
+        if p_str in cls._REGISTERED_ARTIFACTS:
+            return True
+        try:
+            return str(Path(path_or_id).resolve()) in cls._REGISTERED_ARTIFACTS
+        except Exception:
+            return False
 
     def export_field_data(
         self,
@@ -583,6 +805,7 @@ class ArtifactStore:
             total_elements = _count_values(values)
         if total_elements == 0:
             total_elements = _count_values(values)
+        self.register_artifact(authorized_target)
         return {
             "file_path": str(target_path),
             "sha256": sha256,
@@ -743,6 +966,136 @@ def artifact_read(
         "encoding": "base64",
         "data_base64": base64.b64encode(chunk["data_bytes"]).decode("ascii"),
     }
+
+
+def csv_to_field_array(csv_data: str | Path | os.PathLike) -> Any:
+    """Reconstruct a FieldArray from a CSV exported by export_field_data."""
+    from ._solution_binding import FieldArray
+
+    if isinstance(csv_data, (Path, os.PathLike)) or (isinstance(csv_data, str) and os.path.exists(csv_data)):
+        with open(csv_data, "r", encoding="utf-8", newline="") as f:
+            reader = list(csv.DictReader(f))
+    elif isinstance(csv_data, str):
+        reader = list(csv.DictReader(csv_data.strip().splitlines()))
+    else:
+        raise _contract_error("INVALID_REQUEST", "csv_data must be a file path or CSV string")
+
+    if not reader:
+        raise _contract_error("INVALID_REQUEST", "CSV data is empty")
+
+    expressions: list[str] = []
+    outers: list[Any] = []
+    inners: list[Any] = []
+    points: list[Any] = []
+    spatial_by_point: dict[Any, list[float]] = {}
+    units_by_expr: dict[str, str] = {}
+    has_complex = False
+
+    def _parse_num(val_str: str) -> Any:
+        try:
+            return int(val_str)
+        except ValueError:
+            try:
+                return float(val_str)
+            except ValueError:
+                return val_str
+
+    for row in reader:
+        expr = row.get("expr", "")
+        if expr not in expressions:
+            expressions.append(expr)
+
+        outer_val = _parse_num(row.get("outer", ""))
+        if outer_val != "" and outer_val not in outers:
+            outers.append(outer_val)
+
+        inner_val = _parse_num(row.get("inner", ""))
+        if inner_val != "" and inner_val not in inners:
+            inners.append(inner_val)
+
+        point_val = _parse_num(row.get("point", ""))
+        if point_val != "" and point_val not in points:
+            points.append(point_val)
+
+        unit = row.get("unit", "")
+        if expr and unit:
+            units_by_expr[expr] = unit
+
+        imag_str = row.get("imag", "")
+        if imag_str not in ("", None):
+            try:
+                if float(imag_str) != 0.0:
+                    has_complex = True
+            except ValueError:
+                pass
+
+        c0, c1, c2 = row.get("coord_0", ""), row.get("coord_1", ""), row.get("coord_2", "")
+        if c0 != "" or c1 != "" or c2 != "":
+            coords_list = []
+            for c in (c0, c1, c2):
+                if c != "":
+                    try:
+                        coords_list.append(float(c))
+                    except ValueError:
+                        coords_list.append(c)
+            spatial_by_point[point_val] = coords_list
+
+    if not outers:
+        outers = [1]
+    if not inners:
+        inners = [1]
+    if not points:
+        points = [1]
+
+    grid: dict[tuple[Any, Any, Any, Any], Any] = {}
+    for row in reader:
+        expr = row.get("expr", "")
+        outer_val = _parse_num(row.get("outer", "")) if row.get("outer", "") != "" else outers[0]
+        inner_val = _parse_num(row.get("inner", "")) if row.get("inner", "") != "" else inners[0]
+        point_val = _parse_num(row.get("point", "")) if row.get("point", "") != "" else points[0]
+
+        real_str = row.get("real", "")
+        imag_str = row.get("imag", "")
+        real_val = float(real_str) if real_str != "" else 0.0
+        imag_val = float(imag_str) if imag_str != "" else 0.0
+        if has_complex:
+            grid[(expr, outer_val, inner_val, point_val)] = complex(real_val, imag_val)
+        else:
+            grid[(expr, outer_val, inner_val, point_val)] = real_val
+
+    data: list[list[list[list[Any]]]] = []
+    for e in expressions:
+        e_list = []
+        for o in outers:
+            o_list = []
+            for i in inners:
+                i_list = []
+                for p in points:
+                    i_list.append(grid.get((e, o, i, p), 0.0))
+                o_list.append(i_list)
+            e_list.append(o_list)
+        data.append(e_list)
+
+    coords: dict[str, Any] = {
+        "expression": expressions,
+        "outer": outers,
+        "inner": inners,
+        "point": points,
+    }
+    if spatial_by_point:
+        coords["spatial"] = [spatial_by_point.get(p, []) for p in points]
+
+    units: dict[str, Any] = {
+        "expression": units_by_expr,
+    }
+
+    return FieldArray(
+        data,
+        axes=("expression", "outer", "inner", "point"),
+        coords=coords,
+        units=units,
+        is_complex=has_complex,
+    )
 
 
 #: Host-requestable surface.  ``artifact.read`` is the catalogue's own operation for a

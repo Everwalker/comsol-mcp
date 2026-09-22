@@ -3809,7 +3809,36 @@ def _count_elements(val: Any) -> int:
         return sum(_count_elements(v) for v in val.values())
     if isinstance(val, Sequence) and not isinstance(val, (str, bytes)):
         return sum(_count_elements(item) for item in val)
-    return 1
+def _preview_values(val: Any, max_points: int = 4) -> Any:
+    if isinstance(val, (list, tuple)):
+        if len(val) <= max_points:
+            return [_preview_values(x, max_points) for x in val]
+        return [_preview_values(x, max_points) for x in val[:max_points]] + [f"... ({len(val) - max_points} more)"]
+    return val
+
+
+def _field_array_summary(fa: Any, max_preview_points: int = 4) -> dict[str, Any]:
+    from copy import deepcopy
+    if not hasattr(fa, "shape") or not hasattr(fa, "axes"):
+        if isinstance(fa, Mapping):
+            summary = {k: v for k, v in fa.items() if k not in ("values", "data")}
+            summary["preview"] = _preview_values(fa.get("values"), max_points=max_preview_points)
+            summary["storage"] = "artifact"
+            return summary
+        return {}
+    return {
+        "axes": list(fa.axes),
+        "shape": list(fa.shape),
+        "coords": {
+            k: (v[:max_preview_points] if isinstance(v, list) and len(v) > max_preview_points else v)
+            for k, v in fa.coords.items()
+        },
+        "units": deepcopy(fa.units),
+        "metadata": deepcopy(fa.metadata),
+        "is_complex": fa.is_complex,
+        "preview": _preview_values(fa.values, max_points=max_preview_points),
+        "storage": "artifact",
+    }
 
 
 def _export_to_artifact(
@@ -4870,17 +4899,21 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
         and not cleanup["cleanup_failed"]
         and (storage == "artifact" or (storage == "auto" and total_elements > AUTO_ARTIFACT_ELEMENT_LIMIT))
     ):
+        artifact_eval_context: dict[str, Any] = {
+            "expressions": expressions,
+            "dataset": dataset_tag,
+            "solution": solution_tag,
+            "complex_mode": complex_mode,
+            "is_complex": is_complex,
+        }
+        if field_array_payload is not None:
+            artifact_eval_context["field_array"] = field_array_payload.to_dict()
+
         artifact_meta = _export_to_artifact(
             transformed,
             dataset_tag,
             project_root=trusted_project_root(worker),
-            eval_context={
-                "expressions": expressions,
-                "dataset": dataset_tag,
-                "solution": solution_tag,
-                "complex_mode": complex_mode,
-                "is_complex": is_complex,
-            },
+            eval_context=artifact_eval_context,
         )
         artifact_meta["auto_artifact_element_limit"] = AUTO_ARTIFACT_ELEMENT_LIMIT
         artifact_meta["requested_storage"] = storage
@@ -4904,7 +4937,11 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
         "complex_transform_order": requested_transform_order,
         "evaluated_expressions": list(effective_expressions),
         "is_complex": is_complex,
-        "field_array": field_array_payload.to_dict() if field_array_payload is not None else None,
+        "field_array": (
+            _field_array_summary(field_array_payload)
+            if result_payload.get("storage") == "artifact" and field_array_payload is not None
+            else (field_array_payload.to_dict() if field_array_payload is not None else None)
+        ),
         "solution_axes": {
             "outer": list(solution_binding.get("outer_indices", [])) if solution_binding else [],
             "inner": list(solution_binding.get("inner_indices", [])) if solution_binding else [],
