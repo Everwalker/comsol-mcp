@@ -3,7 +3,12 @@
 Distinguishes Model Definitions Probes from Results Derived Values:
 - Model Definitions Probes live under ``model.probe()`` or ``model.component(<comp>).probe()``.
 - Results Derived Values live under ``model.result().numerical()``.
-- Provides probe list, create, inspect, update, remove, and history retrieval.
+
+Implemented here: ``probe.list``, ``probe.create`` and ``probe.remove``.
+``probe.update`` and ``probe.history`` are declared by the G2 action catalogue but
+have no implementation yet, so they are deliberately absent from ``OPERATIONS``:
+``_g3_ops.dispatch`` then refuses them with ``UNSUPPORTED_OPERATION`` instead of
+reporting success for work that never happened.
 """
 from __future__ import annotations
 
@@ -193,3 +198,14 @@ def probe_remove(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> d
         "removed": True,
         "verified_removed": tag not in remaining,
     }
+
+
+#: Host-requestable surface (see the module docstring): the probe operations that
+#: exist, published so ``_g3_ops.dispatch`` can reach them.  Keeping this table
+#: honest is what makes "the catalogue declares it" and "a host can call it"
+#: different statements.
+OPERATIONS: dict[str, Any] = {
+    "probe.list": probe_list,
+    "probe.create": probe_create,
+    "probe.remove": probe_remove,
+}

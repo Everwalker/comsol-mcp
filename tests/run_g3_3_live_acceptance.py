@@ -1947,6 +1947,41 @@ public final class C07Builder {
             probes = probe_list(self.verifier_worker, "reopen_c06")
             assert "prb1" in probes["tags"]
 
+            # 4b. The same operations must be reachable through host dispatch: the F10
+            # module was not wired into _g3_ops._MODULES, so a host request could not
+            # reach any probe operation while the catalogue advertised five.
+            from comsol_mcp._g3_ops import dispatch as dispatch_operation
+
+            self.log("  Verifying host dispatch path for probe operations...")
+            dispatched_list = dispatch_operation("probe.list", self.verifier_worker, "reopen_c06", {})
+            assert "prb1" in dispatched_list["tags"], dispatched_list
+            dispatched_remove = dispatch_operation(
+                "probe.remove", self.verifier_worker, "reopen_c06", {"tag": "prb1"}
+            )
+            assert dispatched_remove["removed"] is True, dispatched_remove
+            assert dispatched_remove["verified_removed"] is True, dispatched_remove
+            dispatched_recreate = dispatch_operation(
+                "probe.create",
+                self.verifier_worker,
+                "reopen_c06",
+                {"tag": "prb1", "type_id": "DomainProbe", "definition": {"expr": "x + 2*y"}},
+            )
+            assert dispatched_recreate["created"] is True, dispatched_recreate
+
+            # Unimplemented but catalogued operations must be refused, not reported as done.
+            unimplemented_probe_ops: dict[str, str] = {}
+            for unimplemented in ("probe.update", "probe.history"):
+                try:
+                    dispatch_operation(unimplemented, self.verifier_worker, "reopen_c06", {})
+                except ExecutionContractError as exc:
+                    unimplemented_probe_ops[unimplemented] = exc.code
+                else:
+                    raise AssertionError(f"{unimplemented} reported success although it is not implemented")
+            assert unimplemented_probe_ops == {
+                "probe.update": "UNSUPPORTED_OPERATION",
+                "probe.history": "UNSUPPORTED_OPERATION",
+            }, unimplemented_probe_ops
+
             # 5. Verify probe is NOT in results derived values (model.result.numerical)
             num_tags = list(self.verifier_worker.client().model("reopen_c06")._call("result")._call("numerical")._call("tags"))
             assert "prb1" not in num_tags
@@ -1996,6 +2031,11 @@ public final class C07Builder {
                     "table_written_data": [[1.5, 2.5], [3.5, 4.5]],
                     "table_read_data": read_vals,
                     "validation_verified": True,
+                    "probe_host_dispatch": {
+                        "reachable": ["probe.list", "probe.create", "probe.remove"],
+                        "dispatched_removed_verified": dispatched_remove["verified_removed"],
+                        "unimplemented_refusals": unimplemented_probe_ops,
+                    },
                 },
             )
         except Exception as exc:

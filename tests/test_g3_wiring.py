@@ -18,7 +18,7 @@ from comsol_mcp._execution_contract import (
     permission_for_legacy_tool,
 )
 from comsol_mcp._g2_registry import is_implemented
-from comsol_mcp._g3_ops import DISPATCH, EFFECTS, IMPLEMENTED_OPERATIONS, REQUIRES_ISOLATION
+from comsol_mcp._g3_ops import DISPATCH, EFFECTS, IMPLEMENTED_OPERATIONS, OPERATION_ORIGINS, REQUIRES_ISOLATION
 from comsol_mcp._managed_backend import _G3_EFFECT_MAP
 
 _ALLOWED_PERMISSIONS = {"inspect", "project_write", "compute", "trusted_code", "host_control"}
@@ -64,3 +64,26 @@ def test_alias_round_trip_matches_g2_alias_generation():
 
     for operation_id in DISPATCH:
         assert ManagedBackend._g2_alias(operation_id) == operation_id.replace(".", "_")
+
+
+def test_probe_operations_are_reachable_from_host_dispatch():
+    """The implemented probe operations must be dispatchable, and only those.
+
+    The F10 module existed but was absent from ``_g3_ops._MODULES``, so no host
+    request could reach ``probe.list``/``probe.create``/``probe.remove`` while the
+    G2 action catalogue advertised them.
+    """
+
+    from comsol_mcp._g3_ops import dispatch as dispatch_operation
+
+    for operation_id in ("probe.list", "probe.create", "probe.remove"):
+        assert operation_id in IMPLEMENTED_OPERATIONS, operation_id
+        assert OPERATION_ORIGINS[operation_id] == "_probe_manage"
+
+    # Declared by the catalogue but not implemented: the host path must refuse them
+    # with a structured error rather than reporting a success that never happened.
+    for unimplemented in ("probe.update", "probe.history"):
+        assert unimplemented not in IMPLEMENTED_OPERATIONS, unimplemented
+        with pytest.raises(ExecutionContractError) as exc:
+            dispatch_operation(unimplemented, None, "Model", {})
+        assert exc.value.code == "UNSUPPORTED_OPERATION"

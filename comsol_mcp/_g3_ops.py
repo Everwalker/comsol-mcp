@@ -36,7 +36,7 @@ from ._g2_registry import BY_ID
 #: runtime/licence inspection operations W15's T042 acceptance needs, and
 #: ``_g3_results`` the minimal sampling adapter recorded as W16 acceptance
 #: infrastructure.
-_MODULES = ("_g3_w13", "_g3_w14", "_g3_w15", "_g3_w16", "_g3_runtime", "_g3_results")
+_MODULES = ("_g3_w13", "_g3_w14", "_g3_w15", "_g3_w16", "_g3_runtime", "_g3_results", "_probe_manage")
 
 #: Effects for operations the design catalogue does not (yet) describe.  Every
 #: W13 operation is present in 02_ACTION_CATALOG.json, so this table is a
