@@ -1,15 +1,6 @@
 {
-  "schema": "comsol-mcp-g3/phase4_3-acceptance/1",
-  "goal": "NEXT_GOAL.md: G3.3 clean-room recovery, evidence correction, and W17 verification",
-  "status": "G3_3_MAC_W17_VERIFIED_SCOPED",
   "run_id": "live_acceptance_20260922T070642Z",
-  "run_dir": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260922T070642Z",
-  "generated_at": "2026-09-22T07:07:21.422657+00:00",
-  "elapsed_seconds": 39.39638433302753,
-  "platform": "darwin",
-  "python_version": "3.13.14 (main, Jun 11 2026, 03:58:32) [Clang 22.1.3 ]",
-  "comsol_version": null,
-  "comsol_version_source": "unavailable: the engine did not report a version in this run",
+  "generated_at": "2026-09-22T07:07:21.427070+00:00",
   "source_manifest": {
     "head": "4ab33bb1abd682f761789b7e2b56af67a6437ee1",
     "tree": "5da1716c9118374d6fda29946158432e539e822b",
@@ -24,65 +15,9 @@
     "source_blob_map_sha256": "167a7c87e9dc8b6b37f418022770b78952a1f9b49602504e85de138db3966a8d",
     "captured_at": "2026-09-22T07:06:45.084201+00:00"
   },
-  "source_identity": {
-    "repository": "Everwalker/comsol-mcp (delivered source workpack)",
-    "commit": "4ab33bb1abd682f761789b7e2b56af67a6437ee1",
-    "tree": "5da1716c9118374d6fda29946158432e539e822b",
-    "branch": "acceptance/independent-20260922",
-    "tracked_files": 6669,
-    "source_blob_map_sha256": "167a7c87e9dc8b6b37f418022770b78952a1f9b49602504e85de138db3966a8d",
-    "lock": "repository/constraints-macos-arm64-py313.txt installs this tree via '-e .'",
-    "how_to_check": "In the recovered clone: git rev-parse HEAD == commit, git rev-parse 'HEAD^{tree}' == tree, git ls-files | wc -l == tracked_files",
-    "regenerated": "written at the start of every acceptance run; records the commit under test",
-    "file": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/SOURCE_TREE_IDENTITY.json",
-    "file_sha256": "da635883f56f02b800e492833a338f7f8f7dbbb94d587ec803b0d252b96a212f",
-    "note": "D6: the dependency lock installs this tree; this file is what a recovering agent compares a fresh clone against"
-  },
-  "runner_sha256": "8fb8db105b3e609057b9a5d0e34f3602f6593b7ca61822c1631098a7f510e2d9",
-  "runner_command": [
-    "tests/run_g3_3_live_acceptance.py"
-  ],
-  "total_cases": 19,
-  "request_reply_trail": {
-    "file": "request_reply_trail.jsonl",
-    "records": 8302,
-    "truncated": false,
-    "note": "one record per worker request event: the 'submitted' request and the matching 'observed' reply (or 'unknown'/'unresponsive' when none arrived), each with the redacted payload and a request hash.  §11 asks for a per-run request/reply record; the in-process operation calls the runner makes are in assertions.json."
-  },
-  "numeric_evidence": {
-    "file": "numeric.json",
-    "cases": [
-      "C03",
-      "C03R",
-      "C04",
-      "C05",
-      "C06",
-      "C07",
-      "C08",
-      "C09",
-      "C10",
-      "C11",
-      "C14"
-    ],
-    "note": "numeric checks, comparisons, tolerances and peak-memory records extracted from the case details"
-  },
   "aborted_cases": [],
-  "passed_cases": 19,
-  "failed_cases": 0,
-  "scope": {
-    "verified_workstream": "W17",
-    "stop_boundary": "W17 (do not advance to W18-W26)",
-    "target_platform": "macOS-aarch64 (Apple Silicon commercial installation)",
-    "unverified_platforms": [
-      "windows",
-      "linux",
-      "intel-mac",
-      "comsol-6.3",
-      "gui"
-    ]
-  },
-  "cases": {
-    "C00": {
+  "assertions": [
+    {
       "case_id": "C00",
       "name": "Clean Recovery, Source Binding & Wheel Verification",
       "status": "PASS",
@@ -121,7 +56,7 @@
       },
       "timestamp": "2026-09-22T07:06:48.346626+00:00"
     },
-    "C01": {
+    {
       "case_id": "C01",
       "name": "Evidence Correction & Ledger Auditing",
       "status": "PASS",
@@ -138,7 +73,7 @@
       },
       "timestamp": "2026-09-22T07:06:48.348387+00:00"
     },
-    "C02": {
+    {
       "case_id": "C02",
       "name": "Dangerous States & Safe Refusal",
       "status": "PASS",
@@ -151,7 +86,7 @@
       },
       "timestamp": "2026-09-22T07:06:48.350272+00:00"
     },
-    "C03": {
+    {
       "case_id": "C03",
       "name": "Gate A Reopen & Stored Solution Acceptance",
       "status": "PASS",
@@ -239,7 +174,7 @@
       },
       "timestamp": "2026-09-22T07:07:07.904041+00:00"
     },
-    "C03R": {
+    {
       "case_id": "C03R",
       "name": "Independent Re-solve & Indistinguishability",
       "status": "PASS",
@@ -273,7 +208,7 @@
       },
       "timestamp": "2026-09-22T07:07:08.601672+00:00"
     },
-    "C04": {
+    {
       "case_id": "C04",
       "name": "Constant Field Statistics (f=2, V=3)",
       "status": "PASS",
@@ -336,7 +271,7 @@
       },
       "timestamp": "2026-09-22T07:07:08.888914+00:00"
     },
-    "C05": {
+    {
       "case_id": "C05",
       "name": "Multi-dimensional & Selection Support",
       "status": "PASS",
@@ -521,7 +456,7 @@
       },
       "timestamp": "2026-09-22T07:07:11.714566+00:00"
     },
-    "C06": {
+    {
       "case_id": "C06",
       "name": "Non-Uniform Field Analytical Verification",
       "status": "PASS",
@@ -589,7 +524,7 @@
       },
       "timestamp": "2026-09-22T07:07:11.900759+00:00"
     },
-    "C07": {
+    {
       "case_id": "C07",
       "name": "Axisymmetric Cylinder Verification",
       "status": "PASS",
@@ -638,7 +573,7 @@
       },
       "timestamp": "2026-09-22T07:07:12.101744+00:00"
     },
-    "C08": {
+    {
       "case_id": "C08",
       "name": "Solution Axis Slicing & Metadata",
       "status": "PASS",
@@ -743,7 +678,7 @@
       },
       "timestamp": "2026-09-22T07:07:12.433536+00:00"
     },
-    "C09": {
+    {
       "case_id": "C09",
       "name": "Complex Field Transformations",
       "status": "PASS",
@@ -771,7 +706,7 @@
       },
       "timestamp": "2026-09-22T07:07:12.645273+00:00"
     },
-    "C10": {
+    {
       "case_id": "C10",
       "name": "Point Coordinates Scaling (m vs mm)",
       "status": "PASS",
@@ -795,7 +730,7 @@
       },
       "timestamp": "2026-09-22T07:07:12.732611+00:00"
     },
-    "C11": {
+    {
       "case_id": "C11",
       "name": "Dataset Dependency Graph & CutPoint2D",
       "status": "PASS",
@@ -813,7 +748,7 @@
       },
       "timestamp": "2026-09-22T07:07:12.818088+00:00"
     },
-    "C12": {
+    {
       "case_id": "C12",
       "name": "Export Path Traversal Protection & Atomic Rollback",
       "status": "PASS",
@@ -892,7 +827,7 @@
       },
       "timestamp": "2026-09-22T07:07:12.823408+00:00"
     },
-    "C13": {
+    {
       "case_id": "C13",
       "name": "Chunk Streaming & Bounded Memory",
       "status": "PASS",
@@ -931,7 +866,7 @@
       },
       "timestamp": "2026-09-22T07:07:14.679184+00:00"
     },
-    "C14": {
+    {
       "case_id": "C14",
       "name": "Definitions Probe vs Derived Values Separation & Table Management",
       "status": "PASS",
@@ -994,7 +929,7 @@
       },
       "timestamp": "2026-09-22T07:07:14.834772+00:00"
     },
-    "C15": {
+    {
       "case_id": "C15",
       "name": "Idempotency & Control Responsiveness",
       "status": "PASS",
@@ -1099,7 +1034,7 @@
       },
       "timestamp": "2026-09-22T07:07:20.231582+00:00"
     },
-    "C16": {
+    {
       "case_id": "C16",
       "name": "Packaging & Dependencies Lock",
       "status": "PASS",
@@ -1153,7 +1088,7 @@
       },
       "timestamp": "2026-09-22T07:07:20.284155+00:00"
     },
-    "C17": {
+    {
       "case_id": "C17",
       "name": "Teardown & Verification Ledger Finalization",
       "status": "PASS",
@@ -1183,5 +1118,5 @@
       },
       "timestamp": "2026-09-22T07:07:21.422229+00:00"
     }
-  }
+  ]
 }
