@@ -1,0 +1,56 @@
+Compiled from "SourceFile"
+public interface com.comsol.model.ProbeFeature extends com.comsol.model.IPlotAndImageExport,com.comsol.model.PropFeature,com.comsol.model.physics.EquationViewParent {
+  public abstract com.comsol.model.ProbeFeature create(java.lang.String, java.lang.String);
+  public abstract com.comsol.model.ProbeFeatureList feature();
+  public abstract com.comsol.model.ProbeFeature feature(java.lang.String);
+  public abstract void genResult(java.lang.String);
+  public abstract com.comsol.model.LocalSelection selection(java.lang.String);
+  public default com.comsol.model.AbstractSelection selection(java.lang.String);
+}
+Compiled from "SourceFile"
+public interface com.comsol.model.TableFeature extends com.comsol.model.ResultBaseFeature,com.comsol.model.TableBaseFeature {
+  public abstract void addColumns(java.lang.String[], double[][]);
+  public abstract void addColumns(java.lang.String[], double[][], double[][]);
+  public abstract void addRow(double[]);
+  public abstract void addRow(double[], double[]);
+  public abstract void addRowAndWarnings(double[], boolean[]);
+  public abstract void addRowAndWarnings(double[], double[], boolean[]);
+  public abstract void addRows(double[][]);
+  public abstract void addRows(double[][], double[][]);
+  public abstract void addRowsAndWarnings(double[][], boolean[][]);
+  public abstract void addRowsAndWarnings(double[][], double[][], boolean[][]);
+  public abstract com.comsol.model.PropFeatureList<com.comsol.model.PropFeature> feature();
+  public abstract double[][] getFilledImag();
+  public abstract double[][] getFilledReal();
+  public abstract void importData(java.lang.String);
+  public abstract void loadFile(java.lang.String);
+  public abstract void loadFile(java.lang.String, java.lang.String, java.lang.String);
+}
+Compiled from "SourceFile"
+public interface com.comsol.model.TableBaseFeature extends com.comsol.model.ResultBaseFeature {
+  public abstract void clearTableData();
+  public abstract java.lang.String[] getColumnHeaders();
+  public abstract double[][] getImag();
+  public abstract double[][] getImag(int, int);
+  public abstract double[] getImagRow(int);
+  public abstract int getNRows();
+  public abstract double[][] getReal();
+  public abstract double[][] getReal(int, int);
+  public abstract double[] getRealRow(int);
+  public abstract java.lang.String[] getRowHeaders();
+  public abstract java.lang.String[][] getTableData(boolean);
+  public abstract java.lang.String[][] getTableData(int, int, boolean);
+  public abstract java.lang.String[] getTableRow(int, boolean);
+  public abstract boolean isComplex();
+  public abstract void removeColumn(int);
+  public abstract void removeRow(int);
+  public abstract void removeRows(int[]);
+  public abstract void save(java.lang.String);
+  public abstract void save(java.lang.String, boolean);
+  public abstract void saveFile(java.lang.String);
+  public abstract void saveFile(java.lang.String, java.lang.String, java.lang.String, boolean, boolean);
+  public abstract void saveFile(java.lang.String, boolean, java.lang.String, java.lang.String, boolean, boolean);
+  public abstract void setColumnHeaders(java.lang.String[]);
+  public abstract void setTableData(double[][]);
+  public abstract void setTableData(double[][], double[][]);
+}

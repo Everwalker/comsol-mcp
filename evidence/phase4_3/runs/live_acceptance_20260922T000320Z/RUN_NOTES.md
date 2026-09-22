@@ -1,0 +1,41 @@
+# Run notes
+
+- run_id: `live_acceptance_20260922T000320Z`
+- goal: NEXT_GOAL.md: G3.3 clean-room recovery, evidence correction, and W17 verification
+- status: `G3_3_MAC_W17_VERIFIED_SCOPED`
+- source: `f12dbff06908c3c271a4d72262c6b4f6189e3d0d` (tree `ced6d7741cb6ad714f4bd1ba2e6854ac82c141ac`, branch `handoff/g3_3_fix`)
+- engine: COMSOL Multiphysics 6.4 (开发版本: 293)
+
+## What is tracked and what is not
+
+This directory is tracked selectively.  The evidence documents are:
+
+- `result.json` -- the ledger written for this run (same payload as
+  `evidence/phase4_3_acceptance.json`);
+- `assertions.json` -- per-case assertion records plus any aborted cases
+  with their tracebacks;
+- `runner.log` -- the runner's own log lines for this run;
+- `source_manifest.json` -- HEAD, tree, branch, tracked-file count and the
+  aggregate blob-map digest the ledger is bound to;
+- `environment.json` -- COMSOL root, JDK, interpreter, cwd, command line;
+- `case_inventory.json` -- the case ids recorded in this run;
+- `SHA256SUMS.json` -- digests of the run artifacts and of the evidence
+  files above, so a verifier can detect edits.
+
+Run-local working state is deliberately *not* tracked (see `.gitignore`):
+`artifacts/` (solved models and sentinel files), `prefs/` (the isolated
+engine's private workspace), `tmp/`, `locks/`, `recovery/`, `worker_*/`,
+`test_venv/`, `wheel_dist/`, generated `*.java` builders, `server.port` and
+`mphserver.log`.  Those are inputs the run consumed or produced on disk;
+they are reproducible by re-running the suite, and their digests are in
+`SHA256SUMS.json`.
+
+## How to re-verify
+
+```
+cd /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository
+.venv/bin/python tests/run_g3_3_live_acceptance.py --run-dir /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260922T000320Z
+```
+
+The run refuses to start from a tree with modified tracked files, so the
+ledger it writes is always bound to a commit.

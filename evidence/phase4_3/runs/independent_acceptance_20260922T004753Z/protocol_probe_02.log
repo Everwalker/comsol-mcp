@@ -1,0 +1,41 @@
+[2026-09-22T01:07:56.677402+00:00] Starting dedicated clean-room COMSOL mphserver...
+[2026-09-22T01:07:59.444943+00:00] COMSOL mphserver PID 68804 listening on port 54860
+[2026-09-22T01:08:21.082378+00:00] Stopping isolated mphserver PID 68804...
+  + Exception Group Traceback (most recent call last):
+  |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tools/g3_3_protocol_acceptance.py", line 145, in <module>
+  |     main()
+  |     ~~~~^^
+  |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tools/g3_3_protocol_acceptance.py", line 139, in main
+  |     asyncio.run(exercise(args, run))
+  |     ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  |   File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 205, in run
+  |     return runner.run(main)
+  |            ~~~~~~~~~~^^^^^^
+  |   File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 128, in run
+  |     return self._loop.run_until_complete(task)
+  |            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  |   File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 720, in run_until_complete
+  |     return future.result()
+  |            ~~~~~~~~~~~~~^^
+  |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tools/g3_3_protocol_acceptance.py", line 84, in exercise
+  |     async with OwnedHost(args, run, transcript, label="builder", private_home=run / "private/builder", run_state=state) as host:
+  |                ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tools/g3_3_protocol_acceptance.py", line 36, in __aexit__
+  |     await self.session.__aexit__(*exc)
+  |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/lib/python3.14/site-packages/mcp/shared/session.py", line 238, in __aexit__
+  |     return await self._task_group.__aexit__(exc_type, exc_val, exc_tb)
+  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/lib/python3.14/site-packages/anyio/_backends/_asyncio.py", line 847, in __aexit__
+  |     raise BaseExceptionGroup(
+  |         "unhandled errors in a TaskGroup", self._exceptions
+  |     ) from None
+  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/lib/python3.14/site-packages/mcp/client/stdio/__init__.py", line 189, in stdio_client
+    |     yield read_stream, write_stream
+    |   File "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tools/g3_3_protocol_acceptance.py", line 103, in exercise
+    |     assert protocol._success(disconnected), disconnected
+    |            ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+    | AssertionError: {'success': False, 'data': {}, 'error': {'code': 'PERMISSION_DENIED', 'message': 'shared-server lifecycle changes are not enabled by this backend', 'safe_retry': False}, 'execution': {'request_id': 'disconnect', 'operation_id': '9f3d567a-226f-4558-902a-84cb9a114352', 'request_hash': '4a2c81213a925b647e871e36951545c48eeeafbc66595df9794c1a576bb2b27b', 'idempotency_key': 'disconnect', 'job_id': '337906be-c524-41bb-98aa-6a28b209b696'}, '_outer_isError': True, '_structuredContent': {'success': False, 'data': {}, 'error': {'code': 'PERMISSION_DENIED', 'message': 'shared-server lifecycle changes are not enabled by this backend', 'safe_retry': False}, 'execution': {'request_id': 'disconnect', 'operation_id': '9f3d567a-226f-4558-902a-84cb9a114352', 'request_hash': '4a2c81213a925b647e871e36951545c48eeeafbc66595df9794c1a576bb2b27b', 'idempotency_key': 'disconnect', 'job_id': '337906be-c524-41bb-98aa-6a28b209b696'}}}
+    +------------------------------------

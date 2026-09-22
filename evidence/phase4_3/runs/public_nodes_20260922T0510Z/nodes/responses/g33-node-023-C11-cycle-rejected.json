@@ -1,0 +1,1231 @@
+{
+  "_outer_isError": true,
+  "_structuredContent": {
+    "data": {
+      "cleanup_failed": false,
+      "dispatch_stage": "validation",
+      "domain_outcome": {
+        "cleanup_failed": false,
+        "details": {
+          "status_token": "REFUSED"
+        },
+        "dispatch_stage": "validation",
+        "execution_state_unknown": false,
+        "failure": {
+          "code": "DATASET_CYCLE_DETECTED",
+          "details": {
+            "cycle": [
+              "g33cycanodes01",
+              "g33cycbnodes01",
+              "g33cycanodes01",
+              "g33cycanodes01"
+            ]
+          },
+          "message": "dataset reference cycle detected: g33cycanodes01 -> g33cycbnodes01 -> g33cycanodes01 -> g33cycanodes01",
+          "safe_retry": false
+        },
+        "operation": "dataset.update",
+        "state": "failed",
+        "status_token": "REFUSED",
+        "verification_status": "NOT_APPLICABLE",
+        "witness": {
+          "dispatches": [
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "result",
+              "receiver": "h-d083f2b5-c736-4c02-8add-9a099466f793"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "dataset",
+              "receiver": "h-5d16c33e-29f2-4324-b4d6-0f820501fde8"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "result",
+              "receiver": "h-e124d82b-7c83-4fbc-b44b-a8f4ec0feaf3"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "dataset",
+              "receiver": "h-54e09052-ee04-4178-af27-da22e17e92d5"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "tags",
+              "receiver": "h-9f998cd7-f029-4095-88cb-da88b0ee76fc"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "get",
+              "receiver": "h-9f998cd7-f029-4095-88cb-da88b0ee76fc"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getType",
+              "receiver": "h-bcfd56fd-3843-4bc4-b020-1c40ea4f245c"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getType",
+              "receiver": "h-bcfd56fd-3843-4bc4-b020-1c40ea4f245c"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "result",
+              "receiver": "h-6d9987f1-c5d0-48c0-895e-3043587dddcc"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "dataset",
+              "receiver": "h-f946823c-5ab5-4f49-8123-601cc43f63ac"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "tags",
+              "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "get",
+              "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getString",
+              "receiver": "h-25052b71-fd00-4173-87ab-0b1ed2fe6922"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getString",
+              "receiver": "h-25052b71-fd00-4173-87ab-0b1ed2fe6922"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "get",
+              "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getString",
+              "receiver": "h-e6cdc2d0-dfee-4412-973d-5707b0daa45d"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getString",
+              "receiver": "h-e6cdc2d0-dfee-4412-973d-5707b0daa45d"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "get",
+              "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getString",
+              "receiver": "h-c8e8cca0-e030-4da0-ad90-beed160f959e"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getString",
+              "receiver": "h-c8e8cca0-e030-4da0-ad90-beed160f959e"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "get",
+              "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getString",
+              "receiver": "h-c73c70c1-b52b-49d0-9157-9241c2f91101"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getString",
+              "receiver": "h-c73c70c1-b52b-49d0-9157-9241c2f91101"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "get",
+              "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getString",
+              "receiver": "h-6bd7ca05-b93f-4d0e-9812-e88a15597e7f"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getString",
+              "receiver": "h-6bd7ca05-b93f-4d0e-9812-e88a15597e7f"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "get",
+              "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getString",
+              "receiver": "h-19da2f7a-ddbb-440a-9913-9d498ed3cf71"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getString",
+              "receiver": "h-19da2f7a-ddbb-440a-9913-9d498ed3cf71"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getString",
+              "receiver": "h-bcfd56fd-3843-4bc4-b020-1c40ea4f245c"
+            }
+          ],
+          "engine_calls": 30,
+          "methods": [
+            "dataset",
+            "get",
+            "getString",
+            "getType",
+            "result",
+            "tags"
+          ],
+          "mutation_issued": false,
+          "mutation_method": null
+        }
+      },
+      "domain_state": "failed",
+      "effect": "project_write",
+      "execution_state_unknown": false,
+      "isolation_proof": {
+        "api_probe": {
+          "authenticated_api_success": true,
+          "denial_evidence_source": "server_access_log",
+          "loopback_address": "127.0.0.1",
+          "loopback_port": 51787,
+          "nonloopback_address": "192.168.100.152",
+          "nonloopback_api_exception_http_status": null,
+          "nonloopback_port": 51787,
+          "observed_at": "2026-09-22T04:51:51Z",
+          "probe_kind": "comsol_java_api",
+          "server_access_log": {
+            "entries": [
+              {
+                "http_status": 101,
+                "method": "GET",
+                "peer": "127.0.0.1",
+                "route": "/webbridge/websocket"
+              },
+              {
+                "http_status": 101,
+                "method": "GET",
+                "peer": "127.0.0.1",
+                "route": "/webbridge/websocket"
+              },
+              {
+                "http_status": 403,
+                "method": "GET",
+                "peer": "192.168.100.152",
+                "route": "/webbridge/websocket"
+              }
+            ],
+            "finished_at": "2026-09-22T04:51:51Z",
+            "inode": 29938932,
+            "java_request_id": "g2-valve-nonloopback-connect",
+            "offset_after": 261,
+            "offset_before": 0,
+            "parsed_nonloopback_entry": {
+              "http_status": 403,
+              "method": "GET",
+              "peer": "192.168.100.152",
+              "route": "/webbridge/websocket"
+            },
+            "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_nodes_20260922T0510Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+            "phase": "java_connect_only",
+            "raw_probe_started_after_capture": true,
+            "segment_sha256": "ac3b31ea9d4cec809bbcdec128af277b8da27a66dc4f5a2c0c6f5ee101425f9e",
+            "started_at": "2026-09-22T04:51:43Z",
+            "status": "PASS"
+          }
+        },
+        "birth": "Tue Sep 22 12:51:39 2026",
+        "config_inode": 14720294,
+        "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+        "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+        "endpoint": "127.0.0.1:51787",
+        "established_client_pids": [
+          69843,
+          69998
+        ],
+        "listener": {
+          "endpoint": "*:51787",
+          "local_endpoint": "*:51787",
+          "pid": 69843,
+          "raw": "java    69843 everwalker   59u  IPv6 0x895525424979e606      0t0  TCP *:51787 (LISTEN)",
+          "remote_endpoint": null,
+          "state": "LISTEN"
+        },
+        "listener_binding": "wildcard",
+        "loopback_listener": false,
+        "pid": 69843,
+        "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+        "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_nodes_20260922T0510Z/isolation_receipt.json",
+        "verified": true,
+        "worker_pid": 69998
+      },
+      "operation": "dataset.update",
+      "partial_change": false,
+      "refusal": {
+        "code": "DATASET_CYCLE_DETECTED",
+        "details": {
+          "cycle": [
+            "g33cycanodes01",
+            "g33cycbnodes01",
+            "g33cycanodes01",
+            "g33cycanodes01"
+          ]
+        },
+        "message": "dataset reference cycle detected: g33cycanodes01 -> g33cycbnodes01 -> g33cycanodes01 -> g33cycanodes01",
+        "safe_retry": false,
+        "stage": "validation"
+      },
+      "refused": true,
+      "status": "REFUSED",
+      "verification_status": "NOT_APPLICABLE",
+      "verified_outcome": "failed",
+      "witness": {
+        "dispatches": [
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "result",
+            "receiver": "h-d083f2b5-c736-4c02-8add-9a099466f793"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "dataset",
+            "receiver": "h-5d16c33e-29f2-4324-b4d6-0f820501fde8"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "result",
+            "receiver": "h-e124d82b-7c83-4fbc-b44b-a8f4ec0feaf3"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "dataset",
+            "receiver": "h-54e09052-ee04-4178-af27-da22e17e92d5"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "tags",
+            "receiver": "h-9f998cd7-f029-4095-88cb-da88b0ee76fc"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "get",
+            "receiver": "h-9f998cd7-f029-4095-88cb-da88b0ee76fc"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getType",
+            "receiver": "h-bcfd56fd-3843-4bc4-b020-1c40ea4f245c"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getType",
+            "receiver": "h-bcfd56fd-3843-4bc4-b020-1c40ea4f245c"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "result",
+            "receiver": "h-6d9987f1-c5d0-48c0-895e-3043587dddcc"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "dataset",
+            "receiver": "h-f946823c-5ab5-4f49-8123-601cc43f63ac"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "tags",
+            "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "get",
+            "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-25052b71-fd00-4173-87ab-0b1ed2fe6922"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-25052b71-fd00-4173-87ab-0b1ed2fe6922"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "get",
+            "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-e6cdc2d0-dfee-4412-973d-5707b0daa45d"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-e6cdc2d0-dfee-4412-973d-5707b0daa45d"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "get",
+            "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-c8e8cca0-e030-4da0-ad90-beed160f959e"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-c8e8cca0-e030-4da0-ad90-beed160f959e"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "get",
+            "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-c73c70c1-b52b-49d0-9157-9241c2f91101"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-c73c70c1-b52b-49d0-9157-9241c2f91101"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "get",
+            "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-6bd7ca05-b93f-4d0e-9812-e88a15597e7f"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-6bd7ca05-b93f-4d0e-9812-e88a15597e7f"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "get",
+            "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-19da2f7a-ddbb-440a-9913-9d498ed3cf71"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-19da2f7a-ddbb-440a-9913-9d498ed3cf71"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-bcfd56fd-3843-4bc4-b020-1c40ea4f245c"
+          }
+        ],
+        "engine_calls": 30,
+        "methods": [
+          "dataset",
+          "get",
+          "getString",
+          "getType",
+          "result",
+          "tags"
+        ],
+        "mutation_issued": false,
+        "mutation_method": null
+      }
+    },
+    "error": {
+      "code": "DATASET_CYCLE_DETECTED",
+      "details": {
+        "cycle": [
+          "g33cycanodes01",
+          "g33cycbnodes01",
+          "g33cycanodes01",
+          "g33cycanodes01"
+        ]
+      },
+      "message": "dataset reference cycle detected: g33cycanodes01 -> g33cycbnodes01 -> g33cycanodes01 -> g33cycanodes01",
+      "safe_retry": false,
+      "stage": "validation"
+    },
+    "execution": {
+      "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+      "dirty": false,
+      "idempotency_key": "g33-node-023-C11-cycle-rejected",
+      "job_id": "e24adc04-a307-4d3e-9278-925679c39ed1",
+      "model_ownership": "mcp_owned",
+      "model_ref": {
+        "generation": 1,
+        "model_tag": "mcp1",
+        "schema_version": 1,
+        "server_instance_id": "237819d8578277b3add3cfdf2e7f3d0f2a17c501b57d0354479b209a802719a5",
+        "session_id": "session-9276352a61fee6a4846f92d2"
+      },
+      "operation_id": "66d44587-be8b-4ac6-bbf2-61eb9f96a57b",
+      "request_hash": "5315f098503b5040044ffefd95c52f3a03ae3cdb23cbb3cb3e51a6f19c46d809",
+      "request_id": "g33-node-C11-cycle-rejected",
+      "revision": 12,
+      "server_ownership": "shared",
+      "session_id": "session-9276352a61fee6a4846f92d2"
+    },
+    "success": false
+  },
+  "data": {
+    "cleanup_failed": false,
+    "dispatch_stage": "validation",
+    "domain_outcome": {
+      "cleanup_failed": false,
+      "details": {
+        "status_token": "REFUSED"
+      },
+      "dispatch_stage": "validation",
+      "execution_state_unknown": false,
+      "failure": {
+        "code": "DATASET_CYCLE_DETECTED",
+        "details": {
+          "cycle": [
+            "g33cycanodes01",
+            "g33cycbnodes01",
+            "g33cycanodes01",
+            "g33cycanodes01"
+          ]
+        },
+        "message": "dataset reference cycle detected: g33cycanodes01 -> g33cycbnodes01 -> g33cycanodes01 -> g33cycanodes01",
+        "safe_retry": false
+      },
+      "operation": "dataset.update",
+      "state": "failed",
+      "status_token": "REFUSED",
+      "verification_status": "NOT_APPLICABLE",
+      "witness": {
+        "dispatches": [
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "result",
+            "receiver": "h-d083f2b5-c736-4c02-8add-9a099466f793"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "dataset",
+            "receiver": "h-5d16c33e-29f2-4324-b4d6-0f820501fde8"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "result",
+            "receiver": "h-e124d82b-7c83-4fbc-b44b-a8f4ec0feaf3"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "dataset",
+            "receiver": "h-54e09052-ee04-4178-af27-da22e17e92d5"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "tags",
+            "receiver": "h-9f998cd7-f029-4095-88cb-da88b0ee76fc"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "get",
+            "receiver": "h-9f998cd7-f029-4095-88cb-da88b0ee76fc"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getType",
+            "receiver": "h-bcfd56fd-3843-4bc4-b020-1c40ea4f245c"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getType",
+            "receiver": "h-bcfd56fd-3843-4bc4-b020-1c40ea4f245c"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "result",
+            "receiver": "h-6d9987f1-c5d0-48c0-895e-3043587dddcc"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "dataset",
+            "receiver": "h-f946823c-5ab5-4f49-8123-601cc43f63ac"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "tags",
+            "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "get",
+            "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-25052b71-fd00-4173-87ab-0b1ed2fe6922"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-25052b71-fd00-4173-87ab-0b1ed2fe6922"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "get",
+            "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-e6cdc2d0-dfee-4412-973d-5707b0daa45d"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-e6cdc2d0-dfee-4412-973d-5707b0daa45d"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "get",
+            "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-c8e8cca0-e030-4da0-ad90-beed160f959e"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-c8e8cca0-e030-4da0-ad90-beed160f959e"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "get",
+            "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-c73c70c1-b52b-49d0-9157-9241c2f91101"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-c73c70c1-b52b-49d0-9157-9241c2f91101"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "get",
+            "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-6bd7ca05-b93f-4d0e-9812-e88a15597e7f"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-6bd7ca05-b93f-4d0e-9812-e88a15597e7f"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "get",
+            "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-19da2f7a-ddbb-440a-9913-9d498ed3cf71"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-19da2f7a-ddbb-440a-9913-9d498ed3cf71"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-bcfd56fd-3843-4bc4-b020-1c40ea4f245c"
+          }
+        ],
+        "engine_calls": 30,
+        "methods": [
+          "dataset",
+          "get",
+          "getString",
+          "getType",
+          "result",
+          "tags"
+        ],
+        "mutation_issued": false,
+        "mutation_method": null
+      }
+    },
+    "domain_state": "failed",
+    "effect": "project_write",
+    "execution_state_unknown": false,
+    "isolation_proof": {
+      "api_probe": {
+        "authenticated_api_success": true,
+        "denial_evidence_source": "server_access_log",
+        "loopback_address": "127.0.0.1",
+        "loopback_port": 51787,
+        "nonloopback_address": "192.168.100.152",
+        "nonloopback_api_exception_http_status": null,
+        "nonloopback_port": 51787,
+        "observed_at": "2026-09-22T04:51:51Z",
+        "probe_kind": "comsol_java_api",
+        "server_access_log": {
+          "entries": [
+            {
+              "http_status": 101,
+              "method": "GET",
+              "peer": "127.0.0.1",
+              "route": "/webbridge/websocket"
+            },
+            {
+              "http_status": 101,
+              "method": "GET",
+              "peer": "127.0.0.1",
+              "route": "/webbridge/websocket"
+            },
+            {
+              "http_status": 403,
+              "method": "GET",
+              "peer": "192.168.100.152",
+              "route": "/webbridge/websocket"
+            }
+          ],
+          "finished_at": "2026-09-22T04:51:51Z",
+          "inode": 29938932,
+          "java_request_id": "g2-valve-nonloopback-connect",
+          "offset_after": 261,
+          "offset_before": 0,
+          "parsed_nonloopback_entry": {
+            "http_status": 403,
+            "method": "GET",
+            "peer": "192.168.100.152",
+            "route": "/webbridge/websocket"
+          },
+          "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_nodes_20260922T0510Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+          "phase": "java_connect_only",
+          "raw_probe_started_after_capture": true,
+          "segment_sha256": "ac3b31ea9d4cec809bbcdec128af277b8da27a66dc4f5a2c0c6f5ee101425f9e",
+          "started_at": "2026-09-22T04:51:43Z",
+          "status": "PASS"
+        }
+      },
+      "birth": "Tue Sep 22 12:51:39 2026",
+      "config_inode": 14720294,
+      "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+      "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+      "endpoint": "127.0.0.1:51787",
+      "established_client_pids": [
+        69843,
+        69998
+      ],
+      "listener": {
+        "endpoint": "*:51787",
+        "local_endpoint": "*:51787",
+        "pid": 69843,
+        "raw": "java    69843 everwalker   59u  IPv6 0x895525424979e606      0t0  TCP *:51787 (LISTEN)",
+        "remote_endpoint": null,
+        "state": "LISTEN"
+      },
+      "listener_binding": "wildcard",
+      "loopback_listener": false,
+      "pid": 69843,
+      "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+      "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_nodes_20260922T0510Z/isolation_receipt.json",
+      "verified": true,
+      "worker_pid": 69998
+    },
+    "operation": "dataset.update",
+    "partial_change": false,
+    "refusal": {
+      "code": "DATASET_CYCLE_DETECTED",
+      "details": {
+        "cycle": [
+          "g33cycanodes01",
+          "g33cycbnodes01",
+          "g33cycanodes01",
+          "g33cycanodes01"
+        ]
+      },
+      "message": "dataset reference cycle detected: g33cycanodes01 -> g33cycbnodes01 -> g33cycanodes01 -> g33cycanodes01",
+      "safe_retry": false,
+      "stage": "validation"
+    },
+    "refused": true,
+    "status": "REFUSED",
+    "verification_status": "NOT_APPLICABLE",
+    "verified_outcome": "failed",
+    "witness": {
+      "dispatches": [
+        {
+          "args_count": 0,
+          "command": "call",
+          "is_mutation": false,
+          "method": "result",
+          "receiver": "h-d083f2b5-c736-4c02-8add-9a099466f793"
+        },
+        {
+          "args_count": 1,
+          "command": "call",
+          "is_mutation": false,
+          "method": "dataset",
+          "receiver": "h-5d16c33e-29f2-4324-b4d6-0f820501fde8"
+        },
+        {
+          "args_count": 0,
+          "command": "call",
+          "is_mutation": false,
+          "method": "result",
+          "receiver": "h-e124d82b-7c83-4fbc-b44b-a8f4ec0feaf3"
+        },
+        {
+          "args_count": 0,
+          "command": "call",
+          "is_mutation": false,
+          "method": "dataset",
+          "receiver": "h-54e09052-ee04-4178-af27-da22e17e92d5"
+        },
+        {
+          "args_count": 0,
+          "command": "call",
+          "is_mutation": false,
+          "method": "tags",
+          "receiver": "h-9f998cd7-f029-4095-88cb-da88b0ee76fc"
+        },
+        {
+          "args_count": 1,
+          "command": "call",
+          "is_mutation": false,
+          "method": "get",
+          "receiver": "h-9f998cd7-f029-4095-88cb-da88b0ee76fc"
+        },
+        {
+          "args_count": 0,
+          "command": "call",
+          "is_mutation": false,
+          "method": "getType",
+          "receiver": "h-bcfd56fd-3843-4bc4-b020-1c40ea4f245c"
+        },
+        {
+          "args_count": 0,
+          "command": "call",
+          "is_mutation": false,
+          "method": "getType",
+          "receiver": "h-bcfd56fd-3843-4bc4-b020-1c40ea4f245c"
+        },
+        {
+          "args_count": 0,
+          "command": "call",
+          "is_mutation": false,
+          "method": "result",
+          "receiver": "h-6d9987f1-c5d0-48c0-895e-3043587dddcc"
+        },
+        {
+          "args_count": 0,
+          "command": "call",
+          "is_mutation": false,
+          "method": "dataset",
+          "receiver": "h-f946823c-5ab5-4f49-8123-601cc43f63ac"
+        },
+        {
+          "args_count": 0,
+          "command": "call",
+          "is_mutation": false,
+          "method": "tags",
+          "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+        },
+        {
+          "args_count": 1,
+          "command": "call",
+          "is_mutation": false,
+          "method": "get",
+          "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+        },
+        {
+          "args_count": 1,
+          "command": "call",
+          "is_mutation": false,
+          "method": "getString",
+          "receiver": "h-25052b71-fd00-4173-87ab-0b1ed2fe6922"
+        },
+        {
+          "args_count": 1,
+          "command": "call",
+          "is_mutation": false,
+          "method": "getString",
+          "receiver": "h-25052b71-fd00-4173-87ab-0b1ed2fe6922"
+        },
+        {
+          "args_count": 1,
+          "command": "call",
+          "is_mutation": false,
+          "method": "get",
+          "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+        },
+        {
+          "args_count": 1,
+          "command": "call",
+          "is_mutation": false,
+          "method": "getString",
+          "receiver": "h-e6cdc2d0-dfee-4412-973d-5707b0daa45d"
+        },
+        {
+          "args_count": 1,
+          "command": "call",
+          "is_mutation": false,
+          "method": "getString",
+          "receiver": "h-e6cdc2d0-dfee-4412-973d-5707b0daa45d"
+        },
+        {
+          "args_count": 1,
+          "command": "call",
+          "is_mutation": false,
+          "method": "get",
+          "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+        },
+        {
+          "args_count": 1,
+          "command": "call",
+          "is_mutation": false,
+          "method": "getString",
+          "receiver": "h-c8e8cca0-e030-4da0-ad90-beed160f959e"
+        },
+        {
+          "args_count": 1,
+          "command": "call",
+          "is_mutation": false,
+          "method": "getString",
+          "receiver": "h-c8e8cca0-e030-4da0-ad90-beed160f959e"
+        },
+        {
+          "args_count": 1,
+          "command": "call",
+          "is_mutation": false,
+          "method": "get",
+          "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+        },
+        {
+          "args_count": 1,
+          "command": "call",
+          "is_mutation": false,
+          "method": "getString",
+          "receiver": "h-c73c70c1-b52b-49d0-9157-9241c2f91101"
+        },
+        {
+          "args_count": 1,
+          "command": "call",
+          "is_mutation": false,
+          "method": "getString",
+          "receiver": "h-c73c70c1-b52b-49d0-9157-9241c2f91101"
+        },
+        {
+          "args_count": 1,
+          "command": "call",
+          "is_mutation": false,
+          "method": "get",
+          "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+        },
+        {
+          "args_count": 1,
+          "command": "call",
+          "is_mutation": false,
+          "method": "getString",
+          "receiver": "h-6bd7ca05-b93f-4d0e-9812-e88a15597e7f"
+        },
+        {
+          "args_count": 1,
+          "command": "call",
+          "is_mutation": false,
+          "method": "getString",
+          "receiver": "h-6bd7ca05-b93f-4d0e-9812-e88a15597e7f"
+        },
+        {
+          "args_count": 1,
+          "command": "call",
+          "is_mutation": false,
+          "method": "get",
+          "receiver": "h-66a8bac3-43d3-461b-80c2-fc95bb5517b7"
+        },
+        {
+          "args_count": 1,
+          "command": "call",
+          "is_mutation": false,
+          "method": "getString",
+          "receiver": "h-19da2f7a-ddbb-440a-9913-9d498ed3cf71"
+        },
+        {
+          "args_count": 1,
+          "command": "call",
+          "is_mutation": false,
+          "method": "getString",
+          "receiver": "h-19da2f7a-ddbb-440a-9913-9d498ed3cf71"
+        },
+        {
+          "args_count": 1,
+          "command": "call",
+          "is_mutation": false,
+          "method": "getString",
+          "receiver": "h-bcfd56fd-3843-4bc4-b020-1c40ea4f245c"
+        }
+      ],
+      "engine_calls": 30,
+      "methods": [
+        "dataset",
+        "get",
+        "getString",
+        "getType",
+        "result",
+        "tags"
+      ],
+      "mutation_issued": false,
+      "mutation_method": null
+    }
+  },
+  "error": {
+    "code": "DATASET_CYCLE_DETECTED",
+    "details": {
+      "cycle": [
+        "g33cycanodes01",
+        "g33cycbnodes01",
+        "g33cycanodes01",
+        "g33cycanodes01"
+      ]
+    },
+    "message": "dataset reference cycle detected: g33cycanodes01 -> g33cycbnodes01 -> g33cycanodes01 -> g33cycanodes01",
+    "safe_retry": false,
+    "stage": "validation"
+  },
+  "execution": {
+    "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+    "dirty": false,
+    "idempotency_key": "g33-node-023-C11-cycle-rejected",
+    "job_id": "e24adc04-a307-4d3e-9278-925679c39ed1",
+    "model_ownership": "mcp_owned",
+    "model_ref": {
+      "generation": 1,
+      "model_tag": "mcp1",
+      "schema_version": 1,
+      "server_instance_id": "237819d8578277b3add3cfdf2e7f3d0f2a17c501b57d0354479b209a802719a5",
+      "session_id": "session-9276352a61fee6a4846f92d2"
+    },
+    "operation_id": "66d44587-be8b-4ac6-bbf2-61eb9f96a57b",
+    "request_hash": "5315f098503b5040044ffefd95c52f3a03ae3cdb23cbb3cb3e51a6f19c46d809",
+    "request_id": "g33-node-C11-cycle-rejected",
+    "revision": 12,
+    "server_ownership": "shared",
+    "session_id": "session-9276352a61fee6a4846f92d2"
+  },
+  "success": false
+}

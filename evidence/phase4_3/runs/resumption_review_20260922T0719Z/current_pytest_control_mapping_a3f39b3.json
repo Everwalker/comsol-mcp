@@ -1,0 +1,572 @@
+{
+  "schema": "comsol-mcp-g3/phase4_3-current-pytest-control-mapping/1",
+  "status": "PASS",
+  "scope": "current a3 full pytest JUnit extraction for software controls only",
+  "source_identity": {
+    "commit": "a3f39b3022b417e16c3087b8b35f1daa06f30b8a",
+    "tree": "5a3e1b72e95a9df8892def2ca0994a8737508612",
+    "source_scope_clean": true
+  },
+  "source_manifests": {
+    "start": {
+      "path": "evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z/source_manifest_start.json",
+      "sha256": "6259d60cc0c8fd60e556961996b7070912877cfdf263a94e67556445bd7dc32e"
+    },
+    "end": {
+      "path": "evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z/source_manifest_end.json",
+      "sha256": "25faafb5771af9ceafe761291cf0cffffdf3a0f5f0a1b1dd7bd1f355cebb8ebc"
+    },
+    "diff": {
+      "path": "evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z/source_manifest_diff.json",
+      "sha256": "58186f4ea4872b14dbe591011805d8ad0aeb41393dd8b3293e8398bb62f434f8"
+    }
+  },
+  "run": {
+    "run_status": {
+      "path": "evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z/run_status.json",
+      "sha256": "5c36c5a41214370b9e7326a532fece77ca1529d6944e6b2684f3103628cf1f7d"
+    },
+    "commands": {
+      "path": "evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z/commands.json",
+      "sha256": "f7255dd0ef7f0207d80e2f62e25d6e0cc55d6933775e3e7948f4e8b2803a9361"
+    },
+    "junit": {
+      "path": "evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z/junit.xml",
+      "sha256": "0a12c73ece93024ad51c92302add0ba8c70b51684485206448cbaf2d76dc65e9"
+    },
+    "run_id": "full_pytest_a3f39b3_20260922T090916Z",
+    "status": "PASS",
+    "counts": {
+      "errors": 0,
+      "failed": 0,
+      "passed": 1824,
+      "skipped": 1
+    },
+    "software_scope": "software pytest only; no COMSOL server lifecycle or ModelUtil.connect",
+    "comsol_started": false,
+    "modelutil_connect_called": false
+  },
+  "controls": {
+    "C02": {
+      "status": "PASS",
+      "scope": "offline/software control only; does not establish COMSOL live, fresh-worker reopen, or physical acceptance",
+      "all_selected_cases_pass": true,
+      "requested_bases": [
+        "tests.test_g3_results::test_a_removal_failure_is_reported_as_an_unknown_execution_state",
+        "tests.test_g3_results::test_a_create_failure_is_reported_without_claiming_a_change",
+        "tests.test_g3_results::test_a_create_that_fails_but_still_creates_is_reconciled_and_removed",
+        "tests.test_g3_results::test_get_data_refused_by_the_worker_is_reported_with_its_allowlist_entry",
+        "tests.test_g3_results::test_non_finite_sample_values_are_refused_instead_of_published",
+        "tests.test_g3_phase4_request_chain::test_a_retry_reuses_its_key_only_with_an_identical_body",
+        "tests.test_g3_phase4_request_chain::test_an_unfinished_job_is_resolved_through_its_own_query_first",
+        "tests.test_g3_phase4_reconcile_and_probes::test_unknown_outcome_classification",
+        "tests.test_g3_phase4_reconcile_and_probes::test_a_first_hand_unknown_result_is_never_replayed",
+        "tests.test_m1_product_repairs::test_a_failed_cleanup_publishes_the_leaked_node_and_reaches_unknown_through_c01",
+        "tests.test_w04_safety::test_t033_preserves_primary_and_cleanup_errors"
+      ],
+      "junit_cases": [
+        {
+          "nodeid": "tests.test_g3_results::test_a_removal_failure_is_reported_as_an_unknown_execution_state",
+          "classname": "tests.test_g3_results",
+          "name": "test_a_removal_failure_is_reported_as_an_unknown_execution_state",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C02"
+        },
+        {
+          "nodeid": "tests.test_g3_results::test_a_create_failure_is_reported_without_claiming_a_change",
+          "classname": "tests.test_g3_results",
+          "name": "test_a_create_failure_is_reported_without_claiming_a_change",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C02"
+        },
+        {
+          "nodeid": "tests.test_g3_results::test_a_create_that_fails_but_still_creates_is_reconciled_and_removed",
+          "classname": "tests.test_g3_results",
+          "name": "test_a_create_that_fails_but_still_creates_is_reconciled_and_removed",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C02"
+        },
+        {
+          "nodeid": "tests.test_g3_results::test_get_data_refused_by_the_worker_is_reported_with_its_allowlist_entry",
+          "classname": "tests.test_g3_results",
+          "name": "test_get_data_refused_by_the_worker_is_reported_with_its_allowlist_entry",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C02"
+        },
+        {
+          "nodeid": "tests.test_g3_results::test_non_finite_sample_values_are_refused_instead_of_published",
+          "classname": "tests.test_g3_results",
+          "name": "test_non_finite_sample_values_are_refused_instead_of_published",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C02"
+        },
+        {
+          "nodeid": "tests.test_g3_phase4_request_chain::test_a_retry_reuses_its_key_only_with_an_identical_body",
+          "classname": "tests.test_g3_phase4_request_chain",
+          "name": "test_a_retry_reuses_its_key_only_with_an_identical_body",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C02"
+        },
+        {
+          "nodeid": "tests.test_g3_phase4_request_chain::test_an_unfinished_job_is_resolved_through_its_own_query_first",
+          "classname": "tests.test_g3_phase4_request_chain",
+          "name": "test_an_unfinished_job_is_resolved_through_its_own_query_first",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C02"
+        },
+        {
+          "nodeid": "tests.test_g3_phase4_reconcile_and_probes::test_unknown_outcome_classification",
+          "classname": "tests.test_g3_phase4_reconcile_and_probes",
+          "name": "test_unknown_outcome_classification",
+          "state": "PASS",
+          "time_seconds": 0.004,
+          "control_id": "C02"
+        },
+        {
+          "nodeid": "tests.test_g3_phase4_reconcile_and_probes::test_a_first_hand_unknown_result_is_never_replayed",
+          "classname": "tests.test_g3_phase4_reconcile_and_probes",
+          "name": "test_a_first_hand_unknown_result_is_never_replayed",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C02"
+        },
+        {
+          "nodeid": "tests.test_m1_product_repairs::test_a_failed_cleanup_publishes_the_leaked_node_and_reaches_unknown_through_c01",
+          "classname": "tests.test_m1_product_repairs",
+          "name": "test_a_failed_cleanup_publishes_the_leaked_node_and_reaches_unknown_through_c01",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C02"
+        },
+        {
+          "nodeid": "tests.test_w04_safety::test_t033_preserves_primary_and_cleanup_errors",
+          "classname": "tests.test_w04_safety",
+          "name": "test_t033_preserves_primary_and_cleanup_errors",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C02"
+        }
+      ],
+      "test_file_hashes": {
+        "tests/test_g3_phase4_reconcile_and_probes.py": "c4947bfe5946af6cde347b70e68eadeed96ad25b6d1b0387c34a42b6f1bb9a56",
+        "tests/test_g3_phase4_request_chain.py": "a1f15c197b8e0b198b75a9728368c984cc7f305ea4d9d2890bf6b2a92ea4cbd8",
+        "tests/test_g3_results.py": "8988e19af3e51b8faadad411e0ef4855b4f7bc8209bbc3fb538259efd8b73951",
+        "tests/test_m1_product_repairs.py": "115c04ee7ccd772b80138e62964d0a6f25425954c81d96f8719c28b395c2ef5a",
+        "tests/test_w04_safety.py": "d81c1cbbd2aa55577176dddfd12058d29e3eca3211e0cd179a2ec848f229a202"
+      },
+      "live_fault_injector": {
+        "status": "NOT_RUN",
+        "reason": "This run is software-only; commands.comsol_started=false and modelutil_connect_called=false. No live cleanup-failure injector was run."
+      }
+    },
+    "C09": {
+      "status": "PASS",
+      "scope": "offline/software control only; does not establish COMSOL live, fresh-worker reopen, or physical acceptance",
+      "all_selected_cases_pass": true,
+      "requested_bases": [
+        "tests.test_g3_3_core_numeric_contracts::test_field_array_complex_flag_describes_published_values",
+        "tests.test_g3_3_core_numeric_contracts::test_unknown_complex_status_cannot_zero_pad_missing_imaginary_data",
+        "tests.test_g3_3_core_numeric_contracts::test_complex_aggregate_uses_one_native_effective_expression",
+        "tests.test_g3_3_core_numeric_contracts::test_bound_aggregate_feature_uses_outer_aware_native_getters",
+        "tests.test_g3_3_remediation::test_complex_transformation_strictness",
+        "tests.test_g3_artifact_hardening::test_csv_flattens_complex_four_axis_field_array_with_units_and_coords",
+        "tests.test_g3_artifact_hardening::test_csv_has_explicit_axes_and_complex_columns",
+        "tests.test_g3_results::test_complex_data_is_flagged_and_the_real_part_is_returned",
+        "tests.test_g3_results::test_get_data_refused_by_the_worker_is_reported_with_its_allowlist_entry",
+        "tests.test_g3_results::test_coordinate_readback_with_the_wrong_shape_is_a_mismatch_with_its_own_code",
+        "tests.test_g3_results::test_coordinate_readback_unavailable_is_reported_with_the_missing_allowlist_entry",
+        "tests.test_g3_w17::test_result_evaluate_complex_field_modes",
+        "tests.test_g3_w17::test_complex_phase_std_transforms_before_statistics",
+        "tests.test_g3_w17::test_result_at_points_rejects_aggregate_getreal_for_multiple_points",
+        "tests.test_probe_semantics::test_history_reads_real_complex_table_and_paginates_without_gen_result",
+        "tests.test_result_budget::test_complex_interp_budget_accounts_for_both_transport_arrays",
+        "tests.test_w04_safety::test_complex_value_has_real_and_imaginary_parts",
+        "tests.test_w04_safety::test_complex_structure_survives_coercion",
+        "tests.test_w04_safety::test_solution_selection_preserves_field_axis_and_complex_parts",
+        "tests.test_results_typed_crud::test_table_inspect_cannot_infer_real_from_null_imaginary_and_missing_complex_flag",
+        "tests.test_results_typed_crud::test_table_real_only_accepts_exact_zero_imaginary_when_complex_flag_is_unavailable",
+        "tests.test_results_typed_crud::test_dataset_inspect_reports_property_getter_failure_without_raising",
+        "tests.test_results_typed_crud::test_table_get_and_list_publish_unreadable_complex_readback"
+      ],
+      "junit_cases": [
+        {
+          "nodeid": "tests.test_g3_3_core_numeric_contracts::test_field_array_complex_flag_describes_published_values",
+          "classname": "tests.test_g3_3_core_numeric_contracts",
+          "name": "test_field_array_complex_flag_describes_published_values",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C09"
+        },
+        {
+          "nodeid": "tests.test_g3_3_core_numeric_contracts::test_unknown_complex_status_cannot_zero_pad_missing_imaginary_data",
+          "classname": "tests.test_g3_3_core_numeric_contracts",
+          "name": "test_unknown_complex_status_cannot_zero_pad_missing_imaginary_data",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C09"
+        },
+        {
+          "nodeid": "tests.test_g3_3_core_numeric_contracts::test_complex_aggregate_uses_one_native_effective_expression",
+          "classname": "tests.test_g3_3_core_numeric_contracts",
+          "name": "test_complex_aggregate_uses_one_native_effective_expression",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C09"
+        },
+        {
+          "nodeid": "tests.test_g3_3_core_numeric_contracts::test_bound_aggregate_feature_uses_outer_aware_native_getters",
+          "classname": "tests.test_g3_3_core_numeric_contracts",
+          "name": "test_bound_aggregate_feature_uses_outer_aware_native_getters",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C09"
+        },
+        {
+          "nodeid": "tests.test_g3_3_remediation::test_complex_transformation_strictness",
+          "classname": "tests.test_g3_3_remediation",
+          "name": "test_complex_transformation_strictness",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C09"
+        },
+        {
+          "nodeid": "tests.test_g3_artifact_hardening::test_csv_flattens_complex_four_axis_field_array_with_units_and_coords",
+          "classname": "tests.test_g3_artifact_hardening",
+          "name": "test_csv_flattens_complex_four_axis_field_array_with_units_and_coords",
+          "state": "PASS",
+          "time_seconds": 0.015,
+          "control_id": "C09"
+        },
+        {
+          "nodeid": "tests.test_g3_artifact_hardening::test_csv_has_explicit_axes_and_complex_columns",
+          "classname": "tests.test_g3_artifact_hardening",
+          "name": "test_csv_has_explicit_axes_and_complex_columns",
+          "state": "PASS",
+          "time_seconds": 0.003,
+          "control_id": "C09"
+        },
+        {
+          "nodeid": "tests.test_g3_results::test_complex_data_is_flagged_and_the_real_part_is_returned",
+          "classname": "tests.test_g3_results",
+          "name": "test_complex_data_is_flagged_and_the_real_part_is_returned",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C09"
+        },
+        {
+          "nodeid": "tests.test_g3_results::test_get_data_refused_by_the_worker_is_reported_with_its_allowlist_entry",
+          "classname": "tests.test_g3_results",
+          "name": "test_get_data_refused_by_the_worker_is_reported_with_its_allowlist_entry",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C09"
+        },
+        {
+          "nodeid": "tests.test_g3_results::test_coordinate_readback_with_the_wrong_shape_is_a_mismatch_with_its_own_code",
+          "classname": "tests.test_g3_results",
+          "name": "test_coordinate_readback_with_the_wrong_shape_is_a_mismatch_with_its_own_code",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C09"
+        },
+        {
+          "nodeid": "tests.test_g3_results::test_coordinate_readback_unavailable_is_reported_with_the_missing_allowlist_entry",
+          "classname": "tests.test_g3_results",
+          "name": "test_coordinate_readback_unavailable_is_reported_with_the_missing_allowlist_entry",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C09"
+        },
+        {
+          "nodeid": "tests.test_g3_w17::test_result_evaluate_complex_field_modes",
+          "classname": "tests.test_g3_w17",
+          "name": "test_result_evaluate_complex_field_modes",
+          "state": "PASS",
+          "time_seconds": 0.001,
+          "control_id": "C09"
+        },
+        {
+          "nodeid": "tests.test_g3_w17::test_complex_phase_std_transforms_before_statistics",
+          "classname": "tests.test_g3_w17",
+          "name": "test_complex_phase_std_transforms_before_statistics",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C09"
+        },
+        {
+          "nodeid": "tests.test_g3_w17::test_result_at_points_rejects_aggregate_getreal_for_multiple_points",
+          "classname": "tests.test_g3_w17",
+          "name": "test_result_at_points_rejects_aggregate_getreal_for_multiple_points",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C09"
+        },
+        {
+          "nodeid": "tests.test_probe_semantics::test_history_reads_real_complex_table_and_paginates_without_gen_result",
+          "classname": "tests.test_probe_semantics",
+          "name": "test_history_reads_real_complex_table_and_paginates_without_gen_result",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C09"
+        },
+        {
+          "nodeid": "tests.test_result_budget::test_complex_interp_budget_accounts_for_both_transport_arrays",
+          "classname": "tests.test_result_budget",
+          "name": "test_complex_interp_budget_accounts_for_both_transport_arrays",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C09"
+        },
+        {
+          "nodeid": "tests.test_w04_safety::test_complex_value_has_real_and_imaginary_parts",
+          "classname": "tests.test_w04_safety",
+          "name": "test_complex_value_has_real_and_imaginary_parts",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C09"
+        },
+        {
+          "nodeid": "tests.test_w04_safety::test_complex_structure_survives_coercion",
+          "classname": "tests.test_w04_safety",
+          "name": "test_complex_structure_survives_coercion",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C09"
+        },
+        {
+          "nodeid": "tests.test_w04_safety::test_solution_selection_preserves_field_axis_and_complex_parts",
+          "classname": "tests.test_w04_safety",
+          "name": "test_solution_selection_preserves_field_axis_and_complex_parts",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C09"
+        },
+        {
+          "nodeid": "tests.test_results_typed_crud::test_table_inspect_cannot_infer_real_from_null_imaginary_and_missing_complex_flag",
+          "classname": "tests.test_results_typed_crud",
+          "name": "test_table_inspect_cannot_infer_real_from_null_imaginary_and_missing_complex_flag",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C09"
+        },
+        {
+          "nodeid": "tests.test_results_typed_crud::test_table_real_only_accepts_exact_zero_imaginary_when_complex_flag_is_unavailable",
+          "classname": "tests.test_results_typed_crud",
+          "name": "test_table_real_only_accepts_exact_zero_imaginary_when_complex_flag_is_unavailable",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C09"
+        },
+        {
+          "nodeid": "tests.test_results_typed_crud::test_dataset_inspect_reports_property_getter_failure_without_raising",
+          "classname": "tests.test_results_typed_crud",
+          "name": "test_dataset_inspect_reports_property_getter_failure_without_raising",
+          "state": "PASS",
+          "time_seconds": 0.001,
+          "control_id": "C09"
+        },
+        {
+          "nodeid": "tests.test_results_typed_crud::test_table_get_and_list_publish_unreadable_complex_readback",
+          "classname": "tests.test_results_typed_crud",
+          "name": "test_table_get_and_list_publish_unreadable_complex_readback",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C09"
+        }
+      ],
+      "test_file_hashes": {
+        "tests/test_g3_3_core_numeric_contracts.py": "ac65ea8db65121b1ac2a29da9ef2bcf5185f95ad1567481989bed1e0d9b8a2a9",
+        "tests/test_g3_3_remediation.py": "91f7bef091e74c713bb83af71fa4f71b850e3ff47ad2d3772f24563b430cb124",
+        "tests/test_g3_artifact_hardening.py": "ac077e13006f74bc711c2626e5983b71614c3db3791573f3d6df0b312ece897d",
+        "tests/test_g3_results.py": "8988e19af3e51b8faadad411e0ef4855b4f7bc8209bbc3fb538259efd8b73951",
+        "tests/test_g3_w17.py": "698c4c920884e04a2e5bb77b1ceba0eb0c3de1d79b04de1cc9ad88092f91ffa7",
+        "tests/test_probe_semantics.py": "b29e39d9709071c8c1acceb714bf89e8786d97f0ed8b9f0ee3f0cb0f5f2fd935",
+        "tests/test_result_budget.py": "47e57920846b5a711840fc51fdcf5377784a97ed253d854739640d61944af896",
+        "tests/test_results_typed_crud.py": "359ed4c1cca21845167fea99a89aa54e3410411cad6423f2c7a24e514576dbde",
+        "tests/test_w04_safety.py": "d81c1cbbd2aa55577176dddfd12058d29e3eca3211e0cd179a2ec848f229a202"
+      }
+    },
+    "C10": {
+      "status": "PASS",
+      "scope": "offline/software control only; does not establish COMSOL live, fresh-worker reopen, or physical acceptance",
+      "all_selected_cases_pass": true,
+      "requested_bases": [
+        "tests.test_g3_results::test_bad_path_coordinates_are_refused",
+        "tests.test_g3_results::test_path_dimension_must_match_the_geometry",
+        "tests.test_g3_results::test_unsupported_path_kinds_are_refused_before_any_engine_call",
+        "tests.test_g3_results::test_units_echo_the_model_length_unit_and_the_engine_expression_unit",
+        "tests.test_g3_results::test_requested_expression_units_are_written_with_set_index",
+        "tests.test_g3_results::test_unit_readback_names_every_unit_source_and_never_converts",
+        "tests.test_g3_results::test_unit_readback_reports_an_unknown_expression_unit_as_null_instead_of_guessing",
+        "tests.test_g3_results::test_coordinate_readback_mismatch_fails_verification_and_stays_in_status_failed",
+        "tests.test_g3_results::test_coordinate_readback_with_the_wrong_shape_is_a_mismatch_with_its_own_code"
+      ],
+      "junit_cases": [
+        {
+          "nodeid": "tests.test_g3_results::test_bad_path_coordinates_are_refused[000-end3]",
+          "classname": "tests.test_g3_results",
+          "name": "test_bad_path_coordinates_are_refused[000-end3]",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C10"
+        },
+        {
+          "nodeid": "tests.test_g3_results::test_bad_path_coordinates_are_refused[start0-end0]",
+          "classname": "tests.test_g3_results",
+          "name": "test_bad_path_coordinates_are_refused[start0-end0]",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C10"
+        },
+        {
+          "nodeid": "tests.test_g3_results::test_bad_path_coordinates_are_refused[start1-end1]",
+          "classname": "tests.test_g3_results",
+          "name": "test_bad_path_coordinates_are_refused[start1-end1]",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C10"
+        },
+        {
+          "nodeid": "tests.test_g3_results::test_bad_path_coordinates_are_refused[start2-end2]",
+          "classname": "tests.test_g3_results",
+          "name": "test_bad_path_coordinates_are_refused[start2-end2]",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C10"
+        },
+        {
+          "nodeid": "tests.test_g3_results::test_bad_path_coordinates_are_refused[start4-end4]",
+          "classname": "tests.test_g3_results",
+          "name": "test_bad_path_coordinates_are_refused[start4-end4]",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C10"
+        },
+        {
+          "nodeid": "tests.test_g3_results::test_bad_path_coordinates_are_refused[start5-end5]",
+          "classname": "tests.test_g3_results",
+          "name": "test_bad_path_coordinates_are_refused[start5-end5]",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C10"
+        },
+        {
+          "nodeid": "tests.test_g3_results::test_bad_path_coordinates_are_refused[start6-end6]",
+          "classname": "tests.test_g3_results",
+          "name": "test_bad_path_coordinates_are_refused[start6-end6]",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C10"
+        },
+        {
+          "nodeid": "tests.test_g3_results::test_path_dimension_must_match_the_geometry",
+          "classname": "tests.test_g3_results",
+          "name": "test_path_dimension_must_match_the_geometry",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C10"
+        },
+        {
+          "nodeid": "tests.test_g3_results::test_unsupported_path_kinds_are_refused_before_any_engine_call[]",
+          "classname": "tests.test_g3_results",
+          "name": "test_unsupported_path_kinds_are_refused_before_any_engine_call[]",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C10"
+        },
+        {
+          "nodeid": "tests.test_g3_results::test_unsupported_path_kinds_are_refused_before_any_engine_call[arc]",
+          "classname": "tests.test_g3_results",
+          "name": "test_unsupported_path_kinds_are_refused_before_any_engine_call[arc]",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C10"
+        },
+        {
+          "nodeid": "tests.test_g3_results::test_unsupported_path_kinds_are_refused_before_any_engine_call[curve]",
+          "classname": "tests.test_g3_results",
+          "name": "test_unsupported_path_kinds_are_refused_before_any_engine_call[curve]",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C10"
+        },
+        {
+          "nodeid": "tests.test_g3_results::test_unsupported_path_kinds_are_refused_before_any_engine_call[polyline]",
+          "classname": "tests.test_g3_results",
+          "name": "test_unsupported_path_kinds_are_refused_before_any_engine_call[polyline]",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C10"
+        },
+        {
+          "nodeid": "tests.test_g3_results::test_unsupported_path_kinds_are_refused_before_any_engine_call[spiral]",
+          "classname": "tests.test_g3_results",
+          "name": "test_unsupported_path_kinds_are_refused_before_any_engine_call[spiral]",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C10"
+        },
+        {
+          "nodeid": "tests.test_g3_results::test_units_echo_the_model_length_unit_and_the_engine_expression_unit",
+          "classname": "tests.test_g3_results",
+          "name": "test_units_echo_the_model_length_unit_and_the_engine_expression_unit",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C10"
+        },
+        {
+          "nodeid": "tests.test_g3_results::test_requested_expression_units_are_written_with_set_index",
+          "classname": "tests.test_g3_results",
+          "name": "test_requested_expression_units_are_written_with_set_index",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C10"
+        },
+        {
+          "nodeid": "tests.test_g3_results::test_unit_readback_names_every_unit_source_and_never_converts",
+          "classname": "tests.test_g3_results",
+          "name": "test_unit_readback_names_every_unit_source_and_never_converts",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C10"
+        },
+        {
+          "nodeid": "tests.test_g3_results::test_unit_readback_reports_an_unknown_expression_unit_as_null_instead_of_guessing",
+          "classname": "tests.test_g3_results",
+          "name": "test_unit_readback_reports_an_unknown_expression_unit_as_null_instead_of_guessing",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C10"
+        },
+        {
+          "nodeid": "tests.test_g3_results::test_coordinate_readback_mismatch_fails_verification_and_stays_in_status_failed",
+          "classname": "tests.test_g3_results",
+          "name": "test_coordinate_readback_mismatch_fails_verification_and_stays_in_status_failed",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C10"
+        },
+        {
+          "nodeid": "tests.test_g3_results::test_coordinate_readback_with_the_wrong_shape_is_a_mismatch_with_its_own_code",
+          "classname": "tests.test_g3_results",
+          "name": "test_coordinate_readback_with_the_wrong_shape_is_a_mismatch_with_its_own_code",
+          "state": "PASS",
+          "time_seconds": 0.0,
+          "control_id": "C10"
+        }
+      ],
+      "test_file_hashes": {
+        "tests/test_g3_results.py": "8988e19af3e51b8faadad411e0ef4855b4f7bc8209bbc3fb538259efd8b73951"
+      }
+    }
+  },
+  "overall_selected_controls_pass": true,
+  "interpretation": "Current JUnit names and PASS states are bound to this run and to the a3 source manifests. These controls support the mapping only; they do not promote software fixtures to native COMSOL or physical acceptance."
+}

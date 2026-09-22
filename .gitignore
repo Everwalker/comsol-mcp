@@ -39,3 +39,44 @@ Thumbs.db
 # G3 task-owned runtime state (private control homes and worker sandboxes).
 .g3-private/
 mcp-home/
+
+# Result artifacts published at run time (the ledger pins them by path + digest).
+g2_artifacts/
+
+# Run-local working state under evidence/phase4_3/runs/<run_id>/: a run tracks its
+# evidence documents (result.json, assertions.json, runner.log, source_manifest.json,
+# environment.json, case_inventory.json, SHA256SUMS.json, RUN_NOTES.md) and nothing
+# else.  The engine's own working state -- private prefs/workspace, locks, compiled
+# worker classes, generated builders, the acceptance venvs and the solved models --
+# stays local: committing COMSOL's runtime workspace or a lock file is not evidence.
+evidence/phase4_3/runs/*/artifacts/
+evidence/phase4_3/runs/*/prefs/
+evidence/phase4_3/runs/*/tmp/
+evidence/phase4_3/runs/*/locks/
+evidence/phase4_3/runs/*/recovery/
+evidence/phase4_3/runs/*/worker_*/
+evidence/phase4_3/runs/*/test_venv/
+evidence/phase4_3/runs/*/wheel_dist/
+evidence/phase4_3/runs/*/c16_wheel_dist/
+evidence/phase4_3/runs/*/neutral_cwd/
+evidence/phase4_3/runs/*/*.java
+evidence/phase4_3/runs/*/server.port
+evidence/phase4_3/runs/*/mphserver.log
+
+# Independent acceptance: local runtime, credentials, interpreters and binaries.
+# Public command/results summaries retain hashes of excluded raw artifacts.
+evidence/phase4_3/runs/*/private/
+evidence/phase4_3/runs/*/software_venv/
+evidence/phase4_3/runs/*/wheel_venv/
+evidence/phase4_3/runs/*/install_venv/
+evidence/phase4_3/runs/*/java_classes/
+evidence/phase4_3/runs/*/javac_classes/
+release/
+evidence/phase4_3/runs/*/control-private/
+# Disposable packaging source copies retain their own manifests locally.
+# Do not publish duplicated historical binaries/evidence from wheel staging.
+evidence/phase4_3/runs/*/source_stage/
+# Verification scratch trees and wheels are local; publish their receipts/hashes.
+evidence/phase4_3/runs/*/pytest_tmp/
+evidence/phase4_3/runs/*/clean_recovery/
+evidence/phase4_3/runs/*/wheelhouse/

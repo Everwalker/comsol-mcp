@@ -1,0 +1,32 @@
+{
+  "commands": [
+    {
+      "argv": [
+        "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_g3_artifact_hardening.py",
+        "tests/test_g3_d17_artifact_service.py",
+        "tests/test_g3_3_remediation.py",
+        "tests/test_g33_export_cases.py",
+        "tests/test_result_budget.py"
+      ],
+      "exit_code": 0,
+      "stdout_file": "targeted_pytest.log"
+    },
+    {
+      "argv": [
+        "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/bin/python",
+        "-m",
+        "pytest",
+        "-q"
+      ],
+      "exit_code": 2,
+      "observed_summary": "532 passed, 2 failed, 4 errors in 209.57s; keyboard interrupt while integration test waited",
+      "status": "interrupted_after_environment_hang"
+    }
+  ],
+  "cwd": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository",
+  "interpreter": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/bin/python"
+}

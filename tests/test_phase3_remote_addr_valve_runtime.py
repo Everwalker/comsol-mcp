@@ -360,7 +360,7 @@ def test_probe_producer_emits_comsol_java_api_shape_for_consumer(monkeypatch: py
     monkeypatch.setattr(runtime, "PersistentJavaWorker", FakeWorker)
     monkeypatch.setattr(runtime, "_current_nonloopback_ipv4", lambda: "192.168.100.152")
     monkeypatch.setattr(runtime, "_access_log_path", lambda _run_dir: access_log)
-    monkeypatch.setattr(runtime, "_socket_rows", lambda: local_rows if len(FakeWorker.instances) == 1 else [local_rows[0]])
+    monkeypatch.setattr(runtime, "_socket_rows", lambda port=PORT: local_rows if len(FakeWorker.instances) == 1 else [local_rows[0]])
     monkeypatch.setattr(
         runtime,
         "_websocket_api_probe",

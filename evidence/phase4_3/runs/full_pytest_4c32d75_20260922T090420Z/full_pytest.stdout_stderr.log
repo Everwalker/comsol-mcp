@@ -1,0 +1,60 @@
+........................................................................ [  3%]
+........................................................................ [  7%]
+........................................................................ [ 11%]
+........................................................................ [ 15%]
+........................................................................ [ 19%]
+........................................................................ [ 23%]
+........................................................................ [ 27%]
+........................................................................ [ 31%]
+........................................................................ [ 35%]
+........................................................................ [ 39%]
+........................................................................ [ 43%]
+........................................................................ [ 47%]
+........................................................................ [ 51%]
+........................................................................ [ 55%]
+........................................................................ [ 59%]
+........................................................................ [ 63%]
+........................................................................ [ 67%]
+........................................................................ [ 71%]
+........................................................................ [ 74%]
+........................................................................ [ 78%]
+........................................................................ [ 82%]
+...............s.........F.............................................. [ 86%]
+........................................................................ [ 90%]
+........................................................................ [ 94%]
+........................................................................ [ 98%]
+.........................                                                [100%]
+=================================== FAILURES ===================================
+____ TestWorkerAllowlist.test_every_dispatched_engine_method_is_allowlisted ____
+
+self = <tests.test_java_worker.TestWorkerAllowlist object at 0x10d928f50>
+
+    def test_every_dispatched_engine_method_is_allowlisted(self):
+        methods = _allowlist_block("METHODS")
+        model_util = _allowlist_block("MODEL_UTIL")
+        dispatched = _dispatched_engine_methods()
+        missing = {name: sorted(where)[:3] for name, where in dispatched.items()
+                   if name not in methods | model_util
+                   and name not in KNOWN_NON_API_PROBES
+                   and name not in WITHHELD_PENDING_TABLE_REPAIR}
+>       assert not missing, (
+            "these engine methods are dispatched by the G3 modules but the worker allow-list would reject "
+            f"them with METHOD_REJECTED: {missing}"
+        )
+E       AssertionError: these engine methods are dispatched by the G3 modules but the worker allow-list would reject them with METHOD_REJECTED: {'getTag': ['_g3_results.py:5489']}
+E       assert not {'getTag': ['_g3_results.py:5489']}
+
+tests/test_java_worker.py:591: AssertionError
+=============================== warnings summary ===============================
+tests/test_g3_phase4_driver.py:205
+  /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tests/test_g3_phase4_driver.py:205: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+tests/test_g3_phase4_m1_fixes.py:1060
+  /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tests/test_g3_phase4_m1_fixes.py:1060: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_java_worker.py::TestWorkerAllowlist::test_every_dispatched_engine_method_is_allowlisted
+1 failed, 1823 passed, 1 skipped, 2 warnings in 20.22s

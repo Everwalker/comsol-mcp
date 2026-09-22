@@ -552,6 +552,16 @@ class TestSmallValidators:
         assert described["code"] == "METHOD_REJECTED"
         assert described["allowlist_entry_required"] == "group"
         assert "group" in described["message"]
+        assert described["execution_state_unknown"] is False
+
+    def test_describe_engine_failure_preserves_structured_unknown_from_worker_reply(self):
+        exc = FakeEngineError("FlException: solve state unresolved",
+                              code="ENGINE_CALL_FAILED")
+        exc.reply["execution_state_unknown"] = True
+        exc.failure["execution_state_unknown"] = True
+        described = common.describe_engine_failure(exc, "run")
+        assert described["code"] == "ENGINE_CALL_FAILED"
+        assert described["execution_state_unknown"] is True
 
     def test_entity_list_hash_is_a_stable_digest_of_the_normalised_list(self):
         normalised = common.require_entity_id_array([3, 2, 1], "entities")

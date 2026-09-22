@@ -1,0 +1,19 @@
+{
+  "status": "CONFIRMED_CODE_DEFECT_REPAIR_IN_PROGRESS",
+  "source_commit": "032c0a5c31ae80361892338fbe606bd7e9d91fb9",
+  "first_failure": "evidence/phase4_3/runs/final3_nodes_032c0a5_20260922T0813Z/nodes/responses/g33-node-031-C14-complex-table-sentinel-create.json",
+  "sha256": "6214494628ddeb48a7a2956e433637167ba5564eb7c2583b4d076188151007ae",
+  "observed": {
+    "public_success": false,
+    "inner_ok": true,
+    "final_match": null,
+    "public_readback_match": false,
+    "step_matches": [
+      true,
+      true
+    ]
+  },
+  "root_cause": "Final table create/set readback omits requested target; match None is coerced to false by completion, yielding public partial outcome despite correct per-step writes. Subsequent revision conflicts are a cascade, not independent numerical failures.",
+  "correction": "Compare all requested values on final readback, preserve unset comparison for inspection, test public classifier plus cross-step corruption.",
+  "prior_software_result": "1816 passed, 1 Windows-only skipped; this result alone does not certify native correctness."
+}

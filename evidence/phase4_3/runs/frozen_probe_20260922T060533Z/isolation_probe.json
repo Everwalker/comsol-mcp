@@ -1,0 +1,205 @@
+{
+  "schema_version": 3,
+  "status": "PASS",
+  "probe_kind": "comsol_java_api",
+  "kind": "remote_addr_valve",
+  "source": "COMSOL Java API via fresh PersistentJavaWorker processes; WebSocket route /webbridge/websocket",
+  "observed_at": "2026-09-22T06:06:17Z",
+  "pid": 92004,
+  "birth": "Tue Sep 22 14:06:04 2026",
+  "process": {
+    "pid": 92004,
+    "birth": "Tue Sep 22 14:06:04 2026"
+  },
+  "port": 58085,
+  "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+  "target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+  "config_guard": "actual webbridge RemoteAddrValve proposal hash and original hash verified",
+  "api_route": "/webbridge/websocket",
+  "listener_binding": "wildcard_or_platform_listener; address filtering is separate from socket binding",
+  "credentials_source": "same private prefs and auto-login credential file for both fresh Workers; material not recorded",
+  "loopback": {
+    "status": "PASS",
+    "address": "127.0.0.1",
+    "port": 58085,
+    "authenticated": true,
+    "authenticated_api_success": true,
+    "http_status": 101,
+    "http_probe": {
+      "status": "HTTP_RESPONSE",
+      "address": "127.0.0.1",
+      "route": "/webbridge/websocket",
+      "source_bind_requested": "127.0.0.1",
+      "local_endpoint": {
+        "host": "127.0.0.1",
+        "port": 58092
+      },
+      "peer_endpoint": {
+        "host": "127.0.0.1",
+        "port": 58085
+      },
+      "http_status": 101,
+      "status_line_class": ""
+    },
+    "java_api": {
+      "status": "PASS",
+      "address": "127.0.0.1",
+      "port": 58085,
+      "authenticated": true,
+      "socket_rows_before_disconnect": [
+        {
+          "pid": 92004,
+          "endpoint": "*:58085",
+          "local_endpoint": "*:58085",
+          "remote_endpoint": null,
+          "state": "LISTEN"
+        },
+        {
+          "pid": 92004,
+          "endpoint": "127.0.0.1:58085->127.0.0.1:58089",
+          "local_endpoint": "127.0.0.1:58085",
+          "remote_endpoint": "127.0.0.1:58089",
+          "state": "ESTABLISHED"
+        },
+        {
+          "pid": 92087,
+          "endpoint": "127.0.0.1:58089->127.0.0.1:58085",
+          "local_endpoint": "127.0.0.1:58089",
+          "remote_endpoint": "127.0.0.1:58085",
+          "state": "ESTABLISHED"
+        }
+      ],
+      "credentials_source": "fresh Worker with the run-owned private prefs; credential material not recorded",
+      "java_request_id": "g2-valve-loopback-connect",
+      "worker_start_status": "HEALTHY",
+      "worker_pid": 92087,
+      "server_reported_endpoint": "127.0.0.1:58085",
+      "socket_pair": [
+        {
+          "pid": 92004,
+          "endpoint": "*:58085",
+          "local_endpoint": "*:58085",
+          "remote_endpoint": null,
+          "state": "LISTEN"
+        },
+        {
+          "pid": 92004,
+          "endpoint": "127.0.0.1:58085->127.0.0.1:58089",
+          "local_endpoint": "127.0.0.1:58085",
+          "remote_endpoint": "127.0.0.1:58089",
+          "state": "ESTABLISHED"
+        },
+        {
+          "pid": 92087,
+          "endpoint": "127.0.0.1:58089->127.0.0.1:58085",
+          "local_endpoint": "127.0.0.1:58089",
+          "remote_endpoint": "127.0.0.1:58085",
+          "state": "ESTABLISHED"
+        }
+      ],
+      "socket_pair_status": "PASS",
+      "disconnect": {
+        "connected": false,
+        "generation": 3,
+        "instance_id": "17afb3be-cb5d-4ae6-875a-9a2a8a95cb72"
+      }
+    }
+  },
+  "nonloopback": {
+    "status": "PASS",
+    "address": "192.168.100.152",
+    "port": 58085,
+    "authenticated": false,
+    "http_status": 403,
+    "api_exception_http_status": null,
+    "server_access_log_http_status": 403,
+    "server_access_log": {
+      "status": "PASS",
+      "phase": "java_connect_only",
+      "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_probe_20260922T060533Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+      "inode": 30041110,
+      "offset_before": 0,
+      "offset_after": 261,
+      "before_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "after_sha256": "14e570339b92919fcf6fbbac646d77de37ef0755470f586bf40febb63071b294",
+      "segment_sha256": "14e570339b92919fcf6fbbac646d77de37ef0755470f586bf40febb63071b294",
+      "java_request_id": "g2-valve-nonloopback-connect",
+      "started_at": "2026-09-22T06:06:09Z",
+      "finished_at": "2026-09-22T06:06:17Z",
+      "raw_probe_started_after_capture": true,
+      "entries": [
+        {
+          "peer": "127.0.0.1",
+          "method": "GET",
+          "route": "/webbridge/websocket",
+          "http_status": 101
+        },
+        {
+          "peer": "127.0.0.1",
+          "method": "GET",
+          "route": "/webbridge/websocket",
+          "http_status": 101
+        },
+        {
+          "peer": "192.168.100.152",
+          "method": "GET",
+          "route": "/webbridge/websocket",
+          "http_status": 403
+        }
+      ],
+      "target_entry_count": 3,
+      "nonloopback_entry_count": 1,
+      "parse_error": false
+    },
+    "http_probe": {
+      "status": "HTTP_RESPONSE",
+      "address": "192.168.100.152",
+      "route": "/webbridge/websocket",
+      "source_bind_requested": "192.168.100.152",
+      "local_endpoint": {
+        "host": "192.168.100.152",
+        "port": 58098
+      },
+      "peer_endpoint": {
+        "host": "192.168.100.152",
+        "port": 58085
+      },
+      "http_status": 403,
+      "status_line_class": ""
+    },
+    "java_api": {
+      "status": "REJECTED",
+      "address": "192.168.100.152",
+      "port": 58085,
+      "authenticated": false,
+      "socket_rows_before_disconnect": [
+        {
+          "pid": 92004,
+          "endpoint": "*:58085",
+          "local_endpoint": "*:58085",
+          "remote_endpoint": null,
+          "state": "LISTEN"
+        },
+        {
+          "pid": 92004,
+          "endpoint": "[::192.168.100.152]:58085->[::192.168.100.152]:58096",
+          "local_endpoint": "[::192.168.100.152]:58085",
+          "remote_endpoint": "[::192.168.100.152]:58096",
+          "state": "OTHER"
+        }
+      ],
+      "credentials_source": "fresh Worker with the run-owned private prefs; credential material not recorded",
+      "java_request_id": "g2-valve-nonloopback-connect",
+      "worker_start_status": "HEALTHY",
+      "error_code": "ENGINE_CALL_FAILED",
+      "failure_class": "JavaWorkerError",
+      "failure_text_sha256": "e90e4e41b1dd964bcfd92242accb54d5bb2cb7ff3bf96908ee408fb0b35cb00d",
+      "http_403_explicitly_observed_in_worker_error": false,
+      "http_failure_category": "UNCLASSIFIED"
+    },
+    "explicit_source_match": true,
+    "address_filter": "RemoteAddrValve"
+  },
+  "model_operations": "NOT_RUN",
+  "solve_operations": "NOT_RUN"
+}

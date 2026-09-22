@@ -1,0 +1,8 @@
+py_compile: /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/bin/python -m py_compile comsol_mcp/_result_budget.py comsol_mcp/_domain_outcome.py tests/test_result_budget.py tests/test_coordinates_shape_bridge.py
+pytest_targeted: /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/bin/python -m pytest -q tests/test_result_budget.py tests/test_coordinates_shape_bridge.py tests/test_g3_domain_outcome.py
+pytest_known_allowlist_regression: /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/bin/python -m pytest -q tests/test_java_worker.py -k every_engine_method_is_allowlisted
+javac_worker: python3 /private/tmp/compile_c13_worker.py
+doc_numerical_feature: python3 /Users/everwalker/Documents/KnowledgeBases/COMSOL-6.4-KB/kb.py read 7657 --chunk 22986
+doc_interp: python3 /Users/everwalker/Documents/KnowledgeBases/COMSOL-6.4-KB/kb.py read 4485 --chunk 17293
+doc_eval: python3 /Users/everwalker/Documents/KnowledgeBases/COMSOL-6.4-KB/kb.py read 4452 --chunk 17232
+doc_mesh: python3 /Users/everwalker/Documents/KnowledgeBases/COMSOL-6.4-KB/kb.py read 4332 --chunk 17080

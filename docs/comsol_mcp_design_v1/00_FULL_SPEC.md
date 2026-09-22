@@ -871,7 +871,7 @@ JSON 附件为每个动作提供顶层输入 schema；类型见 common.schema.js
 | `artifact_register` | `path:str,role:str,classification:str` | 将批准的文件导入项目并计算hash | FILE_WRITE / G3 |
 | `artifact_list` | `filter:object?,cursor:str?,limit:int?` | 分页列出项目Artifact，不扫描整机 | READ / G3 |
 | `artifact_inspect` | `artifact_id:str` | 读取大小、类型、hash、版本、生成作业 | READ / G3 |
-| `artifact_read` | `artifact_id:str,offset:int?,length:int?` | 分块读取授权Artifact；保留完整文件 | READ / G4 |
+| `artifact_read` | `artifact_id:str,offset:int?,length:int?,expected_sha256:str?,expected_chunk_sha256:str?` | 分块读取授权Artifact；保留完整文件并校验整体/分块哈希 | READ / G4 |
 | `artifact_preview` | `artifact_id:str,options:object?` | 返回图像/数据预览并声明下采样 | READ / G4 |
 | `artifact_publish` | `artifact_ids:strings,destination_ref:str,authorization_ref:str` | 按明确外发授权向host交付文件/图像 | HOST_CONTROL / G4 |
 | `artifact_verify` | `artifact_id:str` | 校验包内文件hash、缺失依赖和目标格式 | READ / G6 |
@@ -1787,4 +1787,3 @@ null运行期限意味着未设定引擎任务时长上限，不代表无资源/
 来源：https://modelcontextprotocol.io/specification/2025-11-25/basic/utilities/tasks
 
 核验用途：所查版本中 Tasks 为实验性功能；需能力协商并保留传统 job 轮询兼容。
-

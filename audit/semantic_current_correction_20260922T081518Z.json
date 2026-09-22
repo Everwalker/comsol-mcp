@@ -1,0 +1,343 @@
+{
+  "schema": "comsol-mcp.g3.3.semantic-current-correction.v1",
+  "generated_at_utc": "2026-09-22T08:15:18Z",
+  "repository": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository",
+  "source_head": "032c0a5c31ae80361892338fbe606bd7e9d91fb9",
+  "source_tree": "322cc10e880a70c1491d9ae3e03ab12c105a721e",
+  "source_branch": "acceptance/independent-20260922",
+  "pinned_source": {
+    "commit": "2cb4627924d1a3240818ea7cd00453d4bd2d2da8",
+    "tree": "dd3095e89c640c19aeb151cd0e8efe4af3c55802",
+    "note": "Current acceptance head is a continuation of the pinned source, not the PIN itself."
+  },
+  "scope": "Refresh current semantic records for _g3_results.py, _domain_outcome.py and production Java after bounded W17 repairs; preserve prior audits and distinguish source evidence from offline and live claims.",
+  "authorization_boundary": {
+    "source_modified_by_this_report": false,
+    "engine_started": false,
+    "server_started": false,
+    "comsol_install_or_license_touched": false,
+    "old_audits_overwritten": false,
+    "tests_started_by_this_report": false,
+    "source_status": "The current production files reviewed here are clean at HEAD 032c0a5; unrelated package documentation/audit/evidence files remain dirty in the shared worktree."
+  },
+  "entries": [
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "status": "STATIC_REVIEW_ONLY",
+      "reviewed_current_source": true,
+      "source_sha256": "8fb0ecd57e7fa48b7538adb7b795b465600c0dca88ba5603184b8040425fc853",
+      "bytes": 284990,
+      "lines": 5793,
+      "reviewed_ranges": [
+        "1204-1280",
+        "1681-1937",
+        "2160-2188",
+        "2230-2447",
+        "3298-3348",
+        "4282-4350",
+        "5221-5414",
+        "5533-5668"
+      ],
+      "responsibility": "Typed result Dataset, Numerical and Table CRUD; dataset graph and solution-index binding; sampling/evaluation; axisymmetric measure handling; cleanup and result readback.",
+      "invariants": [
+        "Dataset graph edges are type-scoped: Join reads data/data2, derived datasets read data, Solution.data is a solver alias, and unsupported native types refuse graph proof.",
+        "Required reference getter failure, missing required edge, missing component/geometry and cycles are validation refusals before create/update mutation.",
+        "Legacy solution-index output keeps compatibility axes but binding_complete requires a resolved solution tag, complete axes and pair mapping proof.",
+        "Sampling dispatch uses one verified coord setter and run boundary; a failed run does not fall through to stale getData or a second setter.",
+        "Table inspect publishes match=null without a target; table writes compare actual data, imaginary values, complex status and headers after each single setter and stop before the next step.",
+        "Axisymmetric temporary measure state is restored in finally and read back; restoration failure is a hard AXISYMMETRY_RESTORE_FAILED outcome."
+      ],
+      "findings": [
+        {
+          "id": "G3R-TABLE-READBACK",
+          "severity": "P1",
+          "lines": "5221-5414,5533-5668",
+          "previous_finding": "Table readback previously claimed match from readability without comparing requested values.",
+          "current_disposition": "FIXED_SOURCE_BOUNDED",
+          "evidence": "_table_readback has target-scoped match_details; _table_write compares real/imaginary/header values, complex status and stops on mismatch. Commit 032c0a5 changes numeric comparison to exact normalized Python numeric equality, including the 0 versus 1e-13 ignored-setter case. Root reported the bounded targeted test set as 12PASS.",
+          "acceptance_boundary": "Offline source/test evidence only; no COMSOL table setter claim is promoted to live acceptance here."
+        },
+        {
+          "id": "G3R-DATASET-GRAPH-READS",
+          "severity": "P1",
+          "lines": "1681-1888,1891-1937",
+          "previous_finding": "Dataset reference getter failures were converted to absent edges.",
+          "current_disposition": "FIXED_SOURCE_BOUNDED",
+          "evidence": "_dataset_node_type, _dataset_property_inventory, _dataset_reference_value and _validate_dataset_graph preserve unreadable required edges as DATASET_TYPE_UNREADABLE, DATASET_REFERENCE_UNREADABLE or DATASET_REFERENCE_MISSING; unknown dataset types refuse DATASET_GRAPH_UNVERIFIED. The current source scopes data2 to Join and avoids probing data2 on Solution.",
+          "acceptance_boundary": "Fake-tree contract tests and source inspection do not prove all native COMSOL dataset types."
+        },
+        {
+          "id": "G3R-DATASET-INSPECT-PARTIAL",
+          "severity": "P2",
+          "lines": "2160-2188",
+          "previous_finding": "dataset_inspect still catches all property inventory/value errors and returns a partial map without read_error/status.",
+          "current_disposition": "OPEN_OUT_OF_SCOPE",
+          "evidence": "The current source still has a broad except/pass around properties() and _prop_value().",
+          "acceptance_boundary": "This remains a known semantic limitation; the bounded graph/readback repair did not claim to repair inspection completeness."
+        },
+        {
+          "id": "G3R-SOLUTION-BINDING",
+          "severity": "P1",
+          "lines": "2230-2447",
+          "previous_finding": "Legacy solution-index shape could claim binding_complete from a solution tag without pair proof.",
+          "current_disposition": "FIXED_SOURCE_BOUNDED",
+          "evidence": "The current return requires solution_tag, axis_metadata_complete and pair_mapping_complete; incomplete binding returns binding_complete=false with read_errors rather than guessed axes."
+        },
+        {
+          "id": "G3R-SAMPLE-DISPATCH",
+          "severity": "P2",
+          "lines": "1204-1280",
+          "previous_finding": "A failed native numerical run could be followed by stale getData or an unverified coordinate-setter retry.",
+          "current_disposition": "FIXED_SOURCE_BOUNDED",
+          "evidence": "The current function dispatches the verified set('coord', matrix) once, calls run, and only then reads data; failures propagate. The focused contract test asserts no fallback setter and no getData after a failed run."
+        },
+        {
+          "id": "G3R-AXIS-RESTORE",
+          "severity": "P2",
+          "lines": "4282-4332",
+          "previous_finding": "Axisymmetric temporary measure restoration was swallowed by broad exception handling.",
+          "current_disposition": "FIXED_SOURCE_BOUNDED",
+          "evidence": "The temporary off/run/read is wrapped in finally; restoration uses the native readback helper and a run, and a failed restore raises AXISYMMETRY_RESTORE_FAILED."
+        }
+      ],
+      "limits": [
+        "No engine or COMSOL server was started during this report.",
+        "Native API compatibility and scientific numerical correctness remain separate live gates."
+      ]
+    },
+    {
+      "path": "comsol_mcp/_domain_outcome.py",
+      "status": "STATIC_REVIEW_ONLY",
+      "reviewed_current_source": true,
+      "source_sha256": "d89cd4ef977b2899519425b5cabeb1c0d82afc448021d9e65832b9dddbea80f2",
+      "bytes": 47217,
+      "lines": 1091,
+      "reviewed_ranges": [
+        "1-180",
+        "552-761",
+        "811-879",
+        "1003-1081"
+      ],
+      "responsibility": "Fail-closed domain outcome classification, dispatch witness provenance, envelope merging, execution/verification separation and public status constants.",
+      "invariants": [
+        "Unknown engine/cleanup/partial signals outrank ordinary success.",
+        "A clean validation refusal requires an explicit validation stage and an explicit witness mutation_issued=false; missing/null or contradictory witness provenance remains UNKNOWN.",
+        "classify_envelope carries witness and dispatch-stage provenance from the published envelope without redispatching.",
+        "Execution status and verification status remain separate axes; __all__ exports only defined current names."
+      ],
+      "findings": [
+        {
+          "id": "DOMAIN-REFUSAL-WITNESS",
+          "severity": "P1",
+          "lines": "552-761,811-879,1003-1040",
+          "previous_finding": "A validation-labelled refusal could lose reconciliation pressure when a mutation witness contradicted it.",
+          "current_disposition": "FIXED_SOURCE_BOUNDED",
+          "evidence": "Current classify merges published witness provenance, sets refusal_proof_contradiction and UNKNOWN when stage/witness proof is incomplete, and classify_envelope extracts nested witness/stage data without a new call."
+        },
+        {
+          "id": "DOMAIN-INCOMPLETE-TOKEN",
+          "severity": "P2",
+          "lines": "112-123,450-470",
+          "previous_finding": "INCOMPLETE remains in succeeded status tokens while verification maps it to NOT_RUN.",
+          "current_disposition": "OPEN_LIMITATION",
+          "evidence": "The separate execution/verification axes intentionally preserve this distinction, but callers must check verification_status before accepting a result."
+        },
+        {
+          "id": "DOMAIN-STALE-EXPORTS",
+          "severity": "P2",
+          "lines": "1061-1081",
+          "previous_finding": "Stale undefined __all__ names were exported.",
+          "current_disposition": "FIXED_SOURCE_BOUNDED",
+          "evidence": "Current __all__ contains defined names; import-star validation belongs to the fresh software-validation record, not this static report."
+        }
+      ],
+      "limits": [
+        "Classifier source correctness does not prove that every adapter records a complete witness."
+      ]
+    },
+    {
+      "path": "comsol_mcp/worker_java/PersistentComsolWorker.java",
+      "status": "STATIC_REVIEW_ONLY",
+      "reviewed_current_source": true,
+      "source_sha256": "32f7c734b89feaa6bd4a457701b04735f41e973a4557f1a473b6a23cb8d58504",
+      "bytes": 71988,
+      "lines": 1108,
+      "reviewed_ranges": [
+        "1-1108",
+        "208-300",
+        "423-490",
+        "683-730",
+        "853-912",
+        "953-1005",
+        "1010-1108"
+      ],
+      "responsibility": "Authenticated persistent worker, serial ModelUtil executor, request/job state and idempotency, reflection allowlist, bounded discovery, Java compilation/execution, handle generations and JSON codec.",
+      "invariants": [
+        "Authentication precedes dispatch; native calls are serialized and generation changes clear stale handles.",
+        "Java source is hashed and compiled into a content-derived artifact before entrypoint invocation.",
+        "Non-finite native numbers are refused as NON_FINITE_JSON_VALUE and published as a structured post-dispatch UNKNOWN rather than invalid NDJSON.",
+        "Discovery remains budgeted and returns errors/truncation metadata."
+      ],
+      "findings": [
+        {
+          "id": "JAVA-NONFINITE-JSON",
+          "severity": "P1",
+          "lines": "227-248,289-300,953-1005,1088-1105",
+          "previous_finding": "Number values could escape through the JSON writer without a finite-number check.",
+          "current_disposition": "FIXED_SOURCE_BOUNDED",
+          "evidence": "encode and Json.write reject non-finite values; reply publishes a structured NON_FINITE_JSON_VALUE refusal with post_dispatch/unknown flags. Fresh targeted JVM evidence is at evidence/phase4_3/runs/java_codec_targeted_1b5e80e_20260922T081000Z and records PASS with no ModelUtil.connect."
+        },
+        {
+          "id": "JAVA-EXECUTE-SOURCE-BOUNDARY",
+          "severity": "P1",
+          "lines": "423-490",
+          "current_disposition": "OPEN_TRUST_BOUNDARY",
+          "finding": "executeJava still accepts a caller-provided source artifact path and invokes public static run(Model[,Map]) against a selected model; the worker itself does not impose a trusted source-root/class allowlist or model revision fingerprint.",
+          "impact": "The route requires upstream trusted-code policy; worker source review alone cannot establish an arbitrary-code sandbox or stale-model protection."
+        },
+        {
+          "id": "JAVA-DISCOVERY-SKIPS",
+          "severity": "P2",
+          "lines": "581-726",
+          "current_disposition": "OPEN_LIMITATION",
+          "finding": "Malformed candidate specs, unknown methods, absent collections and getter failures can be skipped or appended as bounded errors while discovery continues.",
+          "impact": "A complete-looking result is not exhaustive unless callers inspect errors/truncated_reason."
+        },
+        {
+          "id": "JAVA-LIFETIME-STATE",
+          "severity": "P2",
+          "lines": "142-149,1010-1013",
+          "current_disposition": "OPEN_LIMITATION",
+          "finding": "handles, requests and compiledArtifacts are process-lifetime maps; empty status returns all request state and there is no eviction policy.",
+          "impact": "Long-lived workers can accumulate memory and expose historical request metadata."
+        },
+        {
+          "id": "JAVA-ENUM-SCORE",
+          "severity": "P2",
+          "lines": "853-912",
+          "current_disposition": "OPEN_LIMITATION",
+          "finding": "conversion supports String to enum, but conversionScore has no corresponding enum branch.",
+          "impact": "Valid enum arguments can lose overload selection before conversion."
+        },
+        {
+          "id": "JAVA-AUTH-PARSE",
+          "severity": "P2",
+          "lines": "208-224",
+          "current_disposition": "OPEN_LIMITATION",
+          "finding": "Malformed authentication JSON is parsed before the inner dispatch failure envelope.",
+          "impact": "Malformed first-line input can close without a structured authentication failure."
+        },
+        {
+          "id": "JAVA-NESTED-IDEMPOTENCY",
+          "severity": "P2",
+          "lines": "1061-1061",
+          "current_disposition": "OPEN_LIMITATION",
+          "finding": "hashRequest sorts top-level keys only; nested map insertion order remains part of the request hash.",
+          "impact": "Semantically equal nested request bodies with different key order can conflict under one request id."
+        }
+      ],
+      "limits": [
+        "No JVM worker, socket endpoint, COMSOL server, ModelUtil.connect, Java compile or executeJava call was started by this static report."
+      ]
+    },
+    {
+      "path": "comsol_mcp/phase1_java/BoundPhase1Poc.java",
+      "status": "STATIC_REVIEW_ONLY",
+      "reviewed_current_source": true,
+      "source_sha256": "093c51f1144b271f1427194014266ee2cd82f0f5597bcaba71c11a34816c00f",
+      "bytes": 2662,
+      "lines": 51,
+      "reviewed_ranges": ["1-51"],
+      "responsibility": "Narrow W02 model-build/solve/MaxSurface/save/export/disconnect Java recipe.",
+      "findings": [
+        {
+          "severity": "P1",
+          "lines": "15-16",
+          "current_disposition": "OPEN_LIMITATION",
+          "finding": "Tag scan and ModelUtil.create are separate, so collision protection is not atomic."
+        },
+        {
+          "severity": "P2",
+          "lines": "11,40-47",
+          "current_disposition": "OPEN_LIMITATION",
+          "finding": "Caller paths have no trusted-root/no-clobber policy, and failures after create do not remove the model."
+        },
+        {
+          "severity": "P2",
+          "lines": "35-44",
+          "current_disposition": "OPEN_LIMITATION",
+          "finding": "Printed scalar has no finite/threshold or fresh-reopen assertion."
+        }
+      ],
+      "limits": ["No COMSOL process/server/model was started."]
+    },
+    {
+      "path": "comsol_mcp/phase1_java/BoundPhase1ProductProbe.java",
+      "status": "STATIC_REVIEW_ONLY",
+      "reviewed_current_source": true,
+      "source_sha256": "788e85cceb5b2a4b55a93e738eee6e37aa8faf8dc7c38587f2c95ef39a4ff619",
+      "bytes": 423,
+      "lines": 7,
+      "reviewed_ranges": ["1-7"],
+      "responsibility": "ModelUtil.hasProduct availability probe.",
+      "findings": [
+        {
+          "severity": "P2",
+          "lines": "5",
+          "current_disposition": "OPEN_LIMITATION",
+          "finding": "Arguments are indexed/port-parsed without structured count/range validation; hasProduct true is not license checkout, solve or acceptance."
+        }
+      ],
+      "limits": ["No product query/server was started."]
+    },
+    {
+      "path": "comsol_mcp/phase1_java/BoundPhase1Reopen.java",
+      "status": "STATIC_REVIEW_ONLY",
+      "reviewed_current_source": true,
+      "source_sha256": "4625f30ca27d492c05442e7b370ea1353389259e83e0b0382868c35e658081a4",
+      "bytes": 732,
+      "lines": 12,
+      "reviewed_ranges": ["1-12"],
+      "responsibility": "Fresh Java-process MPH load and MaxSurface scalar recipe.",
+      "findings": [
+        {
+          "severity": "P1",
+          "lines": "8",
+          "current_disposition": "OPEN_LIMITATION",
+          "finding": "The reopen recipe creates and configures maxr on the loaded model, so it is not a pure read-only identity check."
+        },
+        {
+          "severity": "P2",
+          "lines": "7-8",
+          "current_disposition": "OPEN_LIMITATION",
+          "finding": "Load path has no artifact hash/containment check and scalar has no finite/threshold assertion."
+        }
+      ],
+      "limits": ["No COMSOL process/server/MPH was loaded."]
+    }
+  ],
+  "validation_evidence": {
+    "source_commit": "032c0a5c31ae80361892338fbe606bd7e9d91fb9",
+    "exact_table_patch": "Root reported 12 targeted tests passing after commit 032c0a5; this report did not rerun them.",
+    "java_codec_targeted": {
+      "path": "evidence/phase4_3/runs/java_codec_targeted_1b5e80e_20260922T081000Z/run_status.json",
+      "status": "PASS",
+      "scope": "One fresh local loopback worker control test for finite JSON/error behavior; ModelUtil.connect_called=false."
+    },
+    "live_engine": "NOT_RUN",
+    "fresh_worker_reopen": "NOT_ESTABLISHED_BY_THIS_REPORT",
+    "physical_acceptance": "NOT_ESTABLISHED_BY_THIS_REPORT"
+  },
+  "full_suite_failure_reference": "evidence/phase4_3/runs/full_pytest_failures_public_20260922T080946Z/manifest.json",
+  "historical_reports_preserved": [
+    "audit/semantic_module_review_followup_20260922T074359Z.json",
+    "audit/resumption_finding_dispositions.json",
+    "audit/semantic_review.json (MISSING; retained as a missing reference)"
+  ],
+  "summary": {
+    "g3_results": "Five bounded findings are fixed in current source; dataset_inspect partial-read reporting remains open and is not silently promoted.",
+    "domain_outcome": "Witness-based refusal contradiction and stale exports are fixed; INCOMPLETE execution/verification token distinction remains an explicit caller limitation.",
+    "java": "Finite JSON serialization is fixed and has one fresh targeted software record; executeJava trust boundary, discovery completeness, lifetime state, enum scoring, malformed auth parse and nested request hashing remain open source-level findings.",
+    "evidence_boundary": "No static record in this file is COMSOL live, fresh-worker reopen, numerical, physical or saved-artifact acceptance."
+  }
+}

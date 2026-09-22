@@ -1,0 +1,1230 @@
+{
+  "blocking_findings": [
+    "Historical worker bearer-token blobs remain reachable in the original unpublished Git history; see evidence/phase4_3/runs/prepublication_blob_secret_scan_a3f39b3_20260922T091422Z/scan_report.json. The delivery snapshot must be a new child of verified origin/main and must not include those historical objects."
+  ],
+  "exclude_globs": [
+    "evidence/phase4_3/runs/*/pytest_tmp/**",
+    "evidence/phase4_3/runs/*/clean_recovery/**",
+    "evidence/phase4_3/runs/*/wheelhouse/**",
+    "evidence/phase4_3/runs/*/install_venv/**",
+    "evidence/phase4_3/runs/*/software_venv/**",
+    "evidence/phase4_3/runs/*/worker_*/**",
+    "evidence/phase4_3/runs/*/private/**",
+    "evidence/phase4_3/runs/*/control-private/**",
+    "evidence/phase4_3/runs/*/artifacts/**",
+    "evidence/phase4_3/runs/*/prefs/**",
+    "evidence/phase4_3/runs/*/tmp/**",
+    "evidence/phase4_3/runs/*/locks/**",
+    "evidence/phase4_3/runs/*/recovery/**",
+    "evidence/phase4_3/runs/*/source_stage/**",
+    "evidence/phase4_3/runs/*/*.java",
+    "evidence/phase4_3/runs/*/*.class",
+    "evidence/phase4_3/runs/*/*.mph",
+    "evidence/phase4_3/runs/*/*.mphbin",
+    "evidence/phase4_3/runs/*/server.port",
+    "evidence/phase4_3/runs/*/mphserver.log",
+    "evidence/phase4_3/runs/*/*.log",
+    "evidence/phase4_3/runs/*/transcript.json",
+    "evidence/phase4_3/runs/*/isolation_probe.json",
+    "evidence/phase4_3/runs/*/isolation_receipt.json",
+    "evidence/phase4_3/runs/*/source_manifest.json",
+    "evidence/phase4_3/runs/process_cleanup_final_20260922T083345Z/capture_cleanup.py"
+  ],
+  "excluded_run_directories": [
+    {
+      "path": "evidence/phase4_3/runs/api_probe_probe_axis_20260922T053513Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/api_probe_probe_axis_20260922T053537Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/api_probe_probe_axis_20260922T053553Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/api_probe_probe_axis_20260922T053624Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/archive_preflight_032c0a5_20260922T081600Z",
+      "reason": "archive preflight/draft; final archive is not authorized and copies are incomplete or superseded"
+    },
+    {
+      "path": "evidence/phase4_3/runs/archive_preflight_20260922T080400Z",
+      "reason": "archive preflight/draft; final archive is not authorized and copies are incomplete or superseded"
+    },
+    {
+      "path": "evidence/phase4_3/runs/archive_preflight_ed5a566_20260922T080900Z",
+      "reason": "archive preflight/draft; final archive is not authorized and copies are incomplete or superseded"
+    },
+    {
+      "path": "evidence/phase4_3/runs/archive_preflight_ed5a566_20260922T081200Z",
+      "reason": "archive preflight/draft; final archive is not authorized and copies are incomplete or superseded"
+    },
+    {
+      "path": "evidence/phase4_3/runs/archive_preflight_ed5a566_20260922T081500Z",
+      "reason": "archive preflight/draft; final archive is not authorized and copies are incomplete or superseded"
+    },
+    {
+      "path": "evidence/phase4_3/runs/artifact_immutable_20260922T051143Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/artifact_regression_20260922T014103Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/artifact_regression_20260922T014413Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/artifact_regression_20260922T014543Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/c13_allowlist_regression_20260922T034816Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/c13_budget_contract_20260922T033949Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/c13_final_20260922T034942Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/c13_shape_bridge_20260922T034659Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/control_helper_contract_20260922T021130Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/control_helper_contract_20260922T022414Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/control_helper_contract_20260922T022737Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/control_helper_contract_20260922T022921Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/control_helper_contract_20260922T023143Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/control_helper_contract_20260922T023410Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/coverage_review_20260922T005512Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/coverage_review_20260922T045221Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/coverage_review_20260922T074021Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/export_budget_contract_20260922T0456Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/export_budget_contract_20260922T0457Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/export_helper_contract_20260922T042641Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/export_helper_unknown_correction_20260922T043339Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final2_m3_ed5a566_20260922T0808Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final3_nodes_032c0a5_20260922T0813Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final4_nodes_ec02c12_20260922T0852Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final4_numeric_ec02c12_20260922T0857Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final5_control_4c32d75_20260922T0900Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final5_cutplane_4c32d75_20260922T0900Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final5_export_4c32d75_20260922T0900Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final5_m3_4c32d75_20260922T0900Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final5_nodes_4c32d75_20260922T0900Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final5_numeric_4c32d75_20260922T0900Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final5_probe_4c32d75_20260922T0900Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final5_studyfault_4c32d75_20260922T0900Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final6_control_a3f39b3_20260922T0907Z",
+      "reason": "stage only explicit public receipts listed above"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final6_cutplane_a3f39b3_20260922T0907Z",
+      "reason": "stage only explicit public receipts listed above"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final6_export_a3f39b3_20260922T0907Z",
+      "reason": "stage only explicit public receipts listed above"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final6_m3_a3f39b3_20260922T0907Z",
+      "reason": "stage only explicit public receipts listed above"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final6_nodes_a3f39b3_20260922T0907Z",
+      "reason": "stage only explicit public receipts listed above"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final6_numeric_a3f39b3_20260922T0907Z",
+      "reason": "stage only explicit public receipts listed above"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final6_probe_a3f39b3_20260922T0907Z",
+      "reason": "stage only explicit public receipts listed above"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final6_studyfault_a3f39b3_20260922T0907Z",
+      "reason": "stage only explicit public receipts listed above"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final_batch_4c32d75_20260922T0900Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final_batch_a3f39b3_20260922T0907Z",
+      "reason": "stage only explicit public receipts listed above"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final_control_1b5e80e_20260922T0743Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final_cutplane_1b5e80e_20260922T0741Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final_full_pytest_20260922T073237Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final_m3_1b5e80e_20260922T0737Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final_nodes_1b5e80e_20260922T0739Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final_numeric_1b5e80e_20260922T0735Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final_probe_1b5e80e_20260922T0733Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final_source_archive_1b5e80e_20260922T074100Z",
+      "reason": "archive preflight/draft; final archive is not authorized and copies are incomplete or superseded"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final_source_archive_1b5e80e_20260922T074300Z",
+      "reason": "archive preflight/draft; final archive is not authorized and copies are incomplete or superseded"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final_study_fault_1b5e80e_20260922T0745Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/final_wheel_1b5e80e_20260922T073800Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_19case_20260922T054301Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_19case_20260922T054616Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_19case_20260922T054801Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_19case_20260922T054938Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_19case_20260922T055332Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_19case_20260922T060438Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_19case_20260922T063553Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_axis-probe_20260922T061247Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_chains_20260922T061510Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_control_20260922T060533Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_control_20260922T060857Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_coordinate-probe_20260922T061247Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_cutplane_20260922T060929Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_export_20260922T060533Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_join-probe_20260922T061247Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_m1_20260922T054301Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_m1_20260922T061816Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_m1_20260922T062014Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_measure-probe_20260922T061247Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_nodes_20260922T060533Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_numeric_20260922T054301Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_numeric_20260922T061816Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_numeric_20260922T062014Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_only_20260922T055936Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_only_20260922T060114Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_only_20260922T060239Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_only_20260922T060325Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_outer-probe_20260922T061510Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_probe-transient_20260922T061749Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_probe_20260922T060533Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_shape-probe_20260922T061247Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_study-fault_20260922T060929Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_study-fault_20260922T061057Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_study-fault_20260922T061131Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/frozen_study-fault_20260922T061214Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/full_pytest_032c0a5_20260922T081800Z",
+      "reason": "superseded software diagnostic; retain locally except explicit sanitized failure receipt"
+    },
+    {
+      "path": "evidence/phase4_3/runs/full_pytest_4c32d75_20260922T090420Z",
+      "reason": "stage only explicit public receipts listed above"
+    },
+    {
+      "path": "evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z",
+      "reason": "stage only explicit public receipts listed above"
+    },
+    {
+      "path": "evidence/phase4_3/runs/full_pytest_failures_public_20260922T080946Z",
+      "reason": "superseded software diagnostic; retain locally except explicit sanitized failure receipt"
+    },
+    {
+      "path": "evidence/phase4_3/runs/full_pytest_final_20260922T071755Z",
+      "reason": "superseded software diagnostic; retain locally except explicit sanitized failure receipt"
+    },
+    {
+      "path": "evidence/phase4_3/runs/full_software_wheel_20260922T051548Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/g3_3_acceptance_20260921T133352Z_54itmo38",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/g3_3_acceptance_20260921T134118Z_e7ojki6h",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/g3_3_acceptance_20260921T134739Z_3tbb90uy",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/g3_3_acceptance_20260921T135329Z_5xnn1w4b",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/g3_3_acceptance_20260921T135429Z_9dozr6l_",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/g3_3_acceptance_20260921T135517Z_xbv6t0fl",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/g3_3_acceptance_20260921T223835Z_rsu3dlfp",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/g3_3_acceptance_20260921T231409Z_8gkhtsit",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/impact_review_20260922T014629Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/impact_review_20260922T015303Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/independent_acceptance_20260922T004753Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/independent_live_baseline_20260922T0052Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/java_codec_targeted_1b5e80e_20260922T080200Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/java_codec_targeted_1b5e80e_20260922T080700Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/java_codec_targeted_1b5e80e_20260922T081000Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/live_acceptance_20260921T235704Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/live_acceptance_20260922T000320Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/live_acceptance_20260922T003630Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/live_acceptance_20260922T004005Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/live_acceptance_20260922T070642Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/live_run_g3_3_recheck_20260921T232050Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/native_axis_20260922T0136Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/native_coordinate_units_20260922T0154Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/native_join_20260922T0343Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/native_measure_types_20260922T0158Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/native_outer_20260922T0140Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/native_outer_aggregate_20260922T0410Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/native_outer_aggregate_20260922T0412Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/native_outer_aggregate_20260922T0415Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/native_predata_shape_20260922T0349Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/numeric_m1_20260922T0145Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/prepublication_blob_secret_scan_4c32d75_20260922T090420Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/prepublication_blob_secret_scan_a3f39b3_20260922T091422Z",
+      "reason": "stage only explicit public receipts listed above"
+    },
+    {
+      "path": "evidence/phase4_3/runs/process_cleanup_a3f39b3_20260922T091828Z",
+      "reason": "root-generated cleanup identity/job receipts contain absolute paths and process command fields; retain locally, publish only the filtered process_cleanup_final summary and exclusion hashes"
+    },
+    {
+      "path": "evidence/phase4_3/runs/process_cleanup_audit_20260922T082617Z",
+      "reason": "raw whole-host process/socket captures; publish only filtered cleanup receipt and hash/exclusion reason"
+    },
+    {
+      "path": "evidence/phase4_3/runs/process_cleanup_final_20260922T083345Z",
+      "reason": "stage only explicit public receipts listed above"
+    },
+    {
+      "path": "evidence/phase4_3/runs/protocol_c_20260922T0118Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/protocol_c_20260922T0124Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/protocol_gate_a_20260922T0116Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/protocol_gate_a_20260922T0131Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/protocol_probe_20260922T0120Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/protocol_probe_20260922T0126Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_control_20260922T0226Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_control_20260922T0230Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_control_20260922T0334Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_cutplane_20260922T0357Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_cutplane_20260922T0405Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_export_20260922T0200Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_export_20260922T0421Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_export_20260922T0441Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_export_20260922T0450Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_export_20260922T0516Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_export_20260922T0519Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_m1_20260922T0201Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_m1_20260922T0359Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_m3_20260922T0500Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_m3_20260922T0503Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_nodes_20260922T0210Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_nodes_20260922T0336Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_nodes_20260922T0437Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_nodes_20260922T0453Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_nodes_20260922T0510Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_numeric_20260922T0204Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_numeric_20260922T0215Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_numeric_20260922T0220Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_numeric_20260922T0233Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_numeric_20260922T0400Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_numeric_20260922T0407Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_numeric_20260922T0426Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_numeric_20260922T0431Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_numeric_20260922T0434Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_numeric_20260922T0445Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_probe_20260922T0354Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_probe_20260922T0403Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_probe_20260922T0418Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_probe_20260922T0424Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_transient_probe_20260922T052544Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_transient_probe_20260922T0525Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_transient_probe_20260922T052741Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_transient_probe_20260922T052938Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_transient_probe_20260922T053141Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_transient_probe_20260922T0535Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_transient_probe_20260922T053745Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_transient_probe_20260922T053905Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/public_transient_probe_20260922T053955Z",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/py314_lock_20260922T035723Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/resumed_control_20260922T0724Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/resumed_export_20260922T0727Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/resumed_numeric_20260922T0715Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/resumed_study_fault_20260922T0721Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/resumed_transient_probe_20260922T0718Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/resumption_review_20260922T0719Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/semantic_tests_tools_20260922T035946Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/software_validation_20260922T004801Z",
+      "reason": "superseded or private runtime evidence; retain locally and stage only a reviewed public summary if required"
+    },
+    {
+      "path": "evidence/phase4_3/runs/source_identity_only",
+      "reason": "unreviewed generated runtime tree; retain locally until explicitly selected"
+    },
+    {
+      "path": "evidence/phase4_3/runs/wheel_032c0a5_20260922T082000Z",
+      "reason": "superseded software diagnostic; retain locally except explicit sanitized failure receipt"
+    },
+    {
+      "path": "evidence/phase4_3/runs/wheel_a3f39b3_20260922T091026Z",
+      "reason": "stage only explicit public receipts listed above"
+    },
+    {
+      "path": "evidence/phase4_3/runs/wheel_install_20260922T063238Z",
+      "reason": "superseded software diagnostic; retain locally except explicit sanitized failure receipt"
+    },
+    {
+      "path": "evidence/phase4_3/runs/wheel_install_20260922T063350Z",
+      "reason": "superseded software diagnostic; retain locally except explicit sanitized failure receipt"
+    }
+  ],
+  "generated_at_utc": "2026-09-22T09:25:51.038825+00:00",
+  "include_file_count": 74,
+  "include_files": [
+    {
+      "path": ".gitignore",
+      "sha256": "495d1af7937477f08962b81a87368beb69e1bede3908d260b6bdf643c14dd647",
+      "size": 2473
+    },
+    {
+      "path": "PROGRESS.md",
+      "sha256": "82771c1f010bc55340f020a81aa6661110c8804f7a58052966e6426026e7055c",
+      "size": 2581
+    },
+    {
+      "path": "audit/affected_regression_matrix.json",
+      "sha256": "798ffdcf8fab5b3839de96b2bbdff609011e2bccaabf4ddc7f1492319f47c97b",
+      "size": 4385
+    },
+    {
+      "path": "audit/public_candidate_scan_a3f39b3_20260922T092100Z.json",
+      "sha256": "7252b87ea3f2bda216e847a347bbb9d9929707de081c86ba77fbc9e57d522711",
+      "size": 1609
+    },
+    {
+      "path": "audit/resumption_finding_dispositions.json",
+      "sha256": "954cd409e8df545175acaa0dc8a9c471c1992c0e34e7b44c79c4afc57d28f3d0",
+      "size": 4407
+    },
+    {
+      "path": "audit/root_reopen_driver_review.json",
+      "sha256": "40f150c946b88e193bc5c4e9b678ce96a5e0f248d8ec6186d9a2bf323e4a66cf",
+      "size": 3883
+    },
+    {
+      "path": "audit/root_semantic_delta_review_032c0a5.json",
+      "sha256": "cf5ffeb858757d0d0810dc437808ec393942c9715104235bb8271f8af48f95c2",
+      "size": 2156
+    },
+    {
+      "path": "audit/root_semantic_delta_review_4c32d75.json",
+      "sha256": "f1315bb29c528f402074c78e643a67c2df206f4a051159366f6a9aee59b51947",
+      "size": 1580
+    },
+    {
+      "path": "audit/root_semantic_delta_review_a3f39b3.json",
+      "sha256": "e4b7d0fa254ef1f6ac0bb0324befc38caebfa910a205a3f2ecb7c60f6bfd4e33",
+      "size": 838
+    },
+    {
+      "path": "audit/semantic_coverage_final_4c32d75.json",
+      "sha256": "706e6bd096f6685296ee6288a1499373669c97ce5e7bb529f7f9c96f74a6f78f",
+      "size": 99456
+    },
+    {
+      "path": "audit/semantic_coverage_final_a3f39b3.json",
+      "sha256": "29a2219a455e02a4f8aa7afde2134b02bbeb4166cd7f7508e6e09ccf55888217",
+      "size": 99456
+    },
+    {
+      "path": "audit/semantic_current_correction_20260922T081518Z.json",
+      "sha256": "30cf2e19fe77d8da34ca52b07c74cd1acaecfddbf0c0ee9e18445b05ef9271eb",
+      "size": 19150
+    },
+    {
+      "path": "audit/semantic_current_dispositions_20260922T081518Z.json",
+      "sha256": "5ed776901e694596ee444fd811b91d18d9da6d985756de5880d03c00d799a163",
+      "size": 6108
+    },
+    {
+      "path": "audit/semantic_delta_review_ec02c12_20260922T085803Z.json",
+      "sha256": "80ae2f2884927ca4268276b8d3fea2d9eb280d36466c9e3441a3bc42ae79a196",
+      "size": 7857
+    },
+    {
+      "path": "audit/semantic_key_tests_tools_review.json",
+      "sha256": "0db1c01861eea61c00eef0e0e78d195c608ad812c75cde9e63de47243bd0d545",
+      "size": 28546
+    },
+    {
+      "path": "audit/semantic_module_review.json",
+      "sha256": "f51d0585c1d1ba4105c626df77c90ccc8640882a665fc9df10249ac86352afb9",
+      "size": 198318
+    },
+    {
+      "path": "audit/semantic_module_review_followup_20260922T074304Z.json",
+      "sha256": "1769857ee85dab3a32ad4a03dd8930bf7c0273ddbdc88d76139daf625cc94228",
+      "size": 205700
+    },
+    {
+      "path": "audit/semantic_module_review_followup_20260922T074324Z.json",
+      "sha256": "267745acfdfc264d051be1e31804d32a8d666cad6bb3dd96a8a4ca10fa4e36b3",
+      "size": 215148
+    },
+    {
+      "path": "audit/semantic_module_review_followup_20260922T074346Z.json",
+      "sha256": "a3170ea72608de55916711862842954a3f7aca32543b9d9b368362081e06b672",
+      "size": 215149
+    },
+    {
+      "path": "audit/semantic_module_review_followup_20260922T074359Z.json",
+      "sha256": "fce299fff7697f9516428dd228b833696a98c36459550eb1d8298a5b77893438",
+      "size": 215150
+    },
+    {
+      "path": "audit/semantic_tests_tools_review.json",
+      "sha256": "ac6fa31115bb7ee1904ab84c6a9716e34976aecb1bfecef52e7e495a46387469",
+      "size": 413071
+    },
+    {
+      "path": "audit/semantic_tests_tools_review_final_1b5e80e_20260922T075500Z.json",
+      "sha256": "0b0d8dfed5e4a3f77d20fa9447add89be9eec7ea11f0ca757d4fc6965888ad87",
+      "size": 141301
+    },
+    {
+      "path": "docs/comsol_mcp_design_v1/G3_3_FINDINGS.md",
+      "sha256": "cbc5d37a4ed8bfb8fafb722297936e9ab747b35ab56943552e973655a61fefa2",
+      "size": 6956
+    },
+    {
+      "path": "docs/comsol_mcp_design_v1/G3_3_OPERATIONS.md",
+      "sha256": "f3f64b765ed4beb613355618d06a759594ffe5d5ae5f345fb99c6beb0ac35cb5",
+      "size": 3991
+    },
+    {
+      "path": "docs/comsol_mcp_design_v1/G3_3_PLAN.md",
+      "sha256": "93b53ed80b0b3a20c04b40bd7436ecaae898aaa71f877e413acacd8b1e4ff3bd",
+      "size": 4541
+    },
+    {
+      "path": "docs/comsol_mcp_design_v1/PROGRESS.md",
+      "sha256": "6e8c29fbe1543f16deb218d4a6701c162e11ea9e77d59434e985998b1bb50e5a",
+      "size": 114332
+    },
+    {
+      "path": "docs/comsol_mcp_design_v1/RECOVERY.md",
+      "sha256": "5425a0e842e621840e33b418f1782bb57c961d4d7728d75eefc0cb85528f67c7",
+      "size": 3320
+    },
+    {
+      "path": "evidence/phase4_3/RESUMPTION_REVIEW.json",
+      "sha256": "b9b27ca10c4b5b4e70464a526afadb720d173ebd0afaad782b4cc648ae6cfc98",
+      "size": 1651
+    },
+    {
+      "path": "evidence/phase4_3/runs/final6_control_a3f39b3_20260922T0907Z/final_source_files.json",
+      "sha256": "40a837cf32dd2ae2a0f2b055f56b7af63e727f4625f59f7ee5b4484913370f0f",
+      "size": 18737
+    },
+    {
+      "path": "evidence/phase4_3/runs/final6_control_a3f39b3_20260922T0907Z/run_status.json",
+      "sha256": "a715ffe48c0f2041625a98072f7a6c7882ccd3034113f3c6b89344a1b44b4fdd",
+      "size": 350
+    },
+    {
+      "path": "evidence/phase4_3/runs/final6_cutplane_a3f39b3_20260922T0907Z/final_source_files.json",
+      "sha256": "40a837cf32dd2ae2a0f2b055f56b7af63e727f4625f59f7ee5b4484913370f0f",
+      "size": 18737
+    },
+    {
+      "path": "evidence/phase4_3/runs/final6_cutplane_a3f39b3_20260922T0907Z/run_status.json",
+      "sha256": "59eb72b7b8d353f1025c326830075bd1686cfcac5f64746c673fe7a3ff7393e7",
+      "size": 361
+    },
+    {
+      "path": "evidence/phase4_3/runs/final6_export_a3f39b3_20260922T0907Z/final_source_files.json",
+      "sha256": "40a837cf32dd2ae2a0f2b055f56b7af63e727f4625f59f7ee5b4484913370f0f",
+      "size": 18737
+    },
+    {
+      "path": "evidence/phase4_3/runs/final6_export_a3f39b3_20260922T0907Z/run_status.json",
+      "sha256": "1ee46f93af6d32e601b750e1b1c3d2a3c8599905603014072623cb4ed72a59d5",
+      "size": 361
+    },
+    {
+      "path": "evidence/phase4_3/runs/final6_m3_a3f39b3_20260922T0907Z/final_source_files.json",
+      "sha256": "40a837cf32dd2ae2a0f2b055f56b7af63e727f4625f59f7ee5b4484913370f0f",
+      "size": 18737
+    },
+    {
+      "path": "evidence/phase4_3/runs/final6_m3_a3f39b3_20260922T0907Z/run_status.json",
+      "sha256": "fb9cd2df48811fef8de5d99513c9c18ab63b163fbd77200e8e57d4fd4a4a27cf",
+      "size": 368
+    },
+    {
+      "path": "evidence/phase4_3/runs/final6_nodes_a3f39b3_20260922T0907Z/final_source_files.json",
+      "sha256": "40a837cf32dd2ae2a0f2b055f56b7af63e727f4625f59f7ee5b4484913370f0f",
+      "size": 18737
+    },
+    {
+      "path": "evidence/phase4_3/runs/final6_nodes_a3f39b3_20260922T0907Z/run_status.json",
+      "sha256": "623a4020647e030e08b257c00580b608932f1f434e264746056745a5689e599f",
+      "size": 363
+    },
+    {
+      "path": "evidence/phase4_3/runs/final6_numeric_a3f39b3_20260922T0907Z/final_source_files.json",
+      "sha256": "40a837cf32dd2ae2a0f2b055f56b7af63e727f4625f59f7ee5b4484913370f0f",
+      "size": 18737
+    },
+    {
+      "path": "evidence/phase4_3/runs/final6_numeric_a3f39b3_20260922T0907Z/run_status.json",
+      "sha256": "b6c6eafd58d488f33b5e4f460d255b6fb1f69376767ca8efe18811bfd72fd672",
+      "size": 417
+    },
+    {
+      "path": "evidence/phase4_3/runs/final6_probe_a3f39b3_20260922T0907Z/final_source_files.json",
+      "sha256": "40a837cf32dd2ae2a0f2b055f56b7af63e727f4625f59f7ee5b4484913370f0f",
+      "size": 18737
+    },
+    {
+      "path": "evidence/phase4_3/runs/final6_probe_a3f39b3_20260922T0907Z/run_status.json",
+      "sha256": "76eb50dbfd77aedb007e67ce45a8d7f91353b084adc0fb82385c478e3eca8c5d",
+      "size": 361
+    },
+    {
+      "path": "evidence/phase4_3/runs/final6_studyfault_a3f39b3_20260922T0907Z/final_source_files.json",
+      "sha256": "40a837cf32dd2ae2a0f2b055f56b7af63e727f4625f59f7ee5b4484913370f0f",
+      "size": 18737
+    },
+    {
+      "path": "evidence/phase4_3/runs/final6_studyfault_a3f39b3_20260922T0907Z/run_status.json",
+      "sha256": "a315a2eae91dbbb3ce3db32c4546c0c537d79038e370238db1b58a6bfc13180d",
+      "size": 371
+    },
+    {
+      "path": "evidence/phase4_3/runs/final_batch_a3f39b3_20260922T0907Z/public_batch_status.json",
+      "sha256": "b7a732c13a341d32de0bf5464aacb2a9984638d0277b2d21dcc644a4a6fd8ca2",
+      "size": 5421
+    },
+    {
+      "path": "evidence/phase4_3/runs/full_pytest_4c32d75_20260922T090420Z/public_SHA256SUMS.json",
+      "sha256": "ab7ff6cf5da431598e869004039b94b740f63dda55f8061f7c8a6a375f5e5430",
+      "size": 523
+    },
+    {
+      "path": "evidence/phase4_3/runs/full_pytest_4c32d75_20260922T090420Z/public_run_status.json",
+      "sha256": "7612cd93df06f3ddb0da069270455e626dc69f4680bb042988bb9c810198fbf5",
+      "size": 1328
+    },
+    {
+      "path": "evidence/phase4_3/runs/full_pytest_4c32d75_20260922T090420Z/source_manifest_diff.json",
+      "sha256": "2d7b9458be6acb3127a56a7ef990cc23fbc7a2968df7b4363aa113a6be848cde",
+      "size": 510
+    },
+    {
+      "path": "evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z/evidence_redaction.json",
+      "sha256": "cf9b3144d15d99e9f7820519d71bbe194039b82229cf3fb0013cd3280f8ba853",
+      "size": 831
+    },
+    {
+      "path": "evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z/pip_check.txt",
+      "sha256": "9261363b733079a641c2e4cc9bc46ffa1d8336945a87f807b6cf68847dbc9b09",
+      "size": 30
+    },
+    {
+      "path": "evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z/pip_freeze.txt",
+      "sha256": "18ef7853dc580af2a9766f1a2a16e39a6cfd160ca293f449c660b4ee56c32ed7",
+      "size": 761
+    },
+    {
+      "path": "evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z/public_SHA256SUMS.json",
+      "sha256": "e196bbbf4ac0baf7f04d94540b01a83003463e3c8f523f6dba5e2dac7b9c6b8b",
+      "size": 1124
+    },
+    {
+      "path": "evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z/public_commands.json",
+      "sha256": "c7cc1aa3b9bf9b285af2d0cb9a5e8cb5b790af14b091e1d5c1ae173e6638c6ee",
+      "size": 832
+    },
+    {
+      "path": "evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z/public_interpreter.json",
+      "sha256": "e80e1af19ad47f614d2298c0628ca2a18595fac3c8bcf8db56d1f73a939a8f11",
+      "size": 320
+    },
+    {
+      "path": "evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z/public_run_status.json",
+      "sha256": "98344e3d70f8e9dc046996f2eaefa0544a9205ce8b4554b11d5c9861f251633b",
+      "size": 1155
+    },
+    {
+      "path": "evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z/source_manifest_diff.json",
+      "sha256": "58186f4ea4872b14dbe591011805d8ad0aeb41393dd8b3293e8398bb62f434f8",
+      "size": 510
+    },
+    {
+      "path": "evidence/phase4_3/runs/prepublication_blob_secret_scan_a3f39b3_20260922T091422Z/public_SHA256SUMS.json",
+      "sha256": "b63a9b83ab0d9ebd0b29231f105779b8e47fadd3df7fa8f587ba3e422ff51c05",
+      "size": 532
+    },
+    {
+      "path": "evidence/phase4_3/runs/prepublication_blob_secret_scan_a3f39b3_20260922T091422Z/public_commands.json",
+      "sha256": "f7d2b19160d643a8d231c5729abdf26478151541b2df7cb6ad8e28be1a39ea95",
+      "size": 679
+    },
+    {
+      "path": "evidence/phase4_3/runs/prepublication_blob_secret_scan_a3f39b3_20260922T091422Z/scan_report.json",
+      "sha256": "deb3df5dc47cf7aa883a611d2b874f3c2784245d3499c7a484dad28ceb97c52f",
+      "size": 3152
+    },
+    {
+      "path": "evidence/phase4_3/runs/process_cleanup_final_20260922T083345Z/decision.json",
+      "sha256": "371174fa84aa372d89ffae7882d072d4dc0918f010cb36f33bff8124c2a2270b",
+      "size": 643
+    },
+    {
+      "path": "evidence/phase4_3/runs/process_cleanup_final_20260922T083345Z/post_cleanup.json",
+      "sha256": "0cd9111a4fa289730bc6530242628e81aaf916e92d79fecbef3c33891079913c",
+      "size": 1005
+    },
+    {
+      "path": "evidence/phase4_3/runs/process_cleanup_final_20260922T083345Z/pre_cleanup.json",
+      "sha256": "fb92d6e9b7d64ec305d875f3755fbcf5815dc7e3f29175b09ac6f716e4891fe5",
+      "size": 5881
+    },
+    {
+      "path": "evidence/phase4_3/runs/process_cleanup_final_20260922T083345Z/public_SHA256SUMS.json",
+      "sha256": "f70398bd85e0c192e85f6d634a3bd287af9d2c2707930f96545c7a50de587409",
+      "size": 818
+    },
+    {
+      "path": "evidence/phase4_3/runs/process_cleanup_final_20260922T083345Z/raw_capture_exclusion.json",
+      "sha256": "395882e146cb3c964cedd5f5a0630586c78f019a560fc57bf7dd33a104b35d40",
+      "size": 2723
+    },
+    {
+      "path": "evidence/phase4_3/runs/wheel_a3f39b3_20260922T091026Z/install_freeze_all.txt",
+      "sha256": "127f375c4330bc1063ae50093b4ac0a7c2049ec33c5eae3659faa81ba48081b1",
+      "size": 846
+    },
+    {
+      "path": "evidence/phase4_3/runs/wheel_a3f39b3_20260922T091026Z/install_pip_check.txt",
+      "sha256": "9261363b733079a641c2e4cc9bc46ffa1d8336945a87f807b6cf68847dbc9b09",
+      "size": 30
+    },
+    {
+      "path": "evidence/phase4_3/runs/wheel_a3f39b3_20260922T091026Z/public_SHA256SUMS.json",
+      "sha256": "7f4efaac6a28f2eba0747c2105cc194f02e2e95af6e39032e930ad46d029bdd2",
+      "size": 1308
+    },
+    {
+      "path": "evidence/phase4_3/runs/wheel_a3f39b3_20260922T091026Z/public_commands.json",
+      "sha256": "6c06f49b7d2e6060c997b8c27779ba2c04eb94cf36df0e06bb07c21a07e80c19",
+      "size": 802
+    },
+    {
+      "path": "evidence/phase4_3/runs/wheel_a3f39b3_20260922T091026Z/public_install_interpreter.json",
+      "sha256": "459169031100efa0f399ffbffdef8b38c21e3a678ed9700c4f96cd29ccba9f4a",
+      "size": 314
+    },
+    {
+      "path": "evidence/phase4_3/runs/wheel_a3f39b3_20260922T091026Z/public_resource_hash_compare.json",
+      "sha256": "11fb7524387747d90d6ad26366fde02eaf0da2b659ecea6d0f2ade17ce7cdf83",
+      "size": 764
+    },
+    {
+      "path": "evidence/phase4_3/runs/wheel_a3f39b3_20260922T091026Z/public_run_status.json",
+      "sha256": "7f2af8ff38a389d475cd5be8ffee46e914df04bc1641362f6bf4df47f545808e",
+      "size": 1584
+    },
+    {
+      "path": "evidence/phase4_3/runs/wheel_a3f39b3_20260922T091026Z/source_manifest_diff.json",
+      "sha256": "58186f4ea4872b14dbe591011805d8ad0aeb41393dd8b3293e8398bb62f434f8",
+      "size": 510
+    },
+    {
+      "path": "evidence/phase4_3_acceptance.json",
+      "sha256": "d1cbb8be667a503602b4607d09f9fc611e9b9d209b35b43156e0a7cc1e587f67",
+      "size": 5311
+    },
+    {
+      "path": "evidence/w17_correction.json",
+      "sha256": "c8d5c2b2024d8efefa037fd1598122d8bdf18dcbb6c1ed03832e7cb165a00a22",
+      "size": 7656
+    }
+  ],
+  "manifest_path": "audit/public_path_manifest_a3f39b3_20260922T092100Z.json",
+  "policy": "Stage only include_files plus this manifest; do not use a broad evidence/** add. Raw captures, absolute-path commands/manifests, temporary credentials/endpoints, logs/transcripts, virtualenvs, caches, wheel staging, and incomplete archive drafts remain local. Public receipts are redacted summaries with hashes/counts/status only.",
+  "schema": "comsol-mcp/public-path-manifest.v1",
+  "source_identity": {
+    "head": "a3f39b3022b417e16c3087b8b35f1daa06f30b8a",
+    "range": "origin/main..HEAD",
+    "tree": "5a3e1b72e95a9df8892def2ca0994a8737508612"
+  },
+  "staging_mode": "explicit_paths_only"
+}

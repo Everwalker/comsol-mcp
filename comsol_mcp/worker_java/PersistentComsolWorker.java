@@ -2,6 +2,7 @@ package comsol_mcp.worker_java;
 
 import com.sun.security.auth.module.NTSystem;
 import com.comsol.model.Model;
+import com.comsol.model.NumericalFeature;
 import com.comsol.model.util.ModelChangeInfo;
 import com.comsol.model.util.ModelChangedHandler;
 import com.comsol.model.util.ModelUtil;
@@ -91,12 +92,33 @@ public final class PersistentComsolWorker {
       //   ModelNode.func() -> com.comsol.model.FunctionFeatureList
       "stat", "isGeometry", "objects", "object", "func", "table", "export",
       // G3 sampling: minimal API methods for Interp result extraction
-      // (NumericalFeature.setInterpolationCoordinates, getCoordinates, getNData)
-      "setInterpolationCoordinates", "getCoordinates", "getNData",
+      // (NumericalFeature.setInterpolationCoordinates, getCoordinates, getNData).
+      // getCoordinatesShape is a Worker adapter: it calls the native getter but
+      // returns only a validated [dimension, point_count] shape, never the
+      // coordinate matrix itself.
+      "setInterpolationCoordinates", "getCoordinates", "getCoordinatesShape", "getNData",
       // W17: result, numerical and table API methods javap-verified
-      "getImagData", "clearTableData", "getColumnHeaders", "getRowHeaders",
+      // TableBaseFeature.setColumnHeaders(String[]) is present in the local
+      // COMSOL 6.4 API probe; keep the setter reachable with its readback
+      // getter so table header writes cannot fail at the worker gate.
+      "getImagData", "clearTableData", "getColumnHeaders", "setColumnHeaders", "getRowHeaders",
       "getTableData", "getNRows", "setTableData", "addRow", "addRows",
-      "setResult", "appendResult", "getFilledReal", "getFilledImag"));
+      "setResult", "appendResult", "getFilledReal", "getFilledImag",
+      // G3.3 §4 (F04): the SolutionInfo route for real stored-solution
+      // metadata.  javap -cp apiplugins/com.comsol.api_1.0.0.jar (installed
+      // COMSOL 6.4.0.293):
+      //   SolverSequence.getSolutioninfo() -> com.comsol.model.SolutionInfo
+      //   SolutionInfo.getOuterSolnum() -> int[]
+      //   SolutionInfo.getMaxInner(int[]) -> int
+      //   SolutionInfo.getLevelNames() -> java.lang.String[]
+      // Published here so dataset.solution_indices reads the outer/inner axes
+      // from the engine instead of fabricating outer_indices=[1].
+      "getSolutioninfo", "getOuterSolnum", "getMaxInner", "getLevelNames",
+      // G3.3 independent 6.4 javap verification: native geometry and per-solution metadata.
+      "isAxisymmetric", "getSolnum", "getSolnums", "getPvals", "getUnits", "getUnit",
+      "getPNamesOuter", "getPUnitsOuter", "getSolverSequence",
+      // ProbeFeature.genResult(String): explicit write, never history-read preparation.
+      "genResult"));
   private static final Set<String> MODEL_UTIL = new HashSet<>(Arrays.asList(
       "create", "load", "model", "remove", "tags", "uniquetag", "modelsUsedByOtherClients",
       "getComsolVersion",
@@ -205,14 +227,27 @@ public final class PersistentComsolWorker {
     }
   }
   private void reply(BufferedWriter writer, Map<String, Object> data) throws IOException {
-    writer.write(Json.write(data)); writer.write("\n"); writer.flush();
+    String payload;
+    try {
+      payload = Json.write(data);
+    } catch (Json.NonFiniteJsonValue failure) {
+      // A native result must never escape as invalid NDJSON. Keep the
+      // rejection machine-readable so the controller can classify it.
+      Map<String, Object> refusal = failure("NON_FINITE_JSON_VALUE", failure, true);
+      refusal.put("serialization_failed", true);
+      refusal.put("post_dispatch", true);
+      if (data.containsKey("request_id")) refusal.put("request_id", data.get("request_id"));
+      if (data.containsKey("type")) refusal.put("type", data.get("type"));
+      payload = Json.write(refusal);
+    }
+    writer.write(payload); writer.write("\n"); writer.flush();
   }
 
   private Map<String, Object> dispatch(Map<String, Object> request) throws Exception {
     String type = string(request.get("type"));
     if ("health".equals(type)) return health();
     if ("status".equals(type)) return status(string(request.get("request_id")));
-    if ("codec_selftest".equals(type)) return map("ok", true, "result", encode(map("kind", "map", "nested", map("value", 7), "array", Arrays.asList("x", 2))));
+    if ("codec_selftest".equals(type)) return map("ok", true, "result", codecSelftest());
     if ("reflection_selftest".equals(type)) return map("ok", true, "result", reflectionSelftest());
     if ("marshalling_selftest".equals(type)) return map("ok", true, "result", marshallingSelftest());
     if ("shutdown".equals(type)) return error("PERMISSION_DENIED", "worker shutdown is controlled by its owner process");
@@ -254,6 +289,13 @@ public final class PersistentComsolWorker {
     } catch (WorkerFailure t) {
       Map<String,Object> failure = error(t.code, t.getMessage());
       if (t.details != null) failure.putAll(t.details);
+      if ("NON_FINITE_JSON_VALUE".equals(t.code)) {
+        // The native call already ran; the result could not be published as
+        // JSON, so the caller must retain the dispatched operation as unknown.
+        failure.put("execution_state_unknown", true);
+        failure.put("post_dispatch", true);
+        failure.put("serialization_failed", true);
+      }
       state.fail(failure);
     }
     catch (Throwable t) { state.fail(failure("ENGINE_CALL_FAILED", t, true)); }
@@ -486,7 +528,69 @@ public final class PersistentComsolWorker {
     String handle = string(request.get("handle")); Object target = handles.get(handle);
     if (target == null) throw new IllegalArgumentException("UNKNOWN_WORKER_HANDLE");
     String method = string(request.get("method")); if (!METHODS.contains(method)) throw new SecurityException("METHOD_REJECTED");
-    return invoke(target, target.getClass(), method, list(request.get("args")));
+    List<Object> args = list(request.get("args"));
+    if ("getCoordinatesShape".equals(method)) {
+      if (!args.isEmpty()) throw new IllegalArgumentException("getCoordinatesShape takes no arguments");
+      return getCoordinatesShape(target);
+    }
+    return invoke(target, target.getClass(), method, args);
+  }
+
+  /**
+   * Return a native NumericalFeature coordinate shape without putting the
+   * coordinate values on the worker wire.  This is intentionally a special
+   * call rather than a generic reflection alias: the budget guard needs the
+   * point count before getData(), while a full getCoordinates() response would
+   * itself materialize and transport the array it is meant to bound.
+   */
+  private Object getCoordinatesShape(Object target) throws Exception {
+    if (!(target instanceof NumericalFeature)) {
+      throw new WorkerFailure("COORDINATES_SHAPE_TARGET_INVALID",
+          "getCoordinatesShape is only valid for a NumericalFeature handle");
+    }
+    double[][] coordinates = ((NumericalFeature) target).getCoordinates();
+    if (coordinates == null) {
+      throw new WorkerFailure("COORDINATES_SHAPE_NULL",
+          "NumericalFeature.getCoordinates() returned null");
+    }
+    if (coordinates.length == 0) {
+      throw new WorkerFailure("COORDINATES_SHAPE_EMPTY",
+          "NumericalFeature.getCoordinates() returned zero coordinate dimensions");
+    }
+    int pointCount = -1;
+    for (int dimension = 0; dimension < coordinates.length; dimension++) {
+      double[] row = coordinates[dimension];
+      if (row == null) {
+        throw new WorkerFailure("COORDINATES_SHAPE_NULL_ROW",
+            "NumericalFeature.getCoordinates() returned a null coordinate row",
+            map("dimension", (long) dimension));
+      }
+      if (pointCount < 0) pointCount = row.length;
+      if (row.length != pointCount) {
+        throw new WorkerFailure("COORDINATES_SHAPE_RAGGED",
+            "NumericalFeature.getCoordinates() returned a ragged matrix",
+            map("dimension", (long) dimension, "expected_point_count", (long) pointCount,
+                "actual_point_count", (long) row.length));
+      }
+      for (double value : row) {
+        if (!Double.isFinite(value)) {
+          throw new WorkerFailure("COORDINATES_SHAPE_NONFINITE",
+              "NumericalFeature.getCoordinates() returned a non-finite coordinate",
+              map("dimension", (long) dimension));
+        }
+      }
+    }
+    if (pointCount <= 0) {
+      throw new WorkerFailure("COORDINATES_SHAPE_EMPTY",
+          "NumericalFeature.getCoordinates() returned zero points");
+    }
+    return map("kind", "coordinates_shape",
+        "shape", Arrays.asList((long) coordinates.length, (long) pointCount),
+        "dimension", (long) coordinates.length,
+        "point_count", (long) pointCount,
+        "source", "native NumericalFeature.getCoordinates()",
+        "values_transmitted", false,
+        "wire_payload", "shape-only");
   }
 
   // ---- G3 R02: batch collection discovery and a deterministic tree walk ----
@@ -847,11 +951,57 @@ public final class PersistentComsolWorker {
     return actual;
   }
   private Object encode(Object value) {
-    if (value == null || value instanceof String || value instanceof Number || value instanceof Boolean) return value;
+    if (value == null || value instanceof String || value instanceof Boolean) return value;
+    if (value instanceof Number) {
+      if (!Json.isFiniteNumber((Number) value)) {
+        throw new WorkerFailure("NON_FINITE_JSON_VALUE", "worker result contains a non-finite number");
+      }
+      return value;
+    }
     if (value instanceof Map) { Map<String,Object> out = new LinkedHashMap<>(); for (Map.Entry<?,?> entry : ((Map<?,?>)value).entrySet()) out.put(String.valueOf(entry.getKey()), encode(entry.getValue())); return out; }
     if (value.getClass().isArray()) { int n = Array.getLength(value); List<Object> out = new ArrayList<>(); for (int i=0;i<n;i++) out.add(encode(Array.get(value,i))); return out; }
     if (value instanceof Collection) { List<Object> out = new ArrayList<>(); for (Object v : (Collection<?>) value) out.add(encode(v)); return out; }
     return handle(value);
+  }
+  private Map<String, Object> codecSelftest() {
+    List<Object> values = Arrays.asList(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY,
+        Arrays.asList(1.0, Double.NaN));
+    int rejected = 0;
+    for (Object value : values) {
+      try {
+        encode(map("value", value));
+        throw new WorkerFailure("CODEC_SELFTEST_FAILED", "JSON encoder accepted a non-finite number");
+      } catch (WorkerFailure expected) {
+        if (!"NON_FINITE_JSON_VALUE".equals(expected.code)) throw expected;
+      }
+      try {
+        Json.write(map("value", value));
+        throw new WorkerFailure("CODEC_SELFTEST_FAILED", "JSON writer accepted a non-finite number");
+      } catch (Json.NonFiniteJsonValue expected) {
+        rejected++;
+      }
+    }
+    boolean finite = Json.write(map("finite", Arrays.asList(1, 2.5))).contains("2.5");
+    StringWriter wire = new StringWriter();
+    try {
+      reply(new BufferedWriter(wire), map("ok", true, "request_id", "codec-selftest",
+          "result", map("value", Double.NaN)));
+    } catch (IOException failure) {
+      throw new WorkerFailure("CODEC_SELFTEST_FAILED", "structured failure could not be written");
+    }
+    Map<String, Object> structured = object(wire.toString().trim());
+    boolean structuredFailure = Boolean.FALSE.equals(structured.get("ok"))
+        && "NON_FINITE_JSON_VALUE".equals(structured.get("code"))
+        && Boolean.TRUE.equals(structured.get("serialization_failed"))
+        && Boolean.TRUE.equals(structured.get("execution_state_unknown"))
+        && Boolean.TRUE.equals(structured.get("post_dispatch"))
+        && "codec-selftest".equals(structured.get("request_id"));
+    if (rejected != values.size() || !finite || !structuredFailure)
+      throw new WorkerFailure("CODEC_SELFTEST_FAILED", "finite JSON codec contract failed");
+    return map("kind", "map", "nested", map("value", 7), "array", Arrays.asList("x", 2),
+        "nonfinite_rejected", true, "nonfinite_rejected_count", rejected,
+        "nonfinite_code", "NON_FINITE_JSON_VALUE", "finite_passed", finite,
+        "structured_failure_verified", structuredFailure);
   }
   private Map<String, Object> handle(Object value) {
     String id = "h-" + UUID.randomUUID(); handles.put(id, value);
@@ -941,8 +1091,18 @@ public final class PersistentComsolWorker {
     static String write(Object value) { StringBuilder out=new StringBuilder(); write(out,value); return out.toString(); }
     @SuppressWarnings("unchecked") static void write(StringBuilder out,Object v){
       if(v==null)out.append("null"); else if(v instanceof String){out.append('"'); for(char c:((String)v).toCharArray()){switch(c){case '"':out.append("\\\"");break;case '\\':out.append("\\\\");break;case '\n':out.append("\\n");break;case '\r':out.append("\\r");break;case '\t':out.append("\\t");break;default:if(c<32)out.append(String.format("\\u%04x",(int)c));else out.append(c);}}out.append('"');}
-      else if(v instanceof Number||v instanceof Boolean)out.append(v); else if(v instanceof Map){out.append('{');boolean first=true;for(Map.Entry<?,?> e:((Map<?,?>)v).entrySet()){if(!first)out.append(',');first=false;write(out,String.valueOf(e.getKey()));out.append(':');write(out,e.getValue());}out.append('}');}
+      else if(v instanceof Number){if(!isFiniteNumber((Number)v))throw new NonFiniteJsonValue((Number)v);out.append(v);} else if(v instanceof Boolean)out.append(v); else if(v instanceof Map){out.append('{');boolean first=true;for(Map.Entry<?,?> e:((Map<?,?>)v).entrySet()){if(!first)out.append(',');first=false;write(out,String.valueOf(e.getKey()));out.append(':');write(out,e.getValue());}out.append('}');}
       else if(v instanceof Iterable){out.append('[');boolean first=true;for(Object x:(Iterable<?>)v){if(!first)out.append(',');first=false;write(out,x);}out.append(']');} else write(out,String.valueOf(v)); }
+    static boolean isFiniteNumber(Number value) {
+      if (value instanceof Double) return Double.isFinite((Double) value);
+      if (value instanceof Float) return Float.isFinite((Float) value);
+      String text = String.valueOf(value);
+      return !"NaN".equals(text) && !"Infinity".equals(text) && !"-Infinity".equals(text);
+    }
+    static final class NonFiniteJsonValue extends IllegalArgumentException {
+      final Number value;
+      NonFiniteJsonValue(Number value) { super("non-finite JSON number"); this.value=value; }
+    }
     static final class Parser { final String s; int p; Parser(String s){this.s=s==null?"":s;} Object value(){ws();Object v=raw();ws();if(p!=s.length())throw new IllegalArgumentException("trailing JSON");return v;} Object raw(){ws();if(p>=s.length())throw new IllegalArgumentException("empty JSON");char c=s.charAt(p);if(c=='{')return obj();if(c=='[')return arr();if(c=='\"')return str();if(s.startsWith("true",p)){p+=4;return true;}if(s.startsWith("false",p)){p+=5;return false;}if(s.startsWith("null",p)){p+=4;return null;}return num();} Map<String,Object> obj(){p++;Map<String,Object>m=new LinkedHashMap<>();ws();if(t('}'))return m;while(true){ws();String k=str();ws();need(':');m.put(k,raw());ws();if(t('}'))return m;need(',');}} List<Object> arr(){p++;List<Object>a=new ArrayList<>();ws();if(t(']'))return a;while(true){a.add(raw());ws();if(t(']'))return a;need(',');}} String str(){need('\"');StringBuilder b=new StringBuilder();while(p<s.length()){char c=s.charAt(p++);if(c=='\"')return b.toString();if(c=='\\'){if(p>=s.length())break;char e=s.charAt(p++);if(e=='n')b.append('\n');else if(e=='r')b.append('\r');else if(e=='t')b.append('\t');else if(e=='\"'||e=='\\'||e=='/')b.append(e);else if(e=='u'){if(p+4>s.length())throw new IllegalArgumentException("bad unicode");b.append((char)Integer.parseInt(s.substring(p,p+4),16));p+=4;}else throw new IllegalArgumentException("bad escape");}else b.append(c);}throw new IllegalArgumentException("unterminated string");} Number num(){int q=p;while(p<s.length()&&"-+0123456789.eE".indexOf(s.charAt(p))>=0)p++;String n=s.substring(q,p);try{return n.contains(".")||n.contains("e")||n.contains("E")?Double.valueOf(n):Long.valueOf(n);}catch(Exception e){throw new IllegalArgumentException("bad number");}}void ws(){while(p<s.length()&&Character.isWhitespace(s.charAt(p)))p++;}boolean t(char c){if(p<s.length()&&s.charAt(p)==c){p++;return true;}return false;}void need(char c){if(!t(c))throw new IllegalArgumentException("expected "+c);}}
   }
 }

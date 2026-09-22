@@ -1,0 +1,3638 @@
+{
+  "a": {
+    "status": "PASS",
+    "checks": [
+      {
+        "name": "artifact_sha256",
+        "status": "PASS",
+        "sha256": "5fe97e85aa661931a33c9f0cd48e2a0b39aca516002eaf36f782ee89ac5bed12"
+      },
+      {
+        "name": "dataset_exists",
+        "status": "PASS",
+        "dataset": "dset1"
+      },
+      {
+        "name": "solution_exists",
+        "status": "PASS",
+        "solution": "sol1"
+      },
+      {
+        "name": "solver_settings",
+        "status": "PASS"
+      }
+    ],
+    "comparisons": {
+      "sample_0": {
+        "expression": "sample_0",
+        "expected": 308.1500000000069,
+        "actual": 308.1500000000069,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_1": {
+        "expression": "sample_1",
+        "expected": 323.15000000001123,
+        "actual": 323.15000000001123,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_2": {
+        "expression": "sample_2",
+        "expected": 338.15000000000975,
+        "actual": 338.15000000000975,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_3": {
+        "expression": "sample_3",
+        "expected": -480000.0000001746,
+        "actual": -480000.0000001746,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.1,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.1,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_4": {
+        "expression": "sample_4",
+        "expected": -480000.00000004075,
+        "actual": -480000.00000004075,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.1,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.1,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_5": {
+        "expression": "sample_5",
+        "expected": -479999.9999998021,
+        "actual": -479999.9999998021,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.1,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.1,
+        "decided_by": "absolute",
+        "status": "PASS"
+      }
+    },
+    "tolerance_policy": "each receipt expectation must state 'tolerance' and/or 'rel_tolerance'; the checker applies exactly those windows and records the effective absolute window per comparison instead of substituting a default",
+    "fresh_model_ref": {
+      "schema_version": 1,
+      "session_id": "session-0c6f35ef96b178f2cbc951dd",
+      "server_instance_id": "3a43fc30c0fb88cebbae3903802b334362c140bb96abfe656f310eea2fda3cc8",
+      "model_tag": "mcp_0da2b8b0b520",
+      "generation": 1
+    },
+    "observed_state": {
+      "datasets": [
+        "dset1"
+      ],
+      "solutions": [
+        "sol1"
+      ],
+      "derived_values": [],
+      "material_k": [
+        "400[W/(m*K)]"
+      ],
+      "left_T": "293.15[K]",
+      "right_T": "353.15[K]",
+      "solver_features": [
+        "st1",
+        "v1",
+        "s1"
+      ]
+    },
+    "point_readback": {
+      "values": [
+        [
+          [
+            [
+              308.1500000000069,
+              323.15000000001123,
+              338.15000000000975
+            ]
+          ]
+        ],
+        [
+          [
+            [
+              -480000.0000001746,
+              -480000.00000004075,
+              -479999.9999998021
+            ]
+          ]
+        ]
+      ],
+      "points": [
+        {
+          "x": 0.0125,
+          "y": 0.005
+        },
+        {
+          "x": 0.025,
+          "y": 0.005
+        },
+        {
+          "x": 0.0375,
+          "y": 0.005
+        }
+      ],
+      "point_count": 3,
+      "expressions": [
+        "T",
+        "ht.tfluxx"
+      ],
+      "dataset": "dset1",
+      "solution": "sol1",
+      "binding_source": "resolve_dataset_binding(model, dataset_tag)",
+      "dataset_binding": {
+        "dataset": "dset1",
+        "dataset_type": "Solution",
+        "solution": "sol1",
+        "component": "comp1",
+        "geometry": "geom1",
+        "dataset_chain": [
+          "dset1"
+        ],
+        "dataset_edges": [],
+        "binding_complete": true,
+        "sources": {
+          "solution": "dataset.solution -> model.sol().tags()",
+          "component": "dataset.comp -> modelNode.tags()/model.component()",
+          "geometry": "dataset.geom -> component.geom.tags()/getter"
+        },
+        "properties": {
+          "solution": "sol1",
+          "comp": "comp1",
+          "geom": "geom1"
+        },
+        "read_errors": [],
+        "error": null,
+        "requested_solution": null,
+        "provenance": {
+          "dataset_tags": [
+            "dset1"
+          ],
+          "solution_tags": [
+            "sol1"
+          ],
+          "read_only": true,
+          "mutation_methods_called": []
+        }
+      },
+      "feature_readback": {
+        "data": "dset1",
+        "data_status": "VERIFIED",
+        "source": "NumericalFeature.getString('data') after set('data')"
+      },
+      "coordinate_unit": "m",
+      "frame": "spatial",
+      "coordinate_readback": {
+        "status": "VERIFIED",
+        "coordinates": [
+          [
+            0.0125,
+            0.025,
+            0.0375
+          ],
+          [
+            0.005,
+            0.005,
+            0.005
+          ]
+        ],
+        "unit": "m"
+      },
+      "complex_mode": "real",
+      "is_complex": false,
+      "field_array": {
+        "values": [
+          [
+            [
+              [
+                308.1500000000069,
+                323.15000000001123,
+                338.15000000000975
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                -480000.0000001746,
+                -480000.00000004075,
+                -479999.9999998021
+              ]
+            ]
+          ]
+        ],
+        "data": [
+          [
+            [
+              [
+                308.1500000000069,
+                323.15000000001123,
+                338.15000000000975
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                -480000.0000001746,
+                -480000.00000004075,
+                -479999.9999998021
+              ]
+            ]
+          ]
+        ],
+        "axes": [
+          "expression",
+          "outer",
+          "inner",
+          "point"
+        ],
+        "shape": [
+          2,
+          1,
+          1,
+          3
+        ],
+        "coords": {
+          "expression": [
+            "T",
+            "ht.tfluxx"
+          ],
+          "outer": [
+            1
+          ],
+          "inner": [
+            1
+          ],
+          "point": [
+            1,
+            2,
+            3
+          ],
+          "parameters": [
+            {}
+          ],
+          "params": [
+            {}
+          ],
+          "spatial": [
+            [
+              0.0125,
+              0.005
+            ],
+            [
+              0.025,
+              0.005
+            ],
+            [
+              0.0375,
+              0.005
+            ]
+          ]
+        },
+        "units": {
+          "expression": {
+            "T": "K",
+            "ht.tfluxx": "W/m^2"
+          },
+          "outer": "index",
+          "inner": "index",
+          "point": "m",
+          "parameters": {}
+        },
+        "metadata": {
+          "binding_source": "SolutionInfo.getSolnum(outer, strict)",
+          "pair_mapping_complete": true,
+          "solution_pairs": [
+            {
+              "outer": 1,
+              "inner": 1,
+              "solnum": 1,
+              "parameters": {},
+              "parameter_units": {}
+            }
+          ],
+          "parameter_names": [],
+          "expression_units": {
+            "T": "K",
+            "ht.tfluxx": "W/m^2"
+          },
+          "unit_readback_status": "VERIFIED",
+          "point_coordinate_source": "request"
+        },
+        "is_complex": false
+      },
+      "result_budget": {
+        "status": "PASS",
+        "limits": {
+          "max_elements": 1000000,
+          "max_bytes": 67108864,
+          "scope": "numeric_payload_only",
+          "engine_internal_cache": "UNMEASURED"
+        },
+        "records": [
+          {
+            "status": "PASS",
+            "allowed": true,
+            "verification": "VERIFIED",
+            "reason_code": "BUDGET_WITHIN_LIMIT",
+            "reason": "verified pre-getData result allocation is within both configured limits",
+            "operation": "result.at_points",
+            "feature_kind": "Interp",
+            "raw_getter": "getData",
+            "raw_layout": "expression,solnum,vertex",
+            "pre_getdata": true,
+            "getdata_called": true,
+            "publish_allowed": true,
+            "requested": {
+              "expression_count": 2,
+              "point_count": 3,
+              "outer_count": 1,
+              "inner_count": 1,
+              "inner_counts_by_outer": null,
+              "complex_components": 1,
+              "scalar_bytes": 8,
+              "max_elements": 1000000,
+              "max_bytes": 67108864,
+              "reported_data_vector_count": null,
+              "raw_point_upper_bound": 3,
+              "raw_upper_bound_verified": true,
+              "raw_upper_bound_source": "validated-Interp-request-coordinates;interp-coordinate-columns",
+              "raw_point_upper_bounds_by_outer": [
+                3
+              ]
+            },
+            "computed": {
+              "expression_count": 2,
+              "outer_count": 1,
+              "inner_count_total": 1,
+              "inner_counts_by_outer": null,
+              "requested_point_count": 3,
+              "raw_point_upper_bound": 3,
+              "raw_point_upper_bounds_by_outer": [
+                3
+              ],
+              "complex_components": 1,
+              "scalar_bytes": 8,
+              "numeric_payload_scalar_bytes": 8,
+              "elements": 6,
+              "bytes": 48,
+              "numeric_payload_bytes": 48,
+              "numeric_payload_scope": "float64 scalar payload only; excludes JSON, wire, Python-list, and engine-cache overhead",
+              "raw_upper_bound_source": "validated-Interp-request-coordinates;interp-coordinate-columns"
+            },
+            "limits": {
+              "max_elements": 1000000,
+              "max_bytes": 67108864,
+              "max_numeric_payload_bytes": 67108864
+            },
+            "budget_scope": "numeric_payload_only",
+            "data_vector_count": {
+              "value": null,
+              "used_for_point_bound": false,
+              "interpretation": "observation only; never treated as coordinate count"
+            },
+            "metadata_sources": {
+              "expression": "validated-request-expressions",
+              "point_count": "validated-Interp-request-coordinates",
+              "solution_axes": "validated-SolutionBinding.outer/inner-pairs",
+              "raw_point_upper_bound": "validated-Interp-request-coordinates;interp-coordinate-columns"
+            },
+            "request_progress": {
+              "consumed_numeric_payload_elements": 6,
+              "consumed_numeric_payload_bytes": 48,
+              "max_elements": 1000000,
+              "max_bytes": 67108864
+            }
+          }
+        ],
+        "publish_allowed": true
+      },
+      "cleanup": {
+        "tag": "cmssp1",
+        "type_id": "Interp",
+        "created": true,
+        "removed": true,
+        "cleanup_failed": false,
+        "error": null,
+        "verified_removed": true
+      },
+      "status": {
+        "ok": true,
+        "engine_error": null,
+        "cleanup_failed": false,
+        "verification_status": "PASSED"
+      },
+      "verification_status": "PASSED",
+      "domain_state": "succeeded",
+      "execution_state_unknown": false,
+      "partial_change": false,
+      "cleanup_failed": false,
+      "dispatch_stage": "post_dispatch",
+      "domain_outcome": {
+        "operation": "result.at_points",
+        "state": "succeeded",
+        "verification_status": "PASSED",
+        "cleanup_failed": false,
+        "execution_state_unknown": false,
+        "dispatch_stage": "post_dispatch",
+        "verification": {
+          "declared_by": [
+            "verification_status"
+          ],
+          "raw_status": "PASSED"
+        },
+        "witness": {
+          "engine_calls": 57,
+          "mutation_method": "create",
+          "mutation_issued": true,
+          "methods": [
+            "component",
+            "create",
+            "dataset",
+            "geom",
+            "get",
+            "getCoordinates",
+            "getData",
+            "getLevelNames",
+            "getOuterSolnum",
+            "getPNames",
+            "getPvals",
+            "getSDim",
+            "getSolnum",
+            "getSolnums",
+            "getSolutioninfo",
+            "getString",
+            "getStringArray",
+            "getType",
+            "getUnits",
+            "isAxisymmetric",
+            "isComplex",
+            "lengthUnit",
+            "modelNode",
+            "numerical",
+            "properties",
+            "remove",
+            "result",
+            "run",
+            "set",
+            "setInterpolationCoordinates",
+            "sol",
+            "tags"
+          ],
+          "dispatches": [
+            {
+              "command": "call",
+              "method": "result",
+              "args_count": 0,
+              "receiver": "h-c45e346d-23dd-4f08-8c7c-aa0b094eca9f",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "numerical",
+              "args_count": 0,
+              "receiver": "h-4223ad5a-701f-4577-b85b-f3fb217cf6bd",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "dataset",
+              "args_count": 0,
+              "receiver": "h-4223ad5a-701f-4577-b85b-f3fb217cf6bd",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-9c29a766-4700-4385-8888-81dfdfab415c",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "get",
+              "args_count": 1,
+              "receiver": "h-9c29a766-4700-4385-8888-81dfdfab415c",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "result",
+              "args_count": 0,
+              "receiver": "h-c45e346d-23dd-4f08-8c7c-aa0b094eca9f",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "dataset",
+              "args_count": 0,
+              "receiver": "h-f908efbd-67e5-4e5e-aa71-c18a95e71225",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-8cf04400-7a19-4be9-bb6b-43a18d0134b6",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "sol",
+              "args_count": 0,
+              "receiver": "h-c45e346d-23dd-4f08-8c7c-aa0b094eca9f",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-57e65e44-97c1-41e4-9e38-290aa8127960",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "get",
+              "args_count": 1,
+              "receiver": "h-8cf04400-7a19-4be9-bb6b-43a18d0134b6",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getType",
+              "args_count": 0,
+              "receiver": "h-ab4d4ed6-ccf2-42ba-82a0-77d7b07f474c",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "properties",
+              "args_count": 0,
+              "receiver": "h-ab4d4ed6-ccf2-42ba-82a0-77d7b07f474c",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getString",
+              "args_count": 1,
+              "receiver": "h-ab4d4ed6-ccf2-42ba-82a0-77d7b07f474c",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "properties",
+              "args_count": 0,
+              "receiver": "h-ab4d4ed6-ccf2-42ba-82a0-77d7b07f474c",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "properties",
+              "args_count": 0,
+              "receiver": "h-ab4d4ed6-ccf2-42ba-82a0-77d7b07f474c",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "properties",
+              "args_count": 0,
+              "receiver": "h-ab4d4ed6-ccf2-42ba-82a0-77d7b07f474c",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getString",
+              "args_count": 1,
+              "receiver": "h-ab4d4ed6-ccf2-42ba-82a0-77d7b07f474c",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "properties",
+              "args_count": 0,
+              "receiver": "h-ab4d4ed6-ccf2-42ba-82a0-77d7b07f474c",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getString",
+              "args_count": 1,
+              "receiver": "h-ab4d4ed6-ccf2-42ba-82a0-77d7b07f474c",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "modelNode",
+              "args_count": 0,
+              "receiver": "h-c45e346d-23dd-4f08-8c7c-aa0b094eca9f",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-e6325ed4-d2a4-4d6f-bfde-3facd3d4b049",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "component",
+              "args_count": 1,
+              "receiver": "h-c45e346d-23dd-4f08-8c7c-aa0b094eca9f",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "geom",
+              "args_count": 0,
+              "receiver": "h-58528f71-2998-42d8-a3d6-78d7b0f36b74",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-976e2161-7e08-4757-b115-fa44185b7980",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "get",
+              "args_count": 1,
+              "receiver": "h-976e2161-7e08-4757-b115-fa44185b7980",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "component",
+              "args_count": 1,
+              "receiver": "h-c45e346d-23dd-4f08-8c7c-aa0b094eca9f",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "geom",
+              "args_count": 1,
+              "receiver": "h-d20f322a-626d-476c-91dd-68c329bbc381",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "lengthUnit",
+              "args_count": 0,
+              "receiver": "h-cc41137a-ac6a-4820-8339-70da4855f74b",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getSDim",
+              "args_count": 0,
+              "receiver": "h-cc41137a-ac6a-4820-8339-70da4855f74b",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "isAxisymmetric",
+              "args_count": 0,
+              "receiver": "h-cc41137a-ac6a-4820-8339-70da4855f74b",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "sol",
+              "args_count": 0,
+              "receiver": "h-c45e346d-23dd-4f08-8c7c-aa0b094eca9f",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-1d6f9e85-df42-4b57-87c9-472dbe73dadd",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "get",
+              "args_count": 1,
+              "receiver": "h-1d6f9e85-df42-4b57-87c9-472dbe73dadd",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getSolutioninfo",
+              "args_count": 0,
+              "receiver": "h-96d5a862-43bb-4a50-8fa0-e2888a249fad",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getOuterSolnum",
+              "args_count": 0,
+              "receiver": "h-3ff3cbe1-4b4e-4601-ad54-8132890f3d19",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getSolnums",
+              "args_count": 1,
+              "receiver": "h-3ff3cbe1-4b4e-4601-ad54-8132890f3d19",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getSolnum",
+              "args_count": 2,
+              "receiver": "h-3ff3cbe1-4b4e-4601-ad54-8132890f3d19",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getSolnum",
+              "args_count": 2,
+              "receiver": "h-3ff3cbe1-4b4e-4601-ad54-8132890f3d19",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getPNames",
+              "args_count": 1,
+              "receiver": "h-3ff3cbe1-4b4e-4601-ad54-8132890f3d19",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getPvals",
+              "args_count": 1,
+              "receiver": "h-3ff3cbe1-4b4e-4601-ad54-8132890f3d19",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getUnits",
+              "args_count": 1,
+              "receiver": "h-3ff3cbe1-4b4e-4601-ad54-8132890f3d19",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getLevelNames",
+              "args_count": 0,
+              "receiver": "h-3ff3cbe1-4b4e-4601-ad54-8132890f3d19",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-b3fa0cd7-56c7-4748-a4a0-2547bdbad1d3",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "create",
+              "args_count": 2,
+              "receiver": "h-b3fa0cd7-56c7-4748-a4a0-2547bdbad1d3",
+              "is_mutation": true
+            },
+            {
+              "command": "call",
+              "method": "set",
+              "args_count": 2,
+              "receiver": "h-16f71ec7-cf30-4898-9287-77dff477f68f",
+              "is_mutation": true
+            },
+            {
+              "command": "call",
+              "method": "getString",
+              "args_count": 1,
+              "receiver": "h-16f71ec7-cf30-4898-9287-77dff477f68f",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "set",
+              "args_count": 2,
+              "receiver": "h-16f71ec7-cf30-4898-9287-77dff477f68f",
+              "is_mutation": true
+            },
+            {
+              "command": "call",
+              "method": "setInterpolationCoordinates",
+              "args_count": 1,
+              "receiver": "h-16f71ec7-cf30-4898-9287-77dff477f68f",
+              "is_mutation": true
+            },
+            {
+              "command": "call",
+              "method": "run",
+              "args_count": 0,
+              "receiver": "h-16f71ec7-cf30-4898-9287-77dff477f68f",
+              "is_mutation": true
+            },
+            {
+              "command": "call",
+              "method": "isComplex",
+              "args_count": 0,
+              "receiver": "h-16f71ec7-cf30-4898-9287-77dff477f68f",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "isComplex",
+              "args_count": 0,
+              "receiver": "h-16f71ec7-cf30-4898-9287-77dff477f68f",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getData",
+              "args_count": 0,
+              "receiver": "h-16f71ec7-cf30-4898-9287-77dff477f68f",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getStringArray",
+              "args_count": 1,
+              "receiver": "h-16f71ec7-cf30-4898-9287-77dff477f68f",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getCoordinates",
+              "args_count": 0,
+              "receiver": "h-16f71ec7-cf30-4898-9287-77dff477f68f",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "remove",
+              "args_count": 1,
+              "receiver": "h-b3fa0cd7-56c7-4748-a4a0-2547bdbad1d3",
+              "is_mutation": true
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-b3fa0cd7-56c7-4748-a4a0-2547bdbad1d3",
+              "is_mutation": false
+            }
+          ]
+        },
+        "details": {
+          "status_unexpected_keys": [
+            "cleanup_failed",
+            "verification_status"
+          ]
+        }
+      },
+      "effect": "evaluate",
+      "isolation_proof": {
+        "verified": true,
+        "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_outer-probe_20260922T061510Z/isolation_receipt.json",
+        "pid": 95446,
+        "birth": "Tue Sep 22 14:15:10 2026",
+        "endpoint": "127.0.0.1:60773",
+        "listener": {
+          "pid": 95446,
+          "endpoint": "*:60773",
+          "local_endpoint": "*:60773",
+          "remote_endpoint": null,
+          "state": "LISTEN",
+          "raw": "java    95446 everwalker   59u  IPv6 0x6af479accb8a20d5      0t0  TCP *:60773 (LISTEN)"
+        },
+        "listener_binding": "wildcard",
+        "loopback_listener": false,
+        "worker_pid": 95661,
+        "established_client_pids": [
+          95446,
+          95661
+        ],
+        "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+        "config_inode": 14720294,
+        "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+        "api_probe": {
+          "probe_kind": "comsol_java_api",
+          "observed_at": "2026-09-22T06:15:23Z",
+          "loopback_address": "127.0.0.1",
+          "loopback_port": 60773,
+          "authenticated_api_success": true,
+          "nonloopback_address": "192.168.100.152",
+          "nonloopback_port": 60773,
+          "nonloopback_api_exception_http_status": null,
+          "denial_evidence_source": "server_access_log",
+          "server_access_log": {
+            "status": "PASS",
+            "phase": "java_connect_only",
+            "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_outer-probe_20260922T061510Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+            "inode": 30046654,
+            "offset_before": 0,
+            "offset_after": 261,
+            "segment_sha256": "a13f002dcc8a134413183cbd2e8475d89fe51bed770a18106c79034acb61d4fb",
+            "java_request_id": "g2-valve-nonloopback-connect",
+            "started_at": "2026-09-22T06:15:14Z",
+            "finished_at": "2026-09-22T06:15:23Z",
+            "entries": [
+              {
+                "peer": "127.0.0.1",
+                "method": "GET",
+                "route": "/webbridge/websocket",
+                "http_status": 101
+              },
+              {
+                "peer": "127.0.0.1",
+                "method": "GET",
+                "route": "/webbridge/websocket",
+                "http_status": 101
+              },
+              {
+                "peer": "192.168.100.152",
+                "method": "GET",
+                "route": "/webbridge/websocket",
+                "http_status": 403
+              }
+            ],
+            "parsed_nonloopback_entry": {
+              "peer": "192.168.100.152",
+              "method": "GET",
+              "route": "/webbridge/websocket",
+              "http_status": 403
+            },
+            "raw_probe_started_after_capture": true
+          }
+        },
+        "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer"
+      }
+    },
+    "evidence_level": "LIVE_PUBLIC_MCP_STORED_SOLUTION",
+    "rebuilt_or_resolved": false
+  },
+  "b": {
+    "status": "PASS",
+    "checks": [
+      {
+        "name": "artifact_sha256",
+        "status": "PASS",
+        "sha256": "cbf0a967d768f81612cc887b12d38067c433ddf745945ac16f317b76fe835393"
+      },
+      {
+        "name": "dataset_exists",
+        "status": "PASS",
+        "dataset": "dset1"
+      },
+      {
+        "name": "solution_exists",
+        "status": "PASS",
+        "solution": "sol1"
+      },
+      {
+        "name": "solver_settings",
+        "status": "PASS"
+      }
+    ],
+    "comparisons": {
+      "sample_0": {
+        "expression": "sample_0",
+        "expected": 293.1499999999978,
+        "actual": 293.1499999999978,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_1": {
+        "expression": "sample_1",
+        "expected": 293.1500000011541,
+        "actual": 293.1500000011541,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_2": {
+        "expression": "sample_2",
+        "expected": 293.15001296154196,
+        "actual": 293.15001296154196,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_3": {
+        "expression": "sample_3",
+        "expected": 293.27411927033944,
+        "actual": 293.27411927033944,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_4": {
+        "expression": "sample_4",
+        "expected": 294.70068776489126,
+        "actual": 294.70068776489126,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_5": {
+        "expression": "sample_5",
+        "expected": 306.9005043736273,
+        "actual": 306.9005043736273,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_6": {
+        "expression": "sample_6",
+        "expected": 294.22506680583274,
+        "actual": 294.22506680583274,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_7": {
+        "expression": "sample_7",
+        "expected": 299.1022967213646,
+        "actual": 299.1022967213646,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_8": {
+        "expression": "sample_8",
+        "expected": 316.69880809545685,
+        "actual": 316.69880809545685,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_9": {
+        "expression": "sample_9",
+        "expected": 295.858256490612,
+        "actual": 295.858256490612,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_10": {
+        "expression": "sample_10",
+        "expected": 303.5689550042192,
+        "actual": 303.5689550042192,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_11": {
+        "expression": "sample_11",
+        "expected": 322.46338003179017,
+        "actual": 322.46338003179017,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_12": {
+        "expression": "sample_12",
+        "expected": 297.74128924098557,
+        "actual": 297.74128924098557,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_13": {
+        "expression": "sample_13",
+        "expected": 307.4843865655843,
+        "actual": 307.4843865655843,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_14": {
+        "expression": "sample_14",
+        "expected": 326.37255575551274,
+        "actual": 326.37255575551274,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      }
+    },
+    "tolerance_policy": "each receipt expectation must state 'tolerance' and/or 'rel_tolerance'; the checker applies exactly those windows and records the effective absolute window per comparison instead of substituting a default",
+    "fresh_model_ref": {
+      "schema_version": 1,
+      "session_id": "session-0c6f35ef96b178f2cbc951dd",
+      "server_instance_id": "3a43fc30c0fb88cebbae3903802b334362c140bb96abfe656f310eea2fda3cc8",
+      "model_tag": "mcp_c3223c3402c9",
+      "generation": 1
+    },
+    "observed_state": {
+      "datasets": [
+        "dset1"
+      ],
+      "solutions": [
+        "sol1"
+      ],
+      "derived_values": [],
+      "material_k": [
+        "400[W/(m*K)]"
+      ],
+      "left_T": "293.15[K]",
+      "right_T": "353.15[K]",
+      "solver_features": [
+        "st1",
+        "v1",
+        "t1"
+      ],
+      "solution_parameters": [
+        "t"
+      ],
+      "solution_values": [
+        0.0,
+        0.5,
+        1.0,
+        1.5,
+        2.0
+      ],
+      "study_tlist": "range(0, 0.5, 2.0)",
+      "solver_tlist": "range(0, 0.5, 2.0)",
+      "solver_rtol": "0.01"
+    },
+    "point_readback": {
+      "values": [
+        [
+          [
+            [
+              293.1499999999978,
+              293.1500000011541,
+              293.15001296154196
+            ],
+            [
+              293.27411927033944,
+              294.70068776489126,
+              306.9005043736273
+            ],
+            [
+              294.22506680583274,
+              299.1022967213646,
+              316.69880809545685
+            ],
+            [
+              295.858256490612,
+              303.5689550042192,
+              322.46338003179017
+            ],
+            [
+              297.74128924098557,
+              307.4843865655843,
+              326.37255575551274
+            ]
+          ]
+        ]
+      ],
+      "points": [
+        {
+          "x": 0.0125,
+          "y": 0.005
+        },
+        {
+          "x": 0.025,
+          "y": 0.005
+        },
+        {
+          "x": 0.0375,
+          "y": 0.005
+        }
+      ],
+      "point_count": 3,
+      "expressions": [
+        "T"
+      ],
+      "dataset": "dset1",
+      "solution": "sol1",
+      "binding_source": "resolve_dataset_binding(model, dataset_tag)",
+      "dataset_binding": {
+        "dataset": "dset1",
+        "dataset_type": "Solution",
+        "solution": "sol1",
+        "component": "comp1",
+        "geometry": "geom1",
+        "dataset_chain": [
+          "dset1"
+        ],
+        "dataset_edges": [],
+        "binding_complete": true,
+        "sources": {
+          "solution": "dataset.solution -> model.sol().tags()",
+          "component": "dataset.comp -> modelNode.tags()/model.component()",
+          "geometry": "dataset.geom -> component.geom.tags()/getter"
+        },
+        "properties": {
+          "solution": "sol1",
+          "comp": "comp1",
+          "geom": "geom1"
+        },
+        "read_errors": [],
+        "error": null,
+        "requested_solution": null,
+        "provenance": {
+          "dataset_tags": [
+            "dset1"
+          ],
+          "solution_tags": [
+            "sol1"
+          ],
+          "read_only": true,
+          "mutation_methods_called": []
+        }
+      },
+      "feature_readback": {
+        "data": "dset1",
+        "data_status": "VERIFIED",
+        "source": "NumericalFeature.getString('data') after set('data')"
+      },
+      "coordinate_unit": "m",
+      "frame": "spatial",
+      "coordinate_readback": {
+        "status": "VERIFIED",
+        "coordinates": [
+          [
+            0.0125,
+            0.025,
+            0.0375
+          ],
+          [
+            0.005,
+            0.005,
+            0.005
+          ]
+        ],
+        "unit": "m"
+      },
+      "complex_mode": "real",
+      "is_complex": false,
+      "field_array": {
+        "values": [
+          [
+            [
+              [
+                293.1499999999978,
+                293.1500000011541,
+                293.15001296154196
+              ],
+              [
+                293.27411927033944,
+                294.70068776489126,
+                306.9005043736273
+              ],
+              [
+                294.22506680583274,
+                299.1022967213646,
+                316.69880809545685
+              ],
+              [
+                295.858256490612,
+                303.5689550042192,
+                322.46338003179017
+              ],
+              [
+                297.74128924098557,
+                307.4843865655843,
+                326.37255575551274
+              ]
+            ]
+          ]
+        ],
+        "data": [
+          [
+            [
+              [
+                293.1499999999978,
+                293.1500000011541,
+                293.15001296154196
+              ],
+              [
+                293.27411927033944,
+                294.70068776489126,
+                306.9005043736273
+              ],
+              [
+                294.22506680583274,
+                299.1022967213646,
+                316.69880809545685
+              ],
+              [
+                295.858256490612,
+                303.5689550042192,
+                322.46338003179017
+              ],
+              [
+                297.74128924098557,
+                307.4843865655843,
+                326.37255575551274
+              ]
+            ]
+          ]
+        ],
+        "axes": [
+          "expression",
+          "outer",
+          "inner",
+          "point"
+        ],
+        "shape": [
+          1,
+          1,
+          5,
+          3
+        ],
+        "coords": {
+          "expression": [
+            "T"
+          ],
+          "outer": [
+            1
+          ],
+          "inner": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "point": [
+            1,
+            2,
+            3
+          ],
+          "parameters": [
+            {},
+            {},
+            {},
+            {},
+            {}
+          ],
+          "params": [
+            {},
+            {},
+            {},
+            {},
+            {}
+          ],
+          "spatial": [
+            [
+              0.0125,
+              0.005
+            ],
+            [
+              0.025,
+              0.005
+            ],
+            [
+              0.0375,
+              0.005
+            ]
+          ]
+        },
+        "units": {
+          "expression": {
+            "T": "K"
+          },
+          "outer": "index",
+          "inner": "index",
+          "point": "m",
+          "parameters": {}
+        },
+        "metadata": {
+          "binding_source": "SolutionInfo.getSolnum(outer, strict)",
+          "pair_mapping_complete": true,
+          "solution_pairs": [
+            {
+              "outer": 1,
+              "inner": 1,
+              "solnum": 1,
+              "parameters": {},
+              "parameter_units": {}
+            },
+            {
+              "outer": 1,
+              "inner": 2,
+              "solnum": 2,
+              "parameters": {},
+              "parameter_units": {}
+            },
+            {
+              "outer": 1,
+              "inner": 3,
+              "solnum": 3,
+              "parameters": {},
+              "parameter_units": {}
+            },
+            {
+              "outer": 1,
+              "inner": 4,
+              "solnum": 4,
+              "parameters": {},
+              "parameter_units": {}
+            },
+            {
+              "outer": 1,
+              "inner": 5,
+              "solnum": 5,
+              "parameters": {},
+              "parameter_units": {}
+            }
+          ],
+          "parameter_names": [],
+          "expression_units": {
+            "T": "K"
+          },
+          "unit_readback_status": "VERIFIED",
+          "point_coordinate_source": "request"
+        },
+        "is_complex": false
+      },
+      "result_budget": {
+        "status": "PASS",
+        "limits": {
+          "max_elements": 1000000,
+          "max_bytes": 67108864,
+          "scope": "numeric_payload_only",
+          "engine_internal_cache": "UNMEASURED"
+        },
+        "records": [
+          {
+            "status": "PASS",
+            "allowed": true,
+            "verification": "VERIFIED",
+            "reason_code": "BUDGET_WITHIN_LIMIT",
+            "reason": "verified pre-getData result allocation is within both configured limits",
+            "operation": "result.at_points",
+            "feature_kind": "Interp",
+            "raw_getter": "getData",
+            "raw_layout": "expression,solnum,vertex",
+            "pre_getdata": true,
+            "getdata_called": true,
+            "publish_allowed": true,
+            "requested": {
+              "expression_count": 1,
+              "point_count": 3,
+              "outer_count": 1,
+              "inner_count": 5,
+              "inner_counts_by_outer": null,
+              "complex_components": 1,
+              "scalar_bytes": 8,
+              "max_elements": 1000000,
+              "max_bytes": 67108864,
+              "reported_data_vector_count": null,
+              "raw_point_upper_bound": 3,
+              "raw_upper_bound_verified": true,
+              "raw_upper_bound_source": "validated-Interp-request-coordinates;interp-coordinate-columns",
+              "raw_point_upper_bounds_by_outer": [
+                3
+              ]
+            },
+            "computed": {
+              "expression_count": 1,
+              "outer_count": 1,
+              "inner_count_total": 5,
+              "inner_counts_by_outer": null,
+              "requested_point_count": 3,
+              "raw_point_upper_bound": 3,
+              "raw_point_upper_bounds_by_outer": [
+                3
+              ],
+              "complex_components": 1,
+              "scalar_bytes": 8,
+              "numeric_payload_scalar_bytes": 8,
+              "elements": 15,
+              "bytes": 120,
+              "numeric_payload_bytes": 120,
+              "numeric_payload_scope": "float64 scalar payload only; excludes JSON, wire, Python-list, and engine-cache overhead",
+              "raw_upper_bound_source": "validated-Interp-request-coordinates;interp-coordinate-columns"
+            },
+            "limits": {
+              "max_elements": 1000000,
+              "max_bytes": 67108864,
+              "max_numeric_payload_bytes": 67108864
+            },
+            "budget_scope": "numeric_payload_only",
+            "data_vector_count": {
+              "value": null,
+              "used_for_point_bound": false,
+              "interpretation": "observation only; never treated as coordinate count"
+            },
+            "metadata_sources": {
+              "expression": "validated-request-expressions",
+              "point_count": "validated-Interp-request-coordinates",
+              "solution_axes": "validated-SolutionBinding.outer/inner-pairs",
+              "raw_point_upper_bound": "validated-Interp-request-coordinates;interp-coordinate-columns"
+            },
+            "request_progress": {
+              "consumed_numeric_payload_elements": 15,
+              "consumed_numeric_payload_bytes": 120,
+              "max_elements": 1000000,
+              "max_bytes": 67108864
+            }
+          }
+        ],
+        "publish_allowed": true
+      },
+      "cleanup": {
+        "tag": "cmssp1",
+        "type_id": "Interp",
+        "created": true,
+        "removed": true,
+        "cleanup_failed": false,
+        "error": null,
+        "verified_removed": true
+      },
+      "status": {
+        "ok": true,
+        "engine_error": null,
+        "cleanup_failed": false,
+        "verification_status": "PASSED"
+      },
+      "verification_status": "PASSED",
+      "domain_state": "succeeded",
+      "execution_state_unknown": false,
+      "partial_change": false,
+      "cleanup_failed": false,
+      "dispatch_stage": "post_dispatch",
+      "domain_outcome": {
+        "operation": "result.at_points",
+        "state": "succeeded",
+        "verification_status": "PASSED",
+        "cleanup_failed": false,
+        "execution_state_unknown": false,
+        "dispatch_stage": "post_dispatch",
+        "verification": {
+          "declared_by": [
+            "verification_status"
+          ],
+          "raw_status": "PASSED"
+        },
+        "witness": {
+          "engine_calls": 57,
+          "mutation_method": "create",
+          "mutation_issued": true,
+          "methods": [
+            "component",
+            "create",
+            "dataset",
+            "geom",
+            "get",
+            "getCoordinates",
+            "getData",
+            "getLevelNames",
+            "getOuterSolnum",
+            "getPNames",
+            "getPvals",
+            "getSDim",
+            "getSolnum",
+            "getSolnums",
+            "getSolutioninfo",
+            "getString",
+            "getStringArray",
+            "getType",
+            "getUnits",
+            "isAxisymmetric",
+            "isComplex",
+            "lengthUnit",
+            "modelNode",
+            "numerical",
+            "properties",
+            "remove",
+            "result",
+            "run",
+            "set",
+            "setInterpolationCoordinates",
+            "sol",
+            "tags"
+          ],
+          "dispatches": [
+            {
+              "command": "call",
+              "method": "result",
+              "args_count": 0,
+              "receiver": "h-a559bd29-a6f2-4fbe-a445-53f32b4d62b3",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "numerical",
+              "args_count": 0,
+              "receiver": "h-e08172c0-e5fe-4feb-99cc-9f6d09158a8c",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "dataset",
+              "args_count": 0,
+              "receiver": "h-e08172c0-e5fe-4feb-99cc-9f6d09158a8c",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-9e943dc6-7258-42de-bbc1-548ad1177f31",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "get",
+              "args_count": 1,
+              "receiver": "h-9e943dc6-7258-42de-bbc1-548ad1177f31",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "result",
+              "args_count": 0,
+              "receiver": "h-a559bd29-a6f2-4fbe-a445-53f32b4d62b3",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "dataset",
+              "args_count": 0,
+              "receiver": "h-b657e39b-6903-499f-963f-c6461f1eae39",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-a4c21e75-f6b1-4ce4-8ac0-6c19676623bf",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "sol",
+              "args_count": 0,
+              "receiver": "h-a559bd29-a6f2-4fbe-a445-53f32b4d62b3",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-ef68ddc7-1186-41c6-8dfd-b708060123c0",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "get",
+              "args_count": 1,
+              "receiver": "h-a4c21e75-f6b1-4ce4-8ac0-6c19676623bf",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getType",
+              "args_count": 0,
+              "receiver": "h-015c4fad-631d-4d22-a8c4-f9b84478be39",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "properties",
+              "args_count": 0,
+              "receiver": "h-015c4fad-631d-4d22-a8c4-f9b84478be39",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getString",
+              "args_count": 1,
+              "receiver": "h-015c4fad-631d-4d22-a8c4-f9b84478be39",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "properties",
+              "args_count": 0,
+              "receiver": "h-015c4fad-631d-4d22-a8c4-f9b84478be39",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "properties",
+              "args_count": 0,
+              "receiver": "h-015c4fad-631d-4d22-a8c4-f9b84478be39",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "properties",
+              "args_count": 0,
+              "receiver": "h-015c4fad-631d-4d22-a8c4-f9b84478be39",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getString",
+              "args_count": 1,
+              "receiver": "h-015c4fad-631d-4d22-a8c4-f9b84478be39",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "properties",
+              "args_count": 0,
+              "receiver": "h-015c4fad-631d-4d22-a8c4-f9b84478be39",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getString",
+              "args_count": 1,
+              "receiver": "h-015c4fad-631d-4d22-a8c4-f9b84478be39",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "modelNode",
+              "args_count": 0,
+              "receiver": "h-a559bd29-a6f2-4fbe-a445-53f32b4d62b3",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-1e99998d-fbde-4b8e-9969-9d2c1171b966",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "component",
+              "args_count": 1,
+              "receiver": "h-a559bd29-a6f2-4fbe-a445-53f32b4d62b3",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "geom",
+              "args_count": 0,
+              "receiver": "h-5373e5ab-765c-4d97-be7c-45f933d9fbea",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-3b75e35d-64d5-4823-b6e4-7ab91e899e81",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "get",
+              "args_count": 1,
+              "receiver": "h-3b75e35d-64d5-4823-b6e4-7ab91e899e81",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "component",
+              "args_count": 1,
+              "receiver": "h-a559bd29-a6f2-4fbe-a445-53f32b4d62b3",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "geom",
+              "args_count": 1,
+              "receiver": "h-1cce8c6c-dd44-44c2-89a4-e6f69d027654",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "lengthUnit",
+              "args_count": 0,
+              "receiver": "h-b642ca5a-9e17-49a8-b1c1-66a679f4a5bc",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getSDim",
+              "args_count": 0,
+              "receiver": "h-b642ca5a-9e17-49a8-b1c1-66a679f4a5bc",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "isAxisymmetric",
+              "args_count": 0,
+              "receiver": "h-b642ca5a-9e17-49a8-b1c1-66a679f4a5bc",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "sol",
+              "args_count": 0,
+              "receiver": "h-a559bd29-a6f2-4fbe-a445-53f32b4d62b3",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-f2008fe1-3228-48f7-ba7e-8da6b8024745",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "get",
+              "args_count": 1,
+              "receiver": "h-f2008fe1-3228-48f7-ba7e-8da6b8024745",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getSolutioninfo",
+              "args_count": 0,
+              "receiver": "h-a1d55def-2a34-4b6a-8145-d164214d0c83",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getOuterSolnum",
+              "args_count": 0,
+              "receiver": "h-a94152f4-fec5-4908-865a-ea4e70a23f7b",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getSolnums",
+              "args_count": 1,
+              "receiver": "h-a94152f4-fec5-4908-865a-ea4e70a23f7b",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getSolnum",
+              "args_count": 2,
+              "receiver": "h-a94152f4-fec5-4908-865a-ea4e70a23f7b",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getSolnum",
+              "args_count": 2,
+              "receiver": "h-a94152f4-fec5-4908-865a-ea4e70a23f7b",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getPNames",
+              "args_count": 1,
+              "receiver": "h-a94152f4-fec5-4908-865a-ea4e70a23f7b",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getPvals",
+              "args_count": 1,
+              "receiver": "h-a94152f4-fec5-4908-865a-ea4e70a23f7b",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getUnits",
+              "args_count": 1,
+              "receiver": "h-a94152f4-fec5-4908-865a-ea4e70a23f7b",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getLevelNames",
+              "args_count": 0,
+              "receiver": "h-a94152f4-fec5-4908-865a-ea4e70a23f7b",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-aa5814da-4fd9-439d-83b3-ce8a07490c00",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "create",
+              "args_count": 2,
+              "receiver": "h-aa5814da-4fd9-439d-83b3-ce8a07490c00",
+              "is_mutation": true
+            },
+            {
+              "command": "call",
+              "method": "set",
+              "args_count": 2,
+              "receiver": "h-65660e56-be25-4339-81b1-e30e8da7de80",
+              "is_mutation": true
+            },
+            {
+              "command": "call",
+              "method": "getString",
+              "args_count": 1,
+              "receiver": "h-65660e56-be25-4339-81b1-e30e8da7de80",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "set",
+              "args_count": 2,
+              "receiver": "h-65660e56-be25-4339-81b1-e30e8da7de80",
+              "is_mutation": true
+            },
+            {
+              "command": "call",
+              "method": "setInterpolationCoordinates",
+              "args_count": 1,
+              "receiver": "h-65660e56-be25-4339-81b1-e30e8da7de80",
+              "is_mutation": true
+            },
+            {
+              "command": "call",
+              "method": "run",
+              "args_count": 0,
+              "receiver": "h-65660e56-be25-4339-81b1-e30e8da7de80",
+              "is_mutation": true
+            },
+            {
+              "command": "call",
+              "method": "isComplex",
+              "args_count": 0,
+              "receiver": "h-65660e56-be25-4339-81b1-e30e8da7de80",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "isComplex",
+              "args_count": 0,
+              "receiver": "h-65660e56-be25-4339-81b1-e30e8da7de80",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getData",
+              "args_count": 0,
+              "receiver": "h-65660e56-be25-4339-81b1-e30e8da7de80",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getStringArray",
+              "args_count": 1,
+              "receiver": "h-65660e56-be25-4339-81b1-e30e8da7de80",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getCoordinates",
+              "args_count": 0,
+              "receiver": "h-65660e56-be25-4339-81b1-e30e8da7de80",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "remove",
+              "args_count": 1,
+              "receiver": "h-aa5814da-4fd9-439d-83b3-ce8a07490c00",
+              "is_mutation": true
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-aa5814da-4fd9-439d-83b3-ce8a07490c00",
+              "is_mutation": false
+            }
+          ]
+        },
+        "details": {
+          "status_unexpected_keys": [
+            "cleanup_failed",
+            "verification_status"
+          ]
+        }
+      },
+      "effect": "evaluate",
+      "isolation_proof": {
+        "verified": true,
+        "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_outer-probe_20260922T061510Z/isolation_receipt.json",
+        "pid": 95446,
+        "birth": "Tue Sep 22 14:15:10 2026",
+        "endpoint": "127.0.0.1:60773",
+        "listener": {
+          "pid": 95446,
+          "endpoint": "*:60773",
+          "local_endpoint": "*:60773",
+          "remote_endpoint": null,
+          "state": "LISTEN",
+          "raw": "java    95446 everwalker   59u  IPv6 0x6af479accb8a20d5      0t0  TCP *:60773 (LISTEN)"
+        },
+        "listener_binding": "wildcard",
+        "loopback_listener": false,
+        "worker_pid": 95661,
+        "established_client_pids": [
+          95446,
+          95661
+        ],
+        "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+        "config_inode": 14720294,
+        "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+        "api_probe": {
+          "probe_kind": "comsol_java_api",
+          "observed_at": "2026-09-22T06:15:23Z",
+          "loopback_address": "127.0.0.1",
+          "loopback_port": 60773,
+          "authenticated_api_success": true,
+          "nonloopback_address": "192.168.100.152",
+          "nonloopback_port": 60773,
+          "nonloopback_api_exception_http_status": null,
+          "denial_evidence_source": "server_access_log",
+          "server_access_log": {
+            "status": "PASS",
+            "phase": "java_connect_only",
+            "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_outer-probe_20260922T061510Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+            "inode": 30046654,
+            "offset_before": 0,
+            "offset_after": 261,
+            "segment_sha256": "a13f002dcc8a134413183cbd2e8475d89fe51bed770a18106c79034acb61d4fb",
+            "java_request_id": "g2-valve-nonloopback-connect",
+            "started_at": "2026-09-22T06:15:14Z",
+            "finished_at": "2026-09-22T06:15:23Z",
+            "entries": [
+              {
+                "peer": "127.0.0.1",
+                "method": "GET",
+                "route": "/webbridge/websocket",
+                "http_status": 101
+              },
+              {
+                "peer": "127.0.0.1",
+                "method": "GET",
+                "route": "/webbridge/websocket",
+                "http_status": 101
+              },
+              {
+                "peer": "192.168.100.152",
+                "method": "GET",
+                "route": "/webbridge/websocket",
+                "http_status": 403
+              }
+            ],
+            "parsed_nonloopback_entry": {
+              "peer": "192.168.100.152",
+              "method": "GET",
+              "route": "/webbridge/websocket",
+              "http_status": 403
+            },
+            "raw_probe_started_after_capture": true
+          }
+        },
+        "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer"
+      }
+    },
+    "evidence_level": "LIVE_PUBLIC_MCP_STORED_SOLUTION",
+    "rebuilt_or_resolved": false
+  },
+  "c": {
+    "status": "PASS",
+    "checks": [
+      {
+        "name": "artifact_sha256",
+        "status": "PASS",
+        "sha256": "611fd6b7c6fbb7844575db6af0424726520b7bcf957dca1e5dde3f45b4d6f75b"
+      },
+      {
+        "name": "dataset_exists",
+        "status": "PASS",
+        "dataset": "dset1"
+      },
+      {
+        "name": "solution_exists",
+        "status": "PASS",
+        "solution": "sol1"
+      },
+      {
+        "name": "solver_settings",
+        "status": "PASS"
+      },
+      {
+        "name": "derived_values",
+        "status": "PASS",
+        "expected": [
+          "user_derived_probe"
+        ],
+        "available": [
+          "user_derived_probe"
+        ],
+        "source": "structured control fixture attribute or model.result().numerical().tags() from the engine"
+      }
+    ],
+    "comparisons": {
+      "sample_0": {
+        "expression": "sample_0",
+        "expected": 293.1500053680011,
+        "actual": 293.1500053680011,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_1": {
+        "expression": "sample_1",
+        "expected": 293.15000000427807,
+        "actual": 293.15000000427807,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_2": {
+        "expression": "sample_2",
+        "expected": 293.15004133571045,
+        "actual": 293.15004133571045,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_3": {
+        "expression": "sample_3",
+        "expected": 296.6146269918295,
+        "actual": 296.6146269918295,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_4": {
+        "expression": "sample_4",
+        "expected": 298.5502876311464,
+        "actual": 298.5502876311464,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_5": {
+        "expression": "sample_5",
+        "expected": 312.539840315832,
+        "actual": 312.539840315832,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_6": {
+        "expression": "sample_6",
+        "expected": 300.64567889853697,
+        "actual": 300.64567889853697,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_7": {
+        "expression": "sample_7",
+        "expected": 306.31927503651684,
+        "actual": 306.31927503651684,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_8": {
+        "expression": "sample_8",
+        "expected": 320.00147376614825,
+        "actual": 320.00147376614825,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_9": {
+        "expression": "sample_9",
+        "expected": 303.93139935230676,
+        "actual": 303.93139935230676,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_10": {
+        "expression": "sample_10",
+        "expected": 311.3459520896145,
+        "actual": 311.3459520896145,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_11": {
+        "expression": "sample_11",
+        "expected": 323.83079045004695,
+        "actual": 323.83079045004695,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_12": {
+        "expression": "sample_12",
+        "expected": 306.1398954152188,
+        "actual": 306.1398954152188,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_13": {
+        "expression": "sample_13",
+        "expected": 314.53006715004716,
+        "actual": 314.53006715004716,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_14": {
+        "expression": "sample_14",
+        "expected": 326.12504337452765,
+        "actual": 326.12504337452765,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_15": {
+        "expression": "sample_15",
+        "expected": 307.556647719218,
+        "actual": 307.556647719218,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_16": {
+        "expression": "sample_16",
+        "expected": 316.54277032335233,
+        "actual": 316.54277032335233,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_17": {
+        "expression": "sample_17",
+        "expected": 327.5544651083677,
+        "actual": 327.5544651083677,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_18": {
+        "expression": "sample_18",
+        "expected": 308.45514844736965,
+        "actual": 308.45514844736965,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_19": {
+        "expression": "sample_19",
+        "expected": 317.8148534561044,
+        "actual": 317.8148534561044,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_20": {
+        "expression": "sample_20",
+        "expected": 328.454824034074,
+        "actual": 328.454824034074,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_21": {
+        "expression": "sample_21",
+        "expected": 309.0242540293834,
+        "actual": 309.0242540293834,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_22": {
+        "expression": "sample_22",
+        "expected": 318.6199480743438,
+        "actual": 318.6199480743438,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_23": {
+        "expression": "sample_23",
+        "expected": 329.02420709962655,
+        "actual": 329.02420709962655,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_24": {
+        "expression": "sample_24",
+        "expected": 309.3847876160227,
+        "actual": 309.3847876160227,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_25": {
+        "expression": "sample_25",
+        "expected": 319.12988728376575,
+        "actual": 319.12988728376575,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      },
+      "sample_26": {
+        "expression": "sample_26",
+        "expected": 329.384781299778,
+        "actual": 329.384781299778,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0,
+        "tolerance": 0.001,
+        "rel_tolerance": null,
+        "effective_abs_window": 0.001,
+        "decided_by": "absolute",
+        "status": "PASS"
+      }
+    },
+    "tolerance_policy": "each receipt expectation must state 'tolerance' and/or 'rel_tolerance'; the checker applies exactly those windows and records the effective absolute window per comparison instead of substituting a default",
+    "fresh_model_ref": {
+      "schema_version": 1,
+      "session_id": "session-0c6f35ef96b178f2cbc951dd",
+      "server_instance_id": "3a43fc30c0fb88cebbae3903802b334362c140bb96abfe656f310eea2fda3cc8",
+      "model_tag": "mcp_1416ba1c7a14",
+      "generation": 1
+    },
+    "observed_state": {
+      "datasets": [
+        "dset1"
+      ],
+      "solutions": [
+        "sol1"
+      ],
+      "derived_values": [
+        "user_derived_probe"
+      ],
+      "material_k": [
+        "400[W/(m*K)]"
+      ],
+      "left_T": "300.0[K]",
+      "right_T": "340.0[K]",
+      "solver_features": [
+        "st1",
+        "v1",
+        "t1"
+      ],
+      "solution_parameters": [
+        "t"
+      ],
+      "solution_values": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+        8.0
+      ],
+      "study_tlist": "range(0, 1.0, 8.0)",
+      "solver_tlist": "range(0, 1.0, 8.0)",
+      "solver_rtol": "0.00001",
+      "table": "user_table",
+      "tables": [
+        "user_table"
+      ]
+    },
+    "point_readback": {
+      "values": [
+        [
+          [
+            [
+              293.1500053680011,
+              293.15000000427807,
+              293.15004133571045
+            ],
+            [
+              296.6146269918295,
+              298.5502876311464,
+              312.539840315832
+            ],
+            [
+              300.64567889853697,
+              306.31927503651684,
+              320.00147376614825
+            ],
+            [
+              303.93139935230676,
+              311.3459520896145,
+              323.83079045004695
+            ],
+            [
+              306.1398954152188,
+              314.53006715004716,
+              326.12504337452765
+            ],
+            [
+              307.556647719218,
+              316.54277032335233,
+              327.5544651083677
+            ],
+            [
+              308.45514844736965,
+              317.8148534561044,
+              328.454824034074
+            ],
+            [
+              309.0242540293834,
+              318.6199480743438,
+              329.02420709962655
+            ],
+            [
+              309.3847876160227,
+              319.12988728376575,
+              329.384781299778
+            ]
+          ]
+        ]
+      ],
+      "points": [
+        {
+          "x": 0.0125,
+          "y": 0.005
+        },
+        {
+          "x": 0.025,
+          "y": 0.005
+        },
+        {
+          "x": 0.0375,
+          "y": 0.005
+        }
+      ],
+      "point_count": 3,
+      "expressions": [
+        "T"
+      ],
+      "dataset": "dset1",
+      "solution": "sol1",
+      "binding_source": "resolve_dataset_binding(model, dataset_tag)",
+      "dataset_binding": {
+        "dataset": "dset1",
+        "dataset_type": "Solution",
+        "solution": "sol1",
+        "component": "comp1",
+        "geometry": "geom1",
+        "dataset_chain": [
+          "dset1"
+        ],
+        "dataset_edges": [],
+        "binding_complete": true,
+        "sources": {
+          "solution": "dataset.solution -> model.sol().tags()",
+          "component": "dataset.comp -> modelNode.tags()/model.component()",
+          "geometry": "dataset.geom -> component.geom.tags()/getter"
+        },
+        "properties": {
+          "solution": "sol1",
+          "comp": "comp1",
+          "geom": "geom1"
+        },
+        "read_errors": [],
+        "error": null,
+        "requested_solution": null,
+        "provenance": {
+          "dataset_tags": [
+            "dset1"
+          ],
+          "solution_tags": [
+            "sol1"
+          ],
+          "read_only": true,
+          "mutation_methods_called": []
+        }
+      },
+      "feature_readback": {
+        "data": "dset1",
+        "data_status": "VERIFIED",
+        "source": "NumericalFeature.getString('data') after set('data')"
+      },
+      "coordinate_unit": "m",
+      "frame": "spatial",
+      "coordinate_readback": {
+        "status": "VERIFIED",
+        "coordinates": [
+          [
+            0.0125,
+            0.025,
+            0.0375
+          ],
+          [
+            0.005,
+            0.005,
+            0.005
+          ]
+        ],
+        "unit": "m"
+      },
+      "complex_mode": "real",
+      "is_complex": false,
+      "field_array": {
+        "values": [
+          [
+            [
+              [
+                293.1500053680011,
+                293.15000000427807,
+                293.15004133571045
+              ],
+              [
+                296.6146269918295,
+                298.5502876311464,
+                312.539840315832
+              ],
+              [
+                300.64567889853697,
+                306.31927503651684,
+                320.00147376614825
+              ],
+              [
+                303.93139935230676,
+                311.3459520896145,
+                323.83079045004695
+              ],
+              [
+                306.1398954152188,
+                314.53006715004716,
+                326.12504337452765
+              ],
+              [
+                307.556647719218,
+                316.54277032335233,
+                327.5544651083677
+              ],
+              [
+                308.45514844736965,
+                317.8148534561044,
+                328.454824034074
+              ],
+              [
+                309.0242540293834,
+                318.6199480743438,
+                329.02420709962655
+              ],
+              [
+                309.3847876160227,
+                319.12988728376575,
+                329.384781299778
+              ]
+            ]
+          ]
+        ],
+        "data": [
+          [
+            [
+              [
+                293.1500053680011,
+                293.15000000427807,
+                293.15004133571045
+              ],
+              [
+                296.6146269918295,
+                298.5502876311464,
+                312.539840315832
+              ],
+              [
+                300.64567889853697,
+                306.31927503651684,
+                320.00147376614825
+              ],
+              [
+                303.93139935230676,
+                311.3459520896145,
+                323.83079045004695
+              ],
+              [
+                306.1398954152188,
+                314.53006715004716,
+                326.12504337452765
+              ],
+              [
+                307.556647719218,
+                316.54277032335233,
+                327.5544651083677
+              ],
+              [
+                308.45514844736965,
+                317.8148534561044,
+                328.454824034074
+              ],
+              [
+                309.0242540293834,
+                318.6199480743438,
+                329.02420709962655
+              ],
+              [
+                309.3847876160227,
+                319.12988728376575,
+                329.384781299778
+              ]
+            ]
+          ]
+        ],
+        "axes": [
+          "expression",
+          "outer",
+          "inner",
+          "point"
+        ],
+        "shape": [
+          1,
+          1,
+          9,
+          3
+        ],
+        "coords": {
+          "expression": [
+            "T"
+          ],
+          "outer": [
+            1
+          ],
+          "inner": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "point": [
+            1,
+            2,
+            3
+          ],
+          "parameters": [
+            {},
+            {},
+            {},
+            {},
+            {},
+            {},
+            {},
+            {},
+            {}
+          ],
+          "params": [
+            {},
+            {},
+            {},
+            {},
+            {},
+            {},
+            {},
+            {},
+            {}
+          ],
+          "spatial": [
+            [
+              0.0125,
+              0.005
+            ],
+            [
+              0.025,
+              0.005
+            ],
+            [
+              0.0375,
+              0.005
+            ]
+          ]
+        },
+        "units": {
+          "expression": {
+            "T": "K"
+          },
+          "outer": "index",
+          "inner": "index",
+          "point": "m",
+          "parameters": {}
+        },
+        "metadata": {
+          "binding_source": "SolutionInfo.getSolnum(outer, strict)",
+          "pair_mapping_complete": true,
+          "solution_pairs": [
+            {
+              "outer": 1,
+              "inner": 1,
+              "solnum": 1,
+              "parameters": {},
+              "parameter_units": {}
+            },
+            {
+              "outer": 1,
+              "inner": 2,
+              "solnum": 2,
+              "parameters": {},
+              "parameter_units": {}
+            },
+            {
+              "outer": 1,
+              "inner": 3,
+              "solnum": 3,
+              "parameters": {},
+              "parameter_units": {}
+            },
+            {
+              "outer": 1,
+              "inner": 4,
+              "solnum": 4,
+              "parameters": {},
+              "parameter_units": {}
+            },
+            {
+              "outer": 1,
+              "inner": 5,
+              "solnum": 5,
+              "parameters": {},
+              "parameter_units": {}
+            },
+            {
+              "outer": 1,
+              "inner": 6,
+              "solnum": 6,
+              "parameters": {},
+              "parameter_units": {}
+            },
+            {
+              "outer": 1,
+              "inner": 7,
+              "solnum": 7,
+              "parameters": {},
+              "parameter_units": {}
+            },
+            {
+              "outer": 1,
+              "inner": 8,
+              "solnum": 8,
+              "parameters": {},
+              "parameter_units": {}
+            },
+            {
+              "outer": 1,
+              "inner": 9,
+              "solnum": 9,
+              "parameters": {},
+              "parameter_units": {}
+            }
+          ],
+          "parameter_names": [],
+          "expression_units": {
+            "T": "K"
+          },
+          "unit_readback_status": "VERIFIED",
+          "point_coordinate_source": "request"
+        },
+        "is_complex": false
+      },
+      "result_budget": {
+        "status": "PASS",
+        "limits": {
+          "max_elements": 1000000,
+          "max_bytes": 67108864,
+          "scope": "numeric_payload_only",
+          "engine_internal_cache": "UNMEASURED"
+        },
+        "records": [
+          {
+            "status": "PASS",
+            "allowed": true,
+            "verification": "VERIFIED",
+            "reason_code": "BUDGET_WITHIN_LIMIT",
+            "reason": "verified pre-getData result allocation is within both configured limits",
+            "operation": "result.at_points",
+            "feature_kind": "Interp",
+            "raw_getter": "getData",
+            "raw_layout": "expression,solnum,vertex",
+            "pre_getdata": true,
+            "getdata_called": true,
+            "publish_allowed": true,
+            "requested": {
+              "expression_count": 1,
+              "point_count": 3,
+              "outer_count": 1,
+              "inner_count": 9,
+              "inner_counts_by_outer": null,
+              "complex_components": 1,
+              "scalar_bytes": 8,
+              "max_elements": 1000000,
+              "max_bytes": 67108864,
+              "reported_data_vector_count": null,
+              "raw_point_upper_bound": 3,
+              "raw_upper_bound_verified": true,
+              "raw_upper_bound_source": "validated-Interp-request-coordinates;interp-coordinate-columns",
+              "raw_point_upper_bounds_by_outer": [
+                3
+              ]
+            },
+            "computed": {
+              "expression_count": 1,
+              "outer_count": 1,
+              "inner_count_total": 9,
+              "inner_counts_by_outer": null,
+              "requested_point_count": 3,
+              "raw_point_upper_bound": 3,
+              "raw_point_upper_bounds_by_outer": [
+                3
+              ],
+              "complex_components": 1,
+              "scalar_bytes": 8,
+              "numeric_payload_scalar_bytes": 8,
+              "elements": 27,
+              "bytes": 216,
+              "numeric_payload_bytes": 216,
+              "numeric_payload_scope": "float64 scalar payload only; excludes JSON, wire, Python-list, and engine-cache overhead",
+              "raw_upper_bound_source": "validated-Interp-request-coordinates;interp-coordinate-columns"
+            },
+            "limits": {
+              "max_elements": 1000000,
+              "max_bytes": 67108864,
+              "max_numeric_payload_bytes": 67108864
+            },
+            "budget_scope": "numeric_payload_only",
+            "data_vector_count": {
+              "value": null,
+              "used_for_point_bound": false,
+              "interpretation": "observation only; never treated as coordinate count"
+            },
+            "metadata_sources": {
+              "expression": "validated-request-expressions",
+              "point_count": "validated-Interp-request-coordinates",
+              "solution_axes": "validated-SolutionBinding.outer/inner-pairs",
+              "raw_point_upper_bound": "validated-Interp-request-coordinates;interp-coordinate-columns"
+            },
+            "request_progress": {
+              "consumed_numeric_payload_elements": 27,
+              "consumed_numeric_payload_bytes": 216,
+              "max_elements": 1000000,
+              "max_bytes": 67108864
+            }
+          }
+        ],
+        "publish_allowed": true
+      },
+      "cleanup": {
+        "tag": "cmssp1",
+        "type_id": "Interp",
+        "created": true,
+        "removed": true,
+        "cleanup_failed": false,
+        "error": null,
+        "verified_removed": true
+      },
+      "status": {
+        "ok": true,
+        "engine_error": null,
+        "cleanup_failed": false,
+        "verification_status": "PASSED"
+      },
+      "verification_status": "PASSED",
+      "domain_state": "succeeded",
+      "execution_state_unknown": false,
+      "partial_change": false,
+      "cleanup_failed": false,
+      "dispatch_stage": "post_dispatch",
+      "domain_outcome": {
+        "operation": "result.at_points",
+        "state": "succeeded",
+        "verification_status": "PASSED",
+        "cleanup_failed": false,
+        "execution_state_unknown": false,
+        "dispatch_stage": "post_dispatch",
+        "verification": {
+          "declared_by": [
+            "verification_status"
+          ],
+          "raw_status": "PASSED"
+        },
+        "witness": {
+          "engine_calls": 57,
+          "mutation_method": "create",
+          "mutation_issued": true,
+          "methods": [
+            "component",
+            "create",
+            "dataset",
+            "geom",
+            "get",
+            "getCoordinates",
+            "getData",
+            "getLevelNames",
+            "getOuterSolnum",
+            "getPNames",
+            "getPvals",
+            "getSDim",
+            "getSolnum",
+            "getSolnums",
+            "getSolutioninfo",
+            "getString",
+            "getStringArray",
+            "getType",
+            "getUnits",
+            "isAxisymmetric",
+            "isComplex",
+            "lengthUnit",
+            "modelNode",
+            "numerical",
+            "properties",
+            "remove",
+            "result",
+            "run",
+            "set",
+            "setInterpolationCoordinates",
+            "sol",
+            "tags"
+          ],
+          "dispatches": [
+            {
+              "command": "call",
+              "method": "result",
+              "args_count": 0,
+              "receiver": "h-8b14820c-5884-4dad-ba2d-3d7d2502b9dd",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "numerical",
+              "args_count": 0,
+              "receiver": "h-e1ea5735-e9af-49bc-b91f-241f9a7b2b3c",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "dataset",
+              "args_count": 0,
+              "receiver": "h-e1ea5735-e9af-49bc-b91f-241f9a7b2b3c",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-6cbfa38d-7586-4785-97b0-4f75e92f7696",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "get",
+              "args_count": 1,
+              "receiver": "h-6cbfa38d-7586-4785-97b0-4f75e92f7696",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "result",
+              "args_count": 0,
+              "receiver": "h-8b14820c-5884-4dad-ba2d-3d7d2502b9dd",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "dataset",
+              "args_count": 0,
+              "receiver": "h-7d27b97e-9916-4022-b336-13d765470350",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-f7adbcc9-8c4d-46b7-89aa-667d2f649802",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "sol",
+              "args_count": 0,
+              "receiver": "h-8b14820c-5884-4dad-ba2d-3d7d2502b9dd",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-d68f2183-766b-46eb-93a3-d424b503260c",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "get",
+              "args_count": 1,
+              "receiver": "h-f7adbcc9-8c4d-46b7-89aa-667d2f649802",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getType",
+              "args_count": 0,
+              "receiver": "h-aa8586ef-f8c5-4182-91c3-271f8796fcfb",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "properties",
+              "args_count": 0,
+              "receiver": "h-aa8586ef-f8c5-4182-91c3-271f8796fcfb",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getString",
+              "args_count": 1,
+              "receiver": "h-aa8586ef-f8c5-4182-91c3-271f8796fcfb",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "properties",
+              "args_count": 0,
+              "receiver": "h-aa8586ef-f8c5-4182-91c3-271f8796fcfb",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "properties",
+              "args_count": 0,
+              "receiver": "h-aa8586ef-f8c5-4182-91c3-271f8796fcfb",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "properties",
+              "args_count": 0,
+              "receiver": "h-aa8586ef-f8c5-4182-91c3-271f8796fcfb",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getString",
+              "args_count": 1,
+              "receiver": "h-aa8586ef-f8c5-4182-91c3-271f8796fcfb",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "properties",
+              "args_count": 0,
+              "receiver": "h-aa8586ef-f8c5-4182-91c3-271f8796fcfb",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getString",
+              "args_count": 1,
+              "receiver": "h-aa8586ef-f8c5-4182-91c3-271f8796fcfb",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "modelNode",
+              "args_count": 0,
+              "receiver": "h-8b14820c-5884-4dad-ba2d-3d7d2502b9dd",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-8a487df4-f331-42e1-8d24-b1835cd71ea5",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "component",
+              "args_count": 1,
+              "receiver": "h-8b14820c-5884-4dad-ba2d-3d7d2502b9dd",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "geom",
+              "args_count": 0,
+              "receiver": "h-8b57f45a-a07a-45ca-88c8-6aaee3b7ba67",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-0333ed92-c6cc-4954-8253-36a59cb4ff16",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "get",
+              "args_count": 1,
+              "receiver": "h-0333ed92-c6cc-4954-8253-36a59cb4ff16",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "component",
+              "args_count": 1,
+              "receiver": "h-8b14820c-5884-4dad-ba2d-3d7d2502b9dd",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "geom",
+              "args_count": 1,
+              "receiver": "h-a638111d-1af4-481b-b630-191b81f3b581",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "lengthUnit",
+              "args_count": 0,
+              "receiver": "h-ffe14306-eaae-4e95-9994-99bf7d6d2dd2",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getSDim",
+              "args_count": 0,
+              "receiver": "h-ffe14306-eaae-4e95-9994-99bf7d6d2dd2",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "isAxisymmetric",
+              "args_count": 0,
+              "receiver": "h-ffe14306-eaae-4e95-9994-99bf7d6d2dd2",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "sol",
+              "args_count": 0,
+              "receiver": "h-8b14820c-5884-4dad-ba2d-3d7d2502b9dd",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-ad14f631-8239-4074-92c0-f37c8ad67a7b",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "get",
+              "args_count": 1,
+              "receiver": "h-ad14f631-8239-4074-92c0-f37c8ad67a7b",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getSolutioninfo",
+              "args_count": 0,
+              "receiver": "h-6cb4480c-0165-428e-975d-40aa7914d67a",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getOuterSolnum",
+              "args_count": 0,
+              "receiver": "h-1af9c7de-a4eb-46bb-867f-cd8f032277b7",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getSolnums",
+              "args_count": 1,
+              "receiver": "h-1af9c7de-a4eb-46bb-867f-cd8f032277b7",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getSolnum",
+              "args_count": 2,
+              "receiver": "h-1af9c7de-a4eb-46bb-867f-cd8f032277b7",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getSolnum",
+              "args_count": 2,
+              "receiver": "h-1af9c7de-a4eb-46bb-867f-cd8f032277b7",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getPNames",
+              "args_count": 1,
+              "receiver": "h-1af9c7de-a4eb-46bb-867f-cd8f032277b7",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getPvals",
+              "args_count": 1,
+              "receiver": "h-1af9c7de-a4eb-46bb-867f-cd8f032277b7",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getUnits",
+              "args_count": 1,
+              "receiver": "h-1af9c7de-a4eb-46bb-867f-cd8f032277b7",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getLevelNames",
+              "args_count": 0,
+              "receiver": "h-1af9c7de-a4eb-46bb-867f-cd8f032277b7",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-2698179a-0f6e-45b1-96b5-c381b5ee77de",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "create",
+              "args_count": 2,
+              "receiver": "h-2698179a-0f6e-45b1-96b5-c381b5ee77de",
+              "is_mutation": true
+            },
+            {
+              "command": "call",
+              "method": "set",
+              "args_count": 2,
+              "receiver": "h-75a6343e-1649-4527-9fd2-afe14c881893",
+              "is_mutation": true
+            },
+            {
+              "command": "call",
+              "method": "getString",
+              "args_count": 1,
+              "receiver": "h-75a6343e-1649-4527-9fd2-afe14c881893",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "set",
+              "args_count": 2,
+              "receiver": "h-75a6343e-1649-4527-9fd2-afe14c881893",
+              "is_mutation": true
+            },
+            {
+              "command": "call",
+              "method": "setInterpolationCoordinates",
+              "args_count": 1,
+              "receiver": "h-75a6343e-1649-4527-9fd2-afe14c881893",
+              "is_mutation": true
+            },
+            {
+              "command": "call",
+              "method": "run",
+              "args_count": 0,
+              "receiver": "h-75a6343e-1649-4527-9fd2-afe14c881893",
+              "is_mutation": true
+            },
+            {
+              "command": "call",
+              "method": "isComplex",
+              "args_count": 0,
+              "receiver": "h-75a6343e-1649-4527-9fd2-afe14c881893",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "isComplex",
+              "args_count": 0,
+              "receiver": "h-75a6343e-1649-4527-9fd2-afe14c881893",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getData",
+              "args_count": 0,
+              "receiver": "h-75a6343e-1649-4527-9fd2-afe14c881893",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getStringArray",
+              "args_count": 1,
+              "receiver": "h-75a6343e-1649-4527-9fd2-afe14c881893",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getCoordinates",
+              "args_count": 0,
+              "receiver": "h-75a6343e-1649-4527-9fd2-afe14c881893",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "remove",
+              "args_count": 1,
+              "receiver": "h-2698179a-0f6e-45b1-96b5-c381b5ee77de",
+              "is_mutation": true
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-2698179a-0f6e-45b1-96b5-c381b5ee77de",
+              "is_mutation": false
+            }
+          ]
+        },
+        "details": {
+          "status_unexpected_keys": [
+            "cleanup_failed",
+            "verification_status"
+          ]
+        }
+      },
+      "effect": "evaluate",
+      "isolation_proof": {
+        "verified": true,
+        "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_outer-probe_20260922T061510Z/isolation_receipt.json",
+        "pid": 95446,
+        "birth": "Tue Sep 22 14:15:10 2026",
+        "endpoint": "127.0.0.1:60773",
+        "listener": {
+          "pid": 95446,
+          "endpoint": "*:60773",
+          "local_endpoint": "*:60773",
+          "remote_endpoint": null,
+          "state": "LISTEN",
+          "raw": "java    95446 everwalker   59u  IPv6 0x6af479accb8a20d5      0t0  TCP *:60773 (LISTEN)"
+        },
+        "listener_binding": "wildcard",
+        "loopback_listener": false,
+        "worker_pid": 95661,
+        "established_client_pids": [
+          95446,
+          95661
+        ],
+        "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+        "config_inode": 14720294,
+        "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+        "api_probe": {
+          "probe_kind": "comsol_java_api",
+          "observed_at": "2026-09-22T06:15:23Z",
+          "loopback_address": "127.0.0.1",
+          "loopback_port": 60773,
+          "authenticated_api_success": true,
+          "nonloopback_address": "192.168.100.152",
+          "nonloopback_port": 60773,
+          "nonloopback_api_exception_http_status": null,
+          "denial_evidence_source": "server_access_log",
+          "server_access_log": {
+            "status": "PASS",
+            "phase": "java_connect_only",
+            "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_outer-probe_20260922T061510Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+            "inode": 30046654,
+            "offset_before": 0,
+            "offset_after": 261,
+            "segment_sha256": "a13f002dcc8a134413183cbd2e8475d89fe51bed770a18106c79034acb61d4fb",
+            "java_request_id": "g2-valve-nonloopback-connect",
+            "started_at": "2026-09-22T06:15:14Z",
+            "finished_at": "2026-09-22T06:15:23Z",
+            "entries": [
+              {
+                "peer": "127.0.0.1",
+                "method": "GET",
+                "route": "/webbridge/websocket",
+                "http_status": 101
+              },
+              {
+                "peer": "127.0.0.1",
+                "method": "GET",
+                "route": "/webbridge/websocket",
+                "http_status": 101
+              },
+              {
+                "peer": "192.168.100.152",
+                "method": "GET",
+                "route": "/webbridge/websocket",
+                "http_status": 403
+              }
+            ],
+            "parsed_nonloopback_entry": {
+              "peer": "192.168.100.152",
+              "method": "GET",
+              "route": "/webbridge/websocket",
+              "http_status": 403
+            },
+            "raw_probe_started_after_capture": true
+          }
+        },
+        "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer"
+      }
+    },
+    "evidence_level": "LIVE_PUBLIC_MCP_STORED_SOLUTION",
+    "rebuilt_or_resolved": false
+  }
+}

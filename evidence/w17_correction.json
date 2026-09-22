@@ -1,0 +1,153 @@
+{
+  "schema": "comsol-mcp-g3/w17-correction/2",
+  "generated_at": "2026-09-22T09:30:38.276781+00:00",
+  "corrected_status": "RUNTIME_VALIDATED_DELIVERY_PENDING",
+  "source": {
+    "commit": "a3f39b3022b417e16c3087b8b35f1daa06f30b8a",
+    "tree": "5a3e1b72e95a9df8892def2ca0994a8737508612",
+    "scope": "Current tested source; delivery pending"
+  },
+  "previous_reviews_preserved": [
+    {
+      "path": "evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/prior_state/BASELINE_REVIEW.json",
+      "sha256": "037830c38c3eb05ae72249b360c499578f3e420729d8aba3934e647666a40b63"
+    },
+    {
+      "path": "evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/prior_state/w17_correction.json",
+      "sha256": "82db0acafff143744f54b47edecffa38d5bdb46e3c03b6ccef815220b8866cb7"
+    }
+  ],
+  "historical_ledger": {
+    "path": "evidence/w17_acceptance.json",
+    "sha256": "53daf14f51720f59e5fb8ed731083cd851b80bd3392c4fdeb7fee4a89a225197",
+    "preserved_byte_exact": true
+  },
+  "baseline_review": "evidence/phase4_3/BASELINE_REVIEW.json",
+  "active_failures": [],
+  "implemented_controls": [
+    "Artifact hardening targeted tests pass and the wheel-install check builds, installs outside the checkout, pip-checks and inventories packaged resources",
+    "Probe/typed CRUD control tests pass and the live Probe/Table groups pass"
+  ],
+  "overall_acceptance": false,
+  "next_stage": "stop at W17; W18+ requires new authorization",
+  "corrections": [
+    {
+      "case_id": "T013",
+      "name": "Measures & Axisymmetric 2*pi*r Weighting",
+      "historical_status": "PASS",
+      "corrected_status": "DEFECTIVE_IN_G3_2",
+      "corrected_evidence_level": "UNIT_CONTRACT",
+      "defect_summary": "All aggregates mapped to IntVolume regardless of geometric dimension; average denominator hardcoded to 1.0; std and rms formulas unimplemented; axisymmetric count boolean reflection only."
+    },
+    {
+      "case_id": "T014",
+      "name": "Complex Field Transformation Modes",
+      "historical_status": "PASS",
+      "corrected_status": "DEFECTIVE_IN_G3_2",
+      "corrected_evidence_level": "UNIT_CONTRACT",
+      "defect_summary": "_transform_complex_data silently padded 0.0 when imag extraction failed, masking complex data errors as real numbers."
+    },
+    {
+      "case_id": "T021",
+      "name": "SolutionSpec Inner/Outer & Time Indexing",
+      "historical_status": "PASS",
+      "corrected_status": "DEFECTIVE_IN_G3_2",
+      "corrected_evidence_level": "UNIT_CONTRACT",
+      "defect_summary": "Sliced outer array [expr][solnum][vertex] as inner-1, mistakenly slicing expression axis instead of solution step; hardcoded outer_indices=[1]."
+    },
+    {
+      "case_id": "T049",
+      "name": "Large Array Export & Chunk Pagination",
+      "historical_status": "PASS",
+      "corrected_status": "DEFECTIVE_IN_G3_2",
+      "corrected_evidence_level": "UNIT_CONTRACT",
+      "defect_summary": "Path(dest).resolve() unconstrained; failed evaluations exported successful empty files; verify_artifact_chunks loaded entire file in RAM; no bounded memory chunk stream."
+    },
+    {
+      "case_id": "Gate_A",
+      "name": "Identical-SHA Model Reopen",
+      "historical_status": "PASS",
+      "corrected_status": "MOCK_CONTROL_ONLY_IN_G3_2",
+      "corrected_evidence_level": "CONTROL_UNIT",
+      "defect_summary": "FakeReopenModel used static byte fixtures and string inequality comparisons; no live COMSOL file reopen without re-solve was performed."
+    }
+  ],
+  "corrections_note": "Per-case evidence-level corrections. Restored after the 2026-09-22 acceptance remediation rewrote this ledger around current status: the C01 acceptance case (and any reader) needs the per-case downgrades here, not only in the historical narrative. Gate_A is CONTROL_UNIT because its delivered receipts were tautological self-comparisons; T013/T014/T021/T049 are UNIT_CONTRACT because their delivered evidence came from mocks, not from the engine.",
+  "acceptance_scope": {
+    "verified_workstream": "W17",
+    "stop_boundary": "W17 (W18-W26 remain unauthorized)",
+    "target_platform": "macOS-aarch64 (Apple Silicon commercial installation, COMSOL 6.4)",
+    "unverified_platforms": [
+      "windows",
+      "linux",
+      "intel-mac",
+      "comsol-6.3",
+      "gui"
+    ],
+    "unverified_items": [
+      "Windows/Linux/Intel Mac/COMSOL 6.3/GUI remain UNVERIFIED",
+      "COMSOL internal cache peak unmeasured",
+      "Delivery recovery and remote sync pending"
+    ]
+  },
+  "live_matrix": "evidence/phase4_3/runs/resumption_review_20260922T0719Z/assembled_acceptance_ledger.draft.json",
+  "acceptance_ledger": "evidence/phase4_3_acceptance.json",
+  "prior_corrected_status": "LIVE_MATRIX_VERIFIED_SCOPED",
+  "current_review": "Current a3 runtime and software validated; historical mock corrections remain unchanged; delivery not yet complete.",
+  "historical_closed_failures": [
+    {
+      "failure": "M1 multi-expression standard deviation shape mismatch",
+      "closed_by": "signature-verified numeric fixes plus the live M1 group",
+      "evidence": "evidence/phase4_3/runs/frozen_m1_20260922T062014Z/run_status.json (PASS; non-unit volume: integral 6/9, average 2/3, std 0/0, rms 2/3)"
+    },
+    {
+      "failure": "Gate A full public protocol and exit-confirmed negatives not complete",
+      "closed_by": "public stdio protocol driver plus seven native negative controls and the same-key retry invariants",
+      "evidence": "evidence/phase4_3/runs/frozen_chains_20260922T061510Z/gate_a_negatives.json (wrong_hash, wrong_artifact, wrong_dataset, wrong_solution, cleared, modified_field, missing_derived)"
+    },
+    {
+      "failure": "C05-C15 remaining required live matrix not complete",
+      "closed_by": "the 19-case main runner and the protocol groups, all re-run on the frozen tree",
+      "evidence": "evidence/phase4_3/runs/frozen_19case_20260922T063553Z/result.json (19/19 PASS) plus evidence/phase4_3/LIVE_MATRIX_20260922.json"
+    }
+  ],
+  "closed_failures": [
+    {
+      "failure": "032c0a5 public complex Table create failed; downstream revision conflicts",
+      "closed_by": "ec02 table readback target fix, 4c32 fail-closed unknown complex state, a3 native tag accessor",
+      "evidence": "evidence/phase4_3/runs/final6_nodes_a3f39b3_20260922T0907Z/nodes/g33_node_probe_cases.final.json"
+    },
+    {
+      "failure": "4c32 unsupported getTag fallback violated native allowlist",
+      "closed_by": "a3 removes invented fallback; full suite and all eight native groups rerun",
+      "evidence": "evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z/run_status.json"
+    }
+  ],
+  "historical_independent_observations": {
+    "scope": "CLEAN_ROOM_RE_RUN_ON_THE_FROZEN_COMMIT",
+    "source_commit": "4ab33bb1abd67b140683a992661858c7e6c4ea21",
+    "passed_numeric_observations": [
+      "M1 non-unit-volume integral/average/std/rms on two expressions",
+      "C04 two-expression integral/average/std/rms; C06 analytic polynomial measures and positive nonconstant weighted mean",
+      "C05 point/line/boundary/surface/volume measures in 0-3 D, non-default component and geometry, axisymmetric weighting",
+      "C07 independent cylinder oracle (volume 37.6991, mean radius 1.3333, side area 37.6991)",
+      "C08 full four-axis step matrix (outer x inner x point) with analytic values and out-of-range/wrong-dataset/wrong-solution/wrong-zero refusals",
+      "C09 constant and varying complex modes (real/imag/abs/phase/preserve), transform ordering and centred variance",
+      "C10 mm/m coordinate scaling and unsupported-frame refusals"
+    ],
+    "notes": "Superseded: the earlier C09 phase-before-std failure came from an expectation that assumed the phase stays constant; the corrected contract and the live case now agree (std ~3.6e-15 on the constant-phase fixture). Historical failure records stay in their own run directories."
+  },
+  "latest_independent_observations": {
+    "source_commit": "a3f39b3022b417e16c3087b8b35f1daa06f30b8a",
+    "scope": "LIVE_PUBLIC_MCP",
+    "batch": "evidence/phase4_3/runs/final_batch_a3f39b3_20260922T0907Z/batch_status.json",
+    "groups_passed": 8,
+    "same_hash_fresh_worker_reopen": "A/B/C without resolve plus seven native negative controls",
+    "limitations": [
+      "C10 injected getter corruption remains CONTROL_UNIT; actual coordinate conversion/roundtrip native PASS",
+      "Export cleanup-fault injection CONTROL_UNIT; native evaluation fault and no-publication PASS",
+      "C13 COMSOL internal cache peak UNMEASURED; budget refusal and bounded file chunks verified"
+    ]
+  },
+  "semantic_coverage": "audit/semantic_coverage_final_a3f39b3.json"
+}

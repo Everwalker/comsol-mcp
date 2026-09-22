@@ -1,0 +1,1189 @@
+{
+  "schema": "comsol-mcp-g3/phase4_3-acceptance/1",
+  "goal": "NEXT_GOAL.md: G3.3 clean-room recovery, evidence correction, and W17 verification",
+  "status": "G3_3_MAC_W17_VERIFIED_SCOPED",
+  "run_id": "frozen_19case_20260922T060438Z",
+  "run_dir": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T060438Z",
+  "generated_at": "2026-09-22T06:05:22.023404+00:00",
+  "elapsed_seconds": 43.465515916002914,
+  "platform": "darwin",
+  "python_version": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.3.34.2)]",
+  "comsol_version": null,
+  "comsol_version_source": "unavailable: the engine did not report a version in this run",
+  "source_manifest": {
+    "head": "06567cd27002b08d7e4b39694656ebba55cd55c4",
+    "tree": "44b71f3b7efa3a501854de15d0ed04f29f8c3c74",
+    "branch": "acceptance/independent-20260922",
+    "dirty_paths": [],
+    "tracked_dirty_paths": [],
+    "untracked_paths": [],
+    "untracked_paths_in_source_tree": [],
+    "tracked_files": 6009,
+    "tracked_files_listed": 6009,
+    "tracked_files_present_in_worktree": 6009,
+    "source_blob_map_sha256": "b6bca2fc0b867038305481193f30e6a0336ad6ddd09945677817eed6eaeea92e",
+    "captured_at": "2026-09-22T06:04:41.920170+00:00"
+  },
+  "source_identity": {
+    "repository": "Everwalker/comsol-mcp (delivered source workpack)",
+    "commit": "06567cd27002b08d7e4b39694656ebba55cd55c4",
+    "tree": "44b71f3b7efa3a501854de15d0ed04f29f8c3c74",
+    "branch": "acceptance/independent-20260922",
+    "tracked_files": 6009,
+    "source_blob_map_sha256": "b6bca2fc0b867038305481193f30e6a0336ad6ddd09945677817eed6eaeea92e",
+    "lock": "repository/constraints-macos-arm64-py313.txt installs this tree via '-e .'",
+    "how_to_check": "In the recovered clone: git rev-parse HEAD == commit, git rev-parse 'HEAD^{tree}' == tree, git ls-files | wc -l == tracked_files",
+    "regenerated": "written at the start of every acceptance run; records the commit under test",
+    "file": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/SOURCE_TREE_IDENTITY.json",
+    "file_sha256": "458f14923c42a79238fd7f9e8bc9bd7c6c3ca4c85b382a1f708c58155ee6f5a2",
+    "note": "D6: the dependency lock installs this tree; this file is what a recovering agent compares a fresh clone against"
+  },
+  "runner_sha256": "8fb8db105b3e609057b9a5d0e34f3602f6593b7ca61822c1631098a7f510e2d9",
+  "runner_command": [
+    "tests/run_g3_3_live_acceptance.py",
+    "--run-dir",
+    "evidence/phase4_3/runs/frozen_19case_20260922T060438Z"
+  ],
+  "total_cases": 19,
+  "request_reply_trail": {
+    "file": "request_reply_trail.jsonl",
+    "records": 8302,
+    "truncated": false,
+    "note": "one record per worker request event: the 'submitted' request and the matching 'observed' reply (or 'unknown'/'unresponsive' when none arrived), each with the redacted payload and a request hash.  §11 asks for a per-run request/reply record; the in-process operation calls the runner makes are in assertions.json."
+  },
+  "numeric_evidence": {
+    "file": "numeric.json",
+    "cases": [
+      "C03",
+      "C03R",
+      "C04",
+      "C05",
+      "C06",
+      "C07",
+      "C08",
+      "C09",
+      "C10",
+      "C11",
+      "C14"
+    ],
+    "note": "numeric checks, comparisons, tolerances and peak-memory records extracted from the case details"
+  },
+  "aborted_cases": [],
+  "passed_cases": 19,
+  "failed_cases": 0,
+  "scope": {
+    "verified_workstream": "W17",
+    "stop_boundary": "W17 (do not advance to W18-W26)",
+    "target_platform": "macOS-aarch64 (Apple Silicon commercial installation)",
+    "unverified_platforms": [
+      "windows",
+      "linux",
+      "intel-mac",
+      "comsol-6.3",
+      "gui"
+    ]
+  },
+  "cases": {
+    "C00": {
+      "case_id": "C00",
+      "name": "Clean Recovery, Source Binding & Wheel Verification",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "source_manifest": {
+          "head": "06567cd27002b08d7e4b39694656ebba55cd55c4",
+          "tree": "44b71f3b7efa3a501854de15d0ed04f29f8c3c74",
+          "branch": "acceptance/independent-20260922",
+          "dirty_paths": [],
+          "tracked_dirty_paths": [],
+          "untracked_paths": [],
+          "untracked_paths_in_source_tree": [],
+          "tracked_files": 6009,
+          "tracked_files_listed": 6009,
+          "tracked_files_present_in_worktree": 6009,
+          "source_blob_map_sha256": "b6bca2fc0b867038305481193f30e6a0336ad6ddd09945677817eed6eaeea92e",
+          "captured_at": "2026-09-22T06:04:41.920170+00:00"
+        },
+        "run_evidence_paths_excluded_from_dirty_check": [
+          "evidence/phase4_3/runs/frozen_19case_20260922T060438Z"
+        ],
+        "pack_pin_commit": "2cb4627924d1a3240818ea7cd00453d4bd2d2da8",
+        "pack_pin_tree": "dd3095e89c640c19aeb151cd0e8efe4af3c55802",
+        "pack_inventory_file_count": 3580,
+        "pack_inventory_source_commit": "2cb4627924d1a3240818ea7cd00453d4bd2d2da8",
+        "tracked_files": 6009,
+        "tracked_file_count_source": "git ls-tree -r HEAD (actual list)",
+        "wheel_path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T060438Z/wheel_dist/comsol_mcp-0.1.9-py3-none-any.whl",
+        "wheel_sha256": "d2ecbf63e90332766ee10b8324550c80e8fc2d2f1ad2182b63ec1010d4b5f0a5",
+        "out_of_tree_import": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T060438Z/test_venv/lib/python3.14/site-packages/comsol_mcp/__init__.py",
+        "out_of_tree_import_cwd": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T060438Z/neutral_cwd",
+        "import_source_is_repository_package": false,
+        "import_resolved_into_fresh_venv": true
+      },
+      "timestamp": "2026-09-22T06:04:46.952026+00:00"
+    },
+    "C01": {
+      "case_id": "C01",
+      "name": "Evidence Correction & Ledger Auditing",
+      "status": "PASS",
+      "evidence_level": "static",
+      "error": null,
+      "details": {
+        "phase4_1_sha256": "a2e91f37d021274c5a5f1321f03961c57271e1e614d17f23d3b0ef6627335278",
+        "phase4_2_sha256": "741e702cf019bfede8564cc032bccdbd30c83ee830ec46ce6a3e16356faa52c4",
+        "w17_acceptance_sha256": "53daf14f51720f59e5fb8ed731083cd851b80bd3392c4fdeb7fee4a89a225197",
+        "correction_ledger": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/w17_correction.json",
+        "baseline_review": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/BASELINE_REVIEW.json",
+        "reopen_test_level": "CONTROL_UNIT",
+        "w17_test_level": "UNIT_CONTRACT"
+      },
+      "timestamp": "2026-09-22T06:04:46.954171+00:00"
+    },
+    "C02": {
+      "case_id": "C02",
+      "name": "Dangerous States & Safe Refusal",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "cleanup_failure_outcome_state": "unknown",
+        "export_refusal_verified": true,
+        "fail_closed_verified": true
+      },
+      "timestamp": "2026-09-22T06:04:46.955661+00:00"
+    },
+    "C03": {
+      "case_id": "C03",
+      "name": "Gate A Reopen & Stored Solution Acceptance",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "chain_a_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T060438Z/artifacts/chain_a_solved.mph",
+        "chain_a_sha256": "2fb005d5818e82380028fdf900b7d807cba28406d039a7168665709cb27471e3",
+        "chain_a_points_checked": 3,
+        "chain_a_gradient_values": [
+          308.1500000000069,
+          323.15000000001123,
+          338.15000000000975
+        ],
+        "chain_b_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T060438Z/artifacts/chain_b_solved.mph",
+        "chain_b_sha256": "6ea37079a672832a9c3fe41cfff73afc2dfb02d72d03b66d29bc348f32e2b809",
+        "chain_c_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T060438Z/artifacts/chain_c_solved.mph",
+        "chain_c_sha256": "e4f4fb9a06780b368c85fcb7e6f9e2adc8f9637d7d90f59c9dd23eb8e364894c",
+        "bench_c04_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T060438Z/artifacts/bench_c04_solved.mph",
+        "bench_c05_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T060438Z/artifacts/bench_c05_solved.mph",
+        "bench_c06_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T060438Z/artifacts/bench_c06_solved.mph",
+        "bench_c07_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T060438Z/artifacts/bench_c07_solved.mph",
+        "expectation_source": {
+          "chain_a": "analytic linear profile 293.15 + 1200*x K at x = 0.0125/0.025/0.0375 m",
+          "chain_b": "pre-save read of the build worker (stored-value preservation across save/reopen)",
+          "chain_c": "pre-save read of the build worker (stored-value preservation across save/reopen)"
+        },
+        "chain_b_values_checked": 3,
+        "chain_b_bound_check": "293.15 K <= T <= 353.15 K on every stored value",
+        "chain_c_derived_value_source": "engine read of result/numerical tags in the reopened worker",
+        "independent_resolve": "separate case C03R (§8); not part of this case",
+        "negative_controls_tested": [
+          "ARTIFACT_HASH_MISMATCH",
+          "DATASET_NOT_FOUND",
+          "DERIVED_VALUES_MISSING",
+          "STORED_VALUE_MISMATCH (wrong expected value)",
+          "SOLUTION_CLEARED_OR_EMPTY (stored solution cleared in a copy)",
+          "STORED_VALUE_MISMATCH (field values modified in a copy, digest updated)"
+        ],
+        "negative_control_details": {
+          "cleared_stored_solution": {
+            "expected_code": "SOLUTION_CLEARED_OR_EMPTY",
+            "observed_code": "SOLUTION_CLEARED_OR_EMPTY",
+            "artifact_sha256": "5ffc0b1cbf9d06c99f6e88c56c7323ee43b11dcf5862398fd54638d9e41e99be",
+            "artifact_is_a_copy": true,
+            "clear_steps": {
+              "ok": true,
+              "request_id": "wrk-8fbe6972-5454-4630-abb1-e615f1086c2e",
+              "type": "code_execute",
+              "status": "SUCCEEDED",
+              "queued_at_ms": "1790057106532",
+              "started_at_ms": "1790057106532",
+              "completed_at_ms": "1790057106766",
+              "result": {
+                "executed": true,
+                "model_tag": "reopen_a_cleared",
+                "source_sha256": "7c8eac692ce3ceb0ef6098e9b7f764ead73890dc0c2b4bb359f2ce01da32e6f0",
+                "entrypoint": "ClearStoredSolution",
+                "readback": {
+                  "status": "CLEARED",
+                  "clear_solution_data": true,
+                  "clear_solution": true,
+                  "remove_solution_node": true
+                }
+              }
+            },
+            "cleared_artifact_read": {
+              "read_raised": "PreWriteRefusal: dataset 'dset1' does not exist"
+            }
+          },
+          "modified_field_values": {
+            "expected_code": "STORED_VALUE_MISMATCH",
+            "observed_code": "STORED_VALUE_MISMATCH",
+            "artifact_sha256": "7809af084340c5ed859fb700618c44285d2e0331d1dee8c430e4a511685c29ea",
+            "artifact_is_a_copy": true,
+            "receipt_sha256_matches_mutated_artifact": true,
+            "deviation": {
+              "expected": 308.15,
+              "actual": 310.6500000000081,
+              "abs_diff": 2.5000000000081286,
+              "effective_abs_window": 0.001
+            }
+          }
+        }
+      },
+      "timestamp": "2026-09-22T06:05:07.788583+00:00"
+    },
+    "C03R": {
+      "case_id": "C03R",
+      "name": "Independent Re-solve & Indistinguishability",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "model": "reopen_a",
+        "solve_result": "None",
+        "elapsed_seconds": 0.6088721250416711,
+        "values_compared": 3,
+        "max_abs_delta": 0.0,
+        "tolerance": 0.001,
+        "stored_values": [
+          308.1500000000069,
+          323.15000000001123,
+          338.15000000000975
+        ],
+        "resolved_values": [
+          308.1500000000069,
+          323.15000000001123,
+          338.15000000000975
+        ],
+        "resolved_artifact": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T060438Z/artifacts/chain_a_resolved.mph",
+        "resolved_artifact_sha256": "a2419336158a4cdc17537fe414d5af6634686e5af14313516419f3abe62b6989",
+        "solution_tags": [
+          "sol1"
+        ],
+        "dof": null,
+        "dof_note": "mesh/DoF statistics are not exposed by this worker method surface",
+        "why_separate": "§8: a re-solve may not be folded into the Gate A reopen verdict; the delivered suite ran it inside the case documented '(NO RE-SOLVE)'"
+      },
+      "timestamp": "2026-09-22T06:05:08.527615+00:00"
+    },
+    "C04": {
+      "case_id": "C04",
+      "name": "Constant Field Statistics (f=2, V=3)",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "formula_measure": 2.999999999999969,
+        "formula_integral": 5.999999999999938,
+        "computed_average": 2.0,
+        "computed_std": 0.0,
+        "computed_rms": 2.0,
+        "denominator_verified_as_measure": true,
+        "numeric_checks": {
+          "integral": {
+            "observed": 5.999999999999938,
+            "expected": 6.0,
+            "abs_error": 6.217248937900877e-14,
+            "rel_error": 1.0362081563168127e-14,
+            "tolerance": 1e-09,
+            "tolerance_rationale": "f=2 over a unit square: the integrand is constant, so the quadrature is exact up to binary64 roundoff (order 1e-16 relative); 1e-9 leaves about seven orders of margin.",
+            "margin_factor": 16084.284383466058
+          },
+          "average": {
+            "observed": 2.0,
+            "expected": 2.0,
+            "abs_error": 0.0,
+            "rel_error": 0.0,
+            "tolerance": 1e-09,
+            "tolerance_rationale": "integral/measure for a constant field is 2 exactly; same roundoff-only allowance as the integral.",
+            "margin_factor": null
+          },
+          "std": {
+            "observed": 0.0,
+            "expected": 0.0,
+            "abs_error": 0.0,
+            "rel_error": null,
+            "tolerance": 1e-09,
+            "tolerance_rationale": "a constant field has zero variance; the tolerance is an absolute one because the expected value is zero.",
+            "margin_factor": null
+          },
+          "rms": {
+            "observed": 2.0,
+            "expected": 2.0,
+            "abs_error": 0.0,
+            "rel_error": 0.0,
+            "tolerance": 1e-09,
+            "tolerance_rationale": "sqrt(measure-weighted mean of f^2) with f=2 is again exact up to roundoff.",
+            "margin_factor": null
+          },
+          "denominator": {
+            "observed": 2.999999999999969,
+            "expected": 3.0,
+            "abs_error": 3.108624468950438e-14,
+            "rel_error": 1.0362081563168127e-14,
+            "tolerance": 1e-09,
+            "tolerance_rationale": "the reported denominator must be the domain measure V=3, not the element count; both are integers here, so the check is exact.",
+            "margin_factor": 32168.568766932116
+          }
+        }
+      },
+      "timestamp": "2026-09-22T06:05:08.873328+00:00"
+    },
+    "C05": {
+      "case_id": "C05",
+      "name": "Multi-dimensional & Selection Support",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "domain_1_integral": 1.9999999999999878,
+        "domain_2_integral": 3.9999999999999853,
+        "all_domains_integral": 5.999999999999971,
+        "partition_delta_2d": 2.6645352591003757e-15,
+        "dimension_coverage": {
+          "worker": "c03_reopen_verifier (shared run worker)",
+          "one_d_wire": {
+            "interval_1": {
+              "observed": 0.03,
+              "expected": 0.03,
+              "abs_error": 0.0,
+              "rel_error": 0.0,
+              "tolerance": 1e-12,
+              "tolerance_rationale": "a 1-D integral of 1 over an interval is that interval's length; the values come from the engine measure, not from the geometry model, and the intervals are 0.03 m and 0.07 m by construction, so only double rounding remains",
+              "margin_factor": null
+            },
+            "interval_2": {
+              "observed": 0.06999999999999999,
+              "expected": 0.07,
+              "abs_error": 1.3877787807814457e-17,
+              "rel_error": 1.982541115402065e-16,
+              "tolerance": 1e-12,
+              "tolerance_rationale": "a 1-D integral of 1 over an interval is that interval's length; the values come from the engine measure, not from the geometry model, and the intervals are 0.03 m and 0.07 m by construction, so only double rounding remains",
+              "margin_factor": 72057.59403792793
+            },
+            "all_intervals": {
+              "observed": 0.09999999999999992,
+              "expected": 0.1,
+              "abs_error": 8.326672684688674e-17,
+              "rel_error": 8.326672684688674e-16,
+              "tolerance": 1e-12,
+              "tolerance_rationale": "a 1-D integral of 1 over an interval is that interval's length; the values come from the engine measure, not from the geometry model, and the intervals are 0.03 m and 0.07 m by construction, so only double rounding remains",
+              "margin_factor": 12009.599006321323
+            },
+            "partition_delta": 6.938893903907228e-17,
+            "feature_type": "IntLine",
+            "selection_measure_recorded": true,
+            "endpoint_temperature": {
+              "at_x_0": {
+                "observed": 293.15,
+                "expected": 293.15,
+                "abs_error": 0.0,
+                "rel_error": 0.0,
+                "tolerance": 1e-09,
+                "tolerance_rationale": "both 1-D endpoints carry a Dirichlet temperature; a point read exactly on the boundary returns the prescribed value, so the only error is the engine's own double rounding (observed |delta| ~1e-13 K)",
+                "margin_factor": null
+              },
+              "at_x_0_10": {
+                "observed": 353.15,
+                "expected": 353.15,
+                "abs_error": 0.0,
+                "rel_error": 0.0,
+                "tolerance": 1e-09,
+                "tolerance_rationale": "both 1-D endpoints carry a Dirichlet temperature; a point read exactly on the boundary returns the prescribed value, so the only error is the engine's own double rounding (observed |delta| ~1e-13 K)",
+                "margin_factor": null
+              }
+            }
+          },
+          "three_d_block": {
+            "volume": {
+              "observed": 1.999999999999995e-06,
+              "expected": 2e-06,
+              "abs_error": 5.082197683525802e-21,
+              "rel_error": 2.541098841762901e-15,
+              "tolerance": 1e-15,
+              "tolerance_rationale": "the 3-D integral of 1 over the block is its volume 0.02*0.01*0.01 = 2e-6 m^3; the measure comes from the engine, the geometry is exact",
+              "margin_factor": 196765.27011956857
+            },
+            "face_1_area": {
+              "observed": 9.999999999999998e-05,
+              "expected": 0.0001,
+              "abs_error": 2.710505431213761e-20,
+              "rel_error": 2.710505431213761e-16,
+              "tolerance": 1e-15,
+              "tolerance_rationale": "boundary integrals of 1 over the block's faces give their areas: the two x-faces bound the 0.01 x 0.01 cross-section (1e-4 m^2), the four others are 0.02 x 0.01 (2e-4 m^2); both are exact by construction",
+              "margin_factor": 36893.488147419106
+            },
+            "face_6_area": {
+              "observed": 0.00010000000000000002,
+              "expected": 0.0001,
+              "abs_error": 1.3552527156068805e-20,
+              "rel_error": 1.3552527156068805e-16,
+              "tolerance": 1e-15,
+              "tolerance_rationale": "boundary integrals of 1 over the block's faces give their areas: the two x-faces bound the 0.01 x 0.01 cross-section (1e-4 m^2), the four others are 0.02 x 0.01 (2e-4 m^2); both are exact by construction",
+              "margin_factor": 73786.97629483821
+            },
+            "face_2_area": {
+              "observed": 0.00019999999999999936,
+              "expected": 0.0002,
+              "abs_error": 6.505213034913027e-19,
+              "rel_error": 3.2526065174565133e-15,
+              "tolerance": 1e-15,
+              "tolerance_rationale": "boundary integrals of 1 over the block's faces give their areas: the two x-faces bound the 0.01 x 0.01 cross-section (1e-4 m^2), the four others are 0.02 x 0.01 (2e-4 m^2); both are exact by construction",
+              "margin_factor": 1537.2286728091294
+            },
+            "total_surface_area": {
+              "observed": 0.001,
+              "expected": 0.001,
+              "abs_error": 0.0,
+              "rel_error": 0.0,
+              "tolerance": 1e-15,
+              "tolerance_rationale": "boundary integrals of 1 over the block's faces give their areas: the two x-faces bound the 0.01 x 0.01 cross-section (1e-4 m^2), the four others are 0.02 x 0.01 (2e-4 m^2); both are exact by construction",
+              "margin_factor": null
+            },
+            "face_areas_by_entity": {
+              "1": 9.999999999999998e-05,
+              "2": 0.00019999999999999936,
+              "3": 0.00020000000000000047,
+              "4": 0.0001999999999999999,
+              "5": 0.0002000000000000003,
+              "6": 0.00010000000000000002
+            },
+            "feature_type": "IntVolume"
+          },
+          "three_d_temperature": {
+            "x_0_face_centre": {
+              "observed": 293.1499999999999,
+              "expected": 293.15,
+              "abs_error": 5.684341886080802e-14,
+              "rel_error": 1.93905573463442e-16,
+              "tolerance": 1e-06,
+              "tolerance_rationale": "with the two x-faces held at 293.15 K and 353.15 K and the other faces adiabatic, the steady solution of the homogeneous block is exactly linear in x, so the centre is (293.15+353.15)/2 = 323.15 K and the boundary reads equal the prescribed values; a linear field is reproduced exactly by the FEM up to solver tolerance",
+              "margin_factor": 17592186.044416
+            },
+            "x_0_02_face_centre": {
+              "observed": 353.1500000000002,
+              "expected": 353.15,
+              "abs_error": 2.2737367544323206e-13,
+              "rel_error": 6.438444724429621e-16,
+              "tolerance": 1e-06,
+              "tolerance_rationale": "with the two x-faces held at 293.15 K and 353.15 K and the other faces adiabatic, the steady solution of the homogeneous block is exactly linear in x, so the centre is (293.15+353.15)/2 = 323.15 K and the boundary reads equal the prescribed values; a linear field is reproduced exactly by the FEM up to solver tolerance",
+              "margin_factor": 4398046.511104
+            },
+            "centre": {
+              "observed": 323.1500000000001,
+              "expected": 323.15,
+              "abs_error": 1.1368683772161603e-13,
+              "rel_error": 3.518082553662882e-16,
+              "tolerance": 1e-06,
+              "tolerance_rationale": "with the two x-faces held at 293.15 K and 353.15 K and the other faces adiabatic, the steady solution of the homogeneous block is exactly linear in x, so the centre is (293.15+353.15)/2 = 323.15 K and the boundary reads equal the prescribed values; a linear field is reproduced exactly by the FEM up to solver tolerance",
+              "margin_factor": 8796093.022208
+            }
+          },
+          "empty_selection_refusals": [
+            {
+              "label": "1-D domain 99 (geometry has 2)",
+              "refused": true,
+              "code": "SELECTION_MATCHED_NO_ENTITIES",
+              "message": "selection.set named entities [99] that this geometry does not expose: JavaWorkerError: {\"completed_at_ms\": \"1790057111688\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: com.comsol.model",
+              "details": {
+                "selection": [
+                  99
+                ],
+                "matched_entities": [],
+                "selection_measure": null,
+                "engine_error": "JavaWorkerError: {\"completed_at_ms\": \"1790057111688\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: com.comsol.model.data.SelectionOutOfBoundsException: Illegal input vector illegal entity number (cause: UnexpectedServerException: com.comsol.model.data.SelectionOutOfBoundsException: Illegal_input_vector_illegal_entity_number)\", \"ok\": false}, \"o"
+              }
+            },
+            {
+              "label": "3-D boundary 7 (block has 6 faces)",
+              "refused": true,
+              "code": "SELECTION_MATCHED_NO_ENTITIES",
+              "message": "selection.set named entities [7] that this geometry does not expose: JavaWorkerError: {\"completed_at_ms\": \"1790057111720\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: com.comsol.model.",
+              "details": {
+                "selection": [
+                  7
+                ],
+                "matched_entities": [],
+                "selection_measure": null,
+                "engine_error": "JavaWorkerError: {\"completed_at_ms\": \"1790057111720\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: com.comsol.model.data.SelectionOutOfBoundsException: Illegal input vector illegal entity number (cause: UnexpectedServerException: com.comsol.model.data.SelectionOutOfBoundsException: Illegal_input_vector_illegal_entity_number)\", \"ok\": false}, \"o"
+              }
+            }
+          ],
+          "models_built_and_solved_inside_this_case": true
+        }
+      },
+      "timestamp": "2026-09-22T06:05:11.721877+00:00"
+    },
+    "C06": {
+      "case_id": "C06",
+      "name": "Non-Uniform Field Analytical Verification",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "analytic_area": 6.0,
+        "analytic_integral": 24.0,
+        "analytic_average": 4.0,
+        "analytic_variance": 3.3333333333333335,
+        "analytic_std": 1.8257418583505538,
+        "analytic_rms": 4.396968652757639,
+        "live_integral": 23.999999999999982,
+        "live_average": 3.9999999999999853,
+        "live_std": 1.8257418583505494,
+        "live_rms": 4.396968652757634,
+        "live_denominator_measure": 6.000000000000018,
+        "numeric_checks": {
+          "denominator": {
+            "observed": 6.000000000000018,
+            "expected": 6.0,
+            "abs_error": 1.7763568394002505e-14,
+            "rel_error": 2.960594732333751e-15,
+            "tolerance": 1e-09,
+            "tolerance_rationale": "the unit square has measure 1, but the field f=x+2y is defined on the y in [0,3] strip, so the reference area is 6; planar measure integration is exact up to roundoff.",
+            "margin_factor": 56294.9953421312
+          },
+          "integral": {
+            "observed": 23.999999999999982,
+            "expected": 24.0,
+            "abs_error": 1.7763568394002505e-14,
+            "rel_error": 7.401486830834377e-16,
+            "tolerance": 1e-09,
+            "tolerance_rationale": "integral of x+2y over the strip is 24 analytically; the integrand is degree 1, so COMSOL's quadrature is exact up to binary64 roundoff and 1e-9 leaves ~7 orders of margin.",
+            "margin_factor": 56294.9953421312
+          },
+          "average": {
+            "observed": 3.9999999999999853,
+            "expected": 4.0,
+            "abs_error": 1.4654943925052066e-14,
+            "rel_error": 3.6637359812630166e-15,
+            "tolerance": 1e-09,
+            "tolerance_rationale": "24/6 = 4 exactly; the tolerance covers division roundoff only.",
+            "margin_factor": 68236.35799046207
+          },
+          "std": {
+            "observed": 1.8257418583505494,
+            "expected": 1.8257418583505538,
+            "abs_error": 4.440892098500626e-15,
+            "rel_error": 2.432376777795247e-15,
+            "tolerance": 1e-09,
+            "tolerance_rationale": "sqrt(10/3) comes from the analytic variance of x+2y over the strip; a square root adds at most a few ulp, so the same roundoff-only allowance applies.",
+            "margin_factor": 225179.9813685248
+          },
+          "rms": {
+            "observed": 4.396968652757634,
+            "expected": 4.396968652757639,
+            "abs_error": 5.329070518200751e-15,
+            "rel_error": 1.2119873801826009e-15,
+            "tolerance": 1e-09,
+            "tolerance_rationale": "sqrt(58/3) from the analytic second moment; same roundoff allowance as the std.",
+            "margin_factor": 187649.9844737707
+          }
+        }
+      },
+      "timestamp": "2026-09-22T06:05:12.072323+00:00"
+    },
+    "C07": {
+      "case_id": "C07",
+      "name": "Axisymmetric Cylinder Verification",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "cylinder_radius": 2.0,
+        "cylinder_height": 3.0,
+        "live_revolved_volume": 37.69911184307756,
+        "expected_volume": 37.69911184307752,
+        "live_average_r": 1.3333333333333304,
+        "expected_average_r": 1.3333333333333333,
+        "cross_section_measure": 6.000000000000018,
+        "expected_cross_section_measure": 6.0,
+        "axisymmetric_flag": true,
+        "axisymmetric_applied_count": 1,
+        "numeric_checks": {
+          "revolved_volume": {
+            "observed": 37.69911184307756,
+            "expected": 37.69911184307752,
+            "abs_error": 4.263256414560601e-14,
+            "rel_error": 1.1308638867425838e-15,
+            "tolerance": 1e-06,
+            "tolerance_rationale": "pi*r^2*h = 12*pi measures a revolved solid, so the volume comes from curved-boundary quadrature over a triangulated surface rather than an exact planar formula; 1e-6 is about four orders above the observed deviation and is the same allowance the axisymmetric measure has always used here.",
+            "margin_factor": 23456248.05922133
+          },
+          "average_r": {
+            "observed": 1.3333333333333304,
+            "expected": 1.3333333333333333,
+            "abs_error": 2.886579864025407e-15,
+            "rel_error": 2.1649348980190553e-15,
+            "tolerance": 1e-06,
+            "tolerance_rationale": "the volume-weighted mean radius of a solid cylinder is 4/3; it inherits the revolved-measure allowance.",
+            "margin_factor": 346430740.5669612
+          },
+          "cross_section_measure": {
+            "observed": 6.000000000000018,
+            "expected": 6.0,
+            "abs_error": 1.7763568394002505e-14,
+            "rel_error": 2.960594732333751e-15,
+            "tolerance": 1e-06,
+            "tolerance_rationale": "the revolved 2-D cross-section measure must be 6 as well; same curved-quadrature allowance.",
+            "margin_factor": 56294995.3421312
+          }
+        }
+      },
+      "timestamp": "2026-09-22T06:05:12.179518+00:00"
+    },
+    "C08": {
+      "case_id": "C08",
+      "name": "Solution Axis Slicing & Metadata",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "expressions_count": 2,
+        "solutions_count": 5,
+        "points_count": 5,
+        "solution_axis": {
+          "expressions": 2,
+          "outer_axis_length": 1,
+          "solution_axis_length": 5,
+          "point_axis_length": 5,
+          "engine_time_values": [
+            0.0,
+            0.5,
+            1.0,
+            1.5,
+            2.0
+          ],
+          "binding_complete": true,
+          "expected_time_values": [
+            0.0,
+            0.5,
+            1.0,
+            1.5,
+            2.0
+          ],
+          "slice_checks": {
+            "step_1": {
+              "expressions": 2,
+              "points": 5
+            },
+            "step_5": {
+              "expressions": 2,
+              "points": 5
+            },
+            "last": {
+              "expressions": 2,
+              "points": 5
+            }
+          }
+        },
+        "slice_identity": {
+          "step_1": {
+            "expressions": 2,
+            "points": 5
+          },
+          "step_5": {
+            "expressions": 2,
+            "points": 5
+          },
+          "last": {
+            "expressions": 2,
+            "points": 5
+          }
+        },
+        "subset_checked_steps": [
+          1,
+          4,
+          5
+        ],
+        "expression_product_max_rel_deviation": 0.0,
+        "expression_product_checks": 25,
+        "out_of_range_refusals": [
+          {
+            "step": 0,
+            "refused": true,
+            "code": "INVALID_REQUEST",
+            "message": "inner index 0 out of range"
+          },
+          {
+            "step": -1,
+            "refused": true,
+            "code": "INVALID_REQUEST",
+            "message": "inner index -1 out of range"
+          },
+          {
+            "step": 6,
+            "refused": true,
+            "code": "INVALID_REQUEST",
+            "message": "inner index 6 out of range"
+          },
+          {
+            "step": 999,
+            "refused": true,
+            "code": "INVALID_REQUEST",
+            "message": "inner index 999 out of range"
+          }
+        ],
+        "legacy_helper_out_of_range_refusal": {
+          "refused": true,
+          "code": "INVALID_REQUEST",
+          "message": "inner index 999 out of range [1, 1]"
+        },
+        "declared_expression_mismatch_refusal": {
+          "refused": true,
+          "code": "INVALID_REQUEST",
+          "message": "the value array carries 2 expression rows but 3 expressions were declared"
+        }
+      },
+      "timestamp": "2026-09-22T06:05:12.517507+00:00"
+    },
+    "C09": {
+      "case_id": "C09",
+      "name": "Complex Field Transformations",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "constant_complex": "3+4i",
+        "integral_real": 17.99999999999998,
+        "integral_imag": 24.00000000000007,
+        "integral_abs": 29.999999999999893,
+        "integral_phase": 5.5637713080096685,
+        "spatial_point": [
+          1.0,
+          1.0
+        ],
+        "spatial_complex_value": {
+          "real": 3.0,
+          "imag": 1.0
+        },
+        "zero_padding_rejection": {
+          "rejected": true,
+          "error_code": "COMPLEX_DATA_ERROR",
+          "message": "imaginary component sequence is unavailable while complex status is unknown or complex"
+        }
+      },
+      "timestamp": "2026-09-22T06:05:12.784522+00:00"
+    },
+    "C10": {
+      "case_id": "C10",
+      "name": "Point Coordinates Scaling (m vs mm)",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "evaluated_point_m": [
+          1.0,
+          1.5
+        ],
+        "evaluated_point_mm": [
+          1000.0,
+          1500.0
+        ],
+        "value_m": 3.9999999999999996,
+        "value_mm": 3.9999999999999996,
+        "unit_equivalence_verified": true,
+        "non_finite_rejection_verified": true,
+        "dimension_mismatch_rejected": true,
+        "unsupported_frame_rejected": true
+      },
+      "timestamp": "2026-09-22T06:05:12.864176+00:00"
+    },
+    "C11": {
+      "case_id": "C11",
+      "name": "Dataset Dependency Graph & CutPoint2D",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "cutpoint_dataset": "cpt1",
+        "cutpoint_evaluated_value": 3.9999999999999996,
+        "acyclic_chain": [
+          "dset1",
+          "dset2",
+          "dset3"
+        ],
+        "cycle_detected": true
+      },
+      "timestamp": "2026-09-22T06:05:12.927871+00:00"
+    },
+    "C12": {
+      "case_id": "C12",
+      "name": "Export Path Traversal Protection & Atomic Rollback",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "traversal_rejection": {
+          "rejected": true,
+          "error_code": "ACCESS_VIOLATION",
+          "message": "Export destination '../../etc/passwd' escapes authorized project root /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository"
+        },
+        "export_failure_rejection": {
+          "rejected": true,
+          "error_code": "EXPORT_FAILED",
+          "message": "evaluation status is not publishable: {'ok': False, 'engine_error': 'SIMULATED_FAILURE'}"
+        },
+        "absolute_destination_rejection": {
+          "rejected": true,
+          "error_code": "ACCESS_VIOLATION"
+        },
+        "atomic_rollback": {
+          "rejected": true,
+          "error_type": "AtomicSaveError",
+          "message": "Candidate save callback failed: simulated engine failure during export"
+        },
+        "writer_reached": true,
+        "writer_staged_content": "PARTIAL_CONTENT",
+        "preserved_original_sha256": "1d545b940633ab0ee38f4a06a4bd3a199c4b7ec83373e0a56d8454f862399628",
+        "retained_failure_candidate": [
+          ".preserved.txt.478ab0951f3c4f88b8439731aaa2d617.tmp.mph"
+        ],
+        "retained_candidate_policy": "_atomic_save keeps the failed candidate as incident evidence; ACCEPTANCE.md C12 requires the original hash to survive, not its removal",
+        "artifacts_dir_entries_before": [
+          "bench_c04_solved.mph",
+          "bench_c05_solved.mph",
+          "bench_c06_solved.mph",
+          "bench_c07_solved.mph",
+          "chain_a_cleared.mph",
+          "chain_a_mutated.mph",
+          "chain_a_resolved.mph",
+          "chain_a_solved.mph",
+          "chain_b_solved.mph",
+          "chain_c_solved.mph",
+          "preserved.txt"
+        ],
+        "successful_publish": {
+          "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T060438Z/artifacts/atomic_success.mph",
+          "size": 128,
+          "sha256": "921472173a1d24ef1dd0e5808894d9f5535560a6c63a0c7a48d1a25eff38895a",
+          "checkpoint": {
+            "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T060438Z/artifacts/atomic_success.mph",
+            "size": 128,
+            "sha256": "921472173a1d24ef1dd0e5808894d9f5535560a6c63a0c7a48d1a25eff38895a",
+            "verified": true,
+            "publish_mode": "atomic_replace",
+            "parent_fsync": true
+          },
+          "artifact": {
+            "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T060438Z/artifacts/atomic_success.mph",
+            "size": 128,
+            "sha256": "921472173a1d24ef1dd0e5808894d9f5535560a6c63a0c7a48d1a25eff38895a",
+            "verified": true
+          }
+        },
+        "candidates_after_success": [
+          ".preserved.txt.478ab0951f3c4f88b8439731aaa2d617.tmp.mph"
+        ],
+        "published_artifact": {
+          "file_path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/g2_artifacts/results/result_75988b7ef28843da872ff299494cd85e.json",
+          "sha256": "e2226b0e733ff8a7db77ae4f82a11c526ad03f3dfc872e896be727b9eff9de34",
+          "byte_size": 103,
+          "inside_project_root": true,
+          "candidates_left": []
+        },
+        "export_root_policy": "the delivered store admits the project root plus the process temp tree; anything else is refused with ACCESS_VIOLATION before a file is created"
+      },
+      "timestamp": "2026-09-22T06:05:12.931192+00:00"
+    },
+    "C13": {
+      "case_id": "C13",
+      "name": "Chunk Streaming & Bounded Memory",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "file_size": 526792,
+        "full_sha256": "cf4e286d2a4e2f068155557a707225919be710fd45a92d73faadc20f96be84b1",
+        "chunk_bytes": 32768,
+        "chunk_reads": 17,
+        "reconstructed_sha256": "cf4e286d2a4e2f068155557a707225919be710fd45a92d73faadc20f96be84b1",
+        "chunk_digests_verified": true,
+        "host_dispatch_operation": "artifact.read",
+        "refusals": {
+          "path_escape": "ACCESS_VIOLATION",
+          "offset_out_of_range": "INVALID_CHUNK_RANGE",
+          "forged_whole_digest": "ARTIFACT_HASH_MISMATCH",
+          "forged_chunk_digest": "CHUNK_HASH_MISMATCH"
+        },
+        "peak_memory": {
+          "small_bytes": 526792,
+          "big_bytes": 5666757,
+          "small_stream_no_pin_kib": 1720.2,
+          "small_stream_pinned_kib": 1716.7,
+          "small_full_read_kib": 514.7,
+          "big_stream_no_pin_kib": 2227.7,
+          "big_stream_pinned_kib": 2225.6,
+          "big_full_read_kib": 5534.2,
+          "stream_is_size_independent": true,
+          "pinned_stream_is_size_independent": true,
+          "full_read_tracks_file_size": true,
+          "file_size_ratio": 10.76,
+          "instrument": "tracemalloc peak python allocations (KiB)",
+          "note": "a pinned expected_sha256 costs one bounded 1 MiB-block pass per call; the measured peak is therefore block-bounded, not file-bounded"
+        }
+      },
+      "timestamp": "2026-09-22T06:05:14.835409+00:00"
+    },
+    "C14": {
+      "case_id": "C14",
+      "name": "Definitions Probe vs Derived Values Separation & Table Management",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "created_probe_tag": "prb1",
+        "probe_type": "DomainProbe",
+        "probe_scope": "component.probe (separated from result.numerical)",
+        "table_created_tag": "tbl1",
+        "table_written_data": [
+          [
+            1.5,
+            2.5
+          ],
+          [
+            3.5,
+            4.5
+          ]
+        ],
+        "table_read_data": [
+          [
+            {
+              "real": 1.5,
+              "imag": 0.0
+            },
+            {
+              "real": 2.5,
+              "imag": 0.0
+            }
+          ],
+          [
+            {
+              "real": 3.5,
+              "imag": 0.0
+            },
+            {
+              "real": 4.5,
+              "imag": 0.0
+            }
+          ]
+        ],
+        "validation_verified": true,
+        "probe_host_dispatch": {
+          "reachable": [
+            "probe.list",
+            "probe.create",
+            "probe.remove",
+            "probe.update",
+            "probe.history"
+          ],
+          "dispatched_removed_verified": true,
+          "untargeted_request_codes": {
+            "probe.update": "INVALID_REQUEST",
+            "probe.history": "INVALID_REQUEST"
+          },
+          "linked_table": "tbl_prb1",
+          "history_rows_after_link": []
+        }
+      },
+      "timestamp": "2026-09-22T06:05:14.991907+00:00"
+    },
+    "C15": {
+      "case_id": "C15",
+      "name": "Idempotency & Control Responsiveness",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "identical_retry_values_equal": true,
+        "identical_retry_result": [
+          [
+            [
+              [
+                {
+                  "real": 879.4499999999981,
+                  "imag": 0.0
+                }
+              ]
+            ]
+          ]
+        ],
+        "changed_spec_result": [
+          [
+            [
+              [
+                {
+                  "real": 879.4499999999981,
+                  "imag": 0.0
+                }
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                {
+                  "real": 1.4999999999999938,
+                  "imag": 0.0
+                }
+              ]
+            ]
+          ]
+        ],
+        "request_hashes": {
+          "first": "ee90adc1ea6db8fa11af7331b155d6fcf237eaf7d54110c62ebe3dccd0db5391",
+          "retry": "1ab9327749bb4eaa4ed334b821d19cbf5442131ba3edc885f07894be58833343",
+          "changed": "ef768897ebe6db00eb2ac0c5afe25cb9605f2eb0b59cc10af56274b4164d35e5",
+          "identical_retry_same_request_hash": false,
+          "changed_spec_new_request_hash": true
+        },
+        "control_plane_during_solve": {
+          "samples": [
+            {
+              "latency_s": 0.0013781250454485416,
+              "status": "HEALTHY",
+              "queued_or_running": 1
+            },
+            {
+              "latency_s": 0.0007791249081492424,
+              "status": "HEALTHY",
+              "queued_or_running": 1
+            },
+            {
+              "latency_s": 0.0005398750072345138,
+              "status": "HEALTHY",
+              "queued_or_running": 1
+            },
+            {
+              "latency_s": 0.0006257909117266536,
+              "status": "HEALTHY",
+              "queued_or_running": 1
+            },
+            {
+              "latency_s": 0.0008398750796914101,
+              "status": "HEALTHY",
+              "queued_or_running": 1
+            }
+          ],
+          "max_latency_s": 0.0013781250454485416,
+          "budget_s": 2.0,
+          "budget_rationale": "health never enters the engine thread; the budget only has to exceed one socket round-trip, so 2 s is loose by orders of magnitude rather than tight",
+          "samples_that_observed_the_solve": 5
+        },
+        "long_solve": {
+          "seconds": 1.519731167005375,
+          "finished": true,
+          "post_solve_integral_of_1": 9.999999999999964e-05,
+          "closed_worker_integral_of_T": 0.029350580093791816
+        },
+        "reference_after_worker_close": {
+          "branch": "REOPENED",
+          "reference": "mcp10",
+          "reopened_T_integral": 0.029350580093791816,
+          "closed_worker_T_integral": 0.029350580093791816,
+          "identical_to_closed_worker": true
+        },
+        "never_created_tag_refusal": {
+          "refused": true,
+          "code": "NODE_NOT_FOUND",
+          "message": "bound model 'c15_never_created_tag' is unavailable"
+        },
+        "shared_server_pids_before": [],
+        "shared_server_alive_after": {}
+      },
+      "timestamp": "2026-09-22T06:05:20.849907+00:00"
+    },
+    "C16": {
+      "case_id": "C16",
+      "name": "Packaging & Dependencies Lock",
+      "status": "PASS",
+      "evidence_level": "static",
+      "error": null,
+      "details": {
+        "pyproject": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/pyproject.toml",
+        "pyproject_sha256": "f790aad3d19091be562bad1f02c7ef1d4291fa83426251ae311b944cbde2524d",
+        "dependency_lock_files": {
+          "constraints-macos-arm64-py313.txt": "5aec7b9076fc04a512473ab67b9a8241c31f3462542802184a96fc6ce1d0163e",
+          "requirements-windows-cp312.txt": "30b1fc65aace6117aaf0548183913664fcefd3baad20b10fd9e6fd8e29150ed2",
+          "pip-freeze-fresh.txt": "6d51641b39744925e726243e3fef3c0d48d9ae003d34c675bd8105c288436832"
+        },
+        "lock_binds_delivered_tree": {
+          "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/SOURCE_TREE_IDENTITY.json",
+          "commit": "06567cd27002b08d7e4b39694656ebba55cd55c4",
+          "tree": "44b71f3b7efa3a501854de15d0ed04f29f8c3c74",
+          "tracked_files": 6009,
+          "source_blob_map_sha256": "b6bca2fc0b867038305481193f30e6a0336ad6ddd09945677817eed6eaeea92e",
+          "head_matches": true,
+          "tree_matches": true,
+          "lock_installs_delivered_tree": true,
+          "matches_the_ledger_manifest": true
+        },
+        "wheel_file": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T060438Z/wheel_dist/comsol_mcp-0.1.9-py3-none-any.whl",
+        "wheel_sha256": "d2ecbf63e90332766ee10b8324550c80e8fc2d2f1ad2182b63ec1010d4b5f0a5",
+        "wheel_resource_manifest_source": "read out of the built wheel with zipfile",
+        "wheel_resources": {
+          "comsol_mcp/data/g2/02_ACTION_CATALOG.json": {
+            "entry": "comsol_mcp/data/g2/02_ACTION_CATALOG.json",
+            "size": 531638,
+            "sha256": "63e00e31cd6ecce3fb651c5c2428445d9c28eb771ac709252996c73cd6ca2c18"
+          },
+          "comsol_mcp/data/g2/common.schema.json": {
+            "entry": "comsol_mcp/data/g2/common.schema.json",
+            "size": 7757,
+            "sha256": "1beb031c1da5fedcdbfbb43750aa4e4d0e8b7c07ce4513a832ff3fe535dd7afa"
+          },
+          "comsol_mcp/worker_java/PersistentComsolWorker.java": {
+            "entry": "comsol_mcp/worker_java/PersistentComsolWorker.java",
+            "size": 68100,
+            "sha256": "ab428fd95de0a97cb05b22990f38ce813d7acf47db61e9a935a9b6ffc352d7a2"
+          }
+        },
+        "action_catalog_entries": 7,
+        "schema_top_level_keys": [
+          "$defs",
+          "$id",
+          "$schema"
+        ]
+      },
+      "timestamp": "2026-09-22T06:05:20.893679+00:00"
+    },
+    "C17": {
+      "case_id": "C17",
+      "name": "Teardown & Verification Ledger Finalization",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "isolated_server_pid": 91482,
+        "isolated_server_alive_after_teardown": false,
+        "isolated_server_stopped": true,
+        "lock_files_remaining": [
+          {
+            "name": "endpoint-697e70af2ca30495308f9b19e3c9aeea0b37f3741e4460dd5666af55b6e119ac.lock",
+            "size": 0,
+            "sha256": null,
+            "held": false
+          }
+        ],
+        "locks_held": 0,
+        "lock_probe": "fcntl.lockf(LOCK_EX|LOCK_NB) per endpoint lock file",
+        "teardown_errors": [],
+        "status_tag": "G3_3_MAC_W17_VERIFIED_SCOPED",
+        "status_tag_derived_from": "every case recorded in this run",
+        "cases_recorded_before_teardown": 18,
+        "failed_cases": [],
+        "engine_reported_comsol_version": null,
+        "stop_boundary": "W17 (not entering W18)"
+      },
+      "timestamp": "2026-09-22T06:05:22.022941+00:00"
+    }
+  }
+}

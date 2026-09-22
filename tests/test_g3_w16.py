@@ -211,10 +211,13 @@ def node_for(tag: str, *type_ids: Any) -> FNode:
 class FakeEngineError(RuntimeError):
     """Structured worker failure; ``code`` feeds ``_worker_failure_code``."""
 
-    def __init__(self, message: str, *, code: str = "ENGINE_CALL_FAILED") -> None:
+    def __init__(self, message: str, *, code: str = "ENGINE_CALL_FAILED",
+                 execution_state_unknown: bool = False) -> None:
         super().__init__(message)
-        self.reply = {"ok": False, "code": code, "message": message}
-        self.failure = {"code": code, "message": message}
+        self.reply = {"ok": False, "code": code, "message": message,
+                      "execution_state_unknown": execution_state_unknown}
+        self.failure = {"code": code, "message": message,
+                        "execution_state_unknown": execution_state_unknown}
 
 
 def _method_refusal() -> FakeEngineError:
@@ -600,6 +603,11 @@ class FNode:
         self.calls.append(("run", args))
         if "run" in self.unavailable:
             raise _method_refusal()
+        if "run" in self.raises:
+            failure = self.raises["run"]
+            if isinstance(failure, BaseException):
+                raise failure
+            raise FakeEngineError(str(failure))
         if "geom" in self.state:  # meshing sequence
             self.state.update({
                 "isEmpty": False, "isComplete": True, "getNumElem": 2684, "getNumVertex": 512,
@@ -1482,10 +1490,32 @@ def test_study_run_records_duration_and_reads_the_computation_stamp() -> None:
     assert result["requested_resources"] is None
 
 
+def test_study_run_preserves_structured_worker_unknown_with_readable_timestamp() -> None:
+    """A readable timestamp cannot clear the worker's explicit unknown bit."""
+    model = build_model()
+    study = model.collections["study"].items["std1"]
+    study.raises["run"] = FakeEngineError(
+        "FlException: inner worker execution is unresolved",
+        code="ENGINE_CALL_FAILED",
+        execution_state_unknown=True,
+    )
+
+    result = call("study.run", model, {"study": STUDY_PATH})
+
+    assert result["status"] == "PARTIAL_FAILURE"
+    assert result["ok"] is False
+    assert result["execution_state_unknown"] is True
+    assert result["engine_error"]["execution_state_unknown"] is True
+    assert result["readback"]["readable"] is True
+    assert result["computation_timestamp_changed"] is False
+
+
 def test_study_run_rejects_a_study_without_steps() -> None:
     model = build_model()
     expect_error("INVALID_REQUEST", call, "study.run", model,
                  {"study": {"segments": [{"collection": "study", "tag": "std2"}]}})
+    study = model.collections["study"].items["std2"]
+    assert not any(name == "run" for name, _args in study.calls)
 
 
 # ---------------------------------------------------------------------------

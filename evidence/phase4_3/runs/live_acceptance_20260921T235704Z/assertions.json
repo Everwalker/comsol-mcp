@@ -1,0 +1,542 @@
+{
+  "run_id": "live_acceptance_20260921T235704Z",
+  "generated_at": "2026-09-21T23:57:33.441733+00:00",
+  "source_manifest": {
+    "head": "a3862bdd5547bf182466bf87a79252952bf3499e",
+    "tree": "a3cf88ea91eb24f1f9bc5e34af0e586572c47228",
+    "branch": "handoff/g3_3_fix",
+    "dirty_paths": [
+      "evidence/phase4_3/runs/live_acceptance_20260921T235704Z/"
+    ],
+    "tracked_dirty_paths": [],
+    "untracked_paths": [
+      "evidence/phase4_3/runs/live_acceptance_20260921T235704Z/"
+    ],
+    "untracked_paths_in_source_tree": [],
+    "tracked_files": 3628,
+    "tracked_files_listed": 3628,
+    "tracked_files_present_in_worktree": 3628,
+    "source_blob_map_sha256": "7ccb8e6aff26588551cb69397b7003a1e514ce2481350127bfcf8f80b4d229c5",
+    "captured_at": "2026-09-21T23:57:07.484426+00:00"
+  },
+  "aborted_cases": [],
+  "assertions": [
+    {
+      "case_id": "C00",
+      "name": "Clean Recovery, Source Binding & Wheel Verification",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "source_manifest": {
+          "head": "a3862bdd5547bf182466bf87a79252952bf3499e",
+          "tree": "a3cf88ea91eb24f1f9bc5e34af0e586572c47228",
+          "branch": "handoff/g3_3_fix",
+          "dirty_paths": [
+            "evidence/phase4_3/runs/live_acceptance_20260921T235704Z/"
+          ],
+          "tracked_dirty_paths": [],
+          "untracked_paths": [
+            "evidence/phase4_3/runs/live_acceptance_20260921T235704Z/"
+          ],
+          "untracked_paths_in_source_tree": [],
+          "tracked_files": 3628,
+          "tracked_files_listed": 3628,
+          "tracked_files_present_in_worktree": 3628,
+          "source_blob_map_sha256": "7ccb8e6aff26588551cb69397b7003a1e514ce2481350127bfcf8f80b4d229c5",
+          "captured_at": "2026-09-21T23:57:07.484426+00:00"
+        },
+        "run_evidence_paths_excluded_from_dirty_check": [
+          "evidence/phase4_3/runs/live_acceptance_20260921T235704Z"
+        ],
+        "pack_pin_commit": "2cb4627924d1a3240818ea7cd00453d4bd2d2da8",
+        "pack_pin_tree": "dd3095e89c640c19aeb151cd0e8efe4af3c55802",
+        "pack_inventory_file_count": 3580,
+        "pack_inventory_source_commit": "2cb4627924d1a3240818ea7cd00453d4bd2d2da8",
+        "tracked_files": 3628,
+        "tracked_file_count_source": "git ls-tree -r HEAD (actual list)",
+        "wheel_path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/wheel_dist/comsol_mcp-0.1.9-py3-none-any.whl",
+        "wheel_sha256": "b1aa39965ba6ef564d0ed4a36d36cbc2eb5666001bb2665e8700be3002b936cd",
+        "out_of_tree_import": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/test_venv/lib/python3.13/site-packages/comsol_mcp/__init__.py",
+        "out_of_tree_import_cwd": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/neutral_cwd",
+        "import_source_is_repository_package": false,
+        "import_resolved_into_fresh_venv": true
+      },
+      "timestamp": "2026-09-21T23:57:10.465527+00:00"
+    },
+    {
+      "case_id": "C01",
+      "name": "Evidence Correction & Ledger Auditing",
+      "status": "PASS",
+      "evidence_level": "static",
+      "error": null,
+      "details": {
+        "phase4_1_sha256": "a2e91f37d021274c5a5f1321f03961c57271e1e614d17f23d3b0ef6627335278",
+        "phase4_2_sha256": "741e702cf019bfede8564cc032bccdbd30c83ee830ec46ce6a3e16356faa52c4",
+        "w17_acceptance_sha256": "53daf14f51720f59e5fb8ed731083cd851b80bd3392c4fdeb7fee4a89a225197",
+        "correction_ledger": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/w17_correction.json",
+        "baseline_review": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/BASELINE_REVIEW.json",
+        "reopen_test_level": "CONTROL_UNIT",
+        "w17_test_level": "UNIT_CONTRACT"
+      },
+      "timestamp": "2026-09-21T23:57:10.467552+00:00"
+    },
+    {
+      "case_id": "C02",
+      "name": "Dangerous States & Safe Refusal",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "cleanup_failure_outcome_state": "unknown",
+        "export_refusal_verified": true,
+        "fail_closed_verified": true
+      },
+      "timestamp": "2026-09-21T23:57:10.469287+00:00"
+    },
+    {
+      "case_id": "C03",
+      "name": "Gate A Reopen & Stored Solution Acceptance",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "chain_a_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/artifacts/chain_a_solved.mph",
+        "chain_a_sha256": "32b47a5581732fb4ff0d508b80e3092f9cdd665a3fcbe6c2c2ea80edfc6688e8",
+        "chain_a_points_checked": 3,
+        "chain_a_gradient_values": [
+          308.1500000000069,
+          323.15000000001123,
+          338.15000000000975
+        ],
+        "chain_b_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/artifacts/chain_b_solved.mph",
+        "chain_b_sha256": "8712d62764a30642f03a3a88f3d76d67ffadd1399e654c49a9329562bef6f79c",
+        "chain_c_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/artifacts/chain_c_solved.mph",
+        "chain_c_sha256": "cf4792a80097c9eef29ee95e155787b8824ebcebf31eba2e7f681a6d0e80c71e",
+        "bench_c04_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/artifacts/bench_c04_solved.mph",
+        "bench_c05_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/artifacts/bench_c05_solved.mph",
+        "bench_c06_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/artifacts/bench_c06_solved.mph",
+        "bench_c07_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/artifacts/bench_c07_solved.mph",
+        "expectation_source": {
+          "chain_a": "analytic linear profile 293.15 + 1200*x K at x = 0.0125/0.025/0.0375 m",
+          "chain_b": "pre-save read of the build worker (stored-value preservation across save/reopen)",
+          "chain_c": "pre-save read of the build worker (stored-value preservation across save/reopen)"
+        },
+        "chain_b_values_checked": 3,
+        "chain_b_bound_check": "293.15 K <= T <= 353.15 K on every stored value",
+        "chain_c_derived_value_source": "engine read of result/numerical tags in the reopened worker",
+        "independent_resolve": "separate case C03R (§8); not part of this case",
+        "negative_controls_tested": [
+          "ARTIFACT_HASH_MISMATCH",
+          "DATASET_NOT_FOUND",
+          "DERIVED_VALUES_MISSING",
+          "STORED_VALUE_MISMATCH"
+        ]
+      },
+      "timestamp": "2026-09-21T23:57:28.828435+00:00"
+    },
+    {
+      "case_id": "C03R",
+      "name": "Independent Re-solve & Indistinguishability",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "model": "reopen_a",
+        "solve_result": "None",
+        "elapsed_seconds": 0.6996951659675688,
+        "values_compared": 3,
+        "max_abs_delta": 0.0,
+        "tolerance": 0.001,
+        "stored_values": [
+          308.1500000000069,
+          323.15000000001123,
+          338.15000000000975
+        ],
+        "resolved_values": [
+          308.1500000000069,
+          323.15000000001123,
+          338.15000000000975
+        ],
+        "resolved_artifact": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/artifacts/chain_a_resolved.mph",
+        "resolved_artifact_sha256": "537d8584d3d9396d7e8d743692a706cd4a881fb6a74c31a86e69d055b27bf717",
+        "solution_tags": [
+          "sol1"
+        ],
+        "dof": null,
+        "dof_note": "mesh/DoF statistics are not exposed by this worker method surface",
+        "why_separate": "§8: a re-solve may not be folded into the Gate A reopen verdict; the delivered suite ran it inside the case documented '(NO RE-SOLVE)'"
+      },
+      "timestamp": "2026-09-21T23:57:29.656946+00:00"
+    },
+    {
+      "case_id": "C04",
+      "name": "Constant Field Statistics (f=2, V=3)",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "formula_measure": 2.999999999999969,
+        "formula_integral": 5.999999999999938,
+        "computed_average": 2.0,
+        "computed_std": 0.0,
+        "computed_rms": 2.0,
+        "denominator_verified_as_measure": true
+      },
+      "timestamp": "2026-09-21T23:57:29.974773+00:00"
+    },
+    {
+      "case_id": "C05",
+      "name": "Multi-dimensional & Selection Support",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "domain_1_integral": 1.9999999999999878,
+        "domain_2_integral": 3.9999999999999853,
+        "all_domains_integral": 5.999999999999971,
+        "partition_conservation_verified": true
+      },
+      "timestamp": "2026-09-21T23:57:30.084627+00:00"
+    },
+    {
+      "case_id": "C06",
+      "name": "Non-Uniform Field Analytical Verification",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "analytic_area": 6.0,
+        "analytic_integral": 24.0,
+        "analytic_average": 4.0,
+        "analytic_variance": 3.3333333333333335,
+        "analytic_std": 1.8257418583505538,
+        "analytic_rms": 4.396968652757639,
+        "live_integral": 23.999999999999982,
+        "live_average": 3.9999999999999853,
+        "live_std": 1.8257418583505494,
+        "live_rms": 4.396968652757634,
+        "live_denominator_measure": 6.000000000000018
+      },
+      "timestamp": "2026-09-21T23:57:30.285114+00:00"
+    },
+    {
+      "case_id": "C07",
+      "name": "Axisymmetric Cylinder Verification",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "cylinder_radius": 2.0,
+        "cylinder_height": 3.0,
+        "live_revolved_volume": 37.69911184307756,
+        "expected_volume": 37.69911184307752,
+        "live_average_r": 1.3333333333333304,
+        "expected_average_r": 1.3333333333333333,
+        "cross_section_measure": 6.000000000000018,
+        "expected_cross_section_measure": 6.0,
+        "axisymmetric_flag": true,
+        "axisymmetric_applied_count": 1
+      },
+      "timestamp": "2026-09-21T23:57:30.440344+00:00"
+    },
+    {
+      "case_id": "C08",
+      "name": "Solution Axis Slicing & Metadata",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "expressions_count": 2,
+        "solutions_count": 5,
+        "points_count": 3,
+        "step2_sliced": [
+          [
+            293.27411927033944,
+            294.70068776489126,
+            306.9005043736273
+          ],
+          [
+            3.6659264908792433,
+            7.367517194122282,
+            11.508768914011023
+          ]
+        ],
+        "bounds_check_verified": true
+      },
+      "timestamp": "2026-09-21T23:57:30.464701+00:00"
+    },
+    {
+      "case_id": "C09",
+      "name": "Complex Field Transformations",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "constant_complex": "3+4i",
+        "integral_real": 17.99999999999998,
+        "integral_imag": 24.00000000000007,
+        "integral_abs": 30.000000000000043,
+        "integral_phase": 0.9272952180016142,
+        "spatial_point": [
+          1.0,
+          1.0
+        ],
+        "spatial_complex_value": {
+          "real": 3.0,
+          "imag": 1.0
+        },
+        "zero_padding_rejection": {
+          "rejected": true,
+          "error_code": "COMPLEX_DATA_ERROR",
+          "message": "imaginary component sequence missing for complex field evaluation"
+        }
+      },
+      "timestamp": "2026-09-21T23:57:30.654712+00:00"
+    },
+    {
+      "case_id": "C10",
+      "name": "Point Coordinates Scaling (m vs mm)",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "evaluated_point_m": [
+          1.0,
+          1.5
+        ],
+        "evaluated_point_mm": [
+          1000.0,
+          1500.0
+        ],
+        "value_m": 3.9999999999999996,
+        "value_mm": 3.9999999999999996,
+        "unit_equivalence_verified": true,
+        "non_finite_rejection_verified": true,
+        "dimension_mismatch_rejected": true,
+        "unsupported_frame_rejected": true
+      },
+      "timestamp": "2026-09-21T23:57:30.709928+00:00"
+    },
+    {
+      "case_id": "C11",
+      "name": "Dataset Dependency Graph & CutPoint2D",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "cutpoint_dataset": "cpt1",
+        "cutpoint_evaluated_value": 3.9999999999999996,
+        "acyclic_chain": [
+          "dset1",
+          "dset2",
+          "dset3"
+        ],
+        "cycle_detected": true
+      },
+      "timestamp": "2026-09-21T23:57:30.782337+00:00"
+    },
+    {
+      "case_id": "C12",
+      "name": "Export Path Traversal Protection & Atomic Rollback",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "traversal_rejection": {
+          "rejected": true,
+          "error_code": "ACCESS_VIOLATION",
+          "message": "Export destination '../../etc/passwd' escapes authorized project root /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository"
+        },
+        "export_failure_rejection": {
+          "rejected": true,
+          "error_code": "EXPORT_FAILED",
+          "message": "Cannot export field data because evaluation failed or left dirty state: {'ok': False, 'engine_error': 'SIMULATED_FAILURE'}"
+        },
+        "atomic_rollback": {
+          "rejected": true,
+          "error_type": "AtomicSaveError",
+          "message": "Candidate save callback failed: simulated engine failure during export"
+        },
+        "writer_reached": true,
+        "writer_staged_content": "PARTIAL_CONTENT",
+        "preserved_original_sha256": "1d545b940633ab0ee38f4a06a4bd3a199c4b7ec83373e0a56d8454f862399628",
+        "retained_failure_candidate": [
+          ".preserved.txt.7ad93cf76b28480f963a7bb179739368.tmp.mph"
+        ],
+        "retained_candidate_policy": "_atomic_save keeps the failed candidate as incident evidence; ACCEPTANCE.md C12 requires the original hash to survive, not its removal",
+        "artifacts_dir_entries_before": [
+          "bench_c04_solved.mph",
+          "bench_c05_solved.mph",
+          "bench_c06_solved.mph",
+          "bench_c07_solved.mph",
+          "chain_a_resolved.mph",
+          "chain_a_solved.mph",
+          "chain_b_solved.mph",
+          "chain_c_solved.mph",
+          "preserved.txt"
+        ],
+        "successful_publish": {
+          "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/artifacts/atomic_success.mph",
+          "size": 128,
+          "sha256": "31f051b9f11a0c050b07e35aea2b0f11bc686c0e89d4bc9264299f59298ff10a",
+          "checkpoint": {
+            "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/artifacts/atomic_success.mph",
+            "size": 128,
+            "sha256": "31f051b9f11a0c050b07e35aea2b0f11bc686c0e89d4bc9264299f59298ff10a",
+            "verified": true,
+            "publish_mode": "atomic_replace",
+            "parent_fsync": true
+          },
+          "artifact": {
+            "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/artifacts/atomic_success.mph",
+            "size": 128,
+            "sha256": "31f051b9f11a0c050b07e35aea2b0f11bc686c0e89d4bc9264299f59298ff10a",
+            "verified": true
+          }
+        },
+        "candidates_after_success": [
+          ".preserved.txt.7ad93cf76b28480f963a7bb179739368.tmp.mph"
+        ]
+      },
+      "timestamp": "2026-09-21T23:57:30.785277+00:00"
+    },
+    {
+      "case_id": "C13",
+      "name": "Chunk Streaming & Bounded Memory",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "file_size": 16384,
+        "full_sha256": "26be3b677fd0f096138bfb442988329fa7fe166bfb933802b052f71be9eaf6ef",
+        "chunk1_size": 8192,
+        "chunk2_size": 8192,
+        "reconstructed_sha256": "26be3b677fd0f096138bfb442988329fa7fe166bfb933802b052f71be9eaf6ef",
+        "bounds_check_verified": true
+      },
+      "timestamp": "2026-09-21T23:57:30.785589+00:00"
+    },
+    {
+      "case_id": "C14",
+      "name": "Definitions Probe vs Derived Values Separation & Table Management",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "created_probe_tag": "prb1",
+        "probe_type": "DomainProbe",
+        "probe_scope": "component.probe (separated from result.numerical)",
+        "table_created_tag": "tbl1",
+        "table_written_data": [
+          [
+            1.5,
+            2.5
+          ],
+          [
+            3.5,
+            4.5
+          ]
+        ],
+        "table_read_data": [
+          [
+            1.5,
+            2.5
+          ],
+          [
+            3.5,
+            4.5
+          ]
+        ],
+        "validation_verified": true
+      },
+      "timestamp": "2026-09-21T23:57:30.863864+00:00"
+    },
+    {
+      "case_id": "C15",
+      "name": "Idempotency & Control Responsiveness",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "worker_status": "HEALTHY",
+        "instance_id": "40c78bba-fa5e-4105-a1d7-524414df92f8",
+        "control_responsive": true
+      },
+      "timestamp": "2026-09-21T23:57:31.870487+00:00"
+    },
+    {
+      "case_id": "C16",
+      "name": "Packaging & Dependencies Lock",
+      "status": "PASS",
+      "evidence_level": "static",
+      "error": null,
+      "details": {
+        "pyproject": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/pyproject.toml",
+        "pyproject_sha256": "f790aad3d19091be562bad1f02c7ef1d4291fa83426251ae311b944cbde2524d",
+        "dependency_lock_files": {
+          "constraints-macos-arm64-py313.txt": "6d51641b39744925e726243e3fef3c0d48d9ae003d34c675bd8105c288436832",
+          "requirements-windows-cp312.txt": "30b1fc65aace6117aaf0548183913664fcefd3baad20b10fd9e6fd8e29150ed2",
+          "pip-freeze-fresh.txt": "6d51641b39744925e726243e3fef3c0d48d9ae003d34c675bd8105c288436832"
+        },
+        "wheel_file": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/wheel_dist/comsol_mcp-0.1.9-py3-none-any.whl",
+        "wheel_sha256": "b1aa39965ba6ef564d0ed4a36d36cbc2eb5666001bb2665e8700be3002b936cd",
+        "wheel_resource_manifest_source": "read out of the built wheel with zipfile",
+        "wheel_resources": {
+          "comsol_mcp/data/g2/02_ACTION_CATALOG.json": {
+            "entry": "comsol_mcp/data/g2/02_ACTION_CATALOG.json",
+            "size": 531126,
+            "sha256": "9ab2eda02ae628a25951c79f8a727c1dd71ad38037536344c526e7e04bfc32a2"
+          },
+          "comsol_mcp/data/g2/common.schema.json": {
+            "entry": "comsol_mcp/data/g2/common.schema.json",
+            "size": 7518,
+            "sha256": "820034424a0d28fb5a5738e1ef6b44ad01a5d4e483ad902e56bb69557d116914"
+          },
+          "comsol_mcp/worker_java/PersistentComsolWorker.java": {
+            "entry": "comsol_mcp/worker_java/PersistentComsolWorker.java",
+            "size": 64387,
+            "sha256": "815622a44a36c7112699334bcfa684213503f1a566a03346ca34e11d97465251"
+          }
+        },
+        "action_catalog_entries": 7,
+        "schema_top_level_keys": [
+          "$defs",
+          "$id",
+          "$schema"
+        ]
+      },
+      "timestamp": "2026-09-21T23:57:31.883411+00:00"
+    },
+    {
+      "case_id": "C17",
+      "name": "Teardown & Verification Ledger Finalization",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "isolated_server_pid": 39668,
+        "isolated_server_alive_after_teardown": false,
+        "isolated_server_stopped": true,
+        "lock_files_remaining": [
+          {
+            "name": "endpoint-42771ce2a0fba3308d6a48033bec3ee3e0f9fd0af6bb5e4072f5c465c726f9a3.lock",
+            "size": 0,
+            "sha256": null,
+            "held": false
+          }
+        ],
+        "locks_held": 0,
+        "lock_probe": "fcntl.lockf(LOCK_EX|LOCK_NB) per endpoint lock file",
+        "teardown_errors": [],
+        "status_tag": "G3_3_MAC_W17_VERIFIED_SCOPED",
+        "status_tag_derived_from": "every case recorded in this run",
+        "cases_recorded_before_teardown": 18,
+        "failed_cases": [],
+        "engine_reported_comsol_version": "COMSOL Multiphysics 6.4 (开发版本: 293)",
+        "stop_boundary": "W17 (not entering W18)"
+      },
+      "timestamp": "2026-09-21T23:57:33.439238+00:00"
+    }
+  ]
+}

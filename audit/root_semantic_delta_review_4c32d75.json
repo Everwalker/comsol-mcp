@@ -1,0 +1,22 @@
+{
+  "generated_at": "2026-09-22T09:02:09.410908+00:00",
+  "source_commit": "4c32d75dbcd43b8ba985cd746d7271c790b076b2",
+  "entries": [
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "source_sha256": "2fbcd28c1a0bb1ef61972228e2548a6595052b9c04a27a1d99ce13c55cc066a7",
+      "reviewed_here": true,
+      "status": "STATIC_SEMANTIC_DELTA_REVIEW",
+      "base_review": "audit/semantic_delta_review_ec02c12_20260922T085803Z.json",
+      "conclusion": "Root read ec02c12 table and dataset delta and reviewed the subsequent one-line null-imaginary condition. An unavailable complex flag plus a successful getter returning null is not imaginary proof; fail closed. Actual zero imaginary matrices remain explicit evidence, never fabricated values. Dataset partial inspection is usable metadata with incomplete flags; numerical binding gates remain separate."
+    },
+    {
+      "path": "tests/test_results_typed_crud.py",
+      "source_sha256": "359ed4c1cca21845167fea99a89aa54e3410411cad6423f2c7a24e514576dbde",
+      "reviewed_here": true,
+      "status": "STATIC_SEMANTIC_DELTA_REVIEW",
+      "base_review": "audit/semantic_delta_review_ec02c12_20260922T085803Z.json",
+      "conclusion": "Root reviewed current typed CRUD additions and wrote an actual table create/set result -> production classifier positive regression plus corruption -> classifier negative assertion. This catches the missing-target bug missed by standalone generic inner/outer dictionaries. Added unknown-complex/null-imaginary regression. 67 focused controls pass; no mock is native evidence."
+    }
+  ]
+}

@@ -1,0 +1,724 @@
+{
+  "action_scope": "Only recorded offline pytest-owned control daemons; no shared server, active job, engine connection, or file deletion selected.",
+  "candidate_count": 7,
+  "entries": [
+    {
+      "checked_at_utc": "2026-09-22T09:23:49.962472+00:00",
+      "jobdb": {
+        "all_jobs_terminal": true,
+        "all_operations_terminal": true,
+        "errors": [],
+        "exists": true,
+        "jobs": {},
+        "no_sessions_or_runtimes": true,
+        "operations": {},
+        "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/full_pytest_final_20260922T071755Z/pytest_tmp/test_chain_c_fixture_live_with0/blocked/mcp-home/control-private/operations.sqlite3",
+        "pid": 11042,
+        "read_only": true,
+        "runtimes_count": 0,
+        "sessions_count": 0
+      },
+      "pid": 11042,
+      "process": {
+        "actual": {
+          "birth": "Tue Sep 22 15:20:26 2026",
+          "command": "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m comsol_mcp._control_daemon --home /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/full_pytest_final_20260922T071755Z/pytest_tmp/test_chain_c_fixture_live_with0/blocked/mcp-home/control-private",
+          "pid": 11042,
+          "ppid": 1
+        },
+        "children": [],
+        "established_network": [],
+        "home_exists": true,
+        "home_scope_allowed": true,
+        "identity_match": true,
+        "inspection_commands": {
+          "lsof_all": {
+            "argv": [
+              "/usr/sbin/lsof",
+              "-nP",
+              "-a",
+              "-p",
+              "11042",
+              "-i"
+            ],
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "COMMAND   PID       USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME\nPython  11042 everwalker   10u  IPv4 0xd8452c96935db6ec      0t0  TCP 127.0.0.1:61241 (LISTEN)\n"
+          },
+          "lsof_established": {
+            "argv": [
+              "/usr/sbin/lsof",
+              "-nP",
+              "-a",
+              "-p",
+              "11042",
+              "-iTCP",
+              "-sTCP:ESTABLISHED"
+            ],
+            "returncode": 1,
+            "stderr": "",
+            "stdout": ""
+          },
+          "pgrep_children": {
+            "argv": [
+              "/usr/bin/pgrep",
+              "-P",
+              "11042"
+            ],
+            "returncode": 1,
+            "stderr": "",
+            "stdout": ""
+          },
+          "ps": {
+            "argv": [
+              "/bin/ps",
+              "-p",
+              "11042",
+              "-o",
+              "pid=,ppid=,lstart=,command="
+            ],
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "11042     1 Tue Sep 22 15:20:26 2026     /opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m comsol_mcp._control_daemon --home /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/full_pytest_final_20260922T071755Z/pytest_tmp/test_chain_c_fixture_live_with0/blocked/mcp-home/control-private\n"
+          }
+        },
+        "network": [
+          "COMMAND   PID       USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME",
+          "Python  11042 everwalker   10u  IPv4 0xd8452c96935db6ec      0t0  TCP 127.0.0.1:61241 (LISTEN)"
+        ],
+        "no_children": true,
+        "no_established_engine_connections": true,
+        "pid": 11042,
+        "recorded": {
+          "birth": "Tue Sep 22 15:20:26 2026",
+          "command": "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m comsol_mcp._control_daemon --home /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/full_pytest_final_20260922T071755Z/pytest_tmp/test_chain_c_fixture_live_with0/blocked/mcp-home/control-private",
+          "home": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/full_pytest_final_20260922T071755Z/pytest_tmp/test_chain_c_fixture_live_with0/blocked/mcp-home/control-private",
+          "ppid": 1
+        }
+      },
+      "safe_immediate_recheck": true,
+      "signal": "SIGTERM",
+      "signal_at_utc": "2026-09-22T09:23:50.011644+00:00",
+      "signal_sent": true
+    },
+    {
+      "checked_at_utc": "2026-09-22T09:23:50.011655+00:00",
+      "jobdb": {
+        "all_jobs_terminal": true,
+        "all_operations_terminal": true,
+        "errors": [],
+        "exists": true,
+        "jobs": {},
+        "no_sessions_or_runtimes": true,
+        "operations": {},
+        "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/final_full_pytest_20260922T073237Z/pytest_tmp/test_chain_c_fixture_live_with0/blocked/mcp-home/control-private/operations.sqlite3",
+        "pid": 17068,
+        "read_only": true,
+        "runtimes_count": 0,
+        "sessions_count": 0
+      },
+      "pid": 17068,
+      "process": {
+        "actual": {
+          "birth": "Tue Sep 22 15:33:22 2026",
+          "command": "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m comsol_mcp._control_daemon --home /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/final_full_pytest_20260922T073237Z/pytest_tmp/test_chain_c_fixture_live_with0/blocked/mcp-home/control-private",
+          "pid": 17068,
+          "ppid": 1
+        },
+        "children": [],
+        "established_network": [],
+        "home_exists": true,
+        "home_scope_allowed": true,
+        "identity_match": true,
+        "inspection_commands": {
+          "lsof_all": {
+            "argv": [
+              "/usr/sbin/lsof",
+              "-nP",
+              "-a",
+              "-p",
+              "17068",
+              "-i"
+            ],
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "COMMAND   PID       USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME\nPython  17068 everwalker   10u  IPv4 0x8e722dce63690a01      0t0  TCP 127.0.0.1:62940 (LISTEN)\n"
+          },
+          "lsof_established": {
+            "argv": [
+              "/usr/sbin/lsof",
+              "-nP",
+              "-a",
+              "-p",
+              "17068",
+              "-iTCP",
+              "-sTCP:ESTABLISHED"
+            ],
+            "returncode": 1,
+            "stderr": "",
+            "stdout": ""
+          },
+          "pgrep_children": {
+            "argv": [
+              "/usr/bin/pgrep",
+              "-P",
+              "17068"
+            ],
+            "returncode": 1,
+            "stderr": "",
+            "stdout": ""
+          },
+          "ps": {
+            "argv": [
+              "/bin/ps",
+              "-p",
+              "17068",
+              "-o",
+              "pid=,ppid=,lstart=,command="
+            ],
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "17068     1 Tue Sep 22 15:33:22 2026     /opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m comsol_mcp._control_daemon --home /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/final_full_pytest_20260922T073237Z/pytest_tmp/test_chain_c_fixture_live_with0/blocked/mcp-home/control-private\n"
+          }
+        },
+        "network": [
+          "COMMAND   PID       USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME",
+          "Python  17068 everwalker   10u  IPv4 0x8e722dce63690a01      0t0  TCP 127.0.0.1:62940 (LISTEN)"
+        ],
+        "no_children": true,
+        "no_established_engine_connections": true,
+        "pid": 17068,
+        "recorded": {
+          "birth": "Tue Sep 22 15:33:22 2026",
+          "command": "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m comsol_mcp._control_daemon --home /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/final_full_pytest_20260922T073237Z/pytest_tmp/test_chain_c_fixture_live_with0/blocked/mcp-home/control-private",
+          "home": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/final_full_pytest_20260922T073237Z/pytest_tmp/test_chain_c_fixture_live_with0/blocked/mcp-home/control-private",
+          "ppid": 1
+        }
+      },
+      "safe_immediate_recheck": true,
+      "signal": "SIGTERM",
+      "signal_at_utc": "2026-09-22T09:23:50.060709+00:00",
+      "signal_sent": true
+    },
+    {
+      "checked_at_utc": "2026-09-22T09:23:50.060719+00:00",
+      "jobdb": {
+        "all_jobs_terminal": true,
+        "all_operations_terminal": true,
+        "errors": [],
+        "exists": true,
+        "jobs": {},
+        "no_sessions_or_runtimes": true,
+        "operations": {},
+        "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/full_pytest_032c0a5_20260922T081800Z/pytest_tmp/test_chain_c_fixture_live_with0/blocked/mcp-home/control-private/operations.sqlite3",
+        "pid": 31394,
+        "read_only": true,
+        "runtimes_count": 0,
+        "sessions_count": 0
+      },
+      "pid": 31394,
+      "process": {
+        "actual": {
+          "birth": "Tue Sep 22 16:18:17 2026",
+          "command": "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m comsol_mcp._control_daemon --home /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/full_pytest_032c0a5_20260922T081800Z/pytest_tmp/test_chain_c_fixture_live_with0/blocked/mcp-home/control-private",
+          "pid": 31394,
+          "ppid": 1
+        },
+        "children": [],
+        "established_network": [],
+        "home_exists": true,
+        "home_scope_allowed": true,
+        "identity_match": true,
+        "inspection_commands": {
+          "lsof_all": {
+            "argv": [
+              "/usr/sbin/lsof",
+              "-nP",
+              "-a",
+              "-p",
+              "31394",
+              "-i"
+            ],
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "COMMAND   PID       USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME\nPython  31394 everwalker   10u  IPv4 0x1e95b9b5687385fa      0t0  TCP 127.0.0.1:60424 (LISTEN)\n"
+          },
+          "lsof_established": {
+            "argv": [
+              "/usr/sbin/lsof",
+              "-nP",
+              "-a",
+              "-p",
+              "31394",
+              "-iTCP",
+              "-sTCP:ESTABLISHED"
+            ],
+            "returncode": 1,
+            "stderr": "",
+            "stdout": ""
+          },
+          "pgrep_children": {
+            "argv": [
+              "/usr/bin/pgrep",
+              "-P",
+              "31394"
+            ],
+            "returncode": 1,
+            "stderr": "",
+            "stdout": ""
+          },
+          "ps": {
+            "argv": [
+              "/bin/ps",
+              "-p",
+              "31394",
+              "-o",
+              "pid=,ppid=,lstart=,command="
+            ],
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "31394     1 Tue Sep 22 16:18:17 2026     /opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m comsol_mcp._control_daemon --home /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/full_pytest_032c0a5_20260922T081800Z/pytest_tmp/test_chain_c_fixture_live_with0/blocked/mcp-home/control-private\n"
+          }
+        },
+        "network": [
+          "COMMAND   PID       USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME",
+          "Python  31394 everwalker   10u  IPv4 0x1e95b9b5687385fa      0t0  TCP 127.0.0.1:60424 (LISTEN)"
+        ],
+        "no_children": true,
+        "no_established_engine_connections": true,
+        "pid": 31394,
+        "recorded": {
+          "birth": "Tue Sep 22 16:18:17 2026",
+          "command": "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m comsol_mcp._control_daemon --home /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/full_pytest_032c0a5_20260922T081800Z/pytest_tmp/test_chain_c_fixture_live_with0/blocked/mcp-home/control-private",
+          "home": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/full_pytest_032c0a5_20260922T081800Z/pytest_tmp/test_chain_c_fixture_live_with0/blocked/mcp-home/control-private",
+          "ppid": 1
+        }
+      },
+      "safe_immediate_recheck": true,
+      "signal": "SIGTERM",
+      "signal_at_utc": "2026-09-22T09:23:50.108119+00:00",
+      "signal_sent": true
+    },
+    {
+      "checked_at_utc": "2026-09-22T09:23:50.108129+00:00",
+      "jobdb": {
+        "all_jobs_terminal": true,
+        "all_operations_terminal": true,
+        "errors": [],
+        "exists": true,
+        "jobs": {},
+        "no_sessions_or_runtimes": true,
+        "operations": {},
+        "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/full_pytest_4c32d75_20260922T090420Z/pytest_tmp/test_chain_c_fixture_live_with0/blocked/mcp-home/control-private/operations.sqlite3",
+        "pid": 44053,
+        "read_only": true,
+        "runtimes_count": 0,
+        "sessions_count": 0
+      },
+      "pid": 44053,
+      "process": {
+        "actual": {
+          "birth": "Tue Sep 22 17:04:50 2026",
+          "command": "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m comsol_mcp._control_daemon --home /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/full_pytest_4c32d75_20260922T090420Z/pytest_tmp/test_chain_c_fixture_live_with0/blocked/mcp-home/control-private",
+          "pid": 44053,
+          "ppid": 1
+        },
+        "children": [],
+        "established_network": [],
+        "home_exists": true,
+        "home_scope_allowed": true,
+        "identity_match": true,
+        "inspection_commands": {
+          "lsof_all": {
+            "argv": [
+              "/usr/sbin/lsof",
+              "-nP",
+              "-a",
+              "-p",
+              "44053",
+              "-i"
+            ],
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "COMMAND   PID       USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME\nPython  44053 everwalker   10u  IPv4 0x4fd179c9b06e0d13      0t0  TCP 127.0.0.1:63366 (LISTEN)\n"
+          },
+          "lsof_established": {
+            "argv": [
+              "/usr/sbin/lsof",
+              "-nP",
+              "-a",
+              "-p",
+              "44053",
+              "-iTCP",
+              "-sTCP:ESTABLISHED"
+            ],
+            "returncode": 1,
+            "stderr": "",
+            "stdout": ""
+          },
+          "pgrep_children": {
+            "argv": [
+              "/usr/bin/pgrep",
+              "-P",
+              "44053"
+            ],
+            "returncode": 1,
+            "stderr": "",
+            "stdout": ""
+          },
+          "ps": {
+            "argv": [
+              "/bin/ps",
+              "-p",
+              "44053",
+              "-o",
+              "pid=,ppid=,lstart=,command="
+            ],
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "44053     1 Tue Sep 22 17:04:50 2026     /opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m comsol_mcp._control_daemon --home /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/full_pytest_4c32d75_20260922T090420Z/pytest_tmp/test_chain_c_fixture_live_with0/blocked/mcp-home/control-private\n"
+          }
+        },
+        "network": [
+          "COMMAND   PID       USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME",
+          "Python  44053 everwalker   10u  IPv4 0x4fd179c9b06e0d13      0t0  TCP 127.0.0.1:63366 (LISTEN)"
+        ],
+        "no_children": true,
+        "no_established_engine_connections": true,
+        "pid": 44053,
+        "recorded": {
+          "birth": "Tue Sep 22 17:04:50 2026",
+          "command": "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m comsol_mcp._control_daemon --home /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/full_pytest_4c32d75_20260922T090420Z/pytest_tmp/test_chain_c_fixture_live_with0/blocked/mcp-home/control-private",
+          "home": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/full_pytest_4c32d75_20260922T090420Z/pytest_tmp/test_chain_c_fixture_live_with0/blocked/mcp-home/control-private",
+          "ppid": 1
+        }
+      },
+      "safe_immediate_recheck": true,
+      "signal": "SIGTERM",
+      "signal_at_utc": "2026-09-22T09:23:50.152344+00:00",
+      "signal_sent": true
+    },
+    {
+      "checked_at_utc": "2026-09-22T09:23:50.152355+00:00",
+      "jobdb": {
+        "all_jobs_terminal": true,
+        "all_operations_terminal": true,
+        "errors": [],
+        "exists": true,
+        "jobs": {
+          "FAILED": 1
+        },
+        "no_sessions_or_runtimes": true,
+        "operations": {
+          "FAILED": 1
+        },
+        "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/.g3-private/phase4-acceptance/offline/primary/mcp-home/control-private/operations.sqlite3",
+        "pid": 44172,
+        "read_only": true,
+        "runtimes_count": 0,
+        "sessions_count": 0
+      },
+      "pid": 44172,
+      "process": {
+        "actual": {
+          "birth": "Tue Sep 22 17:04:54 2026",
+          "command": "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m comsol_mcp._control_daemon --home /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/.g3-private/phase4-acceptance/offline/primary/mcp-home/control-private",
+          "pid": 44172,
+          "ppid": 1
+        },
+        "children": [],
+        "established_network": [],
+        "home_exists": true,
+        "home_scope_allowed": true,
+        "identity_match": true,
+        "inspection_commands": {
+          "lsof_all": {
+            "argv": [
+              "/usr/sbin/lsof",
+              "-nP",
+              "-a",
+              "-p",
+              "44172",
+              "-i"
+            ],
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "COMMAND   PID       USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME\nPython  44172 everwalker   10u  IPv4 0x782eb968682be8e8      0t0  TCP 127.0.0.1:63381 (LISTEN)\n"
+          },
+          "lsof_established": {
+            "argv": [
+              "/usr/sbin/lsof",
+              "-nP",
+              "-a",
+              "-p",
+              "44172",
+              "-iTCP",
+              "-sTCP:ESTABLISHED"
+            ],
+            "returncode": 1,
+            "stderr": "",
+            "stdout": ""
+          },
+          "pgrep_children": {
+            "argv": [
+              "/usr/bin/pgrep",
+              "-P",
+              "44172"
+            ],
+            "returncode": 1,
+            "stderr": "",
+            "stdout": ""
+          },
+          "ps": {
+            "argv": [
+              "/bin/ps",
+              "-p",
+              "44172",
+              "-o",
+              "pid=,ppid=,lstart=,command="
+            ],
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "44172     1 Tue Sep 22 17:04:54 2026     /opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m comsol_mcp._control_daemon --home /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/.g3-private/phase4-acceptance/offline/primary/mcp-home/control-private\n"
+          }
+        },
+        "network": [
+          "COMMAND   PID       USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME",
+          "Python  44172 everwalker   10u  IPv4 0x782eb968682be8e8      0t0  TCP 127.0.0.1:63381 (LISTEN)"
+        ],
+        "no_children": true,
+        "no_established_engine_connections": true,
+        "pid": 44172,
+        "recorded": {
+          "birth": "Tue Sep 22 17:04:54 2026",
+          "command": "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m comsol_mcp._control_daemon --home /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/.g3-private/phase4-acceptance/offline/primary/mcp-home/control-private",
+          "home": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/.g3-private/phase4-acceptance/offline/primary/mcp-home/control-private",
+          "ppid": 1
+        }
+      },
+      "safe_immediate_recheck": true,
+      "signal": "SIGTERM",
+      "signal_at_utc": "2026-09-22T09:23:50.196362+00:00",
+      "signal_sent": true
+    },
+    {
+      "checked_at_utc": "2026-09-22T09:23:50.196375+00:00",
+      "jobdb": {
+        "all_jobs_terminal": true,
+        "all_operations_terminal": true,
+        "errors": [],
+        "exists": true,
+        "jobs": {
+          "FAILED": 2
+        },
+        "no_sessions_or_runtimes": true,
+        "operations": {
+          "FAILED": 2
+        },
+        "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/.g3-private/phase4-acceptance/m1-offline/primary/mcp-home/control-private/operations.sqlite3",
+        "pid": 44190,
+        "read_only": true,
+        "runtimes_count": 0,
+        "sessions_count": 0
+      },
+      "pid": 44190,
+      "process": {
+        "actual": {
+          "birth": "Tue Sep 22 17:04:56 2026",
+          "command": "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m comsol_mcp._control_daemon --home /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/.g3-private/phase4-acceptance/m1-offline/primary/mcp-home/control-private",
+          "pid": 44190,
+          "ppid": 1
+        },
+        "children": [],
+        "established_network": [],
+        "home_exists": true,
+        "home_scope_allowed": true,
+        "identity_match": true,
+        "inspection_commands": {
+          "lsof_all": {
+            "argv": [
+              "/usr/sbin/lsof",
+              "-nP",
+              "-a",
+              "-p",
+              "44190",
+              "-i"
+            ],
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "COMMAND   PID       USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME\nPython  44190 everwalker   10u  IPv4 0x2da1238767f79910      0t0  TCP 127.0.0.1:63407 (LISTEN)\n"
+          },
+          "lsof_established": {
+            "argv": [
+              "/usr/sbin/lsof",
+              "-nP",
+              "-a",
+              "-p",
+              "44190",
+              "-iTCP",
+              "-sTCP:ESTABLISHED"
+            ],
+            "returncode": 1,
+            "stderr": "",
+            "stdout": ""
+          },
+          "pgrep_children": {
+            "argv": [
+              "/usr/bin/pgrep",
+              "-P",
+              "44190"
+            ],
+            "returncode": 1,
+            "stderr": "",
+            "stdout": ""
+          },
+          "ps": {
+            "argv": [
+              "/bin/ps",
+              "-p",
+              "44190",
+              "-o",
+              "pid=,ppid=,lstart=,command="
+            ],
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "44190     1 Tue Sep 22 17:04:56 2026     /opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m comsol_mcp._control_daemon --home /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/.g3-private/phase4-acceptance/m1-offline/primary/mcp-home/control-private\n"
+          }
+        },
+        "network": [
+          "COMMAND   PID       USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME",
+          "Python  44190 everwalker   10u  IPv4 0x2da1238767f79910      0t0  TCP 127.0.0.1:63407 (LISTEN)"
+        ],
+        "no_children": true,
+        "no_established_engine_connections": true,
+        "pid": 44190,
+        "recorded": {
+          "birth": "Tue Sep 22 17:04:56 2026",
+          "command": "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m comsol_mcp._control_daemon --home /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/.g3-private/phase4-acceptance/m1-offline/primary/mcp-home/control-private",
+          "home": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/.g3-private/phase4-acceptance/m1-offline/primary/mcp-home/control-private",
+          "ppid": 1
+        }
+      },
+      "safe_immediate_recheck": true,
+      "signal": "SIGTERM",
+      "signal_at_utc": "2026-09-22T09:23:50.241990+00:00",
+      "signal_sent": true
+    },
+    {
+      "checked_at_utc": "2026-09-22T09:23:50.242001+00:00",
+      "jobdb": {
+        "all_jobs_terminal": true,
+        "all_operations_terminal": true,
+        "errors": [],
+        "exists": true,
+        "jobs": {},
+        "no_sessions_or_runtimes": true,
+        "operations": {},
+        "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z/pytest_tmp/test_chain_c_fixture_live_with0/blocked/mcp-home/control-private/operations.sqlite3",
+        "pid": 45507,
+        "read_only": true,
+        "runtimes_count": 0,
+        "sessions_count": 0
+      },
+      "pid": 45507,
+      "process": {
+        "actual": {
+          "birth": "Tue Sep 22 17:09:33 2026",
+          "command": "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m comsol_mcp._control_daemon --home /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z/pytest_tmp/test_chain_c_fixture_live_with0/blocked/mcp-home/control-private",
+          "pid": 45507,
+          "ppid": 1
+        },
+        "children": [],
+        "established_network": [],
+        "home_exists": true,
+        "home_scope_allowed": true,
+        "identity_match": true,
+        "inspection_commands": {
+          "lsof_all": {
+            "argv": [
+              "/usr/sbin/lsof",
+              "-nP",
+              "-a",
+              "-p",
+              "45507",
+              "-i"
+            ],
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "COMMAND   PID       USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME\nPython  45507 everwalker   10u  IPv4 0xe7f381cb6c9bcda6      0t0  TCP 127.0.0.1:65072 (LISTEN)\n"
+          },
+          "lsof_established": {
+            "argv": [
+              "/usr/sbin/lsof",
+              "-nP",
+              "-a",
+              "-p",
+              "45507",
+              "-iTCP",
+              "-sTCP:ESTABLISHED"
+            ],
+            "returncode": 1,
+            "stderr": "",
+            "stdout": ""
+          },
+          "pgrep_children": {
+            "argv": [
+              "/usr/bin/pgrep",
+              "-P",
+              "45507"
+            ],
+            "returncode": 1,
+            "stderr": "",
+            "stdout": ""
+          },
+          "ps": {
+            "argv": [
+              "/bin/ps",
+              "-p",
+              "45507",
+              "-o",
+              "pid=,ppid=,lstart=,command="
+            ],
+            "returncode": 0,
+            "stderr": "",
+            "stdout": "45507     1 Tue Sep 22 17:09:33 2026     /opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m comsol_mcp._control_daemon --home /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z/pytest_tmp/test_chain_c_fixture_live_with0/blocked/mcp-home/control-private\n"
+          }
+        },
+        "network": [
+          "COMMAND   PID       USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME",
+          "Python  45507 everwalker   10u  IPv4 0xe7f381cb6c9bcda6      0t0  TCP 127.0.0.1:65072 (LISTEN)"
+        ],
+        "no_children": true,
+        "no_established_engine_connections": true,
+        "pid": 45507,
+        "recorded": {
+          "birth": "Tue Sep 22 17:09:33 2026",
+          "command": "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m comsol_mcp._control_daemon --home /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z/pytest_tmp/test_chain_c_fixture_live_with0/blocked/mcp-home/control-private",
+          "home": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z/pytest_tmp/test_chain_c_fixture_live_with0/blocked/mcp-home/control-private",
+          "ppid": 1
+        }
+      },
+      "safe_immediate_recheck": true,
+      "signal": "SIGTERM",
+      "signal_at_utc": "2026-09-22T09:23:50.286582+00:00",
+      "signal_sent": true
+    }
+  ],
+  "generated_at_utc": "2026-09-22T09:23:50.286594+00:00",
+  "inventory_source": "evidence/phase4_3/runs/final_batch_a3f39b3_20260922T0907Z/final_process_inventory.json",
+  "predecision_source": "evidence/phase4_3/runs/process_cleanup_a3f39b3_20260922T091828Z/predecision_final.json",
+  "repository": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository",
+  "schema": "comsol-mcp.process-cleanup-signal.v1",
+  "signal": "SIGTERM",
+  "signals_not_sent": [],
+  "signals_sent": [
+    11042,
+    17068,
+    31394,
+    44053,
+    44172,
+    44190,
+    45507
+  ],
+  "source_commit": "a3f39b3022b417e16c3087b8b35f1daa06f30b8a"
+}

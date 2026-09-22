@@ -1,0 +1,335 @@
+{
+  "success": false,
+  "data": {
+    "status": "REFUSED",
+    "refused": true,
+    "operation": "result.at_points",
+    "refusal": {
+      "code": "API_UNSUPPORTED",
+      "message": "coordinate frame 'unsupported-frame' not supported; only 'spatial' supported",
+      "safe_retry": false,
+      "stage": "validation",
+      "details": {
+        "frame": "unsupported-frame",
+        "mutation_issued": false
+      }
+    },
+    "dispatch_stage": "validation",
+    "witness": {
+      "engine_calls": 0,
+      "mutation_method": null,
+      "mutation_issued": false,
+      "methods": [],
+      "dispatches": []
+    },
+    "domain_state": "failed",
+    "verification_status": "NOT_APPLICABLE",
+    "execution_state_unknown": false,
+    "partial_change": false,
+    "cleanup_failed": false,
+    "domain_outcome": {
+      "operation": "result.at_points",
+      "state": "failed",
+      "verification_status": "NOT_APPLICABLE",
+      "cleanup_failed": false,
+      "execution_state_unknown": false,
+      "dispatch_stage": "validation",
+      "status_token": "REFUSED",
+      "failure": {
+        "code": "API_UNSUPPORTED",
+        "message": "coordinate frame 'unsupported-frame' not supported; only 'spatial' supported",
+        "safe_retry": false,
+        "details": {
+          "frame": "unsupported-frame",
+          "mutation_issued": false
+        }
+      },
+      "witness": {
+        "engine_calls": 0,
+        "mutation_method": null,
+        "mutation_issued": false,
+        "methods": [],
+        "dispatches": []
+      },
+      "details": {
+        "status_token": "REFUSED"
+      }
+    },
+    "effect": "evaluate",
+    "verified_outcome": "failed",
+    "isolation_proof": {
+      "verified": true,
+      "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_numeric_20260922T0445Z/isolation_receipt.json",
+      "pid": 62290,
+      "birth": "Tue Sep 22 12:32:11 2026",
+      "endpoint": "127.0.0.1:58717",
+      "listener": {
+        "pid": 62290,
+        "endpoint": "*:58717",
+        "local_endpoint": "*:58717",
+        "remote_endpoint": null,
+        "state": "LISTEN",
+        "raw": "java    62290 everwalker   59u  IPv6 0xc4c7269cd5658ccf      0t0  TCP *:58717 (LISTEN)"
+      },
+      "listener_binding": "wildcard",
+      "loopback_listener": false,
+      "worker_pid": 62453,
+      "established_client_pids": [
+        62290,
+        62453
+      ],
+      "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+      "config_inode": 14720294,
+      "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+      "api_probe": {
+        "probe_kind": "comsol_java_api",
+        "observed_at": "2026-09-22T04:32:23Z",
+        "loopback_address": "127.0.0.1",
+        "loopback_port": 58717,
+        "authenticated_api_success": true,
+        "nonloopback_address": "192.168.100.152",
+        "nonloopback_port": 58717,
+        "nonloopback_api_exception_http_status": null,
+        "denial_evidence_source": "server_access_log",
+        "server_access_log": {
+          "status": "PASS",
+          "phase": "java_connect_only",
+          "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_numeric_20260922T0445Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+          "inode": 29922866,
+          "offset_before": 0,
+          "offset_after": 261,
+          "segment_sha256": "3a66cce89d637d957bd5bd2ab8a2813b7c4d0805846abe819722825df135d025",
+          "java_request_id": "g2-valve-nonloopback-connect",
+          "started_at": "2026-09-22T04:32:15Z",
+          "finished_at": "2026-09-22T04:32:23Z",
+          "entries": [
+            {
+              "peer": "127.0.0.1",
+              "method": "GET",
+              "route": "/webbridge/websocket",
+              "http_status": 101
+            },
+            {
+              "peer": "127.0.0.1",
+              "method": "GET",
+              "route": "/webbridge/websocket",
+              "http_status": 101
+            },
+            {
+              "peer": "192.168.100.152",
+              "method": "GET",
+              "route": "/webbridge/websocket",
+              "http_status": 403
+            }
+          ],
+          "parsed_nonloopback_entry": {
+            "peer": "192.168.100.152",
+            "method": "GET",
+            "route": "/webbridge/websocket",
+            "http_status": 403
+          },
+          "raw_probe_started_after_capture": true
+        }
+      },
+      "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer"
+    }
+  },
+  "error": {
+    "code": "API_UNSUPPORTED",
+    "message": "coordinate frame 'unsupported-frame' not supported; only 'spatial' supported",
+    "safe_retry": false,
+    "stage": "validation",
+    "details": {
+      "frame": "unsupported-frame",
+      "mutation_issued": false
+    }
+  },
+  "execution": {
+    "session_id": "session-442f83eaf2cded6d7210f29b",
+    "model_ref": {
+      "schema_version": 1,
+      "session_id": "session-442f83eaf2cded6d7210f29b",
+      "server_instance_id": "2058d55747caf4ef6d03df29acdaea37e07180c14c19f13d7ecb4008d435337c",
+      "model_tag": "mcp2",
+      "generation": 1
+    },
+    "revision": 28,
+    "dirty": false,
+    "server_ownership": "shared",
+    "model_ownership": "mcp_owned",
+    "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+    "request_id": "public_numeric_20260922T0445Z-run-result-at_points-9",
+    "operation_id": "78c286ac-d4be-45f1-9979-7665bcd5ba5a",
+    "request_hash": "3a9b51408898301d2d2719f5b9a1539fbd80622be4925cd285fab6f61c01a296",
+    "idempotency_key": "public_numeric_20260922T0445Z-run-result-at_points-9",
+    "job_id": "2d5b609e-d65f-4f68-abc0-ab0f506bc105"
+  },
+  "_outer_isError": true,
+  "_structuredContent": {
+    "success": false,
+    "data": {
+      "status": "REFUSED",
+      "refused": true,
+      "operation": "result.at_points",
+      "refusal": {
+        "code": "API_UNSUPPORTED",
+        "message": "coordinate frame 'unsupported-frame' not supported; only 'spatial' supported",
+        "safe_retry": false,
+        "stage": "validation",
+        "details": {
+          "frame": "unsupported-frame",
+          "mutation_issued": false
+        }
+      },
+      "dispatch_stage": "validation",
+      "witness": {
+        "engine_calls": 0,
+        "mutation_method": null,
+        "mutation_issued": false,
+        "methods": [],
+        "dispatches": []
+      },
+      "domain_state": "failed",
+      "verification_status": "NOT_APPLICABLE",
+      "execution_state_unknown": false,
+      "partial_change": false,
+      "cleanup_failed": false,
+      "domain_outcome": {
+        "operation": "result.at_points",
+        "state": "failed",
+        "verification_status": "NOT_APPLICABLE",
+        "cleanup_failed": false,
+        "execution_state_unknown": false,
+        "dispatch_stage": "validation",
+        "status_token": "REFUSED",
+        "failure": {
+          "code": "API_UNSUPPORTED",
+          "message": "coordinate frame 'unsupported-frame' not supported; only 'spatial' supported",
+          "safe_retry": false,
+          "details": {
+            "frame": "unsupported-frame",
+            "mutation_issued": false
+          }
+        },
+        "witness": {
+          "engine_calls": 0,
+          "mutation_method": null,
+          "mutation_issued": false,
+          "methods": [],
+          "dispatches": []
+        },
+        "details": {
+          "status_token": "REFUSED"
+        }
+      },
+      "effect": "evaluate",
+      "verified_outcome": "failed",
+      "isolation_proof": {
+        "verified": true,
+        "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_numeric_20260922T0445Z/isolation_receipt.json",
+        "pid": 62290,
+        "birth": "Tue Sep 22 12:32:11 2026",
+        "endpoint": "127.0.0.1:58717",
+        "listener": {
+          "pid": 62290,
+          "endpoint": "*:58717",
+          "local_endpoint": "*:58717",
+          "remote_endpoint": null,
+          "state": "LISTEN",
+          "raw": "java    62290 everwalker   59u  IPv6 0xc4c7269cd5658ccf      0t0  TCP *:58717 (LISTEN)"
+        },
+        "listener_binding": "wildcard",
+        "loopback_listener": false,
+        "worker_pid": 62453,
+        "established_client_pids": [
+          62290,
+          62453
+        ],
+        "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+        "config_inode": 14720294,
+        "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+        "api_probe": {
+          "probe_kind": "comsol_java_api",
+          "observed_at": "2026-09-22T04:32:23Z",
+          "loopback_address": "127.0.0.1",
+          "loopback_port": 58717,
+          "authenticated_api_success": true,
+          "nonloopback_address": "192.168.100.152",
+          "nonloopback_port": 58717,
+          "nonloopback_api_exception_http_status": null,
+          "denial_evidence_source": "server_access_log",
+          "server_access_log": {
+            "status": "PASS",
+            "phase": "java_connect_only",
+            "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_numeric_20260922T0445Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+            "inode": 29922866,
+            "offset_before": 0,
+            "offset_after": 261,
+            "segment_sha256": "3a66cce89d637d957bd5bd2ab8a2813b7c4d0805846abe819722825df135d025",
+            "java_request_id": "g2-valve-nonloopback-connect",
+            "started_at": "2026-09-22T04:32:15Z",
+            "finished_at": "2026-09-22T04:32:23Z",
+            "entries": [
+              {
+                "peer": "127.0.0.1",
+                "method": "GET",
+                "route": "/webbridge/websocket",
+                "http_status": 101
+              },
+              {
+                "peer": "127.0.0.1",
+                "method": "GET",
+                "route": "/webbridge/websocket",
+                "http_status": 101
+              },
+              {
+                "peer": "192.168.100.152",
+                "method": "GET",
+                "route": "/webbridge/websocket",
+                "http_status": 403
+              }
+            ],
+            "parsed_nonloopback_entry": {
+              "peer": "192.168.100.152",
+              "method": "GET",
+              "route": "/webbridge/websocket",
+              "http_status": 403
+            },
+            "raw_probe_started_after_capture": true
+          }
+        },
+        "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer"
+      }
+    },
+    "error": {
+      "code": "API_UNSUPPORTED",
+      "message": "coordinate frame 'unsupported-frame' not supported; only 'spatial' supported",
+      "safe_retry": false,
+      "stage": "validation",
+      "details": {
+        "frame": "unsupported-frame",
+        "mutation_issued": false
+      }
+    },
+    "execution": {
+      "session_id": "session-442f83eaf2cded6d7210f29b",
+      "model_ref": {
+        "schema_version": 1,
+        "session_id": "session-442f83eaf2cded6d7210f29b",
+        "server_instance_id": "2058d55747caf4ef6d03df29acdaea37e07180c14c19f13d7ecb4008d435337c",
+        "model_tag": "mcp2",
+        "generation": 1
+      },
+      "revision": 28,
+      "dirty": false,
+      "server_ownership": "shared",
+      "model_ownership": "mcp_owned",
+      "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+      "request_id": "public_numeric_20260922T0445Z-run-result-at_points-9",
+      "operation_id": "78c286ac-d4be-45f1-9979-7665bcd5ba5a",
+      "request_hash": "3a9b51408898301d2d2719f5b9a1539fbd80622be4925cd285fab6f61c01a296",
+      "idempotency_key": "public_numeric_20260922T0445Z-run-result-at_points-9",
+      "job_id": "2d5b609e-d65f-4f68-abc0-ab0f506bc105"
+    }
+  }
+}

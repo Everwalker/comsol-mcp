@@ -1,0 +1,3429 @@
+{
+  "automated_inventory_only": false,
+  "coverage_gaps": [
+    "No tests/test_complex_transform.py exists; complex transformation coverage is in tests/test_g3_3_remediation.py and tests/test_g3_3_core_numeric_contracts.py (mapped separately).",
+    "The final software run is not a replacement for post-freeze public MCP ledgers or live cleanup-failure injection."
+  ],
+  "entries": [
+    {
+      "bytes": 0,
+      "cleanup_risks": "no cleanup",
+      "false_pass_risks": "none",
+      "invariants_checked": "import/package discovery only",
+      "key_symbols": [],
+      "line_count": 0,
+      "oracle_or_evidence_source": "none",
+      "path": "tests/__init__.py",
+      "responsibility": "test package marker",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software only",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 204141,
+      "cleanup_risks": "owned cleanup and reconciliation are driver responsibilities; fault branches remain NOT_RUN without injector",
+      "false_pass_risks": "helper/host protocol can be correct while no engine run occurs; status rows are not independent physics oracle",
+      "invariants_checked": "same-key retry uses exact body; UNKNOWN is preserved; cleanup/no-publish and evidence level are distinct",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 748,
+          "name": "run_c00"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 877,
+          "name": "run_c01"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 922,
+          "name": "run_c02"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 965,
+          "name": "run_c03"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 1773,
+          "name": "run_c04"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 1853,
+          "name": "run_c05"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 2088,
+          "name": "run_c06"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 2177,
+          "name": "run_c07"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 2246,
+          "name": "run_c08"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 2403,
+          "name": "run_c09"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 2496,
+          "name": "run_c10"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 2584,
+          "name": "run_c11"
+        }
+      ],
+      "line_count": 4014,
+      "oracle_or_evidence_source": "action-client replies, job status/log/result/reconcile witnesses, case assertions",
+      "path": "tests/run_g3_3_live_acceptance.py",
+      "responsibility": "C00-C17 public/live acceptance orchestration and status precedence",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "engine-capable driver; not invoked by pytest",
+      "sha256": "8fb8db105b3e609057b9a5d0e34f3602f6593b7ca61822c1631098a7f510e2d9",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 6387,
+      "cleanup_risks": "partial/candidate files are intentionally retained for diagnosis",
+      "false_pass_risks": "fake ZIP/callbacks and temp files do not establish COMSOL save/reopen",
+      "invariants_checked": "publish only after complete verification; failures preserve old target and retain candidate evidence; no-clobber race is refused",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 17,
+          "name": "test_atomic_save_replaces_only_after_complete_zip_verification"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 33,
+          "name": "test_valid_mph_zip_may_contain_an_empty_optional_member"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 35,
+          "name": "callback"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 43,
+          "name": "test_callback_failure_preserves_existing_checkpoint_and_keeps_partial_evidence"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 60,
+          "name": "test_verification_and_publish_failures_do_not_replace_existing_checkpoint"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 77,
+          "name": "test_file_flush_failure_preserves_original_and_candidate"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 99,
+          "name": "test_file_flush_uses_writable_mode_without_truncating_candidate"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 120,
+          "name": "test_path_escape_and_overwrite_refusal_do_not_create_candidate"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 131,
+          "name": "test_no_clobber_publish_refuses_a_destination_created_after_preflight"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 145,
+          "name": "test_symlink_parent_escape_is_rejected_before_callback"
+        }
+      ],
+      "line_count": 152,
+      "oracle_or_evidence_source": "ZIP validation, callback/flush/publish outcomes and target hash",
+      "path": "tests/test_atomic_save.py",
+      "responsibility": "atomic MPH/checkpoint save publication",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software unit only",
+      "sha256": "ef0a10708878db688cf91770921dbe3ab46773e0398ed779c19c02c696b79018",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 5339,
+      "cleanup_risks": "client does not own arbitrary process cleanup",
+      "false_pass_risks": "all transport/process objects are monkeypatched; no daemon or COMSOL",
+      "invariants_checked": "transport loss becomes UNKNOWN without resubmit; same identity and wait validation; Windows breakaway/foreign-lock refusal",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 4,
+          "name": "test_transport_lost_response_never_resubmits_and_retains_identity"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 19,
+          "name": "test_invalid_wait_budget_rejects_before_service_start"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 25,
+          "name": "test_live_unresponsive_control_is_not_replaced"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 36,
+          "name": "test_control_pid_reuse_is_not_treated_as_the_published_daemon"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 42,
+          "name": "test_healthy_existing_windows_control_is_attached_without_spawn"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 52,
+          "name": "test_windows_spawn_requests_breakaway_detached_process_group"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 79,
+          "name": "test_windows_breakaway_denial_fails_closed_without_transport_fallback"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 99,
+          "name": "test_dispatch_preserves_unknown_code_but_explains_windows_prerequisite"
+        }
+      ],
+      "line_count": 111,
+      "oracle_or_evidence_source": "fake transport replies and subprocess/process snapshots",
+      "path": "tests/test_control_client.py",
+      "responsibility": "control client transport/idempotency/process guard behavior",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software unit only",
+      "sha256": "cc4bb465cb85f77ce357a79a2c19d6f3a7df832ac54485c79e016034fef80e47",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 6025,
+      "cleanup_risks": "durable store cleanup/restart is simulated",
+      "false_pass_risks": "fake persistence/service cannot prove a real worker or active solve",
+      "invariants_checked": "idempotency, timeout validation, event paging, callback exception UNKNOWN, restart no replay, model inspection queueing",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 10,
+          "name": "test_health_without_worker_and_unknown_operation"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 16,
+          "name": "test_daemon_routes_callback_through_service_and_idempotency"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 26,
+          "name": "test_lazy_bootstrap_requires_explicit_runtime_environment"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 35,
+          "name": "test_timeout_fields_reject_bool_and_nonfinite_without_callback"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 42,
+          "name": "test_reconcile_uses_durable_completion_after_worker_replacement"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 62,
+          "name": "test_reconcile_never_ignores_pending_request_beyond_first_log_page"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 81,
+          "name": "test_callback_exception_persists_unknown_and_restart_reconciles_without_replay"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 86,
+          "name": "lost_worker_callback"
+        }
+      ],
+      "line_count": 116,
+      "oracle_or_evidence_source": "fake service/store callbacks and restart state",
+      "path": "tests/test_control_daemon.py",
+      "responsibility": "durable control daemon operation/reconciliation",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software unit only",
+      "sha256": "5907ba3b6d47fb259b9aed0172efbfdd21d9a879534df98c8b5efa764b55f147",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 5816,
+      "cleanup_risks": "daemon thread shutdown is fixture scoped",
+      "false_pass_risks": "in-process fake adapter and short event waits are not an active COMSOL solve",
+      "invariants_checked": "same-key running job is observed before replay; health is responsive; queue expiry/watchdog events are explicit",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 15,
+          "name": "test_same_key_reuses_running_job_and_health_stays_responsive"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 33,
+          "name": "test_queue_expiry_does_not_invoke_callback"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 49,
+          "name": "test_execution_and_progress_watchdogs_start_only_after_running"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 71,
+          "name": "test_model_inspect_is_queued_behind_solve_and_does_not_snapshot_early"
+        }
+      ],
+      "line_count": 86,
+      "oracle_or_evidence_source": "real in-process ControlDaemon/ExecutionService with fake adapter and threading events",
+      "path": "tests/test_control_queue.py",
+      "responsibility": "queued control responsiveness/watchdog/expiry",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software unit with threads; no engine",
+      "sha256": "1baed1b7fd4ed7a179f3d5eabfd701bdb67d60c9e2ba05369197cb6eb77de980",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 2240,
+      "cleanup_risks": "none in static check",
+      "false_pass_risks": "regex/source checks do not compile or attach to Java worker",
+      "invariants_checked": "read-only NumericalFeature call; rectangular [dim,point_count]; ragged/null/nonfinite refusal; no coordinate payload wire transfer",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 22,
+          "name": "test_shape_alias_is_allowlisted_and_classified_as_read_only"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 27,
+          "name": "test_shape_alias_checks_handle_then_calls_native_getcoordinates_without_wire_values"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 43,
+          "name": "test_shape_alias_does_not_replace_the_raw_coordinate_getter_contract"
+        }
+      ],
+      "line_count": 48,
+      "oracle_or_evidence_source": "source text assertions for allowlist/native call/shape-only response",
+      "path": "tests/test_coordinates_shape_bridge.py",
+      "responsibility": "PersistentComsolWorker getCoordinatesShape bridge contract",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "static source control only",
+      "sha256": "6ae52a545825b437a1c26f3dae1b332fe87d911c27296e5be4679d8c2d250d4a",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 9662,
+      "cleanup_risks": "no external nodes are deleted",
+      "false_pass_risks": "fake tree names can differ from COMSOL runtime semantics",
+      "invariants_checked": "wrong component/cycle/missing witness refusal; unique single-component fallback only",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 115,
+          "name": "test_solution_binding_reads_real_solution_component_geometry_and_source"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 128,
+          "name": "test_cutpoint_resolves_upstream_solution_and_unique_chain"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 141,
+          "name": "test_join_same_solution_is_compatible_and_preserves_both_edges"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 152,
+          "name": "test_join_with_incompatible_solution_is_explicitly_rejected"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 165,
+          "name": "test_cycle_missing_reference_and_wrong_component_or_geometry_fail_closed"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 179,
+          "name": "test_solution_wrong_component_or_geometry_never_falls_back_to_direct_properties"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 192,
+          "name": "test_coordinate_context_rejects_incomplete_solution_binding_without_legacy_fallback"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 214,
+          "name": "test_coordinate_context_rejects_missing_binding_witness"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 220,
+          "name": "test_unique_single_component_geometry_derivation_is_the_only_default"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 231,
+          "name": "test_unreadable_required_property_never_becomes_complete"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 242,
+          "name": "test_requested_solution_mismatch_is_explicit"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 248,
+          "name": "test_requested_solution_cannot_fill_missing_dataset_solution_property"
+        }
+      ],
+      "line_count": 256,
+      "oracle_or_evidence_source": "fake model tree lookup and binding witnesses",
+      "path": "tests/test_dataset_binding.py",
+      "responsibility": "dataset/solution/component/geometry binding",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software unit only",
+      "sha256": "e2fa2f610e37eee583f97a09ee8b67f262c83affc160be764ae1f04dd2844063",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 5363,
+      "cleanup_risks": "ledger state only",
+      "false_pass_risks": "synthetic timestamps/fingerprints are not real worker observations",
+      "invariants_checked": "anti-ABA generation/model_ref; canonical request hash; write revision/fingerprint; unknown/partial no retry; symlink and redaction guards",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 23,
+          "name": "test_model_ref_has_only_server_identity_and_rebind_prevents_aba"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 35,
+          "name": "test_canonical_hash_ignores_tracking_and_rpc_wait_but_not_semantics"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 44,
+          "name": "test_write_requires_revision_permissions_and_fingerprint"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 55,
+          "name": "test_external_event_fails_closed_until_explicit_observation"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 66,
+          "name": "test_partial_and_unknown_are_dirty_revision_advancing_and_not_retryable"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 75,
+          "name": "test_legacy_effects_cover_current_surface_and_unknown_rejects"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 85,
+          "name": "test_bool_generation_and_revision_are_rejected_and_ticket_is_single_use"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 99,
+          "name": "test_external_change_while_running_cannot_report_success"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 108,
+          "name": "test_project_path_resolves_symlink_escape_and_credentials_are_redacted"
+        }
+      ],
+      "line_count": 120,
+      "oracle_or_evidence_source": "SessionLedger/contract objects and synthetic receipts",
+      "path": "tests/test_execution_contract.py",
+      "responsibility": "model reference, revision, request hash, path/credential safety",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software unit only",
+      "sha256": "0ef2dd28e0a8d076646dc6ada5a97f67652f65eb76966d9ac84437e17a51752a",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 4422,
+      "cleanup_risks": "unknown post-state remains unresolved; no real cleanup",
+      "false_pass_risks": "fake adapter cannot verify COMSOL mutation or engine state",
+      "invariants_checked": "conflicts/preflight before mutation; reconcile revision; unbound create versus bound write; post-snapshot failure UNKNOWN",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 28,
+          "name": "test_service_conflict_prevents_callback_before_write"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 38,
+          "name": "test_service_reconcile_invalidates_old_revision_then_executes"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 51,
+          "name": "test_service_paths_are_canonicalized_before_callback"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 58,
+          "name": "test_service_unbound_create_is_permitted_but_unbound_write_is_not"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 65,
+          "name": "test_service_rejects_adapter_snapshot_for_a_different_selected_model"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 73,
+          "name": "test_false_legacy_envelope_is_not_promoted_to_success"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 80,
+          "name": "test_post_snapshot_failure_releases_ticket_and_marks_unknown"
+        }
+      ],
+      "line_count": 95,
+      "oracle_or_evidence_source": "fake adapter and model snapshots",
+      "path": "tests/test_execution_service.py",
+      "responsibility": "execution-service preflight/reconcile/dispatch state",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software unit only",
+      "sha256": "96f8dab2a324bcfc4235b77955597391d2b15a4add36e8701ba737a3cd8cdb11",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 9192,
+      "cleanup_risks": "unknown cleanup state retained in object graph",
+      "false_pass_risks": "constructed exception/envelope chains are not live failures",
+      "invariants_checked": "nested unknown cannot be cleared; dirty/retry state and inherited physics availability propagate",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 49,
+          "name": "__call__"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 78,
+          "name": "_run_wrapped_worker_failure"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 103,
+          "name": "test_decode_reply_preserves_structured_worker_failure_and_message"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 115,
+          "name": "test_run_tool_collects_unknown_from_cause_without_parsing_error_text"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 131,
+          "name": "test_tool_execution_data_cannot_clear_true_cause_signal"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 134,
+          "name": "callback"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 169,
+          "name": "test_execution_service_marks_wrapped_unknown_dirty_and_blocks_retry"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 196,
+          "name": "test_execution_service_keeps_plain_local_value_error_retryable"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 260,
+          "name": "__call__"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 286,
+          "name": "test_physics_feature_discovery_exposes_inherited_state_without_fake_editability"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 300,
+          "name": "test_physics_feature_discovery_is_unknown_when_inherit_predicate_is_unavailable"
+        }
+      ],
+      "line_count": 305,
+      "oracle_or_evidence_source": "fake model/service/domain outcomes",
+      "path": "tests/test_execution_state_propagation.py",
+      "responsibility": "structured failure/UNKNOWN propagation across nested outcomes",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software unit only",
+      "sha256": "94eb9340f82b11bfa1655ca3a406a55ba3f1606363190ca622d4b00f0e344aab",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 3556,
+      "cleanup_risks": "temp package dirs are fixture scoped",
+      "false_pass_risks": "does not call MCP server or COMSOL",
+      "invariants_checked": "packaged catalog/schema authoritative; legacy fallback bounded; package data present",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 25,
+          "name": "test_packaged_catalog_matches_reviewed_source_and_is_authoritative"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 35,
+          "name": "test_catalog_selector_rejects_drift_and_prefers_package"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 52,
+          "name": "test_catalog_selector_has_only_legacy_workspace_fallback"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 63,
+          "name": "test_pyproject_declares_catalog_as_package_data"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 68,
+          "name": "test_registry_imports_from_isolated_package_tree_without_checkout"
+        }
+      ],
+      "line_count": 94,
+      "oracle_or_evidence_source": "package metadata/resources and temporary isolated package copy",
+      "path": "tests/test_g2_registry_packaging.py",
+      "responsibility": "packaged catalog/registry authority and isolated import",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software/package only",
+      "sha256": "496e3245d1466c4d402d7572fd7d804c0b46f6a3775bd4b1d8ee8528b0b15f21",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 17510,
+      "cleanup_risks": "no process lifecycle is performed",
+      "false_pass_risks": "all endpoint/process evidence is synthetic; no listener is probed",
+      "invariants_checked": "wildcard listener/authenticated probe; stale PID/config/inode/port/nonloopback rejection; access-log correlation/tamper",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 94,
+          "name": "test_remote_addr_valve_accepts_wildcard_listener_with_verified_api_probe"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 114,
+          "name": "test_remote_addr_valve_rejects_missing_or_stale_identity_proof"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 145,
+          "name": "test_remote_addr_valve_rejects_probe_bound_to_another_process_port_or_config"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 167,
+          "name": "test_remote_addr_valve_requires_authenticated_loopback_and_specific_nonloopback_403"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 189,
+          "name": "test_remote_addr_valve_binds_both_probe_addresses_to_current_port"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 202,
+          "name": "test_remote_addr_valve_rejects_http_only_probe_without_java_api_kind"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 215,
+          "name": "test_remote_addr_valve_rejects_extra_or_nonloopback_current_client"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 230,
+          "name": "test_remote_addr_valve_does_not_accept_self_reported_unreviewed_target_or_hash"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 295,
+          "name": "test_remote_addr_valve_accepts_server_access_log_when_java_exception_has_no_http_status"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 318,
+          "name": "test_server_access_log_segment_remains_valid_when_log_appends_after_capture"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 333,
+          "name": "test_server_access_log_rejects_tampering_or_unrelated_entries"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 377,
+          "name": "test_server_access_log_rejects_missing_companion_proof"
+        }
+      ],
+      "line_count": 398,
+      "oracle_or_evidence_source": "synthetic process/socket/access-log receipts plus monkeypatches",
+      "path": "tests/test_g2_remote_isolation.py",
+      "responsibility": "remote loopback/worker isolation receipt validation",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software control only",
+      "sha256": "42a42d48793f946d4f601ef5f15d7d58819212c65588f1928283cf25fdc442a9",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 30054,
+      "cleanup_risks": "deletion/cleanup paths are fake and assertion-only",
+      "false_pass_risks": "fixtures are not Java API or COMSOL observations",
+      "invariants_checked": "untrusted Java prewrite refusal; distinct worker/outer job; stale/missing/tampered checkpoint; cleanup UNKNOWN; setter readback failure",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 222,
+          "name": "test_nested_java_without_trusted_code_rejects_before_checkpoint_or_copy"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 243,
+          "name": "test_direct_untrusted_java_mode_rejects_before_write_ticket"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 269,
+          "name": "test_nested_untrusted_java_mode_rejects_before_checkpoint_or_copy"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 294,
+          "name": "test_g2_direct_and_operation_fallback_bind_worker_events_to_original_job"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 347,
+          "name": "test_g2_event_context_restores_outer_context_when_action_raises"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 397,
+          "name": "test_transaction_nested_code_steps_use_distinct_worker_ids_and_one_outer_job"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 411,
+          "name": "run_action"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 445,
+          "name": "test_trial_nested_code_steps_use_distinct_worker_ids_and_one_outer_job"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 460,
+          "name": "run_action"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 497,
+          "name": "test_trial_stale_revision_rejects_before_copy_or_load"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 515,
+          "name": "test_trial_requires_explicit_checkpoint_before_copy_or_load"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 532,
+          "name": "test_trial_copies_bound_checkpoint_without_saving_main"
+        }
+      ],
+      "line_count": 804,
+      "oracle_or_evidence_source": "fake transaction/trial/checkpoint flows",
+      "path": "tests/test_g2_review_regressions.py",
+      "responsibility": "transaction/trial/checkpoint regression controls",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software unit only",
+      "sha256": "1aa188e57aac4eb32cc486e0c25fea14ed388d1023ce7d288129198e7f89f285",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 16421,
+      "cleanup_risks": "sentinel protection and cleanup are local fixtures",
+      "false_pass_risks": "no actual filesystem/server credential boundary beyond temp fixtures",
+      "invariants_checked": "owned receipt and registry/hash/revision gates; recursive symlink/outside refusal; exact pair binding",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 155,
+          "name": "test_sensitive_g2_operations_require_owned_receipt_before_engine_calls"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 167,
+          "name": "test_request_isolation_boolean_cannot_substitute_a_live_receipt"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 192,
+          "name": "test_sensitive_g2_permissions_fail_before_engine_calls"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 221,
+          "name": "test_malformed_registry_shape_is_rejected_before_worker_dispatch"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 239,
+          "name": "test_stale_revision_rejects_transaction_before_checkpoint_save"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 257,
+          "name": "test_altered_checkpoint_hash_is_rejected_without_replacing_model"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 284,
+          "name": "test_trial_cleanup_failure_is_unknown_and_not_reported_as_success"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 307,
+          "name": "test_recursive_docs_index_skips_private_symlink_and_rejects_outside_root"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 350,
+          "name": "test_stale_or_wildcard_isolation_receipt_is_rejected"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 391,
+          "name": "test_isolation_receipt_accepts_exact_bidirectional_server_worker_pair"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 424,
+          "name": "test_isolation_receipt_rejects_mismatched_server_worker_peer_ports"
+        }
+      ],
+      "line_count": 452,
+      "oracle_or_evidence_source": "synthetic receipts, paths and document trees",
+      "path": "tests/test_g2_security_guards.py",
+      "responsibility": "security guards for receipts/paths/docs/checkpoints",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software unit only",
+      "sha256": "75c156315dc68d1eec64c95cd266784d7b162fca359a84261fc9b6f9a4120692",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 16370,
+      "cleanup_risks": "none beyond temp fixture",
+      "false_pass_risks": "fake getter/setter cannot prove native API compatibility",
+      "invariants_checked": "nonfinite readback refusal; COMSOL argument order; booleans/unknown metadata; docs version/hash; preview no execute",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 65,
+          "name": "test_typed_get_preserves_empty_singleton_matrix_and_uses_authoritative_getters"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 76,
+          "name": "test_typed_get_bounds_metadata_to_requested_names_and_preserves_unknown_rejection"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 103,
+          "name": "test_nonfinite_engine_readbacks_fail_closed_before_json_serialization"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 110,
+          "name": "test_nonfinite_property_get_has_no_write_and_serializable_error"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 136,
+          "name": "test_typed_set_and_index_use_java_signature_and_comsol_argument_order"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 150,
+          "name": "test_boolean_on_off_metadata_accepts_typed_json_boolean_without_set_string_conversion"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 166,
+          "name": "test_boolean_single_allowed_on_off_value_accepts_only_its_corresponding_bool"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 190,
+          "name": "test_boolean_allowed_values_remain_fail_closed_before_set"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 205,
+          "name": "test_unknown_metadata_and_int64_writes_fail_closed"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 217,
+          "name": "test_registry_profiles_and_compile_missing_reply_are_truthful"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 245,
+          "name": "test_legacy_fallback_uses_registered_fastmcp_schema_and_rejects_unknown_fields"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 269,
+          "name": "test_hidden_legacy_fallback_routes_valid_workflow_and_rejects_bad_arguments"
+        }
+      ],
+      "line_count": 363,
+      "oracle_or_evidence_source": "fake typed APIs/readbacks and package docs",
+      "path": "tests/test_g2_w08_w12.py",
+      "responsibility": "typed getter/setter, metadata, registry and docs regressions",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software unit only",
+      "sha256": "53c3c2474c91b28e11d935a7c6bc6f0c6a816cfc23912d89151524c2e6e3411c",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 6656,
+      "cleanup_risks": "none",
+      "false_pass_risks": "pure helper outputs are not engine values",
+      "invariants_checked": "labels/properties/coercion/path containment and workflow statuses remain explicit",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 21,
+          "name": "test_alphanumeric_passthrough"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 24,
+          "name": "test_special_characters_replaced"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 27,
+          "name": "test_empty_returns_snapshot"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 30,
+          "name": "test_only_underscores_trimmed"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 33,
+          "name": "test_dots_and_dashes_preserved"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 38,
+          "name": "test_empty_string"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 41,
+          "name": "test_json_object"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 45,
+          "name": "test_json_object_multi_value"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 49,
+          "name": "test_json_array"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 53,
+          "name": "test_invalid_input"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 59,
+          "name": "test_scalar"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 62,
+          "name": "test_string"
+        }
+      ],
+      "line_count": 204,
+      "oracle_or_evidence_source": "deterministic value/path/state assertions",
+      "path": "tests/test_helpers.py",
+      "responsibility": "pure helper snapshot/coercion/path/workflow functions",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software unit only",
+      "sha256": "6b5e9b3bb37c83b923cf4278e5618e1f0aca53b111354b16ac788fb85b97e4c5",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 30425,
+      "cleanup_risks": "worker subprocess fixtures are isolated; no shared process takeover",
+      "false_pass_risks": "no COMSOL attach/model/solve; one Windows-only test skipped on macOS",
+      "invariants_checked": "identity/classpath/permissions/health/foreign-lock refusal; Windows skip is environment-specific",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 152,
+          "name": "test_java_worker_is_loopback_authenticated_and_reports_health"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 166,
+          "name": "test_java_worker_keeps_original_request_queryable_after_nonblocking_submit"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 179,
+          "name": "test_java_worker_persists_private_endpoint_metadata"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 196,
+          "name": "test_windows_acl_owner_rights_is_resolved_to_verified_owner"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 229,
+          "name": "test_windows_acl_metadata_rejects_foreign_owner_and_broad_allow"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 236,
+          "name": "test_windows_jdk_executables_keep_space_containing_paths"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 243,
+          "name": "test_windows_compile_uses_exe_semicolon_classpath_and_utf8_decoding"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 266,
+          "name": "test_windows_classpath_prefers_complete_apiplugins_without_scanning_plugins"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 280,
+          "name": "test_windows_classpath_uses_complete_plugins_only_when_apiplugins_is_incomplete"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 293,
+          "name": "test_windows_classpath_rejects_partial_roots_instead_of_mixing"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 304,
+          "name": "test_windows_classpath_missing_manifest_entry_fails_precisely"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 313,
+          "name": "test_reused_worker_pid_with_different_creation_time_is_stale"
+        }
+      ],
+      "line_count": 643,
+      "oracle_or_evidence_source": "conditional worker fixture plus synthetic process/Java responses",
+      "path": "tests/test_java_worker.py",
+      "responsibility": "PersistentJavaWorker process/control and endpoint guards",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence. The fresh JVM codec test now asserts NaN, positive/negative infinity, nested non-finite rejection, finite pass and structured post-dispatch failure fields.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software control; no COMSOL",
+      "sha256": "803bfee7828bef91f56e8909282ce9852153d9e50779aef0eed169ec89e980d5",
+      "working_tree_state": " M"
+    },
+    {
+      "bytes": 57315,
+      "cleanup_risks": "cleanup failures intentionally become UNKNOWN and are not hidden",
+      "false_pass_risks": "fake domain model and tool responses cannot establish public MCP/live cleanup",
+      "invariants_checked": "pre/post dispatch stage; mutation UNKNOWN; inventory/adopt/cleanup; replay conflict; data/units binding",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 110,
+          "name": "test_missing_component_refusal_declares_the_validation_stage"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 122,
+          "name": "test_the_other_lookup_only_refusals_declare_the_stage_too"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 148,
+          "name": "test_a_refusal_with_the_stage_and_a_clean_witness_is_published_as_a_refusal"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 164,
+          "name": "test_a_witness_that_saw_a_mutation_keeps_the_fail_closed_unknown"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 171,
+          "name": "call"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 183,
+          "name": "test_a_raise_without_the_stage_stays_unknown"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 185,
+          "name": "call"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 195,
+          "name": "test_every_node_not_found_raise_in_the_package_declares_the_stage"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 232,
+          "name": "test_the_existing_component_refusal_declares_the_validation_stage"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 244,
+          "name": "test_the_dispatch_envelope_publishes_the_tag_conflict_as_a_refusal"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 267,
+          "name": "test_a_tag_conflict_behind_a_mutation_keeps_the_fail_closed_unknown"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 273,
+          "name": "call_after_a_write"
+        }
+      ],
+      "line_count": 1214,
+      "oracle_or_evidence_source": "fake outcomes and tiny tool adapters",
+      "path": "tests/test_m1_product_repairs.py",
+      "responsibility": "M1 DomainOutcome/dispatch/cleanup/idempotency product repairs",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software unit only",
+      "sha256": "115c04ee7ccd772b80138e62964d0a6f25425954c81d96f8719c28b395c2ef5a",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 6993,
+      "cleanup_risks": "reconnect/old epoch cleanup is in-memory",
+      "false_pass_risks": "fake backend does not connect to COMSOL",
+      "invariants_checked": "scoped capability; unbound visible load vs model read; path boundary; reconnect invalidates epoch",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 18,
+          "name": "test_external_change_capability_is_explicitly_scope_limited"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 37,
+          "name": "test_unbound_visible_load_is_permitted_but_model_reads_still_require_ref"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 48,
+          "name": "test_unconnected_local_workflow_tools_and_path_boundary"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 65,
+          "name": "test_async_public_study_uses_serial_synchronous_callback"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 80,
+          "name": "test_explicit_reconnect_starts_existing_worker_and_invalidates_old_epoch"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 117,
+          "name": "test_visible_workflow_start_uses_managed_connection_not_legacy_reconnect"
+        }
+      ],
+      "line_count": 136,
+      "oracle_or_evidence_source": "fake Worker/Store and callbacks",
+      "path": "tests/test_managed_backend.py",
+      "responsibility": "managed backend capability/path/reconnect/epoch boundaries",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software unit only",
+      "sha256": "b3d598f13ef1338603d40f34fefce38b20d55b71b87c203c2e2a5efee7b8f8cf",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 5060,
+      "cleanup_risks": "sentinel fixture protected",
+      "false_pass_risks": "network disabled and no real backend",
+      "invariants_checked": "portable root and sentinel stay protected; no worker calls on hostile input",
+      "key_symbols": [
+        {
+          "kind": "ClassDef",
+          "line": 20,
+          "name": "_NoCallWorker"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 25,
+          "name": "test_help_roots_keep_project_and_configured_paths_portable"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 46,
+          "name": "test_managed_backend_delegates_installation_paths_to_platform_helper"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 63,
+          "name": "test_managed_docs_treat_malicious_fragment_as_data_without_network_or_worker"
+        }
+      ],
+      "line_count": 135,
+      "oracle_or_evidence_source": "malicious docs/temp paths with networking monkeypatched off",
+      "path": "tests/test_managed_backend_docs_security.py",
+      "responsibility": "managed backend portable roots and malicious docs security",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software security unit only",
+      "sha256": "43a6380e70e3cb800e5de0fae45dc0b90a739d054e8a1949fb0d0bd9e4781db5",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 2073,
+      "cleanup_risks": "none",
+      "false_pass_risks": "fake gateway replies are not public MCP transport",
+      "invariants_checked": "business failure and partial evidence retained; invalid result fail closed; legacy route/schema; secret redaction",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 9,
+          "name": "test_business_failure_has_outer_error_and_preserves_partial_evidence"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 17,
+          "name": "test_invalid_backend_result_fails_closed"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 22,
+          "name": "test_legacy_tool_schema_and_real_dispatch_route"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 40,
+          "name": "test_transport_failure_does_not_leak_exception_secrets"
+        }
+      ],
+      "line_count": 50,
+      "oracle_or_evidence_source": "fake route/service envelopes",
+      "path": "tests/test_mcp_gateway.py",
+      "responsibility": "gateway outer failure/partial evidence and secret redaction",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software unit only",
+      "sha256": "f5cb8a415ef8e6c41a49a901a9edde8c30f0261c963e725e1a4cc83c06da4e60",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 7540,
+      "cleanup_risks": "temp DB cleanup fixture",
+      "false_pass_risks": "local SQLite does not prove worker/engine durability",
+      "invariants_checked": "schema migration; restart/terminal timestamp; same-key conflict; unknown has no terminal time; event page order",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 6,
+          "name": "test_store_idempotency_result_and_restart_reconciliation"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 28,
+          "name": "test_schema_zero_migrates_and_durable_metadata_round_trips"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 39,
+          "name": "test_concurrent_same_key_has_one_operation_and_job"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 53,
+          "name": "test_two_connections_restart_events_and_terminal_reconcile"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 70,
+          "name": "test_finish_commits_operation_and_job_terminal_state_before_reopen"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 88,
+          "name": "test_running_update_preserves_original_started_timestamp"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 99,
+          "name": "test_operation_and_job_share_running_and_restart_observations"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 112,
+          "name": "test_list_metadata_rejects_unapproved_table_name"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 121,
+          "name": "test_finish_persists_unknown_without_terminal_timestamp"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 134,
+          "name": "test_future_schema_rejected"
+        }
+      ],
+      "line_count": 139,
+      "oracle_or_evidence_source": "temporary SQLite database and concurrent calls",
+      "path": "tests/test_operation_store.py",
+      "responsibility": "SQLite operation durability/idempotency/event paging",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software unit only",
+      "sha256": "65f3974d835eb04d47ec0f8a22041a5715409e2cf76522b8dda2c2a7c9789aa7",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 1531,
+      "cleanup_risks": "temp files fixture scoped",
+      "false_pass_risks": "fixtures are synthetic and not engine output",
+      "invariants_checked": "path escape refusal; plugin classpath; PNG raster/CRC",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 7,
+          "name": "test_paths_cannot_escape_via_symlink"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 12,
+          "name": "test_classpath_uses_official_apiplugins_and_rejects_missing"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 22,
+          "name": "test_png_validator_checks_raster_and_crc"
+        }
+      ],
+      "line_count": 27,
+      "oracle_or_evidence_source": "temporary filesystem, classpath and PNG bytes",
+      "path": "tests/test_phase1_runtime.py",
+      "responsibility": "phase1 symlink/classpath/PNG fixture checks",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software unit only",
+      "sha256": "6a5246763561b438d52621c69936f475ed23d8bf61f52c91fa982dd838d7619b",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 1284,
+      "cleanup_risks": "none",
+      "false_pass_risks": "static checks do not run external Java or COMSOL",
+      "invariants_checked": "stdio/recovery route/loopback mutation/event readback present",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 7,
+          "name": "test_followup_uses_production_stdio_and_verified_recovery_route"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 16,
+          "name": "test_external_mutation_is_bounded_to_explicit_loopback_test_target"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 24,
+          "name": "test_external_api_evidence_requires_event_readback_and_stale_write_rejection"
+        }
+      ],
+      "line_count": 28,
+      "oracle_or_evidence_source": "source text and route assertions",
+      "path": "tests/test_phase2_followup_driver.py",
+      "responsibility": "phase2 follow-up driver static contract",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "static source control only",
+      "sha256": "8468c88da0ee0149a7e9138181751f70ce98dffc4be6e4239126d23c82a5252a",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 15463,
+      "cleanup_risks": "fake cleanup only",
+      "false_pass_risks": "all callbacks fake; no engine side effects",
+      "invariants_checked": "preflight batch; no retry on parameter/study/partial metrics; cleanup UNKNOWN; idempotent feature/commit artifact",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 10,
+          "name": "test_solver_batch_preflights_all_steps_before_creating_any"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 46,
+          "name": "test_parameter_static_preflight_happens_before_any_write"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 58,
+          "name": "test_parameter_runtime_failure_reports_applied_failed_and_not_executed"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 81,
+          "name": "test_legacy_runner_preserves_structured_business_failure_data"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 102,
+          "name": "test_study_solve_failure_is_not_retried_with_a_second_target"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 128,
+          "name": "test_iteration_rejects_partial_metrics_and_does_not_save"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 153,
+          "name": "test_iteration_success_separates_execution_metrics_and_acceptance"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 177,
+          "name": "test_property_batch_is_prevalidated_and_setter_failure_is_not_atomic"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 199,
+          "name": "test_expression_row_failure_is_outer_business_failure_with_preserved_rows"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 226,
+          "name": "test_cleanup_failure_is_engine_unknown_not_a_row_level_success"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 244,
+          "name": "test_metric_cleanup_failure_is_engine_unknown_not_partial_metric_row"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 263,
+          "name": "test_existing_feature_type_must_match_before_idempotent_reuse"
+        }
+      ],
+      "line_count": 352,
+      "oracle_or_evidence_source": "fake callbacks and structured failures",
+      "path": "tests/test_phase2_legacy_control_flow.py",
+      "responsibility": "legacy parameter/study control-flow regressions",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software unit only",
+      "sha256": "b5ae365062542015b148748cd97ada53a98b275e269bf39fc2cf4ecf316d300d",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 16611,
+      "cleanup_risks": "no process lifecycle in tests",
+      "false_pass_risks": "driver is not invoked; process rows are synthetic",
+      "invariants_checked": "private home/model ref; no os.kill; PID/command/Windows identity; T028 ACTIVE scope and p95 observations",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 23,
+          "name": "test_driver_uses_stdio_client_sessions_and_never_imports_control_client"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 35,
+          "name": "test_control_home_matches_production_private_layout"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 39,
+          "name": "test_model_ref_accepts_saved_execution_envelope"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 46,
+          "name": "test_model_ref_rejects_non_identity_input"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 53,
+          "name": "test_execution_identity_requires_a_bound_ref_and_integer_revision"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 60,
+          "name": "test_evidence_redaction_removes_private_paths_and_tokens"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 73,
+          "name": "test_verified_pid_rejects_registered_comsol_pid_before_ps"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 78,
+          "name": "test_windows_verified_pid_requires_endpoint_birth_and_exact_private_command"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 103,
+          "name": "test_windows_command_identity_requires_one_module_invocation_and_one_home"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 111,
+          "name": "test_windows_external_control_argv_is_a_list_with_unicode_home"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 120,
+          "name": "test_windows_external_control_pair_checks_redirector_child_and_selected_python"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 162,
+          "name": "test_windows_external_preflight_fails_closed_without_existing_endpoint"
+        }
+      ],
+      "line_count": 357,
+      "oracle_or_evidence_source": "static/fixture recovery driver, SQLite observations, process metadata",
+      "path": "tests/test_phase2_recovery_driver.py",
+      "responsibility": "recovery driver identity/redaction/T028 boundaries",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software/static control only",
+      "sha256": "98de5ab14a62d17eafb9ca6367243109c8973415dfa5990dbacc56bf944b71e5",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 19542,
+      "cleanup_risks": "no process cleanup",
+      "false_pass_risks": "static/fixture assertions cannot establish live Java/COMSOL",
+      "invariants_checked": "identity/revision, typed readback, reconciliation/no replay, fallback client, no process lifecycle, Java injection/redaction",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 27,
+          "name": "test_public_evidence_redacts_docs_and_serialized_text_mirror"
+        },
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 56,
+          "name": "call"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 66,
+          "name": "test_driver_is_production_stdio_only_and_has_no_direct_comsol_bypass"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 82,
+          "name": "test_driver_defaults_to_explicit_live_fixture_and_records_scope"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 96,
+          "name": "test_case_status_precedence_is_fail_then_blocked_then_not_run"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 109,
+          "name": "test_model_identity_and_revision_parsing_fail_closed"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 128,
+          "name": "test_different_typed_value_changes_data_without_changing_kind_or_shape"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 136,
+          "name": "test_different_typed_value_does_not_invent_empty_property_data"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 141,
+          "name": "test_property_rows_use_actual_inspect_values_and_get_properties"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 154,
+          "name": "test_worker_compile_diagnostics_are_flattened_but_must_keep_line_data"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 160,
+          "name": "test_execution_readback_extracts_the_reviewed_nested_worker_result_only"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 187,
+          "name": "test_trial_scope_property_map_selects_matching_nested_path"
+        }
+      ],
+      "line_count": 440,
+      "oracle_or_evidence_source": "static production stdio and fixture receipts",
+      "path": "tests/test_phase3_acceptance_driver.py",
+      "responsibility": "phase3 acceptance driver source and case precedence",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software/static control only",
+      "sha256": "164df382a8f292fe4fc56317809858edb2f76507bb126bdc2168c3cbd48972f3",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 6307,
+      "cleanup_risks": "process cleanup is only snapshot validation",
+      "false_pass_risks": "runtime launcher never invoked by tests",
+      "invariants_checked": "exact config diff, loopback guard, process identity and cleanup metadata",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 11,
+          "name": "test_reviewed_server_xml_is_exact_one_attribute_change"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 17,
+          "name": "test_proposal_rejects_an_unreviewed_byte_change"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 30,
+          "name": "test_listener_records_require_numeric_loopback"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 47,
+          "name": "test_loopback_guard_rejects_wildcard"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 57,
+          "name": "test_wrong_address_is_terminal_loopback_violation"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 67,
+          "name": "test_failed_attempt_snapshots_child_before_launcher_stop"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 88,
+          "name": "test_failed_attempt_stops_child_before_launcher"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 116,
+          "name": "test_process_parser_preserves_birth_and_command"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 127,
+          "name": "test_in_place_write_preserves_inode_and_metadata"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 141,
+          "name": "test_target_metadata_rejects_unknown_xattr"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 150,
+          "name": "test_target_metadata_accepts_recorded_provenance_residual"
+        }
+      ],
+      "line_count": 161,
+      "oracle_or_evidence_source": "synthetic XML/proposal/hash/process snapshots",
+      "path": "tests/test_phase3_owned_runtime.py",
+      "responsibility": "task-owned COMSOL runtime configuration receipt guards",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software control only",
+      "sha256": "781318c397a4f369e5769799d541ce717ad44c08703e59824f7ce643fefeee93",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 21775,
+      "cleanup_risks": "cleanup state is synthetic",
+      "false_pass_risks": "no actual listener/API is started by test",
+      "invariants_checked": "loopback/API/log correlation, restore and cleanup status",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 44,
+          "name": "test_approved_remote_addr_valve_proposal_is_exact_and_preserves_access_log"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 56,
+          "name": "test_proposal_hash_guard_rejects_modified_private_copy"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 69,
+          "name": "test_webbridge_restore_uses_recorded_target_and_metadata_snapshot"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 102,
+          "name": "test_webbridge_metadata_guard_preserves_known_provenance_residual"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 134,
+          "name": "test_webbridge_metadata_guard_rejects_unapproved_provenance_value"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 154,
+          "name": "test_authenticated_socket_pair_requires_exact_loopback_bidirectional_pair"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 166,
+          "name": "test_authenticated_socket_pair_rejects_unapproved_client"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 189,
+          "name": "test_worker_failure_403_classification_requires_http_context"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 234,
+          "name": "test_websocket_api_probe_records_only_status_facts"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 248,
+          "name": "test_access_log_correlation_binds_java_interval_and_rejects_other_nonloopback_rows"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 297,
+          "name": "test_current_nonloopback_address_is_discovered_each_run"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 308,
+          "name": "test_probe_producer_emits_comsol_java_api_shape_for_consumer"
+        }
+      ],
+      "line_count": 522,
+      "oracle_or_evidence_source": "synthetic socket/access-log/receipt and exact diff",
+      "path": "tests/test_phase3_remote_addr_valve_runtime.py",
+      "responsibility": "RemoteAddrValve runtime receipt validation",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software control only",
+      "sha256": "34e069a428b413574aadf7cccf1382fbdc9e53e4dfe776a23bef13d09d15f9e1",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 901,
+      "cleanup_risks": "no process mutation",
+      "false_pass_risks": "no real process termination",
+      "invariants_checked": "Windows forbids os.kill and invalid PID rejected",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 5,
+          "name": "test_windows_probe_never_uses_os_kill"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 13,
+          "name": "test_invalid_pid_is_dead_without_platform_probe"
+        }
+      ],
+      "line_count": 15,
+      "oracle_or_evidence_source": "unit calls to PID/platform helpers",
+      "path": "tests/test_platform_process.py",
+      "responsibility": "cross-platform process guard helpers",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software unit only",
+      "sha256": "5da7219cfd227a44f83bb10e833dc38bf3a8cf96923f53ff3777dc3f2f761d55",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 17064,
+      "cleanup_risks": "cleanup assertions are synthetic",
+      "false_pass_risks": "driver not run; fixture snapshots are not native engine evidence",
+      "invariants_checked": "private homes, lifecycle identity, lock contention/auth cleanup and Windows identity rules",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 27,
+          "name": "test_driver_is_syntax_valid_and_has_separate_fixture_and_reopen_phases"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 44,
+          "name": "test_driver_uses_portable_java_worker_path_resolution"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 54,
+          "name": "test_driver_does_not_probe_or_manage_process_lifecycles"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 65,
+          "name": "test_driver_requires_new_private_home_for_each_managed_worker_phase"
+        },
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 89,
+          "name": "call"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 101,
+          "name": "cleanup"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 125,
+          "name": "test_reopen_stops_before_connect_when_workflow_configuration_fails"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 133,
+          "name": "test_reopen_configures_fixed_recipe_before_connect"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 146,
+          "name": "test_portable_workflow_configuration_keeps_fixture_dimension_and_paths"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 157,
+          "name": "test_driver_marks_worker_lock_contention_blocked"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 163,
+          "name": "test_driver_releases_only_its_authenticated_worker_before_reopen"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 174,
+          "name": "test_driver_prestarts_matching_control_and_checks_stdio_teardown_identity"
+        }
+      ],
+      "line_count": 476,
+      "oracle_or_evidence_source": "static driver, lock/auth/identity fixtures",
+      "path": "tests/test_portable_engine_regression_driver.py",
+      "responsibility": "portable W02/W05-W07 engine-driver source/fixture checks",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software/static control only",
+      "sha256": "599063847267bed807888cc7e8039be786b5ddf713541eae439ee6dd15f20414",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 19826,
+      "cleanup_risks": "fake cleanup only",
+      "false_pass_risks": "fake client cannot prove public server response",
+      "invariants_checked": "typed path, prevalidation, component ambiguity, complex history pagination without gen_result, catalog/schema",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 113,
+          "name": "__call__"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 157,
+          "name": "getImag"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 222,
+          "name": "test_global_probe_uses_native_global_variable_and_stops_after_first_failure"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 244,
+          "name": "test_create_prevalidates_table_and_can_explicitly_prepare_result"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 265,
+          "name": "test_global_probe_explicit_component_is_bound_and_typed_path_resolves"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 290,
+          "name": "test_global_probe_without_component_refuses_multiple_native_owners"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 303,
+          "name": "test_update_requires_typed_path_and_rejects_ambiguous_legacy_tag"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 328,
+          "name": "test_update_rejects_unknown_property_as_pre_dispatch_validation"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 347,
+          "name": "test_history_reads_real_complex_table_and_paginates_without_gen_result"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 389,
+          "name": "test_history_time_parser_accepts_localized_header_and_rejects_unverified_axes"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 412,
+          "name": "test_history_without_real_linked_table_is_explicit_no_history"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 420,
+          "name": "test_probe_create_component_is_published_in_both_catalogs"
+        }
+      ],
+      "line_count": 522,
+      "oracle_or_evidence_source": "fake public probe client and response tables",
+      "path": "tests/test_probe_semantics.py",
+      "responsibility": "public probe semantic/schema controls",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software unit only",
+      "sha256": "b29e39d9709071c8c1acceb714bf89e8786d97f0ed8b9f0ee3f0cb0f5f2fd935",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 2464,
+      "cleanup_risks": "none",
+      "false_pass_risks": "no server registry call",
+      "invariants_checked": "safe/read/write/restricted sets and gateway registration stay consistent",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 72,
+          "name": "test_all_tools_registered"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 84,
+          "name": "test_tool_count"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 91,
+          "name": "test_every_public_tool_uses_the_execution_gateway"
+        }
+      ],
+      "line_count": 96,
+      "oracle_or_evidence_source": "registry fixtures and descriptors",
+      "path": "tests/test_registration.py",
+      "responsibility": "registry registration/count/gateway package checks",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software/package only",
+      "sha256": "d727c8db27f25b4a55292a5c710ecb8ad0428ccd5ae705ad6716cd8e4b0b51b6",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 9755,
+      "cleanup_risks": "no artifact publish in refusal fixture",
+      "false_pass_risks": "fake shape getter; raw/native shape live probe is separate evidence",
+      "invariants_checked": "point/axis/expression/complex components before getData; getNData not promoted; engine cache UNMEASURED vs client memory; refusal blocks publish",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 25,
+          "name": "getData"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 30,
+          "name": "test_interp_budget_uses_expression_solution_axes_and_points_before_getdata"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 57,
+          "name": "test_complex_interp_budget_accounts_for_both_transport_arrays"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 73,
+          "name": "test_getndata_observation_is_not_promoted_to_eval_point_count"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 96,
+          "name": "test_eval_accepts_only_an_explicit_verified_raw_point_upper_bound"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 124,
+          "name": "test_budget_refusal_happens_before_getdata_and_blocks_publish"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 144,
+          "name": "test_missing_verification_is_fail_closed_even_with_positive_dimensions"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 159,
+          "name": "test_memory_ledger_keeps_engine_cache_unmeasured_and_client_scopes_separate"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 199,
+          "name": "getCoordinatesShape"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 209,
+          "name": "getData"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 222,
+          "name": "test_eval_budget_reads_shape_then_refuses_before_getdata"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 245,
+          "name": "test_eval_budget_success_records_native_shape_before_getdata"
+        }
+      ],
+      "line_count": 297,
+      "oracle_or_evidence_source": "fake native shape getter and bounded feature",
+      "path": "tests/test_result_budget.py",
+      "responsibility": "pre-getData C13 element/transport budget",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software contract unit only",
+      "sha256": "47e57920846b5a711840fc51fdcf5377784a97ed253d854739640d61944af896",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 5163,
+      "cleanup_risks": "temp/fake node cleanup",
+      "false_pass_risks": "fake tree cannot prove COMSOL node API",
+      "invariants_checked": "prevalidate/cycle/refuse before mutation; setter failure no fallback",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 21,
+          "name": "test_dataset_definition_is_prevalidated_and_typed_path_rejects_geometry"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 42,
+          "name": "test_dataset_binding_refs_and_cycles_refuse_before_mutation"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 75,
+          "name": "test_cutplane_rejects_component_geometry_setters_before_create"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 88,
+          "name": "test_numerical_update_stops_on_first_engine_set_failure"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 108,
+          "name": "test_table_set_does_not_fallback_after_set_error"
+        }
+      ],
+      "line_count": 121,
+      "oracle_or_evidence_source": "fake result tree/path operations",
+      "path": "tests/test_results_typed_crud.py",
+      "responsibility": "typed result CRUD and setter safety",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software unit only",
+      "sha256": "18877bcea7b7238183fd363d4778c3849a96d16393355beb49cf81d0b089d1a2",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 2053,
+      "cleanup_risks": "temp store only",
+      "false_pass_risks": "no real persisted worker",
+      "invariants_checked": "future schema/generation/revision/identity refusal and round-trip",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 13,
+          "name": "test_roundtrip_preserves_full_model_state_and_active_ticket_unknown"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 19,
+          "name": "test_worker_epoch_change_invalidates_ref_and_advances_generation"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 26,
+          "name": "test_future_schema_rejected"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 32,
+          "name": "test_missing_worker_identity_never_preserves_old_ref"
+        }
+      ],
+      "line_count": 37,
+      "oracle_or_evidence_source": "fake Store and state documents",
+      "path": "tests/test_runtime_state.py",
+      "responsibility": "runtime state save/restore identity/revision/generation",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software unit only",
+      "sha256": "80032ddf1a4af96b2b0b1260b99574feb800f55d0bbc92f0581e06ad69b39ad6",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 903,
+      "cleanup_risks": "none",
+      "false_pass_risks": "static catalog is not runtime tools/list",
+      "invariants_checked": "safe/read/write/restricted partitions and published registrations",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 6,
+          "name": "test_classification_sets_disjoint"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 16,
+          "name": "test_all_classified_tools_are_registered"
+        }
+      ],
+      "line_count": 22,
+      "oracle_or_evidence_source": "static registry sets",
+      "path": "tests/test_tool_classification.py",
+      "responsibility": "tool classification/registration disjointness",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software/package only",
+      "sha256": "41ed6fc2f56083f7342baa18d2d2417d5792f64bf96d7b88a7134d3e19ceecdc",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 14168,
+      "cleanup_risks": "cleanup error precedence is software-only",
+      "false_pass_risks": "fake engine-shaped objects; no COMSOL",
+      "invariants_checked": "real/imag structure; nonfinite/path/selection/metric preflight; primary+cleanup errors; unknown models",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 33,
+          "name": "getData"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 46,
+          "name": "__call__"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 60,
+          "name": "test_t005_owned_temp_nodes_preserve_user_nodes_and_cleanup_on_failure"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 72,
+          "name": "test_t033_preserves_primary_and_cleanup_errors"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 83,
+          "name": "test_java_arrays_become_nested_lists_instead_of_strings"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 87,
+          "name": "test_temp_tag_collision_never_removes_existing_user_node"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 107,
+          "name": "test_spatial_eval_uses_owned_eval_getdata_after_evalglobal_failure"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 113,
+          "name": "test_eval_diagnostics_retain_global_and_fallback_failures"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 120,
+          "name": "test_complex_value_has_real_and_imaginary_parts"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 123,
+          "name": "getImag"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 129,
+          "name": "test_t005_aggregate_uses_unique_temp_tag_not_agg1"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 148,
+          "name": "__call__"
+        }
+      ],
+      "line_count": 309,
+      "oracle_or_evidence_source": "fake numerical model and temporary nodes",
+      "path": "tests/test_w04_safety.py",
+      "responsibility": "W04 typed complex/path/cleanup safety",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software unit only",
+      "sha256": "d81c1cbbd2aa55577176dddfd12058d29e3eca3211e0cd179a2ec848f229a202",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 4792,
+      "cleanup_risks": "destination overwrite refused",
+      "false_pass_risks": "no Windows native extraction in this macOS run",
+      "invariants_checked": "safe path, symlink, hash, no-overwrite, casefold duplicate checks",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 39,
+          "name": "test_safe_member_path_rejects_windows_unsafe_names"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 44,
+          "name": "test_extract_refuses_existing_destination_before_archive_access"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 52,
+          "name": "test_git_paths_uses_nul_records_without_git_unicode_quoting"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 65,
+          "name": "test_extract_refuses_symlink_member_without_creating_destination"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 74,
+          "name": "test_extract_preverifies_manifest_hashes_before_creating_destination"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 82,
+          "name": "test_extract_rejects_unmanifested_member_without_creating_destination"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 90,
+          "name": "test_extract_rejects_duplicate_casefolded_windows_member"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 103,
+          "name": "test_extract_verifies_exact_manifest_and_hashes"
+        }
+      ],
+      "line_count": 108,
+      "oracle_or_evidence_source": "temporary archive/manifest/tree",
+      "path": "tests/test_windows_handoff_snapshot.py",
+      "responsibility": "Windows handoff archive safety",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software unit only",
+      "sha256": "4ea05cff89513044b209facb1222b50ba5c4cd8238cbcb30acc99a3e3b62c928",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 6056,
+      "cleanup_risks": "none",
+      "false_pass_risks": "documentation itself is not a test",
+      "invariants_checked": "requires source identity, manifest hashes, status separation and exclusions",
+      "key_symbols": [],
+      "line_count": 111,
+      "oracle_or_evidence_source": "documentation read against generated runner behavior",
+      "path": "tools/README_REGRESSION.md",
+      "responsibility": "regression evidence/reporting contract",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "documentation only",
+      "sha256": "20a6009a8a2350aa04a7e8ff0a434ba11112a33b77854618c82da6fb7ccd9066",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 5881,
+      "cleanup_risks": "none",
+      "false_pass_risks": "does not create live evidence",
+      "invariants_checked": "missing ledgers cannot promote; status is evidence-level aware",
+      "key_symbols": [],
+      "line_count": 154,
+      "oracle_or_evidence_source": "JSON ledger loading and source identity binding",
+      "path": "tools/build_live_matrix.py",
+      "responsibility": "aggregate live/software ledgers into matrix",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "offline aggregator",
+      "sha256": "4df65811fd4b562a1c1b88e32be62a3834e7b9af72b34e8b9615a34bd75a32e3",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 37321,
+      "cleanup_risks": "retains active runtime until quiescent/terminal; cleanup is caller-owned",
+      "false_pass_risks": "unit tests use fake client; actual live result must be separate public ledger",
+      "invariants_checked": "RUNNING/QUEUED/rpc_wait_expired/UNKNOWN force status/log/result/reconcile observation; terminal SUCCEEDED/FAILED permits same-key exact-body retry; no new solve",
+      "key_symbols": [
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 293,
+          "name": "_call"
+        },
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 529,
+          "name": "run_control_cases"
+        }
+      ],
+      "line_count": 787,
+      "oracle_or_evidence_source": "public ActionClient bound Chain-B calls and original-job polling",
+      "path": "tools/g33_control_cases.py",
+      "responsibility": "C15 active-control response helper",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "engine-capable helper; not run in pytest",
+      "sha256": "4770c6ecb15849c8e9f64eb15b43907e8da7a7a1ebc73a8803b66304b7129303",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 74549,
+      "cleanup_risks": "artifact inventory limited to artifact subtree/request parent; engine cache UNMEASURED, client RSS sampled",
+      "false_pass_risks": "fake-control tests and timeout probes cannot prove no file on live remote; live injector branches may be NOT_RUN",
+      "invariants_checked": "path/symlink/format/overwrite preflight before evaluate; UNKNOWN reconciled; no publish on failure/budget; expected whole/chunk hash and bounded chunks",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 216,
+          "name": "_reconciled_quiescent"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 378,
+          "name": "_plan_budget_probe"
+        },
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 611,
+          "name": "_call"
+        },
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 999,
+          "name": "run_export_cases"
+        }
+      ],
+      "line_count": 1526,
+      "oracle_or_evidence_source": "public ActionClient export, preflight, inventory, budget and bounded read assertions",
+      "path": "tools/g33_export_cases.py",
+      "responsibility": "C12/C13/C14 public export helper",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "engine-capable helper; live runs separate",
+      "sha256": "795f18e521b15625a46217d5ffdf9a6a789e8fdc30b2664b28485547093cbc5b",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 134705,
+      "cleanup_risks": "owned node cleanup and quiescence are explicit",
+      "false_pass_risks": "fake client tests not live engine",
+      "invariants_checked": "binding witnesses, unknown observation, owned cleanup/cascade, axis coverage/localized table",
+      "key_symbols": [
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 466,
+          "name": "call"
+        },
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 913,
+          "name": "_table_tags_for_cleanup"
+        },
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 952,
+          "name": "_dataset_tags_for_cleanup"
+        },
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 1093,
+          "name": "run_node_probe_cases"
+        },
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 1671,
+          "name": "run_cutplane_cases"
+        },
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 1855,
+          "name": "run_transient_probe_case"
+        }
+      ],
+      "line_count": 2245,
+      "oracle_or_evidence_source": "dataset/solution/readback/transient/history public calls",
+      "path": "tools/g33_node_probe_cases.py",
+      "responsibility": "C11/C14 public node/probe helper",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "engine-capable helper; not run in pytest",
+      "sha256": "417147797b560f1abc99232ba1dc554992755f79e6fb6f13571ffa40d3246434",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 19472,
+      "cleanup_risks": "cleanup/job reconciliation delegated to host",
+      "false_pass_risks": "engine metadata/flatten comparisons are not independent physical oracle; live fixture still required",
+      "invariants_checked": "complex/axes/units/finite/shape/status assertions, exact request keys and witness methods",
+      "key_symbols": [
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 32,
+          "name": "run_numeric_cases"
+        }
+      ],
+      "line_count": 299,
+      "oracle_or_evidence_source": "ActionClient numeric calls and contract checks",
+      "path": "tools/g33_numeric_cases.py",
+      "responsibility": "C04-C10 numerical public helper/oracles",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "engine-capable helper; not run in pytest",
+      "sha256": "837fafc92ad9637b21332a8d9e0e8b861b808844794658570886191b409f8926",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 62756,
+      "cleanup_risks": "owned runtime cleanup required",
+      "false_pass_risks": "driver static review does not certify a run; old ledger cannot bind new source",
+      "invariants_checked": "reconcile before mutation/retry; UNKNOWN/cleanup/no-publish status precedence; source identity and hashes",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 922,
+          "name": "main"
+        }
+      ],
+      "line_count": 1022,
+      "oracle_or_evidence_source": "ProductionHost/ActionClient requests, source/job/artifact ledgers",
+      "path": "tools/g3_3_protocol_acceptance.py",
+      "responsibility": "G3.3 public protocol driver C00-C17",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "engine-capable driver; not run in pytest",
+      "sha256": "930362c4e33ab81e767630e24e100fc3a444e813d4f06d4fbbf1715a58aad220",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 3858,
+      "cleanup_risks": "none",
+      "false_pass_risks": "generation is not runtime tools/list",
+      "invariants_checked": "generated references track authoritative catalog/schema",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 60,
+          "name": "main"
+        }
+      ],
+      "line_count": 65,
+      "oracle_or_evidence_source": "catalog/schema deterministic generation",
+      "path": "tools/generate_g2_api.py",
+      "responsibility": "generate registry/API docs from catalog",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "offline generator",
+      "sha256": "dcc7d273f107eccc8d9efe437bc2f6cf25f49d58c62a3fc12156a26cab010040",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 1526,
+      "cleanup_risks": "disconnect is caller path",
+      "false_pass_risks": "not compiled or attached here; direct engine only when caller supplies model/tag",
+      "invariants_checked": "loopback/arg count/connect/disconnect; no save/remove",
+      "key_symbols": [],
+      "line_count": 34,
+      "oracle_or_evidence_source": "injected official ModelUtil connection and one parameter write",
+      "path": "tools/java/Phase2ExternalMutation.java",
+      "responsibility": "Phase2 external Java mutation helper",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "Java engine-capable; NOT_RUN",
+      "sha256": "312554cbc520611c8ee8d32f3ad7d34290a059afdd509dab6924ac6b36bcd16c",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 2733,
+      "cleanup_risks": "remove/disconnect cleanup required",
+      "false_pass_risks": "not compiled/run; no live model",
+      "invariants_checked": "source/destination preconditions and element cap",
+      "key_symbols": [],
+      "line_count": 55,
+      "oracle_or_evidence_source": "ModelUtil load, bounded mesh/save, cleanup",
+      "path": "tools/java/Phase2Fixture.java",
+      "responsibility": "Phase2 Java fixture builder",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "Java engine-capable; NOT_RUN",
+      "sha256": "23a93efdba18c98229de826744660d674a403a7a7e288a7953e32aeb95a265e4",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 3240,
+      "cleanup_risks": "driver owns fresh model cleanup",
+      "false_pass_risks": "not compiled/run; source inspection cannot prove API",
+      "invariants_checked": "injected Model only; fixed tags require fresh model",
+      "key_symbols": [],
+      "line_count": 67,
+      "oracle_or_evidence_source": "geometry/workplane/rectangle/point/bezier/write/run",
+      "path": "tools/java/Phase3Fixture.java",
+      "responsibility": "Phase3 injected-model fixture writer",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "Java engine-capable; NOT_RUN",
+      "sha256": "2fa1a3e21de95d7d806968d99fd45da14e6e12a45f19c76b442c66b87a653306",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 1740,
+      "cleanup_risks": "caller owns model",
+      "false_pass_risks": "not compiled/run; readback code can accept runtime-specific mismatch only when executed",
+      "invariants_checked": "direct API effect and readback; no wrapper",
+      "key_symbols": [],
+      "line_count": 46,
+      "oracle_or_evidence_source": "injected Model comments/params/write/readback",
+      "path": "tools/java/Phase3NoWrapper.java",
+      "responsibility": "Phase3 direct Java read/write probe",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "Java engine-capable; NOT_RUN",
+      "sha256": "e1016223dbd696cf435189dadb0e6d55ccc111026fd290e472a3591cc7062bb9",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 757,
+      "cleanup_risks": "caller must reconcile/cleanup",
+      "false_pass_risks": "not compiled/run; source throw is not live fault evidence",
+      "invariants_checked": "partial effect is intentionally surfaced for UNKNOWN control",
+      "key_symbols": [],
+      "line_count": 20,
+      "oracle_or_evidence_source": "write one parameter then throw",
+      "path": "tools/java/Phase3PartialFailure.java",
+      "responsibility": "Phase3 deliberate partial mutation fault",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "Java engine-capable; NOT_RUN",
+      "sha256": "18191f31b91df048bb8ff1f1df090fe41f98635363fe83d44e8095c69bbfdd96",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 1334,
+      "cleanup_risks": "caller owns model",
+      "false_pass_risks": "not compiled/run; source does not prove native values",
+      "invariants_checked": "returns values/guard; no finite enforcement in helper",
+      "key_symbols": [],
+      "line_count": 35,
+      "oracle_or_evidence_source": "injected Model readback and guard",
+      "path": "tools/java/Phase3Readback.java",
+      "responsibility": "Phase3 direct parameter readback",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "Java engine-capable; NOT_RUN",
+      "sha256": "c501c911a1427a923ba66b117420d64a7f6156da98393a1db1317edda474f2fd",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 345,
+      "cleanup_risks": "none",
+      "false_pass_risks": "compile-negative only; no engine",
+      "invariants_checked": "must fail compilation and never be accepted as runtime effect",
+      "key_symbols": [],
+      "line_count": 12,
+      "oracle_or_evidence_source": "invalid model.label syntax",
+      "path": "tools/java/Phase3SyntaxFailure.java",
+      "responsibility": "intentional invalid Java compile negative",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "Java compile negative; NOT_RUN",
+      "sha256": "97478991f58f96971c03482651c1b6fc6ab66dc290b2e15ca9273343e1e29f19",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 5722,
+      "cleanup_risks": "temporary model/artifact deletion must remain owned and hash-bound",
+      "false_pass_risks": "not compiled/run; path guards are driver-side",
+      "invariants_checked": "preconditions/snapshots and cleanup error recording",
+      "key_symbols": [],
+      "line_count": 142,
+      "oracle_or_evidence_source": "injected Model save/load/mutate/remove/temp deletion",
+      "path": "tools/java/Phase3TrialFingerprint.java",
+      "responsibility": "Phase3 trial save/load/mutate/fingerprint helper",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "Java engine-capable; NOT_RUN",
+      "sha256": "189cb8b23949c0b65c588309d75d3af36524209413c0b54735b1d3b2904901d5",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 5328,
+      "cleanup_risks": "driver owns cleanup",
+      "false_pass_risks": "not compiled/run; candidate tokens are not accepted as API proof",
+      "invariants_checked": "at most one candidate and explicit refusal recording",
+      "key_symbols": [],
+      "line_count": 124,
+      "oracle_or_evidence_source": "injected Model best-effort derived-value type creation",
+      "path": "tools/java/Phase4ChainCDerivedValue.java",
+      "responsibility": "Chain-C derived-value candidate probe",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "Java engine-capable; NOT_RUN",
+      "sha256": "13a1a546f11fb4442132ea9e9753526283774b8fdc9e0372ec640f7b62e46174",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 13224,
+      "cleanup_risks": "driver cleanup required",
+      "false_pass_risks": "not compiled/run; no native result proof",
+      "invariants_checked": "missing solution refusal and node binding",
+      "key_symbols": [],
+      "line_count": 322,
+      "oracle_or_evidence_source": "injected Model node creation/bind/evaluate/readback",
+      "path": "tools/java/Phase4ChainCResultNodes.java",
+      "responsibility": "Chain-C result/table/numerical node helper",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "Java engine-capable; NOT_RUN",
+      "sha256": "195054021a239c076a073c2cf1d94e26b6d19dab2f04bd2fc59a8a4cc25161c9",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 9143,
+      "cleanup_risks": "driver owns source/model cleanup",
+      "false_pass_risks": "not compiled/run; source path/runtime behavior unverified",
+      "invariants_checked": "source must exist during save; dependency failure surfaced",
+      "key_symbols": [],
+      "line_count": 209,
+      "oracle_or_evidence_source": "injected Model interpolation file-backed function/save",
+      "path": "tools/java/Phase4MissingDependency.java",
+      "responsibility": "Chain-C missing dependency fixture",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "Java engine-capable; NOT_RUN",
+      "sha256": "af0b8f77ba53ca979a9a6b6fcf9ffc8177afc79868cd8b717e3ecfb756c5b254",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 3927,
+      "cleanup_risks": "caller owns server cleanup",
+      "false_pass_risks": "not invoked; no COMSOL in this review",
+      "invariants_checked": "bounded attach/readback and fixture lifecycle",
+      "key_symbols": [],
+      "line_count": 55,
+      "oracle_or_evidence_source": "real engine bridge if explicitly invoked",
+      "path": "tools/phase1_engine_test_server.py",
+      "responsibility": "phase1 test-server Java/JPype fixture",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "engine-capable; NOT_RUN",
+      "sha256": "2f1635aec4afe615c96137658c8e6d5997081bb006a897cf7c3e243679591c4c",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 6927,
+      "cleanup_risks": "filler cleanup required on target mount",
+      "false_pass_risks": "not invoked; destructive only on explicit disposable mount",
+      "invariants_checked": "target volume/size guard, no broad filesystem fill",
+      "key_symbols": [
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 55,
+          "name": "call"
+        }
+      ],
+      "line_count": 115,
+      "oracle_or_evidence_source": "separate disposable mount and bounded filler",
+      "path": "tools/phase2_disk_full_mcp.py",
+      "responsibility": "disk-full safety driver",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "engine-capable/host-side; NOT_RUN",
+      "sha256": "284d8189cd5d32a1657fc5fa317365b737b000cad91d8743ce239d5333d06e7d",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 13504,
+      "cleanup_risks": "child runtime cleanup caller-owned",
+      "false_pass_risks": "not invoked; no COMSOL",
+      "invariants_checked": "fresh model/recovery identity and result binding",
+      "key_symbols": [
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 52,
+          "name": "call"
+        }
+      ],
+      "line_count": 135,
+      "oracle_or_evidence_source": "launches recovery helper and production MCP if invoked",
+      "path": "tools/phase2_followup_mcp.py",
+      "responsibility": "phase2 external mutation/follow-up orchestrator",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "engine-capable; NOT_RUN",
+      "sha256": "ade976f426f7be94e04b44f5986c5cc4f4b5cd9e286aacbb7d773cda5ecbd328",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 59816,
+      "cleanup_risks": "owned process cleanup only",
+      "false_pass_risks": "not invoked; no COMSOL/shared PID touched",
+      "invariants_checked": "PID/port/model identity, original-job query, no stale replay",
+      "key_symbols": [
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 712,
+          "name": "call"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 1039,
+          "name": "main"
+        }
+      ],
+      "line_count": 1077,
+      "oracle_or_evidence_source": "real recovery modes, identity/reconcile/path safety",
+      "path": "tools/phase2_recovery_mcp.py",
+      "responsibility": "phase2 production stdio recovery driver",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "engine-capable; NOT_RUN",
+      "sha256": "6b29aba38f1b0e3e809186bf0fd3338c7db1aebf5424ce1e3278a39bb1523de8",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 29010,
+      "cleanup_risks": "caller/runtime cleanup external",
+      "false_pass_risks": "not invoked",
+      "invariants_checked": "explicit scope/case ledger; does not start/stop COMSOL itself",
+      "key_symbols": [
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 145,
+          "name": "call"
+        },
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 343,
+          "name": "fresh_call"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 380,
+          "name": "main"
+        }
+      ],
+      "line_count": 396,
+      "oracle_or_evidence_source": "stdio client and evidence driver",
+      "path": "tools/phase2_run_mcp.py",
+      "responsibility": "phase2 acceptance entrypoint",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "engine-capable driver; NOT_RUN",
+      "sha256": "55684e76b003bbb47c7a3d1dadeb268ff670cb391acfc8632fc8a4024f8ccae3",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 45720,
+      "cleanup_risks": "must stop only verified owned runtime",
+      "false_pass_risks": "not invoked; no lifecycle mutation",
+      "invariants_checked": "loopback/private dirs, owned PID and restoration receipts",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 690,
+          "name": "_new_run_dir"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 939,
+          "name": "_cleanup"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 1077,
+          "name": "main"
+        }
+      ],
+      "line_count": 1088,
+      "oracle_or_evidence_source": "private prefs/tmp/recovery, process identity, atomic config",
+      "path": "tools/phase3_owned_runtime.py",
+      "responsibility": "task-owned COMSOL runtime launcher/configuration",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "engine-capable; NOT_RUN",
+      "sha256": "1b1fd6f4a17b7ecd49232aaba10827908ecbf3f83412dad32bc7919942c4099b",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 56656,
+      "cleanup_risks": "restore/cleanup is mandatory if invoked",
+      "false_pass_risks": "not invoked; no server/firewall changes",
+      "invariants_checked": "exact config/provenance, loopback/auth/log correlation, restore",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 160,
+          "name": "_new_run_dir"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 1050,
+          "name": "_cleanup"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 1177,
+          "name": "main"
+        }
+      ],
+      "line_count": 1188,
+      "oracle_or_evidence_source": "config apply, one-shot server/API/access-log/restore",
+      "path": "tools/phase3_remote_addr_valve_runtime.py",
+      "responsibility": "guarded RemoteAddrValve runtime proof",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "engine-capable; NOT_RUN",
+      "sha256": "9073697360bcc1b3d865bba1e160ae59f483a54a40424b9c8be2aa0575c39c74",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 145576,
+      "cleanup_risks": "checkpoint/runtime cleanup caller-owned",
+      "false_pass_risks": "not invoked; source read only",
+      "invariants_checked": "profile manifest, no fallback overclaim, UNKNOWN/recovery gates",
+      "key_symbols": [
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 503,
+          "name": "call"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 2674,
+          "name": "main"
+        }
+      ],
+      "line_count": 2679,
+      "oracle_or_evidence_source": "public registry/capability/transaction/checkpoint route",
+      "path": "tools/phase3_run_mcp.py",
+      "responsibility": "phase3 acceptance driver and recovery/state cases",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "engine-capable; NOT_RUN",
+      "sha256": "2456205231f35fa05043f7fff80c20766a6159f855a4c6bea076011554474719",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 135081,
+      "cleanup_risks": "fresh fixture cleanup required",
+      "false_pass_risks": "not invoked; no fixture or COMSOL",
+      "invariants_checked": "bounded geometry/derived/table/dependency plan and missing dependency refusal",
+      "key_symbols": [
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 763,
+          "name": "operation_call"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 2126,
+          "name": "default_run_dir"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 2130,
+          "name": "main"
+        }
+      ],
+      "line_count": 2188,
+      "oracle_or_evidence_source": "public/Java route fixture/model construction if invoked",
+      "path": "tools/phase4_chain_c_fixture.py",
+      "responsibility": "Chain-C fixture builder",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "engine-capable; NOT_RUN",
+      "sha256": "c65fa921931a0b4d82dfa25c565474ccc78f3fb22b21a137e79d0a56e6a92410",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 707805,
+      "cleanup_risks": "owned runtime/checkpoint cleanup caller-owned",
+      "false_pass_risks": "not invoked; source read only",
+      "invariants_checked": "case status precedence, transaction/recovery gates, identity/revision and evidence hash",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 1089,
+          "name": "query_budget"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 2096,
+          "name": "_fresh_call_identity"
+        },
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 2550,
+          "name": "call"
+        },
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 2825,
+          "name": "reconcile_external_change"
+        },
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 2847,
+          "name": "_reconcile_and_continue"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 2933,
+          "name": "_reconcile_targets"
+        },
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 2971,
+          "name": "_reconcile_jobs"
+        },
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 3066,
+          "name": "_call_once"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 4607,
+          "name": "_envelope_calls"
+        },
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 6469,
+          "name": "call"
+        },
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 9230,
+          "name": "_call"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 11113,
+          "name": "_write_run_index"
+        }
+      ],
+      "line_count": 11676,
+      "oracle_or_evidence_source": "MCP action sequences, planned cases and ledger",
+      "path": "tools/phase4_run_mcp.py",
+      "responsibility": "phase4/G3 chain acceptance driver",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "engine-capable; NOT_RUN",
+      "sha256": "423fa3e1c743e0a669d1a85ae7261f731cca3d638eb3ca01703d5ec0c274cd58",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 70512,
+      "cleanup_risks": "must close owned worker/control only",
+      "false_pass_risks": "not invoked; no COMSOL",
+      "invariants_checked": "identity/lock/auth/cleanup and failure classification",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 188,
+          "name": "_run_logged"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 701,
+          "name": "cleanup"
+        },
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 1087,
+          "name": "call"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 1428,
+          "name": "main"
+        }
+      ],
+      "line_count": 1459,
+      "oracle_or_evidence_source": "private worker/control lifecycle and W02/W05-W07 cases",
+      "path": "tools/portable_engine_regression.py",
+      "responsibility": "portable engine regression orchestrator",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "engine-capable; NOT_RUN",
+      "sha256": "9ee2e23d87a5e8390143dc23900d56f94602b49c4d60169ee0eb4e49770bc0da",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 7446,
+      "cleanup_risks": "fresh venv remains evidence-owned; no server",
+      "false_pass_risks": "build/install verification is software/package scope, not COMSOL",
+      "invariants_checked": "install outside checkout; Java/catalog/schema and entrypoint present; step exit codes recorded",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 53,
+          "name": "main"
+        }
+      ],
+      "line_count": 178,
+      "oracle_or_evidence_source": "pip wheel, fresh venv, constraints, pip check/freeze, package resource/import probe",
+      "path": "tools/verify_wheel_install.py",
+      "responsibility": "wheel build/outside-source install verifier",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software tool; executed final PASS",
+      "sha256": "7da699e50a0f8efcaed2ee59319b6e617328610328b961189f7772113d33ba05",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 6255,
+      "cleanup_risks": "none",
+      "false_pass_risks": "static output not runtime tools/list",
+      "invariants_checked": "required sets, schema and source identity are explicit",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 50,
+          "name": "main"
+        }
+      ],
+      "line_count": 101,
+      "oracle_or_evidence_source": "static registry/catalog scan and JSON report",
+      "path": "tools/w01_generate_registry_audit.py",
+      "responsibility": "W01 registry audit generator",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "offline generator",
+      "sha256": "c7ecfd0404a65b470a2abcb1810ef5b3a06448e64c748ed4229aaaf29fec851d",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 1434,
+      "cleanup_risks": "none",
+      "false_pass_risks": "not invoked in this final run; historic only",
+      "invariants_checked": "full stdout/count/exit/status separation",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 21,
+          "name": "main"
+        }
+      ],
+      "line_count": 34,
+      "oracle_or_evidence_source": "pytest subprocess and result capture",
+      "path": "tools/w01_run_baseline_tests.py",
+      "responsibility": "W01 baseline test runner",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software runner",
+      "sha256": "8503437d9b3d47d2dc2c3f060237354de3551ed5eed0d4d6e89c8a140b4a25fb",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 4831,
+      "cleanup_risks": "none",
+      "false_pass_risks": "lexical hits can false-positive/false-negative semantics",
+      "invariants_checked": "findings distinguish static evidence from runtime",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 34,
+          "name": "main"
+        }
+      ],
+      "line_count": 51,
+      "oracle_or_evidence_source": "source/catalog lexical inventory",
+      "path": "tools/w01_static_findings.py",
+      "responsibility": "W01 static findings scanner",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "offline scanner",
+      "sha256": "83db4f0c7c0e4fa0c6a5a5a67e67ca8d37e151697ca9f2c3564922d72517c015",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 4303,
+      "cleanup_risks": "child process cleanup caller-owned",
+      "false_pass_risks": "not invoked; protocol fixture/live distinction applies",
+      "invariants_checked": "protocol reply/error/identity evidence",
+      "key_symbols": [],
+      "line_count": 76,
+      "oracle_or_evidence_source": "MCP initialize/tools/list/schema over stdio if invoked",
+      "path": "tools/w01_stdio_protocol_probe.py",
+      "responsibility": "W01 stdio protocol probe",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "engine-capable/stdio; NOT_RUN",
+      "sha256": "809f3e1845719f2f4fce55ca102d3db1cdac2885b222a7d4f5635385779bec37",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 1747,
+      "cleanup_risks": "owned server/worker cleanup required",
+      "false_pass_risks": "not invoked; no COMSOL",
+      "invariants_checked": "fresh worker identity, lock and case status",
+      "key_symbols": [
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 8,
+          "name": "main"
+        }
+      ],
+      "line_count": 24,
+      "oracle_or_evidence_source": "stdio client/engine lifecycle if invoked",
+      "path": "tools/w02_run_mcp.py",
+      "responsibility": "W02 production MCP regression driver",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "engine-capable; NOT_RUN",
+      "sha256": "04d55f2e13ae72c788e76bc574d503469b320e454dc368f1a9cc339656a2987a",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 8032,
+      "cleanup_risks": "owned runtime cleanup only",
+      "false_pass_risks": "not invoked; no COMSOL",
+      "invariants_checked": "source/runtime identity, safe path/selection/complex/nonfinite gates",
+      "key_symbols": [
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 8,
+          "name": "main"
+        },
+        {
+          "kind": "AsyncFunctionDef",
+          "line": 22,
+          "name": "call"
+        }
+      ],
+      "line_count": 86,
+      "oracle_or_evidence_source": "real PID/port/typed readback and cleanup if invoked",
+      "path": "tools/w04_run_mcp.py",
+      "responsibility": "W04 safety/live driver",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "engine-capable; NOT_RUN",
+      "sha256": "a5bff12f6aa7bbca48144dd15678abb1a91b0f493da9a5845347dfa51b049fd9",
+      "working_tree_state": "clean"
+    },
+    {
+      "bytes": 8796,
+      "cleanup_risks": "destination overwrite refused",
+      "false_pass_risks": "not a native Windows run in this review",
+      "invariants_checked": "safe member paths, duplicate casefold, whole-file hashes, no-overwrite",
+      "key_symbols": [
+        {
+          "kind": "FunctionDef",
+          "line": 78,
+          "name": "create_snapshot"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 96,
+          "name": "validate_archive"
+        },
+        {
+          "kind": "FunctionDef",
+          "line": 165,
+          "name": "main"
+        }
+      ],
+      "line_count": 174,
+      "oracle_or_evidence_source": "manifested tar extraction/validation",
+      "path": "tools/windows_handoff_snapshot.py",
+      "responsibility": "safe cross-platform source handoff archive",
+      "review_method": "Source was read for control flow, assertions, response/status handling and cleanup ownership; selected key symbol line locations are navigational only. No source was executed as live COMSOL evidence.",
+      "review_status": "STATIC_SEMANTIC_REVIEW",
+      "reviewed_here": true,
+      "runtime_scope": "software tool; archive logic static/read",
+      "sha256": "bb5f4ee416eb812bb5864e0c006a9873ccb097ba4ec7df18ac65b46de2d823d3",
+      "working_tree_state": "clean"
+    }
+  ],
+  "findings": [
+    {
+      "affected": "all tests/tools",
+      "conclusion": "All reviewed tests and most reviewed tools use fake models, synthetic receipts or static source assertions. They support software/control contracts only; they cannot certify COMSOL live, fresh-worker reopen, or physical numerical truth.",
+      "id": "F-LIVE-SEPARATION",
+      "severity": "LIMITATION"
+    },
+    {
+      "affected": "C12 mapping, tests/test_g33_export_cases.py, tools/g33_export_cases.py, and native live fault-injector scope",
+      "conclusion": "Software cleanup-failure/no-publish fault fixtures and fake-client controls ran and passed in the final software suite. Native COMSOL cleanup-failure fault injection was not run; it remains NOT_RUN and must not be relabeled live C12.",
+      "id": "F-C12-LIVE-NOT-RUN",
+      "severity": "NOT_RUN"
+    },
+    {
+      "affected": "tests/test_result_budget.py, tools/g33_export_cases.py",
+      "conclusion": "Budget tests bound numeric element counts and sampled client transport scope; COMSOL engine internal/cache peak remains UNMEASURED.",
+      "id": "F-C13-MEMORY-SCOPE",
+      "severity": "LIMITATION"
+    },
+    {
+      "affected": "tools/g33_numeric_cases.py and numerical tests",
+      "conclusion": "Some numeric helpers compare engine-shaped arrays/metadata and flattening contracts; those are not independent physical oracles. Live acceptance needs separate model/axis/units evidence.",
+      "id": "F-NUMERIC-ORACLE",
+      "severity": "LIMITATION"
+    },
+    {
+      "affected": "working tree outside scope",
+      "conclusion": "The final pytest source roots had zero hash drift from start to end at frozen HEAD 1b5e80e. Shared docs/audit/evidence edits outside the reviewed roots remain uncommitted; a delivery commit containing them needs a new source-bound run.",
+      "id": "F-SOURCE-DRIFT-BINDING",
+      "severity": "FOLLOW_UP"
+    },
+    {
+      "affected": "tools/phase*.py, tools/java/*.java",
+      "conclusion": "Engine-capable phase/Java tools were semantically reviewed but not invoked, so their engine branches remain unverified here.",
+      "id": "F-TOOLS-NOT-RUN",
+      "severity": "NOT_RUN"
+    }
+  ],
+  "follow_up_source_changes": [
+    {
+      "path": "comsol_mcp/worker_java/PersistentComsolWorker.java",
+      "scope": "production Java finite JSON serializer repair; not part of this tests/tools report; requires final post-freeze fullsuite/wheel"
+    },
+    {
+      "path": "tests/test_java_worker.py",
+      "scope": "offline/runtime codec selftest assertions; hash and symbol locations refreshed; fresh targeted JVM PASS is recorded separately"
+    }
+  ],
+  "full_pytest_reference": {
+    "errors": 0,
+    "failed": 0,
+    "junit": "evidence/phase4_3/runs/final_full_pytest_20260922T073237Z/junit.xml",
+    "passed": 1799,
+    "run_id": "final_full_pytest_20260922T073237Z",
+    "scope": "software only; COMSOL server marker excluded by pytest config; Windows-only foreign-lock test skipped",
+    "skipped": 1,
+    "status": "PASS"
+  },
+  "generated_at_utc": "2026-09-22T07:58:58.127430+00:00",
+  "head": "1b5e80e24368ab516e91948d02d80f9945a046b5",
+  "repository": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository",
+  "schema": "comsol-mcp/semantic-tests-tools-review.v2",
+  "scope": {
+    "file_count": 78,
+    "production": "omitted; restore agent owns production/Java worker modules",
+    "tests": "all tracked tests/*.py except tests/test_g3*.py; tests/test_g3* owned by core agent",
+    "tools": "all tracked tools/*.py, tools/java/*.java, tools/README_REGRESSION.md"
+  },
+  "semantic_reviewed": true,
+  "status": "STATIC_SEMANTIC_REVIEW_COMPLETE_FOR_DECLARED_SCOPE",
+  "tree": "ee2632b5bbfd703e10c660a1a1f97a0c2ca67da7",
+  "working_tree_note": "This report is a semantic review artifact, not a final source freeze. The reviewed tests/tools scope was clean at its capture except the explicitly refreshed test_java_worker follow-up; the shared working tree contains authorized production/docs/audit/evidence edits. Final delivery must bind a post-repair commit and rerun."
+}

@@ -460,7 +460,7 @@ def _worker_probe(
         result.update({"status": "ERROR", "worker_start": _worker_failure_record(exc)})
     finally:
         try:
-            rows = _socket_rows()
+            rows = _socket_rows(PORT)
             result["socket_rows_before_disconnect"] = _public_socket_rows(rows)
             if connected and expect_loopback:
                 try:

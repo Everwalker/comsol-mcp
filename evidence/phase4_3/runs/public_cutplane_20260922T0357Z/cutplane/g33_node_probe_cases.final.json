@@ -1,0 +1,365 @@
+{
+  "calls": [
+    {
+      "body_sha256": "8ebd92940ecb3757cc59c3c356aff427a1bb117ac4c65c5d852559f79c1d31b8",
+      "continue_allowed": true,
+      "idempotency_key": "g33-node-001-dataset-create-g33cpcutplane01",
+      "mode": "response",
+      "operation": "dataset.create",
+      "reconcile": false,
+      "request": "g33-node-dataset-create-g33cpcutplane01",
+      "require_model": true,
+      "unknown_observation": {
+        "job_id": "15d14cd9-5da4-4c1c-9e62-6acec012823e",
+        "model_reconcile": {
+          "body_sha256": "f22763fa21d3ce31c8f6f6ee5aa447ffdaaa27cee83dc6bbb159555035bca379",
+          "dirty": false,
+          "error_code": null,
+          "key": "g33-node-005-unknown-model-inspect-15d14cd9-5da4-4c1c-9e62-6acec012823e",
+          "revision": 2,
+          "success": true,
+          "summary": {
+            "data_keys": [],
+            "error_code": null,
+            "execution": {
+              "idempotency_key": "g33-node-005-unknown-model-inspect-15d14cd9-5da4-4c1c-9e62-6acec012823e",
+              "job_id": "80f11d5e-52ec-474e-8db3-857d43050751",
+              "operation_id": "26eb35af-5cca-49b6-9937-ac1e5ba531ef",
+              "request_id": "model_inspect",
+              "revision": 2
+            },
+            "success": true,
+            "unknown": false
+          },
+          "tool": "model_inspect"
+        },
+        "model_reconciled": true,
+        "quiescent": true,
+        "reads": [
+          {
+            "body_sha256": "9cc10d3c396d2ae9a717bef71797e3c1388c262c7e26d08d5cc346bfc6065ba0",
+            "error_code": null,
+            "key": "g33-node-002-unknown-job_status-15d14cd9-5da4-4c1c-9e62-6acec012823e",
+            "success": true,
+            "summary": {
+              "data_keys": [
+                "created_at",
+                "effective_timeouts",
+                "finished_at",
+                "job_id",
+                "metadata",
+                "operation",
+                "operation_id",
+                "result",
+                "started_at",
+                "status"
+              ],
+              "error_code": null,
+              "status": "UNKNOWN",
+              "success": true,
+              "unknown": false
+            },
+            "tool": "job_status"
+          },
+          {
+            "body_sha256": "2c533b58fefecb174cc7c7ad344fe00c89aaef75d40084ac80a74bb354fd939e",
+            "error_code": null,
+            "key": "g33-node-003-unknown-job_result-15d14cd9-5da4-4c1c-9e62-6acec012823e",
+            "success": false,
+            "summary": {
+              "data_keys": [
+                "created_at",
+                "effective_timeouts",
+                "finished_at",
+                "job_id",
+                "metadata",
+                "operation",
+                "operation_id",
+                "result",
+                "started_at",
+                "status"
+              ],
+              "error_code": null,
+              "status": "UNKNOWN",
+              "success": false,
+              "unknown": false
+            },
+            "tool": "job_result"
+          },
+          {
+            "body_sha256": "d72e8023397f8be1c6cd137e8600666a919f8157ec06045c5e992600d5d03c3f",
+            "error_code": null,
+            "key": "g33-node-004-unknown-job_reconcile-15d14cd9-5da4-4c1c-9e62-6acec012823e",
+            "success": true,
+            "summary": {
+              "data_keys": [
+                "created_at",
+                "effective_timeouts",
+                "finished_at",
+                "job_id",
+                "metadata",
+                "operation",
+                "operation_id",
+                "result",
+                "started_at",
+                "status"
+              ],
+              "error_code": null,
+              "status": "UNKNOWN",
+              "success": true,
+              "unknown": false
+            },
+            "tool": "job_reconcile"
+          }
+        ],
+        "source_key": "g33-node-001-dataset-create-g33cpcutplane01",
+        "source_operation": "dataset.create"
+      }
+    },
+    {
+      "body_sha256": "9cc10d3c396d2ae9a717bef71797e3c1388c262c7e26d08d5cc346bfc6065ba0",
+      "idempotency_key": "g33-node-002-unknown-job_status-15d14cd9-5da4-4c1c-9e62-6acec012823e",
+      "job_id": "15d14cd9-5da4-4c1c-9e62-6acec012823e",
+      "kind": "unknown_observation",
+      "mode": "response",
+      "operation": "job_status",
+      "reconcile": false,
+      "request": "job_status",
+      "require_model": false
+    },
+    {
+      "body_sha256": "2c533b58fefecb174cc7c7ad344fe00c89aaef75d40084ac80a74bb354fd939e",
+      "idempotency_key": "g33-node-003-unknown-job_result-15d14cd9-5da4-4c1c-9e62-6acec012823e",
+      "job_id": "15d14cd9-5da4-4c1c-9e62-6acec012823e",
+      "kind": "unknown_observation",
+      "mode": "response",
+      "operation": "job_result",
+      "reconcile": false,
+      "request": "job_result",
+      "require_model": false
+    },
+    {
+      "body_sha256": "d72e8023397f8be1c6cd137e8600666a919f8157ec06045c5e992600d5d03c3f",
+      "idempotency_key": "g33-node-004-unknown-job_reconcile-15d14cd9-5da4-4c1c-9e62-6acec012823e",
+      "job_id": "15d14cd9-5da4-4c1c-9e62-6acec012823e",
+      "kind": "unknown_observation",
+      "mode": "response",
+      "operation": "job_reconcile",
+      "reconcile": false,
+      "request": "job_reconcile",
+      "require_model": false
+    },
+    {
+      "body_sha256": "f22763fa21d3ce31c8f6f6ee5aa447ffdaaa27cee83dc6bbb159555035bca379",
+      "idempotency_key": "g33-node-005-unknown-model-inspect-15d14cd9-5da4-4c1c-9e62-6acec012823e",
+      "job_id": "15d14cd9-5da4-4c1c-9e62-6acec012823e",
+      "kind": "model_reconciliation",
+      "mode": "response",
+      "operation": "model_inspect",
+      "reconcile": false,
+      "request": "model_inspect",
+      "require_model": true
+    }
+  ],
+  "metadata": {
+    "bound_model": true,
+    "fixture_request": {
+      "execute_java_signature": "await execute_java(name, source, arguments=None)",
+      "kind": "temporary_solved_3d_cutplane_fixture",
+      "required_return": {
+        "component": "a component tag containing the dataset geometry",
+        "dataset": "a Solution dataset tag readable by dataset.list",
+        "fixture_ready": true,
+        "geometry": "optional geometry tag; if supplied it must be readable"
+      },
+      "safety": "root-owned fixture only; no existing Chain-A node may be relabelled"
+    },
+    "native_method_allowlist": {
+      "dataset": [
+        "DatasetFeatureList.create(String,String)",
+        "DatasetFeature.set(String,Object)",
+        "PropFeature.getString(String)",
+        "PropFeature.getDouble(String)",
+        "PropFeature.getDoubleArray(String)",
+        "PropFeature.getDoubleMatrix(String)",
+        "PropFeature.getStringArray(String)",
+        "PropFeature.getStringMatrix(String)",
+        "PropFeature.getType()",
+        "PropFeature.properties()"
+      ],
+      "probe": [
+        "ProbeFeatureList.create(String,String)",
+        "ProbeFeature.genResult(String)",
+        "PropFeature.set(String,Object)",
+        "PropFeature.getString(String)",
+        "PropFeature.getDouble(String)",
+        "PropFeature.getStringArray(String)",
+        "PropFeature.properties()"
+      ],
+      "table": [
+        "TableBaseFeature.setTableData(double[][])",
+        "TableBaseFeature.setTableData(double[][],double[][])",
+        "TableBaseFeature.setColumnHeaders(String[])",
+        "TableBaseFeature.getReal()",
+        "TableBaseFeature.getImag()",
+        "TableBaseFeature.getColumnHeaders()",
+        "TableBaseFeature.getRowHeaders()",
+        "TableBaseFeature.getTableData(boolean)",
+        "TableBaseFeature.isComplex()"
+      ]
+    },
+    "scope": "public_mcp_solved_3d_cutplane"
+  },
+  "overall": "FAIL",
+  "rows": [
+    {
+      "assertions": {},
+      "case": "dataset-create-g33cpcutplane01",
+      "idempotency_key": "g33-node-001-dataset-create-g33cpcutplane01",
+      "operation": "dataset.create",
+      "reason": "public action did not return a response",
+      "response": null,
+      "status": "FAIL"
+    },
+    {
+      "assertions": {},
+      "case": "C11-CutPlane-3D",
+      "idempotency_key": null,
+      "operation": null,
+      "reason": "CutPlane create was not verified",
+      "response": null,
+      "status": "FAIL"
+    },
+    {
+      "assertions": {
+        "all_body_hashes_recorded": true,
+        "all_reconcile_false": true,
+        "call_count": 5,
+        "unique_idempotency_keys": true
+      },
+      "case": "request-discipline",
+      "idempotency_key": null,
+      "operation": null,
+      "response": null,
+      "status": "PASS"
+    }
+  ],
+  "run_dir": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_cutplane_20260922T0357Z/cutplane",
+  "schema_version": 1,
+  "scope": "public_mcp_chain_a_c11_c14",
+  "summary": {
+    "BLOCKED": 0,
+    "FAIL": 2,
+    "NOT_RUN": 0,
+    "PASS": 1,
+    "UNVERIFIED": 0
+  },
+  "unknown_observations": [
+    {
+      "job_id": "15d14cd9-5da4-4c1c-9e62-6acec012823e",
+      "model_reconcile": {
+        "body_sha256": "f22763fa21d3ce31c8f6f6ee5aa447ffdaaa27cee83dc6bbb159555035bca379",
+        "dirty": false,
+        "error_code": null,
+        "key": "g33-node-005-unknown-model-inspect-15d14cd9-5da4-4c1c-9e62-6acec012823e",
+        "revision": 2,
+        "success": true,
+        "summary": {
+          "data_keys": [],
+          "error_code": null,
+          "execution": {
+            "idempotency_key": "g33-node-005-unknown-model-inspect-15d14cd9-5da4-4c1c-9e62-6acec012823e",
+            "job_id": "80f11d5e-52ec-474e-8db3-857d43050751",
+            "operation_id": "26eb35af-5cca-49b6-9937-ac1e5ba531ef",
+            "request_id": "model_inspect",
+            "revision": 2
+          },
+          "success": true,
+          "unknown": false
+        },
+        "tool": "model_inspect"
+      },
+      "model_reconciled": true,
+      "quiescent": true,
+      "reads": [
+        {
+          "body_sha256": "9cc10d3c396d2ae9a717bef71797e3c1388c262c7e26d08d5cc346bfc6065ba0",
+          "error_code": null,
+          "key": "g33-node-002-unknown-job_status-15d14cd9-5da4-4c1c-9e62-6acec012823e",
+          "success": true,
+          "summary": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "status": "UNKNOWN",
+            "success": true,
+            "unknown": false
+          },
+          "tool": "job_status"
+        },
+        {
+          "body_sha256": "2c533b58fefecb174cc7c7ad344fe00c89aaef75d40084ac80a74bb354fd939e",
+          "error_code": null,
+          "key": "g33-node-003-unknown-job_result-15d14cd9-5da4-4c1c-9e62-6acec012823e",
+          "success": false,
+          "summary": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "status": "UNKNOWN",
+            "success": false,
+            "unknown": false
+          },
+          "tool": "job_result"
+        },
+        {
+          "body_sha256": "d72e8023397f8be1c6cd137e8600666a919f8157ec06045c5e992600d5d03c3f",
+          "error_code": null,
+          "key": "g33-node-004-unknown-job_reconcile-15d14cd9-5da4-4c1c-9e62-6acec012823e",
+          "success": true,
+          "summary": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "status": "UNKNOWN",
+            "success": true,
+            "unknown": false
+          },
+          "tool": "job_reconcile"
+        }
+      ],
+      "source_key": "g33-node-001-dataset-create-g33cpcutplane01",
+      "source_operation": "dataset.create"
+    }
+  ]
+}

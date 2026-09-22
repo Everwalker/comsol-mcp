@@ -1,0 +1,83 @@
+{
+  "conclusion": "Three historical worker bearer-token values are reachable from the unpublished range but absent from the final candidate tree. Public synchronization must not expose this history without credential revocation and an approved history-sanitization decision.",
+  "finding_count": 3,
+  "findings": [
+    {
+      "blob_sha1": "2436c7f32e34c0fe4fa7712688d4d53f874b0ad5",
+      "blob_size": 362,
+      "classification": "credential-shaped literal",
+      "embedded_path": null,
+      "introduced_commit": "d859a7eee869f85b4d498c54fa095f679f7e1847",
+      "paths": [
+        "evidence/phase4_3/runs/live_acceptance_20260921T235704Z/worker_c03_builder/worker_endpoint.json"
+      ],
+      "pattern": "token",
+      "present_at_source_head": false,
+      "reachable_in_unpushed_range": true,
+      "risk": "HIGH",
+      "value_length": 43,
+      "value_sha256": "c2d04027db32e4fe85ca7e73ef0de258cb80d829d15c578c7b1cddd0278f418e"
+    },
+    {
+      "blob_sha1": "7d7c90fb5d4970caac9143edcb22c50370f1937a",
+      "blob_size": 362,
+      "classification": "credential-shaped literal",
+      "embedded_path": null,
+      "introduced_commit": "d859a7eee869f85b4d498c54fa095f679f7e1847",
+      "paths": [
+        "evidence/phase4_3/runs/live_acceptance_20260921T235704Z/worker_c03_reopen_verifier/worker_endpoint.json"
+      ],
+      "pattern": "token",
+      "present_at_source_head": false,
+      "reachable_in_unpushed_range": true,
+      "risk": "HIGH",
+      "value_length": 43,
+      "value_sha256": "fa1f57e7cca74ac9a4399cc5de91d2152711142244e098b6d1f056c885ad122b"
+    },
+    {
+      "blob_sha1": "ea740a8beb2155a16c0cda8dc2983ef8387688fe",
+      "blob_size": 362,
+      "classification": "credential-shaped literal",
+      "embedded_path": null,
+      "introduced_commit": "d859a7eee869f85b4d498c54fa095f679f7e1847",
+      "paths": [
+        "evidence/phase4_3/runs/live_acceptance_20260921T235704Z/worker_c15_probe/worker_endpoint.json"
+      ],
+      "pattern": "token",
+      "present_at_source_head": false,
+      "reachable_in_unpushed_range": true,
+      "risk": "HIGH",
+      "value_length": 43,
+      "value_sha256": "86b294ae0028a29a0f55c0f3e26e520cc1eb741ab1359659b589996d59b0c4d1"
+    }
+  ],
+  "generated_at_utc": "2026-09-22T09:14:41.015265+00:00",
+  "gitleaks_aggregate": {
+    "commits": 4,
+    "files": 184,
+    "matches": 212,
+    "redacted": true,
+    "rules": {
+      "generic-api-key": 212
+    }
+  },
+  "object_inventory": {
+    "blob_bytes": 312379731,
+    "scanned_bytes": 312379731,
+    "unique_blobs": 2512,
+    "unique_reachable_objects": 2993
+  },
+  "publication_blocker": true,
+  "range": "origin/main..HEAD",
+  "result": "HIGH_RISK_HISTORICAL_CREDENTIALS",
+  "scan": {
+    "text_blobs": 2486,
+    "transport": "git cat-file --batch",
+    "wheel_text_members": 270,
+    "wheels": 13
+  },
+  "schema": "comsol-mcp/prepublication-blob-secret-scan.v1",
+  "source_head": "a3f39b3022b417e16c3087b8b35f1daa06f30b8a",
+  "source_tree": "5a3e1b72e95a9df8892def2ca0994a8737508612",
+  "value_policy": "No credential values retained or printed; only value SHA-256, length, path, blob SHA-1, and classification are recorded."
+}

@@ -1,0 +1,1 @@
+/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/wheel_venv/bin/python -m pip install --constraint constraints-exact.txt wheel_dist/comsol_mcp-0.1.9-py3-none-any.whl

@@ -1,0 +1,679 @@
+{
+  "_outer_isError": true,
+  "_structuredContent": {
+    "data": {
+      "cleanup_failed": false,
+      "dispatch_stage": "validation",
+      "domain_outcome": {
+        "cleanup_failed": false,
+        "details": {
+          "status_token": "REFUSED"
+        },
+        "dispatch_stage": "validation",
+        "execution_state_unknown": false,
+        "failure": {
+          "code": "AMBIGUOUS_NODE_PATH",
+          "message": "probe path resolves to multiple probe owners: {'segments': [{'collection': 'component', 'tag': 'comp1'}, {'collection': 'probe', 'tag': 'g33trprobeansientprobe01'}]}",
+          "safe_retry": false
+        },
+        "operation": "probe.update",
+        "state": "failed",
+        "status_token": "REFUSED",
+        "verification_status": "NOT_APPLICABLE",
+        "witness": {
+          "dispatches": [
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "component",
+              "receiver": "h-7b02c98b-ddeb-4604-8739-040cc53c4abf"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "probe",
+              "receiver": "h-2701b048-ad2d-4051-b92f-1102d385f0ab"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "probe",
+              "receiver": "h-36ed14d8-6858-45bb-957b-c52160ccc8fa"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "modelNode",
+              "receiver": "h-36ed14d8-6858-45bb-957b-c52160ccc8fa"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "tags",
+              "receiver": "h-96af6224-a055-47cf-b67f-c2d3ffc27913"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "component",
+              "receiver": "h-36ed14d8-6858-45bb-957b-c52160ccc8fa"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "probe",
+              "receiver": "h-bcb22ff9-9af9-485d-ae61-3231cd6ce723"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "tags",
+              "receiver": "h-cf47a351-bb6c-476d-86a8-660e245d6de3"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "get",
+              "receiver": "h-cf47a351-bb6c-476d-86a8-660e245d6de3"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "model",
+              "receiver": "h-7e4829ef-551a-43b9-8f24-e296e8f0f5af"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "tags",
+              "receiver": "h-9cc9a93d-113e-4fcd-8751-cf53fb4a3e85"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "get",
+              "receiver": "h-9cc9a93d-113e-4fcd-8751-cf53fb4a3e85"
+            }
+          ],
+          "engine_calls": 12,
+          "methods": [
+            "component",
+            "get",
+            "model",
+            "modelNode",
+            "probe",
+            "tags"
+          ],
+          "mutation_issued": false,
+          "mutation_method": null
+        }
+      },
+      "domain_state": "failed",
+      "effect": "project_write",
+      "execution_state_unknown": false,
+      "isolation_proof": {
+        "api_probe": {
+          "authenticated_api_success": true,
+          "denial_evidence_source": "server_access_log",
+          "loopback_address": "127.0.0.1",
+          "loopback_port": 57455,
+          "nonloopback_address": "192.168.100.152",
+          "nonloopback_api_exception_http_status": null,
+          "nonloopback_port": 57455,
+          "observed_at": "2026-09-22T05:25:58Z",
+          "probe_kind": "comsol_java_api",
+          "server_access_log": {
+            "entries": [
+              {
+                "http_status": 101,
+                "method": "GET",
+                "peer": "127.0.0.1",
+                "route": "/webbridge/websocket"
+              },
+              {
+                "http_status": 101,
+                "method": "GET",
+                "peer": "127.0.0.1",
+                "route": "/webbridge/websocket"
+              },
+              {
+                "http_status": 403,
+                "method": "GET",
+                "peer": "192.168.100.152",
+                "route": "/webbridge/websocket"
+              }
+            ],
+            "finished_at": "2026-09-22T05:25:58Z",
+            "inode": 29970233,
+            "java_request_id": "g2-valve-nonloopback-connect",
+            "offset_after": 261,
+            "offset_before": 0,
+            "parsed_nonloopback_entry": {
+              "http_status": 403,
+              "method": "GET",
+              "peer": "192.168.100.152",
+              "route": "/webbridge/websocket"
+            },
+            "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_transient_probe_20260922T052544Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+            "phase": "java_connect_only",
+            "raw_probe_started_after_capture": true,
+            "segment_sha256": "9876fe82f9899fa68bf74f67d369a29c1c3c0d9fc771fe7526389cd2009ae9b6",
+            "started_at": "2026-09-22T05:25:50Z",
+            "status": "PASS"
+          }
+        },
+        "birth": "Tue Sep 22 13:25:45 2026",
+        "config_inode": 14720294,
+        "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+        "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+        "endpoint": "127.0.0.1:57455",
+        "established_client_pids": [
+          79033,
+          79143
+        ],
+        "listener": {
+          "endpoint": "*:57455",
+          "local_endpoint": "*:57455",
+          "pid": 79033,
+          "raw": "java    79033 everwalker   59u  IPv6 0x174cc2c8a231f2c9      0t0  TCP *:57455 (LISTEN)",
+          "remote_endpoint": null,
+          "state": "LISTEN"
+        },
+        "listener_binding": "wildcard",
+        "loopback_listener": false,
+        "pid": 79033,
+        "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+        "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_transient_probe_20260922T052544Z/isolation_receipt.json",
+        "verified": true,
+        "worker_pid": 79143
+      },
+      "operation": "probe.update",
+      "partial_change": false,
+      "refusal": {
+        "code": "AMBIGUOUS_NODE_PATH",
+        "message": "probe path resolves to multiple probe owners: {'segments': [{'collection': 'component', 'tag': 'comp1'}, {'collection': 'probe', 'tag': 'g33trprobeansientprobe01'}]}",
+        "safe_retry": false,
+        "stage": "validation"
+      },
+      "refused": true,
+      "status": "REFUSED",
+      "verification_status": "NOT_APPLICABLE",
+      "verified_outcome": "failed",
+      "witness": {
+        "dispatches": [
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "component",
+            "receiver": "h-7b02c98b-ddeb-4604-8739-040cc53c4abf"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "probe",
+            "receiver": "h-2701b048-ad2d-4051-b92f-1102d385f0ab"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "probe",
+            "receiver": "h-36ed14d8-6858-45bb-957b-c52160ccc8fa"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "modelNode",
+            "receiver": "h-36ed14d8-6858-45bb-957b-c52160ccc8fa"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "tags",
+            "receiver": "h-96af6224-a055-47cf-b67f-c2d3ffc27913"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "component",
+            "receiver": "h-36ed14d8-6858-45bb-957b-c52160ccc8fa"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "probe",
+            "receiver": "h-bcb22ff9-9af9-485d-ae61-3231cd6ce723"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "tags",
+            "receiver": "h-cf47a351-bb6c-476d-86a8-660e245d6de3"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "get",
+            "receiver": "h-cf47a351-bb6c-476d-86a8-660e245d6de3"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "model",
+            "receiver": "h-7e4829ef-551a-43b9-8f24-e296e8f0f5af"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "tags",
+            "receiver": "h-9cc9a93d-113e-4fcd-8751-cf53fb4a3e85"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "get",
+            "receiver": "h-9cc9a93d-113e-4fcd-8751-cf53fb4a3e85"
+          }
+        ],
+        "engine_calls": 12,
+        "methods": [
+          "component",
+          "get",
+          "model",
+          "modelNode",
+          "probe",
+          "tags"
+        ],
+        "mutation_issued": false,
+        "mutation_method": null
+      }
+    },
+    "error": {
+      "code": "AMBIGUOUS_NODE_PATH",
+      "message": "probe path resolves to multiple probe owners: {'segments': [{'collection': 'component', 'tag': 'comp1'}, {'collection': 'probe', 'tag': 'g33trprobeansientprobe01'}]}",
+      "safe_retry": false,
+      "stage": "validation"
+    },
+    "execution": {
+      "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+      "dirty": false,
+      "idempotency_key": "g33-node-008-C14-transient-global-probe-update-gen-result",
+      "job_id": "f2683440-95fa-4b29-8291-28509b665273",
+      "model_ownership": "mcp_owned",
+      "model_ref": {
+        "generation": 1,
+        "model_tag": "mcp1",
+        "schema_version": 1,
+        "server_instance_id": "352d49ef86194f80134601a3efeac8dfb3fb3c02dcbf43123906b2a9511b6d70",
+        "session_id": "session-4bd9ff80689d6da9bd22b294"
+      },
+      "operation_id": "d36868ed-4aad-4d40-b444-186aadd6bd48",
+      "request_hash": "47ff3a63a63be7415c68da15c947e3f0f8f8918b3df17037b3c2d6548faacd66",
+      "request_id": "g33-node-C14-transient-global-probe-update-gen-result",
+      "revision": 5,
+      "server_ownership": "shared",
+      "session_id": "session-4bd9ff80689d6da9bd22b294"
+    },
+    "success": false
+  },
+  "data": {
+    "cleanup_failed": false,
+    "dispatch_stage": "validation",
+    "domain_outcome": {
+      "cleanup_failed": false,
+      "details": {
+        "status_token": "REFUSED"
+      },
+      "dispatch_stage": "validation",
+      "execution_state_unknown": false,
+      "failure": {
+        "code": "AMBIGUOUS_NODE_PATH",
+        "message": "probe path resolves to multiple probe owners: {'segments': [{'collection': 'component', 'tag': 'comp1'}, {'collection': 'probe', 'tag': 'g33trprobeansientprobe01'}]}",
+        "safe_retry": false
+      },
+      "operation": "probe.update",
+      "state": "failed",
+      "status_token": "REFUSED",
+      "verification_status": "NOT_APPLICABLE",
+      "witness": {
+        "dispatches": [
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "component",
+            "receiver": "h-7b02c98b-ddeb-4604-8739-040cc53c4abf"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "probe",
+            "receiver": "h-2701b048-ad2d-4051-b92f-1102d385f0ab"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "probe",
+            "receiver": "h-36ed14d8-6858-45bb-957b-c52160ccc8fa"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "modelNode",
+            "receiver": "h-36ed14d8-6858-45bb-957b-c52160ccc8fa"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "tags",
+            "receiver": "h-96af6224-a055-47cf-b67f-c2d3ffc27913"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "component",
+            "receiver": "h-36ed14d8-6858-45bb-957b-c52160ccc8fa"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "probe",
+            "receiver": "h-bcb22ff9-9af9-485d-ae61-3231cd6ce723"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "tags",
+            "receiver": "h-cf47a351-bb6c-476d-86a8-660e245d6de3"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "get",
+            "receiver": "h-cf47a351-bb6c-476d-86a8-660e245d6de3"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "model",
+            "receiver": "h-7e4829ef-551a-43b9-8f24-e296e8f0f5af"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "tags",
+            "receiver": "h-9cc9a93d-113e-4fcd-8751-cf53fb4a3e85"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "get",
+            "receiver": "h-9cc9a93d-113e-4fcd-8751-cf53fb4a3e85"
+          }
+        ],
+        "engine_calls": 12,
+        "methods": [
+          "component",
+          "get",
+          "model",
+          "modelNode",
+          "probe",
+          "tags"
+        ],
+        "mutation_issued": false,
+        "mutation_method": null
+      }
+    },
+    "domain_state": "failed",
+    "effect": "project_write",
+    "execution_state_unknown": false,
+    "isolation_proof": {
+      "api_probe": {
+        "authenticated_api_success": true,
+        "denial_evidence_source": "server_access_log",
+        "loopback_address": "127.0.0.1",
+        "loopback_port": 57455,
+        "nonloopback_address": "192.168.100.152",
+        "nonloopback_api_exception_http_status": null,
+        "nonloopback_port": 57455,
+        "observed_at": "2026-09-22T05:25:58Z",
+        "probe_kind": "comsol_java_api",
+        "server_access_log": {
+          "entries": [
+            {
+              "http_status": 101,
+              "method": "GET",
+              "peer": "127.0.0.1",
+              "route": "/webbridge/websocket"
+            },
+            {
+              "http_status": 101,
+              "method": "GET",
+              "peer": "127.0.0.1",
+              "route": "/webbridge/websocket"
+            },
+            {
+              "http_status": 403,
+              "method": "GET",
+              "peer": "192.168.100.152",
+              "route": "/webbridge/websocket"
+            }
+          ],
+          "finished_at": "2026-09-22T05:25:58Z",
+          "inode": 29970233,
+          "java_request_id": "g2-valve-nonloopback-connect",
+          "offset_after": 261,
+          "offset_before": 0,
+          "parsed_nonloopback_entry": {
+            "http_status": 403,
+            "method": "GET",
+            "peer": "192.168.100.152",
+            "route": "/webbridge/websocket"
+          },
+          "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_transient_probe_20260922T052544Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+          "phase": "java_connect_only",
+          "raw_probe_started_after_capture": true,
+          "segment_sha256": "9876fe82f9899fa68bf74f67d369a29c1c3c0d9fc771fe7526389cd2009ae9b6",
+          "started_at": "2026-09-22T05:25:50Z",
+          "status": "PASS"
+        }
+      },
+      "birth": "Tue Sep 22 13:25:45 2026",
+      "config_inode": 14720294,
+      "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+      "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+      "endpoint": "127.0.0.1:57455",
+      "established_client_pids": [
+        79033,
+        79143
+      ],
+      "listener": {
+        "endpoint": "*:57455",
+        "local_endpoint": "*:57455",
+        "pid": 79033,
+        "raw": "java    79033 everwalker   59u  IPv6 0x174cc2c8a231f2c9      0t0  TCP *:57455 (LISTEN)",
+        "remote_endpoint": null,
+        "state": "LISTEN"
+      },
+      "listener_binding": "wildcard",
+      "loopback_listener": false,
+      "pid": 79033,
+      "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+      "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_transient_probe_20260922T052544Z/isolation_receipt.json",
+      "verified": true,
+      "worker_pid": 79143
+    },
+    "operation": "probe.update",
+    "partial_change": false,
+    "refusal": {
+      "code": "AMBIGUOUS_NODE_PATH",
+      "message": "probe path resolves to multiple probe owners: {'segments': [{'collection': 'component', 'tag': 'comp1'}, {'collection': 'probe', 'tag': 'g33trprobeansientprobe01'}]}",
+      "safe_retry": false,
+      "stage": "validation"
+    },
+    "refused": true,
+    "status": "REFUSED",
+    "verification_status": "NOT_APPLICABLE",
+    "verified_outcome": "failed",
+    "witness": {
+      "dispatches": [
+        {
+          "args_count": 1,
+          "command": "call",
+          "is_mutation": false,
+          "method": "component",
+          "receiver": "h-7b02c98b-ddeb-4604-8739-040cc53c4abf"
+        },
+        {
+          "args_count": 1,
+          "command": "call",
+          "is_mutation": false,
+          "method": "probe",
+          "receiver": "h-2701b048-ad2d-4051-b92f-1102d385f0ab"
+        },
+        {
+          "args_count": 0,
+          "command": "call",
+          "is_mutation": false,
+          "method": "probe",
+          "receiver": "h-36ed14d8-6858-45bb-957b-c52160ccc8fa"
+        },
+        {
+          "args_count": 0,
+          "command": "call",
+          "is_mutation": false,
+          "method": "modelNode",
+          "receiver": "h-36ed14d8-6858-45bb-957b-c52160ccc8fa"
+        },
+        {
+          "args_count": 0,
+          "command": "call",
+          "is_mutation": false,
+          "method": "tags",
+          "receiver": "h-96af6224-a055-47cf-b67f-c2d3ffc27913"
+        },
+        {
+          "args_count": 1,
+          "command": "call",
+          "is_mutation": false,
+          "method": "component",
+          "receiver": "h-36ed14d8-6858-45bb-957b-c52160ccc8fa"
+        },
+        {
+          "args_count": 0,
+          "command": "call",
+          "is_mutation": false,
+          "method": "probe",
+          "receiver": "h-bcb22ff9-9af9-485d-ae61-3231cd6ce723"
+        },
+        {
+          "args_count": 0,
+          "command": "call",
+          "is_mutation": false,
+          "method": "tags",
+          "receiver": "h-cf47a351-bb6c-476d-86a8-660e245d6de3"
+        },
+        {
+          "args_count": 1,
+          "command": "call",
+          "is_mutation": false,
+          "method": "get",
+          "receiver": "h-cf47a351-bb6c-476d-86a8-660e245d6de3"
+        },
+        {
+          "args_count": 0,
+          "command": "call",
+          "is_mutation": false,
+          "method": "model",
+          "receiver": "h-7e4829ef-551a-43b9-8f24-e296e8f0f5af"
+        },
+        {
+          "args_count": 0,
+          "command": "call",
+          "is_mutation": false,
+          "method": "tags",
+          "receiver": "h-9cc9a93d-113e-4fcd-8751-cf53fb4a3e85"
+        },
+        {
+          "args_count": 1,
+          "command": "call",
+          "is_mutation": false,
+          "method": "get",
+          "receiver": "h-9cc9a93d-113e-4fcd-8751-cf53fb4a3e85"
+        }
+      ],
+      "engine_calls": 12,
+      "methods": [
+        "component",
+        "get",
+        "model",
+        "modelNode",
+        "probe",
+        "tags"
+      ],
+      "mutation_issued": false,
+      "mutation_method": null
+    }
+  },
+  "error": {
+    "code": "AMBIGUOUS_NODE_PATH",
+    "message": "probe path resolves to multiple probe owners: {'segments': [{'collection': 'component', 'tag': 'comp1'}, {'collection': 'probe', 'tag': 'g33trprobeansientprobe01'}]}",
+    "safe_retry": false,
+    "stage": "validation"
+  },
+  "execution": {
+    "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+    "dirty": false,
+    "idempotency_key": "g33-node-008-C14-transient-global-probe-update-gen-result",
+    "job_id": "f2683440-95fa-4b29-8291-28509b665273",
+    "model_ownership": "mcp_owned",
+    "model_ref": {
+      "generation": 1,
+      "model_tag": "mcp1",
+      "schema_version": 1,
+      "server_instance_id": "352d49ef86194f80134601a3efeac8dfb3fb3c02dcbf43123906b2a9511b6d70",
+      "session_id": "session-4bd9ff80689d6da9bd22b294"
+    },
+    "operation_id": "d36868ed-4aad-4d40-b444-186aadd6bd48",
+    "request_hash": "47ff3a63a63be7415c68da15c947e3f0f8f8918b3df17037b3c2d6548faacd66",
+    "request_id": "g33-node-C14-transient-global-probe-update-gen-result",
+    "revision": 5,
+    "server_ownership": "shared",
+    "session_id": "session-4bd9ff80689d6da9bd22b294"
+  },
+  "success": false
+}

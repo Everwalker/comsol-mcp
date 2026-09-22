@@ -1,0 +1,57 @@
+{
+  "additional_local_only_receipts": [
+    {
+      "path": "evidence/phase4_3/runs/process_cleanup_a3f39b3_20260922T091828Z/postreceipt.json",
+      "sha256": "25a16cde59cdc9acd32d5ed4b42595b8a0f877dfcdd1d84e73d173d2ba5bb85f",
+      "size": 5971
+    },
+    {
+      "path": "evidence/phase4_3/runs/process_cleanup_a3f39b3_20260922T091828Z/predecision.json",
+      "sha256": "04fb437567554e362fb77d85c9a0dda4286fa94392fb50dfa17e604b20385f5e",
+      "size": 29585
+    },
+    {
+      "path": "evidence/phase4_3/runs/process_cleanup_a3f39b3_20260922T091828Z/predecision_corrected.json",
+      "sha256": "ff5d34556011b26fe6f14b65ceb370f07353c9252f787c6d59b03e25ed1eb0c5",
+      "size": 27273
+    },
+    {
+      "path": "evidence/phase4_3/runs/process_cleanup_a3f39b3_20260922T091828Z/predecision_final.json",
+      "sha256": "ae85f6c6766943ee16281fef252fd14752551d076b6e833f09dcd3979c6ac213",
+      "size": 27377
+    },
+    {
+      "path": "evidence/phase4_3/runs/process_cleanup_a3f39b3_20260922T091828Z/signal_receipt.json",
+      "sha256": "82df83925238c3fce0a5d137de049ecd65ca50dd69284f386152dcd9c79708db",
+      "size": 30438
+    }
+  ],
+  "additional_reason": "The later root-generated cleanup decision/signal receipts also retain absolute process identity and command fields; they remain local-only and are excluded by the public path manifest.",
+  "excluded_files": [
+    {
+      "path": "evidence/phase4_3/runs/process_cleanup_audit_20260922T082617Z/job_database_inventory.json",
+      "sha256": "f5207c01292962d38f6e74d8ed3f06dabe94d26edfdef6ad40628c0d9b57d90d",
+      "size": 11739
+    },
+    {
+      "path": "evidence/phase4_3/runs/process_cleanup_audit_20260922T082617Z/process_inventory.json",
+      "sha256": "d674154fca85c1e17d97d64ce36d6c562c91cec02a51eb368b819499e4466c84",
+      "size": 185847
+    },
+    {
+      "path": "evidence/phase4_3/runs/process_cleanup_audit_20260922T082617Z/process_sockets_files.json",
+      "sha256": "9982fe933b9c6226afd4ec4b9606a0e530f0bb7e280b7b2348908f1d4c7e91e3",
+      "size": 10058
+    }
+  ],
+  "excluded_helper": "capture_cleanup.py is retained locally as original-execution evidence and is not a recovery or production helper for publication.",
+  "generated_at_utc": "2026-09-22T09:25:06.539199+00:00",
+  "public_replacement": [
+    "pre_cleanup.json",
+    "post_cleanup.json",
+    "decision.json",
+    "SHA256SUMS.json"
+  ],
+  "reason": "Raw whole-host process and socket captures remain local because unrestricted command lines, paths, and listener/file details may contain unrelated private information. The filtered process_cleanup_final receipt is the publication record; no raw values are copied here.",
+  "schema": "comsol-mcp/process-cleanup-public-exclusion.v1"
+}

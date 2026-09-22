@@ -1,0 +1,4394 @@
+[
+  {
+    "host": "measure-probe",
+    "transport": "stdio",
+    "operation": "initialize",
+    "elapsed_s": 0.2615269589005038,
+    "result": {
+      "meta": null,
+      "protocolVersion": "2025-11-25",
+      "capabilities": {
+        "experimental": {},
+        "logging": null,
+        "prompts": {
+          "listChanged": false
+        },
+        "resources": {
+          "subscribe": false,
+          "listChanged": false
+        },
+        "tools": {
+          "listChanged": false
+        },
+        "completions": null,
+        "tasks": null
+      },
+      "serverInfo": {
+        "name": "comsol-mcp-server",
+        "title": null,
+        "version": "1.30.0",
+        "websiteUrl": null,
+        "icons": null
+      },
+      "instructions": null
+    },
+    "outer_isError": false
+  },
+  {
+    "host": "measure-probe",
+    "transport": "stdio",
+    "operation": "tools/list",
+    "result": {
+      "meta": null,
+      "nextCursor": null,
+      "tools": [
+        {
+          "name": "server_info",
+          "title": null,
+          "description": "Return COMSOL MCP status and the recommended attach-first workflow.\n\nFor normal visible Desktop usage, manually start COMSOL Multiphysics Server,\nconnect Desktop to it, and then call server_connect().\n\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "server_infoArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "check_server_port",
+          "title": null,
+          "description": "Check whether a manually started COMSOL Server is listening on host:port.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "host": {
+                "default": "127.0.0.1",
+                "title": "Host",
+                "type": "string"
+              },
+              "port": {
+                "default": 59136,
+                "title": "Port",
+                "type": "integer"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "check_server_portArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "server_start",
+          "title": null,
+          "description": "Advanced fallback only: start a local COMSOL server and connect MCP to it.\n\nDo NOT use this as the default visible workflow.\nPreferred workflow:\n1. Manually start COMSOL Multiphysics Server.\n2. Connect COMSOL Desktop to that server.\n3. Call server_connect(host, port) from MCP.\n\nUse server_start() only when MCP should own the COMSOL server lifecycle and\nrandom or non-default listening ports are acceptable.\n\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "port": {
+                "default": 0,
+                "title": "Port",
+                "type": "integer"
+              },
+              "cores": {
+                "default": 0,
+                "title": "Cores",
+                "type": "integer"
+              },
+              "multi": {
+                "default": "on",
+                "title": "Multi",
+                "type": "string"
+              },
+              "timeout_seconds": {
+                "default": 120,
+                "title": "Timeout Seconds",
+                "type": "integer"
+              },
+              "version": {
+                "default": "",
+                "title": "Version",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "server_startArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "server_connect",
+          "title": null,
+          "description": "Default entrypoint: attach MCP to an already running COMSOL Multiphysics Server.\n\nThis is the recommended tool for the visible Desktop workflow:\nmanually start COMSOL Multiphysics Server, call server_connect(host, port),\nload_visible_main_model(path), then connect Desktop and import that model.\n\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "host": {
+                "default": "127.0.0.1",
+                "title": "Host",
+                "type": "string"
+              },
+              "port": {
+                "default": 59136,
+                "title": "Port",
+                "type": "integer"
+              },
+              "model_name": {
+                "default": "",
+                "title": "Model Name",
+                "type": "string"
+              },
+              "timeout_seconds": {
+                "default": 30.0,
+                "title": "Timeout Seconds",
+                "type": "number"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "server_connectArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "server_disconnect",
+          "title": null,
+          "description": "Disconnect the MCP client. Optionally shut down the local server if MCP started it.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "shutdown_server": {
+                "default": false,
+                "title": "Shutdown Server",
+                "type": "boolean"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "server_disconnectArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "workflow_info",
+          "title": null,
+          "description": "Return the persisted MCP workflow policy for current-main-model operation.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "workflow_infoArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "configure_single_main_workflow",
+          "title": null,
+          "description": "Persist the single-current-main-model workflow in MCP state.\n\nmodel_dimension: spatial dimension of the model (2 or 3). Set to 0 to\nskip. This is used by create_physics and evaluate_expressions aggregate\nto select the correct COMSOL node types. For 2D models set to 2, for 3D\nset to 3.\n\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "current_main_model_path": {
+                "title": "Current Main Model Path",
+                "type": "string"
+              },
+              "snapshot_dir": {
+                "default": "",
+                "title": "Snapshot Dir",
+                "type": "string"
+              },
+              "snapshot_prefix": {
+                "default": "",
+                "title": "Snapshot Prefix",
+                "type": "string"
+              },
+              "model_dimension": {
+                "default": 0,
+                "title": "Model Dimension",
+                "type": "integer"
+              },
+              "notes": {
+                "default": "",
+                "title": "Notes",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "current_main_model_path"
+            ],
+            "title": "configure_single_main_workflowArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "load_visible_main_model",
+          "title": null,
+          "description": "Load or adopt the visible main MPH, then lock MCP to that server-side model.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "path": {
+                "default": "",
+                "title": "Path",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "load_visible_main_modelArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "start_visible_main_workflow",
+          "title": null,
+          "description": "Fixed visible workflow entrypoint: check port, connect, load MPH, then instruct Desktop import.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "host": {
+                "default": "127.0.0.1",
+                "title": "Host",
+                "type": "string"
+              },
+              "port": {
+                "default": 59136,
+                "title": "Port",
+                "type": "integer"
+              },
+              "path": {
+                "default": "",
+                "title": "Path",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "start_visible_main_workflowArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "start_visible_main_workflow_async",
+          "title": null,
+          "description": "Start visible-main loading in a background job so large MPH loads do not hit tool timeouts.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "host": {
+                "default": "127.0.0.1",
+                "title": "Host",
+                "type": "string"
+              },
+              "port": {
+                "default": 59136,
+                "title": "Port",
+                "type": "integer"
+              },
+              "path": {
+                "default": "",
+                "title": "Path",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "start_visible_main_workflow_asyncArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "visible_main_workflow_status",
+          "title": null,
+          "description": "Return status for the latest or specified asynchronous visible-main workflow job.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "job_id": {
+                "default": "",
+                "title": "Job Id",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "visible_main_workflow_statusArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "verify_visible_main_session",
+          "title": null,
+          "description": "Verify that MCP is still operating on the locked visible main model.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "verify_visible_main_sessionArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "unlock_visible_main",
+          "title": null,
+          "description": "Unlock the visible-main guard for explicit maintenance actions.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "reason": {
+                "title": "Reason",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "reason"
+            ],
+            "title": "unlock_visible_mainArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "mcp_tool_audit",
+          "title": null,
+          "description": "Return the visible-main safety classification for the MCP tool surface.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "mcp_tool_auditArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "model_tree",
+          "title": null,
+          "description": "Return tags and structure for the current server-side model.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "model_treeArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "run_study",
+          "title": null,
+          "description": "Run the current model study, optionally restricting execution to a study tag.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "study_tag": {
+                "default": "",
+                "title": "Study Tag",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "run_studyArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "load_current_main_model",
+          "title": null,
+          "description": "Load the persisted current main model into the connected COMSOL server session.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "load_current_main_modelArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "model_create",
+          "title": null,
+          "description": "Create a new in-memory model on the connected COMSOL server and select it as current.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "name": {
+                "default": "Server Model",
+                "title": "Name",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "model_createArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "model_load",
+          "title": null,
+          "description": "Load an MPH file on the connected COMSOL server and select it as current.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "path": {
+                "title": "Path",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "title": "model_loadArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "prune_loaded_models",
+          "title": null,
+          "description": "Remove extra loaded server-side models and keep only the requested working model.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "keep": {
+                "default": "current",
+                "title": "Keep",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "prune_loaded_modelsArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "get_parameters",
+          "title": null,
+          "description": "Return current global parameters from the selected server-side model.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "get_parametersArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "evaluate_expressions",
+          "title": null,
+          "description": "Evaluate one or more expressions on the current server-side model.\n\nEach expression item supports: {\"name\": \"...\", \"expression\": \"...\",\n  \"aggregate\": \"max\"|\"min\"|\"avg\"|\"integral\"|\"none\",\n  \"domains\": [1,2], \"boundaries\": [5,6], \"time_point\": \"last\"|\"all\"|\"N\"}.\n\nBackward compatible: [{\"name\": \"...\", \"expression\": \"...\"}] still works.\nevaluation_policy: ``ephemeral_mutation`` is serialized and creates only\nshort-lived MCP-owned nodes. ``pure_read`` rejects evaluation because this\nbackend cannot evaluate without temporary nodes. max_result_size is retained\nfor backwards compatibility; it no longer truncates numerical results.\n\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "expressions_json": {
+                "default": "[]",
+                "title": "Expressions Json",
+                "type": "string"
+              },
+              "max_result_size": {
+                "default": 0,
+                "title": "Max Result Size",
+                "type": "integer"
+              },
+              "evaluation_policy": {
+                "default": "ephemeral_mutation",
+                "title": "Evaluation Policy",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "evaluate_expressionsArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "get_core_metrics",
+          "title": null,
+          "description": "Evaluate explicit task metrics; no model-specific defaults are assumed.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "metrics_json": {
+                "default": "[]",
+                "title": "Metrics Json",
+                "type": "string"
+              },
+              "evaluation_policy": {
+                "default": "ephemeral_mutation",
+                "title": "Evaluation Policy",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "get_core_metricsArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "set_parameters",
+          "title": null,
+          "description": "Set multiple global parameters on the selected server-side model.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "parameters_json": {
+                "title": "Parameters Json",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "parameters_json"
+            ],
+            "title": "set_parametersArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "ensure_component",
+          "title": null,
+          "description": "Ensure a component exists in the selected server-side model.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "component": {
+                "default": "comp1",
+                "title": "Component",
+                "type": "string"
+              },
+              "dimension": {
+                "default": 2,
+                "title": "Dimension",
+                "type": "integer"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "ensure_componentArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "ensure_geometry",
+          "title": null,
+          "description": "Ensure a geometry sequence exists in the selected server-side model.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "component": {
+                "default": "comp1",
+                "title": "Component",
+                "type": "string"
+              },
+              "geometry": {
+                "default": "geom1",
+                "title": "Geometry",
+                "type": "string"
+              },
+              "dimension": {
+                "default": 2,
+                "title": "Dimension",
+                "type": "integer"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "ensure_geometryArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "ensure_mesh",
+          "title": null,
+          "description": "Ensure a mesh sequence exists in the selected server-side model.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "component": {
+                "default": "comp1",
+                "title": "Component",
+                "type": "string"
+              },
+              "mesh": {
+                "default": "mesh1",
+                "title": "Mesh",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "ensure_meshArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "create_feature",
+          "title": null,
+          "description": "Create a geometry feature and optionally apply initial properties.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "component": {
+                "title": "Component",
+                "type": "string"
+              },
+              "geometry": {
+                "title": "Geometry",
+                "type": "string"
+              },
+              "tag": {
+                "title": "Tag",
+                "type": "string"
+              },
+              "feature_type": {
+                "title": "Feature Type",
+                "type": "string"
+              },
+              "properties_json": {
+                "default": "[]",
+                "title": "Properties Json",
+                "type": "string"
+              },
+              "run_geometry": {
+                "default": false,
+                "title": "Run Geometry",
+                "type": "boolean"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "component",
+              "geometry",
+              "tag",
+              "feature_type"
+            ],
+            "title": "create_featureArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "update_feature",
+          "title": null,
+          "description": "Update geometry feature properties on the selected server-side model.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "component": {
+                "title": "Component",
+                "type": "string"
+              },
+              "geometry": {
+                "title": "Geometry",
+                "type": "string"
+              },
+              "tag": {
+                "title": "Tag",
+                "type": "string"
+              },
+              "properties_json": {
+                "title": "Properties Json",
+                "type": "string"
+              },
+              "run_geometry": {
+                "default": false,
+                "title": "Run Geometry",
+                "type": "boolean"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "component",
+              "geometry",
+              "tag",
+              "properties_json"
+            ],
+            "title": "update_featureArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "delete_feature",
+          "title": null,
+          "description": "Delete a geometry feature from the selected server-side model.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "component": {
+                "title": "Component",
+                "type": "string"
+              },
+              "geometry": {
+                "title": "Geometry",
+                "type": "string"
+              },
+              "tag": {
+                "title": "Tag",
+                "type": "string"
+              },
+              "run_geometry": {
+                "default": false,
+                "title": "Run Geometry",
+                "type": "boolean"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "component",
+              "geometry",
+              "tag"
+            ],
+            "title": "delete_featureArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "run_feature",
+          "title": null,
+          "description": "Run a geometry or mesh sequence on the selected server-side model.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "collection": {
+                "title": "Collection",
+                "type": "string"
+              },
+              "tag": {
+                "title": "Tag",
+                "type": "string"
+              },
+              "component": {
+                "default": "comp1",
+                "title": "Component",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "collection",
+              "tag"
+            ],
+            "title": "run_featureArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "run_visible_main_iteration",
+          "title": null,
+          "description": "Run one locked visible-main iteration: set parameters, solve, extract metrics, save a copy snapshot.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "label": {
+                "title": "Label",
+                "type": "string"
+              },
+              "parameters_json": {
+                "default": "[]",
+                "title": "Parameters Json",
+                "type": "string"
+              },
+              "study_tag": {
+                "default": "",
+                "title": "Study Tag",
+                "type": "string"
+              },
+              "metrics_json": {
+                "default": "[]",
+                "title": "Metrics Json",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "label"
+            ],
+            "title": "run_visible_main_iterationArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "save_main_model_snapshot",
+          "title": null,
+          "description": "Save a named snapshot from the current server-side model using the persisted workflow naming policy.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "snapshot_label": {
+                "title": "Snapshot Label",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "snapshot_label"
+            ],
+            "title": "save_main_model_snapshotArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "commit_current_main_model",
+          "title": null,
+          "description": "Save a named snapshot, then overwrite the persisted current main model with the current server-side state.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "snapshot_label": {
+                "default": "",
+                "title": "Snapshot Label",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "commit_current_main_modelArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "save_model",
+          "title": null,
+          "description": "Save the current server-side model to disk.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "path": {
+                "default": "",
+                "title": "Path",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "save_modelArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "list_physics",
+          "title": null,
+          "description": "List all physics interfaces in a component with their features.\n\nReturns tags, labels, and feature counts for each physics interface.\n\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "component": {
+                "default": "comp1",
+                "title": "Component",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "list_physicsArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "create_physics",
+          "title": null,
+          "description": "Add a physics interface to a component.\n\nCommon physics_type values: \"cfpde\" (Coefficient Form PDE),\n\"tds\" (Transport of Diluted Species), \"solid\" (Solid Mechanics),\n\"ht\" (Heat Transfer), \"es\" (Electrostatics), etc.\n\ndimension: spatial dimension (1, 2, or 3). Default 0 = auto-detect from\nthe component's geometry. Set via configure_single_main_workflow(model_dimension=2).\n\ndependent_variables: comma-separated dependent variable names. Default \"u\".\nCOMSOL uses these to create the correct physics with matching spatial dimension.\nFor multiple dependent variables use \"u,v\" or \"u,v,w\".\n\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "component": {
+                "title": "Component",
+                "type": "string"
+              },
+              "tag": {
+                "title": "Tag",
+                "type": "string"
+              },
+              "physics_type": {
+                "title": "Physics Type",
+                "type": "string"
+              },
+              "dimension": {
+                "default": 0,
+                "title": "Dimension",
+                "type": "integer"
+              },
+              "dependent_variables": {
+                "default": "u",
+                "title": "Dependent Variables",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "component",
+              "tag",
+              "physics_type"
+            ],
+            "title": "create_physicsArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "remove_physics",
+          "title": null,
+          "description": "Remove a physics interface from a component.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "component": {
+                "title": "Component",
+                "type": "string"
+              },
+              "tag": {
+                "title": "Tag",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "component",
+              "tag"
+            ],
+            "title": "remove_physicsArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "list_physics_features",
+          "title": null,
+          "description": "List all features (boundary conditions, sources, etc.) under a physics interface.\n\nReturns tags, labels, feature_type identifiers, property names, and the\nobserved ``selection_inheriting`` state for each feature. COMSOL does not\nexpose an authoritative ``isEditable`` method here, so\n``selection_editable`` is tri-state because discovery does not establish\nwhether an edit is accepted; the attempted operation's response or\nfailure is authoritative. The feature_type field shows the COMSOL\ninternal identifier to use with create_physics_feature.\n\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "component": {
+                "title": "Component",
+                "type": "string"
+              },
+              "physics_tag": {
+                "title": "Physics Tag",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "component",
+              "physics_tag"
+            ],
+            "title": "list_physics_featuresArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "create_physics_feature",
+          "title": null,
+          "description": "Add a child feature (boundary condition, source term, etc.) to a physics interface.\n\nIMPORTANT: feature_type uses COMSOL internal identifiers, NOT display names.\nFor example, in TDS (Transport of Diluted Species), valid types include:\n\"Inflow\", \"Outflow\", \"Flux\", \"NoFlux\", \"Concentration\", \"InitialValues\",\n\"ConservedQuantity\", \"WeakConstraint\".\nUse list_physics_features first to discover existing feature_type identifiers\nin the current physics interface, as these vary per physics type and COMSOL version.\nproperties_json format: [{\"name\": \"prop_name\", \"value\": \"value\"}] or\n{\"prop_name\": \"value\", ...}.\n\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "component": {
+                "title": "Component",
+                "type": "string"
+              },
+              "physics_tag": {
+                "title": "Physics Tag",
+                "type": "string"
+              },
+              "feature_tag": {
+                "title": "Feature Tag",
+                "type": "string"
+              },
+              "feature_type": {
+                "title": "Feature Type",
+                "type": "string"
+              },
+              "properties_json": {
+                "default": "[]",
+                "title": "Properties Json",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "component",
+              "physics_tag",
+              "feature_tag",
+              "feature_type"
+            ],
+            "title": "create_physics_featureArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "update_physics_feature",
+          "title": null,
+          "description": "Set properties on an existing physics feature.\n\nproperties_json format: [{\"name\": \"prop_name\", \"value\": \"value\"}] or\n{\"prop_name\": \"value\", ...}. For array-valued properties use\n[{\"name\": \"prop_name\", \"values\": [\"v1\", \"v2\"]}].\n\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "component": {
+                "title": "Component",
+                "type": "string"
+              },
+              "physics_tag": {
+                "title": "Physics Tag",
+                "type": "string"
+              },
+              "feature_tag": {
+                "title": "Feature Tag",
+                "type": "string"
+              },
+              "properties_json": {
+                "title": "Properties Json",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "component",
+              "physics_tag",
+              "feature_tag",
+              "properties_json"
+            ],
+            "title": "update_physics_featureArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "remove_physics_feature",
+          "title": null,
+          "description": "Remove a child feature from a physics interface.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "component": {
+                "title": "Component",
+                "type": "string"
+              },
+              "physics_tag": {
+                "title": "Physics Tag",
+                "type": "string"
+              },
+              "feature_tag": {
+                "title": "Feature Tag",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "component",
+              "physics_tag",
+              "feature_tag"
+            ],
+            "title": "remove_physics_featureArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "set_physics_selection",
+          "title": null,
+          "description": "Set a physics-interface or child-feature selection.\n\nentities_json is a JSON array of integer entity IDs, e.g. \"[1, 2, 3]\".\nSome features have inherited selections that cannot be modified directly.\n``list_physics_features`` reports the observed inherited state, while this\noperation's response and failure are authoritative for the attempted edit.\nPass feature_tag equal to physics_tag (or empty) for the parent interface.\nentities_json may also be {\"kind\":\"all\"}, {\"kind\":\"named\",\"name\":\"sel1\"},\nor {\"kind\":\"inherited\"}. The response contains actual selection readback.\n\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "component": {
+                "title": "Component",
+                "type": "string"
+              },
+              "physics_tag": {
+                "title": "Physics Tag",
+                "type": "string"
+              },
+              "feature_tag": {
+                "title": "Feature Tag",
+                "type": "string"
+              },
+              "entities_json": {
+                "title": "Entities Json",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "component",
+              "physics_tag",
+              "feature_tag",
+              "entities_json"
+            ],
+            "title": "set_physics_selectionArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "manage_variables",
+          "title": null,
+          "description": "Manage variable definitions: list, create, or remove.\n\nActions:\n- \"list\": List all variables. Returns tags, names, and expressions.\n- \"create\": Create a variable node with given name and expression.\n- \"remove\": Remove a variable node by tag.\n\nWhen component is empty, operates on global variables.\nWhen component is specified, operates on component-level variables.\n\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "action": {
+                "title": "Action",
+                "type": "string"
+              },
+              "component": {
+                "default": "",
+                "title": "Component",
+                "type": "string"
+              },
+              "tag": {
+                "default": "",
+                "title": "Tag",
+                "type": "string"
+              },
+              "name": {
+                "default": "",
+                "title": "Name",
+                "type": "string"
+              },
+              "expression": {
+                "default": "",
+                "title": "Expression",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "action"
+            ],
+            "title": "manage_variablesArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "list_solver_config",
+          "title": null,
+          "description": "List all solver configurations with their features.\n\nReturns solver tags, feature counts, and feature tags for each solver\nconfiguration in the current model.\n\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "list_solver_configArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "create_solver_config",
+          "title": null,
+          "description": "Create a solver configuration linked to a study.\n\nThe solver tag identifies the new solver config. The study tag links it\nto an existing study for solving.\n\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "sol_tag": {
+                "title": "Sol Tag",
+                "type": "string"
+              },
+              "study_tag": {
+                "title": "Study Tag",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "sol_tag",
+              "study_tag"
+            ],
+            "title": "create_solver_configArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "list_solver_features",
+          "title": null,
+          "description": "List features and sub-features under a solver configuration.\n\nReturns feature tags, labels, properties, and any sub-features (e.g.\nsegregated solver steps).\n\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "sol_tag": {
+                "title": "Sol Tag",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "sol_tag"
+            ],
+            "title": "list_solver_featuresArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "configure_solver",
+          "title": null,
+          "description": "Configure a solver feature's properties.\n\nproperties_json format: [{\"name\": \"prop_name\", \"value\": \"value\"}] or\n{\"prop_name\": \"value\", ...}. For array-valued properties use\n[{\"name\": \"prop_name\", \"values\": [\"v1\", \"v2\"]}].\n\nTo add segregated solver steps, use properties_json with:\n[{\"name\": \"add_segregated_step\", \"value\": \"{\"step_tag\": \"step1\", \"variables\": [\"u\", \"v\"]}\"}]\nMultiple steps can be added in a single call.\n\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "sol_tag": {
+                "title": "Sol Tag",
+                "type": "string"
+              },
+              "feature_tag": {
+                "title": "Feature Tag",
+                "type": "string"
+              },
+              "properties_json": {
+                "default": "[]",
+                "title": "Properties Json",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "sol_tag",
+              "feature_tag"
+            ],
+            "title": "configure_solverArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "run_study_async",
+          "title": null,
+          "description": "Run a COMSOL study in a background thread and return a job ID for polling.\n\nThis is the async version of run_study. It starts the solve in a background\nthread and returns immediately with a job_id. Use run_study_status(job_id)\nto poll for completion.\n\nThe MCP client will NOT disconnect during long solves because this tool\nreturns immediately.\n\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "study_tag": {
+                "default": "",
+                "title": "Study Tag",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "run_study_asyncArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "run_study_status",
+          "title": null,
+          "description": "Return status for the latest or specified async run_study job.\n\nPass the job_id returned by run_study_async, or leave empty to get the\nlatest job status.\n\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "job_id": {
+                "default": "",
+                "title": "Job Id",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "run_study_statusArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "runtime_poc_v64",
+          "title": null,
+          "description": "Attach to the registered local test server; never start/stop a user server.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "run_directory": {
+                "title": "Run Directory",
+                "type": "string"
+              },
+              "known_server_pid": {
+                "title": "Known Server Pid",
+                "type": "integer"
+              },
+              "known_port": {
+                "title": "Known Port",
+                "type": "integer"
+              },
+              "preferences_directory": {
+                "title": "Preferences Directory",
+                "type": "string"
+              },
+              "comsol_root": {
+                "default": "/Applications/COMSOL64/Multiphysics",
+                "title": "Comsol Root",
+                "type": "string"
+              },
+              "jdk11": {
+                "default": "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home",
+                "title": "Jdk11",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "run_directory",
+              "known_server_pid",
+              "known_port",
+              "preferences_directory"
+            ],
+            "title": "runtime_poc_v64Arguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "session_health",
+          "title": null,
+          "description": "Read cached service/worker liveness without entering COMSOL.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "session_healthArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "model_inspect",
+          "title": null,
+          "description": "Inspect bound model identity/revision; refresh explicitly reconciles observed changes.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "refresh": {
+                "default": false,
+                "title": "Refresh",
+                "type": "boolean"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "model_inspectArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "model_adopt",
+          "title": null,
+          "description": "Bind an existing server model by tag without loading, creating or removing a model.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "model_tag": {
+                "title": "Model Tag",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "model_tag"
+            ],
+            "title": "model_adoptArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "job_status",
+          "title": null,
+          "description": "Read durable job status without contacting the engine or resubmitting work.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "job_id": {
+                "title": "Job Id",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "job_id"
+            ],
+            "title": "job_statusArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "job_log",
+          "title": null,
+          "description": "Read a bounded page of persisted job events, including observed engine logs.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "job_id": {
+                "title": "Job Id",
+                "type": "string"
+              },
+              "offset": {
+                "default": 0,
+                "title": "Offset",
+                "type": "integer"
+              },
+              "limit": {
+                "default": 100,
+                "title": "Limit",
+                "type": "integer"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "job_id"
+            ],
+            "title": "job_logArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "job_result",
+          "title": null,
+          "description": "Retrieve the original job result; never starts a replacement computation.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "job_id": {
+                "title": "Job Id",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "job_id"
+            ],
+            "title": "job_resultArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "job_reconcile",
+          "title": null,
+          "description": "Reconcile the original job with worker evidence without replaying its mutations.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "job_id": {
+                "title": "Job Id",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "job_id"
+            ],
+            "title": "job_reconcileArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "registry_list",
+          "title": null,
+          "description": "List catalog actions with a continuation cursor and executable status.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "domain": {
+                "default": "",
+                "title": "Domain",
+                "type": "string"
+              },
+              "cursor": {
+                "default": "",
+                "title": "Cursor",
+                "type": "string"
+              },
+              "limit": {
+                "default": 100,
+                "title": "Limit",
+                "type": "integer"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "registry_listArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "registry_describe",
+          "title": null,
+          "description": "Describe one logical operation, including its JSON input schema.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "operation_id": {
+                "title": "Operation Id",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "operation_id"
+            ],
+            "title": "registry_describeArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "registry_search",
+          "title": null,
+          "description": "Search catalog action purposes and names.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "query": {
+                "title": "Query",
+                "type": "string"
+              },
+              "domain": {
+                "default": "",
+                "title": "Domain",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "query"
+            ],
+            "title": "registry_searchArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "registry_manifest",
+          "title": null,
+          "description": "Return the current profile's executable operation manifest.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "profile": {
+                "default": "full",
+                "title": "Profile",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "title": "registry_manifestArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "registry_call",
+          "title": null,
+          "description": "Call one registry operation through the managed control service.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "operation_id": {
+                "title": "Operation Id",
+                "type": "string"
+              },
+              "arguments": {
+                "additionalProperties": true,
+                "title": "Arguments",
+                "type": "object"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "operation_id",
+              "arguments"
+            ],
+            "title": "registry_callArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "operation_describe",
+          "title": null,
+          "description": "Compatibility alias for hosts that call the fallback operation API.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "operation_id": {
+                "title": "Operation Id",
+                "type": "string"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "operation_id"
+            ],
+            "title": "operation_describeArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        },
+        {
+          "name": "operation_call",
+          "title": null,
+          "description": "Compatibility alias for registry_call.\nExecution metadata supplies session_id, model_ref, expected_revision, idempotency_key and timeout policy. Writes require a current revision.",
+          "inputSchema": {
+            "properties": {
+              "operation_id": {
+                "title": "Operation Id",
+                "type": "string"
+              },
+              "arguments": {
+                "additionalProperties": true,
+                "title": "Arguments",
+                "type": "object"
+              },
+              "execution": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Execution"
+              }
+            },
+            "required": [
+              "operation_id",
+              "arguments"
+            ],
+            "title": "operation_callArguments",
+            "type": "object"
+          },
+          "outputSchema": null,
+          "icons": null,
+          "annotations": null,
+          "meta": null,
+          "execution": null
+        }
+      ]
+    },
+    "outer_isError": false
+  },
+  {
+    "host": "measure-probe",
+    "transport": "stdio",
+    "operation": "server_connect",
+    "arguments": {
+      "host": "127.0.0.1",
+      "port": 59136,
+      "execution": {
+        "idempotency_key": "measure-probe-connect",
+        "request_id": "measure-probe-connect"
+      }
+    },
+    "elapsed_s": 1.2756105000153184,
+    "outer_isError": false,
+    "structuredContent": {
+      "success": true,
+      "data": {
+        "connected": true,
+        "server_ownership": "shared",
+        "endpoint": "127.0.0.1:59136",
+        "session_id": "session-18677d36c9efbac72e27a0af",
+        "server_instance_id": "685b28072703906202f65155884de397ea7fa102892a38c09aff963e628e1d33",
+        "external_change_detection": {
+          "coverage": "parameters+shallow_tree_identity",
+          "status": "SCOPED_EVIDENCE_ONLY",
+          "event_notifications": "UNVERIFIED",
+          "full_model_property_coverage": "UNVERIFIED",
+          "cas_guarantee": "NONE",
+          "evidence_source": "evidence/phase2/followup/20260918T142300Z-external-api",
+          "evidence_environment": "macOS arm64; COMSOL 6.4.0.293",
+          "other_platforms_or_versions": "UNVERIFIED"
+        },
+        "trusted_code": {
+          "enabled": true,
+          "os_sandbox": false,
+          "config": "COMSOL_MCP_TRUSTED_CODE"
+        },
+        "worker": {
+          "host": "127.0.0.1",
+          "port": 59179,
+          "pid": 81385,
+          "generation": 2,
+          "instance_id": "721245e3-b779-4bba-a879-0a66cc51f25c",
+          "connected": true,
+          "server": "127.0.0.1:59136"
+        }
+      },
+      "execution": {
+        "session_id": "session-18677d36c9efbac72e27a0af",
+        "model_ref": null,
+        "revision": null,
+        "request_id": "measure-probe-connect",
+        "operation_id": "c4a28246-0ba5-464b-af5f-771b29620421",
+        "request_hash": "6670df8823bab70e5fe7e0ab7404c306006d05748c6c8df67258c621825308c3",
+        "idempotency_key": "measure-probe-connect",
+        "job_id": "532d50ce-0768-4aeb-8db5-e26a07463777"
+      }
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"data\": {\"connected\": true, \"endpoint\": \"127.0.0.1:59136\", \"external_change_detection\": {\"cas_guarantee\": \"NONE\", \"coverage\": \"parameters+shallow_tree_identity\", \"event_notifications\": \"UNVERIFIED\", \"evidence_environment\": \"macOS arm64; COMSOL 6.4.0.293\", \"evidence_source\": \"evidence/phase2/followup/20260918T142300Z-external-api\", \"full_model_property_coverage\": \"UNVERIFIED\", \"other_platforms_or_versions\": \"UNVERIFIED\", \"status\": \"SCOPED_EVIDENCE_ONLY\"}, \"server_instance_id\": \"685b28072703906202f65155884de397ea7fa102892a38c09aff963e628e1d33\", \"server_ownership\": \"shared\", \"session_id\": \"session-18677d36c9efbac72e27a0af\", \"trusted_code\": {\"config\": \"COMSOL_MCP_TRUSTED_CODE\", \"enabled\": true, \"os_sandbox\": false}, \"worker\": {\"connected\": true, \"generation\": 2, \"host\": \"127.0.0.1\", \"instance_id\": \"721245e3-b779-4bba-a879-0a66cc51f25c\", \"pid\": 81385, \"port\": 59179, \"server\": \"127.0.0.1:59136\"}}, \"execution\": {\"idempotency_key\": \"measure-probe-connect\", \"job_id\": \"532d50ce-0768-4aeb-8db5-e26a07463777\", \"model_ref\": null, \"operation_id\": \"c4a28246-0ba5-464b-af5f-771b29620421\", \"request_hash\": \"6670df8823bab70e5fe7e0ab7404c306006d05748c6c8df67258c621825308c3\", \"request_id\": \"measure-probe-connect\", \"revision\": null, \"session_id\": \"session-18677d36c9efbac72e27a0af\"}, \"success\": true}",
+        "annotations": null,
+        "meta": null
+      }
+    ],
+    "payload": {
+      "success": true,
+      "data": {
+        "connected": true,
+        "server_ownership": "shared",
+        "endpoint": "127.0.0.1:59136",
+        "session_id": "session-18677d36c9efbac72e27a0af",
+        "server_instance_id": "685b28072703906202f65155884de397ea7fa102892a38c09aff963e628e1d33",
+        "external_change_detection": {
+          "coverage": "parameters+shallow_tree_identity",
+          "status": "SCOPED_EVIDENCE_ONLY",
+          "event_notifications": "UNVERIFIED",
+          "full_model_property_coverage": "UNVERIFIED",
+          "cas_guarantee": "NONE",
+          "evidence_source": "evidence/phase2/followup/20260918T142300Z-external-api",
+          "evidence_environment": "macOS arm64; COMSOL 6.4.0.293",
+          "other_platforms_or_versions": "UNVERIFIED"
+        },
+        "trusted_code": {
+          "enabled": true,
+          "os_sandbox": false,
+          "config": "COMSOL_MCP_TRUSTED_CODE"
+        },
+        "worker": {
+          "host": "127.0.0.1",
+          "port": 59179,
+          "pid": 81385,
+          "generation": 2,
+          "instance_id": "721245e3-b779-4bba-a879-0a66cc51f25c",
+          "connected": true,
+          "server": "127.0.0.1:59136"
+        }
+      },
+      "execution": {
+        "session_id": "session-18677d36c9efbac72e27a0af",
+        "model_ref": null,
+        "revision": null,
+        "request_id": "measure-probe-connect",
+        "operation_id": "c4a28246-0ba5-464b-af5f-771b29620421",
+        "request_hash": "6670df8823bab70e5fe7e0ab7404c306006d05748c6c8df67258c621825308c3",
+        "idempotency_key": "measure-probe-connect",
+        "job_id": "532d50ce-0768-4aeb-8db5-e26a07463777"
+      }
+    }
+  },
+  {
+    "host": "measure-probe",
+    "transport": "stdio",
+    "operation": "operation_describe",
+    "arguments": {
+      "operation_id": "model.create",
+      "execution": {
+        "idempotency_key": "phase4-describe-model-create-1",
+        "request_id": "phase4-describe-model-create-1"
+      }
+    },
+    "elapsed_s": 0.029096291051246226,
+    "outer_isError": false,
+    "structuredContent": {
+      "success": true,
+      "data": {
+        "operation_id": "model.create",
+        "mcp_tool_name": "model_create",
+        "domain": "model",
+        "purpose": "\u663e\u5f0f\u65b0\u5efa\u6a21\u578b\u5e76\u8fd4\u56de\u552f\u4e00\u8eab\u4efd",
+        "effect": "WRITE",
+        "scope": "project",
+        "gate": "G3",
+        "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+        "input_schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "model.create input",
+          "type": "object",
+          "properties": {
+            "project_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 1
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "session_id": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "dimension": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "project_id",
+            "idempotency_key",
+            "session_id",
+            "label"
+          ],
+          "additionalProperties": false
+        },
+        "catalog_input_schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "model.create input",
+          "type": "object",
+          "properties": {
+            "project_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 1
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "session_id": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "dimension": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "project_id",
+            "idempotency_key",
+            "session_id",
+            "label"
+          ],
+          "additionalProperties": false
+        },
+        "output_schema": {
+          "type": "object",
+          "required": [
+            "success",
+            "data"
+          ],
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "data": {
+              "type": "object"
+            },
+            "error": {
+              "type": [
+                "object",
+                "string",
+                "null"
+              ]
+            },
+            "execution": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": true
+        },
+        "wire_compatibility": {
+          "transport": "MCP structuredContent plus text mirror; isError equals not success",
+          "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+          "result_fields": [
+            "success",
+            "data",
+            "error",
+            "execution"
+          ]
+        },
+        "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+        "route": "control plane",
+        "required_tests": [
+          "schema_valid",
+          "normal_path",
+          "failure_is_truthful"
+        ],
+        "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+        "executable": false
+      }
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"data\": {\"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"dimension\": {\"type\": \"integer\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"label\": {\"type\": \"string\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"type\": \"string\"}}, \"required\": [\"project_id\", \"idempotency_key\", \"session_id\", \"label\"], \"title\": \"model.create input\", \"type\": \"object\"}, \"domain\": \"model\", \"effect\": \"WRITE\", \"executable\": false, \"gate\": \"G3\", \"implementation_status\": \"PROPOSED_NOT_IMPLEMENTED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"additionalProperties\": false, \"properties\": {\"dimension\": {\"type\": \"integer\"}, \"idempotency_key\": {\"minLength\": 1, \"type\": \"string\"}, \"label\": {\"type\": \"string\"}, \"project_id\": {\"minLength\": 1, \"type\": \"string\"}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"type\": \"string\"}}, \"required\": [\"project_id\", \"idempotency_key\", \"session_id\", \"label\"], \"title\": \"model.create input\", \"type\": \"object\"}, \"mcp_tool_name\": \"model_create\", \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"operation_id\": \"model.create\", \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"output_schema\": {\"additionalProperties\": true, \"properties\": {\"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}, \"success\": {\"type\": \"boolean\"}}, \"required\": [\"success\", \"data\"], \"type\": \"object\"}, \"purpose\": \"\u663e\u5f0f\u65b0\u5efa\u6a21\u578b\u5e76\u8fd4\u56de\u552f\u4e00\u8eab\u4efd\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\"], \"route\": \"control plane\", \"scope\": \"project\", \"wire_compatibility\": {\"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"], \"transport\": \"MCP structuredContent plus text mirror; isError equals not success\"}}, \"success\": true}",
+        "annotations": null,
+        "meta": null
+      }
+    ],
+    "payload": {
+      "success": true,
+      "data": {
+        "operation_id": "model.create",
+        "mcp_tool_name": "model_create",
+        "domain": "model",
+        "purpose": "\u663e\u5f0f\u65b0\u5efa\u6a21\u578b\u5e76\u8fd4\u56de\u552f\u4e00\u8eab\u4efd",
+        "effect": "WRITE",
+        "scope": "project",
+        "gate": "G3",
+        "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+        "input_schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "model.create input",
+          "type": "object",
+          "properties": {
+            "project_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 1
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "session_id": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "dimension": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "project_id",
+            "idempotency_key",
+            "session_id",
+            "label"
+          ],
+          "additionalProperties": false
+        },
+        "catalog_input_schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "model.create input",
+          "type": "object",
+          "properties": {
+            "project_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 1
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "session_id": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "dimension": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "project_id",
+            "idempotency_key",
+            "session_id",
+            "label"
+          ],
+          "additionalProperties": false
+        },
+        "output_schema": {
+          "type": "object",
+          "required": [
+            "success",
+            "data"
+          ],
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "data": {
+              "type": "object"
+            },
+            "error": {
+              "type": [
+                "object",
+                "string",
+                "null"
+              ]
+            },
+            "execution": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": true
+        },
+        "wire_compatibility": {
+          "transport": "MCP structuredContent plus text mirror; isError equals not success",
+          "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+          "result_fields": [
+            "success",
+            "data",
+            "error",
+            "execution"
+          ]
+        },
+        "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+        "route": "control plane",
+        "required_tests": [
+          "schema_valid",
+          "normal_path",
+          "failure_is_truthful"
+        ],
+        "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+        "executable": false
+      }
+    }
+  },
+  {
+    "host": "measure-probe",
+    "transport": "stdio",
+    "operation": "model_create",
+    "arguments": {
+      "name": "MeasureTypes",
+      "execution": {
+        "idempotency_key": "create-MeasureTypes",
+        "request_id": "create-MeasureTypes"
+      }
+    },
+    "elapsed_s": 0.9904289590194821,
+    "outer_isError": false,
+    "structuredContent": {
+      "success": true,
+      "data": {
+        "label": "MeasureTypes",
+        "file_path": "",
+        "model_tag": "mcp1"
+      },
+      "error": null,
+      "execution": {
+        "session_id": "session-18677d36c9efbac72e27a0af",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-18677d36c9efbac72e27a0af",
+          "server_instance_id": "685b28072703906202f65155884de397ea7fa102892a38c09aff963e628e1d33",
+          "model_tag": "mcp1",
+          "generation": 1
+        },
+        "revision": 0,
+        "dirty": false,
+        "server_ownership": "shared",
+        "model_ownership": "mcp_owned",
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "request_id": "create-MeasureTypes",
+        "operation_id": "5062f323-df84-42e6-ad5a-3dac029c4644",
+        "request_hash": "4973feb05799adc12d499f2cf864c782865129c8c28a55fcf91caf0b121e13cf",
+        "idempotency_key": "create-MeasureTypes",
+        "job_id": "66585adf-1e55-4227-9caf-4f0b070e6477"
+      }
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"data\": {\"file_path\": \"\", \"label\": \"MeasureTypes\", \"model_tag\": \"mcp1\"}, \"error\": null, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"create-MeasureTypes\", \"job_id\": \"66585adf-1e55-4227-9caf-4f0b070e6477\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp1\", \"schema_version\": 1, \"server_instance_id\": \"685b28072703906202f65155884de397ea7fa102892a38c09aff963e628e1d33\", \"session_id\": \"session-18677d36c9efbac72e27a0af\"}, \"operation_id\": \"5062f323-df84-42e6-ad5a-3dac029c4644\", \"request_hash\": \"4973feb05799adc12d499f2cf864c782865129c8c28a55fcf91caf0b121e13cf\", \"request_id\": \"create-MeasureTypes\", \"revision\": 0, \"server_ownership\": \"shared\", \"session_id\": \"session-18677d36c9efbac72e27a0af\"}, \"success\": true}",
+        "annotations": null,
+        "meta": null
+      }
+    ],
+    "payload": {
+      "success": true,
+      "data": {
+        "label": "MeasureTypes",
+        "file_path": "",
+        "model_tag": "mcp1"
+      },
+      "error": null,
+      "execution": {
+        "session_id": "session-18677d36c9efbac72e27a0af",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-18677d36c9efbac72e27a0af",
+          "server_instance_id": "685b28072703906202f65155884de397ea7fa102892a38c09aff963e628e1d33",
+          "model_tag": "mcp1",
+          "generation": 1
+        },
+        "revision": 0,
+        "dirty": false,
+        "server_ownership": "shared",
+        "model_ownership": "mcp_owned",
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "request_id": "create-MeasureTypes",
+        "operation_id": "5062f323-df84-42e6-ad5a-3dac029c4644",
+        "request_hash": "4973feb05799adc12d499f2cf864c782865129c8c28a55fcf91caf0b121e13cf",
+        "idempotency_key": "create-MeasureTypes",
+        "job_id": "66585adf-1e55-4227-9caf-4f0b070e6477"
+      }
+    }
+  },
+  {
+    "host": "measure-probe",
+    "transport": "stdio",
+    "operation": "operation_call",
+    "arguments": {
+      "operation_id": "code.execute_java",
+      "arguments": {
+        "project_id": "g33-native_measure_types_20260922T0158Z",
+        "session_id": "session-18677d36c9efbac72e27a0af",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-18677d36c9efbac72e27a0af",
+          "server_instance_id": "685b28072703906202f65155884de397ea7fa102892a38c09aff963e628e1d33",
+          "model_tag": "mcp1",
+          "generation": 1
+        },
+        "expected_revision": 0,
+        "mode": "trusted",
+        "source_artifact": "evidence/phase4_3/runs/native_measure_types_20260922T0158Z/C04Builder.java",
+        "entrypoint": "C04Builder",
+        "arguments": {}
+      },
+      "execution": {
+        "idempotency_key": "native_measure_types_20260922T0158Z-run-code-execute_java-1",
+        "request_id": "native_measure_types_20260922T0158Z-run-code-execute_java-1",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-18677d36c9efbac72e27a0af",
+          "server_instance_id": "685b28072703906202f65155884de397ea7fa102892a38c09aff963e628e1d33",
+          "model_tag": "mcp1",
+          "generation": 1
+        },
+        "session_id": "session-18677d36c9efbac72e27a0af",
+        "expected_revision": 0
+      }
+    },
+    "elapsed_s": 4.391266249935143,
+    "outer_isError": false,
+    "structuredContent": {
+      "success": true,
+      "data": {
+        "source_sha256": "0b6d96129d980df632784c7009ed6f693ce1e65251c3c290ceba679f5378c7ad",
+        "entrypoint": "C04Builder",
+        "worker": {
+          "ok": true,
+          "request_id": "9fd1ba0b-faee-4a3c-8c44-0478f73bc2ba",
+          "type": "code_execute",
+          "status": "SUCCEEDED",
+          "queued_at_ms": "1790042279069",
+          "started_at_ms": "1790042279069",
+          "completed_at_ms": "1790042283388",
+          "result": {
+            "executed": true,
+            "model_tag": "mcp1",
+            "source_sha256": "0b6d96129d980df632784c7009ed6f693ce1e65251c3c290ceba679f5378c7ad",
+            "entrypoint": "C04Builder",
+            "readback": {
+              "status": "SOLVED"
+            }
+          }
+        },
+        "before": {
+          "tag": "mcp1",
+          "model_tag": "mcp1",
+          "fingerprint": "d7f1f05e74597e6bcbf7fa24a07fbd9fc3b26a108fc08d47adb83a01e3b5ca7b",
+          "fingerprint_scope": [
+            "tag",
+            "label",
+            "file_path",
+            "time_modified",
+            "parameters"
+          ],
+          "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+          "external_event_counter": 0,
+          "changed_tags": [],
+          "server_instance_id": "127.0.0.1:59136",
+          "worker_instance_id": "721245e3-b779-4bba-a879-0a66cc51f25c",
+          "instance_id": "721245e3-b779-4bba-a879-0a66cc51f25c",
+          "generation": 2
+        },
+        "after": {
+          "tag": "mcp1",
+          "model_tag": "mcp1",
+          "fingerprint": "d7f1f05e74597e6bcbf7fa24a07fbd9fc3b26a108fc08d47adb83a01e3b5ca7b",
+          "fingerprint_scope": [
+            "tag",
+            "label",
+            "file_path",
+            "time_modified",
+            "parameters"
+          ],
+          "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+          "external_event_counter": 0,
+          "changed_tags": [],
+          "server_instance_id": "127.0.0.1:59136",
+          "worker_instance_id": "721245e3-b779-4bba-a879-0a66cc51f25c",
+          "instance_id": "721245e3-b779-4bba-a879-0a66cc51f25c",
+          "generation": 2
+        },
+        "readback": {
+          "executed": true,
+          "model_tag": "mcp1",
+          "source_sha256": "0b6d96129d980df632784c7009ed6f693ce1e65251c3c290ceba679f5378c7ad",
+          "entrypoint": "C04Builder",
+          "readback": {
+            "status": "SOLVED"
+          }
+        },
+        "execution_success": true,
+        "domain_state": "succeeded",
+        "verification_status": "NOT_APPLICABLE",
+        "execution_state_unknown": false,
+        "partial_change": false,
+        "cleanup_failed": false,
+        "dispatch_stage": "post_dispatch",
+        "operation": "code.execute_java",
+        "effect": "project_write",
+        "domain_outcome": {
+          "operation": "",
+          "state": "succeeded",
+          "verification_status": "NOT_APPLICABLE",
+          "cleanup_failed": false,
+          "execution_state_unknown": false,
+          "dispatch_stage": "post_dispatch"
+        },
+        "isolation_proof": {
+          "verified": true,
+          "receipt": "REDACTED",
+          "pid": 81174,
+          "birth": "Tue Sep 22 09:57:43 2026",
+          "endpoint": "127.0.0.1:59136",
+          "listener": {
+            "pid": 81174,
+            "endpoint": "*:59136",
+            "local_endpoint": "*:59136",
+            "remote_endpoint": null,
+            "state": "LISTEN",
+            "raw": "java    81174 everwalker   59u  IPv6 0x6c0e97b56f47b203      0t0  TCP *:59136 (LISTEN)"
+          },
+          "listener_binding": "wildcard",
+          "loopback_listener": false,
+          "worker_pid": 81385,
+          "established_client_pids": [
+            81174,
+            81385
+          ],
+          "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+          "config_inode": 14720294,
+          "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+          "api_probe": {
+            "probe_kind": "comsol_java_api",
+            "observed_at": "2026-09-22T01:57:56Z",
+            "loopback_address": "127.0.0.1",
+            "loopback_port": 59136,
+            "authenticated_api_success": true,
+            "nonloopback_address": "192.168.100.152",
+            "nonloopback_port": 59136,
+            "nonloopback_api_exception_http_status": null,
+            "denial_evidence_source": "server_access_log",
+            "server_access_log": {
+              "status": "PASS",
+              "phase": "java_connect_only",
+              "path": "$REPO/evidence/phase4_3/runs/native_measure_types_20260922T0158Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+              "inode": 29863028,
+              "offset_before": 0,
+              "offset_after": 261,
+              "segment_sha256": "bc1c2f59bfa2fe7ea801759c17cea130d44157e6259712cac0ecbcc39931299a",
+              "java_request_id": "g2-valve-nonloopback-connect",
+              "started_at": "2026-09-22T01:57:48Z",
+              "finished_at": "2026-09-22T01:57:56Z",
+              "entries": [
+                {
+                  "peer": "127.0.0.1",
+                  "method": "GET",
+                  "route": "/webbridge/websocket",
+                  "http_status": 101
+                },
+                {
+                  "peer": "127.0.0.1",
+                  "method": "GET",
+                  "route": "/webbridge/websocket",
+                  "http_status": 101
+                },
+                {
+                  "peer": "192.168.100.152",
+                  "method": "GET",
+                  "route": "/webbridge/websocket",
+                  "http_status": 403
+                }
+              ],
+              "parsed_nonloopback_entry": {
+                "peer": "192.168.100.152",
+                "method": "GET",
+                "route": "/webbridge/websocket",
+                "http_status": 403
+              },
+              "raw_probe_started_after_capture": true
+            }
+          },
+          "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer"
+        }
+      },
+      "error": null,
+      "execution": {
+        "session_id": "session-18677d36c9efbac72e27a0af",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-18677d36c9efbac72e27a0af",
+          "server_instance_id": "685b28072703906202f65155884de397ea7fa102892a38c09aff963e628e1d33",
+          "model_tag": "mcp1",
+          "generation": 1
+        },
+        "revision": 1,
+        "dirty": false,
+        "server_ownership": "shared",
+        "model_ownership": "mcp_owned",
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "request_id": "native_measure_types_20260922T0158Z-run-code-execute_java-1",
+        "operation_id": "9fd1ba0b-faee-4a3c-8c44-0478f73bc2ba",
+        "request_hash": "22c732e5797fd10f6b48ceaf777477f021465a2f98a10bcf679cd5d08abd2c77",
+        "idempotency_key": "native_measure_types_20260922T0158Z-run-code-execute_java-1",
+        "job_id": "14bad784-bbec-4a77-833a-5b81aa3218b7"
+      }
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"data\": {\"after\": {\"cas_limit\": \"control-plane revision plus observed change events; not COMSOL atomic CAS\", \"changed_tags\": [], \"external_event_counter\": 0, \"fingerprint\": \"d7f1f05e74597e6bcbf7fa24a07fbd9fc3b26a108fc08d47adb83a01e3b5ca7b\", \"fingerprint_scope\": [\"tag\", \"label\", \"file_path\", \"time_modified\", \"parameters\"], \"generation\": 2, \"instance_id\": \"721245e3-b779-4bba-a879-0a66cc51f25c\", \"model_tag\": \"mcp1\", \"server_instance_id\": \"127.0.0.1:59136\", \"tag\": \"mcp1\", \"worker_instance_id\": \"721245e3-b779-4bba-a879-0a66cc51f25c\"}, \"before\": {\"cas_limit\": \"control-plane revision plus observed change events; not COMSOL atomic CAS\", \"changed_tags\": [], \"external_event_counter\": 0, \"fingerprint\": \"d7f1f05e74597e6bcbf7fa24a07fbd9fc3b26a108fc08d47adb83a01e3b5ca7b\", \"fingerprint_scope\": [\"tag\", \"label\", \"file_path\", \"time_modified\", \"parameters\"], \"generation\": 2, \"instance_id\": \"721245e3-b779-4bba-a879-0a66cc51f25c\", \"model_tag\": \"mcp1\", \"server_instance_id\": \"127.0.0.1:59136\", \"tag\": \"mcp1\", \"worker_instance_id\": \"721245e3-b779-4bba-a879-0a66cc51f25c\"}, \"cleanup_failed\": false, \"dispatch_stage\": \"post_dispatch\", \"domain_outcome\": {\"cleanup_failed\": false, \"dispatch_stage\": \"post_dispatch\", \"execution_state_unknown\": false, \"operation\": \"\", \"state\": \"succeeded\", \"verification_status\": \"NOT_APPLICABLE\"}, \"domain_state\": \"succeeded\", \"effect\": \"project_write\", \"entrypoint\": \"C04Builder\", \"execution_state_unknown\": false, \"execution_success\": true, \"isolation_proof\": {\"api_probe\": {\"authenticated_api_success\": true, \"denial_evidence_source\": \"server_access_log\", \"loopback_address\": \"127.0.0.1\", \"loopback_port\": 59136, \"nonloopback_address\": \"192.168.100.152\", \"nonloopback_api_exception_http_status\": null, \"nonloopback_port\": 59136, \"observed_at\": \"2026-09-22T01:57:56Z\", \"probe_kind\": \"comsol_java_api\", \"server_access_log\": {\"entries\": [{\"http_status\": 101, \"method\": \"GET\", \"peer\": \"127.0.0.1\", \"route\": \"/webbridge/websocket\"}, {\"http_status\": 101, \"method\": \"GET\", \"peer\": \"127.0.0.1\", \"route\": \"/webbridge/websocket\"}, {\"http_status\": 403, \"method\": \"GET\", \"peer\": \"192.168.100.152\", \"route\": \"/webbridge/websocket\"}], \"finished_at\": \"2026-09-22T01:57:56Z\", \"inode\": 29863028, \"java_request_id\": \"g2-valve-nonloopback-connect\", \"offset_after\": 261, \"offset_before\": 0, \"parsed_nonloopback_entry\": {\"http_status\": 403, \"method\": \"GET\", \"peer\": \"192.168.100.152\", \"route\": \"/webbridge/websocket\"}, \"path\": \"$REPO/evidence/phase4_3/runs/native_measure_types_20260922T0158Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt\", \"phase\": \"java_connect_only\", \"raw_probe_started_after_capture\": true, \"segment_sha256\": \"bc1c2f59bfa2fe7ea801759c17cea130d44157e6259712cac0ecbcc39931299a\", \"started_at\": \"2026-09-22T01:57:48Z\", \"status\": \"PASS\"}}, \"birth\": \"Tue Sep 22 09:57:43 2026\", \"config_inode\": 14720294, \"config_sha256\": \"1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357\", \"config_target\": \"/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml\", \"endpoint\": \"127.0.0.1:59136\", \"established_client_pids\": [81174, 81385], \"listener\": {\"endpoint\": \"*:59136\", \"local_endpoint\": \"*:59136\", \"pid\": 81174, \"raw\": \"java    81174 everwalker   59u  IPv6 0x6c0e97b56f47b203      0t0  TCP *:59136 (LISTEN)\", \"remote_endpoint\": null, \"state\": \"LISTEN\"}, \"listener_binding\": \"wildcard\", \"loopback_listener\": false, \"pid\": 81174, \"proof_scope\": \"owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer\", \"receipt\": \"REDACTED\", \"verified\": true, \"worker_pid\": 81385}, \"operation\": \"code.execute_java\", \"partial_change\": false, \"readback\": {\"entrypoint\": \"C04Builder\", \"executed\": true, \"model_tag\": \"mcp1\", \"readback\": {\"status\": \"SOLVED\"}, \"source_sha256\": \"0b6d96129d980df632784c7009ed6f693ce1e65251c3c290ceba679f5378c7ad\"}, \"source_sha256\": \"0b6d96129d980df632784c7009ed6f693ce1e65251c3c290ceba679f5378c7ad\", \"verification_status\": \"NOT_APPLICABLE\", \"worker\": {\"completed_at_ms\": \"1790042283388\", \"ok\": true, \"queued_at_ms\": \"1790042279069\", \"request_id\": \"9fd1ba0b-faee-4a3c-8c44-0478f73bc2ba\", \"result\": {\"entrypoint\": \"C04Builder\", \"executed\": true, \"model_tag\": \"mcp1\", \"readback\": {\"status\": \"SOLVED\"}, \"source_sha256\": \"0b6d96129d980df632784c7009ed6f693ce1e65251c3c290ceba679f5378c7ad\"}, \"started_at_ms\": \"1790042279069\", \"status\": \"SUCCEEDED\", \"type\": \"code_execute\"}}, \"error\": null, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"native_measure_types_20260922T0158Z-run-code-execute_java-1\", \"job_id\": \"14bad784-bbec-4a77-833a-5b81aa3218b7\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp1\", \"schema_version\": 1, \"server_instance_id\": \"685b28072703906202f65155884de397ea7fa102892a38c09aff963e628e1d33\", \"session_id\": \"session-18677d36c9efbac72e27a0af\"}, \"operation_id\": \"9fd1ba0b-faee-4a3c-8c44-0478f73bc2ba\", \"request_hash\": \"22c732e5797fd10f6b48ceaf777477f021465a2f98a10bcf679cd5d08abd2c77\", \"request_id\": \"native_measure_types_20260922T0158Z-run-code-execute_java-1\", \"revision\": 1, \"server_ownership\": \"shared\", \"session_id\": \"session-18677d36c9efbac72e27a0af\"}, \"success\": true}",
+        "annotations": null,
+        "meta": null
+      }
+    ],
+    "payload": {
+      "success": true,
+      "data": {
+        "source_sha256": "0b6d96129d980df632784c7009ed6f693ce1e65251c3c290ceba679f5378c7ad",
+        "entrypoint": "C04Builder",
+        "worker": {
+          "ok": true,
+          "request_id": "9fd1ba0b-faee-4a3c-8c44-0478f73bc2ba",
+          "type": "code_execute",
+          "status": "SUCCEEDED",
+          "queued_at_ms": "1790042279069",
+          "started_at_ms": "1790042279069",
+          "completed_at_ms": "1790042283388",
+          "result": {
+            "executed": true,
+            "model_tag": "mcp1",
+            "source_sha256": "0b6d96129d980df632784c7009ed6f693ce1e65251c3c290ceba679f5378c7ad",
+            "entrypoint": "C04Builder",
+            "readback": {
+              "status": "SOLVED"
+            }
+          }
+        },
+        "before": {
+          "tag": "mcp1",
+          "model_tag": "mcp1",
+          "fingerprint": "d7f1f05e74597e6bcbf7fa24a07fbd9fc3b26a108fc08d47adb83a01e3b5ca7b",
+          "fingerprint_scope": [
+            "tag",
+            "label",
+            "file_path",
+            "time_modified",
+            "parameters"
+          ],
+          "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+          "external_event_counter": 0,
+          "changed_tags": [],
+          "server_instance_id": "127.0.0.1:59136",
+          "worker_instance_id": "721245e3-b779-4bba-a879-0a66cc51f25c",
+          "instance_id": "721245e3-b779-4bba-a879-0a66cc51f25c",
+          "generation": 2
+        },
+        "after": {
+          "tag": "mcp1",
+          "model_tag": "mcp1",
+          "fingerprint": "d7f1f05e74597e6bcbf7fa24a07fbd9fc3b26a108fc08d47adb83a01e3b5ca7b",
+          "fingerprint_scope": [
+            "tag",
+            "label",
+            "file_path",
+            "time_modified",
+            "parameters"
+          ],
+          "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+          "external_event_counter": 0,
+          "changed_tags": [],
+          "server_instance_id": "127.0.0.1:59136",
+          "worker_instance_id": "721245e3-b779-4bba-a879-0a66cc51f25c",
+          "instance_id": "721245e3-b779-4bba-a879-0a66cc51f25c",
+          "generation": 2
+        },
+        "readback": {
+          "executed": true,
+          "model_tag": "mcp1",
+          "source_sha256": "0b6d96129d980df632784c7009ed6f693ce1e65251c3c290ceba679f5378c7ad",
+          "entrypoint": "C04Builder",
+          "readback": {
+            "status": "SOLVED"
+          }
+        },
+        "execution_success": true,
+        "domain_state": "succeeded",
+        "verification_status": "NOT_APPLICABLE",
+        "execution_state_unknown": false,
+        "partial_change": false,
+        "cleanup_failed": false,
+        "dispatch_stage": "post_dispatch",
+        "operation": "code.execute_java",
+        "effect": "project_write",
+        "domain_outcome": {
+          "operation": "",
+          "state": "succeeded",
+          "verification_status": "NOT_APPLICABLE",
+          "cleanup_failed": false,
+          "execution_state_unknown": false,
+          "dispatch_stage": "post_dispatch"
+        },
+        "isolation_proof": {
+          "verified": true,
+          "receipt": "REDACTED",
+          "pid": 81174,
+          "birth": "Tue Sep 22 09:57:43 2026",
+          "endpoint": "127.0.0.1:59136",
+          "listener": {
+            "pid": 81174,
+            "endpoint": "*:59136",
+            "local_endpoint": "*:59136",
+            "remote_endpoint": null,
+            "state": "LISTEN",
+            "raw": "java    81174 everwalker   59u  IPv6 0x6c0e97b56f47b203      0t0  TCP *:59136 (LISTEN)"
+          },
+          "listener_binding": "wildcard",
+          "loopback_listener": false,
+          "worker_pid": 81385,
+          "established_client_pids": [
+            81174,
+            81385
+          ],
+          "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+          "config_inode": 14720294,
+          "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+          "api_probe": {
+            "probe_kind": "comsol_java_api",
+            "observed_at": "2026-09-22T01:57:56Z",
+            "loopback_address": "127.0.0.1",
+            "loopback_port": 59136,
+            "authenticated_api_success": true,
+            "nonloopback_address": "192.168.100.152",
+            "nonloopback_port": 59136,
+            "nonloopback_api_exception_http_status": null,
+            "denial_evidence_source": "server_access_log",
+            "server_access_log": {
+              "status": "PASS",
+              "phase": "java_connect_only",
+              "path": "$REPO/evidence/phase4_3/runs/native_measure_types_20260922T0158Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+              "inode": 29863028,
+              "offset_before": 0,
+              "offset_after": 261,
+              "segment_sha256": "bc1c2f59bfa2fe7ea801759c17cea130d44157e6259712cac0ecbcc39931299a",
+              "java_request_id": "g2-valve-nonloopback-connect",
+              "started_at": "2026-09-22T01:57:48Z",
+              "finished_at": "2026-09-22T01:57:56Z",
+              "entries": [
+                {
+                  "peer": "127.0.0.1",
+                  "method": "GET",
+                  "route": "/webbridge/websocket",
+                  "http_status": 101
+                },
+                {
+                  "peer": "127.0.0.1",
+                  "method": "GET",
+                  "route": "/webbridge/websocket",
+                  "http_status": 101
+                },
+                {
+                  "peer": "192.168.100.152",
+                  "method": "GET",
+                  "route": "/webbridge/websocket",
+                  "http_status": 403
+                }
+              ],
+              "parsed_nonloopback_entry": {
+                "peer": "192.168.100.152",
+                "method": "GET",
+                "route": "/webbridge/websocket",
+                "http_status": 403
+              },
+              "raw_probe_started_after_capture": true
+            }
+          },
+          "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer"
+        }
+      },
+      "error": null,
+      "execution": {
+        "session_id": "session-18677d36c9efbac72e27a0af",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-18677d36c9efbac72e27a0af",
+          "server_instance_id": "685b28072703906202f65155884de397ea7fa102892a38c09aff963e628e1d33",
+          "model_tag": "mcp1",
+          "generation": 1
+        },
+        "revision": 1,
+        "dirty": false,
+        "server_ownership": "shared",
+        "model_ownership": "mcp_owned",
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "request_id": "native_measure_types_20260922T0158Z-run-code-execute_java-1",
+        "operation_id": "9fd1ba0b-faee-4a3c-8c44-0478f73bc2ba",
+        "request_hash": "22c732e5797fd10f6b48ceaf777477f021465a2f98a10bcf679cd5d08abd2c77",
+        "idempotency_key": "native_measure_types_20260922T0158Z-run-code-execute_java-1",
+        "job_id": "14bad784-bbec-4a77-833a-5b81aa3218b7"
+      }
+    }
+  },
+  {
+    "host": "measure-probe",
+    "transport": "stdio",
+    "operation": "operation_call",
+    "arguments": {
+      "operation_id": "code.execute_java",
+      "arguments": {
+        "project_id": "g33-native_measure_types_20260922T0158Z",
+        "session_id": "session-18677d36c9efbac72e27a0af",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-18677d36c9efbac72e27a0af",
+          "server_instance_id": "685b28072703906202f65155884de397ea7fa102892a38c09aff963e628e1d33",
+          "model_tag": "mcp1",
+          "generation": 1
+        },
+        "expected_revision": 1,
+        "mode": "trusted",
+        "source_artifact": "evidence/phase4_3/runs/native_measure_types_20260922T0158Z/MeasureProbe.java",
+        "entrypoint": "MeasureProbe",
+        "arguments": {}
+      },
+      "execution": {
+        "idempotency_key": "native_measure_types_20260922T0158Z-run-code-execute_java-2",
+        "request_id": "native_measure_types_20260922T0158Z-run-code-execute_java-2",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-18677d36c9efbac72e27a0af",
+          "server_instance_id": "685b28072703906202f65155884de397ea7fa102892a38c09aff963e628e1d33",
+          "model_tag": "mcp1",
+          "generation": 1
+        },
+        "session_id": "session-18677d36c9efbac72e27a0af",
+        "expected_revision": 1
+      }
+    },
+    "elapsed_s": 0.28457687504123896,
+    "outer_isError": false,
+    "structuredContent": {
+      "success": true,
+      "data": {
+        "source_sha256": "0961b650c00d917ed3f98f5143461def2bbe455994f298380dc81c879f2b1621",
+        "entrypoint": "MeasureProbe",
+        "worker": {
+          "ok": true,
+          "request_id": "930e9177-1004-4158-bc6a-fb61811a18af",
+          "type": "code_execute",
+          "status": "SUCCEEDED",
+          "queued_at_ms": "1790042283468",
+          "started_at_ms": "1790042283468",
+          "completed_at_ms": "1790042283688",
+          "result": {
+            "executed": true,
+            "model_tag": "mcp1",
+            "source_sha256": "0961b650c00d917ed3f98f5143461def2bbe455994f298380dc81c879f2b1621",
+            "entrypoint": "MeasureProbe",
+            "readback": {
+              "IntPoint": {
+                "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\nMessages:\n\t\u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\n\t- \u8fd0\u7b97: IntPoint\n"
+              },
+              "AvPoint": {
+                "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\nMessages:\n\t\u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\n\t- \u8fd0\u7b97: AvPoint\n"
+              },
+              "EvalPoint": {
+                "created_type": "EvalPoint",
+                "real": [
+                  [
+                    2.0
+                  ],
+                  [
+                    2.0
+                  ],
+                  [
+                    2.0
+                  ],
+                  [
+                    2.0
+                  ],
+                  [
+                    2.0
+                  ],
+                  [
+                    2.0
+                  ],
+                  [
+                    2.0
+                  ],
+                  [
+                    2.0
+                  ],
+                  [
+                    1.0
+                  ],
+                  [
+                    1.0
+                  ],
+                  [
+                    1.0
+                  ],
+                  [
+                    1.0
+                  ],
+                  [
+                    1.0
+                  ],
+                  [
+                    1.0
+                  ],
+                  [
+                    1.0
+                  ],
+                  [
+                    1.0
+                  ]
+                ],
+                "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\nMessages:\n\t\u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\n"
+              },
+              "MaxPoint": {
+                "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\nMessages:\n\t\u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\n\t- \u8fd0\u7b97: MaxPoint\n"
+              },
+              "MinPoint": {
+                "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\nMessages:\n\t\u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\n\t- \u8fd0\u7b97: MinPoint\n"
+              },
+              "IntLine": {
+                "created_type": "IntLine",
+                "real": [
+                  [
+                    40.000000000000014
+                  ],
+                  [
+                    20.000000000000007
+                  ]
+                ],
+                "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\nMessages:\n\t\u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\n"
+              },
+              "IntSurface": {
+                "created_type": "IntSurface",
+                "real": [
+                  [
+                    28.00000000000004
+                  ],
+                  [
+                    14.00000000000002
+                  ]
+                ],
+                "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\nMessages:\n\t\u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\n"
+              },
+              "IntVolume": {
+                "created_type": "IntVolume",
+                "real": [
+                  [
+                    5.999999999999938
+                  ],
+                  [
+                    2.999999999999969
+                  ]
+                ],
+                "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\nMessages:\n\t\u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\n"
+              }
+            }
+          }
+        },
+        "before": {
+          "tag": "mcp1",
+          "model_tag": "mcp1",
+          "fingerprint": "d7f1f05e74597e6bcbf7fa24a07fbd9fc3b26a108fc08d47adb83a01e3b5ca7b",
+          "fingerprint_scope": [
+            "tag",
+            "label",
+            "file_path",
+            "time_modified",
+            "parameters"
+          ],
+          "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+          "external_event_counter": 0,
+          "changed_tags": [],
+          "server_instance_id": "127.0.0.1:59136",
+          "worker_instance_id": "721245e3-b779-4bba-a879-0a66cc51f25c",
+          "instance_id": "721245e3-b779-4bba-a879-0a66cc51f25c",
+          "generation": 2
+        },
+        "after": {
+          "tag": "mcp1",
+          "model_tag": "mcp1",
+          "fingerprint": "d7f1f05e74597e6bcbf7fa24a07fbd9fc3b26a108fc08d47adb83a01e3b5ca7b",
+          "fingerprint_scope": [
+            "tag",
+            "label",
+            "file_path",
+            "time_modified",
+            "parameters"
+          ],
+          "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+          "external_event_counter": 0,
+          "changed_tags": [],
+          "server_instance_id": "127.0.0.1:59136",
+          "worker_instance_id": "721245e3-b779-4bba-a879-0a66cc51f25c",
+          "instance_id": "721245e3-b779-4bba-a879-0a66cc51f25c",
+          "generation": 2
+        },
+        "readback": {
+          "executed": true,
+          "model_tag": "mcp1",
+          "source_sha256": "0961b650c00d917ed3f98f5143461def2bbe455994f298380dc81c879f2b1621",
+          "entrypoint": "MeasureProbe",
+          "readback": {
+            "IntPoint": {
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\nMessages:\n\t\u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\n\t- \u8fd0\u7b97: IntPoint\n"
+            },
+            "AvPoint": {
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\nMessages:\n\t\u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\n\t- \u8fd0\u7b97: AvPoint\n"
+            },
+            "EvalPoint": {
+              "created_type": "EvalPoint",
+              "real": [
+                [
+                  2.0
+                ],
+                [
+                  2.0
+                ],
+                [
+                  2.0
+                ],
+                [
+                  2.0
+                ],
+                [
+                  2.0
+                ],
+                [
+                  2.0
+                ],
+                [
+                  2.0
+                ],
+                [
+                  2.0
+                ],
+                [
+                  1.0
+                ],
+                [
+                  1.0
+                ],
+                [
+                  1.0
+                ],
+                [
+                  1.0
+                ],
+                [
+                  1.0
+                ],
+                [
+                  1.0
+                ],
+                [
+                  1.0
+                ],
+                [
+                  1.0
+                ]
+              ],
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\nMessages:\n\t\u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\n"
+            },
+            "MaxPoint": {
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\nMessages:\n\t\u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\n\t- \u8fd0\u7b97: MaxPoint\n"
+            },
+            "MinPoint": {
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\nMessages:\n\t\u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\n\t- \u8fd0\u7b97: MinPoint\n"
+            },
+            "IntLine": {
+              "created_type": "IntLine",
+              "real": [
+                [
+                  40.000000000000014
+                ],
+                [
+                  20.000000000000007
+                ]
+              ],
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\nMessages:\n\t\u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\n"
+            },
+            "IntSurface": {
+              "created_type": "IntSurface",
+              "real": [
+                [
+                  28.00000000000004
+                ],
+                [
+                  14.00000000000002
+                ]
+              ],
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\nMessages:\n\t\u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\n"
+            },
+            "IntVolume": {
+              "created_type": "IntVolume",
+              "real": [
+                [
+                  5.999999999999938
+                ],
+                [
+                  2.999999999999969
+                ]
+              ],
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\nMessages:\n\t\u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\n"
+            }
+          }
+        },
+        "execution_success": true,
+        "domain_state": "succeeded",
+        "verification_status": "NOT_APPLICABLE",
+        "execution_state_unknown": false,
+        "partial_change": false,
+        "cleanup_failed": false,
+        "dispatch_stage": "post_dispatch",
+        "operation": "code.execute_java",
+        "effect": "project_write",
+        "domain_outcome": {
+          "operation": "",
+          "state": "succeeded",
+          "verification_status": "NOT_APPLICABLE",
+          "cleanup_failed": false,
+          "execution_state_unknown": false,
+          "dispatch_stage": "post_dispatch"
+        },
+        "isolation_proof": {
+          "verified": true,
+          "receipt": "REDACTED",
+          "pid": 81174,
+          "birth": "Tue Sep 22 09:57:43 2026",
+          "endpoint": "127.0.0.1:59136",
+          "listener": {
+            "pid": 81174,
+            "endpoint": "*:59136",
+            "local_endpoint": "*:59136",
+            "remote_endpoint": null,
+            "state": "LISTEN",
+            "raw": "java    81174 everwalker   59u  IPv6 0x6c0e97b56f47b203      0t0  TCP *:59136 (LISTEN)"
+          },
+          "listener_binding": "wildcard",
+          "loopback_listener": false,
+          "worker_pid": 81385,
+          "established_client_pids": [
+            81174,
+            81385
+          ],
+          "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+          "config_inode": 14720294,
+          "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+          "api_probe": {
+            "probe_kind": "comsol_java_api",
+            "observed_at": "2026-09-22T01:57:56Z",
+            "loopback_address": "127.0.0.1",
+            "loopback_port": 59136,
+            "authenticated_api_success": true,
+            "nonloopback_address": "192.168.100.152",
+            "nonloopback_port": 59136,
+            "nonloopback_api_exception_http_status": null,
+            "denial_evidence_source": "server_access_log",
+            "server_access_log": {
+              "status": "PASS",
+              "phase": "java_connect_only",
+              "path": "$REPO/evidence/phase4_3/runs/native_measure_types_20260922T0158Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+              "inode": 29863028,
+              "offset_before": 0,
+              "offset_after": 261,
+              "segment_sha256": "bc1c2f59bfa2fe7ea801759c17cea130d44157e6259712cac0ecbcc39931299a",
+              "java_request_id": "g2-valve-nonloopback-connect",
+              "started_at": "2026-09-22T01:57:48Z",
+              "finished_at": "2026-09-22T01:57:56Z",
+              "entries": [
+                {
+                  "peer": "127.0.0.1",
+                  "method": "GET",
+                  "route": "/webbridge/websocket",
+                  "http_status": 101
+                },
+                {
+                  "peer": "127.0.0.1",
+                  "method": "GET",
+                  "route": "/webbridge/websocket",
+                  "http_status": 101
+                },
+                {
+                  "peer": "192.168.100.152",
+                  "method": "GET",
+                  "route": "/webbridge/websocket",
+                  "http_status": 403
+                }
+              ],
+              "parsed_nonloopback_entry": {
+                "peer": "192.168.100.152",
+                "method": "GET",
+                "route": "/webbridge/websocket",
+                "http_status": 403
+              },
+              "raw_probe_started_after_capture": true
+            }
+          },
+          "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer"
+        }
+      },
+      "error": null,
+      "execution": {
+        "session_id": "session-18677d36c9efbac72e27a0af",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-18677d36c9efbac72e27a0af",
+          "server_instance_id": "685b28072703906202f65155884de397ea7fa102892a38c09aff963e628e1d33",
+          "model_tag": "mcp1",
+          "generation": 1
+        },
+        "revision": 2,
+        "dirty": false,
+        "server_ownership": "shared",
+        "model_ownership": "mcp_owned",
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "request_id": "native_measure_types_20260922T0158Z-run-code-execute_java-2",
+        "operation_id": "930e9177-1004-4158-bc6a-fb61811a18af",
+        "request_hash": "e286722c809236e2a01d8a9d21212a783d0cd4101589d1c3384e13cf3cac6c10",
+        "idempotency_key": "native_measure_types_20260922T0158Z-run-code-execute_java-2",
+        "job_id": "8d6045a2-0481-4765-b473-0a3361f4b3d1"
+      }
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"data\": {\"after\": {\"cas_limit\": \"control-plane revision plus observed change events; not COMSOL atomic CAS\", \"changed_tags\": [], \"external_event_counter\": 0, \"fingerprint\": \"d7f1f05e74597e6bcbf7fa24a07fbd9fc3b26a108fc08d47adb83a01e3b5ca7b\", \"fingerprint_scope\": [\"tag\", \"label\", \"file_path\", \"time_modified\", \"parameters\"], \"generation\": 2, \"instance_id\": \"721245e3-b779-4bba-a879-0a66cc51f25c\", \"model_tag\": \"mcp1\", \"server_instance_id\": \"127.0.0.1:59136\", \"tag\": \"mcp1\", \"worker_instance_id\": \"721245e3-b779-4bba-a879-0a66cc51f25c\"}, \"before\": {\"cas_limit\": \"control-plane revision plus observed change events; not COMSOL atomic CAS\", \"changed_tags\": [], \"external_event_counter\": 0, \"fingerprint\": \"d7f1f05e74597e6bcbf7fa24a07fbd9fc3b26a108fc08d47adb83a01e3b5ca7b\", \"fingerprint_scope\": [\"tag\", \"label\", \"file_path\", \"time_modified\", \"parameters\"], \"generation\": 2, \"instance_id\": \"721245e3-b779-4bba-a879-0a66cc51f25c\", \"model_tag\": \"mcp1\", \"server_instance_id\": \"127.0.0.1:59136\", \"tag\": \"mcp1\", \"worker_instance_id\": \"721245e3-b779-4bba-a879-0a66cc51f25c\"}, \"cleanup_failed\": false, \"dispatch_stage\": \"post_dispatch\", \"domain_outcome\": {\"cleanup_failed\": false, \"dispatch_stage\": \"post_dispatch\", \"execution_state_unknown\": false, \"operation\": \"\", \"state\": \"succeeded\", \"verification_status\": \"NOT_APPLICABLE\"}, \"domain_state\": \"succeeded\", \"effect\": \"project_write\", \"entrypoint\": \"MeasureProbe\", \"execution_state_unknown\": false, \"execution_success\": true, \"isolation_proof\": {\"api_probe\": {\"authenticated_api_success\": true, \"denial_evidence_source\": \"server_access_log\", \"loopback_address\": \"127.0.0.1\", \"loopback_port\": 59136, \"nonloopback_address\": \"192.168.100.152\", \"nonloopback_api_exception_http_status\": null, \"nonloopback_port\": 59136, \"observed_at\": \"2026-09-22T01:57:56Z\", \"probe_kind\": \"comsol_java_api\", \"server_access_log\": {\"entries\": [{\"http_status\": 101, \"method\": \"GET\", \"peer\": \"127.0.0.1\", \"route\": \"/webbridge/websocket\"}, {\"http_status\": 101, \"method\": \"GET\", \"peer\": \"127.0.0.1\", \"route\": \"/webbridge/websocket\"}, {\"http_status\": 403, \"method\": \"GET\", \"peer\": \"192.168.100.152\", \"route\": \"/webbridge/websocket\"}], \"finished_at\": \"2026-09-22T01:57:56Z\", \"inode\": 29863028, \"java_request_id\": \"g2-valve-nonloopback-connect\", \"offset_after\": 261, \"offset_before\": 0, \"parsed_nonloopback_entry\": {\"http_status\": 403, \"method\": \"GET\", \"peer\": \"192.168.100.152\", \"route\": \"/webbridge/websocket\"}, \"path\": \"$REPO/evidence/phase4_3/runs/native_measure_types_20260922T0158Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt\", \"phase\": \"java_connect_only\", \"raw_probe_started_after_capture\": true, \"segment_sha256\": \"bc1c2f59bfa2fe7ea801759c17cea130d44157e6259712cac0ecbcc39931299a\", \"started_at\": \"2026-09-22T01:57:48Z\", \"status\": \"PASS\"}}, \"birth\": \"Tue Sep 22 09:57:43 2026\", \"config_inode\": 14720294, \"config_sha256\": \"1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357\", \"config_target\": \"/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml\", \"endpoint\": \"127.0.0.1:59136\", \"established_client_pids\": [81174, 81385], \"listener\": {\"endpoint\": \"*:59136\", \"local_endpoint\": \"*:59136\", \"pid\": 81174, \"raw\": \"java    81174 everwalker   59u  IPv6 0x6c0e97b56f47b203      0t0  TCP *:59136 (LISTEN)\", \"remote_endpoint\": null, \"state\": \"LISTEN\"}, \"listener_binding\": \"wildcard\", \"loopback_listener\": false, \"pid\": 81174, \"proof_scope\": \"owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer\", \"receipt\": \"REDACTED\", \"verified\": true, \"worker_pid\": 81385}, \"operation\": \"code.execute_java\", \"partial_change\": false, \"readback\": {\"entrypoint\": \"MeasureProbe\", \"executed\": true, \"model_tag\": \"mcp1\", \"readback\": {\"AvPoint\": {\"error\": \"Exception:\\n\\tcom.comsol.util.exceptions.FlException: \u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\\nMessages:\\n\\t\u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\\n\\t- \u8fd0\u7b97: AvPoint\\n\"}, \"EvalPoint\": {\"created_type\": \"EvalPoint\", \"error\": \"Exception:\\n\\tcom.comsol.util.exceptions.FlException: \u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\\nMessages:\\n\\t\u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\\n\", \"real\": [[2.0], [2.0], [2.0], [2.0], [2.0], [2.0], [2.0], [2.0], [1.0], [1.0], [1.0], [1.0], [1.0], [1.0], [1.0], [1.0]]}, \"IntLine\": {\"created_type\": \"IntLine\", \"error\": \"Exception:\\n\\tcom.comsol.util.exceptions.FlException: \u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\\nMessages:\\n\\t\u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\\n\", \"real\": [[40.000000000000014], [20.000000000000007]]}, \"IntPoint\": {\"error\": \"Exception:\\n\\tcom.comsol.util.exceptions.FlException: \u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\\nMessages:\\n\\t\u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\\n\\t- \u8fd0\u7b97: IntPoint\\n\"}, \"IntSurface\": {\"created_type\": \"IntSurface\", \"error\": \"Exception:\\n\\tcom.comsol.util.exceptions.FlException: \u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\\nMessages:\\n\\t\u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\\n\", \"real\": [[28.00000000000004], [14.00000000000002]]}, \"IntVolume\": {\"created_type\": \"IntVolume\", \"error\": \"Exception:\\n\\tcom.comsol.util.exceptions.FlException: \u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\\nMessages:\\n\\t\u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\\n\", \"real\": [[5.999999999999938], [2.999999999999969]]}, \"MaxPoint\": {\"error\": \"Exception:\\n\\tcom.comsol.util.exceptions.FlException: \u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\\nMessages:\\n\\t\u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\\n\\t- \u8fd0\u7b97: MaxPoint\\n\"}, \"MinPoint\": {\"error\": \"Exception:\\n\\tcom.comsol.util.exceptions.FlException: \u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\\nMessages:\\n\\t\u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\\n\\t- \u8fd0\u7b97: MinPoint\\n\"}}, \"source_sha256\": \"0961b650c00d917ed3f98f5143461def2bbe455994f298380dc81c879f2b1621\"}, \"source_sha256\": \"0961b650c00d917ed3f98f5143461def2bbe455994f298380dc81c879f2b1621\", \"verification_status\": \"NOT_APPLICABLE\", \"worker\": {\"completed_at_ms\": \"1790042283688\", \"ok\": true, \"queued_at_ms\": \"1790042283468\", \"request_id\": \"930e9177-1004-4158-bc6a-fb61811a18af\", \"result\": {\"entrypoint\": \"MeasureProbe\", \"executed\": true, \"model_tag\": \"mcp1\", \"readback\": {\"AvPoint\": {\"error\": \"Exception:\\n\\tcom.comsol.util.exceptions.FlException: \u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\\nMessages:\\n\\t\u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\\n\\t- \u8fd0\u7b97: AvPoint\\n\"}, \"EvalPoint\": {\"created_type\": \"EvalPoint\", \"error\": \"Exception:\\n\\tcom.comsol.util.exceptions.FlException: \u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\\nMessages:\\n\\t\u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\\n\", \"real\": [[2.0], [2.0], [2.0], [2.0], [2.0], [2.0], [2.0], [2.0], [1.0], [1.0], [1.0], [1.0], [1.0], [1.0], [1.0], [1.0]]}, \"IntLine\": {\"created_type\": \"IntLine\", \"error\": \"Exception:\\n\\tcom.comsol.util.exceptions.FlException: \u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\\nMessages:\\n\\t\u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\\n\", \"real\": [[40.000000000000014], [20.000000000000007]]}, \"IntPoint\": {\"error\": \"Exception:\\n\\tcom.comsol.util.exceptions.FlException: \u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\\nMessages:\\n\\t\u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\\n\\t- \u8fd0\u7b97: IntPoint\\n\"}, \"IntSurface\": {\"created_type\": \"IntSurface\", \"error\": \"Exception:\\n\\tcom.comsol.util.exceptions.FlException: \u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\\nMessages:\\n\\t\u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\\n\", \"real\": [[28.00000000000004], [14.00000000000002]]}, \"IntVolume\": {\"created_type\": \"IntVolume\", \"error\": \"Exception:\\n\\tcom.comsol.util.exceptions.FlException: \u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\\nMessages:\\n\\t\u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\\n\", \"real\": [[5.999999999999938], [2.999999999999969]]}, \"MaxPoint\": {\"error\": \"Exception:\\n\\tcom.comsol.util.exceptions.FlException: \u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\\nMessages:\\n\\t\u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\\n\\t- \u8fd0\u7b97: MaxPoint\\n\"}, \"MinPoint\": {\"error\": \"Exception:\\n\\tcom.comsol.util.exceptions.FlException: \u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\\nMessages:\\n\\t\u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\\n\\t- \u8fd0\u7b97: MinPoint\\n\"}}, \"source_sha256\": \"0961b650c00d917ed3f98f5143461def2bbe455994f298380dc81c879f2b1621\"}, \"started_at_ms\": \"1790042283468\", \"status\": \"SUCCEEDED\", \"type\": \"code_execute\"}}, \"error\": null, \"execution\": {\"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"dirty\": false, \"idempotency_key\": \"native_measure_types_20260922T0158Z-run-code-execute_java-2\", \"job_id\": \"8d6045a2-0481-4765-b473-0a3361f4b3d1\", \"model_ownership\": \"mcp_owned\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp1\", \"schema_version\": 1, \"server_instance_id\": \"685b28072703906202f65155884de397ea7fa102892a38c09aff963e628e1d33\", \"session_id\": \"session-18677d36c9efbac72e27a0af\"}, \"operation_id\": \"930e9177-1004-4158-bc6a-fb61811a18af\", \"request_hash\": \"e286722c809236e2a01d8a9d21212a783d0cd4101589d1c3384e13cf3cac6c10\", \"request_id\": \"native_measure_types_20260922T0158Z-run-code-execute_java-2\", \"revision\": 2, \"server_ownership\": \"shared\", \"session_id\": \"session-18677d36c9efbac72e27a0af\"}, \"success\": true}",
+        "annotations": null,
+        "meta": null
+      }
+    ],
+    "payload": {
+      "success": true,
+      "data": {
+        "source_sha256": "0961b650c00d917ed3f98f5143461def2bbe455994f298380dc81c879f2b1621",
+        "entrypoint": "MeasureProbe",
+        "worker": {
+          "ok": true,
+          "request_id": "930e9177-1004-4158-bc6a-fb61811a18af",
+          "type": "code_execute",
+          "status": "SUCCEEDED",
+          "queued_at_ms": "1790042283468",
+          "started_at_ms": "1790042283468",
+          "completed_at_ms": "1790042283688",
+          "result": {
+            "executed": true,
+            "model_tag": "mcp1",
+            "source_sha256": "0961b650c00d917ed3f98f5143461def2bbe455994f298380dc81c879f2b1621",
+            "entrypoint": "MeasureProbe",
+            "readback": {
+              "IntPoint": {
+                "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\nMessages:\n\t\u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\n\t- \u8fd0\u7b97: IntPoint\n"
+              },
+              "AvPoint": {
+                "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\nMessages:\n\t\u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\n\t- \u8fd0\u7b97: AvPoint\n"
+              },
+              "EvalPoint": {
+                "created_type": "EvalPoint",
+                "real": [
+                  [
+                    2.0
+                  ],
+                  [
+                    2.0
+                  ],
+                  [
+                    2.0
+                  ],
+                  [
+                    2.0
+                  ],
+                  [
+                    2.0
+                  ],
+                  [
+                    2.0
+                  ],
+                  [
+                    2.0
+                  ],
+                  [
+                    2.0
+                  ],
+                  [
+                    1.0
+                  ],
+                  [
+                    1.0
+                  ],
+                  [
+                    1.0
+                  ],
+                  [
+                    1.0
+                  ],
+                  [
+                    1.0
+                  ],
+                  [
+                    1.0
+                  ],
+                  [
+                    1.0
+                  ],
+                  [
+                    1.0
+                  ]
+                ],
+                "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\nMessages:\n\t\u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\n"
+              },
+              "MaxPoint": {
+                "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\nMessages:\n\t\u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\n\t- \u8fd0\u7b97: MaxPoint\n"
+              },
+              "MinPoint": {
+                "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\nMessages:\n\t\u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\n\t- \u8fd0\u7b97: MinPoint\n"
+              },
+              "IntLine": {
+                "created_type": "IntLine",
+                "real": [
+                  [
+                    40.000000000000014
+                  ],
+                  [
+                    20.000000000000007
+                  ]
+                ],
+                "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\nMessages:\n\t\u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\n"
+              },
+              "IntSurface": {
+                "created_type": "IntSurface",
+                "real": [
+                  [
+                    28.00000000000004
+                  ],
+                  [
+                    14.00000000000002
+                  ]
+                ],
+                "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\nMessages:\n\t\u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\n"
+              },
+              "IntVolume": {
+                "created_type": "IntVolume",
+                "real": [
+                  [
+                    5.999999999999938
+                  ],
+                  [
+                    2.999999999999969
+                  ]
+                ],
+                "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\nMessages:\n\t\u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\n"
+              }
+            }
+          }
+        },
+        "before": {
+          "tag": "mcp1",
+          "model_tag": "mcp1",
+          "fingerprint": "d7f1f05e74597e6bcbf7fa24a07fbd9fc3b26a108fc08d47adb83a01e3b5ca7b",
+          "fingerprint_scope": [
+            "tag",
+            "label",
+            "file_path",
+            "time_modified",
+            "parameters"
+          ],
+          "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+          "external_event_counter": 0,
+          "changed_tags": [],
+          "server_instance_id": "127.0.0.1:59136",
+          "worker_instance_id": "721245e3-b779-4bba-a879-0a66cc51f25c",
+          "instance_id": "721245e3-b779-4bba-a879-0a66cc51f25c",
+          "generation": 2
+        },
+        "after": {
+          "tag": "mcp1",
+          "model_tag": "mcp1",
+          "fingerprint": "d7f1f05e74597e6bcbf7fa24a07fbd9fc3b26a108fc08d47adb83a01e3b5ca7b",
+          "fingerprint_scope": [
+            "tag",
+            "label",
+            "file_path",
+            "time_modified",
+            "parameters"
+          ],
+          "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+          "external_event_counter": 0,
+          "changed_tags": [],
+          "server_instance_id": "127.0.0.1:59136",
+          "worker_instance_id": "721245e3-b779-4bba-a879-0a66cc51f25c",
+          "instance_id": "721245e3-b779-4bba-a879-0a66cc51f25c",
+          "generation": 2
+        },
+        "readback": {
+          "executed": true,
+          "model_tag": "mcp1",
+          "source_sha256": "0961b650c00d917ed3f98f5143461def2bbe455994f298380dc81c879f2b1621",
+          "entrypoint": "MeasureProbe",
+          "readback": {
+            "IntPoint": {
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\nMessages:\n\t\u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\n\t- \u8fd0\u7b97: IntPoint\n"
+            },
+            "AvPoint": {
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\nMessages:\n\t\u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\n\t- \u8fd0\u7b97: AvPoint\n"
+            },
+            "EvalPoint": {
+              "created_type": "EvalPoint",
+              "real": [
+                [
+                  2.0
+                ],
+                [
+                  2.0
+                ],
+                [
+                  2.0
+                ],
+                [
+                  2.0
+                ],
+                [
+                  2.0
+                ],
+                [
+                  2.0
+                ],
+                [
+                  2.0
+                ],
+                [
+                  2.0
+                ],
+                [
+                  1.0
+                ],
+                [
+                  1.0
+                ],
+                [
+                  1.0
+                ],
+                [
+                  1.0
+                ],
+                [
+                  1.0
+                ],
+                [
+                  1.0
+                ],
+                [
+                  1.0
+                ],
+                [
+                  1.0
+                ]
+              ],
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\nMessages:\n\t\u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\n"
+            },
+            "MaxPoint": {
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\nMessages:\n\t\u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\n\t- \u8fd0\u7b97: MaxPoint\n"
+            },
+            "MinPoint": {
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\nMessages:\n\t\u5728\u8fd9\u4e2a\u60c5\u666f\u4e2d\u4e0d\u80fd\u521b\u5efa\u672c\u64cd\u4f5c\u3002\n\t- \u8fd0\u7b97: MinPoint\n"
+            },
+            "IntLine": {
+              "created_type": "IntLine",
+              "real": [
+                [
+                  40.000000000000014
+                ],
+                [
+                  20.000000000000007
+                ]
+              ],
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\nMessages:\n\t\u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\n"
+            },
+            "IntSurface": {
+              "created_type": "IntSurface",
+              "real": [
+                [
+                  28.00000000000004
+                ],
+                [
+                  14.00000000000002
+                ]
+              ],
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\nMessages:\n\t\u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\n"
+            },
+            "IntVolume": {
+              "created_type": "IntVolume",
+              "real": [
+                [
+                  5.999999999999938
+                ],
+                [
+                  2.999999999999969
+                ]
+              ],
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\nMessages:\n\t\u4ec5\u53d7\u201cEval\u201d\u3001\u201cInterp\u201d\u548c\u201cGlobal\u201d\u652f\u6301\u3002\n"
+            }
+          }
+        },
+        "execution_success": true,
+        "domain_state": "succeeded",
+        "verification_status": "NOT_APPLICABLE",
+        "execution_state_unknown": false,
+        "partial_change": false,
+        "cleanup_failed": false,
+        "dispatch_stage": "post_dispatch",
+        "operation": "code.execute_java",
+        "effect": "project_write",
+        "domain_outcome": {
+          "operation": "",
+          "state": "succeeded",
+          "verification_status": "NOT_APPLICABLE",
+          "cleanup_failed": false,
+          "execution_state_unknown": false,
+          "dispatch_stage": "post_dispatch"
+        },
+        "isolation_proof": {
+          "verified": true,
+          "receipt": "REDACTED",
+          "pid": 81174,
+          "birth": "Tue Sep 22 09:57:43 2026",
+          "endpoint": "127.0.0.1:59136",
+          "listener": {
+            "pid": 81174,
+            "endpoint": "*:59136",
+            "local_endpoint": "*:59136",
+            "remote_endpoint": null,
+            "state": "LISTEN",
+            "raw": "java    81174 everwalker   59u  IPv6 0x6c0e97b56f47b203      0t0  TCP *:59136 (LISTEN)"
+          },
+          "listener_binding": "wildcard",
+          "loopback_listener": false,
+          "worker_pid": 81385,
+          "established_client_pids": [
+            81174,
+            81385
+          ],
+          "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+          "config_inode": 14720294,
+          "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+          "api_probe": {
+            "probe_kind": "comsol_java_api",
+            "observed_at": "2026-09-22T01:57:56Z",
+            "loopback_address": "127.0.0.1",
+            "loopback_port": 59136,
+            "authenticated_api_success": true,
+            "nonloopback_address": "192.168.100.152",
+            "nonloopback_port": 59136,
+            "nonloopback_api_exception_http_status": null,
+            "denial_evidence_source": "server_access_log",
+            "server_access_log": {
+              "status": "PASS",
+              "phase": "java_connect_only",
+              "path": "$REPO/evidence/phase4_3/runs/native_measure_types_20260922T0158Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+              "inode": 29863028,
+              "offset_before": 0,
+              "offset_after": 261,
+              "segment_sha256": "bc1c2f59bfa2fe7ea801759c17cea130d44157e6259712cac0ecbcc39931299a",
+              "java_request_id": "g2-valve-nonloopback-connect",
+              "started_at": "2026-09-22T01:57:48Z",
+              "finished_at": "2026-09-22T01:57:56Z",
+              "entries": [
+                {
+                  "peer": "127.0.0.1",
+                  "method": "GET",
+                  "route": "/webbridge/websocket",
+                  "http_status": 101
+                },
+                {
+                  "peer": "127.0.0.1",
+                  "method": "GET",
+                  "route": "/webbridge/websocket",
+                  "http_status": 101
+                },
+                {
+                  "peer": "192.168.100.152",
+                  "method": "GET",
+                  "route": "/webbridge/websocket",
+                  "http_status": 403
+                }
+              ],
+              "parsed_nonloopback_entry": {
+                "peer": "192.168.100.152",
+                "method": "GET",
+                "route": "/webbridge/websocket",
+                "http_status": 403
+              },
+              "raw_probe_started_after_capture": true
+            }
+          },
+          "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer"
+        }
+      },
+      "error": null,
+      "execution": {
+        "session_id": "session-18677d36c9efbac72e27a0af",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-18677d36c9efbac72e27a0af",
+          "server_instance_id": "685b28072703906202f65155884de397ea7fa102892a38c09aff963e628e1d33",
+          "model_tag": "mcp1",
+          "generation": 1
+        },
+        "revision": 2,
+        "dirty": false,
+        "server_ownership": "shared",
+        "model_ownership": "mcp_owned",
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "request_id": "native_measure_types_20260922T0158Z-run-code-execute_java-2",
+        "operation_id": "930e9177-1004-4158-bc6a-fb61811a18af",
+        "request_hash": "e286722c809236e2a01d8a9d21212a783d0cd4101589d1c3384e13cf3cac6c10",
+        "idempotency_key": "native_measure_types_20260922T0158Z-run-code-execute_java-2",
+        "job_id": "8d6045a2-0481-4765-b473-0a3361f4b3d1"
+      }
+    }
+  }
+]

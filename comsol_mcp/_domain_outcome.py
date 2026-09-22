@@ -187,7 +187,7 @@ SELECTION_MUTATION_METHODS = frozenset({
 
 #: Overloaded methods that are getters with 0 args, setters with 1+ args
 OVERLOADED_SETTER_METHODS = frozenset({
-    "label", "active", "lengthUnit", "comments", "name", "tag",
+    "label", "active", "lengthUnit", "comments", "name", "tag", "model",
 })
 
 #: Pure accessor / query methods that never mutate the model
@@ -195,15 +195,20 @@ KNOWN_READ_METHODS = frozenset({
     "tags", "uniquetag", "getComsolVersion", "getFilePath",
     "getType", "getString", "getDouble", "getInt", "getBoolean",
     "getStringArray", "getDoubleArray", "getIntArray",
-    "getReal", "getImag", "getComplex", "getCoordinates",
+    "getReal", "getImag", "getComplex", "getCoordinates", "getCoordinatesShape",
     "getValue", "getData", "getEntryKeys", "getEntryKeyIndex", "getEntryTypes",
     "index", "ndims", "size", "hasField", "isInheriting", "isActive", "hasProduct",
-    "param", "variable", "component", "physics", "material", "study", "sol",
+    "param", "variable", "component", "modelNode", "physics", "material", "study", "sol",
     "mesh", "result", "numerical", "plot", "export", "field", "prop", "dataset",
     "feature", "selection", "measure", "cminpack", "batch", "func", "probe",
     "table", "node", "get", "problems", "getNData", "getTableData",
     "getColumnHeaders", "getRowHeaders", "getNRows", "getFilledReal",
     "getFilledImag", "getImagData", "getPVals",
+    "getLastComputationTime", "getLastComputationDate", "getLastComputationVersion",
+    "isComplex", "isAxisymmetric", "getSDim", "getSolutioninfo",
+    "getOuterSolnum", "getMaxInner", "getLevelNames", "getSolnum", "getSolnums",
+    "properties", "getPNames", "getPvals", "getUnits", "getUnit", "getPNamesOuter", "getPUnitsOuter",
+    "getSolverSequence",
 })
 
 
@@ -573,6 +578,10 @@ def classify(operation: str, data: Mapping[str, Any] | None, *,
 
     details: dict[str, Any] = {}
     signals: dict[str, Any] = {}
+    witness_payload = _merge_witness_provenance(
+        data.get("witness"), _witness_dict(witness)
+    )
+    witness_mutation = _witness_mutation_state(witness_payload)
 
     status_state, status_signals = _classify_status(data.get("status"), details)
     signals.update(status_signals)
@@ -614,11 +623,49 @@ def classify(operation: str, data: Mapping[str, Any] | None, *,
         or signals.get("status_execution_state_unknown")
     )
     mutation_evidence = bool(applied_count) or bool(signals.get("partial_change")) or bool(signals.get("status_partial_change"))
+    # A callback can publish a refusal after the worker has already dispatched a
+    # mutation-class method.  The witness is the authoritative provenance for
+    # that fact; applied/partial counters are only a separate, domain-level hint.
+    # A missing/null witness contributes no mutation evidence, but it also
+    # cannot satisfy the separate witness proof required for a clean refusal.
+    # A true mutation witness is the authoritative contradiction when present.
+    if witness_mutation is True:
+        mutation_evidence = True
+        signals["witness_mutation_issued"] = True
+    elif witness_mutation is False:
+        signals["witness_mutation_issued"] = False
+    elif witness_payload is not None:
+        signals["witness_mutation_issued"] = None
     if engine_changed is True:
         mutation_evidence = True
 
+    # A clean refusal needs both proofs: an explicit validation stage and an
+    # existing witness that explicitly says no mutation was dispatched.  A
+    # mutation witness, a post-dispatch stage, a missing/null witness, or any
+    # other mutation evidence leaves the pre-dispatch claim unproven and must
+    # poison the state for reconciliation.  Do not let the refusal's own error
+    # code mask that UNKNOWN outcome, and preserve the observed stage below.
+    refusal_proven = (
+        declared_refusal
+        and dispatch_stage == STAGE_VALIDATION
+        and witness_mutation is False
+        and not unknown_signal
+        and not mutation_evidence
+    )
+    refusal_contradiction = declared_refusal and not refusal_proven
+    if refusal_contradiction:
+        signals["refusal_proof_contradiction"] = True
+        unknown_signal = True
+        details["unproven_pre_dispatch"] = True
+        details["refusal_proof"] = {
+            "dispatch_stage": dispatch_stage,
+            "witness_mutation_issued": witness_mutation,
+        }
+        if success_record is not None:
+            details["contradictory_refusal"] = dict(success_record)
+
     # -- precedence 1: an unresolved engine state or an unverified cleanup -----
-    if declared_refusal and not unknown_signal and not mutation_evidence:
+    if refusal_proven:
         # A refusal the dispatcher could prove happened before its first engine
         # mutation is a clean failure: no unknown state, nothing to reconcile.
         state = STATE_FAILED
@@ -655,7 +702,9 @@ def classify(operation: str, data: Mapping[str, Any] | None, *,
     execution_status = _execution_status(data)
     if state == STATE_SUCCEEDED and verification_status == VERIFICATION_FAILED:
         state = STATE_PARTIAL
-    failure = success_record
+    # A refusal whose proof was contradicted is an UNKNOWN reconciliation case,
+    # even though the refusal block carries an otherwise usable error code.
+    failure = None if refusal_contradiction else success_record
     if state != STATE_SUCCEEDED and failure is None:
         declared_failure = _first_failed_record(data.get("failed"))
         if declared_failure is not None:
@@ -700,7 +749,11 @@ def classify(operation: str, data: Mapping[str, Any] | None, *,
         failure=failure,
         engine_error=engine_error,
         cleanup_failed=bool(signals.get("cleanup_failed")),
-        execution_state_unknown=bool(signals.get("execution_state_unknown") or signals.get("engine_state_unknown")),
+        execution_state_unknown=bool(
+            signals.get("execution_state_unknown")
+            or signals.get("engine_state_unknown")
+            or signals.get("refusal_proof_contradiction")
+        ),
         verification=verification,
         applied_count=applied_count,
         failed_count=failed_count,
@@ -708,7 +761,7 @@ def classify(operation: str, data: Mapping[str, Any] | None, *,
         status_token=details.get("status_token"),
         execution_status=execution_status,
         dispatch_stage=dispatch_stage,
-        witness=_witness_dict(witness),
+        witness=witness_payload,
         details=details,
     )
 
@@ -753,6 +806,84 @@ def _witness_dict(witness: DispatchWitness | Mapping[str, Any] | None) -> dict[s
     if isinstance(witness, DispatchWitness):
         return witness.as_dict()
     return dict(witness)
+
+
+def _witness_mutation_state(witness: Mapping[str, Any] | None) -> bool | None:
+    """Return the explicit mutation bit from existing witness provenance.
+
+    ``False`` is proof only when it is explicitly published.  A missing or
+    null bit is unknown; it cannot satisfy the pre-dispatch proof and must not
+    be inferred from a method list or from the absence of a witness.
+    """
+    if not isinstance(witness, Mapping):
+        return None
+    value = witness.get("mutation_issued")
+    return value if isinstance(value, bool) else None
+
+
+def _merge_witness_provenance(*containers: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    """Carry an already-published witness into envelope classification.
+
+    The inner domain record is preferred for descriptive fields, while the
+    mutation bit is monotone: an inner/outer ``True`` cannot be cleared by an
+    outer ``False``.  An explicit ``null`` keeps a false record from becoming
+    a fabricated clean proof.  This only merges existing records; it never
+    creates a new dispatch or a synthetic clean witness.
+    """
+    candidates: list[Mapping[str, Any]] = [
+        value for value in containers
+        if isinstance(value, Mapping)
+    ]
+    if not candidates:
+        return None
+    merged: dict[str, Any] = {}
+    states: list[bool | None] = []
+    has_explicit_state = False
+    for candidate in candidates:
+        for key, value in candidate.items():
+            if key == "mutation_issued":
+                has_explicit_state = True
+                if isinstance(value, bool):
+                    states.append(value)
+                else:
+                    states.append(None)
+                continue
+            if key not in merged:
+                merged[key] = value
+    if states:
+        # A true witness is monotone and cannot be masked by an outer false.
+        # Conversely, an explicit null keeps a false witness from becoming a
+        # fabricated clean proof.
+        if any(value is True for value in states):
+            merged["mutation_issued"] = True
+        elif any(value is None for value in states):
+            merged["mutation_issued"] = None
+        else:
+            merged["mutation_issued"] = False
+    elif has_explicit_state:
+        merged["mutation_issued"] = None
+    return merged
+
+
+def _envelope_witness(envelope: Mapping[str, Any], detail: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Find witness provenance in the published envelope without re-dispatching."""
+    candidates: list[Mapping[str, Any] | None] = []
+    for container in (detail, envelope):
+        if not isinstance(container, Mapping):
+            continue
+        direct = container.get("witness")
+        candidates.append(direct if isinstance(direct, Mapping) else None)
+        domain_outcome = container.get("domain_outcome")
+        if isinstance(domain_outcome, Mapping):
+            nested = domain_outcome.get("witness")
+            candidates.append(nested if isinstance(nested, Mapping) else None)
+        error = container.get("error")
+        if isinstance(error, Mapping):
+            error_details = error.get("details")
+            if isinstance(error_details, Mapping):
+                nested = error_details.get("witness")
+                candidates.append(nested if isinstance(nested, Mapping) else None)
+    return _merge_witness_provenance(*candidates)
 
 
 # ---------------------------------------------------------------------------
@@ -880,9 +1011,16 @@ def classify_envelope(envelope: Mapping[str, Any], *, engine_changed: bool | Non
     detail: Mapping[str, Any] = raw_detail if isinstance(raw_detail, Mapping) else {}
     declared_state = _string(envelope.get("domain_state"))
     merged = _merge_contract_envelopes(envelope, detail)
+    witness = _envelope_witness(envelope, detail)
+    dispatch_stage = (
+        _string(envelope.get("dispatch_stage"))
+        or _string(detail.get("dispatch_stage"))
+        or STAGE_POST_DISPATCH
+    )
     outcome = classify(
         str(envelope.get("operation") or detail.get("operation") or ""), merged,
-        dispatch_stage=str(envelope.get("dispatch_stage") or STAGE_POST_DISPATCH),
+        dispatch_stage=dispatch_stage,
+        witness=witness,
         engine_changed=engine_changed,
     )
     if declared_state not in STATES or declared_state == outcome.state:
@@ -925,10 +1063,8 @@ __all__ = [
     "DomainOutcome",
     "DispatchWitness",
     "FAILED_STATUS_TOKENS",
-    "MUTATION_METHOD_NAMES",
     "MUTATION_METHOD_PREFIXES",
     "PARTIAL_STATUS_TOKENS",
-    "STAGES",
     "STAGE_POST_DISPATCH",
     "STAGE_VALIDATION",
     "STATES",

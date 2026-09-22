@@ -1,0 +1,3577 @@
+{
+  "calls": [
+    {
+      "body_sha256": "a0a09a802ae7a318f9ddb86665afb3f06ef3b6bbda5b87a1a8d32a5e9e0d11b5",
+      "elapsed_s": 0.06046483397949487,
+      "idempotency_key": "g33-control-001-solve",
+      "mode": "response",
+      "operation": "study.run",
+      "reconcile": false,
+      "request": "g33-control-solve",
+      "require_model": true,
+      "response": {
+        "data_keys": [
+          "job_id",
+          "rpc_wait_expired",
+          "status"
+        ],
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-control-001-solve",
+          "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+          "operation_id": "72ff9f7b-b8f2-4e61-a16d-200589c34446",
+          "request_id": "g33-control-solve"
+        },
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "rpc_wait_expired": true,
+        "status": "RUNNING",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": 0.05,
+      "sequence": 1,
+      "unknown_job_queries": {
+        "active_observed": true,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "needs_retained_runtime": false,
+        "poll_interval_s": 0.1,
+        "poll_rounds": 9,
+        "poll_timeout_s": 60.0,
+        "queries": [
+          {
+            "active": true,
+            "elapsed_s": 0.007411541999317706,
+            "idempotency_key": "g33-control-002-solve-job_status",
+            "mode": "response",
+            "operation": "job_status",
+            "response": {
+              "data_keys": [
+                "created_at",
+                "effective_timeouts",
+                "finished_at",
+                "job_id",
+                "metadata",
+                "operation",
+                "operation_id",
+                "result",
+                "started_at",
+                "status"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "metadata": {},
+              "status": "RUNNING",
+              "success": true,
+              "unknown": null
+            },
+            "status": "RUNNING"
+          },
+          {
+            "active": false,
+            "elapsed_s": 0.008626749971881509,
+            "event_snapshot": {
+              "complete": true,
+              "event_count": 14,
+              "events_sha256": "e1a7ecf438d18993d2a51ae1c41587fa24a713856e58e2bd95247b2ee813d7af",
+              "limit": 1000,
+              "present": true
+            },
+            "idempotency_key": "g33-control-003-solve-job_log",
+            "mode": "response",
+            "operation": "job_log",
+            "response": {
+              "data_keys": [
+                "events",
+                "job_id",
+                "next_offset"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "success": true,
+              "unknown": null
+            },
+            "status": null
+          },
+          {
+            "active": true,
+            "elapsed_s": 0.006138124968856573,
+            "idempotency_key": "g33-control-004-solve-job_result",
+            "mode": "response",
+            "operation": "job_result",
+            "response": {
+              "data_keys": [
+                "created_at",
+                "effective_timeouts",
+                "finished_at",
+                "job_id",
+                "metadata",
+                "operation",
+                "operation_id",
+                "result",
+                "started_at",
+                "status"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "metadata": {},
+              "status": "RUNNING",
+              "success": true,
+              "unknown": null
+            },
+            "status": "RUNNING"
+          },
+          {
+            "active": true,
+            "elapsed_s": 0.00452258309815079,
+            "idempotency_key": "g33-control-005-solve-job_reconcile",
+            "mode": "response",
+            "operation": "job_reconcile",
+            "response": {
+              "data_keys": [
+                "created_at",
+                "effective_timeouts",
+                "finished_at",
+                "job_id",
+                "metadata",
+                "operation",
+                "operation_id",
+                "result",
+                "started_at",
+                "status"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "metadata": {},
+              "status": "RUNNING",
+              "success": true,
+              "unknown": null
+            },
+            "status": "RUNNING"
+          },
+          {
+            "active": true,
+            "elapsed_s": 0.004349666996859014,
+            "idempotency_key": "g33-control-006-solve-poll-001-job_status",
+            "mode": "response",
+            "operation": "job_status",
+            "response": {
+              "data_keys": [
+                "created_at",
+                "effective_timeouts",
+                "finished_at",
+                "job_id",
+                "metadata",
+                "operation",
+                "operation_id",
+                "result",
+                "started_at",
+                "status"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "metadata": {},
+              "status": "RUNNING",
+              "success": true,
+              "unknown": null
+            },
+            "status": "RUNNING"
+          },
+          {
+            "active": false,
+            "elapsed_s": 0.013089041924104095,
+            "event_snapshot": {
+              "complete": true,
+              "event_count": 32,
+              "events_sha256": "ba8e03ce02699e95cd6c2e92b2cd709a98e2c0859db0d5048582b52d4bd97634",
+              "limit": 1000,
+              "present": true
+            },
+            "idempotency_key": "g33-control-007-solve-poll-001-job_log",
+            "mode": "response",
+            "operation": "job_log",
+            "response": {
+              "data_keys": [
+                "events",
+                "job_id",
+                "next_offset"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "success": true,
+              "unknown": null
+            },
+            "status": null
+          },
+          {
+            "active": true,
+            "elapsed_s": 0.00597170798573643,
+            "idempotency_key": "g33-control-008-solve-poll-001-job_reconcile",
+            "mode": "response",
+            "operation": "job_reconcile",
+            "response": {
+              "data_keys": [
+                "created_at",
+                "effective_timeouts",
+                "finished_at",
+                "job_id",
+                "metadata",
+                "operation",
+                "operation_id",
+                "result",
+                "started_at",
+                "status"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "metadata": {},
+              "status": "RUNNING",
+              "success": true,
+              "unknown": null
+            },
+            "status": "RUNNING"
+          },
+          {
+            "active": true,
+            "elapsed_s": 0.006685875006951392,
+            "idempotency_key": "g33-control-009-solve-poll-002-job_status",
+            "mode": "response",
+            "operation": "job_status",
+            "response": {
+              "data_keys": [
+                "created_at",
+                "effective_timeouts",
+                "finished_at",
+                "job_id",
+                "metadata",
+                "operation",
+                "operation_id",
+                "result",
+                "started_at",
+                "status"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "metadata": {},
+              "status": "RUNNING",
+              "success": true,
+              "unknown": null
+            },
+            "status": "RUNNING"
+          },
+          {
+            "active": false,
+            "elapsed_s": 0.01508145802654326,
+            "event_snapshot": {
+              "complete": true,
+              "event_count": 32,
+              "events_sha256": "ba8e03ce02699e95cd6c2e92b2cd709a98e2c0859db0d5048582b52d4bd97634",
+              "limit": 1000,
+              "present": true
+            },
+            "idempotency_key": "g33-control-010-solve-poll-002-job_log",
+            "mode": "response",
+            "operation": "job_log",
+            "response": {
+              "data_keys": [
+                "events",
+                "job_id",
+                "next_offset"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "success": true,
+              "unknown": null
+            },
+            "status": null
+          },
+          {
+            "active": true,
+            "elapsed_s": 0.006921584019437432,
+            "idempotency_key": "g33-control-011-solve-poll-002-job_reconcile",
+            "mode": "response",
+            "operation": "job_reconcile",
+            "response": {
+              "data_keys": [
+                "created_at",
+                "effective_timeouts",
+                "finished_at",
+                "job_id",
+                "metadata",
+                "operation",
+                "operation_id",
+                "result",
+                "started_at",
+                "status"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "metadata": {},
+              "status": "RUNNING",
+              "success": true,
+              "unknown": null
+            },
+            "status": "RUNNING"
+          },
+          {
+            "active": true,
+            "elapsed_s": 0.00643341604154557,
+            "idempotency_key": "g33-control-012-solve-poll-003-job_status",
+            "mode": "response",
+            "operation": "job_status",
+            "response": {
+              "data_keys": [
+                "created_at",
+                "effective_timeouts",
+                "finished_at",
+                "job_id",
+                "metadata",
+                "operation",
+                "operation_id",
+                "result",
+                "started_at",
+                "status"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "metadata": {},
+              "status": "RUNNING",
+              "success": true,
+              "unknown": null
+            },
+            "status": "RUNNING"
+          },
+          {
+            "active": false,
+            "elapsed_s": 0.015055374940857291,
+            "event_snapshot": {
+              "complete": true,
+              "event_count": 32,
+              "events_sha256": "ba8e03ce02699e95cd6c2e92b2cd709a98e2c0859db0d5048582b52d4bd97634",
+              "limit": 1000,
+              "present": true
+            },
+            "idempotency_key": "g33-control-013-solve-poll-003-job_log",
+            "mode": "response",
+            "operation": "job_log",
+            "response": {
+              "data_keys": [
+                "events",
+                "job_id",
+                "next_offset"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "success": true,
+              "unknown": null
+            },
+            "status": null
+          },
+          {
+            "active": true,
+            "elapsed_s": 0.0061365419533103704,
+            "idempotency_key": "g33-control-014-solve-poll-003-job_reconcile",
+            "mode": "response",
+            "operation": "job_reconcile",
+            "response": {
+              "data_keys": [
+                "created_at",
+                "effective_timeouts",
+                "finished_at",
+                "job_id",
+                "metadata",
+                "operation",
+                "operation_id",
+                "result",
+                "started_at",
+                "status"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "metadata": {},
+              "status": "RUNNING",
+              "success": true,
+              "unknown": null
+            },
+            "status": "RUNNING"
+          },
+          {
+            "active": true,
+            "elapsed_s": 0.0076679999474436045,
+            "idempotency_key": "g33-control-015-solve-poll-004-job_status",
+            "mode": "response",
+            "operation": "job_status",
+            "response": {
+              "data_keys": [
+                "created_at",
+                "effective_timeouts",
+                "finished_at",
+                "job_id",
+                "metadata",
+                "operation",
+                "operation_id",
+                "result",
+                "started_at",
+                "status"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "metadata": {},
+              "status": "RUNNING",
+              "success": true,
+              "unknown": null
+            },
+            "status": "RUNNING"
+          },
+          {
+            "active": false,
+            "elapsed_s": 0.01487170800101012,
+            "event_snapshot": {
+              "complete": true,
+              "event_count": 32,
+              "events_sha256": "ba8e03ce02699e95cd6c2e92b2cd709a98e2c0859db0d5048582b52d4bd97634",
+              "limit": 1000,
+              "present": true
+            },
+            "idempotency_key": "g33-control-016-solve-poll-004-job_log",
+            "mode": "response",
+            "operation": "job_log",
+            "response": {
+              "data_keys": [
+                "events",
+                "job_id",
+                "next_offset"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "success": true,
+              "unknown": null
+            },
+            "status": null
+          },
+          {
+            "active": true,
+            "elapsed_s": 0.006464708014391363,
+            "idempotency_key": "g33-control-017-solve-poll-004-job_reconcile",
+            "mode": "response",
+            "operation": "job_reconcile",
+            "response": {
+              "data_keys": [
+                "created_at",
+                "effective_timeouts",
+                "finished_at",
+                "job_id",
+                "metadata",
+                "operation",
+                "operation_id",
+                "result",
+                "started_at",
+                "status"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "metadata": {},
+              "status": "RUNNING",
+              "success": true,
+              "unknown": null
+            },
+            "status": "RUNNING"
+          },
+          {
+            "active": true,
+            "elapsed_s": 0.006595707964152098,
+            "idempotency_key": "g33-control-018-solve-poll-005-job_status",
+            "mode": "response",
+            "operation": "job_status",
+            "response": {
+              "data_keys": [
+                "created_at",
+                "effective_timeouts",
+                "finished_at",
+                "job_id",
+                "metadata",
+                "operation",
+                "operation_id",
+                "result",
+                "started_at",
+                "status"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "metadata": {},
+              "status": "RUNNING",
+              "success": true,
+              "unknown": null
+            },
+            "status": "RUNNING"
+          },
+          {
+            "active": false,
+            "elapsed_s": 0.011631457949988544,
+            "event_snapshot": {
+              "complete": true,
+              "event_count": 32,
+              "events_sha256": "ba8e03ce02699e95cd6c2e92b2cd709a98e2c0859db0d5048582b52d4bd97634",
+              "limit": 1000,
+              "present": true
+            },
+            "idempotency_key": "g33-control-019-solve-poll-005-job_log",
+            "mode": "response",
+            "operation": "job_log",
+            "response": {
+              "data_keys": [
+                "events",
+                "job_id",
+                "next_offset"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "success": true,
+              "unknown": null
+            },
+            "status": null
+          },
+          {
+            "active": true,
+            "elapsed_s": 0.006311833974905312,
+            "idempotency_key": "g33-control-020-solve-poll-005-job_reconcile",
+            "mode": "response",
+            "operation": "job_reconcile",
+            "response": {
+              "data_keys": [
+                "created_at",
+                "effective_timeouts",
+                "finished_at",
+                "job_id",
+                "metadata",
+                "operation",
+                "operation_id",
+                "result",
+                "started_at",
+                "status"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "metadata": {},
+              "status": "RUNNING",
+              "success": true,
+              "unknown": null
+            },
+            "status": "RUNNING"
+          },
+          {
+            "active": true,
+            "elapsed_s": 0.0061338330851867795,
+            "idempotency_key": "g33-control-021-solve-poll-006-job_status",
+            "mode": "response",
+            "operation": "job_status",
+            "response": {
+              "data_keys": [
+                "created_at",
+                "effective_timeouts",
+                "finished_at",
+                "job_id",
+                "metadata",
+                "operation",
+                "operation_id",
+                "result",
+                "started_at",
+                "status"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "metadata": {},
+              "status": "RUNNING",
+              "success": true,
+              "unknown": null
+            },
+            "status": "RUNNING"
+          },
+          {
+            "active": false,
+            "elapsed_s": 0.013253374956548214,
+            "event_snapshot": {
+              "complete": true,
+              "event_count": 32,
+              "events_sha256": "ba8e03ce02699e95cd6c2e92b2cd709a98e2c0859db0d5048582b52d4bd97634",
+              "limit": 1000,
+              "present": true
+            },
+            "idempotency_key": "g33-control-022-solve-poll-006-job_log",
+            "mode": "response",
+            "operation": "job_log",
+            "response": {
+              "data_keys": [
+                "events",
+                "job_id",
+                "next_offset"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "success": true,
+              "unknown": null
+            },
+            "status": null
+          },
+          {
+            "active": true,
+            "elapsed_s": 0.005997208063490689,
+            "idempotency_key": "g33-control-023-solve-poll-006-job_reconcile",
+            "mode": "response",
+            "operation": "job_reconcile",
+            "response": {
+              "data_keys": [
+                "created_at",
+                "effective_timeouts",
+                "finished_at",
+                "job_id",
+                "metadata",
+                "operation",
+                "operation_id",
+                "result",
+                "started_at",
+                "status"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "metadata": {},
+              "status": "RUNNING",
+              "success": true,
+              "unknown": null
+            },
+            "status": "RUNNING"
+          },
+          {
+            "active": true,
+            "elapsed_s": 0.006309291929937899,
+            "idempotency_key": "g33-control-024-solve-poll-007-job_status",
+            "mode": "response",
+            "operation": "job_status",
+            "response": {
+              "data_keys": [
+                "created_at",
+                "effective_timeouts",
+                "finished_at",
+                "job_id",
+                "metadata",
+                "operation",
+                "operation_id",
+                "result",
+                "started_at",
+                "status"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "metadata": {},
+              "status": "RUNNING",
+              "success": true,
+              "unknown": null
+            },
+            "status": "RUNNING"
+          },
+          {
+            "active": false,
+            "elapsed_s": 0.012546584010124207,
+            "event_snapshot": {
+              "complete": true,
+              "event_count": 32,
+              "events_sha256": "ba8e03ce02699e95cd6c2e92b2cd709a98e2c0859db0d5048582b52d4bd97634",
+              "limit": 1000,
+              "present": true
+            },
+            "idempotency_key": "g33-control-025-solve-poll-007-job_log",
+            "mode": "response",
+            "operation": "job_log",
+            "response": {
+              "data_keys": [
+                "events",
+                "job_id",
+                "next_offset"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "success": true,
+              "unknown": null
+            },
+            "status": null
+          },
+          {
+            "active": true,
+            "elapsed_s": 0.0058105409843847156,
+            "idempotency_key": "g33-control-026-solve-poll-007-job_reconcile",
+            "mode": "response",
+            "operation": "job_reconcile",
+            "response": {
+              "data_keys": [
+                "created_at",
+                "effective_timeouts",
+                "finished_at",
+                "job_id",
+                "metadata",
+                "operation",
+                "operation_id",
+                "result",
+                "started_at",
+                "status"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "metadata": {},
+              "status": "RUNNING",
+              "success": true,
+              "unknown": null
+            },
+            "status": "RUNNING"
+          },
+          {
+            "active": true,
+            "elapsed_s": 0.006514042033813894,
+            "idempotency_key": "g33-control-027-solve-poll-008-job_status",
+            "mode": "response",
+            "operation": "job_status",
+            "response": {
+              "data_keys": [
+                "created_at",
+                "effective_timeouts",
+                "finished_at",
+                "job_id",
+                "metadata",
+                "operation",
+                "operation_id",
+                "result",
+                "started_at",
+                "status"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "metadata": {},
+              "status": "RUNNING",
+              "success": true,
+              "unknown": null
+            },
+            "status": "RUNNING"
+          },
+          {
+            "active": false,
+            "elapsed_s": 0.012430000002495944,
+            "event_snapshot": {
+              "complete": true,
+              "event_count": 32,
+              "events_sha256": "ba8e03ce02699e95cd6c2e92b2cd709a98e2c0859db0d5048582b52d4bd97634",
+              "limit": 1000,
+              "present": true
+            },
+            "idempotency_key": "g33-control-028-solve-poll-008-job_log",
+            "mode": "response",
+            "operation": "job_log",
+            "response": {
+              "data_keys": [
+                "events",
+                "job_id",
+                "next_offset"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "success": true,
+              "unknown": null
+            },
+            "status": null
+          },
+          {
+            "active": true,
+            "elapsed_s": 0.005919874995015562,
+            "idempotency_key": "g33-control-029-solve-poll-008-job_reconcile",
+            "mode": "response",
+            "operation": "job_reconcile",
+            "response": {
+              "data_keys": [
+                "created_at",
+                "effective_timeouts",
+                "finished_at",
+                "job_id",
+                "metadata",
+                "operation",
+                "operation_id",
+                "result",
+                "started_at",
+                "status"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "metadata": {},
+              "status": "RUNNING",
+              "success": true,
+              "unknown": null
+            },
+            "status": "RUNNING"
+          },
+          {
+            "active": false,
+            "elapsed_s": 0.007566082989796996,
+            "idempotency_key": "g33-control-030-solve-poll-009-job_status",
+            "mode": "response",
+            "operation": "job_status",
+            "response": {
+              "data_keys": [
+                "created_at",
+                "effective_timeouts",
+                "finished_at",
+                "job_id",
+                "metadata",
+                "operation",
+                "operation_id",
+                "result",
+                "started_at",
+                "status"
+              ],
+              "error_code": null,
+              "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+              "metadata": {},
+              "status": "SUCCEEDED",
+              "success": true,
+              "unknown": null
+            },
+            "status": "SUCCEEDED"
+          }
+        ],
+        "queries_complete": true,
+        "quiescent": true,
+        "terminal_observed": true
+      }
+    },
+    {
+      "body_sha256": "a297946156bae12339143198cda5852abead8efe78e320dc5887d4c5a2e9e737",
+      "elapsed_s": 0.007411541999317706,
+      "idempotency_key": "g33-control-002-solve-job_status",
+      "mode": "response",
+      "operation": "job_status",
+      "reconcile": false,
+      "request": "g33-control-solve-job_status",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "created_at",
+          "effective_timeouts",
+          "finished_at",
+          "job_id",
+          "metadata",
+          "operation",
+          "operation_id",
+          "result",
+          "started_at",
+          "status"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "metadata": {},
+        "status": "RUNNING",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 2
+    },
+    {
+      "body_sha256": "83349196f59bc7a32ec158e295dae1908e25dccebf3517dda508a67cb1366470",
+      "elapsed_s": 0.008626749971881509,
+      "idempotency_key": "g33-control-003-solve-job_log",
+      "mode": "response",
+      "operation": "job_log",
+      "reconcile": false,
+      "request": "g33-control-solve-job_log",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "events",
+          "job_id",
+          "next_offset"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 3
+    },
+    {
+      "body_sha256": "a297946156bae12339143198cda5852abead8efe78e320dc5887d4c5a2e9e737",
+      "elapsed_s": 0.006138124968856573,
+      "idempotency_key": "g33-control-004-solve-job_result",
+      "mode": "response",
+      "operation": "job_result",
+      "reconcile": false,
+      "request": "g33-control-solve-job_result",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "created_at",
+          "effective_timeouts",
+          "finished_at",
+          "job_id",
+          "metadata",
+          "operation",
+          "operation_id",
+          "result",
+          "started_at",
+          "status"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "metadata": {},
+        "status": "RUNNING",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 4
+    },
+    {
+      "body_sha256": "a297946156bae12339143198cda5852abead8efe78e320dc5887d4c5a2e9e737",
+      "elapsed_s": 0.00452258309815079,
+      "idempotency_key": "g33-control-005-solve-job_reconcile",
+      "mode": "response",
+      "operation": "job_reconcile",
+      "reconcile": false,
+      "request": "g33-control-solve-job_reconcile",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "created_at",
+          "effective_timeouts",
+          "finished_at",
+          "job_id",
+          "metadata",
+          "operation",
+          "operation_id",
+          "result",
+          "started_at",
+          "status"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "metadata": {},
+        "status": "RUNNING",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 5
+    },
+    {
+      "body_sha256": "a297946156bae12339143198cda5852abead8efe78e320dc5887d4c5a2e9e737",
+      "elapsed_s": 0.004349666996859014,
+      "idempotency_key": "g33-control-006-solve-poll-001-job_status",
+      "mode": "response",
+      "operation": "job_status",
+      "reconcile": false,
+      "request": "g33-control-solve-poll-001-job_status",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "created_at",
+          "effective_timeouts",
+          "finished_at",
+          "job_id",
+          "metadata",
+          "operation",
+          "operation_id",
+          "result",
+          "started_at",
+          "status"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "metadata": {},
+        "status": "RUNNING",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 6
+    },
+    {
+      "body_sha256": "83349196f59bc7a32ec158e295dae1908e25dccebf3517dda508a67cb1366470",
+      "elapsed_s": 0.013089041924104095,
+      "idempotency_key": "g33-control-007-solve-poll-001-job_log",
+      "mode": "response",
+      "operation": "job_log",
+      "reconcile": false,
+      "request": "g33-control-solve-poll-001-job_log",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "events",
+          "job_id",
+          "next_offset"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 7
+    },
+    {
+      "body_sha256": "a297946156bae12339143198cda5852abead8efe78e320dc5887d4c5a2e9e737",
+      "elapsed_s": 0.00597170798573643,
+      "idempotency_key": "g33-control-008-solve-poll-001-job_reconcile",
+      "mode": "response",
+      "operation": "job_reconcile",
+      "reconcile": false,
+      "request": "g33-control-solve-poll-001-job_reconcile",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "created_at",
+          "effective_timeouts",
+          "finished_at",
+          "job_id",
+          "metadata",
+          "operation",
+          "operation_id",
+          "result",
+          "started_at",
+          "status"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "metadata": {},
+        "status": "RUNNING",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 8
+    },
+    {
+      "body_sha256": "a297946156bae12339143198cda5852abead8efe78e320dc5887d4c5a2e9e737",
+      "elapsed_s": 0.006685875006951392,
+      "idempotency_key": "g33-control-009-solve-poll-002-job_status",
+      "mode": "response",
+      "operation": "job_status",
+      "reconcile": false,
+      "request": "g33-control-solve-poll-002-job_status",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "created_at",
+          "effective_timeouts",
+          "finished_at",
+          "job_id",
+          "metadata",
+          "operation",
+          "operation_id",
+          "result",
+          "started_at",
+          "status"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "metadata": {},
+        "status": "RUNNING",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 9
+    },
+    {
+      "body_sha256": "83349196f59bc7a32ec158e295dae1908e25dccebf3517dda508a67cb1366470",
+      "elapsed_s": 0.01508145802654326,
+      "idempotency_key": "g33-control-010-solve-poll-002-job_log",
+      "mode": "response",
+      "operation": "job_log",
+      "reconcile": false,
+      "request": "g33-control-solve-poll-002-job_log",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "events",
+          "job_id",
+          "next_offset"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 10
+    },
+    {
+      "body_sha256": "a297946156bae12339143198cda5852abead8efe78e320dc5887d4c5a2e9e737",
+      "elapsed_s": 0.006921584019437432,
+      "idempotency_key": "g33-control-011-solve-poll-002-job_reconcile",
+      "mode": "response",
+      "operation": "job_reconcile",
+      "reconcile": false,
+      "request": "g33-control-solve-poll-002-job_reconcile",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "created_at",
+          "effective_timeouts",
+          "finished_at",
+          "job_id",
+          "metadata",
+          "operation",
+          "operation_id",
+          "result",
+          "started_at",
+          "status"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "metadata": {},
+        "status": "RUNNING",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 11
+    },
+    {
+      "body_sha256": "a297946156bae12339143198cda5852abead8efe78e320dc5887d4c5a2e9e737",
+      "elapsed_s": 0.00643341604154557,
+      "idempotency_key": "g33-control-012-solve-poll-003-job_status",
+      "mode": "response",
+      "operation": "job_status",
+      "reconcile": false,
+      "request": "g33-control-solve-poll-003-job_status",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "created_at",
+          "effective_timeouts",
+          "finished_at",
+          "job_id",
+          "metadata",
+          "operation",
+          "operation_id",
+          "result",
+          "started_at",
+          "status"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "metadata": {},
+        "status": "RUNNING",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 12
+    },
+    {
+      "body_sha256": "83349196f59bc7a32ec158e295dae1908e25dccebf3517dda508a67cb1366470",
+      "elapsed_s": 0.015055374940857291,
+      "idempotency_key": "g33-control-013-solve-poll-003-job_log",
+      "mode": "response",
+      "operation": "job_log",
+      "reconcile": false,
+      "request": "g33-control-solve-poll-003-job_log",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "events",
+          "job_id",
+          "next_offset"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 13
+    },
+    {
+      "body_sha256": "a297946156bae12339143198cda5852abead8efe78e320dc5887d4c5a2e9e737",
+      "elapsed_s": 0.0061365419533103704,
+      "idempotency_key": "g33-control-014-solve-poll-003-job_reconcile",
+      "mode": "response",
+      "operation": "job_reconcile",
+      "reconcile": false,
+      "request": "g33-control-solve-poll-003-job_reconcile",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "created_at",
+          "effective_timeouts",
+          "finished_at",
+          "job_id",
+          "metadata",
+          "operation",
+          "operation_id",
+          "result",
+          "started_at",
+          "status"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "metadata": {},
+        "status": "RUNNING",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 14
+    },
+    {
+      "body_sha256": "a297946156bae12339143198cda5852abead8efe78e320dc5887d4c5a2e9e737",
+      "elapsed_s": 0.0076679999474436045,
+      "idempotency_key": "g33-control-015-solve-poll-004-job_status",
+      "mode": "response",
+      "operation": "job_status",
+      "reconcile": false,
+      "request": "g33-control-solve-poll-004-job_status",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "created_at",
+          "effective_timeouts",
+          "finished_at",
+          "job_id",
+          "metadata",
+          "operation",
+          "operation_id",
+          "result",
+          "started_at",
+          "status"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "metadata": {},
+        "status": "RUNNING",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 15
+    },
+    {
+      "body_sha256": "83349196f59bc7a32ec158e295dae1908e25dccebf3517dda508a67cb1366470",
+      "elapsed_s": 0.01487170800101012,
+      "idempotency_key": "g33-control-016-solve-poll-004-job_log",
+      "mode": "response",
+      "operation": "job_log",
+      "reconcile": false,
+      "request": "g33-control-solve-poll-004-job_log",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "events",
+          "job_id",
+          "next_offset"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 16
+    },
+    {
+      "body_sha256": "a297946156bae12339143198cda5852abead8efe78e320dc5887d4c5a2e9e737",
+      "elapsed_s": 0.006464708014391363,
+      "idempotency_key": "g33-control-017-solve-poll-004-job_reconcile",
+      "mode": "response",
+      "operation": "job_reconcile",
+      "reconcile": false,
+      "request": "g33-control-solve-poll-004-job_reconcile",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "created_at",
+          "effective_timeouts",
+          "finished_at",
+          "job_id",
+          "metadata",
+          "operation",
+          "operation_id",
+          "result",
+          "started_at",
+          "status"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "metadata": {},
+        "status": "RUNNING",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 17
+    },
+    {
+      "body_sha256": "a297946156bae12339143198cda5852abead8efe78e320dc5887d4c5a2e9e737",
+      "elapsed_s": 0.006595707964152098,
+      "idempotency_key": "g33-control-018-solve-poll-005-job_status",
+      "mode": "response",
+      "operation": "job_status",
+      "reconcile": false,
+      "request": "g33-control-solve-poll-005-job_status",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "created_at",
+          "effective_timeouts",
+          "finished_at",
+          "job_id",
+          "metadata",
+          "operation",
+          "operation_id",
+          "result",
+          "started_at",
+          "status"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "metadata": {},
+        "status": "RUNNING",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 18
+    },
+    {
+      "body_sha256": "83349196f59bc7a32ec158e295dae1908e25dccebf3517dda508a67cb1366470",
+      "elapsed_s": 0.011631457949988544,
+      "idempotency_key": "g33-control-019-solve-poll-005-job_log",
+      "mode": "response",
+      "operation": "job_log",
+      "reconcile": false,
+      "request": "g33-control-solve-poll-005-job_log",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "events",
+          "job_id",
+          "next_offset"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 19
+    },
+    {
+      "body_sha256": "a297946156bae12339143198cda5852abead8efe78e320dc5887d4c5a2e9e737",
+      "elapsed_s": 0.006311833974905312,
+      "idempotency_key": "g33-control-020-solve-poll-005-job_reconcile",
+      "mode": "response",
+      "operation": "job_reconcile",
+      "reconcile": false,
+      "request": "g33-control-solve-poll-005-job_reconcile",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "created_at",
+          "effective_timeouts",
+          "finished_at",
+          "job_id",
+          "metadata",
+          "operation",
+          "operation_id",
+          "result",
+          "started_at",
+          "status"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "metadata": {},
+        "status": "RUNNING",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 20
+    },
+    {
+      "body_sha256": "a297946156bae12339143198cda5852abead8efe78e320dc5887d4c5a2e9e737",
+      "elapsed_s": 0.0061338330851867795,
+      "idempotency_key": "g33-control-021-solve-poll-006-job_status",
+      "mode": "response",
+      "operation": "job_status",
+      "reconcile": false,
+      "request": "g33-control-solve-poll-006-job_status",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "created_at",
+          "effective_timeouts",
+          "finished_at",
+          "job_id",
+          "metadata",
+          "operation",
+          "operation_id",
+          "result",
+          "started_at",
+          "status"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "metadata": {},
+        "status": "RUNNING",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 21
+    },
+    {
+      "body_sha256": "83349196f59bc7a32ec158e295dae1908e25dccebf3517dda508a67cb1366470",
+      "elapsed_s": 0.013253374956548214,
+      "idempotency_key": "g33-control-022-solve-poll-006-job_log",
+      "mode": "response",
+      "operation": "job_log",
+      "reconcile": false,
+      "request": "g33-control-solve-poll-006-job_log",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "events",
+          "job_id",
+          "next_offset"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 22
+    },
+    {
+      "body_sha256": "a297946156bae12339143198cda5852abead8efe78e320dc5887d4c5a2e9e737",
+      "elapsed_s": 0.005997208063490689,
+      "idempotency_key": "g33-control-023-solve-poll-006-job_reconcile",
+      "mode": "response",
+      "operation": "job_reconcile",
+      "reconcile": false,
+      "request": "g33-control-solve-poll-006-job_reconcile",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "created_at",
+          "effective_timeouts",
+          "finished_at",
+          "job_id",
+          "metadata",
+          "operation",
+          "operation_id",
+          "result",
+          "started_at",
+          "status"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "metadata": {},
+        "status": "RUNNING",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 23
+    },
+    {
+      "body_sha256": "a297946156bae12339143198cda5852abead8efe78e320dc5887d4c5a2e9e737",
+      "elapsed_s": 0.006309291929937899,
+      "idempotency_key": "g33-control-024-solve-poll-007-job_status",
+      "mode": "response",
+      "operation": "job_status",
+      "reconcile": false,
+      "request": "g33-control-solve-poll-007-job_status",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "created_at",
+          "effective_timeouts",
+          "finished_at",
+          "job_id",
+          "metadata",
+          "operation",
+          "operation_id",
+          "result",
+          "started_at",
+          "status"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "metadata": {},
+        "status": "RUNNING",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 24
+    },
+    {
+      "body_sha256": "83349196f59bc7a32ec158e295dae1908e25dccebf3517dda508a67cb1366470",
+      "elapsed_s": 0.012546584010124207,
+      "idempotency_key": "g33-control-025-solve-poll-007-job_log",
+      "mode": "response",
+      "operation": "job_log",
+      "reconcile": false,
+      "request": "g33-control-solve-poll-007-job_log",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "events",
+          "job_id",
+          "next_offset"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 25
+    },
+    {
+      "body_sha256": "a297946156bae12339143198cda5852abead8efe78e320dc5887d4c5a2e9e737",
+      "elapsed_s": 0.0058105409843847156,
+      "idempotency_key": "g33-control-026-solve-poll-007-job_reconcile",
+      "mode": "response",
+      "operation": "job_reconcile",
+      "reconcile": false,
+      "request": "g33-control-solve-poll-007-job_reconcile",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "created_at",
+          "effective_timeouts",
+          "finished_at",
+          "job_id",
+          "metadata",
+          "operation",
+          "operation_id",
+          "result",
+          "started_at",
+          "status"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "metadata": {},
+        "status": "RUNNING",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 26
+    },
+    {
+      "body_sha256": "a297946156bae12339143198cda5852abead8efe78e320dc5887d4c5a2e9e737",
+      "elapsed_s": 0.006514042033813894,
+      "idempotency_key": "g33-control-027-solve-poll-008-job_status",
+      "mode": "response",
+      "operation": "job_status",
+      "reconcile": false,
+      "request": "g33-control-solve-poll-008-job_status",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "created_at",
+          "effective_timeouts",
+          "finished_at",
+          "job_id",
+          "metadata",
+          "operation",
+          "operation_id",
+          "result",
+          "started_at",
+          "status"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "metadata": {},
+        "status": "RUNNING",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 27
+    },
+    {
+      "body_sha256": "83349196f59bc7a32ec158e295dae1908e25dccebf3517dda508a67cb1366470",
+      "elapsed_s": 0.012430000002495944,
+      "idempotency_key": "g33-control-028-solve-poll-008-job_log",
+      "mode": "response",
+      "operation": "job_log",
+      "reconcile": false,
+      "request": "g33-control-solve-poll-008-job_log",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "events",
+          "job_id",
+          "next_offset"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 28
+    },
+    {
+      "body_sha256": "a297946156bae12339143198cda5852abead8efe78e320dc5887d4c5a2e9e737",
+      "elapsed_s": 0.005919874995015562,
+      "idempotency_key": "g33-control-029-solve-poll-008-job_reconcile",
+      "mode": "response",
+      "operation": "job_reconcile",
+      "reconcile": false,
+      "request": "g33-control-solve-poll-008-job_reconcile",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "created_at",
+          "effective_timeouts",
+          "finished_at",
+          "job_id",
+          "metadata",
+          "operation",
+          "operation_id",
+          "result",
+          "started_at",
+          "status"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "metadata": {},
+        "status": "RUNNING",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 29
+    },
+    {
+      "body_sha256": "a297946156bae12339143198cda5852abead8efe78e320dc5887d4c5a2e9e737",
+      "elapsed_s": 0.007566082989796996,
+      "idempotency_key": "g33-control-030-solve-poll-009-job_status",
+      "mode": "response",
+      "operation": "job_status",
+      "reconcile": false,
+      "request": "g33-control-solve-poll-009-job_status",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "created_at",
+          "effective_timeouts",
+          "finished_at",
+          "job_id",
+          "metadata",
+          "operation",
+          "operation_id",
+          "result",
+          "started_at",
+          "status"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "metadata": {},
+        "status": "SUCCEEDED",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 30
+    },
+    {
+      "body_sha256": "83349196f59bc7a32ec158e295dae1908e25dccebf3517dda508a67cb1366470",
+      "elapsed_s": 0.012490457971580327,
+      "idempotency_key": "g33-control-031-retry-pre-job-log",
+      "mode": "response",
+      "operation": "job_log",
+      "reconcile": false,
+      "request": "g33-control-retry-pre-job-log",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "events",
+          "job_id",
+          "next_offset"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 31
+    },
+    {
+      "body_sha256": "83349196f59bc7a32ec158e295dae1908e25dccebf3517dda508a67cb1366470",
+      "elapsed_s": 0.012273000087589025,
+      "idempotency_key": "g33-control-032-retry-post-job-log",
+      "mode": "response",
+      "operation": "job_log",
+      "reconcile": false,
+      "request": "g33-control-retry-post-job-log",
+      "require_model": false,
+      "response": {
+        "data_keys": [
+          "events",
+          "job_id",
+          "next_offset"
+        ],
+        "error_code": null,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "success": true,
+        "unknown": null
+      },
+      "rpc_timeout_s": null,
+      "sequence": 32
+    }
+  ],
+  "rows": [
+    {
+      "assertions": {
+        "active_observed": true,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "poll_rounds": 9,
+        "poll_timeout_s": 60.0,
+        "queries_complete": true,
+        "query_operations": [
+          "job_status",
+          "job_log",
+          "job_result",
+          "job_reconcile",
+          "job_status",
+          "job_log",
+          "job_reconcile",
+          "job_status",
+          "job_log",
+          "job_reconcile",
+          "job_status",
+          "job_log",
+          "job_reconcile",
+          "job_status",
+          "job_log",
+          "job_reconcile",
+          "job_status",
+          "job_log",
+          "job_reconcile",
+          "job_status",
+          "job_log",
+          "job_reconcile",
+          "job_status",
+          "job_log",
+          "job_reconcile",
+          "job_status",
+          "job_log",
+          "job_reconcile",
+          "job_status"
+        ],
+        "quiescent": true,
+        "quiescent_source": "data.metadata.reconciled_quiescent",
+        "terminal_observed": true
+      },
+      "case": "unknown-job-query",
+      "idempotency_key": null,
+      "operation": "job_status/job_log/job_result/job_reconcile",
+      "query_results": [
+        {
+          "active": true,
+          "elapsed_s": 0.007411541999317706,
+          "idempotency_key": "g33-control-002-solve-job_status",
+          "mode": "response",
+          "operation": "job_status",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": false,
+          "elapsed_s": 0.008626749971881509,
+          "event_snapshot": {
+            "complete": true,
+            "event_count": 14,
+            "events_sha256": "e1a7ecf438d18993d2a51ae1c41587fa24a713856e58e2bd95247b2ee813d7af",
+            "limit": 1000,
+            "present": true
+          },
+          "idempotency_key": "g33-control-003-solve-job_log",
+          "mode": "response",
+          "operation": "job_log",
+          "response": {
+            "data_keys": [
+              "events",
+              "job_id",
+              "next_offset"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "success": true,
+            "unknown": null
+          },
+          "status": null
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.006138124968856573,
+          "idempotency_key": "g33-control-004-solve-job_result",
+          "mode": "response",
+          "operation": "job_result",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.00452258309815079,
+          "idempotency_key": "g33-control-005-solve-job_reconcile",
+          "mode": "response",
+          "operation": "job_reconcile",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.004349666996859014,
+          "idempotency_key": "g33-control-006-solve-poll-001-job_status",
+          "mode": "response",
+          "operation": "job_status",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": false,
+          "elapsed_s": 0.013089041924104095,
+          "event_snapshot": {
+            "complete": true,
+            "event_count": 32,
+            "events_sha256": "ba8e03ce02699e95cd6c2e92b2cd709a98e2c0859db0d5048582b52d4bd97634",
+            "limit": 1000,
+            "present": true
+          },
+          "idempotency_key": "g33-control-007-solve-poll-001-job_log",
+          "mode": "response",
+          "operation": "job_log",
+          "response": {
+            "data_keys": [
+              "events",
+              "job_id",
+              "next_offset"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "success": true,
+            "unknown": null
+          },
+          "status": null
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.00597170798573643,
+          "idempotency_key": "g33-control-008-solve-poll-001-job_reconcile",
+          "mode": "response",
+          "operation": "job_reconcile",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.006685875006951392,
+          "idempotency_key": "g33-control-009-solve-poll-002-job_status",
+          "mode": "response",
+          "operation": "job_status",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": false,
+          "elapsed_s": 0.01508145802654326,
+          "event_snapshot": {
+            "complete": true,
+            "event_count": 32,
+            "events_sha256": "ba8e03ce02699e95cd6c2e92b2cd709a98e2c0859db0d5048582b52d4bd97634",
+            "limit": 1000,
+            "present": true
+          },
+          "idempotency_key": "g33-control-010-solve-poll-002-job_log",
+          "mode": "response",
+          "operation": "job_log",
+          "response": {
+            "data_keys": [
+              "events",
+              "job_id",
+              "next_offset"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "success": true,
+            "unknown": null
+          },
+          "status": null
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.006921584019437432,
+          "idempotency_key": "g33-control-011-solve-poll-002-job_reconcile",
+          "mode": "response",
+          "operation": "job_reconcile",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.00643341604154557,
+          "idempotency_key": "g33-control-012-solve-poll-003-job_status",
+          "mode": "response",
+          "operation": "job_status",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": false,
+          "elapsed_s": 0.015055374940857291,
+          "event_snapshot": {
+            "complete": true,
+            "event_count": 32,
+            "events_sha256": "ba8e03ce02699e95cd6c2e92b2cd709a98e2c0859db0d5048582b52d4bd97634",
+            "limit": 1000,
+            "present": true
+          },
+          "idempotency_key": "g33-control-013-solve-poll-003-job_log",
+          "mode": "response",
+          "operation": "job_log",
+          "response": {
+            "data_keys": [
+              "events",
+              "job_id",
+              "next_offset"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "success": true,
+            "unknown": null
+          },
+          "status": null
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.0061365419533103704,
+          "idempotency_key": "g33-control-014-solve-poll-003-job_reconcile",
+          "mode": "response",
+          "operation": "job_reconcile",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.0076679999474436045,
+          "idempotency_key": "g33-control-015-solve-poll-004-job_status",
+          "mode": "response",
+          "operation": "job_status",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": false,
+          "elapsed_s": 0.01487170800101012,
+          "event_snapshot": {
+            "complete": true,
+            "event_count": 32,
+            "events_sha256": "ba8e03ce02699e95cd6c2e92b2cd709a98e2c0859db0d5048582b52d4bd97634",
+            "limit": 1000,
+            "present": true
+          },
+          "idempotency_key": "g33-control-016-solve-poll-004-job_log",
+          "mode": "response",
+          "operation": "job_log",
+          "response": {
+            "data_keys": [
+              "events",
+              "job_id",
+              "next_offset"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "success": true,
+            "unknown": null
+          },
+          "status": null
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.006464708014391363,
+          "idempotency_key": "g33-control-017-solve-poll-004-job_reconcile",
+          "mode": "response",
+          "operation": "job_reconcile",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.006595707964152098,
+          "idempotency_key": "g33-control-018-solve-poll-005-job_status",
+          "mode": "response",
+          "operation": "job_status",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": false,
+          "elapsed_s": 0.011631457949988544,
+          "event_snapshot": {
+            "complete": true,
+            "event_count": 32,
+            "events_sha256": "ba8e03ce02699e95cd6c2e92b2cd709a98e2c0859db0d5048582b52d4bd97634",
+            "limit": 1000,
+            "present": true
+          },
+          "idempotency_key": "g33-control-019-solve-poll-005-job_log",
+          "mode": "response",
+          "operation": "job_log",
+          "response": {
+            "data_keys": [
+              "events",
+              "job_id",
+              "next_offset"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "success": true,
+            "unknown": null
+          },
+          "status": null
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.006311833974905312,
+          "idempotency_key": "g33-control-020-solve-poll-005-job_reconcile",
+          "mode": "response",
+          "operation": "job_reconcile",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.0061338330851867795,
+          "idempotency_key": "g33-control-021-solve-poll-006-job_status",
+          "mode": "response",
+          "operation": "job_status",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": false,
+          "elapsed_s": 0.013253374956548214,
+          "event_snapshot": {
+            "complete": true,
+            "event_count": 32,
+            "events_sha256": "ba8e03ce02699e95cd6c2e92b2cd709a98e2c0859db0d5048582b52d4bd97634",
+            "limit": 1000,
+            "present": true
+          },
+          "idempotency_key": "g33-control-022-solve-poll-006-job_log",
+          "mode": "response",
+          "operation": "job_log",
+          "response": {
+            "data_keys": [
+              "events",
+              "job_id",
+              "next_offset"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "success": true,
+            "unknown": null
+          },
+          "status": null
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.005997208063490689,
+          "idempotency_key": "g33-control-023-solve-poll-006-job_reconcile",
+          "mode": "response",
+          "operation": "job_reconcile",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.006309291929937899,
+          "idempotency_key": "g33-control-024-solve-poll-007-job_status",
+          "mode": "response",
+          "operation": "job_status",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": false,
+          "elapsed_s": 0.012546584010124207,
+          "event_snapshot": {
+            "complete": true,
+            "event_count": 32,
+            "events_sha256": "ba8e03ce02699e95cd6c2e92b2cd709a98e2c0859db0d5048582b52d4bd97634",
+            "limit": 1000,
+            "present": true
+          },
+          "idempotency_key": "g33-control-025-solve-poll-007-job_log",
+          "mode": "response",
+          "operation": "job_log",
+          "response": {
+            "data_keys": [
+              "events",
+              "job_id",
+              "next_offset"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "success": true,
+            "unknown": null
+          },
+          "status": null
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.0058105409843847156,
+          "idempotency_key": "g33-control-026-solve-poll-007-job_reconcile",
+          "mode": "response",
+          "operation": "job_reconcile",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.006514042033813894,
+          "idempotency_key": "g33-control-027-solve-poll-008-job_status",
+          "mode": "response",
+          "operation": "job_status",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": false,
+          "elapsed_s": 0.012430000002495944,
+          "event_snapshot": {
+            "complete": true,
+            "event_count": 32,
+            "events_sha256": "ba8e03ce02699e95cd6c2e92b2cd709a98e2c0859db0d5048582b52d4bd97634",
+            "limit": 1000,
+            "present": true
+          },
+          "idempotency_key": "g33-control-028-solve-poll-008-job_log",
+          "mode": "response",
+          "operation": "job_log",
+          "response": {
+            "data_keys": [
+              "events",
+              "job_id",
+              "next_offset"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "success": true,
+            "unknown": null
+          },
+          "status": null
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.005919874995015562,
+          "idempotency_key": "g33-control-029-solve-poll-008-job_reconcile",
+          "mode": "response",
+          "operation": "job_reconcile",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": false,
+          "elapsed_s": 0.007566082989796996,
+          "idempotency_key": "g33-control-030-solve-poll-009-job_status",
+          "mode": "response",
+          "operation": "job_status",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "SUCCEEDED",
+            "success": true,
+            "unknown": null
+          },
+          "status": "SUCCEEDED"
+        }
+      ],
+      "response": null,
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "active_success_response": true,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "new_solve_dispatched": false,
+        "unknown_response": false
+      },
+      "case": "solve-unknown",
+      "idempotency_key": "g33-control-001-solve",
+      "operation": "study.run",
+      "response": {
+        "data_keys": [
+          "job_id",
+          "rpc_wait_expired",
+          "status"
+        ],
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-control-001-solve",
+          "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+          "operation_id": "72ff9f7b-b8f2-4e61-a16d-200589c34446",
+          "request_id": "g33-control-solve"
+        },
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "rpc_wait_expired": true,
+        "status": "RUNNING",
+        "success": true,
+        "unknown": null
+      },
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "queries_complete": true,
+        "query_before_retry": true,
+        "query_operations": [
+          "study.run",
+          "job_status",
+          "job_log",
+          "job_result",
+          "job_reconcile",
+          "job_status",
+          "job_log",
+          "job_reconcile",
+          "job_status",
+          "job_log",
+          "job_reconcile",
+          "job_status",
+          "job_log",
+          "job_reconcile",
+          "job_status",
+          "job_log",
+          "job_reconcile",
+          "job_status",
+          "job_log",
+          "job_reconcile",
+          "job_status",
+          "job_log",
+          "job_reconcile",
+          "job_status",
+          "job_log",
+          "job_reconcile",
+          "job_status",
+          "job_log",
+          "job_reconcile",
+          "job_status"
+        ]
+      },
+      "case": "unknown-query-before-retry",
+      "idempotency_key": "g33-control-001-solve",
+      "operation": "job_status/job_log/job_result/job_reconcile",
+      "response": null,
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "active_observed": true,
+        "control_call_count": 19,
+        "latency_budget_s": 2.0,
+        "latency_recorded": true,
+        "max_latency_s": 0.01508145802654326
+      },
+      "case": "active-control-response",
+      "idempotency_key": "g33-control-001-solve",
+      "operation": "job_status/job_log",
+      "query_results": [
+        {
+          "active": true,
+          "elapsed_s": 0.007411541999317706,
+          "idempotency_key": "g33-control-002-solve-job_status",
+          "mode": "response",
+          "operation": "job_status",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": false,
+          "elapsed_s": 0.008626749971881509,
+          "event_snapshot": {
+            "complete": true,
+            "event_count": 14,
+            "events_sha256": "e1a7ecf438d18993d2a51ae1c41587fa24a713856e58e2bd95247b2ee813d7af",
+            "limit": 1000,
+            "present": true
+          },
+          "idempotency_key": "g33-control-003-solve-job_log",
+          "mode": "response",
+          "operation": "job_log",
+          "response": {
+            "data_keys": [
+              "events",
+              "job_id",
+              "next_offset"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "success": true,
+            "unknown": null
+          },
+          "status": null
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.006138124968856573,
+          "idempotency_key": "g33-control-004-solve-job_result",
+          "mode": "response",
+          "operation": "job_result",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.00452258309815079,
+          "idempotency_key": "g33-control-005-solve-job_reconcile",
+          "mode": "response",
+          "operation": "job_reconcile",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.004349666996859014,
+          "idempotency_key": "g33-control-006-solve-poll-001-job_status",
+          "mode": "response",
+          "operation": "job_status",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": false,
+          "elapsed_s": 0.013089041924104095,
+          "event_snapshot": {
+            "complete": true,
+            "event_count": 32,
+            "events_sha256": "ba8e03ce02699e95cd6c2e92b2cd709a98e2c0859db0d5048582b52d4bd97634",
+            "limit": 1000,
+            "present": true
+          },
+          "idempotency_key": "g33-control-007-solve-poll-001-job_log",
+          "mode": "response",
+          "operation": "job_log",
+          "response": {
+            "data_keys": [
+              "events",
+              "job_id",
+              "next_offset"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "success": true,
+            "unknown": null
+          },
+          "status": null
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.00597170798573643,
+          "idempotency_key": "g33-control-008-solve-poll-001-job_reconcile",
+          "mode": "response",
+          "operation": "job_reconcile",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.006685875006951392,
+          "idempotency_key": "g33-control-009-solve-poll-002-job_status",
+          "mode": "response",
+          "operation": "job_status",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": false,
+          "elapsed_s": 0.01508145802654326,
+          "event_snapshot": {
+            "complete": true,
+            "event_count": 32,
+            "events_sha256": "ba8e03ce02699e95cd6c2e92b2cd709a98e2c0859db0d5048582b52d4bd97634",
+            "limit": 1000,
+            "present": true
+          },
+          "idempotency_key": "g33-control-010-solve-poll-002-job_log",
+          "mode": "response",
+          "operation": "job_log",
+          "response": {
+            "data_keys": [
+              "events",
+              "job_id",
+              "next_offset"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "success": true,
+            "unknown": null
+          },
+          "status": null
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.006921584019437432,
+          "idempotency_key": "g33-control-011-solve-poll-002-job_reconcile",
+          "mode": "response",
+          "operation": "job_reconcile",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.00643341604154557,
+          "idempotency_key": "g33-control-012-solve-poll-003-job_status",
+          "mode": "response",
+          "operation": "job_status",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": false,
+          "elapsed_s": 0.015055374940857291,
+          "event_snapshot": {
+            "complete": true,
+            "event_count": 32,
+            "events_sha256": "ba8e03ce02699e95cd6c2e92b2cd709a98e2c0859db0d5048582b52d4bd97634",
+            "limit": 1000,
+            "present": true
+          },
+          "idempotency_key": "g33-control-013-solve-poll-003-job_log",
+          "mode": "response",
+          "operation": "job_log",
+          "response": {
+            "data_keys": [
+              "events",
+              "job_id",
+              "next_offset"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "success": true,
+            "unknown": null
+          },
+          "status": null
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.0061365419533103704,
+          "idempotency_key": "g33-control-014-solve-poll-003-job_reconcile",
+          "mode": "response",
+          "operation": "job_reconcile",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.0076679999474436045,
+          "idempotency_key": "g33-control-015-solve-poll-004-job_status",
+          "mode": "response",
+          "operation": "job_status",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": false,
+          "elapsed_s": 0.01487170800101012,
+          "event_snapshot": {
+            "complete": true,
+            "event_count": 32,
+            "events_sha256": "ba8e03ce02699e95cd6c2e92b2cd709a98e2c0859db0d5048582b52d4bd97634",
+            "limit": 1000,
+            "present": true
+          },
+          "idempotency_key": "g33-control-016-solve-poll-004-job_log",
+          "mode": "response",
+          "operation": "job_log",
+          "response": {
+            "data_keys": [
+              "events",
+              "job_id",
+              "next_offset"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "success": true,
+            "unknown": null
+          },
+          "status": null
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.006464708014391363,
+          "idempotency_key": "g33-control-017-solve-poll-004-job_reconcile",
+          "mode": "response",
+          "operation": "job_reconcile",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.006595707964152098,
+          "idempotency_key": "g33-control-018-solve-poll-005-job_status",
+          "mode": "response",
+          "operation": "job_status",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": false,
+          "elapsed_s": 0.011631457949988544,
+          "event_snapshot": {
+            "complete": true,
+            "event_count": 32,
+            "events_sha256": "ba8e03ce02699e95cd6c2e92b2cd709a98e2c0859db0d5048582b52d4bd97634",
+            "limit": 1000,
+            "present": true
+          },
+          "idempotency_key": "g33-control-019-solve-poll-005-job_log",
+          "mode": "response",
+          "operation": "job_log",
+          "response": {
+            "data_keys": [
+              "events",
+              "job_id",
+              "next_offset"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "success": true,
+            "unknown": null
+          },
+          "status": null
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.006311833974905312,
+          "idempotency_key": "g33-control-020-solve-poll-005-job_reconcile",
+          "mode": "response",
+          "operation": "job_reconcile",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.0061338330851867795,
+          "idempotency_key": "g33-control-021-solve-poll-006-job_status",
+          "mode": "response",
+          "operation": "job_status",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": false,
+          "elapsed_s": 0.013253374956548214,
+          "event_snapshot": {
+            "complete": true,
+            "event_count": 32,
+            "events_sha256": "ba8e03ce02699e95cd6c2e92b2cd709a98e2c0859db0d5048582b52d4bd97634",
+            "limit": 1000,
+            "present": true
+          },
+          "idempotency_key": "g33-control-022-solve-poll-006-job_log",
+          "mode": "response",
+          "operation": "job_log",
+          "response": {
+            "data_keys": [
+              "events",
+              "job_id",
+              "next_offset"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "success": true,
+            "unknown": null
+          },
+          "status": null
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.005997208063490689,
+          "idempotency_key": "g33-control-023-solve-poll-006-job_reconcile",
+          "mode": "response",
+          "operation": "job_reconcile",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.006309291929937899,
+          "idempotency_key": "g33-control-024-solve-poll-007-job_status",
+          "mode": "response",
+          "operation": "job_status",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": false,
+          "elapsed_s": 0.012546584010124207,
+          "event_snapshot": {
+            "complete": true,
+            "event_count": 32,
+            "events_sha256": "ba8e03ce02699e95cd6c2e92b2cd709a98e2c0859db0d5048582b52d4bd97634",
+            "limit": 1000,
+            "present": true
+          },
+          "idempotency_key": "g33-control-025-solve-poll-007-job_log",
+          "mode": "response",
+          "operation": "job_log",
+          "response": {
+            "data_keys": [
+              "events",
+              "job_id",
+              "next_offset"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "success": true,
+            "unknown": null
+          },
+          "status": null
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.0058105409843847156,
+          "idempotency_key": "g33-control-026-solve-poll-007-job_reconcile",
+          "mode": "response",
+          "operation": "job_reconcile",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.006514042033813894,
+          "idempotency_key": "g33-control-027-solve-poll-008-job_status",
+          "mode": "response",
+          "operation": "job_status",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": false,
+          "elapsed_s": 0.012430000002495944,
+          "event_snapshot": {
+            "complete": true,
+            "event_count": 32,
+            "events_sha256": "ba8e03ce02699e95cd6c2e92b2cd709a98e2c0859db0d5048582b52d4bd97634",
+            "limit": 1000,
+            "present": true
+          },
+          "idempotency_key": "g33-control-028-solve-poll-008-job_log",
+          "mode": "response",
+          "operation": "job_log",
+          "response": {
+            "data_keys": [
+              "events",
+              "job_id",
+              "next_offset"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "success": true,
+            "unknown": null
+          },
+          "status": null
+        },
+        {
+          "active": true,
+          "elapsed_s": 0.005919874995015562,
+          "idempotency_key": "g33-control-029-solve-poll-008-job_reconcile",
+          "mode": "response",
+          "operation": "job_reconcile",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "RUNNING",
+            "success": true,
+            "unknown": null
+          },
+          "status": "RUNNING"
+        },
+        {
+          "active": false,
+          "elapsed_s": 0.007566082989796996,
+          "idempotency_key": "g33-control-030-solve-poll-009-job_status",
+          "mode": "response",
+          "operation": "job_status",
+          "response": {
+            "data_keys": [
+              "created_at",
+              "effective_timeouts",
+              "finished_at",
+              "job_id",
+              "metadata",
+              "operation",
+              "operation_id",
+              "result",
+              "started_at",
+              "status"
+            ],
+            "error_code": null,
+            "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+            "metadata": {},
+            "status": "SUCCEEDED",
+            "success": true,
+            "unknown": null
+          },
+          "status": "SUCCEEDED"
+        }
+      ],
+      "response": null,
+      "status": "PASS"
+    },
+    {
+      "assertions": {
+        "hashes_match": true,
+        "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "job_log_after": {
+          "complete": true,
+          "event_count": 52,
+          "events_sha256": "29fee90829b92ade00b14832a0147ee1a8f80e608c80f8b68dc5654de61287bd",
+          "limit": 1000,
+          "present": true
+        },
+        "job_log_before": {
+          "complete": true,
+          "event_count": 52,
+          "events_sha256": "29fee90829b92ade00b14832a0147ee1a8f80e608c80f8b68dc5654de61287bd",
+          "limit": 1000,
+          "present": true
+        },
+        "job_log_complete": true,
+        "job_log_events_unchanged": true,
+        "new_solve_dispatched": false,
+        "polling_log_before_quiescence": {
+          "complete": true,
+          "event_count": 32,
+          "events_sha256": "ba8e03ce02699e95cd6c2e92b2cd709a98e2c0859db0d5048582b52d4bd97634",
+          "limit": 1000,
+          "present": true
+        },
+        "quiescent": true,
+        "retry_job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+        "same_body": true,
+        "same_job": true,
+        "same_key": true,
+        "same_operation": true,
+        "solve_dispatch_count": 1
+      },
+      "case": "same-key-retry",
+      "elapsed_s": 0.004502583993598819,
+      "idempotency_key": "g33-control-001-solve",
+      "operation": "study.run",
+      "response": {
+        "data_keys": [
+          "applied",
+          "applied_count",
+          "cleanup_failed",
+          "computation_after",
+          "computation_before",
+          "computation_timestamp_changed",
+          "dispatch_stage",
+          "domain_outcome",
+          "domain_state",
+          "duration_s",
+          "effect",
+          "engine_error",
+          "execution_state_unknown",
+          "failed",
+          "failed_count",
+          "isolation_proof",
+          "long_task_semantics",
+          "not_executed",
+          "not_executed_count",
+          "notes",
+          "ok",
+          "partial_change",
+          "readback",
+          "requested_resources",
+          "requested_timeout_s",
+          "solver_sequences",
+          "status",
+          "steps",
+          "study",
+          "study_tag",
+          "verification_status"
+        ],
+        "error_code": null,
+        "execution": {
+          "idempotency_key": "g33-control-001-solve",
+          "job_id": "ed4c1c48-5769-46f9-a8b2-60171104a65f",
+          "operation_id": "72ff9f7b-b8f2-4e61-a16d-200589c34446",
+          "request_id": "g33-control-solve"
+        },
+        "execution_state_unknown": false,
+        "status": "APPLIED",
+        "success": true,
+        "unknown": null
+      },
+      "retry_record": {
+        "at": "2026-09-22T09:13:26.365228Z",
+        "body_sha256": "8cb31a57f4f917667ce91722ac6df1e0cd1ac8ad4a2324c716d1335293649a88",
+        "error_code": null,
+        "first_dispatched_at": "2026-09-22T09:13:25.167801Z",
+        "key": "g33-control-001-solve",
+        "operation": "study.run",
+        "request_id": "g33-control-001-solve",
+        "retry_body_sha256": "8cb31a57f4f917667ce91722ac6df1e0cd1ac8ad4a2324c716d1335293649a88",
+        "same_body": true,
+        "success": true,
+        "tool": "operation_call"
+      },
+      "status": "PASS"
+    }
+  ],
+  "run_dir": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/final6_control_a3f39b3_20260922T0907Z/control",
+  "schema_version": 1,
+  "scope": "public_mcp_chain_b_control",
+  "summary": {
+    "BLOCKED": 0,
+    "FAIL": 0,
+    "NOT_RUN": 0,
+    "PASS": 5,
+    "UNVERIFIED": 0
+  }
+}

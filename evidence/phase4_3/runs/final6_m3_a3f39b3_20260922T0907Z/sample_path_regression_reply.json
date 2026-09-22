@@ -1,0 +1,1961 @@
+{
+  "success": true,
+  "data": {
+    "samples": [
+      {
+        "x": 0.0125,
+        "y": 0.005,
+        "solnum": 1,
+        "T": 308.1500000000069,
+        "ht.tfluxx": -480000.0000001746
+      },
+      {
+        "x": 0.025,
+        "y": 0.005,
+        "solnum": 1,
+        "T": 323.15000000001123,
+        "ht.tfluxx": -480000.00000004075
+      },
+      {
+        "x": 0.0375,
+        "y": 0.005,
+        "solnum": 1,
+        "T": 338.15000000000975,
+        "ht.tfluxx": -479999.9999998021
+      }
+    ],
+    "sample_count": 3,
+    "points": {
+      "kind": "line",
+      "start": [
+        0.0125,
+        0.005
+      ],
+      "end": [
+        0.0375,
+        0.005
+      ],
+      "count": 3,
+      "dimension": 2,
+      "coordinate_unit": "m",
+      "space_dimension": 2
+    },
+    "expressions": [
+      "T",
+      "ht.tfluxx"
+    ],
+    "expression_units": {
+      "T": "K",
+      "ht.tfluxx": "W/m^2"
+    },
+    "columns": [
+      {
+        "name": "x",
+        "role": "coordinate",
+        "unit": "m"
+      },
+      {
+        "name": "y",
+        "role": "coordinate",
+        "unit": "m"
+      },
+      {
+        "name": "solnum",
+        "role": "solution_index",
+        "unit": "one-based index"
+      },
+      {
+        "name": "T",
+        "role": "expression",
+        "unit": "K"
+      },
+      {
+        "name": "ht.tfluxx",
+        "role": "expression",
+        "unit": "W/m^2"
+      }
+    ],
+    "roles": {
+      "coordinates": [
+        "x",
+        "y"
+      ],
+      "solution_index": "solnum",
+      "time": null,
+      "expressions": {
+        "T": "T",
+        "ht.tfluxx": "ht.tfluxx"
+      },
+      "lookup": "row keys are exact: resolve a column through this map or through 'columns'"
+    },
+    "dataset": "dset1",
+    "solution": "sol1",
+    "binding": {
+      "dataset": "dset1",
+      "solution": "sol1",
+      "component": "comp1",
+      "geometry": "geom1",
+      "length_unit": "m",
+      "space_dimension": 2,
+      "content_context": "dataset.comp/dataset.geom",
+      "stored_solutions": 1,
+      "time_axis": {
+        "time_dependent": false,
+        "status": "not_time_dependent",
+        "source": null,
+        "unit": null,
+        "values": null
+      },
+      "revision_required": false
+    },
+    "unit_readback": {
+      "expression_units": {
+        "T": "K",
+        "ht.tfluxx": "W/m^2"
+      },
+      "coordinate_unit": "m",
+      "time_unit": null,
+      "source": "model.result().numerical(<tag>).getStringArray(\"unit\") and GeomSequence.lengthUnit()"
+    },
+    "coordinate_readback": {
+      "attempted": true,
+      "status": "VERIFIED",
+      "method": "result.numerical(<tag>).getCoordinates()",
+      "coordinates": [
+        [
+          0.0125,
+          0.025,
+          0.0375
+        ],
+        [
+          0.005,
+          0.005,
+          0.005
+        ]
+      ],
+      "max_deviation": 0.0,
+      "allowlist_entry_required": null,
+      "reason": null
+    },
+    "units": {
+      "x": "m",
+      "y": "m",
+      "T": "K",
+      "ht.tfluxx": "W/m^2",
+      "solnum": "one-based index"
+    },
+    "complex": false,
+    "complex_mode": "real",
+    "time_values": null,
+    "time_steps": null,
+    "solution_axis": {
+      "time_dependent": false,
+      "status": "not_time_dependent",
+      "source": null,
+      "values": null,
+      "unit": null,
+      "stored_solutions": 1,
+      "solution": "sol1",
+      "study": "std1",
+      "study_steps": [
+        {
+          "tag": "stat",
+          "type": "Stationary"
+        }
+      ],
+      "feature_times": null,
+      "solver_values": [
+        0.0
+      ],
+      "conflicts": [],
+      "reason": null
+    },
+    "ephemeral_feature": {
+      "tag": "cmssp1",
+      "type_id": "Interp",
+      "property_readback": {
+        "data": "dset1",
+        "expr": [
+          "T",
+          "ht.tfluxx"
+        ],
+        "unit": [
+          "K",
+          "W/m^2"
+        ],
+        "observed_properties": [
+          "hasbeenevaluated",
+          "defaultPlotID",
+          "weight",
+          "data",
+          "oldanalysistype",
+          "oldouteranalysistype",
+          "outertype",
+          "outersolnum",
+          "solvertype",
+          "solnum",
+          "timeinterp",
+          "t",
+          "t_vector_method",
+          "t_vector_start",
+          "t_vector_stop",
+          "t_vector_step",
+          "t_vector_numvalues",
+          "t_vector_function",
+          "t_vector_interval",
+          "t_vector_freqperdec",
+          "unittrans",
+          "unitdim",
+          "exprexcelfilename",
+          "exprexcelsheet",
+          "exprexcelrange",
+          "exprexcelincludeheaders",
+          "exprexcelseparateunits",
+          "exprexceloverwrite",
+          "exprexcelcalculatedvalues",
+          "expr",
+          "unit",
+          "descr",
+          "compactexprs",
+          "allowdescrupdate",
+          "evalmethodactive",
+          "evalmethod",
+          "differential",
+          "constactive",
+          "const",
+          "constUnit",
+          "constisupdated",
+          "constprefixes",
+          "recover",
+          "refine",
+          "edim",
+          "ext",
+          "coorderr",
+          "phase",
+          "complexfun",
+          "matherr",
+          "resultinfo",
+          "resetbeenset"
+        ]
+      }
+    },
+    "coordinate_source": "the requested path_definition points (coord property); a getCoordinates() readback needs the worker allow-list entry recorded in ALLOWLIST_ADDITIONS",
+    "notes": [
+      "coordinates are the requested path points, expressed in the model length unit (GeomSequence.lengthUnit()); this adapter never converts units",
+      "the sample table index 'solnum' is the one-based stored-solution index of the dataset, matching COMSOL's one-based solution numbering",
+      "no time column is published for this dataset: the dataset is not time-dependent"
+    ],
+    "cleanup": {
+      "tag": "cmssp1",
+      "type_id": "Interp",
+      "created": true,
+      "removed": true,
+      "verified_removed": true,
+      "cleanup_failed": false,
+      "error": null
+    },
+    "status": {
+      "ok": true,
+      "status": "APPLIED",
+      "partial_change": true,
+      "execution_state_unknown": false,
+      "applied": [
+        "result.numerical.create(Interp)",
+        "result.numerical.getCoordinates(verified)",
+        "result.numerical.set(coord)",
+        "result.numerical.getData",
+        "result.numerical.remove",
+        "result.numerical.remove(verified)"
+      ],
+      "failed": [],
+      "not_executed": [],
+      "readback_match": true,
+      "readback": {
+        "readable": true,
+        "sample_count": 3,
+        "stored_solutions": 1,
+        "time_steps": null
+      },
+      "engine_error": null
+    },
+    "verification_status": "PASSED",
+    "verification": {
+      "axis": "coordinate_readback",
+      "status": "PASSED",
+      "detail": {
+        "attempted": true,
+        "status": "VERIFIED",
+        "method": "result.numerical(<tag>).getCoordinates()",
+        "coordinates": [
+          [
+            0.0125,
+            0.025,
+            0.0375
+          ],
+          [
+            0.005,
+            0.005,
+            0.005
+          ]
+        ],
+        "max_deviation": 0.0,
+        "allowlist_entry_required": null,
+        "reason": null
+      }
+    },
+    "engine_error": null,
+    "read_errors": [
+      {
+        "method": "getString",
+        "code": "ENGINE_CALL_FAILED",
+        "message": "COMSOL getString probe failed: JavaWorkerError",
+        "allowlist_entry_required": null
+      }
+    ],
+    "allowlist_entry_required": [],
+    "allowlist_additions": [
+      "getLevels",
+      "getVals",
+      "getSolverSequences",
+      "evaluationGroup",
+      "looplevelinput"
+    ],
+    "allowlist_available_unused": [
+      "getSequenceType",
+      "getPNames",
+      "getParamVals",
+      "getParamNames",
+      "isAttached"
+    ],
+    "unverified_paths": [
+      {
+        "path": "spec.selection / spec.aggregate / spec.weight_expression",
+        "reason": "outside the minimal sampler; refused with API_UNSUPPORTED instead of approximated"
+      },
+      {
+        "path": "spec.solution.inner / .outer / .time / .frequency / .parameters",
+        "reason": "per-solution selection is not implemented; every stored solution is returned and indexed by the 'solnum' column"
+      },
+      {
+        "path": "spec.complex_mode other than 'real'",
+        "reason": "NumericalFeature.getData() returns the real part (documented); no silent complex reshuffle"
+      },
+      {
+        "path": "path_definition kinds other than 'line'",
+        "reason": "only the line kind the W16 chains need is implemented"
+      },
+      {
+        "path": "coordinate readback via getCoordinates()",
+        "reason": "documented but not on the worker allow-list; the row coordinates are the requested path points"
+      }
+    ],
+    "domain_state": "succeeded",
+    "execution_state_unknown": false,
+    "partial_change": true,
+    "cleanup_failed": false,
+    "dispatch_stage": "post_dispatch",
+    "domain_outcome": {
+      "operation": "result.sample_path",
+      "state": "succeeded",
+      "verification_status": "PASSED",
+      "cleanup_failed": false,
+      "execution_state_unknown": false,
+      "dispatch_stage": "post_dispatch",
+      "applied_count": 6,
+      "failed_count": 0,
+      "not_executed_count": 0,
+      "status_token": "APPLIED",
+      "verification": {
+        "declared_by": [
+          "verification_status",
+          "verification"
+        ],
+        "verification": {
+          "status": "PASSED"
+        },
+        "raw_status": "PASSED"
+      },
+      "witness": {
+        "engine_calls": 66,
+        "mutation_method": "create",
+        "methods": [
+          "component",
+          "create",
+          "dataset",
+          "feature",
+          "geom",
+          "get",
+          "getCoordinates",
+          "getData",
+          "getDoubleArray",
+          "getPVals",
+          "getSDim",
+          "getString",
+          "getStringArray",
+          "getType",
+          "isAxisymmetric",
+          "isComplex",
+          "lengthUnit",
+          "modelNode",
+          "numerical",
+          "properties",
+          "remove",
+          "result",
+          "run",
+          "set",
+          "setIndex",
+          "sol",
+          "study",
+          "tags"
+        ],
+        "dispatches": [
+          {
+            "command": "call",
+            "method": "result",
+            "args_count": 0,
+            "receiver": "h-626e37ce-6083-44b9-88e0-b350f560fe6c",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "dataset",
+            "args_count": 0,
+            "receiver": "h-04acc628-7301-4a54-b35f-e08d6fea5e64",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-eb50c67a-84af-4dea-854f-b1aca4c1bbc2",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "get",
+            "args_count": 1,
+            "receiver": "h-eb50c67a-84af-4dea-854f-b1aca4c1bbc2",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "result",
+            "args_count": 0,
+            "receiver": "h-626e37ce-6083-44b9-88e0-b350f560fe6c",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "dataset",
+            "args_count": 0,
+            "receiver": "h-2b2a3c08-20df-4f5a-8be0-7e110f0a6b01",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-57b0ef75-74ad-42f7-aafb-404e906e39f7",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "sol",
+            "args_count": 0,
+            "receiver": "h-626e37ce-6083-44b9-88e0-b350f560fe6c",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-8e190ae1-f6a6-4d05-bb3e-066c8629d1d8",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "get",
+            "args_count": 1,
+            "receiver": "h-57b0ef75-74ad-42f7-aafb-404e906e39f7",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getType",
+            "args_count": 0,
+            "receiver": "h-99589837-40a7-41d8-95be-d2c55c4a9584",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "properties",
+            "args_count": 0,
+            "receiver": "h-99589837-40a7-41d8-95be-d2c55c4a9584",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getString",
+            "args_count": 1,
+            "receiver": "h-99589837-40a7-41d8-95be-d2c55c4a9584",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "properties",
+            "args_count": 0,
+            "receiver": "h-99589837-40a7-41d8-95be-d2c55c4a9584",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "properties",
+            "args_count": 0,
+            "receiver": "h-99589837-40a7-41d8-95be-d2c55c4a9584",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "properties",
+            "args_count": 0,
+            "receiver": "h-99589837-40a7-41d8-95be-d2c55c4a9584",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getString",
+            "args_count": 1,
+            "receiver": "h-99589837-40a7-41d8-95be-d2c55c4a9584",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "properties",
+            "args_count": 0,
+            "receiver": "h-99589837-40a7-41d8-95be-d2c55c4a9584",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getString",
+            "args_count": 1,
+            "receiver": "h-99589837-40a7-41d8-95be-d2c55c4a9584",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "modelNode",
+            "args_count": 0,
+            "receiver": "h-626e37ce-6083-44b9-88e0-b350f560fe6c",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-b46291d3-7ffd-4411-9aea-f3ad7e9ad943",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "component",
+            "args_count": 1,
+            "receiver": "h-626e37ce-6083-44b9-88e0-b350f560fe6c",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "geom",
+            "args_count": 0,
+            "receiver": "h-a3676fab-15e5-4aed-bbf0-d66caff8e08a",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-c61670f3-1002-4994-8618-0f2da62ff528",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "get",
+            "args_count": 1,
+            "receiver": "h-c61670f3-1002-4994-8618-0f2da62ff528",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "component",
+            "args_count": 1,
+            "receiver": "h-626e37ce-6083-44b9-88e0-b350f560fe6c",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "geom",
+            "args_count": 1,
+            "receiver": "h-7d6182b1-5160-4e18-8062-8375c0bfa0df",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "lengthUnit",
+            "args_count": 0,
+            "receiver": "h-63d76b97-d46b-491e-a487-4384a4e144e7",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getSDim",
+            "args_count": 0,
+            "receiver": "h-63d76b97-d46b-491e-a487-4384a4e144e7",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "isAxisymmetric",
+            "args_count": 0,
+            "receiver": "h-63d76b97-d46b-491e-a487-4384a4e144e7",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "sol",
+            "args_count": 0,
+            "receiver": "h-626e37ce-6083-44b9-88e0-b350f560fe6c",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-4cf0ee2d-e1ed-4bee-a56d-49653dbe96dc",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "numerical",
+            "args_count": 0,
+            "receiver": "h-04acc628-7301-4a54-b35f-e08d6fea5e64",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-6607aa37-a10d-4844-aa21-b888e915c162",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "create",
+            "args_count": 2,
+            "receiver": "h-6607aa37-a10d-4844-aa21-b888e915c162",
+            "is_mutation": true
+          },
+          {
+            "command": "call",
+            "method": "get",
+            "args_count": 1,
+            "receiver": "h-6607aa37-a10d-4844-aa21-b888e915c162",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "set",
+            "args_count": 2,
+            "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+            "is_mutation": true
+          },
+          {
+            "command": "call",
+            "method": "getString",
+            "args_count": 1,
+            "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getType",
+            "args_count": 0,
+            "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "setIndex",
+            "args_count": 3,
+            "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+            "is_mutation": true
+          },
+          {
+            "command": "call",
+            "method": "setIndex",
+            "args_count": 3,
+            "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+            "is_mutation": true
+          },
+          {
+            "command": "call",
+            "method": "set",
+            "args_count": 2,
+            "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+            "is_mutation": true
+          },
+          {
+            "command": "call",
+            "method": "run",
+            "args_count": 0,
+            "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+            "is_mutation": true
+          },
+          {
+            "command": "call",
+            "method": "getData",
+            "args_count": 0,
+            "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "isComplex",
+            "args_count": 0,
+            "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getStringArray",
+            "args_count": 1,
+            "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getStringArray",
+            "args_count": 1,
+            "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "properties",
+            "args_count": 0,
+            "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getCoordinates",
+            "args_count": 0,
+            "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "sol",
+            "args_count": 0,
+            "receiver": "h-626e37ce-6083-44b9-88e0-b350f560fe6c",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-6b742576-020c-42d4-8e74-c5fe1ed3d499",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "sol",
+            "args_count": 1,
+            "receiver": "h-626e37ce-6083-44b9-88e0-b350f560fe6c",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getDoubleArray",
+            "args_count": 1,
+            "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getPVals",
+            "args_count": 0,
+            "receiver": "h-2f2cd00b-2d0a-443f-b7b9-4ab2aa7c9ab5",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "study",
+            "args_count": 0,
+            "receiver": "h-2f2cd00b-2d0a-443f-b7b9-4ab2aa7c9ab5",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "study",
+            "args_count": 0,
+            "receiver": "h-626e37ce-6083-44b9-88e0-b350f560fe6c",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-5dbc8dc0-f355-4905-aa1d-3e5077892995",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "study",
+            "args_count": 1,
+            "receiver": "h-626e37ce-6083-44b9-88e0-b350f560fe6c",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "feature",
+            "args_count": 0,
+            "receiver": "h-716eb575-547b-4c5b-b9ad-4669cd481c10",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-540f77ab-fd17-412c-b707-2afb88395c43",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "get",
+            "args_count": 1,
+            "receiver": "h-540f77ab-fd17-412c-b707-2afb88395c43",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getType",
+            "args_count": 0,
+            "receiver": "h-055017bf-0f3d-4921-bfe9-9b54d8a615fa",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getDoubleArray",
+            "args_count": 1,
+            "receiver": "h-055017bf-0f3d-4921-bfe9-9b54d8a615fa",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getString",
+            "args_count": 1,
+            "receiver": "h-055017bf-0f3d-4921-bfe9-9b54d8a615fa",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "remove",
+            "args_count": 1,
+            "receiver": "h-6607aa37-a10d-4844-aa21-b888e915c162",
+            "is_mutation": true
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-6607aa37-a10d-4844-aa21-b888e915c162",
+            "is_mutation": false
+          }
+        ],
+        "mutation_issued": true
+      },
+      "details": {
+        "status_token": "APPLIED"
+      }
+    },
+    "effect": "evaluate",
+    "isolation_proof": {
+      "verified": true,
+      "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/final6_m3_a3f39b3_20260922T0907Z/isolation_receipt.json",
+      "pid": 46631,
+      "birth": "Tue Sep 22 17:10:53 2026",
+      "endpoint": "127.0.0.1:54834",
+      "listener": {
+        "pid": 46631,
+        "endpoint": "*:54834",
+        "local_endpoint": "*:54834",
+        "remote_endpoint": null,
+        "state": "LISTEN",
+        "raw": "java    46631 everwalker   59u  IPv6 0x1853004e4a4c6e98      0t0  TCP *:54834 (LISTEN)"
+      },
+      "listener_binding": "wildcard",
+      "loopback_listener": false,
+      "worker_pid": 46879,
+      "established_client_pids": [
+        46631,
+        46879
+      ],
+      "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+      "config_inode": 14720294,
+      "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+      "api_probe": {
+        "probe_kind": "comsol_java_api",
+        "observed_at": "2026-09-22T09:11:06Z",
+        "loopback_address": "127.0.0.1",
+        "loopback_port": 54834,
+        "authenticated_api_success": true,
+        "nonloopback_address": "192.168.100.152",
+        "nonloopback_port": 54834,
+        "nonloopback_api_exception_http_status": null,
+        "denial_evidence_source": "server_access_log",
+        "server_access_log": {
+          "status": "PASS",
+          "phase": "java_connect_only",
+          "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/final6_m3_a3f39b3_20260922T0907Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+          "inode": 30232598,
+          "offset_before": 0,
+          "offset_after": 261,
+          "segment_sha256": "96df5059303a59f6805620250114f85a9dfb4caff7fb254c976ae19f44e54eaa",
+          "java_request_id": "g2-valve-nonloopback-connect",
+          "started_at": "2026-09-22T09:10:58Z",
+          "finished_at": "2026-09-22T09:11:06Z",
+          "entries": [
+            {
+              "peer": "127.0.0.1",
+              "method": "GET",
+              "route": "/webbridge/websocket",
+              "http_status": 101
+            },
+            {
+              "peer": "127.0.0.1",
+              "method": "GET",
+              "route": "/webbridge/websocket",
+              "http_status": 101
+            },
+            {
+              "peer": "192.168.100.152",
+              "method": "GET",
+              "route": "/webbridge/websocket",
+              "http_status": 403
+            }
+          ],
+          "parsed_nonloopback_entry": {
+            "peer": "192.168.100.152",
+            "method": "GET",
+            "route": "/webbridge/websocket",
+            "http_status": 403
+          },
+          "raw_probe_started_after_capture": true
+        }
+      },
+      "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer"
+    }
+  },
+  "error": null,
+  "execution": {
+    "session_id": "session-b7b18ca9ea34d3a93f7237bd",
+    "model_ref": {
+      "schema_version": 1,
+      "session_id": "session-b7b18ca9ea34d3a93f7237bd",
+      "server_instance_id": "2b80e305766d4d819fee417d439496f202d6eafce2f4014c0b0cf75470f90085",
+      "model_tag": "mcp1",
+      "generation": 1
+    },
+    "revision": 3,
+    "dirty": false,
+    "server_ownership": "shared",
+    "model_ownership": "mcp_owned",
+    "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+    "request_id": "final6_m3_a3f39b3_20260922T0907Z-run-result-sample_path-1",
+    "operation_id": "f6d370de-5ba6-441d-adb5-06c65d105792",
+    "request_hash": "124dec1fbd2a8a3f9d71c904a6bb23146a77ca88a711c669dcc6a149b0f5caac",
+    "idempotency_key": "final6_m3_a3f39b3_20260922T0907Z-run-result-sample_path-1",
+    "job_id": "1d69d853-eaed-43ea-8eb1-e3ca0e8c02b3"
+  },
+  "_outer_isError": false,
+  "_structuredContent": {
+    "success": true,
+    "data": {
+      "samples": [
+        {
+          "x": 0.0125,
+          "y": 0.005,
+          "solnum": 1,
+          "T": 308.1500000000069,
+          "ht.tfluxx": -480000.0000001746
+        },
+        {
+          "x": 0.025,
+          "y": 0.005,
+          "solnum": 1,
+          "T": 323.15000000001123,
+          "ht.tfluxx": -480000.00000004075
+        },
+        {
+          "x": 0.0375,
+          "y": 0.005,
+          "solnum": 1,
+          "T": 338.15000000000975,
+          "ht.tfluxx": -479999.9999998021
+        }
+      ],
+      "sample_count": 3,
+      "points": {
+        "kind": "line",
+        "start": [
+          0.0125,
+          0.005
+        ],
+        "end": [
+          0.0375,
+          0.005
+        ],
+        "count": 3,
+        "dimension": 2,
+        "coordinate_unit": "m",
+        "space_dimension": 2
+      },
+      "expressions": [
+        "T",
+        "ht.tfluxx"
+      ],
+      "expression_units": {
+        "T": "K",
+        "ht.tfluxx": "W/m^2"
+      },
+      "columns": [
+        {
+          "name": "x",
+          "role": "coordinate",
+          "unit": "m"
+        },
+        {
+          "name": "y",
+          "role": "coordinate",
+          "unit": "m"
+        },
+        {
+          "name": "solnum",
+          "role": "solution_index",
+          "unit": "one-based index"
+        },
+        {
+          "name": "T",
+          "role": "expression",
+          "unit": "K"
+        },
+        {
+          "name": "ht.tfluxx",
+          "role": "expression",
+          "unit": "W/m^2"
+        }
+      ],
+      "roles": {
+        "coordinates": [
+          "x",
+          "y"
+        ],
+        "solution_index": "solnum",
+        "time": null,
+        "expressions": {
+          "T": "T",
+          "ht.tfluxx": "ht.tfluxx"
+        },
+        "lookup": "row keys are exact: resolve a column through this map or through 'columns'"
+      },
+      "dataset": "dset1",
+      "solution": "sol1",
+      "binding": {
+        "dataset": "dset1",
+        "solution": "sol1",
+        "component": "comp1",
+        "geometry": "geom1",
+        "length_unit": "m",
+        "space_dimension": 2,
+        "content_context": "dataset.comp/dataset.geom",
+        "stored_solutions": 1,
+        "time_axis": {
+          "time_dependent": false,
+          "status": "not_time_dependent",
+          "source": null,
+          "unit": null,
+          "values": null
+        },
+        "revision_required": false
+      },
+      "unit_readback": {
+        "expression_units": {
+          "T": "K",
+          "ht.tfluxx": "W/m^2"
+        },
+        "coordinate_unit": "m",
+        "time_unit": null,
+        "source": "model.result().numerical(<tag>).getStringArray(\"unit\") and GeomSequence.lengthUnit()"
+      },
+      "coordinate_readback": {
+        "attempted": true,
+        "status": "VERIFIED",
+        "method": "result.numerical(<tag>).getCoordinates()",
+        "coordinates": [
+          [
+            0.0125,
+            0.025,
+            0.0375
+          ],
+          [
+            0.005,
+            0.005,
+            0.005
+          ]
+        ],
+        "max_deviation": 0.0,
+        "allowlist_entry_required": null,
+        "reason": null
+      },
+      "units": {
+        "x": "m",
+        "y": "m",
+        "T": "K",
+        "ht.tfluxx": "W/m^2",
+        "solnum": "one-based index"
+      },
+      "complex": false,
+      "complex_mode": "real",
+      "time_values": null,
+      "time_steps": null,
+      "solution_axis": {
+        "time_dependent": false,
+        "status": "not_time_dependent",
+        "source": null,
+        "values": null,
+        "unit": null,
+        "stored_solutions": 1,
+        "solution": "sol1",
+        "study": "std1",
+        "study_steps": [
+          {
+            "tag": "stat",
+            "type": "Stationary"
+          }
+        ],
+        "feature_times": null,
+        "solver_values": [
+          0.0
+        ],
+        "conflicts": [],
+        "reason": null
+      },
+      "ephemeral_feature": {
+        "tag": "cmssp1",
+        "type_id": "Interp",
+        "property_readback": {
+          "data": "dset1",
+          "expr": [
+            "T",
+            "ht.tfluxx"
+          ],
+          "unit": [
+            "K",
+            "W/m^2"
+          ],
+          "observed_properties": [
+            "hasbeenevaluated",
+            "defaultPlotID",
+            "weight",
+            "data",
+            "oldanalysistype",
+            "oldouteranalysistype",
+            "outertype",
+            "outersolnum",
+            "solvertype",
+            "solnum",
+            "timeinterp",
+            "t",
+            "t_vector_method",
+            "t_vector_start",
+            "t_vector_stop",
+            "t_vector_step",
+            "t_vector_numvalues",
+            "t_vector_function",
+            "t_vector_interval",
+            "t_vector_freqperdec",
+            "unittrans",
+            "unitdim",
+            "exprexcelfilename",
+            "exprexcelsheet",
+            "exprexcelrange",
+            "exprexcelincludeheaders",
+            "exprexcelseparateunits",
+            "exprexceloverwrite",
+            "exprexcelcalculatedvalues",
+            "expr",
+            "unit",
+            "descr",
+            "compactexprs",
+            "allowdescrupdate",
+            "evalmethodactive",
+            "evalmethod",
+            "differential",
+            "constactive",
+            "const",
+            "constUnit",
+            "constisupdated",
+            "constprefixes",
+            "recover",
+            "refine",
+            "edim",
+            "ext",
+            "coorderr",
+            "phase",
+            "complexfun",
+            "matherr",
+            "resultinfo",
+            "resetbeenset"
+          ]
+        }
+      },
+      "coordinate_source": "the requested path_definition points (coord property); a getCoordinates() readback needs the worker allow-list entry recorded in ALLOWLIST_ADDITIONS",
+      "notes": [
+        "coordinates are the requested path points, expressed in the model length unit (GeomSequence.lengthUnit()); this adapter never converts units",
+        "the sample table index 'solnum' is the one-based stored-solution index of the dataset, matching COMSOL's one-based solution numbering",
+        "no time column is published for this dataset: the dataset is not time-dependent"
+      ],
+      "cleanup": {
+        "tag": "cmssp1",
+        "type_id": "Interp",
+        "created": true,
+        "removed": true,
+        "verified_removed": true,
+        "cleanup_failed": false,
+        "error": null
+      },
+      "status": {
+        "ok": true,
+        "status": "APPLIED",
+        "partial_change": true,
+        "execution_state_unknown": false,
+        "applied": [
+          "result.numerical.create(Interp)",
+          "result.numerical.getCoordinates(verified)",
+          "result.numerical.set(coord)",
+          "result.numerical.getData",
+          "result.numerical.remove",
+          "result.numerical.remove(verified)"
+        ],
+        "failed": [],
+        "not_executed": [],
+        "readback_match": true,
+        "readback": {
+          "readable": true,
+          "sample_count": 3,
+          "stored_solutions": 1,
+          "time_steps": null
+        },
+        "engine_error": null
+      },
+      "verification_status": "PASSED",
+      "verification": {
+        "axis": "coordinate_readback",
+        "status": "PASSED",
+        "detail": {
+          "attempted": true,
+          "status": "VERIFIED",
+          "method": "result.numerical(<tag>).getCoordinates()",
+          "coordinates": [
+            [
+              0.0125,
+              0.025,
+              0.0375
+            ],
+            [
+              0.005,
+              0.005,
+              0.005
+            ]
+          ],
+          "max_deviation": 0.0,
+          "allowlist_entry_required": null,
+          "reason": null
+        }
+      },
+      "engine_error": null,
+      "read_errors": [
+        {
+          "method": "getString",
+          "code": "ENGINE_CALL_FAILED",
+          "message": "COMSOL getString probe failed: JavaWorkerError",
+          "allowlist_entry_required": null
+        }
+      ],
+      "allowlist_entry_required": [],
+      "allowlist_additions": [
+        "getLevels",
+        "getVals",
+        "getSolverSequences",
+        "evaluationGroup",
+        "looplevelinput"
+      ],
+      "allowlist_available_unused": [
+        "getSequenceType",
+        "getPNames",
+        "getParamVals",
+        "getParamNames",
+        "isAttached"
+      ],
+      "unverified_paths": [
+        {
+          "path": "spec.selection / spec.aggregate / spec.weight_expression",
+          "reason": "outside the minimal sampler; refused with API_UNSUPPORTED instead of approximated"
+        },
+        {
+          "path": "spec.solution.inner / .outer / .time / .frequency / .parameters",
+          "reason": "per-solution selection is not implemented; every stored solution is returned and indexed by the 'solnum' column"
+        },
+        {
+          "path": "spec.complex_mode other than 'real'",
+          "reason": "NumericalFeature.getData() returns the real part (documented); no silent complex reshuffle"
+        },
+        {
+          "path": "path_definition kinds other than 'line'",
+          "reason": "only the line kind the W16 chains need is implemented"
+        },
+        {
+          "path": "coordinate readback via getCoordinates()",
+          "reason": "documented but not on the worker allow-list; the row coordinates are the requested path points"
+        }
+      ],
+      "domain_state": "succeeded",
+      "execution_state_unknown": false,
+      "partial_change": true,
+      "cleanup_failed": false,
+      "dispatch_stage": "post_dispatch",
+      "domain_outcome": {
+        "operation": "result.sample_path",
+        "state": "succeeded",
+        "verification_status": "PASSED",
+        "cleanup_failed": false,
+        "execution_state_unknown": false,
+        "dispatch_stage": "post_dispatch",
+        "applied_count": 6,
+        "failed_count": 0,
+        "not_executed_count": 0,
+        "status_token": "APPLIED",
+        "verification": {
+          "declared_by": [
+            "verification_status",
+            "verification"
+          ],
+          "verification": {
+            "status": "PASSED"
+          },
+          "raw_status": "PASSED"
+        },
+        "witness": {
+          "engine_calls": 66,
+          "mutation_method": "create",
+          "methods": [
+            "component",
+            "create",
+            "dataset",
+            "feature",
+            "geom",
+            "get",
+            "getCoordinates",
+            "getData",
+            "getDoubleArray",
+            "getPVals",
+            "getSDim",
+            "getString",
+            "getStringArray",
+            "getType",
+            "isAxisymmetric",
+            "isComplex",
+            "lengthUnit",
+            "modelNode",
+            "numerical",
+            "properties",
+            "remove",
+            "result",
+            "run",
+            "set",
+            "setIndex",
+            "sol",
+            "study",
+            "tags"
+          ],
+          "dispatches": [
+            {
+              "command": "call",
+              "method": "result",
+              "args_count": 0,
+              "receiver": "h-626e37ce-6083-44b9-88e0-b350f560fe6c",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "dataset",
+              "args_count": 0,
+              "receiver": "h-04acc628-7301-4a54-b35f-e08d6fea5e64",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-eb50c67a-84af-4dea-854f-b1aca4c1bbc2",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "get",
+              "args_count": 1,
+              "receiver": "h-eb50c67a-84af-4dea-854f-b1aca4c1bbc2",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "result",
+              "args_count": 0,
+              "receiver": "h-626e37ce-6083-44b9-88e0-b350f560fe6c",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "dataset",
+              "args_count": 0,
+              "receiver": "h-2b2a3c08-20df-4f5a-8be0-7e110f0a6b01",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-57b0ef75-74ad-42f7-aafb-404e906e39f7",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "sol",
+              "args_count": 0,
+              "receiver": "h-626e37ce-6083-44b9-88e0-b350f560fe6c",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-8e190ae1-f6a6-4d05-bb3e-066c8629d1d8",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "get",
+              "args_count": 1,
+              "receiver": "h-57b0ef75-74ad-42f7-aafb-404e906e39f7",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getType",
+              "args_count": 0,
+              "receiver": "h-99589837-40a7-41d8-95be-d2c55c4a9584",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "properties",
+              "args_count": 0,
+              "receiver": "h-99589837-40a7-41d8-95be-d2c55c4a9584",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getString",
+              "args_count": 1,
+              "receiver": "h-99589837-40a7-41d8-95be-d2c55c4a9584",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "properties",
+              "args_count": 0,
+              "receiver": "h-99589837-40a7-41d8-95be-d2c55c4a9584",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "properties",
+              "args_count": 0,
+              "receiver": "h-99589837-40a7-41d8-95be-d2c55c4a9584",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "properties",
+              "args_count": 0,
+              "receiver": "h-99589837-40a7-41d8-95be-d2c55c4a9584",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getString",
+              "args_count": 1,
+              "receiver": "h-99589837-40a7-41d8-95be-d2c55c4a9584",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "properties",
+              "args_count": 0,
+              "receiver": "h-99589837-40a7-41d8-95be-d2c55c4a9584",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getString",
+              "args_count": 1,
+              "receiver": "h-99589837-40a7-41d8-95be-d2c55c4a9584",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "modelNode",
+              "args_count": 0,
+              "receiver": "h-626e37ce-6083-44b9-88e0-b350f560fe6c",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-b46291d3-7ffd-4411-9aea-f3ad7e9ad943",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "component",
+              "args_count": 1,
+              "receiver": "h-626e37ce-6083-44b9-88e0-b350f560fe6c",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "geom",
+              "args_count": 0,
+              "receiver": "h-a3676fab-15e5-4aed-bbf0-d66caff8e08a",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-c61670f3-1002-4994-8618-0f2da62ff528",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "get",
+              "args_count": 1,
+              "receiver": "h-c61670f3-1002-4994-8618-0f2da62ff528",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "component",
+              "args_count": 1,
+              "receiver": "h-626e37ce-6083-44b9-88e0-b350f560fe6c",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "geom",
+              "args_count": 1,
+              "receiver": "h-7d6182b1-5160-4e18-8062-8375c0bfa0df",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "lengthUnit",
+              "args_count": 0,
+              "receiver": "h-63d76b97-d46b-491e-a487-4384a4e144e7",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getSDim",
+              "args_count": 0,
+              "receiver": "h-63d76b97-d46b-491e-a487-4384a4e144e7",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "isAxisymmetric",
+              "args_count": 0,
+              "receiver": "h-63d76b97-d46b-491e-a487-4384a4e144e7",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "sol",
+              "args_count": 0,
+              "receiver": "h-626e37ce-6083-44b9-88e0-b350f560fe6c",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-4cf0ee2d-e1ed-4bee-a56d-49653dbe96dc",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "numerical",
+              "args_count": 0,
+              "receiver": "h-04acc628-7301-4a54-b35f-e08d6fea5e64",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-6607aa37-a10d-4844-aa21-b888e915c162",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "create",
+              "args_count": 2,
+              "receiver": "h-6607aa37-a10d-4844-aa21-b888e915c162",
+              "is_mutation": true
+            },
+            {
+              "command": "call",
+              "method": "get",
+              "args_count": 1,
+              "receiver": "h-6607aa37-a10d-4844-aa21-b888e915c162",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "set",
+              "args_count": 2,
+              "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+              "is_mutation": true
+            },
+            {
+              "command": "call",
+              "method": "getString",
+              "args_count": 1,
+              "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getType",
+              "args_count": 0,
+              "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "setIndex",
+              "args_count": 3,
+              "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+              "is_mutation": true
+            },
+            {
+              "command": "call",
+              "method": "setIndex",
+              "args_count": 3,
+              "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+              "is_mutation": true
+            },
+            {
+              "command": "call",
+              "method": "set",
+              "args_count": 2,
+              "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+              "is_mutation": true
+            },
+            {
+              "command": "call",
+              "method": "run",
+              "args_count": 0,
+              "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+              "is_mutation": true
+            },
+            {
+              "command": "call",
+              "method": "getData",
+              "args_count": 0,
+              "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "isComplex",
+              "args_count": 0,
+              "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getStringArray",
+              "args_count": 1,
+              "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getStringArray",
+              "args_count": 1,
+              "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "properties",
+              "args_count": 0,
+              "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getCoordinates",
+              "args_count": 0,
+              "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "sol",
+              "args_count": 0,
+              "receiver": "h-626e37ce-6083-44b9-88e0-b350f560fe6c",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-6b742576-020c-42d4-8e74-c5fe1ed3d499",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "sol",
+              "args_count": 1,
+              "receiver": "h-626e37ce-6083-44b9-88e0-b350f560fe6c",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getDoubleArray",
+              "args_count": 1,
+              "receiver": "h-513fd5fa-830d-4f50-8573-59cc591bb120",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getPVals",
+              "args_count": 0,
+              "receiver": "h-2f2cd00b-2d0a-443f-b7b9-4ab2aa7c9ab5",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "study",
+              "args_count": 0,
+              "receiver": "h-2f2cd00b-2d0a-443f-b7b9-4ab2aa7c9ab5",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "study",
+              "args_count": 0,
+              "receiver": "h-626e37ce-6083-44b9-88e0-b350f560fe6c",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-5dbc8dc0-f355-4905-aa1d-3e5077892995",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "study",
+              "args_count": 1,
+              "receiver": "h-626e37ce-6083-44b9-88e0-b350f560fe6c",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "feature",
+              "args_count": 0,
+              "receiver": "h-716eb575-547b-4c5b-b9ad-4669cd481c10",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-540f77ab-fd17-412c-b707-2afb88395c43",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "get",
+              "args_count": 1,
+              "receiver": "h-540f77ab-fd17-412c-b707-2afb88395c43",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getType",
+              "args_count": 0,
+              "receiver": "h-055017bf-0f3d-4921-bfe9-9b54d8a615fa",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getDoubleArray",
+              "args_count": 1,
+              "receiver": "h-055017bf-0f3d-4921-bfe9-9b54d8a615fa",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "getString",
+              "args_count": 1,
+              "receiver": "h-055017bf-0f3d-4921-bfe9-9b54d8a615fa",
+              "is_mutation": false
+            },
+            {
+              "command": "call",
+              "method": "remove",
+              "args_count": 1,
+              "receiver": "h-6607aa37-a10d-4844-aa21-b888e915c162",
+              "is_mutation": true
+            },
+            {
+              "command": "call",
+              "method": "tags",
+              "args_count": 0,
+              "receiver": "h-6607aa37-a10d-4844-aa21-b888e915c162",
+              "is_mutation": false
+            }
+          ],
+          "mutation_issued": true
+        },
+        "details": {
+          "status_token": "APPLIED"
+        }
+      },
+      "effect": "evaluate",
+      "isolation_proof": {
+        "verified": true,
+        "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/final6_m3_a3f39b3_20260922T0907Z/isolation_receipt.json",
+        "pid": 46631,
+        "birth": "Tue Sep 22 17:10:53 2026",
+        "endpoint": "127.0.0.1:54834",
+        "listener": {
+          "pid": 46631,
+          "endpoint": "*:54834",
+          "local_endpoint": "*:54834",
+          "remote_endpoint": null,
+          "state": "LISTEN",
+          "raw": "java    46631 everwalker   59u  IPv6 0x1853004e4a4c6e98      0t0  TCP *:54834 (LISTEN)"
+        },
+        "listener_binding": "wildcard",
+        "loopback_listener": false,
+        "worker_pid": 46879,
+        "established_client_pids": [
+          46631,
+          46879
+        ],
+        "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+        "config_inode": 14720294,
+        "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+        "api_probe": {
+          "probe_kind": "comsol_java_api",
+          "observed_at": "2026-09-22T09:11:06Z",
+          "loopback_address": "127.0.0.1",
+          "loopback_port": 54834,
+          "authenticated_api_success": true,
+          "nonloopback_address": "192.168.100.152",
+          "nonloopback_port": 54834,
+          "nonloopback_api_exception_http_status": null,
+          "denial_evidence_source": "server_access_log",
+          "server_access_log": {
+            "status": "PASS",
+            "phase": "java_connect_only",
+            "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/final6_m3_a3f39b3_20260922T0907Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+            "inode": 30232598,
+            "offset_before": 0,
+            "offset_after": 261,
+            "segment_sha256": "96df5059303a59f6805620250114f85a9dfb4caff7fb254c976ae19f44e54eaa",
+            "java_request_id": "g2-valve-nonloopback-connect",
+            "started_at": "2026-09-22T09:10:58Z",
+            "finished_at": "2026-09-22T09:11:06Z",
+            "entries": [
+              {
+                "peer": "127.0.0.1",
+                "method": "GET",
+                "route": "/webbridge/websocket",
+                "http_status": 101
+              },
+              {
+                "peer": "127.0.0.1",
+                "method": "GET",
+                "route": "/webbridge/websocket",
+                "http_status": 101
+              },
+              {
+                "peer": "192.168.100.152",
+                "method": "GET",
+                "route": "/webbridge/websocket",
+                "http_status": 403
+              }
+            ],
+            "parsed_nonloopback_entry": {
+              "peer": "192.168.100.152",
+              "method": "GET",
+              "route": "/webbridge/websocket",
+              "http_status": 403
+            },
+            "raw_probe_started_after_capture": true
+          }
+        },
+        "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer"
+      }
+    },
+    "error": null,
+    "execution": {
+      "session_id": "session-b7b18ca9ea34d3a93f7237bd",
+      "model_ref": {
+        "schema_version": 1,
+        "session_id": "session-b7b18ca9ea34d3a93f7237bd",
+        "server_instance_id": "2b80e305766d4d819fee417d439496f202d6eafce2f4014c0b0cf75470f90085",
+        "model_tag": "mcp1",
+        "generation": 1
+      },
+      "revision": 3,
+      "dirty": false,
+      "server_ownership": "shared",
+      "model_ownership": "mcp_owned",
+      "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+      "request_id": "final6_m3_a3f39b3_20260922T0907Z-run-result-sample_path-1",
+      "operation_id": "f6d370de-5ba6-441d-adb5-06c65d105792",
+      "request_hash": "124dec1fbd2a8a3f9d71c904a6bb23146a77ca88a711c669dcc6a149b0f5caac",
+      "idempotency_key": "final6_m3_a3f39b3_20260922T0907Z-run-result-sample_path-1",
+      "job_id": "1d69d853-eaed-43ea-8eb1-e3ca0e8c02b3"
+    }
+  }
+}

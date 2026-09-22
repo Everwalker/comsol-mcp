@@ -1,0 +1,1 @@
+import com.comsol.model.*; import java.util.*; public final class NegativeMutationMissingDerived {public static Object run(Model model, Map<String,Object> args) {model.result().numerical().remove("user_derived_probe");return Collections.singletonMap("mutation", args.get("name")); }}

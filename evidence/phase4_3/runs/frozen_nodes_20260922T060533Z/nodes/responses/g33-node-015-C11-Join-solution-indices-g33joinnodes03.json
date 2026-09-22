@@ -1,0 +1,271 @@
+{
+  "_outer_isError": false,
+  "_structuredContent": {
+    "data": {
+      "axis_metadata_complete": true,
+      "axis_metadata_source": "SolutionInfo.getSolnum(outer, strict) + getPNames/getPvals/getUnits",
+      "binding_complete": true,
+      "binding_source": "dataset property 'solution'/'data' resolved against model.sol().tags(); SolutionInfo.getSolnum(outer, strict)",
+      "dataset": "g33joinnodes03",
+      "dataset_binding": {
+        "binding_complete": true,
+        "component": "comp1",
+        "dataset": "g33joinnodes03",
+        "dataset_chain": [
+          "dset1",
+          "g33joinnodes03"
+        ],
+        "dataset_edges": [
+          {
+            "from": "g33joinnodes03",
+            "property": "data",
+            "to": "dset1"
+          },
+          {
+            "from": "g33joinnodes03",
+            "property": "data2",
+            "to": "dset1"
+          }
+        ],
+        "dataset_type": "Join",
+        "error": null,
+        "geometry": "geom1",
+        "properties": {
+          "data": "dset1",
+          "data2": "dset1"
+        },
+        "provenance": {
+          "dataset_tags": [
+            "dset1",
+            "g33cptnodes01",
+            "g33linenodes02",
+            "g33joinnodes03"
+          ],
+          "mutation_methods_called": [],
+          "read_only": true,
+          "solution_tags": [
+            "sol1"
+          ]
+        },
+        "read_errors": [],
+        "requested_solution": null,
+        "solution": "sol1",
+        "sources": {
+          "component": "upstream dataset reference(s): ['dset1', 'dset1']",
+          "geometry": "upstream dataset reference(s): ['dset1', 'dset1']",
+          "solution": "upstream dataset reference(s): ['dset1', 'dset1']"
+        }
+      },
+      "inner_indices": [
+        1
+      ],
+      "level_names": [],
+      "outer_indices": [
+        1
+      ],
+      "pair_mapping_complete": true,
+      "parameters": {
+        "by_pair": {
+          "1:1": {
+            "names": [],
+            "solnum": 1,
+            "units": [],
+            "values": []
+          }
+        }
+      },
+      "parameters_complete": false,
+      "parameters_source": "SolutionInfo.getPNames(int[][])/getPvals(int[][])/getUnits(int[][])",
+      "read_errors": [
+        {
+          "allowlist_entry_required": null,
+          "code": "ENGINE_CALL_FAILED",
+          "message": "COMSOL getString probe failed: JavaWorkerError",
+          "method": "getString"
+        },
+        {
+          "code": "SOLUTION_METADATA_ERROR",
+          "message": "{\"completed_at_ms\": \"1790057155225\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1790057155224\", \"request_id\": \"wrk-062aa4b2-2824-4e1a-acee-c4d9807365fa\", \"started_at_ms\": \"1790057155224\", \"status\": \"FAILED\", \"type\": \"call\"}",
+          "method": "getPNames"
+        },
+        {
+          "code": "SOLUTION_METADATA_ERROR",
+          "message": "{\"completed_at_ms\": \"1790057155227\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1790057155226\", \"request_id\": \"wrk-125f5d2b-38bc-451b-a7a9-f2e29f5cac08\", \"started_at_ms\": \"1790057155226\", \"status\": \"FAILED\", \"type\": \"call\"}",
+          "method": "getPvals"
+        },
+        {
+          "code": "SOLUTION_METADATA_ERROR",
+          "message": "{\"completed_at_ms\": \"1790057155228\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1790057155227\", \"request_id\": \"wrk-c91a66e2-8817-4b6e-ac5d-80bb6301eddf\", \"started_at_ms\": \"1790057155227\", \"status\": \"FAILED\", \"type\": \"call\"}",
+          "method": "getUnits"
+        }
+      ],
+      "solnum_pairs": [
+        {
+          "inner": 1,
+          "outer": 1,
+          "solnum": 1
+        }
+      ],
+      "solution": "sol1",
+      "solution_count": 1,
+      "study": "std1",
+      "time_axis_source": "steady: no time axis",
+      "time_values": []
+    },
+    "error": null,
+    "execution": {
+      "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+      "dirty": false,
+      "idempotency_key": "g33-node-015-C11-Join-solution-indices-g33joinnodes03",
+      "job_id": "55a48747-612e-4f00-ab60-679a0337d1f5",
+      "model_ownership": "mcp_owned",
+      "model_ref": {
+        "generation": 1,
+        "model_tag": "mcp1",
+        "schema_version": 1,
+        "server_instance_id": "5400e8c66883a359b9afb0ca4fac70c9a49aeef726ee287b7f863d3d69a1ce2d",
+        "session_id": "session-6e668ff6bcbd1b418a28502e"
+      },
+      "operation_id": "312f843e-8166-4ad9-826e-940271881967",
+      "request_hash": "077f8135f54a557513bcc7c389fb034347316e24f05093e95b69024e14215c5d",
+      "request_id": "g33-node-C11-Join-solution-indices-g33joinnodes03",
+      "revision": 8,
+      "server_ownership": "shared",
+      "session_id": "session-6e668ff6bcbd1b418a28502e"
+    },
+    "success": true
+  },
+  "data": {
+    "axis_metadata_complete": true,
+    "axis_metadata_source": "SolutionInfo.getSolnum(outer, strict) + getPNames/getPvals/getUnits",
+    "binding_complete": true,
+    "binding_source": "dataset property 'solution'/'data' resolved against model.sol().tags(); SolutionInfo.getSolnum(outer, strict)",
+    "dataset": "g33joinnodes03",
+    "dataset_binding": {
+      "binding_complete": true,
+      "component": "comp1",
+      "dataset": "g33joinnodes03",
+      "dataset_chain": [
+        "dset1",
+        "g33joinnodes03"
+      ],
+      "dataset_edges": [
+        {
+          "from": "g33joinnodes03",
+          "property": "data",
+          "to": "dset1"
+        },
+        {
+          "from": "g33joinnodes03",
+          "property": "data2",
+          "to": "dset1"
+        }
+      ],
+      "dataset_type": "Join",
+      "error": null,
+      "geometry": "geom1",
+      "properties": {
+        "data": "dset1",
+        "data2": "dset1"
+      },
+      "provenance": {
+        "dataset_tags": [
+          "dset1",
+          "g33cptnodes01",
+          "g33linenodes02",
+          "g33joinnodes03"
+        ],
+        "mutation_methods_called": [],
+        "read_only": true,
+        "solution_tags": [
+          "sol1"
+        ]
+      },
+      "read_errors": [],
+      "requested_solution": null,
+      "solution": "sol1",
+      "sources": {
+        "component": "upstream dataset reference(s): ['dset1', 'dset1']",
+        "geometry": "upstream dataset reference(s): ['dset1', 'dset1']",
+        "solution": "upstream dataset reference(s): ['dset1', 'dset1']"
+      }
+    },
+    "inner_indices": [
+      1
+    ],
+    "level_names": [],
+    "outer_indices": [
+      1
+    ],
+    "pair_mapping_complete": true,
+    "parameters": {
+      "by_pair": {
+        "1:1": {
+          "names": [],
+          "solnum": 1,
+          "units": [],
+          "values": []
+        }
+      }
+    },
+    "parameters_complete": false,
+    "parameters_source": "SolutionInfo.getPNames(int[][])/getPvals(int[][])/getUnits(int[][])",
+    "read_errors": [
+      {
+        "allowlist_entry_required": null,
+        "code": "ENGINE_CALL_FAILED",
+        "message": "COMSOL getString probe failed: JavaWorkerError",
+        "method": "getString"
+      },
+      {
+        "code": "SOLUTION_METADATA_ERROR",
+        "message": "{\"completed_at_ms\": \"1790057155225\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1790057155224\", \"request_id\": \"wrk-062aa4b2-2824-4e1a-acee-c4d9807365fa\", \"started_at_ms\": \"1790057155224\", \"status\": \"FAILED\", \"type\": \"call\"}",
+        "method": "getPNames"
+      },
+      {
+        "code": "SOLUTION_METADATA_ERROR",
+        "message": "{\"completed_at_ms\": \"1790057155227\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1790057155226\", \"request_id\": \"wrk-125f5d2b-38bc-451b-a7a9-f2e29f5cac08\", \"started_at_ms\": \"1790057155226\", \"status\": \"FAILED\", \"type\": \"call\"}",
+        "method": "getPvals"
+      },
+      {
+        "code": "SOLUTION_METADATA_ERROR",
+        "message": "{\"completed_at_ms\": \"1790057155228\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1790057155227\", \"request_id\": \"wrk-c91a66e2-8817-4b6e-ac5d-80bb6301eddf\", \"started_at_ms\": \"1790057155227\", \"status\": \"FAILED\", \"type\": \"call\"}",
+        "method": "getUnits"
+      }
+    ],
+    "solnum_pairs": [
+      {
+        "inner": 1,
+        "outer": 1,
+        "solnum": 1
+      }
+    ],
+    "solution": "sol1",
+    "solution_count": 1,
+    "study": "std1",
+    "time_axis_source": "steady: no time axis",
+    "time_values": []
+  },
+  "error": null,
+  "execution": {
+    "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+    "dirty": false,
+    "idempotency_key": "g33-node-015-C11-Join-solution-indices-g33joinnodes03",
+    "job_id": "55a48747-612e-4f00-ab60-679a0337d1f5",
+    "model_ownership": "mcp_owned",
+    "model_ref": {
+      "generation": 1,
+      "model_tag": "mcp1",
+      "schema_version": 1,
+      "server_instance_id": "5400e8c66883a359b9afb0ca4fac70c9a49aeef726ee287b7f863d3d69a1ce2d",
+      "session_id": "session-6e668ff6bcbd1b418a28502e"
+    },
+    "operation_id": "312f843e-8166-4ad9-826e-940271881967",
+    "request_hash": "077f8135f54a557513bcc7c389fb034347316e24f05093e95b69024e14215c5d",
+    "request_id": "g33-node-C11-Join-solution-indices-g33joinnodes03",
+    "revision": 8,
+    "server_ownership": "shared",
+    "session_id": "session-6e668ff6bcbd1b418a28502e"
+  },
+  "success": true
+}

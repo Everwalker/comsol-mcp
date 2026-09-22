@@ -1,0 +1,127 @@
+{
+  "schema": "comsol-mcp-g3/baseline-review/2",
+  "generated_at": "2026-09-22T01:45:44.232068+00:00",
+  "current_status": "IMPLEMENTED_WITH_OPEN_ACCEPTANCE_DEFECTS",
+  "source": {
+    "commit": "e14c946616f1b9c24c6faffa9f51f29f0e70a337",
+    "tree": "00536965d04f4dc5b35613be9c3db2a558bf4843",
+    "dirty": true
+  },
+  "previous_reviews_preserved": [
+    {
+      "path": "evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/prior_state/BASELINE_REVIEW.json",
+      "sha256": "037830c38c3eb05ae72249b360c499578f3e420729d8aba3934e647666a40b63"
+    },
+    {
+      "path": "evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/prior_state/w17_correction.json",
+      "sha256": "82db0acafff143744f54b47edecffa38d5bdb46e3c03b6ccef815220b8866cb7"
+    }
+  ],
+  "claims": [
+    {
+      "case_id": "C00",
+      "subcase_id": "fixed_source_restore",
+      "scope": "SOURCE_RESTORATION",
+      "evidence_level": "FRESH_NETWORK_HASH_AUDIT",
+      "status": "PASS",
+      "source": "evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/fresh_restore/history_preservation_audit.json",
+      "fact": "3580 pinned source files independently match commit/tree/blob/sha256/size; no latest-main substitution."
+    },
+    {
+      "case_id": "C00",
+      "subcase_id": "historical_bytes",
+      "scope": "HISTORICAL_PRESERVATION_ONLY",
+      "evidence_level": "FRESH_COMPARISON",
+      "status": "PASS",
+      "source": "evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/current_history_vs_fresh_pin.json",
+      "fact": "600 historical files in current repository equal freshly restored PIN bytes; their PASS claims remain historical claims."
+    },
+    {
+      "case_id": "C03",
+      "subcase_id": "fake_reopen_test",
+      "scope": "UNIT",
+      "evidence_level": "CONTROL_UNIT",
+      "status": "NOT_LIVE_EVIDENCE",
+      "source": "tests/test_g3_gate_a2_f02_reopen.py",
+      "fact": "FakeReopenModel and test-created bytes cannot establish COMSOL reopen or physical acceptance."
+    },
+    {
+      "case_id": "C04-C14",
+      "subcase_id": "fwired_tree_tests",
+      "scope": "UNIT",
+      "evidence_level": "UNIT_CONTRACT",
+      "status": "NOT_LIVE_EVIDENCE",
+      "source": "tests/test_g3_w17.py",
+      "fact": "FWiredTree tests remain control/contract checks, not numerical engine acceptance."
+    },
+    {
+      "case_id": "C00",
+      "subcase_id": "software_baseline",
+      "scope": "SOFTWARE_ONLY",
+      "evidence_level": "FRESH_EXECUTION",
+      "status": "PASS_WITH_SKIP",
+      "source": "evidence/phase4_3/runs/software_validation_20260922T004801Z",
+      "fact": "New environment: 1648 passed, 1 skipped; prior sandbox socket failures retained separately. This is not W17 live acceptance."
+    },
+    {
+      "case_id": "C03",
+      "subcase_id": "independent_live_baseline",
+      "scope": "LIVE_COMSOL",
+      "evidence_level": "FRESH_EXECUTION",
+      "status": "FAIL",
+      "source": "evidence/phase4_3/runs/independent_live_baseline_20260922T0052Z",
+      "fact": "Negative fixture Java compile failure was ignored; C03 failed and dependent cases cascaded. No overall acceptance."
+    },
+    {
+      "case_id": "C03",
+      "subcase_id": "protocol_chain_c_development",
+      "scope": "LIVE_PUBLIC_MCP",
+      "evidence_level": "FRESH_EXECUTION",
+      "status": "PARTIAL",
+      "source": "evidence/phase4_3/runs/protocol_c_20260922T0124Z",
+      "fact": "27 stored values and structural continuation readbacks match fresh worker; incomplete worker exit confirmation prevents full Gate A promotion."
+    },
+    {
+      "case_id": "C04",
+      "subcase_id": "two_expression_constant",
+      "scope": "LIVE_PUBLIC_MCP",
+      "evidence_level": "FRESH_EXECUTION",
+      "status": "FAIL",
+      "source": "evidence/phase4_3/runs/numeric_m1_20260922T0145Z",
+      "fact": "Volume=3; integral/average for constants [2,3] correct; std fails numerator/denominator axis shape. M1 not passed."
+    },
+    {
+      "case_id": "C08",
+      "subcase_id": "native_solution_api_probe",
+      "scope": "API_ADAPTER_DIAGNOSIS",
+      "evidence_level": "FRESH_LIVE_PROBE",
+      "status": "OBSERVED_NOT_ACCEPTANCE",
+      "source": "evidence/phase4_3/runs/native_outer_20260922T0140Z",
+      "fact": "Fresh two-parameter transient model exposes dset2/sol2 four outer values and five inner times. Native parameter metadata recorded; production FieldArray acceptance remains open."
+    }
+  ],
+  "missing_references": [
+    {
+      "path": "audit/semantic_review.json",
+      "status": "MISSING",
+      "source": "fresh restored PIN inventory"
+    }
+  ],
+  "gate_policy": "No fixture/control/source audit can satisfy live required gates. No W18 work authorized.",
+  "latest_independent_observations": {
+    "scope": "DEVELOPMENT_RUNS_NOT_FINAL_FROZEN_SOURCE_ACCEPTANCE",
+    "passed_numeric_observations": [
+      "C04 two-expression integral/average/std/rms",
+      "C05 3D surface full/subset and volume; 2D boundary full/subset",
+      "C06 analytic polynomial integral/average/std/rms and positive nonconstant weighted mean",
+      "C09 constant complex modes and varying complex mean"
+    ],
+    "failed_numeric_observation": {
+      "case": "C09 phase-before-std",
+      "actual": 5.698548667161188,
+      "expected": 0,
+      "source": "evidence/phase4_3/runs/public_numeric_20260922T0215Z/numerics/C09-phase-before-std.json"
+    },
+    "notes": "Source changing during development; no overall PASS. Additional coordinate and point-feature native probes in independent root findings."
+  }
+}

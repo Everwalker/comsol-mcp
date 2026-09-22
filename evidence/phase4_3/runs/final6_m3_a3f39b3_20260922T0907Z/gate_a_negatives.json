@@ -1,0 +1,121 @@
+{
+  "wrong_hash": {
+    "status": "FAIL",
+    "error_code": "ARTIFACT_HASH_MISMATCH",
+    "message": "File SHA256 056172c5cc167ab42e7bd23f02116d4dd8760bb1b474c7e451028765b1403b05 does not match receipt SHA256 0000000000000000000000000000000000000000000000000000000000000000",
+    "details": {
+      "expected_sha": "0000000000000000000000000000000000000000000000000000000000000000",
+      "actual_sha": "056172c5cc167ab42e7bd23f02116d4dd8760bb1b474c7e451028765b1403b05"
+    },
+    "expected_code": "ARTIFACT_HASH_MISMATCH",
+    "negative_control_pass": true
+  },
+  "wrong_artifact": {
+    "status": "FAIL",
+    "error_code": "ARTIFACT_HASH_MISMATCH",
+    "message": "File SHA256 45fc0b9ae1143e7e19837b87fc6ed16a5f026bab944e67c36131acd9c153d5f1 does not match receipt SHA256 056172c5cc167ab42e7bd23f02116d4dd8760bb1b474c7e451028765b1403b05",
+    "details": {
+      "expected_sha": "056172c5cc167ab42e7bd23f02116d4dd8760bb1b474c7e451028765b1403b05",
+      "actual_sha": "45fc0b9ae1143e7e19837b87fc6ed16a5f026bab944e67c36131acd9c153d5f1"
+    },
+    "expected_code": "ARTIFACT_HASH_MISMATCH",
+    "negative_control_pass": true
+  },
+  "wrong_dataset": {
+    "status": "FAIL",
+    "error_code": "DATASET_NOT_FOUND",
+    "message": "Expected dataset 'absent_dataset' not found in model datasets ['dset1']",
+    "details": {
+      "expected_dataset": "absent_dataset",
+      "available_datasets": [
+        "dset1"
+      ]
+    },
+    "expected_code": "DATASET_NOT_FOUND",
+    "negative_control_pass": true
+  },
+  "wrong_solution": {
+    "status": "FAIL",
+    "error_code": "SOLUTION_NOT_FOUND",
+    "message": "Expected solution 'absent_solution' not found in model solutions ['sol1']",
+    "details": {
+      "expected_solution": "absent_solution",
+      "available_solutions": [
+        "sol1"
+      ]
+    },
+    "expected_code": "SOLUTION_NOT_FOUND",
+    "negative_control_pass": true
+  },
+  "cleared": {
+    "status": "FAIL",
+    "error_code": "SOLUTION_CLEARED_OR_EMPTY",
+    "message": "Failed to evaluate stored solution expression 'sample_0': {'code': 'EXECUTION_STATE_UNKNOWN', 'message': 'result.at_points failed with FIELD_ARRAY_SHAPE_MISMATCH (numerical feature returned no solution rows); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged', 'safe_retry': False, 'stage': 'post_dispatch', 'details': {'dispatch_stage': 'post_dispatch', 'witness': {'engine_calls': 56, 'mutation_method': 'create', 'mutation_issued': True, 'methods': ['component', 'create', 'dataset', 'geom', 'get', 'getData', 'getLevelNames', 'getOuterSolnum', 'getPNames', 'getPvals', 'getSDim', 'getSolnum', 'getSolnums', 'getSolutioninfo', 'getString', 'getStringArray', 'getType', 'getUnits', 'isAxisymmetric', 'isComplex', 'lengthUnit', 'modelNode', 'numerical', 'properties', 'remove', 'result', 'run', 'set', 'setInterpolationCoordinates', 'sol', 'tags'], 'dispatches': [{'command': 'call', 'method': 'result', 'args_count': 0, 'receiver': 'h-d1365b66-9409-4d7e-9c78-050a97c36dc1', 'is_mutation': False}, {'command': 'call', 'method': 'numerical', 'args_count': 0, 'receiver': 'h-a593cff6-92dd-41e8-96b1-677b2d844ad8', 'is_mutation': False}, {'command': 'call', 'method': 'dataset', 'args_count': 0, 'receiver': 'h-a593cff6-92dd-41e8-96b1-677b2d844ad8', 'is_mutation': False}, {'command': 'call', 'method': 'tags', 'args_count': 0, 'receiver': 'h-9a9630f2-4616-4ae9-84a4-b4b57b2c4aaf', 'is_mutation': False}, {'command': 'call', 'method': 'get', 'args_count': 1, 'receiver': 'h-9a9630f2-4616-4ae9-84a4-b4b57b2c4aaf', 'is_mutation': False}, {'command': 'call', 'method': 'result', 'args_count': 0, 'receiver': 'h-d1365b66-9409-4d7e-9c78-050a97c36dc1', 'is_mutation': False}, {'command': 'call', 'method': 'dataset', 'args_count': 0, 'receiver': 'h-cc3d3f4c-f5a7-4422-9fe7-8cbfb4e99610', 'is_mutation': False}, {'command': 'call', 'method': 'tags', 'args_count': 0, 'receiver': 'h-aa7b3608-b9cd-4558-9674-9cccbeda5069', 'is_mutation': False}, {'command': 'call', 'method': 'sol', 'args_count': 0, 'receiver': 'h-d1365b66-9409-4d7e-9c78-050a97c36dc1', 'is_mutation': False}, {'command': 'call', 'method': 'tags', 'args_count': 0, 'receiver': 'h-4cad724f-ba3e-4da8-8def-6c71269fffdb', 'is_mutation': False}, {'command': 'call', 'method': 'get', 'args_count': 1, 'receiver': 'h-aa7b3608-b9cd-4558-9674-9cccbeda5069', 'is_mutation': False}, {'command': 'call', 'method': 'getType', 'args_count': 0, 'receiver': 'h-2f42b86a-bbef-404f-9f0f-341c83b00b0f', 'is_mutation': False}, {'command': 'call', 'method': 'properties', 'args_count': 0, 'receiver': 'h-2f42b86a-bbef-404f-9f0f-341c83b00b0f', 'is_mutation': False}, {'command': 'call', 'method': 'getString', 'args_count': 1, 'receiver': 'h-2f42b86a-bbef-404f-9f0f-341c83b00b0f', 'is_mutation': False}, {'command': 'call', 'method': 'properties', 'args_count': 0, 'receiver': 'h-2f42b86a-bbef-404f-9f0f-341c83b00b0f', 'is_mutation': False}, {'command': 'call', 'method': 'properties', 'args_count': 0, 'receiver': 'h-2f42b86a-bbef-404f-9f0f-341c83b00b0f', 'is_mutation': False}, {'command': 'call', 'method': 'properties', 'args_count': 0, 'receiver': 'h-2f42b86a-bbef-404f-9f0f-341c83b00b0f', 'is_mutation': False}, {'command': 'call', 'method': 'getString', 'args_count': 1, 'receiver': 'h-2f42b86a-bbef-404f-9f0f-341c83b00b0f', 'is_mutation': False}, {'command': 'call', 'method': 'properties', 'args_count': 0, 'receiver': 'h-2f42b86a-bbef-404f-9f0f-341c83b00b0f', 'is_mutation': False}, {'command': 'call', 'method': 'getString', 'args_count': 1, 'receiver': 'h-2f42b86a-bbef-404f-9f0f-341c83b00b0f', 'is_mutation': False}, {'command': 'call', 'method': 'modelNode', 'args_count': 0, 'receiver': 'h-d1365b66-9409-4d7e-9c78-050a97c36dc1', 'is_mutation': False}, {'command': 'call', 'method': 'tags', 'args_count': 0, 'receiver': 'h-7e5075e3-b790-46f7-82bd-518d4e311864', 'is_mutation': False}, {'command': 'call', 'method': 'component', 'args_count': 1, 'receiver': 'h-d1365b66-9409-4d7e-9c78-050a97c36dc1', 'is_mutation': False}, {'command': 'call', 'method': 'geom', 'args_count': 0, 'receiver': 'h-f376b71e-cb84-4ca7-a467-6c64e923328e', 'is_mutation': False}, {'command': 'call', 'method': 'tags', 'args_count': 0, 'receiver': 'h-a2449f3c-c256-4fe3-ae35-b824ee70b868', 'is_mutation': False}, {'command': 'call', 'method': 'get', 'args_count': 1, 'receiver': 'h-a2449f3c-c256-4fe3-ae35-b824ee70b868', 'is_mutation': False}, {'command': 'call', 'method': 'component', 'args_count': 1, 'receiver': 'h-d1365b66-9409-4d7e-9c78-050a97c36dc1', 'is_mutation': False}, {'command': 'call', 'method': 'geom', 'args_count': 1, 'receiver': 'h-7d3be62f-159e-4dfb-a583-9435810910bc', 'is_mutation': False}, {'command': 'call', 'method': 'lengthUnit', 'args_count': 0, 'receiver': 'h-ebb44268-ff71-4a4b-85a7-7c8ab4c3a9ff', 'is_mutation': False}, {'command': 'call', 'method': 'getSDim', 'args_count': 0, 'receiver': 'h-ebb44268-ff71-4a4b-85a7-7c8ab4c3a9ff', 'is_mutation': False}, {'command': 'call', 'method': 'isAxisymmetric', 'args_count': 0, 'receiver': 'h-ebb44268-ff71-4a4b-85a7-7c8ab4c3a9ff', 'is_mutation': False}, {'command': 'call', 'method': 'sol', 'args_count': 0, 'receiver': 'h-d1365b66-9409-4d7e-9c78-050a97c36dc1', 'is_mutation': False}, {'command': 'call', 'method': 'tags', 'args_count': 0, 'receiver': 'h-3a1c89da-fb03-477d-ab5d-249bb0d4b91b', 'is_mutation': False}, {'command': 'call', 'method': 'get', 'args_count': 1, 'receiver': 'h-3a1c89da-fb03-477d-ab5d-249bb0d4b91b', 'is_mutation': False}, {'command': 'call', 'method': 'getSolutioninfo', 'args_count': 0, 'receiver': 'h-a25deca6-6e42-4410-b981-270ed9f922af', 'is_mutation': False}, {'command': 'call', 'method': 'getOuterSolnum', 'args_count': 0, 'receiver': 'h-c054c33b-661e-4fb6-be3f-070ebe00a1ea', 'is_mutation': False}, {'command': 'call', 'method': 'getSolnums', 'args_count': 1, 'receiver': 'h-c054c33b-661e-4fb6-be3f-070ebe00a1ea', 'is_mutation': False}, {'command': 'call', 'method': 'getSolnum', 'args_count': 2, 'receiver': 'h-c054c33b-661e-4fb6-be3f-070ebe00a1ea', 'is_mutation': False}, {'command': 'call', 'method': 'getSolnum', 'args_count': 2, 'receiver': 'h-c054c33b-661e-4fb6-be3f-070ebe00a1ea', 'is_mutation': False}, {'command': 'call', 'method': 'getPNames', 'args_count': 1, 'receiver': 'h-c054c33b-661e-4fb6-be3f-070ebe00a1ea', 'is_mutation': False}, {'command': 'call', 'method': 'getPvals', 'args_count': 1, 'receiver': 'h-c054c33b-661e-4fb6-be3f-070ebe00a1ea', 'is_mutation': False}, {'command': 'call', 'method': 'getUnits', 'args_count': 1, 'receiver': 'h-c054c33b-661e-4fb6-be3f-070ebe00a1ea', 'is_mutation': False}, {'command': 'call', 'method': 'getLevelNames', 'args_count': 0, 'receiver': 'h-c054c33b-661e-4fb6-be3f-070ebe00a1ea', 'is_mutation': False}, {'command': 'call', 'method': 'tags', 'args_count': 0, 'receiver': 'h-1c9d0f49-1e33-44c1-abfb-153b9235cae5', 'is_mutation': False}, {'command': 'call', 'method': 'create', 'args_count': 2, 'receiver': 'h-1c9d0f49-1e33-44c1-abfb-153b9235cae5', 'is_mutation': True}, {'command': 'call', 'method': 'set', 'args_count': 2, 'receiver': 'h-aead8c5d-3766-442a-9933-54eae7b297bb', 'is_mutation': True}, {'command': 'call', 'method': 'getString', 'args_count': 1, 'receiver': 'h-aead8c5d-3766-442a-9933-54eae7b297bb', 'is_mutation': False}, {'command': 'call', 'method': 'set', 'args_count': 2, 'receiver': 'h-aead8c5d-3766-442a-9933-54eae7b297bb', 'is_mutation': True}, {'command': 'call', 'method': 'setInterpolationCoordinates', 'args_count': 1, 'receiver': 'h-aead8c5d-3766-442a-9933-54eae7b297bb', 'is_mutation': True}, {'command': 'call', 'method': 'run', 'args_count': 0, 'receiver': 'h-aead8c5d-3766-442a-9933-54eae7b297bb', 'is_mutation': True}, {'command': 'call', 'method': 'isComplex', 'args_count': 0, 'receiver': 'h-aead8c5d-3766-442a-9933-54eae7b297bb', 'is_mutation': False}, {'command': 'call', 'method': 'isComplex', 'args_count': 0, 'receiver': 'h-aead8c5d-3766-442a-9933-54eae7b297bb', 'is_mutation': False}, {'command': 'call', 'method': 'getData', 'args_count': 0, 'receiver': 'h-aead8c5d-3766-442a-9933-54eae7b297bb', 'is_mutation': False}, {'command': 'call', 'method': 'getStringArray', 'args_count': 1, 'receiver': 'h-aead8c5d-3766-442a-9933-54eae7b297bb', 'is_mutation': False}, {'command': 'call', 'method': 'remove', 'args_count': 1, 'receiver': 'h-1c9d0f49-1e33-44c1-abfb-153b9235cae5', 'is_mutation': True}, {'command': 'call', 'method': 'tags', 'args_count': 0, 'receiver': 'h-1c9d0f49-1e33-44c1-abfb-153b9235cae5', 'is_mutation': False}]}, 'unproven_pre_dispatch': False, 'cause_code': 'FIELD_ARRAY_SHAPE_MISMATCH', 'cause_message': 'numerical feature returned no solution rows'}}",
+    "details": {
+      "expression": "sample_0",
+      "error": "{'code': 'EXECUTION_STATE_UNKNOWN', 'message': 'result.at_points failed with FIELD_ARRAY_SHAPE_MISMATCH (numerical feature returned no solution rows); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged', 'safe_retry': False, 'stage': 'post_dispatch', 'details': {'dispatch_stage': 'post_dispatch', 'witness': {'engine_calls': 56, 'mutation_method': 'create', 'mutation_issued': True, 'methods': ['component', 'create', 'dataset', 'geom', 'get', 'getData', 'getLevelNames', 'getOuterSolnum', 'getPNames', 'getPvals', 'getSDim', 'getSolnum', 'getSolnums', 'getSolutioninfo', 'getString', 'getStringArray', 'getType', 'getUnits', 'isAxisymmetric', 'isComplex', 'lengthUnit', 'modelNode', 'numerical', 'properties', 'remove', 'result', 'run', 'set', 'setInterpolationCoordinates', 'sol', 'tags'], 'dispatches': [{'command': 'call', 'method': 'result', 'args_count': 0, 'receiver': 'h-d1365b66-9409-4d7e-9c78-050a97c36dc1', 'is_mutation': False}, {'command': 'call', 'method': 'numerical', 'args_count': 0, 'receiver': 'h-a593cff6-92dd-41e8-96b1-677b2d844ad8', 'is_mutation': False}, {'command': 'call', 'method': 'dataset', 'args_count': 0, 'receiver': 'h-a593cff6-92dd-41e8-96b1-677b2d844ad8', 'is_mutation': False}, {'command': 'call', 'method': 'tags', 'args_count': 0, 'receiver': 'h-9a9630f2-4616-4ae9-84a4-b4b57b2c4aaf', 'is_mutation': False}, {'command': 'call', 'method': 'get', 'args_count': 1, 'receiver': 'h-9a9630f2-4616-4ae9-84a4-b4b57b2c4aaf', 'is_mutation': False}, {'command': 'call', 'method': 'result', 'args_count': 0, 'receiver': 'h-d1365b66-9409-4d7e-9c78-050a97c36dc1', 'is_mutation': False}, {'command': 'call', 'method': 'dataset', 'args_count': 0, 'receiver': 'h-cc3d3f4c-f5a7-4422-9fe7-8cbfb4e99610', 'is_mutation': False}, {'command': 'call', 'method': 'tags', 'args_count': 0, 'receiver': 'h-aa7b3608-b9cd-4558-9674-9cccbeda5069', 'is_mutation': False}, {'command': 'call', 'method': 'sol', 'args_count': 0, 'receiver': 'h-d1365b66-9409-4d7e-9c78-050a97c36dc1', 'is_mutation': False}, {'command': 'call', 'method': 'tags', 'args_count': 0, 'receiver': 'h-4cad724f-ba3e-4da8-8def-6c71269fffdb', 'is_mutation': False}, {'command': 'call', 'method': 'get', 'args_count': 1, 'receiver': 'h-aa7b3608-b9cd-4558-9674-9cccbeda5069', 'is_mutation': False}, {'command': 'call', 'method': 'getType', 'args_count': 0, 'receiver': 'h-2f42b86a-bbef-404f-9f0f-341c83b00b0f', 'is_mutation': False}, {'command': 'call', 'method': 'properties', 'args_count': 0, 'receiver': 'h-2f42b86a-bbef-404f-9f0f-341c83b00b0f', 'is_mutation': False}, {'command': 'call', 'method': 'getString', 'args_count': 1, 'receiver': 'h-2f42b86a-bbef-404f-9f0f-341c83b00b0f', 'is_mutation': False}, {'command': 'call', 'method': 'properties', 'args_count': 0, 'receiver': 'h-2f42b86a-bbef-404f-9f0f-341c83b00b0f', 'is_mutation': False}, {'command': 'call', 'method': 'properties', 'args_count': 0, 'receiver': 'h-2f42b86a-bbef-404f-9f0f-341c83b00b0f', 'is_mutation': False}, {'command': 'call', 'method': 'properties', 'args_count': 0, 'receiver': 'h-2f42b86a-bbef-404f-9f0f-341c83b00b0f', 'is_mutation': False}, {'command': 'call', 'method': 'getString', 'args_count': 1, 'receiver': 'h-2f42b86a-bbef-404f-9f0f-341c83b00b0f', 'is_mutation': False}, {'command': 'call', 'method': 'properties', 'args_count': 0, 'receiver': 'h-2f42b86a-bbef-404f-9f0f-341c83b00b0f', 'is_mutation': False}, {'command': 'call', 'method': 'getString', 'args_count': 1, 'receiver': 'h-2f42b86a-bbef-404f-9f0f-341c83b00b0f', 'is_mutation': False}, {'command': 'call', 'method': 'modelNode', 'args_count': 0, 'receiver': 'h-d1365b66-9409-4d7e-9c78-050a97c36dc1', 'is_mutation': False}, {'command': 'call', 'method': 'tags', 'args_count': 0, 'receiver': 'h-7e5075e3-b790-46f7-82bd-518d4e311864', 'is_mutation': False}, {'command': 'call', 'method': 'component', 'args_count': 1, 'receiver': 'h-d1365b66-9409-4d7e-9c78-050a97c36dc1', 'is_mutation': False}, {'command': 'call', 'method': 'geom', 'args_count': 0, 'receiver': 'h-f376b71e-cb84-4ca7-a467-6c64e923328e', 'is_mutation': False}, {'command': 'call', 'method': 'tags', 'args_count': 0, 'receiver': 'h-a2449f3c-c256-4fe3-ae35-b824ee70b868', 'is_mutation': False}, {'command': 'call', 'method': 'get', 'args_count': 1, 'receiver': 'h-a2449f3c-c256-4fe3-ae35-b824ee70b868', 'is_mutation': False}, {'command': 'call', 'method': 'component', 'args_count': 1, 'receiver': 'h-d1365b66-9409-4d7e-9c78-050a97c36dc1', 'is_mutation': False}, {'command': 'call', 'method': 'geom', 'args_count': 1, 'receiver': 'h-7d3be62f-159e-4dfb-a583-9435810910bc', 'is_mutation': False}, {'command': 'call', 'method': 'lengthUnit', 'args_count': 0, 'receiver': 'h-ebb44268-ff71-4a4b-85a7-7c8ab4c3a9ff', 'is_mutation': False}, {'command': 'call', 'method': 'getSDim', 'args_count': 0, 'receiver': 'h-ebb44268-ff71-4a4b-85a7-7c8ab4c3a9ff', 'is_mutation': False}, {'command': 'call', 'method': 'isAxisymmetric', 'args_count': 0, 'receiver': 'h-ebb44268-ff71-4a4b-85a7-7c8ab4c3a9ff', 'is_mutation': False}, {'command': 'call', 'method': 'sol', 'args_count': 0, 'receiver': 'h-d1365b66-9409-4d7e-9c78-050a97c36dc1', 'is_mutation': False}, {'command': 'call', 'method': 'tags', 'args_count': 0, 'receiver': 'h-3a1c89da-fb03-477d-ab5d-249bb0d4b91b', 'is_mutation': False}, {'command': 'call', 'method': 'get', 'args_count': 1, 'receiver': 'h-3a1c89da-fb03-477d-ab5d-249bb0d4b91b', 'is_mutation': False}, {'command': 'call', 'method': 'getSolutioninfo', 'args_count': 0, 'receiver': 'h-a25deca6-6e42-4410-b981-270ed9f922af', 'is_mutation': False}, {'command': 'call', 'method': 'getOuterSolnum', 'args_count': 0, 'receiver': 'h-c054c33b-661e-4fb6-be3f-070ebe00a1ea', 'is_mutation': False}, {'command': 'call', 'method': 'getSolnums', 'args_count': 1, 'receiver': 'h-c054c33b-661e-4fb6-be3f-070ebe00a1ea', 'is_mutation': False}, {'command': 'call', 'method': 'getSolnum', 'args_count': 2, 'receiver': 'h-c054c33b-661e-4fb6-be3f-070ebe00a1ea', 'is_mutation': False}, {'command': 'call', 'method': 'getSolnum', 'args_count': 2, 'receiver': 'h-c054c33b-661e-4fb6-be3f-070ebe00a1ea', 'is_mutation': False}, {'command': 'call', 'method': 'getPNames', 'args_count': 1, 'receiver': 'h-c054c33b-661e-4fb6-be3f-070ebe00a1ea', 'is_mutation': False}, {'command': 'call', 'method': 'getPvals', 'args_count': 1, 'receiver': 'h-c054c33b-661e-4fb6-be3f-070ebe00a1ea', 'is_mutation': False}, {'command': 'call', 'method': 'getUnits', 'args_count': 1, 'receiver': 'h-c054c33b-661e-4fb6-be3f-070ebe00a1ea', 'is_mutation': False}, {'command': 'call', 'method': 'getLevelNames', 'args_count': 0, 'receiver': 'h-c054c33b-661e-4fb6-be3f-070ebe00a1ea', 'is_mutation': False}, {'command': 'call', 'method': 'tags', 'args_count': 0, 'receiver': 'h-1c9d0f49-1e33-44c1-abfb-153b9235cae5', 'is_mutation': False}, {'command': 'call', 'method': 'create', 'args_count': 2, 'receiver': 'h-1c9d0f49-1e33-44c1-abfb-153b9235cae5', 'is_mutation': True}, {'command': 'call', 'method': 'set', 'args_count': 2, 'receiver': 'h-aead8c5d-3766-442a-9933-54eae7b297bb', 'is_mutation': True}, {'command': 'call', 'method': 'getString', 'args_count': 1, 'receiver': 'h-aead8c5d-3766-442a-9933-54eae7b297bb', 'is_mutation': False}, {'command': 'call', 'method': 'set', 'args_count': 2, 'receiver': 'h-aead8c5d-3766-442a-9933-54eae7b297bb', 'is_mutation': True}, {'command': 'call', 'method': 'setInterpolationCoordinates', 'args_count': 1, 'receiver': 'h-aead8c5d-3766-442a-9933-54eae7b297bb', 'is_mutation': True}, {'command': 'call', 'method': 'run', 'args_count': 0, 'receiver': 'h-aead8c5d-3766-442a-9933-54eae7b297bb', 'is_mutation': True}, {'command': 'call', 'method': 'isComplex', 'args_count': 0, 'receiver': 'h-aead8c5d-3766-442a-9933-54eae7b297bb', 'is_mutation': False}, {'command': 'call', 'method': 'isComplex', 'args_count': 0, 'receiver': 'h-aead8c5d-3766-442a-9933-54eae7b297bb', 'is_mutation': False}, {'command': 'call', 'method': 'getData', 'args_count': 0, 'receiver': 'h-aead8c5d-3766-442a-9933-54eae7b297bb', 'is_mutation': False}, {'command': 'call', 'method': 'getStringArray', 'args_count': 1, 'receiver': 'h-aead8c5d-3766-442a-9933-54eae7b297bb', 'is_mutation': False}, {'command': 'call', 'method': 'remove', 'args_count': 1, 'receiver': 'h-1c9d0f49-1e33-44c1-abfb-153b9235cae5', 'is_mutation': True}, {'command': 'call', 'method': 'tags', 'args_count': 0, 'receiver': 'h-1c9d0f49-1e33-44c1-abfb-153b9235cae5', 'is_mutation': False}]}, 'unproven_pre_dispatch': False, 'cause_code': 'FIELD_ARRAY_SHAPE_MISMATCH', 'cause_message': 'numerical feature returned no solution rows'}}"
+    },
+    "expected_code": "SOLUTION_CLEARED_OR_EMPTY",
+    "negative_control_pass": true,
+    "artifact_sha256": "84afbc785640557e42aa04248004a541ac78db8ee9424fcfc2ae2822cb585618",
+    "reopened_model_ref": {
+      "schema_version": 1,
+      "session_id": "session-b7b18ca9ea34d3a93f7237bd",
+      "server_instance_id": "4229f5f347dbdb8075083709c2fc8fb522c13f3173b85f0075ff3310334b8e11",
+      "model_tag": "mcp_8a7a4e1ee1f3",
+      "generation": 1
+    },
+    "evidence_level": "LIVE_PUBLIC_MCP_STORED_SOLUTION",
+    "readback_re_solved": false
+  },
+  "modified_field": {
+    "status": "FAIL",
+    "error_code": "STORED_VALUE_MISMATCH",
+    "message": "Value for 'sample_0' deviated: expected 308.1500000000069, got 315.6500000000086 (abs_diff=7.500000e+00 > 0.001, rel_diff=2.433880e-02 > None)",
+    "details": {
+      "expression": "sample_0",
+      "expected": 308.1500000000069,
+      "actual": 315.6500000000086,
+      "abs_diff": 7.500000000001705,
+      "rel_diff": 0.024338796040894166,
+      "tolerance": 0.001,
+      "rel_tolerance": null,
+      "effective_abs_window": 0.001
+    },
+    "expected_code": "STORED_VALUE_MISMATCH",
+    "negative_control_pass": true,
+    "artifact_sha256": "0025a6adcd5807678f93f11675c11f38ab689ca862e66b68e2236b4e80ce86fc",
+    "reopened_model_ref": {
+      "schema_version": 1,
+      "session_id": "session-b7b18ca9ea34d3a93f7237bd",
+      "server_instance_id": "4229f5f347dbdb8075083709c2fc8fb522c13f3173b85f0075ff3310334b8e11",
+      "model_tag": "mcp_a2fa519eebcc",
+      "generation": 1
+    },
+    "evidence_level": "LIVE_PUBLIC_MCP_STORED_SOLUTION",
+    "readback_re_solved": false
+  },
+  "missing_derived": {
+    "status": "FAIL",
+    "error_code": "DERIVED_VALUES_MISSING",
+    "message": "Required derived values nodes missing: ['user_derived_probe']",
+    "details": {
+      "missing": [
+        "user_derived_probe"
+      ],
+      "available": []
+    },
+    "expected_code": "DERIVED_VALUES_MISSING",
+    "negative_control_pass": true,
+    "artifact_sha256": "34e990f8c1083eda8dbd3eb4982ccc404e16e510d6b3d44a6637adaf0edd2c3f",
+    "reopened_model_ref": {
+      "schema_version": 1,
+      "session_id": "session-b7b18ca9ea34d3a93f7237bd",
+      "server_instance_id": "4229f5f347dbdb8075083709c2fc8fb522c13f3173b85f0075ff3310334b8e11",
+      "model_tag": "mcp_14ea89dbfef3",
+      "generation": 1
+    },
+    "evidence_level": "LIVE_PUBLIC_MCP_STORED_SOLUTION",
+    "readback_re_solved": false
+  }
+}

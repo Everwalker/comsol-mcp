@@ -1,0 +1,1093 @@
+........................................................................ [  4%]
+........................................................................ [  8%]
+.....................................EEEE.............F................. [ 13%]
+........................................................................ [ 17%]
+........................................................................ [ 21%]
+......................................F................................. [ 26%]
+........................................................................ [ 30%]
+........................................................................ [ 34%]
+........................................................................ [ 39%]
+........................................................................ [ 43%]
+........................................................................ [ 48%]
+........................................................................ [ 52%]
+........................................................................ [ 56%]
+........................................................................ [ 61%]
+........................................................................ [ 65%]
+........................................................................ [ 69%]
+........................................................................ [ 74%]
+........................................................................ [ 78%]
+........................................................................ [ 82%]
+............EEE...........EsFEEE....F................................... [ 87%]
+........................................................................ [ 91%]
+........................................................................ [ 96%]
+.................................................................        [100%]
+==================================== ERRORS ====================================
+_ ERROR at setup of test_the_real_marshaller_accepts_the_declared_string_array _
+
+tmp_path_factory = TempPathFactory(_given_basetemp=None, _trace=<pluggy._tracing.TagTracerSub object at 0x1086de8b0>, _basetemp=PosixPath...ers/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-799'), _retention_count=3, _retention_policy='all')
+
+    @pytest.fixture(scope="module")
+    def real_worker(tmp_path_factory):
+        if not _worker_build_environment_available():
+            pytest.skip("COMSOL 6.4/JDK 11 local Worker build environment unavailable")
+        from comsol_mcp._java_worker import JavaWorkerPaths, PersistentJavaWorker
+    
+        instance = PersistentJavaWorker(JavaWorkerPaths(COMSOL_ROOT, JDK11),
+                                        state_dir=tmp_path_factory.mktemp("c05-worker-state"))
+>       instance.start()
+
+tests/test_g3_c05_license_marshalling.py:323: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x10bcc67b0>
+startup_timeout_s = 20.0
+
+    def start(self, *, startup_timeout_s: float = 20.0) -> dict[str, Any]:
+        with self._lock:
+            if self._process is not None and self._process.poll() is None:
+                return self.health(timeout_s=1.0)
+            self.paths.validate()
+            classpath, classpath_hash, jar_count = self.paths.classpath()
+            self.state_dir.mkdir(parents=True, exist_ok=True)
+            try: os.chmod(self.state_dir, 0o700)
+            except OSError: pass
+            source = Path(__file__).with_name("worker_java") / "PersistentComsolWorker.java"
+            source_hash = hashlib.sha256(source.read_bytes()).hexdigest()[:20]
+            classes = self.state_dir / "classes" / source_hash
+            marker = classes / ".compiled"
+            if not marker.is_file():
+                classes.mkdir(parents=True, exist_ok=True)
+                compile_result = subprocess.run(
+                    [str(self.paths.executable("javac")), "-cp", classpath, "-d", str(classes), str(source)],
+                    text=True, encoding="utf-8", errors="replace", stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+                )
+                if compile_result.returncode:
+                    raise JavaWorkerError(f"worker compilation failed: {compile_result.stderr[-2000:]}")
+                marker.write_text(source_hash + "\n", encoding="ascii")
+            self._classes_dir = classes
+            endpoint = self.state_dir / "worker_endpoint.json"
+            existing = self._attach_existing(endpoint)
+            if existing is not None:
+                return existing
+            command = [str(self.paths.executable("java"))]
+            if self.paths.private_prefs is not None:
+                command.append(f"-Dcs.prefsdir={self.paths.private_prefs}")
+            command += ["-cp", str(classes) + self.paths.classpath_separator + classpath,
+                        "comsol_mcp.worker_java.PersistentComsolWorker", "--port", "0", "--endpoint-file", str(endpoint),
+                        "--server-lock-root", str(self.paths.resolved_global_lock_root)]
+            command += ["--generation", str(self._next_generation)]
+            environment = dict(os.environ); environment["COMSOL_MCP_WORKER_TOKEN"] = self._token
+            log = (self.state_dir / "worker.stderr.log").open("a", encoding="utf-8")
+            self._process = subprocess.Popen(command, text=True, stdout=subprocess.DEVNULL, stderr=log,
+                                             env=environment, start_new_session=True)
+            log.close()
+            deadline = time.monotonic() + startup_timeout_s
+            ready: dict[str, Any] | None = None
+            while time.monotonic() < deadline:
+                if endpoint.is_file():
+                    try:
+                        candidate = json.loads(endpoint.read_text(encoding="utf-8"))
+                        if candidate.get("type") == "ready": ready = candidate; break
+                    except (OSError, json.JSONDecodeError): pass
+                if self._process.poll() is not None:
+                    detail = (self.state_dir / "worker.stderr.log").read_text(errors="replace")[-2000:]
+>                   raise JavaWorkerError(f"worker exited during startup: {detail}")
+E                   comsol_mcp._java_worker.JavaWorkerError: worker exited during startup: Exception in thread "main" java.net.BindException: Operation not permitted (Bind failed)
+E                   	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+E                   	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+E                   	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+E                   	at java.base/java.net.ServerSocket.bind(ServerSocket.java:349)
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.<init>(PersistentComsolWorker.java:147)
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.main(PersistentComsolWorker.java:161)
+
+comsol_mcp/_java_worker.py:222: JavaWorkerError
+_ ERROR at setup of test_the_real_marshaller_refuses_a_bare_scalar_and_says_why _
+
+tmp_path_factory = TempPathFactory(_given_basetemp=None, _trace=<pluggy._tracing.TagTracerSub object at 0x1086de8b0>, _basetemp=PosixPath...ers/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-799'), _retention_count=3, _retention_policy='all')
+
+    @pytest.fixture(scope="module")
+    def real_worker(tmp_path_factory):
+        if not _worker_build_environment_available():
+            pytest.skip("COMSOL 6.4/JDK 11 local Worker build environment unavailable")
+        from comsol_mcp._java_worker import JavaWorkerPaths, PersistentJavaWorker
+    
+        instance = PersistentJavaWorker(JavaWorkerPaths(COMSOL_ROOT, JDK11),
+                                        state_dir=tmp_path_factory.mktemp("c05-worker-state"))
+>       instance.start()
+
+tests/test_g3_c05_license_marshalling.py:323: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x10bcc67b0>
+startup_timeout_s = 20.0
+
+    def start(self, *, startup_timeout_s: float = 20.0) -> dict[str, Any]:
+        with self._lock:
+            if self._process is not None and self._process.poll() is None:
+                return self.health(timeout_s=1.0)
+            self.paths.validate()
+            classpath, classpath_hash, jar_count = self.paths.classpath()
+            self.state_dir.mkdir(parents=True, exist_ok=True)
+            try: os.chmod(self.state_dir, 0o700)
+            except OSError: pass
+            source = Path(__file__).with_name("worker_java") / "PersistentComsolWorker.java"
+            source_hash = hashlib.sha256(source.read_bytes()).hexdigest()[:20]
+            classes = self.state_dir / "classes" / source_hash
+            marker = classes / ".compiled"
+            if not marker.is_file():
+                classes.mkdir(parents=True, exist_ok=True)
+                compile_result = subprocess.run(
+                    [str(self.paths.executable("javac")), "-cp", classpath, "-d", str(classes), str(source)],
+                    text=True, encoding="utf-8", errors="replace", stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+                )
+                if compile_result.returncode:
+                    raise JavaWorkerError(f"worker compilation failed: {compile_result.stderr[-2000:]}")
+                marker.write_text(source_hash + "\n", encoding="ascii")
+            self._classes_dir = classes
+            endpoint = self.state_dir / "worker_endpoint.json"
+            existing = self._attach_existing(endpoint)
+            if existing is not None:
+                return existing
+            command = [str(self.paths.executable("java"))]
+            if self.paths.private_prefs is not None:
+                command.append(f"-Dcs.prefsdir={self.paths.private_prefs}")
+            command += ["-cp", str(classes) + self.paths.classpath_separator + classpath,
+                        "comsol_mcp.worker_java.PersistentComsolWorker", "--port", "0", "--endpoint-file", str(endpoint),
+                        "--server-lock-root", str(self.paths.resolved_global_lock_root)]
+            command += ["--generation", str(self._next_generation)]
+            environment = dict(os.environ); environment["COMSOL_MCP_WORKER_TOKEN"] = self._token
+            log = (self.state_dir / "worker.stderr.log").open("a", encoding="utf-8")
+            self._process = subprocess.Popen(command, text=True, stdout=subprocess.DEVNULL, stderr=log,
+                                             env=environment, start_new_session=True)
+            log.close()
+            deadline = time.monotonic() + startup_timeout_s
+            ready: dict[str, Any] | None = None
+            while time.monotonic() < deadline:
+                if endpoint.is_file():
+                    try:
+                        candidate = json.loads(endpoint.read_text(encoding="utf-8"))
+                        if candidate.get("type") == "ready": ready = candidate; break
+                    except (OSError, json.JSONDecodeError): pass
+                if self._process.poll() is not None:
+                    detail = (self.state_dir / "worker.stderr.log").read_text(errors="replace")[-2000:]
+>                   raise JavaWorkerError(f"worker exited during startup: {detail}")
+E                   comsol_mcp._java_worker.JavaWorkerError: worker exited during startup: Exception in thread "main" java.net.BindException: Operation not permitted (Bind failed)
+E                   	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+E                   	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+E                   	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+E                   	at java.base/java.net.ServerSocket.bind(ServerSocket.java:349)
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.<init>(PersistentComsolWorker.java:147)
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.main(PersistentComsolWorker.java:161)
+
+comsol_mcp/_java_worker.py:222: JavaWorkerError
+_ ERROR at setup of test_the_real_marshaller_separates_a_missing_api_from_a_bad_argument _
+
+tmp_path_factory = TempPathFactory(_given_basetemp=None, _trace=<pluggy._tracing.TagTracerSub object at 0x1086de8b0>, _basetemp=PosixPath...ers/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-799'), _retention_count=3, _retention_policy='all')
+
+    @pytest.fixture(scope="module")
+    def real_worker(tmp_path_factory):
+        if not _worker_build_environment_available():
+            pytest.skip("COMSOL 6.4/JDK 11 local Worker build environment unavailable")
+        from comsol_mcp._java_worker import JavaWorkerPaths, PersistentJavaWorker
+    
+        instance = PersistentJavaWorker(JavaWorkerPaths(COMSOL_ROOT, JDK11),
+                                        state_dir=tmp_path_factory.mktemp("c05-worker-state"))
+>       instance.start()
+
+tests/test_g3_c05_license_marshalling.py:323: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x10bcc67b0>
+startup_timeout_s = 20.0
+
+    def start(self, *, startup_timeout_s: float = 20.0) -> dict[str, Any]:
+        with self._lock:
+            if self._process is not None and self._process.poll() is None:
+                return self.health(timeout_s=1.0)
+            self.paths.validate()
+            classpath, classpath_hash, jar_count = self.paths.classpath()
+            self.state_dir.mkdir(parents=True, exist_ok=True)
+            try: os.chmod(self.state_dir, 0o700)
+            except OSError: pass
+            source = Path(__file__).with_name("worker_java") / "PersistentComsolWorker.java"
+            source_hash = hashlib.sha256(source.read_bytes()).hexdigest()[:20]
+            classes = self.state_dir / "classes" / source_hash
+            marker = classes / ".compiled"
+            if not marker.is_file():
+                classes.mkdir(parents=True, exist_ok=True)
+                compile_result = subprocess.run(
+                    [str(self.paths.executable("javac")), "-cp", classpath, "-d", str(classes), str(source)],
+                    text=True, encoding="utf-8", errors="replace", stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+                )
+                if compile_result.returncode:
+                    raise JavaWorkerError(f"worker compilation failed: {compile_result.stderr[-2000:]}")
+                marker.write_text(source_hash + "\n", encoding="ascii")
+            self._classes_dir = classes
+            endpoint = self.state_dir / "worker_endpoint.json"
+            existing = self._attach_existing(endpoint)
+            if existing is not None:
+                return existing
+            command = [str(self.paths.executable("java"))]
+            if self.paths.private_prefs is not None:
+                command.append(f"-Dcs.prefsdir={self.paths.private_prefs}")
+            command += ["-cp", str(classes) + self.paths.classpath_separator + classpath,
+                        "comsol_mcp.worker_java.PersistentComsolWorker", "--port", "0", "--endpoint-file", str(endpoint),
+                        "--server-lock-root", str(self.paths.resolved_global_lock_root)]
+            command += ["--generation", str(self._next_generation)]
+            environment = dict(os.environ); environment["COMSOL_MCP_WORKER_TOKEN"] = self._token
+            log = (self.state_dir / "worker.stderr.log").open("a", encoding="utf-8")
+            self._process = subprocess.Popen(command, text=True, stdout=subprocess.DEVNULL, stderr=log,
+                                             env=environment, start_new_session=True)
+            log.close()
+            deadline = time.monotonic() + startup_timeout_s
+            ready: dict[str, Any] | None = None
+            while time.monotonic() < deadline:
+                if endpoint.is_file():
+                    try:
+                        candidate = json.loads(endpoint.read_text(encoding="utf-8"))
+                        if candidate.get("type") == "ready": ready = candidate; break
+                    except (OSError, json.JSONDecodeError): pass
+                if self._process.poll() is not None:
+                    detail = (self.state_dir / "worker.stderr.log").read_text(errors="replace")[-2000:]
+>                   raise JavaWorkerError(f"worker exited during startup: {detail}")
+E                   comsol_mcp._java_worker.JavaWorkerError: worker exited during startup: Exception in thread "main" java.net.BindException: Operation not permitted (Bind failed)
+E                   	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+E                   	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+E                   	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+E                   	at java.base/java.net.ServerSocket.bind(ServerSocket.java:349)
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.<init>(PersistentComsolWorker.java:147)
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.main(PersistentComsolWorker.java:161)
+
+comsol_mcp/_java_worker.py:222: JavaWorkerError
+________ ERROR at setup of test_the_allow_list_still_gates_has_product _________
+
+tmp_path_factory = TempPathFactory(_given_basetemp=None, _trace=<pluggy._tracing.TagTracerSub object at 0x1086de8b0>, _basetemp=PosixPath...ers/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-799'), _retention_count=3, _retention_policy='all')
+
+    @pytest.fixture(scope="module")
+    def real_worker(tmp_path_factory):
+        if not _worker_build_environment_available():
+            pytest.skip("COMSOL 6.4/JDK 11 local Worker build environment unavailable")
+        from comsol_mcp._java_worker import JavaWorkerPaths, PersistentJavaWorker
+    
+        instance = PersistentJavaWorker(JavaWorkerPaths(COMSOL_ROOT, JDK11),
+                                        state_dir=tmp_path_factory.mktemp("c05-worker-state"))
+>       instance.start()
+
+tests/test_g3_c05_license_marshalling.py:323: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x10bcc67b0>
+startup_timeout_s = 20.0
+
+    def start(self, *, startup_timeout_s: float = 20.0) -> dict[str, Any]:
+        with self._lock:
+            if self._process is not None and self._process.poll() is None:
+                return self.health(timeout_s=1.0)
+            self.paths.validate()
+            classpath, classpath_hash, jar_count = self.paths.classpath()
+            self.state_dir.mkdir(parents=True, exist_ok=True)
+            try: os.chmod(self.state_dir, 0o700)
+            except OSError: pass
+            source = Path(__file__).with_name("worker_java") / "PersistentComsolWorker.java"
+            source_hash = hashlib.sha256(source.read_bytes()).hexdigest()[:20]
+            classes = self.state_dir / "classes" / source_hash
+            marker = classes / ".compiled"
+            if not marker.is_file():
+                classes.mkdir(parents=True, exist_ok=True)
+                compile_result = subprocess.run(
+                    [str(self.paths.executable("javac")), "-cp", classpath, "-d", str(classes), str(source)],
+                    text=True, encoding="utf-8", errors="replace", stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+                )
+                if compile_result.returncode:
+                    raise JavaWorkerError(f"worker compilation failed: {compile_result.stderr[-2000:]}")
+                marker.write_text(source_hash + "\n", encoding="ascii")
+            self._classes_dir = classes
+            endpoint = self.state_dir / "worker_endpoint.json"
+            existing = self._attach_existing(endpoint)
+            if existing is not None:
+                return existing
+            command = [str(self.paths.executable("java"))]
+            if self.paths.private_prefs is not None:
+                command.append(f"-Dcs.prefsdir={self.paths.private_prefs}")
+            command += ["-cp", str(classes) + self.paths.classpath_separator + classpath,
+                        "comsol_mcp.worker_java.PersistentComsolWorker", "--port", "0", "--endpoint-file", str(endpoint),
+                        "--server-lock-root", str(self.paths.resolved_global_lock_root)]
+            command += ["--generation", str(self._next_generation)]
+            environment = dict(os.environ); environment["COMSOL_MCP_WORKER_TOKEN"] = self._token
+            log = (self.state_dir / "worker.stderr.log").open("a", encoding="utf-8")
+            self._process = subprocess.Popen(command, text=True, stdout=subprocess.DEVNULL, stderr=log,
+                                             env=environment, start_new_session=True)
+            log.close()
+            deadline = time.monotonic() + startup_timeout_s
+            ready: dict[str, Any] | None = None
+            while time.monotonic() < deadline:
+                if endpoint.is_file():
+                    try:
+                        candidate = json.loads(endpoint.read_text(encoding="utf-8"))
+                        if candidate.get("type") == "ready": ready = candidate; break
+                    except (OSError, json.JSONDecodeError): pass
+                if self._process.poll() is not None:
+                    detail = (self.state_dir / "worker.stderr.log").read_text(errors="replace")[-2000:]
+>                   raise JavaWorkerError(f"worker exited during startup: {detail}")
+E                   comsol_mcp._java_worker.JavaWorkerError: worker exited during startup: Exception in thread "main" java.net.BindException: Operation not permitted (Bind failed)
+E                   	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+E                   	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+E                   	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+E                   	at java.base/java.net.ServerSocket.bind(ServerSocket.java:349)
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.<init>(PersistentComsolWorker.java:147)
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.main(PersistentComsolWorker.java:161)
+
+comsol_mcp/_java_worker.py:222: JavaWorkerError
+_ ERROR at setup of test_java_worker_is_loopback_authenticated_and_reports_health _
+
+tmp_path_factory = TempPathFactory(_given_basetemp=None, _trace=<pluggy._tracing.TagTracerSub object at 0x1086de8b0>, _basetemp=PosixPath...ers/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-799'), _retention_count=3, _retention_policy='all')
+
+    @pytest.fixture(scope="module")
+    def worker(tmp_path_factory):
+        if not _worker_build_environment_available():
+            pytest.skip("COMSOL 6.4/JDK 11 local Worker build environment unavailable")
+        instance = PersistentJavaWorker(JavaWorkerPaths(COMSOL_ROOT, JDK11), state_dir=tmp_path_factory.mktemp("worker-state"))
+>       instance.start()
+
+tests/test_java_worker.py:147: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x10db43890>
+startup_timeout_s = 20.0
+
+    def start(self, *, startup_timeout_s: float = 20.0) -> dict[str, Any]:
+        with self._lock:
+            if self._process is not None and self._process.poll() is None:
+                return self.health(timeout_s=1.0)
+            self.paths.validate()
+            classpath, classpath_hash, jar_count = self.paths.classpath()
+            self.state_dir.mkdir(parents=True, exist_ok=True)
+            try: os.chmod(self.state_dir, 0o700)
+            except OSError: pass
+            source = Path(__file__).with_name("worker_java") / "PersistentComsolWorker.java"
+            source_hash = hashlib.sha256(source.read_bytes()).hexdigest()[:20]
+            classes = self.state_dir / "classes" / source_hash
+            marker = classes / ".compiled"
+            if not marker.is_file():
+                classes.mkdir(parents=True, exist_ok=True)
+                compile_result = subprocess.run(
+                    [str(self.paths.executable("javac")), "-cp", classpath, "-d", str(classes), str(source)],
+                    text=True, encoding="utf-8", errors="replace", stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+                )
+                if compile_result.returncode:
+                    raise JavaWorkerError(f"worker compilation failed: {compile_result.stderr[-2000:]}")
+                marker.write_text(source_hash + "\n", encoding="ascii")
+            self._classes_dir = classes
+            endpoint = self.state_dir / "worker_endpoint.json"
+            existing = self._attach_existing(endpoint)
+            if existing is not None:
+                return existing
+            command = [str(self.paths.executable("java"))]
+            if self.paths.private_prefs is not None:
+                command.append(f"-Dcs.prefsdir={self.paths.private_prefs}")
+            command += ["-cp", str(classes) + self.paths.classpath_separator + classpath,
+                        "comsol_mcp.worker_java.PersistentComsolWorker", "--port", "0", "--endpoint-file", str(endpoint),
+                        "--server-lock-root", str(self.paths.resolved_global_lock_root)]
+            command += ["--generation", str(self._next_generation)]
+            environment = dict(os.environ); environment["COMSOL_MCP_WORKER_TOKEN"] = self._token
+            log = (self.state_dir / "worker.stderr.log").open("a", encoding="utf-8")
+            self._process = subprocess.Popen(command, text=True, stdout=subprocess.DEVNULL, stderr=log,
+                                             env=environment, start_new_session=True)
+            log.close()
+            deadline = time.monotonic() + startup_timeout_s
+            ready: dict[str, Any] | None = None
+            while time.monotonic() < deadline:
+                if endpoint.is_file():
+                    try:
+                        candidate = json.loads(endpoint.read_text(encoding="utf-8"))
+                        if candidate.get("type") == "ready": ready = candidate; break
+                    except (OSError, json.JSONDecodeError): pass
+                if self._process.poll() is not None:
+                    detail = (self.state_dir / "worker.stderr.log").read_text(errors="replace")[-2000:]
+>                   raise JavaWorkerError(f"worker exited during startup: {detail}")
+E                   comsol_mcp._java_worker.JavaWorkerError: worker exited during startup: Exception in thread "main" java.net.BindException: Operation not permitted (Bind failed)
+E                   	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+E                   	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+E                   	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+E                   	at java.base/java.net.ServerSocket.bind(ServerSocket.java:349)
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.<init>(PersistentComsolWorker.java:147)
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.main(PersistentComsolWorker.java:161)
+
+comsol_mcp/_java_worker.py:222: JavaWorkerError
+_ ERROR at setup of test_java_worker_keeps_original_request_queryable_after_nonblocking_submit _
+
+tmp_path_factory = TempPathFactory(_given_basetemp=None, _trace=<pluggy._tracing.TagTracerSub object at 0x1086de8b0>, _basetemp=PosixPath...ers/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-799'), _retention_count=3, _retention_policy='all')
+
+    @pytest.fixture(scope="module")
+    def worker(tmp_path_factory):
+        if not _worker_build_environment_available():
+            pytest.skip("COMSOL 6.4/JDK 11 local Worker build environment unavailable")
+        instance = PersistentJavaWorker(JavaWorkerPaths(COMSOL_ROOT, JDK11), state_dir=tmp_path_factory.mktemp("worker-state"))
+>       instance.start()
+
+tests/test_java_worker.py:147: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x10db43890>
+startup_timeout_s = 20.0
+
+    def start(self, *, startup_timeout_s: float = 20.0) -> dict[str, Any]:
+        with self._lock:
+            if self._process is not None and self._process.poll() is None:
+                return self.health(timeout_s=1.0)
+            self.paths.validate()
+            classpath, classpath_hash, jar_count = self.paths.classpath()
+            self.state_dir.mkdir(parents=True, exist_ok=True)
+            try: os.chmod(self.state_dir, 0o700)
+            except OSError: pass
+            source = Path(__file__).with_name("worker_java") / "PersistentComsolWorker.java"
+            source_hash = hashlib.sha256(source.read_bytes()).hexdigest()[:20]
+            classes = self.state_dir / "classes" / source_hash
+            marker = classes / ".compiled"
+            if not marker.is_file():
+                classes.mkdir(parents=True, exist_ok=True)
+                compile_result = subprocess.run(
+                    [str(self.paths.executable("javac")), "-cp", classpath, "-d", str(classes), str(source)],
+                    text=True, encoding="utf-8", errors="replace", stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+                )
+                if compile_result.returncode:
+                    raise JavaWorkerError(f"worker compilation failed: {compile_result.stderr[-2000:]}")
+                marker.write_text(source_hash + "\n", encoding="ascii")
+            self._classes_dir = classes
+            endpoint = self.state_dir / "worker_endpoint.json"
+            existing = self._attach_existing(endpoint)
+            if existing is not None:
+                return existing
+            command = [str(self.paths.executable("java"))]
+            if self.paths.private_prefs is not None:
+                command.append(f"-Dcs.prefsdir={self.paths.private_prefs}")
+            command += ["-cp", str(classes) + self.paths.classpath_separator + classpath,
+                        "comsol_mcp.worker_java.PersistentComsolWorker", "--port", "0", "--endpoint-file", str(endpoint),
+                        "--server-lock-root", str(self.paths.resolved_global_lock_root)]
+            command += ["--generation", str(self._next_generation)]
+            environment = dict(os.environ); environment["COMSOL_MCP_WORKER_TOKEN"] = self._token
+            log = (self.state_dir / "worker.stderr.log").open("a", encoding="utf-8")
+            self._process = subprocess.Popen(command, text=True, stdout=subprocess.DEVNULL, stderr=log,
+                                             env=environment, start_new_session=True)
+            log.close()
+            deadline = time.monotonic() + startup_timeout_s
+            ready: dict[str, Any] | None = None
+            while time.monotonic() < deadline:
+                if endpoint.is_file():
+                    try:
+                        candidate = json.loads(endpoint.read_text(encoding="utf-8"))
+                        if candidate.get("type") == "ready": ready = candidate; break
+                    except (OSError, json.JSONDecodeError): pass
+                if self._process.poll() is not None:
+                    detail = (self.state_dir / "worker.stderr.log").read_text(errors="replace")[-2000:]
+>                   raise JavaWorkerError(f"worker exited during startup: {detail}")
+E                   comsol_mcp._java_worker.JavaWorkerError: worker exited during startup: Exception in thread "main" java.net.BindException: Operation not permitted (Bind failed)
+E                   	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+E                   	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+E                   	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+E                   	at java.base/java.net.ServerSocket.bind(ServerSocket.java:349)
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.<init>(PersistentComsolWorker.java:147)
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.main(PersistentComsolWorker.java:161)
+
+comsol_mcp/_java_worker.py:222: JavaWorkerError
+____ ERROR at setup of test_java_worker_persists_private_endpoint_metadata _____
+
+tmp_path_factory = TempPathFactory(_given_basetemp=None, _trace=<pluggy._tracing.TagTracerSub object at 0x1086de8b0>, _basetemp=PosixPath...ers/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-799'), _retention_count=3, _retention_policy='all')
+
+    @pytest.fixture(scope="module")
+    def worker(tmp_path_factory):
+        if not _worker_build_environment_available():
+            pytest.skip("COMSOL 6.4/JDK 11 local Worker build environment unavailable")
+        instance = PersistentJavaWorker(JavaWorkerPaths(COMSOL_ROOT, JDK11), state_dir=tmp_path_factory.mktemp("worker-state"))
+>       instance.start()
+
+tests/test_java_worker.py:147: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x10db43890>
+startup_timeout_s = 20.0
+
+    def start(self, *, startup_timeout_s: float = 20.0) -> dict[str, Any]:
+        with self._lock:
+            if self._process is not None and self._process.poll() is None:
+                return self.health(timeout_s=1.0)
+            self.paths.validate()
+            classpath, classpath_hash, jar_count = self.paths.classpath()
+            self.state_dir.mkdir(parents=True, exist_ok=True)
+            try: os.chmod(self.state_dir, 0o700)
+            except OSError: pass
+            source = Path(__file__).with_name("worker_java") / "PersistentComsolWorker.java"
+            source_hash = hashlib.sha256(source.read_bytes()).hexdigest()[:20]
+            classes = self.state_dir / "classes" / source_hash
+            marker = classes / ".compiled"
+            if not marker.is_file():
+                classes.mkdir(parents=True, exist_ok=True)
+                compile_result = subprocess.run(
+                    [str(self.paths.executable("javac")), "-cp", classpath, "-d", str(classes), str(source)],
+                    text=True, encoding="utf-8", errors="replace", stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+                )
+                if compile_result.returncode:
+                    raise JavaWorkerError(f"worker compilation failed: {compile_result.stderr[-2000:]}")
+                marker.write_text(source_hash + "\n", encoding="ascii")
+            self._classes_dir = classes
+            endpoint = self.state_dir / "worker_endpoint.json"
+            existing = self._attach_existing(endpoint)
+            if existing is not None:
+                return existing
+            command = [str(self.paths.executable("java"))]
+            if self.paths.private_prefs is not None:
+                command.append(f"-Dcs.prefsdir={self.paths.private_prefs}")
+            command += ["-cp", str(classes) + self.paths.classpath_separator + classpath,
+                        "comsol_mcp.worker_java.PersistentComsolWorker", "--port", "0", "--endpoint-file", str(endpoint),
+                        "--server-lock-root", str(self.paths.resolved_global_lock_root)]
+            command += ["--generation", str(self._next_generation)]
+            environment = dict(os.environ); environment["COMSOL_MCP_WORKER_TOKEN"] = self._token
+            log = (self.state_dir / "worker.stderr.log").open("a", encoding="utf-8")
+            self._process = subprocess.Popen(command, text=True, stdout=subprocess.DEVNULL, stderr=log,
+                                             env=environment, start_new_session=True)
+            log.close()
+            deadline = time.monotonic() + startup_timeout_s
+            ready: dict[str, Any] | None = None
+            while time.monotonic() < deadline:
+                if endpoint.is_file():
+                    try:
+                        candidate = json.loads(endpoint.read_text(encoding="utf-8"))
+                        if candidate.get("type") == "ready": ready = candidate; break
+                    except (OSError, json.JSONDecodeError): pass
+                if self._process.poll() is not None:
+                    detail = (self.state_dir / "worker.stderr.log").read_text(errors="replace")[-2000:]
+>                   raise JavaWorkerError(f"worker exited during startup: {detail}")
+E                   comsol_mcp._java_worker.JavaWorkerError: worker exited during startup: Exception in thread "main" java.net.BindException: Operation not permitted (Bind failed)
+E                   	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+E                   	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+E                   	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+E                   	at java.base/java.net.ServerSocket.bind(ServerSocket.java:349)
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.<init>(PersistentComsolWorker.java:147)
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.main(PersistentComsolWorker.java:161)
+
+comsol_mcp/_java_worker.py:222: JavaWorkerError
+_ ERROR at setup of test_java_worker_reconnects_existing_endpoint_without_spawning_or_replaying _
+
+tmp_path_factory = TempPathFactory(_given_basetemp=None, _trace=<pluggy._tracing.TagTracerSub object at 0x1086de8b0>, _basetemp=PosixPath...ers/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-799'), _retention_count=3, _retention_policy='all')
+
+    @pytest.fixture(scope="module")
+    def worker(tmp_path_factory):
+        if not _worker_build_environment_available():
+            pytest.skip("COMSOL 6.4/JDK 11 local Worker build environment unavailable")
+        instance = PersistentJavaWorker(JavaWorkerPaths(COMSOL_ROOT, JDK11), state_dir=tmp_path_factory.mktemp("worker-state"))
+>       instance.start()
+
+tests/test_java_worker.py:147: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x10db43890>
+startup_timeout_s = 20.0
+
+    def start(self, *, startup_timeout_s: float = 20.0) -> dict[str, Any]:
+        with self._lock:
+            if self._process is not None and self._process.poll() is None:
+                return self.health(timeout_s=1.0)
+            self.paths.validate()
+            classpath, classpath_hash, jar_count = self.paths.classpath()
+            self.state_dir.mkdir(parents=True, exist_ok=True)
+            try: os.chmod(self.state_dir, 0o700)
+            except OSError: pass
+            source = Path(__file__).with_name("worker_java") / "PersistentComsolWorker.java"
+            source_hash = hashlib.sha256(source.read_bytes()).hexdigest()[:20]
+            classes = self.state_dir / "classes" / source_hash
+            marker = classes / ".compiled"
+            if not marker.is_file():
+                classes.mkdir(parents=True, exist_ok=True)
+                compile_result = subprocess.run(
+                    [str(self.paths.executable("javac")), "-cp", classpath, "-d", str(classes), str(source)],
+                    text=True, encoding="utf-8", errors="replace", stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+                )
+                if compile_result.returncode:
+                    raise JavaWorkerError(f"worker compilation failed: {compile_result.stderr[-2000:]}")
+                marker.write_text(source_hash + "\n", encoding="ascii")
+            self._classes_dir = classes
+            endpoint = self.state_dir / "worker_endpoint.json"
+            existing = self._attach_existing(endpoint)
+            if existing is not None:
+                return existing
+            command = [str(self.paths.executable("java"))]
+            if self.paths.private_prefs is not None:
+                command.append(f"-Dcs.prefsdir={self.paths.private_prefs}")
+            command += ["-cp", str(classes) + self.paths.classpath_separator + classpath,
+                        "comsol_mcp.worker_java.PersistentComsolWorker", "--port", "0", "--endpoint-file", str(endpoint),
+                        "--server-lock-root", str(self.paths.resolved_global_lock_root)]
+            command += ["--generation", str(self._next_generation)]
+            environment = dict(os.environ); environment["COMSOL_MCP_WORKER_TOKEN"] = self._token
+            log = (self.state_dir / "worker.stderr.log").open("a", encoding="utf-8")
+            self._process = subprocess.Popen(command, text=True, stdout=subprocess.DEVNULL, stderr=log,
+                                             env=environment, start_new_session=True)
+            log.close()
+            deadline = time.monotonic() + startup_timeout_s
+            ready: dict[str, Any] | None = None
+            while time.monotonic() < deadline:
+                if endpoint.is_file():
+                    try:
+                        candidate = json.loads(endpoint.read_text(encoding="utf-8"))
+                        if candidate.get("type") == "ready": ready = candidate; break
+                    except (OSError, json.JSONDecodeError): pass
+                if self._process.poll() is not None:
+                    detail = (self.state_dir / "worker.stderr.log").read_text(errors="replace")[-2000:]
+>                   raise JavaWorkerError(f"worker exited during startup: {detail}")
+E                   comsol_mcp._java_worker.JavaWorkerError: worker exited during startup: Exception in thread "main" java.net.BindException: Operation not permitted (Bind failed)
+E                   	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+E                   	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+E                   	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+E                   	at java.base/java.net.ServerSocket.bind(ServerSocket.java:349)
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.<init>(PersistentComsolWorker.java:147)
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.main(PersistentComsolWorker.java:161)
+
+comsol_mcp/_java_worker.py:222: JavaWorkerError
+_ ERROR at setup of test_same_request_id_with_different_body_is_rejected_without_replay _
+
+tmp_path_factory = TempPathFactory(_given_basetemp=None, _trace=<pluggy._tracing.TagTracerSub object at 0x1086de8b0>, _basetemp=PosixPath...ers/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-799'), _retention_count=3, _retention_policy='all')
+
+    @pytest.fixture(scope="module")
+    def worker(tmp_path_factory):
+        if not _worker_build_environment_available():
+            pytest.skip("COMSOL 6.4/JDK 11 local Worker build environment unavailable")
+        instance = PersistentJavaWorker(JavaWorkerPaths(COMSOL_ROOT, JDK11), state_dir=tmp_path_factory.mktemp("worker-state"))
+>       instance.start()
+
+tests/test_java_worker.py:147: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x10db43890>
+startup_timeout_s = 20.0
+
+    def start(self, *, startup_timeout_s: float = 20.0) -> dict[str, Any]:
+        with self._lock:
+            if self._process is not None and self._process.poll() is None:
+                return self.health(timeout_s=1.0)
+            self.paths.validate()
+            classpath, classpath_hash, jar_count = self.paths.classpath()
+            self.state_dir.mkdir(parents=True, exist_ok=True)
+            try: os.chmod(self.state_dir, 0o700)
+            except OSError: pass
+            source = Path(__file__).with_name("worker_java") / "PersistentComsolWorker.java"
+            source_hash = hashlib.sha256(source.read_bytes()).hexdigest()[:20]
+            classes = self.state_dir / "classes" / source_hash
+            marker = classes / ".compiled"
+            if not marker.is_file():
+                classes.mkdir(parents=True, exist_ok=True)
+                compile_result = subprocess.run(
+                    [str(self.paths.executable("javac")), "-cp", classpath, "-d", str(classes), str(source)],
+                    text=True, encoding="utf-8", errors="replace", stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+                )
+                if compile_result.returncode:
+                    raise JavaWorkerError(f"worker compilation failed: {compile_result.stderr[-2000:]}")
+                marker.write_text(source_hash + "\n", encoding="ascii")
+            self._classes_dir = classes
+            endpoint = self.state_dir / "worker_endpoint.json"
+            existing = self._attach_existing(endpoint)
+            if existing is not None:
+                return existing
+            command = [str(self.paths.executable("java"))]
+            if self.paths.private_prefs is not None:
+                command.append(f"-Dcs.prefsdir={self.paths.private_prefs}")
+            command += ["-cp", str(classes) + self.paths.classpath_separator + classpath,
+                        "comsol_mcp.worker_java.PersistentComsolWorker", "--port", "0", "--endpoint-file", str(endpoint),
+                        "--server-lock-root", str(self.paths.resolved_global_lock_root)]
+            command += ["--generation", str(self._next_generation)]
+            environment = dict(os.environ); environment["COMSOL_MCP_WORKER_TOKEN"] = self._token
+            log = (self.state_dir / "worker.stderr.log").open("a", encoding="utf-8")
+            self._process = subprocess.Popen(command, text=True, stdout=subprocess.DEVNULL, stderr=log,
+                                             env=environment, start_new_session=True)
+            log.close()
+            deadline = time.monotonic() + startup_timeout_s
+            ready: dict[str, Any] | None = None
+            while time.monotonic() < deadline:
+                if endpoint.is_file():
+                    try:
+                        candidate = json.loads(endpoint.read_text(encoding="utf-8"))
+                        if candidate.get("type") == "ready": ready = candidate; break
+                    except (OSError, json.JSONDecodeError): pass
+                if self._process.poll() is not None:
+                    detail = (self.state_dir / "worker.stderr.log").read_text(errors="replace")[-2000:]
+>                   raise JavaWorkerError(f"worker exited during startup: {detail}")
+E                   comsol_mcp._java_worker.JavaWorkerError: worker exited during startup: Exception in thread "main" java.net.BindException: Operation not permitted (Bind failed)
+E                   	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+E                   	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+E                   	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+E                   	at java.base/java.net.ServerSocket.bind(ServerSocket.java:349)
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.<init>(PersistentComsolWorker.java:147)
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.main(PersistentComsolWorker.java:161)
+
+comsol_mcp/_java_worker.py:222: JavaWorkerError
+_ ERROR at setup of test_unknown_command_is_rejected_and_parallel_control_queries_remain_responsive _
+
+tmp_path_factory = TempPathFactory(_given_basetemp=None, _trace=<pluggy._tracing.TagTracerSub object at 0x1086de8b0>, _basetemp=PosixPath...ers/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-799'), _retention_count=3, _retention_policy='all')
+
+    @pytest.fixture(scope="module")
+    def worker(tmp_path_factory):
+        if not _worker_build_environment_available():
+            pytest.skip("COMSOL 6.4/JDK 11 local Worker build environment unavailable")
+        instance = PersistentJavaWorker(JavaWorkerPaths(COMSOL_ROOT, JDK11), state_dir=tmp_path_factory.mktemp("worker-state"))
+>       instance.start()
+
+tests/test_java_worker.py:147: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x10db43890>
+startup_timeout_s = 20.0
+
+    def start(self, *, startup_timeout_s: float = 20.0) -> dict[str, Any]:
+        with self._lock:
+            if self._process is not None and self._process.poll() is None:
+                return self.health(timeout_s=1.0)
+            self.paths.validate()
+            classpath, classpath_hash, jar_count = self.paths.classpath()
+            self.state_dir.mkdir(parents=True, exist_ok=True)
+            try: os.chmod(self.state_dir, 0o700)
+            except OSError: pass
+            source = Path(__file__).with_name("worker_java") / "PersistentComsolWorker.java"
+            source_hash = hashlib.sha256(source.read_bytes()).hexdigest()[:20]
+            classes = self.state_dir / "classes" / source_hash
+            marker = classes / ".compiled"
+            if not marker.is_file():
+                classes.mkdir(parents=True, exist_ok=True)
+                compile_result = subprocess.run(
+                    [str(self.paths.executable("javac")), "-cp", classpath, "-d", str(classes), str(source)],
+                    text=True, encoding="utf-8", errors="replace", stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+                )
+                if compile_result.returncode:
+                    raise JavaWorkerError(f"worker compilation failed: {compile_result.stderr[-2000:]}")
+                marker.write_text(source_hash + "\n", encoding="ascii")
+            self._classes_dir = classes
+            endpoint = self.state_dir / "worker_endpoint.json"
+            existing = self._attach_existing(endpoint)
+            if existing is not None:
+                return existing
+            command = [str(self.paths.executable("java"))]
+            if self.paths.private_prefs is not None:
+                command.append(f"-Dcs.prefsdir={self.paths.private_prefs}")
+            command += ["-cp", str(classes) + self.paths.classpath_separator + classpath,
+                        "comsol_mcp.worker_java.PersistentComsolWorker", "--port", "0", "--endpoint-file", str(endpoint),
+                        "--server-lock-root", str(self.paths.resolved_global_lock_root)]
+            command += ["--generation", str(self._next_generation)]
+            environment = dict(os.environ); environment["COMSOL_MCP_WORKER_TOKEN"] = self._token
+            log = (self.state_dir / "worker.stderr.log").open("a", encoding="utf-8")
+            self._process = subprocess.Popen(command, text=True, stdout=subprocess.DEVNULL, stderr=log,
+                                             env=environment, start_new_session=True)
+            log.close()
+            deadline = time.monotonic() + startup_timeout_s
+            ready: dict[str, Any] | None = None
+            while time.monotonic() < deadline:
+                if endpoint.is_file():
+                    try:
+                        candidate = json.loads(endpoint.read_text(encoding="utf-8"))
+                        if candidate.get("type") == "ready": ready = candidate; break
+                    except (OSError, json.JSONDecodeError): pass
+                if self._process.poll() is not None:
+                    detail = (self.state_dir / "worker.stderr.log").read_text(errors="replace")[-2000:]
+>                   raise JavaWorkerError(f"worker exited during startup: {detail}")
+E                   comsol_mcp._java_worker.JavaWorkerError: worker exited during startup: Exception in thread "main" java.net.BindException: Operation not permitted (Bind failed)
+E                   	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+E                   	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+E                   	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+E                   	at java.base/java.net.ServerSocket.bind(ServerSocket.java:349)
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.<init>(PersistentComsolWorker.java:147)
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.main(PersistentComsolWorker.java:161)
+
+comsol_mcp/_java_worker.py:222: JavaWorkerError
+_ ERROR at setup of test_operation_context_publishes_request_linkage_and_redacts_credentials _
+
+tmp_path_factory = TempPathFactory(_given_basetemp=None, _trace=<pluggy._tracing.TagTracerSub object at 0x1086de8b0>, _basetemp=PosixPath...ers/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-799'), _retention_count=3, _retention_policy='all')
+
+    @pytest.fixture(scope="module")
+    def worker(tmp_path_factory):
+        if not _worker_build_environment_available():
+            pytest.skip("COMSOL 6.4/JDK 11 local Worker build environment unavailable")
+        instance = PersistentJavaWorker(JavaWorkerPaths(COMSOL_ROOT, JDK11), state_dir=tmp_path_factory.mktemp("worker-state"))
+>       instance.start()
+
+tests/test_java_worker.py:147: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x10db43890>
+startup_timeout_s = 20.0
+
+    def start(self, *, startup_timeout_s: float = 20.0) -> dict[str, Any]:
+        with self._lock:
+            if self._process is not None and self._process.poll() is None:
+                return self.health(timeout_s=1.0)
+            self.paths.validate()
+            classpath, classpath_hash, jar_count = self.paths.classpath()
+            self.state_dir.mkdir(parents=True, exist_ok=True)
+            try: os.chmod(self.state_dir, 0o700)
+            except OSError: pass
+            source = Path(__file__).with_name("worker_java") / "PersistentComsolWorker.java"
+            source_hash = hashlib.sha256(source.read_bytes()).hexdigest()[:20]
+            classes = self.state_dir / "classes" / source_hash
+            marker = classes / ".compiled"
+            if not marker.is_file():
+                classes.mkdir(parents=True, exist_ok=True)
+                compile_result = subprocess.run(
+                    [str(self.paths.executable("javac")), "-cp", classpath, "-d", str(classes), str(source)],
+                    text=True, encoding="utf-8", errors="replace", stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+                )
+                if compile_result.returncode:
+                    raise JavaWorkerError(f"worker compilation failed: {compile_result.stderr[-2000:]}")
+                marker.write_text(source_hash + "\n", encoding="ascii")
+            self._classes_dir = classes
+            endpoint = self.state_dir / "worker_endpoint.json"
+            existing = self._attach_existing(endpoint)
+            if existing is not None:
+                return existing
+            command = [str(self.paths.executable("java"))]
+            if self.paths.private_prefs is not None:
+                command.append(f"-Dcs.prefsdir={self.paths.private_prefs}")
+            command += ["-cp", str(classes) + self.paths.classpath_separator + classpath,
+                        "comsol_mcp.worker_java.PersistentComsolWorker", "--port", "0", "--endpoint-file", str(endpoint),
+                        "--server-lock-root", str(self.paths.resolved_global_lock_root)]
+            command += ["--generation", str(self._next_generation)]
+            environment = dict(os.environ); environment["COMSOL_MCP_WORKER_TOKEN"] = self._token
+            log = (self.state_dir / "worker.stderr.log").open("a", encoding="utf-8")
+            self._process = subprocess.Popen(command, text=True, stdout=subprocess.DEVNULL, stderr=log,
+                                             env=environment, start_new_session=True)
+            log.close()
+            deadline = time.monotonic() + startup_timeout_s
+            ready: dict[str, Any] | None = None
+            while time.monotonic() < deadline:
+                if endpoint.is_file():
+                    try:
+                        candidate = json.loads(endpoint.read_text(encoding="utf-8"))
+                        if candidate.get("type") == "ready": ready = candidate; break
+                    except (OSError, json.JSONDecodeError): pass
+                if self._process.poll() is not None:
+                    detail = (self.state_dir / "worker.stderr.log").read_text(errors="replace")[-2000:]
+>                   raise JavaWorkerError(f"worker exited during startup: {detail}")
+E                   comsol_mcp._java_worker.JavaWorkerError: worker exited during startup: Exception in thread "main" java.net.BindException: Operation not permitted (Bind failed)
+E                   	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+E                   	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+E                   	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+E                   	at java.base/java.net.ServerSocket.bind(ServerSocket.java:349)
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.<init>(PersistentComsolWorker.java:147)
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.main(PersistentComsolWorker.java:161)
+
+comsol_mcp/_java_worker.py:222: JavaWorkerError
+=================================== FAILURES ===================================
+____________ test_chain_c_fixture_live_without_an_engine_is_blocked ____________
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-799/test_chain_c_fixture_live_with0')
+
+    def test_chain_c_fixture_live_without_an_engine_is_blocked(tmp_path):
+        pytest.importorskip("mcp", reason="the stdio child needs the MCP SDK")
+        with socket.socket() as probe:  # a port nothing can answer on
+>           probe.bind(("127.0.0.1", 0))
+E           PermissionError: [Errno 1] Operation not permitted
+
+tests/test_g3_chain_c_fixture.py:598: PermissionError
+_____________ test_phase4_offline_protocol_case_produces_evidence ______________
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-799/test_phase4_offline_protocol_c0')
+
+    @pytest.mark.integration
+    def test_phase4_offline_protocol_case_produces_evidence(tmp_path):
+        """One bounded offline case against the real MCP stdio entrypoint (no COMSOL Server)."""
+        run_dir = tmp_path / "offline"
+        reply = subprocess.run(
+            [sys.executable, str(DRIVER), "--only", "GUARD_T038", "--run-dir", str(run_dir)],
+            cwd=ROOT, capture_output=True, text=True, timeout=900,
+        )
+>       assert reply.returncode in {0, 3, 4}, reply.stdout + reply.stderr
+E       AssertionError: 
+E         evidence: /private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-799/test_phase4_offline_protocol_c0/offline
+E         case                         status    assert   sub  first finding
+E         ----------------------------------------------------------------------------------------------------------------------
+E         GUARD_T038                   FAIL          12     7  the unknown-operation probe was refused with an unknown engine state (
+E         ----------------------------------------------------------------------------------------------------------------------
+E         cases: PASS 0 | FAIL 1 | BLOCKED 0 | NOT_RUN 0
+E         subcases: PASS 4 | FAIL 1 | BLOCKED 2 | NOT_RUN 0
+E         
+E       assert 1 in {0, 3, 4}
+E        +  where 1 = CompletedProcess(args=['/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/softwar...-----\ncases: PASS 0 | FAIL 1 | BLOCKED 0 | NOT_RUN 0\nsubcases: PASS 4 | FAIL 1 | BLOCKED 2 | NOT_RUN 0\n', stderr='').returncode
+
+tests/test_g3_phase4_driver.py:213: AssertionError
+_______ test_dead_owned_worker_increments_generation_before_replacement ________
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-799/test_dead_owned_worker_increme0')
+
+    def test_dead_owned_worker_increments_generation_before_replacement(tmp_path):
+        if not _worker_build_environment_available():
+            pytest.skip("COMSOL 6.4/JDK 11 local Worker build environment unavailable")
+        first = PersistentJavaWorker(JavaWorkerPaths(COMSOL_ROOT, JDK11), state_dir=tmp_path)
+>       first.start(); previous_generation = first.generation; first.close()
+        ^^^^^^^^^^^^^
+
+tests/test_java_worker.py:369: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x10c998290>
+startup_timeout_s = 20.0
+
+    def start(self, *, startup_timeout_s: float = 20.0) -> dict[str, Any]:
+        with self._lock:
+            if self._process is not None and self._process.poll() is None:
+                return self.health(timeout_s=1.0)
+            self.paths.validate()
+            classpath, classpath_hash, jar_count = self.paths.classpath()
+            self.state_dir.mkdir(parents=True, exist_ok=True)
+            try: os.chmod(self.state_dir, 0o700)
+            except OSError: pass
+            source = Path(__file__).with_name("worker_java") / "PersistentComsolWorker.java"
+            source_hash = hashlib.sha256(source.read_bytes()).hexdigest()[:20]
+            classes = self.state_dir / "classes" / source_hash
+            marker = classes / ".compiled"
+            if not marker.is_file():
+                classes.mkdir(parents=True, exist_ok=True)
+                compile_result = subprocess.run(
+                    [str(self.paths.executable("javac")), "-cp", classpath, "-d", str(classes), str(source)],
+                    text=True, encoding="utf-8", errors="replace", stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+                )
+                if compile_result.returncode:
+                    raise JavaWorkerError(f"worker compilation failed: {compile_result.stderr[-2000:]}")
+                marker.write_text(source_hash + "\n", encoding="ascii")
+            self._classes_dir = classes
+            endpoint = self.state_dir / "worker_endpoint.json"
+            existing = self._attach_existing(endpoint)
+            if existing is not None:
+                return existing
+            command = [str(self.paths.executable("java"))]
+            if self.paths.private_prefs is not None:
+                command.append(f"-Dcs.prefsdir={self.paths.private_prefs}")
+            command += ["-cp", str(classes) + self.paths.classpath_separator + classpath,
+                        "comsol_mcp.worker_java.PersistentComsolWorker", "--port", "0", "--endpoint-file", str(endpoint),
+                        "--server-lock-root", str(self.paths.resolved_global_lock_root)]
+            command += ["--generation", str(self._next_generation)]
+            environment = dict(os.environ); environment["COMSOL_MCP_WORKER_TOKEN"] = self._token
+            log = (self.state_dir / "worker.stderr.log").open("a", encoding="utf-8")
+            self._process = subprocess.Popen(command, text=True, stdout=subprocess.DEVNULL, stderr=log,
+                                             env=environment, start_new_session=True)
+            log.close()
+            deadline = time.monotonic() + startup_timeout_s
+            ready: dict[str, Any] | None = None
+            while time.monotonic() < deadline:
+                if endpoint.is_file():
+                    try:
+                        candidate = json.loads(endpoint.read_text(encoding="utf-8"))
+                        if candidate.get("type") == "ready": ready = candidate; break
+                    except (OSError, json.JSONDecodeError): pass
+                if self._process.poll() is not None:
+                    detail = (self.state_dir / "worker.stderr.log").read_text(errors="replace")[-2000:]
+>                   raise JavaWorkerError(f"worker exited during startup: {detail}")
+E                   comsol_mcp._java_worker.JavaWorkerError: worker exited during startup: Exception in thread "main" java.net.BindException: Operation not permitted (Bind failed)
+E                   	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+E                   	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+E                   	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+E                   	at java.base/java.net.ServerSocket.bind(ServerSocket.java:349)
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.<init>(PersistentComsolWorker.java:147)
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.main(PersistentComsolWorker.java:161)
+
+comsol_mcp/_java_worker.py:222: JavaWorkerError
+__________ test_two_workers_cannot_own_the_same_global_endpoint_lock ___________
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-799/test_two_workers_cannot_own_th0')
+
+    def test_two_workers_cannot_own_the_same_global_endpoint_lock(tmp_path):
+        if not _worker_build_environment_available():
+            pytest.skip("COMSOL 6.4/JDK 11 local Worker build environment unavailable")
+        lock_root = tmp_path / "global-endpoint-locks"
+        paths = JavaWorkerPaths(COMSOL_ROOT, JDK11, project_root=tmp_path, global_lock_root=lock_root)
+        first = PersistentJavaWorker(paths, state_dir=tmp_path / "first")
+        second = PersistentJavaWorker(paths, state_dir=tmp_path / "second")
+        try:
+>           first.start(); second.start()
+            ^^^^^^^^^^^^^
+
+tests/test_java_worker.py:482: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x10c9b67a0>
+startup_timeout_s = 20.0
+
+    def start(self, *, startup_timeout_s: float = 20.0) -> dict[str, Any]:
+        with self._lock:
+            if self._process is not None and self._process.poll() is None:
+                return self.health(timeout_s=1.0)
+            self.paths.validate()
+            classpath, classpath_hash, jar_count = self.paths.classpath()
+            self.state_dir.mkdir(parents=True, exist_ok=True)
+            try: os.chmod(self.state_dir, 0o700)
+            except OSError: pass
+            source = Path(__file__).with_name("worker_java") / "PersistentComsolWorker.java"
+            source_hash = hashlib.sha256(source.read_bytes()).hexdigest()[:20]
+            classes = self.state_dir / "classes" / source_hash
+            marker = classes / ".compiled"
+            if not marker.is_file():
+                classes.mkdir(parents=True, exist_ok=True)
+                compile_result = subprocess.run(
+                    [str(self.paths.executable("javac")), "-cp", classpath, "-d", str(classes), str(source)],
+                    text=True, encoding="utf-8", errors="replace", stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+                )
+                if compile_result.returncode:
+                    raise JavaWorkerError(f"worker compilation failed: {compile_result.stderr[-2000:]}")
+                marker.write_text(source_hash + "\n", encoding="ascii")
+            self._classes_dir = classes
+            endpoint = self.state_dir / "worker_endpoint.json"
+            existing = self._attach_existing(endpoint)
+            if existing is not None:
+                return existing
+            command = [str(self.paths.executable("java"))]
+            if self.paths.private_prefs is not None:
+                command.append(f"-Dcs.prefsdir={self.paths.private_prefs}")
+            command += ["-cp", str(classes) + self.paths.classpath_separator + classpath,
+                        "comsol_mcp.worker_java.PersistentComsolWorker", "--port", "0", "--endpoint-file", str(endpoint),
+                        "--server-lock-root", str(self.paths.resolved_global_lock_root)]
+            command += ["--generation", str(self._next_generation)]
+            environment = dict(os.environ); environment["COMSOL_MCP_WORKER_TOKEN"] = self._token
+            log = (self.state_dir / "worker.stderr.log").open("a", encoding="utf-8")
+            self._process = subprocess.Popen(command, text=True, stdout=subprocess.DEVNULL, stderr=log,
+                                             env=environment, start_new_session=True)
+            log.close()
+            deadline = time.monotonic() + startup_timeout_s
+            ready: dict[str, Any] | None = None
+            while time.monotonic() < deadline:
+                if endpoint.is_file():
+                    try:
+                        candidate = json.loads(endpoint.read_text(encoding="utf-8"))
+                        if candidate.get("type") == "ready": ready = candidate; break
+                    except (OSError, json.JSONDecodeError): pass
+                if self._process.poll() is not None:
+                    detail = (self.state_dir / "worker.stderr.log").read_text(errors="replace")[-2000:]
+>                   raise JavaWorkerError(f"worker exited during startup: {detail}")
+E                   comsol_mcp._java_worker.JavaWorkerError: worker exited during startup: Exception in thread "main" java.net.BindException: Operation not permitted (Bind failed)
+E                   	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+E                   	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+E                   	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+E                   	at java.base/java.net.ServerSocket.bind(ServerSocket.java:349)
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.<init>(PersistentComsolWorker.java:147)
+E                   	at comsol_mcp.worker_java.PersistentComsolWorker.main(PersistentComsolWorker.java:161)
+
+comsol_mcp/_java_worker.py:222: JavaWorkerError
+=============================== warnings summary ===============================
+tests/test_g3_phase4_driver.py:205
+  /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tests/test_g3_phase4_driver.py:205: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+tests/test_g3_phase4_m1_fixes.py:1060
+  /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tests/test_g3_phase4_m1_fixes.py:1060: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_g3_chain_c_fixture.py::test_chain_c_fixture_live_without_an_engine_is_blocked
+FAILED tests/test_g3_phase4_driver.py::test_phase4_offline_protocol_case_produces_evidence
+FAILED tests/test_java_worker.py::test_dead_owned_worker_increments_generation_before_replacement
+FAILED tests/test_java_worker.py::test_two_workers_cannot_own_the_same_global_endpoint_lock
+ERROR tests/test_g3_c05_license_marshalling.py::test_the_real_marshaller_accepts_the_declared_string_array
+ERROR tests/test_g3_c05_license_marshalling.py::test_the_real_marshaller_refuses_a_bare_scalar_and_says_why
+ERROR tests/test_g3_c05_license_marshalling.py::test_the_real_marshaller_separates_a_missing_api_from_a_bad_argument
+ERROR tests/test_g3_c05_license_marshalling.py::test_the_allow_list_still_gates_has_product
+ERROR tests/test_java_worker.py::test_java_worker_is_loopback_authenticated_and_reports_health
+ERROR tests/test_java_worker.py::test_java_worker_keeps_original_request_queryable_after_nonblocking_submit
+ERROR tests/test_java_worker.py::test_java_worker_persists_private_endpoint_metadata
+ERROR tests/test_java_worker.py::test_java_worker_reconnects_existing_endpoint_without_spawning_or_replaying
+ERROR tests/test_java_worker.py::test_same_request_id_with_different_body_is_rejected_without_replay
+ERROR tests/test_java_worker.py::test_unknown_command_is_rejected_and_parallel_control_queries_remain_responsive
+ERROR tests/test_java_worker.py::test_operation_context_publishes_request_linkage_and_redacts_credentials
+4 failed, 1633 passed, 1 skipped, 2 warnings, 11 errors in 13.92s

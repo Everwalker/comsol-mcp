@@ -122,6 +122,11 @@ never edits Java): ``axisymmetric``, ``isAxisymmetric``, ``angularUnit``,
 ``source``, ``destination``, ``type``, ``pairName``, ``swap``,
 ``hasAutoSelection``, ``manualSelection``, ``searchMethod``, ``searchDist``,
 ``copy``, ``duplicate``.
+
+``isAxisymmetric`` is now in the worker allow-list (the C07 axisymmetric
+measure needs the native flag), so the geometry readback probes it for real
+instead of claiming it is unavailable; the setter ``axisymmetric`` is still
+refused before the first write.
 """
 
 from __future__ import annotations
@@ -471,7 +476,7 @@ COMPONENT_TYPE_IDS = frozenset({"Component", "ExtraDim", "MeshComponent"})
 #: removed here so this table keeps meaning "still absent from the worker".
 WORKER_UNAVAILABLE_METHODS = frozenset(
     {
-        "axisymmetric", "isAxisymmetric", "angularUnit", "isBuilt",
+        "axisymmetric", "angularUnit", "isBuilt",
         "status", "message", "errors",
         "warnings", "obj", "objectNames", "coord",
         "isLinear", "isOrthonormal", "masterSystem", "source", "destination",
@@ -873,9 +878,12 @@ def _geometry_state(sequence: Any) -> dict[str, Any]:
         "length_unit": call_probe(sequence, "lengthUnit")["value"],
         "entity_counters": _geometry_counters(sequence),
         "bounding_box": _geometry_bounding_box(sequence),
+        # ``isAxisymmetric`` is in the worker allow-list (C07 repair), so the
+        # state reports the native flag instead of a stale unavailable claim.
+        "axisymmetric_readback": call_probe(sequence, "isAxisymmetric"),
         "unavailable": {
             name: _unavailable(name)
-            for name in ("isAxisymmetric", "angularUnit", "current", "problems", "objectNames")
+            for name in ("angularUnit", "current", "problems", "objectNames")
         },
     }
 
@@ -1020,10 +1028,11 @@ def geometry_sequence_create(worker: Any, model_tag: str, arguments: Mapping[str
         "length_unit": call_probe(sequence, "lengthUnit")["value"],
         "axisymmetric": None,
         "axisymmetric_requested": False,
+        "axisymmetric_readback": call_probe(sequence, "isAxisymmetric"),
         "features": _feature_tags(sequence),
         "created": True,
         "readback": {"geometries": after},
-        "unavailable": {"axisymmetric": _unavailable("axisymmetric"), "isAxisymmetric": _unavailable("isAxisymmetric")},
+        "unavailable": {"axisymmetric": _unavailable("axisymmetric")},
         "notes": [
             "geometry sequences are created with the documented create(<tag>,<sdim>) call; the axisymmetric "
             "flag is refused before the write because its documented setter is not in the worker allow-list, "

@@ -1,0 +1,15 @@
+{
+  "generated_at": "2026-09-22T09:22:52.355850+00:00",
+  "status": "CLEAN_PUBLICATION_SNAPSHOT_REQUIRED",
+  "source_candidate": "a3f39b3022b417e16c3087b8b35f1daa06f30b8a",
+  "preserved_development_branch": "acceptance/independent-20260922",
+  "public_parent": "2cb4627924d1a3240818ea7cd00453d4bd2d2da8",
+  "reason": "Three worker bearer-token blobs remain reachable only in unpublished intermediate commits despite deletion from the current tree. Publishing that branch would expose them.",
+  "scan": "evidence/phase4_3/runs/prepublication_blob_secret_scan_a3f39b3_20260922T091422Z/scan_report.json",
+  "decision": "Retain the original branch and all evidence locally. Create a separate public snapshot commit whose real parent is the verified remote PIN; include current implementation and approved public evidence. Verify runtime source file hashes against the snapshot and prove the three token blobs are not reachable in the publication range. Push normally without force.",
+  "permissions": "Local branch creation, safe packaging and ordinary non-force phase delivery are already authorized; no shared service, global credential, remote history or original local history is changed.",
+  "credential_revocation": "NOT_ASSERTED; secret values will be excluded from public history regardless of their lifetime.",
+  "publication_commit": null,
+  "source_hash_bridge": null,
+  "remote_sync": false
+}

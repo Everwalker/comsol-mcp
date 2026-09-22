@@ -878,7 +878,10 @@ def _completion(*, dispatched: bool, applied: Sequence[Any], failed: Sequence[An
     """
     if error is not None:
         failed = list(failed) + [dict(error)]
-        unknown = not readback.get("readable", False)
+        # A worker may report an explicit unknown engine state while the
+        # post-failure metadata read is still readable.  That readback is only
+        # an observation and cannot prove the dispatched call completed.
+        unknown = bool(error.get("execution_state_unknown")) or not readback.get("readable", False)
         status = "PARTIAL_FAILURE" if applied or not unknown else "FAILED"
     elif not dispatched:
         unknown = False

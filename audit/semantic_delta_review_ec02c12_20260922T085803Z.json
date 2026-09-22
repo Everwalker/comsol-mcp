@@ -1,0 +1,125 @@
+{
+  "schema": "comsol-mcp.g3.3.semantic-delta-review.v1",
+  "generated_at_utc": "2026-09-22T08:58:03Z",
+  "repository": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository",
+  "source_head": "ec02c1292555d1c7094cb75effc096258a32da88",
+  "source_tree": "7c2734b579d9284b533bd3eaabd4a893baac6344",
+  "previous_semantic_records": [
+    "audit/semantic_current_correction_20260922T081518Z.json",
+    "audit/semantic_current_dispositions_20260922T081518Z.json",
+    "audit/root_semantic_delta_review_032c0a5.json"
+  ],
+  "scope": "Focused semantic review of the ec02c12 W17 result-table and dataset-inspect delta only.",
+  "authorization_boundary": {
+    "source_modified_by_this_report": false,
+    "tests_started_by_this_report": false,
+    "engine_started_by_this_report": false,
+    "comsol_server_started_by_this_report": false,
+    "old_audits_overwritten": false,
+    "native_acceptance_claimed": false
+  },
+  "entries": [
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "commit": "ec02c1292555d1c7094cb75effc096258a32da88",
+      "source_sha256": "4fa9a5a0ad7137972b0e2727130d7fdd91a3fd82a1cde95696718afb890ff154",
+      "bytes": 306606,
+      "lines": 6242,
+      "reviewed_ranges": [
+        "2160-2359",
+        "5391-5810",
+        "5912-6100"
+      ],
+      "responsibility": "Typed W17 dataset inspection and result table CRUD/readback.",
+      "findings": [
+        {
+          "id": "G3R-TABLE-FINAL-COMBINED-READBACK",
+          "severity": "P1",
+          "previous_disposition": "FIXED_SOURCE_BOUNDED",
+          "current_disposition": "FIXED_SOURCE_BOUNDED",
+          "change": "create and set now perform one final readback over every requested real matrix, imaginary matrix, and header value after all setters; create additionally proves the actual native tag and type. Empty create verifies identity without requiring invented table rows.",
+          "semantic_evidence": [
+            "_table_matrix_matches performs exact value and shape comparison.",
+            "_table_definition_targets combines all requested fields into one target-scoped readback.",
+            "_table_final_write_check converts a readable mismatch to READBACK_MISMATCH and an unreadable result to EXECUTION_STATE_UNKNOWN.",
+            "A final read catches data corruption introduced by a later header setter."
+          ],
+          "boundary": "Offline fake-engine and public classifier evidence only; native COMSOL TableBaseFeature behavior remains pending live acceptance."
+        },
+        {
+          "id": "G3R-TABLE-COMPLEX-STATE",
+          "severity": "P1",
+          "previous_disposition": "FIXED_SOURCE_BOUNDED",
+          "current_disposition": "FIXED_SOURCE_BOUNDED",
+          "change": "Explicit imaginary writes require a readable isComplex=True proof. Real-only writes require native isComplex=False or an exact all-zero imaginary readback when the flag is unavailable. Complex imaginary read failure or shape mismatch remains unreadable and is exposed by get/list.",
+          "semantic_evidence": [
+            "A native false complex flag is accepted as real-only proof even when optional getImag is absent or irrelevant.",
+            "A zero-imaginary proof uses the actual getImag value and exact matrix comparison; no zero matrix is fabricated for an unreadable getter.",
+            "Unscoped get/list responses retain match=None and now publish unreadable status/readback evidence instead of silently presenting real-only data."
+          ],
+          "boundary": "The zero-imaginary branch proves only table storage/readback semantics; it is not a numerical or scientific validation."
+        },
+        {
+          "id": "G3R-DATASET-INSPECT-COMPLETENESS",
+          "severity": "P2",
+          "previous_disposition": "OPEN_OUT_OF_SCOPE",
+          "current_disposition": "FIXED_SOURCE_BOUNDED",
+          "change": "dataset_inspect now reuses _resolve_dataset_binding, publishes the resolved solution only when the complete binding is proven, and exposes upstream dataset edges separately. It records per-property getter outcomes, property-inventory availability, a bounded 50-property snapshot, truncation, inspection_complete/incomplete, binding_complete, and read_errors.",
+          "semantic_evidence": [
+            "A derived dataset data reference is returned as upstream_reference/upstream_references and is not copied into solution.",
+            "An unresolved binding returns solution=null with binding_complete=false and explicit errors.",
+            "Partial read-only inspection remains usable: metadata incompleteness does not set execution_state_unknown; only an unreadable core type does so.",
+            "Absent optional properties are not treated as failures when the native inventory and graph resolver establish that they are not published."
+          ],
+          "boundary": "Inspection completeness is metadata evidence only; it does not certify a solved model, field values, numerical correctness, or physical acceptance. Native property inventories and release-specific dataset behavior remain live gates."
+        }
+      ],
+      "open_limitations": [
+        "No COMSOL engine or native worker was started for this semantic review.",
+        "The source still relies on release-specific native table and dataset accessor behavior that offline fakes cannot establish."
+      ]
+    },
+    {
+      "path": "tests/test_results_typed_crud.py",
+      "commit": "ec02c1292555d1c7094cb75effc096258a32da88",
+      "source_sha256": "dfcd2400a1acb8712c66c203f58754b68de599be6d96687f9886ab82f801c32d",
+      "bytes": 24184,
+      "lines": 561,
+      "reviewed_ranges": [
+        "1-561"
+      ],
+      "responsibility": "Focused contract regressions for W17 table and dataset behavior, including public domain classification of table outcomes.",
+      "findings": [
+        {
+          "id": "G3R-TEST-TABLE-PUBLIC-OUTCOME",
+          "severity": "P1",
+          "current_disposition": "COVERED_OFFLINE",
+          "change": "The test file exercises successful table create/set responses through the public classifier and asserts that late header-induced data corruption is classified as a failure, alongside exact complex/real-only, empty identity, unreadable get/list, and dataset inspection cases."
+        },
+        {
+          "id": "G3R-TEST-DATASET-INSPECT",
+          "severity": "P2",
+          "current_disposition": "COVERED_OFFLINE",
+          "change": "Tests cover derived dataset solution resolution, separate upstream references, getter failure diagnostics without raising, and unresolved datasets returning null solution while remaining usable read-only introspection."
+        }
+      ],
+      "validation": {
+        "command": "evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/bin/python -m pytest tests/test_g3_gate_a1_f04_f05.py tests/test_results_typed_crud.py tests/test_g3_w17.py tests/test_dataset_binding.py -q",
+        "result": "66 passed",
+        "scope": "Focused software tests; no full-suite or native-engine claim."
+      },
+      "open_limitations": [
+        "Fixtures do not prove all COMSOL 6.4 native table/dataset variants.",
+        "Passing tests do not promote table persistence, fresh-worker reopen, or numerical/physical acceptance."
+      ]
+    }
+  ],
+  "acceptance_boundary": {
+    "software_contract": "The current bounded source/test delta is semantically reviewed and focused tests pass.",
+    "live_native_comsol": "PENDING",
+    "fresh_worker_reopen": "PENDING",
+    "numerical_or_physical_acceptance": "NOT_CLAIMED",
+    "zero_imaginary_proof": "Requires actual readable getImag data whose cells compare exactly to zero; no synthetic zero is accepted.",
+    "dataset_inspection": "Partial diagnostics and binding/inventory completeness are introspection metadata, not numeric-result certification."
+  }
+}

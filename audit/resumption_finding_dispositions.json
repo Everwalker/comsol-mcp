@@ -1,0 +1,270 @@
+{
+  "generated_at": "2026-09-22T09:33:07.412118+00:00",
+  "status": "RUNTIME_VALIDATED_DELIVERY_PENDING",
+  "production_review": "audit/semantic_coverage_final_a3f39b3.json",
+  "decisions": [
+    {
+      "finding": "table write/readback match",
+      "decision": "RUNTIME_VALIDATED",
+      "owner": "restore_audit",
+      "reason": "Native public C11/C14 node run passed against the a3f39b3 source manifest; exact table readback is live evidence. Offline public-classifier and late-corruption tests remain software evidence.",
+      "previous_decision": "IMPLEMENTED_PENDING_FINAL_RUNTIME",
+      "previous_reason": "W17 requires actual data/header comparison, including ignored setters and complex rows.",
+      "current_evidence": [
+        "evidence/phase4_3/runs/final6_nodes_a3f39b3_20260922T0907Z/run_status.json",
+        "audit/root_semantic_delta_review_a3f39b3.json"
+      ],
+      "scope_boundary": "Does not certify other COMSOL releases or numerical/physical correctness beyond the exercised table/node cases."
+    },
+    {
+      "finding": "dataset reference read failure and legacy complete flag",
+      "decision": "RUNTIME_VALIDATED_BOUNDED",
+      "owner": "restore_audit",
+      "reason": "The native typed-node group passed on a3f39b3; getter-failure and unresolved-binding branches remain explicit software/control diagnostics. Inspection completeness is metadata evidence only.",
+      "previous_decision": "IMPLEMENTED_PENDING_FINAL_RUNTIME",
+      "previous_reason": "A failed native getter cannot erase a graph edge or certify full solution binding.",
+      "current_evidence": [
+        "evidence/phase4_3/runs/final6_nodes_a3f39b3_20260922T0907Z/run_status.json",
+        "audit/semantic_delta_review_ec02c12_20260922T085803Z.json"
+      ],
+      "scope_boundary": "No numeric result or physical acceptance is inferred from partial inspection; injected getter failures are not native live coverage."
+    },
+    {
+      "finding": "sample_path run failure and generic coordinate setter retry",
+      "decision": "RUNTIME_VALIDATED",
+      "owner": "restore_audit",
+      "reason": "The final numeric group passed C04-C10 with unchanged source manifests, including coordinate readback and failure handling exercised by the public run.",
+      "previous_decision": "IMPLEMENTED_PENDING_FINAL_RUNTIME",
+      "previous_reason": "Postdispatch errors must stop subsequent mutations and stale reads.",
+      "current_evidence": [
+        "evidence/phase4_3/runs/final6_numeric_a3f39b3_20260922T0907Z/run_status.json"
+      ],
+      "scope_boundary": "Scope is the exercised macOS Apple Silicon / COMSOL 6.4.0.293 cases; no universal API claim."
+    },
+    {
+      "finding": "refusal contradicting mutation witness",
+      "decision": "RUNTIME_VALIDATED_BOUNDED",
+      "owner": "acceptance_coverage_review",
+      "reason": "Native study-fault propagation and control/no-replay groups passed on a3f39b3. Cleanup-fault injection remains control evidence only.",
+      "previous_decision": "IMPLEMENTED_PENDING_FINAL_RUNTIME",
+      "previous_reason": "C02 must preserve UNKNOWN when a declared clean refusal contradicts actual dispatch evidence.",
+      "current_evidence": [
+        "evidence/phase4_3/runs/final6_studyfault_a3f39b3_20260922T0907Z/run_status.json",
+        "evidence/phase4_3/runs/final6_control_a3f39b3_20260922T0907Z/run_status.json"
+      ],
+      "scope_boundary": "The live cases preserve UNKNOWN/reconciliation semantics; they do not certify arbitrary failure injections or platforms."
+    },
+    {
+      "finding": "Java nonfinite JSON serialization",
+      "decision": "SOFTWARE_VALIDATED",
+      "owner": "fresh_software_validation",
+      "reason": "The full a3f39b3 software suite passed 1824 tests with one Windows-only skip; serializer controls are software evidence.",
+      "previous_decision": "IMPLEMENTED_PENDING_FINAL_RUNTIME",
+      "previous_reason": "NEXT_GOAL requires serializers to reject nonfinite values; invalid NDJSON cannot stand in for structured failure.",
+      "current_evidence": [
+        "evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z/run_status.json",
+        "audit/semantic_coverage_final_a3f39b3.json"
+      ],
+      "scope_boundary": "No native COMSOL claim is made for serializer-only behavior."
+    },
+    {
+      "finding": "W16 ok=true with DISPATCHED_UNVERIFIED and unknown=true",
+      "decision": "RUNTIME_VALIDATED_BOUNDED",
+      "reason": "The final native study-fault and active-control groups passed with public domain classification and no-replay checks.",
+      "previous_decision": "LAYERED_CONTRACT_REVIEW",
+      "previous_reason": "Adapter ok describes call return; public domain classifier must preserve UNKNOWN. Root read study_run and actual native failure/retry proof; targeted contradiction tests are required, not scientific acceptance from ok alone.",
+      "current_evidence": [
+        "evidence/phase4_3/runs/final6_studyfault_a3f39b3_20260922T0907Z/run_status.json",
+        "evidence/phase4_3/runs/final6_control_a3f39b3_20260922T0907Z/run_status.json"
+      ],
+      "scope_boundary": "The adapter/public outcome boundary remains case-scoped; cleanup-fault and other injected branches remain control-only."
+    },
+    {
+      "finding": "worker executeJava is not OS sandbox",
+      "decision": "EXPLICIT_TRUST_BOUNDARY",
+      "reason": "The reviewed managed backend remains a trusted-code boundary; this finding is not upgraded by the native batch.",
+      "previous_decision": "EXPLICIT_TRUST_BOUNDARY",
+      "previous_reason": "Public _managed_backend requires trusted_code permission/mode and managed execution identity. _g2_code.read_source resolves a project-local .java and records hash/size. The private worker is not an untrusted arbitrary-code sandbox; broad sandbox redesign is outside W17.",
+      "current_evidence": [
+        "audit/semantic_coverage_final_a3f39b3.json"
+      ],
+      "scope_boundary": "No arbitrary-code sandbox or broader worker security guarantee is claimed."
+    },
+    {
+      "finding": "worker maps lifetime, enum overload, malformed auth response, nested JSON key order",
+      "decision": "UNVERIFIED_LEGACY_LIMIT",
+      "reason": "These legacy observations remain outside the current W17 acceptance matrix.",
+      "previous_decision": "UNVERIFIED_LEGACY_LIMIT",
+      "previous_reason": "Not a W17 numeric/export/reopen acceptance claim; preserve audit observations. Same byte-body/key replay is the current public contract and freshly tested. No claim of arbitrary key-order normalization or unlimited persistent-worker memory.",
+      "current_evidence": [
+        "audit/semantic_coverage_final_a3f39b3.json"
+      ],
+      "scope_boundary": "No current runtime or software pass upgrades them."
+    },
+    {
+      "finding": "mesh/geometry legacy create partial state and quality setting",
+      "decision": "EXISTING_EXPLICIT_EFFECT_SCOPE",
+      "reason": "The full software suite remains green, but legacy mesh/geometry limits are outside the current typed W17 native cases.",
+      "previous_decision": "EXISTING_EXPLICIT_EFFECT_SCOPE",
+      "previous_reason": "W14/W16 APIs expose mutation/partial state and validation limits. W17 required typed Dataset/Numerical/Table preflight remains independently enforced; no new mesh capability is certified.",
+      "current_evidence": [
+        "evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z/run_status.json"
+      ],
+      "scope_boundary": "No new mesh/geometry capability is certified."
+    },
+    {
+      "finding": "singleton reopened scalar test name first-number-wins",
+      "decision": "REPORT_CORRECTION",
+      "reason": "The current stored-solution/negative-control group and full software suite pass; the old test name remains a historical report correction.",
+      "previous_decision": "REPORT_CORRECTION",
+      "previous_reason": "Current checker rejects multiple scalar values; test_g33_reopen_fail_closed explicitly covers this. The old singleton test name/docstring is imprecise, not evidence of a current multi-value acceptance defect.",
+      "current_evidence": [
+        "evidence/phase4_3/runs/final6_m3_a3f39b3_20260922T0907Z/run_status.json",
+        "evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z/run_status.json"
+      ],
+      "scope_boundary": "The evidence does not broaden the checker beyond exercised scalar-shape cases."
+    },
+    {
+      "finding": "single old W17 test file lacks probe update/history/outer pairs",
+      "decision": "CROSS_FILE_COVERAGE",
+      "reason": "Native transient Probe history and the full software suite cover the cross-file contracts on a3f39b3.",
+      "previous_decision": "CROSS_FILE_COVERAGE",
+      "previous_reason": "test_probe_semantics and test_g3_3_core_numeric_contracts cover these behaviors; real public node/probe and numeric runs provide separate live evidence. Do not infer project absence from one legacy test module.",
+      "current_evidence": [
+        "evidence/phase4_3/runs/final6_probe_a3f39b3_20260922T0907Z/run_status.json",
+        "evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z/run_status.json"
+      ],
+      "scope_boundary": "A single legacy test module is not the coverage boundary; platform/release generality remains unclaimed."
+    },
+    {
+      "finding": "dataset inspection completeness and upstream alias",
+      "decision": "RUNTIME_VALIDATED_BOUNDED",
+      "reason": "Native typed-node acceptance passed and the focused semantic record documents graph-derived solution identity, upstream references and partial diagnostics.",
+      "previous_decision": "IMPLEMENTED_PENDING_FINAL_RUNTIME",
+      "previous_reason": "Directly within F04/F07. Read-only inspection returns explicit partial metadata, real resolved solution or null, upstream dataset edges and property-read errors. An unsolved node remains inspectable; this is not a complete numerical binding claim.",
+      "current_evidence": [
+        "evidence/phase4_3/runs/final6_nodes_a3f39b3_20260922T0907Z/run_status.json",
+        "audit/semantic_delta_review_ec02c12_20260922T085803Z.json"
+      ],
+      "scope_boundary": "Inspection completeness is read-only metadata, not numerical certification; injected getter failures remain control evidence."
+    }
+  ],
+  "source_commit": "a3f39b3022b417e16c3087b8b35f1daa06f30b8a",
+  "semantic_coverage": "audit/semantic_coverage_final_a3f39b3.json",
+  "source_tree": "5a3e1b72e95a9df8892def2ca0994a8737508612",
+  "current_validation": {
+    "source_commit": "a3f39b3022b417e16c3087b8b35f1daa06f30b8a",
+    "source_tree": "5a3e1b72e95a9df8892def2ca0994a8737508612",
+    "native_batch": "evidence/phase4_3/runs/final_batch_a3f39b3_20260922T0907Z/batch_status.json",
+    "native_batch_status": "PASS",
+    "native_groups": [
+      {
+        "path": "evidence/phase4_3/runs/final6_numeric_a3f39b3_20260922T0907Z/run_status.json",
+        "cases": [
+          "C04",
+          "C05",
+          "C06",
+          "C07",
+          "C08",
+          "C09",
+          "C10"
+        ],
+        "status": "PASS"
+      },
+      {
+        "path": "evidence/phase4_3/runs/final6_nodes_a3f39b3_20260922T0907Z/run_status.json",
+        "cases": [
+          "C11",
+          "C14"
+        ],
+        "status": "PASS"
+      },
+      {
+        "path": "evidence/phase4_3/runs/final6_probe_a3f39b3_20260922T0907Z/run_status.json",
+        "cases": [
+          "C14-transient"
+        ],
+        "status": "PASS"
+      },
+      {
+        "path": "evidence/phase4_3/runs/final6_m3_a3f39b3_20260922T0907Z/run_status.json",
+        "cases": [
+          "C03 chains/negative controls"
+        ],
+        "status": "PASS"
+      },
+      {
+        "path": "evidence/phase4_3/runs/final6_cutplane_a3f39b3_20260922T0907Z/run_status.json",
+        "cases": [
+          "C11-CutPlane"
+        ],
+        "status": "PASS"
+      },
+      {
+        "path": "evidence/phase4_3/runs/final6_export_a3f39b3_20260922T0907Z/run_status.json",
+        "cases": [
+          "C12",
+          "C13"
+        ],
+        "status": "PASS"
+      },
+      {
+        "path": "evidence/phase4_3/runs/final6_control_a3f39b3_20260922T0907Z/run_status.json",
+        "cases": [
+          "C15"
+        ],
+        "status": "PASS"
+      },
+      {
+        "path": "evidence/phase4_3/runs/final6_studyfault_a3f39b3_20260922T0907Z/run_status.json",
+        "cases": [
+          "C02-native-study-fault"
+        ],
+        "status": "PASS"
+      }
+    ],
+    "software": {
+      "path": "evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z/run_status.json",
+      "status": "PASS",
+      "passed": 1824,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 1,
+      "skip_scope": "Windows-only"
+    },
+    "wheel": {
+      "path": "evidence/phase4_3/runs/wheel_a3f39b3_20260922T091026Z/run_status.json",
+      "status": "PASS",
+      "scope": "source-outside install, pip check, import/entrypoint and packaged resource/hash checks"
+    },
+    "cleanup": {
+      "path": "evidence/phase4_3/runs/final_batch_a3f39b3_20260922T0907Z/final_process_inventory_after_cleanup.json",
+      "status": "PASS",
+      "owned_processes_remaining": 0,
+      "scope": "task-owned offline pytest control daemons only; no shared server or file deletion"
+    },
+    "delivery": {
+      "status": "PENDING",
+      "recovery_archive": "PENDING",
+      "remote_sync": "PENDING",
+      "overall_acceptance": false,
+      "next_stage": "W18_NOT_AUTHORIZED"
+    },
+    "native_batch_public_summary": "evidence/phase4_3/runs/final_batch_a3f39b3_20260922T0907Z/public_batch_status.json"
+  },
+  "historical_state": {
+    "generated_at": "2026-09-22T09:02:37.235958+00:00",
+    "status": "IMPLEMENTED_FINAL_RUNTIME_IN_PROGRESS",
+    "source_commit": "4c32d75dbcd43b8ba985cd746d7271c790b076b2",
+    "semantic_coverage": "audit/semantic_coverage_final_4c32d75.json"
+  },
+  "publication_boundary": {
+    "status": "PENDING",
+    "preserve_development_history_locally": true,
+    "publication_parent": "origin/main at verified PIN 2cb4627924d1a3240818ea7cd00453d4bd2d2da8",
+    "snapshot": "Create a separate child snapshot from that parent, carrying the tested source and approved public evidence.",
+    "source_hash_bridge": "Recompute the a3f39b3 tested source hashes against the snapshot before publication.",
+    "historical_token_blobs": "Exclude the three bearer-token blobs reachable only in unpublished intermediate history.",
+    "force_push": false
+  }
+}

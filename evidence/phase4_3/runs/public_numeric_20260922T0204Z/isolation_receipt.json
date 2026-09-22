@@ -1,0 +1,228 @@
+{
+  "schema_version": 2,
+  "status": "RUNNING",
+  "isolation_mode": "remote_addr_valve",
+  "process": {
+    "pid": 82716,
+    "ppid": 82698,
+    "birth": "Tue Sep 22 10:03:16 2026",
+    "command_sha256": "d0b6d30fc4fd326ee526fd400074b31b1875a642e543dfa51e18095af1bffdad",
+    "raw": "82716 82698 Tue Sep 22 10:03:16 2026     /Applications/COMSOL64/Multiphysics/bin/comsol mphserver -Dcs.root=/Applications/COMSOL64/Multiphysics -Dcatalina.home=/Applications/COMSOL64/Multiphysics/bin/tomcat -Djava.io.tmpdir=/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_numeric_20260922T0204Z/tmp --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.rmi/sun.rmi.transport=ALL-UNNAMED -Djava.class.path=/Applications/COMSOL64/Multiphysics/bin/tomcat/bin/bootstrap.jar:/Applications/COMSOL64/Multiphysics/bin/tomcat/bin/tomcat-juli.jar:/Applications/COMSOL64/Multiphysics/plugins/com.comsol.systemutils_1.0.0.jar:/Applications/COMSOL64/Multiphysics/plugins/com.comsol.util_1.0.0.jar:/Applications/COMSOL64/Multiphysics/plugins/org.eclipse.equinox.launcher_1.7.0.v20250519-0528.jar:/Applications/COMSOL64/Multiphysics/plugins/org.eclipse.osgi_3.23.100.v20250514-1759.jar -Dorg.osgi.service.log.admin.loglevel=INFO -Declipse.product=com.comsol.util.product -Dosgi.bundles=org.eclipse.update.configurator@1:start,org.eclipse.equinox.common@2:start,org.apache.felix.scr@1:start,org.eclipse.equinox.event@3:start,org.eclipse.core.runtime@start -Dosgi.bundles.defaultStartLevel=4 -Dosgi.startLevel=6 -Djava.util.logging.manager=org.apache.juli.ClassLoaderLogManager -Dcs.logoutput=file -Dcs.logfileprefix=mphserver -Djava.awt.headless=true -Xss4m -Xms40m -Xmx2g -XX:MaxMetaspaceSize=1g -Dlog4j2.formatMsgNoLookups=true -XX:-SplitIfBlocks com.comsol.util.application.ServerApplication -port \"0\" -portfile \"/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_numeric_20260922T0204Z/server.port\" -prefsdir \"/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_numeric_20260922T0204Z/prefs\" -tmpdir \"/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_numeric_20260922T0204Z/tmp\" -recoverydir \"/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_numeric_20260922T0204Z/recovery\" -login \"auto\" -silent -multi \"on\" -forcecomsolgcc on",
+    "port": 59805
+  },
+  "config": {
+    "target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+    "target_inode": 14720294,
+    "content_sha256_after_apply": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+    "action_this_run": "READ_ONLY_EXISTING_CONFIGURATION"
+  },
+  "probe": {
+    "schema_version": 3,
+    "status": "PASS",
+    "probe_kind": "comsol_java_api",
+    "kind": "remote_addr_valve",
+    "source": "COMSOL Java API via fresh PersistentJavaWorker processes; WebSocket route /webbridge/websocket",
+    "observed_at": "2026-09-22T02:03:29Z",
+    "pid": 82716,
+    "birth": "Tue Sep 22 10:03:16 2026",
+    "process": {
+      "pid": 82716,
+      "birth": "Tue Sep 22 10:03:16 2026"
+    },
+    "port": 59805,
+    "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+    "target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+    "config_guard": "actual webbridge RemoteAddrValve proposal hash and original hash verified",
+    "api_route": "/webbridge/websocket",
+    "listener_binding": "wildcard_or_platform_listener; address filtering is separate from socket binding",
+    "credentials_source": "same private prefs and auto-login credential file for both fresh Workers; material not recorded",
+    "loopback": {
+      "status": "PASS",
+      "address": "127.0.0.1",
+      "port": 59805,
+      "authenticated": true,
+      "authenticated_api_success": true,
+      "http_status": 101,
+      "http_probe": {
+        "status": "HTTP_RESPONSE",
+        "address": "127.0.0.1",
+        "route": "/webbridge/websocket",
+        "source_bind_requested": "127.0.0.1",
+        "local_endpoint": {
+          "host": "127.0.0.1",
+          "port": 59818
+        },
+        "peer_endpoint": {
+          "host": "127.0.0.1",
+          "port": 59805
+        },
+        "http_status": 101,
+        "status_line_class": ""
+      },
+      "java_api": {
+        "status": "PASS",
+        "address": "127.0.0.1",
+        "port": 59805,
+        "authenticated": true,
+        "socket_rows_before_disconnect": [
+          {
+            "pid": 82716,
+            "endpoint": "*:59805",
+            "local_endpoint": "*:59805",
+            "remote_endpoint": null,
+            "state": "LISTEN"
+          },
+          {
+            "pid": 82716,
+            "endpoint": "127.0.0.1:59805->127.0.0.1:59815",
+            "local_endpoint": "127.0.0.1:59805",
+            "remote_endpoint": "127.0.0.1:59815",
+            "state": "ESTABLISHED"
+          },
+          {
+            "pid": 82818,
+            "endpoint": "127.0.0.1:59815->127.0.0.1:59805",
+            "local_endpoint": "127.0.0.1:59815",
+            "remote_endpoint": "127.0.0.1:59805",
+            "state": "ESTABLISHED"
+          }
+        ],
+        "credentials_source": "fresh Worker with the run-owned private prefs; credential material not recorded",
+        "java_request_id": "g2-valve-loopback-connect",
+        "worker_start_status": "HEALTHY",
+        "worker_pid": 82818,
+        "server_reported_endpoint": "127.0.0.1:59805",
+        "socket_pair": [
+          {
+            "pid": 82716,
+            "endpoint": "*:59805",
+            "local_endpoint": "*:59805",
+            "remote_endpoint": null,
+            "state": "LISTEN"
+          },
+          {
+            "pid": 82716,
+            "endpoint": "127.0.0.1:59805->127.0.0.1:59815",
+            "local_endpoint": "127.0.0.1:59805",
+            "remote_endpoint": "127.0.0.1:59815",
+            "state": "ESTABLISHED"
+          },
+          {
+            "pid": 82818,
+            "endpoint": "127.0.0.1:59815->127.0.0.1:59805",
+            "local_endpoint": "127.0.0.1:59815",
+            "remote_endpoint": "127.0.0.1:59805",
+            "state": "ESTABLISHED"
+          }
+        ],
+        "socket_pair_status": "PASS",
+        "disconnect": {
+          "connected": false,
+          "generation": 3,
+          "instance_id": "b9c11cc6-7d94-49a8-aed3-8e251f5cf486"
+        }
+      }
+    },
+    "nonloopback": {
+      "status": "PASS",
+      "address": "192.168.100.152",
+      "port": 59805,
+      "authenticated": false,
+      "http_status": 403,
+      "api_exception_http_status": null,
+      "server_access_log_http_status": 403,
+      "server_access_log": {
+        "status": "PASS",
+        "phase": "java_connect_only",
+        "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_numeric_20260922T0204Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+        "inode": 29865442,
+        "offset_before": 0,
+        "offset_after": 261,
+        "before_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_sha256": "62c051ee48ad1a4a57677518139a5bf230b569040ab711def5a18503935aade8",
+        "segment_sha256": "62c051ee48ad1a4a57677518139a5bf230b569040ab711def5a18503935aade8",
+        "java_request_id": "g2-valve-nonloopback-connect",
+        "started_at": "2026-09-22T02:03:20Z",
+        "finished_at": "2026-09-22T02:03:29Z",
+        "raw_probe_started_after_capture": true,
+        "entries": [
+          {
+            "peer": "127.0.0.1",
+            "method": "GET",
+            "route": "/webbridge/websocket",
+            "http_status": 101
+          },
+          {
+            "peer": "127.0.0.1",
+            "method": "GET",
+            "route": "/webbridge/websocket",
+            "http_status": 101
+          },
+          {
+            "peer": "192.168.100.152",
+            "method": "GET",
+            "route": "/webbridge/websocket",
+            "http_status": 403
+          }
+        ],
+        "target_entry_count": 3,
+        "nonloopback_entry_count": 1,
+        "parse_error": false
+      },
+      "http_probe": {
+        "status": "HTTP_RESPONSE",
+        "address": "192.168.100.152",
+        "route": "/webbridge/websocket",
+        "source_bind_requested": "192.168.100.152",
+        "local_endpoint": {
+          "host": "192.168.100.152",
+          "port": 59825
+        },
+        "peer_endpoint": {
+          "host": "192.168.100.152",
+          "port": 59805
+        },
+        "http_status": 403,
+        "status_line_class": ""
+      },
+      "java_api": {
+        "status": "REJECTED",
+        "address": "192.168.100.152",
+        "port": 59805,
+        "authenticated": false,
+        "socket_rows_before_disconnect": [
+          {
+            "pid": 82716,
+            "endpoint": "*:59805",
+            "local_endpoint": "*:59805",
+            "remote_endpoint": null,
+            "state": "LISTEN"
+          },
+          {
+            "pid": 82716,
+            "endpoint": "[::192.168.100.152]:59805->[::192.168.100.152]:59822",
+            "local_endpoint": "[::192.168.100.152]:59805",
+            "remote_endpoint": "[::192.168.100.152]:59822",
+            "state": "OTHER"
+          }
+        ],
+        "credentials_source": "fresh Worker with the run-owned private prefs; credential material not recorded",
+        "java_request_id": "g2-valve-nonloopback-connect",
+        "worker_start_status": "HEALTHY",
+        "error_code": "ENGINE_CALL_FAILED",
+        "failure_class": "JavaWorkerError",
+        "failure_text_sha256": "e90e4e41b1dd964bcfd92242accb54d5bb2cb7ff3bf96908ee408fb0b35cb00d",
+        "http_403_explicitly_observed_in_worker_error": false,
+        "http_failure_category": "UNCLASSIFIED"
+      },
+      "explicit_source_match": true,
+      "address_filter": "RemoteAddrValve"
+    },
+    "model_operations": "NOT_RUN",
+    "solve_operations": "NOT_RUN"
+  },
+  "paths": {
+    "run_dir": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_numeric_20260922T0204Z",
+    "prefs": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_numeric_20260922T0204Z/prefs"
+  }
+}

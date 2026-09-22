@@ -1,0 +1,111 @@
+{
+  "schema": "comsol-mcp.g3.3.semantic-dispositions-current.v1",
+  "generated_at_utc": "2026-09-22T08:15:18Z",
+  "source_head": "032c0a5c31ae80361892338fbe606bd7e9d91fb9",
+  "source_tree": "322cc10e880a70c1491d9ae3e03ab12c105a721e",
+  "previous_disposition_preserved": "audit/resumption_finding_dispositions.json",
+  "status": "BOUNDED_FIX_COMPLETE_WITH_OPEN_LIMITATIONS",
+  "decisions": [
+    {
+      "finding": "_g3_results table setter/readback did not compare requested values",
+      "owner": "restore_audit",
+      "decision": "FIXED_SOURCE_BOUNDED",
+      "source": "comsol_mcp/_g3_results.py:5221-5414,5533-5668",
+      "commit": "032c0a5c31ae80361892338fbe606bd7e9d91fb9",
+      "evidence": "Exact data/imaginary/header readback and first-failure stop; root reported 12 targeted tests PASS, including ignored setter 0 versus 1e-13.",
+      "remaining_gate": "COMSOL native TableBaseFeature live readback"
+    },
+    {
+      "finding": "_g3_results dataset graph swallowed required reference getter failures",
+      "owner": "restore_audit",
+      "decision": "FIXED_SOURCE_BOUNDED",
+      "source": "comsol_mcp/_g3_results.py:1681-1937",
+      "evidence": "Type-scoped graph edges, explicit absent versus unreadable references, fail-closed unknown types and pre-write cycle/existence checks.",
+      "remaining_gate": "Release-specific native dataset type/property coverage"
+    },
+    {
+      "finding": "_g3_results dataset_inspect broad property read catch",
+      "owner": "root/core",
+      "decision": "OPEN_OUT_OF_SCOPE",
+      "source": "comsol_mcp/_g3_results.py:2160-2188",
+      "evidence": "Current broad except/pass remains; no false fixed claim is made.",
+      "remaining_gate": "A separate bounded change must publish partial/read_error status without changing the current freeze."
+    },
+    {
+      "finding": "_g3_results legacy dataset_solution_indices binding_complete overclaim",
+      "owner": "restore_audit",
+      "decision": "FIXED_SOURCE_BOUNDED",
+      "source": "comsol_mcp/_g3_results.py:2230-2447",
+      "evidence": "binding_complete requires solution tag, complete axes and pair mapping; incomplete reads return false plus read_errors."
+    },
+    {
+      "finding": "_g3_results sample_path run failure followed by stale data/fallback setter",
+      "owner": "restore_audit",
+      "decision": "FIXED_SOURCE_BOUNDED",
+      "source": "comsol_mcp/_g3_results.py:1204-1280",
+      "evidence": "One verified coord setter, run boundary, no getData after failed run; focused contract coverage exists."
+    },
+    {
+      "finding": "_g3_results axisymmetric temporary-measure restoration swallowed errors",
+      "owner": "restore_audit",
+      "decision": "FIXED_SOURCE_BOUNDED",
+      "source": "comsol_mcp/_g3_results.py:4282-4332",
+      "evidence": "finally restoration with native readback and hard AXISYMMETRY_RESTORE_FAILED outcome."
+    },
+    {
+      "finding": "_domain_outcome clean validation refusal ignored mutation witness",
+      "owner": "root/domain",
+      "decision": "FIXED_SOURCE_BOUNDED",
+      "source": "comsol_mcp/_domain_outcome.py:552-761,811-879,1003-1040",
+      "evidence": "Explicit witness mutation_issued=false is required for a clean refusal; contradiction/missing witness becomes UNKNOWN and is retained in provenance."
+    },
+    {
+      "finding": "_domain_outcome stale undefined exports",
+      "owner": "root/domain",
+      "decision": "FIXED_SOURCE_BOUNDED",
+      "source": "comsol_mcp/_domain_outcome.py:1061-1081",
+      "evidence": "Current __all__ names are defined."
+    },
+    {
+      "finding": "_domain_outcome INCOMPLETE token and verification axis",
+      "owner": "root/domain",
+      "decision": "OPEN_LIMITATION",
+      "source": "comsol_mcp/_domain_outcome.py:112-123,450-470",
+      "evidence": "Execution and verification are intentionally separate; callers must not treat execution succeeded plus verification NOT_RUN as acceptance."
+    },
+    {
+      "finding": "PersistentComsolWorker non-finite JSON values",
+      "owner": "root/worker",
+      "decision": "FIXED_SOURCE_BOUNDED",
+      "source": "comsol_mcp/worker_java/PersistentComsolWorker.java:227-248,289-300,953-1005,1088-1105",
+      "evidence": "Finite checks and structured post-dispatch UNKNOWN; fresh targeted runtime record java_codec_targeted_1b5e80e_20260922T081000Z is PASS without ModelUtil.connect."
+    },
+    {
+      "finding": "PersistentComsolWorker executeJava source/model trust boundary",
+      "owner": "root/worker",
+      "decision": "OPEN_TRUST_BOUNDARY",
+      "source": "comsol_mcp/worker_java/PersistentComsolWorker.java:423-490",
+      "evidence": "Caller source artifact and selected model are accepted inside the worker; upstream trusted-code permission remains required."
+    },
+    {
+      "finding": "PersistentComsolWorker discovery completeness, lifetime maps, enum score, malformed auth parse, nested hash order",
+      "owner": "root/worker",
+      "decision": "OPEN_LIMITATIONS",
+      "source": "comsol_mcp/worker_java/PersistentComsolWorker.java:208-224,581-726,853-912,1010-1013,1061",
+      "evidence": "Current source still has each bounded limitation; no live worker claim is inferred from source or the socket-bind-blocked full suite."
+    },
+    {
+      "finding": "phase1 Java recipes collision/output/cleanup/reopen mutation boundaries",
+      "owner": "root/phase1",
+      "decision": "OPEN_LIMITATIONS",
+      "source": "comsol_mcp/phase1_java/BoundPhase1Poc.java, BoundPhase1ProductProbe.java, BoundPhase1Reopen.java",
+      "evidence": "Current hashes were refreshed and concrete source findings remain in semantic_current_correction_20260922T081518Z.json; no recipe was run."
+    }
+  ],
+  "evidence_boundary": {
+    "live_comsol": "NOT_CLAIMED",
+    "fresh_worker_reopen": "NOT_CLAIMED",
+    "physical_or_numerical_acceptance": "NOT_CLAIMED",
+    "pytest997_failures": "Recorded separately at evidence/phase4_3/runs/full_pytest_failures_public_20260922T080946Z/manifest.json; socket-bind errors are environment evidence, while GUARD_T038 is preserved as its own offline protocol failure."
+  }
+}

@@ -1,0 +1,248 @@
+{
+  "generated_at": "2026-09-22T09:33:59.562480+00:00",
+  "status": "RUNTIME_VALIDATED_DELIVERY_PENDING",
+  "scope": "Impact matrix for the a3f39b3 G3.3 source candidate; native claims are limited to the eight fresh public-MCP final6 groups on macOS Apple Silicon / COMSOL 6.4.0.293, and software controls additionally cover unchanged G0-G3 contracts.",
+  "groups": [
+    {
+      "area": "result numerical semantics",
+      "production_paths": [
+        "comsol_mcp/_g3_results.py",
+        "comsol_mcp/_measure_spec.py",
+        "comsol_mcp/_solution_binding.py",
+        "comsol_mcp/_complex_transform.py",
+        "comsol_mcp/_dataset_binding.py"
+      ],
+      "required_control_tests": [
+        "tests/test_g3_results.py",
+        "tests/test_g3_w17.py",
+        "tests/test_g3_wiring.py",
+        "tests/test_dataset_binding.py",
+        "tests/test_g3_3_core_numeric_contracts.py"
+      ],
+      "required_live_cases": [
+        "C04",
+        "C05",
+        "C06",
+        "C07",
+        "C08",
+        "C09",
+        "C10",
+        "C11",
+        "C03"
+      ],
+      "reason": "Result values, axes and provenance affect both new evaluations and persisted-solution reads.",
+      "current_validation": {
+        "status": "RUNTIME_VALIDATED",
+        "evidence": [
+          "evidence/phase4_3/runs/final6_numeric_a3f39b3_20260922T0907Z/run_status.json",
+          "evidence/phase4_3/runs/final6_m3_a3f39b3_20260922T0907Z/run_status.json"
+        ],
+        "scope": "C04-C10 numeric measures/axes/complex/coordinates plus stored-solution chains; tolerances and native cases are those in the run receipts."
+      },
+      "source_commit": "a3f39b3022b417e16c3087b8b35f1daa06f30b8a",
+      "source_tree": "5a3e1b72e95a9df8892def2ca0994a8737508612"
+    },
+    {
+      "area": "typed node and definitions probe writes",
+      "production_paths": [
+        "comsol_mcp/_g3_results.py",
+        "comsol_mcp/_probe_manage.py"
+      ],
+      "required_control_tests": [
+        "tests/test_results_typed_crud.py",
+        "tests/test_probe_semantics.py",
+        "tests/test_g33_node_probe_cases.py"
+      ],
+      "required_live_cases": [
+        "C11",
+        "C14"
+      ],
+      "reason": "Preflight and setter failures must preserve dispatch witnesses, real applied state and user nodes.",
+      "current_validation": {
+        "status": "RUNTIME_VALIDATED_BOUNDED",
+        "evidence": [
+          "evidence/phase4_3/runs/final6_nodes_a3f39b3_20260922T0907Z/run_status.json",
+          "evidence/phase4_3/runs/final6_probe_a3f39b3_20260922T0907Z/run_status.json",
+          "evidence/phase4_3/runs/final6_cutplane_a3f39b3_20260922T0907Z/run_status.json"
+        ],
+        "scope": "C11/C14 typed nodes, transient Probe history and CutPlane passed; getter-failure injections remain control evidence."
+      },
+      "source_commit": "a3f39b3022b417e16c3087b8b35f1daa06f30b8a",
+      "source_tree": "5a3e1b72e95a9df8892def2ca0994a8737508612"
+    },
+    {
+      "area": "artifact serialization and bounded access",
+      "production_paths": [
+        "comsol_mcp/_artifact_store.py",
+        "comsol_mcp/_result_budget.py"
+      ],
+      "required_control_tests": [
+        "tests/test_g3_d17_artifact_service.py",
+        "tests/test_g3_artifact_hardening.py",
+        "tests/test_result_budget.py",
+        "tests/test_g33_export_cases.py"
+      ],
+      "required_live_cases": [
+        "C12",
+        "C13"
+      ],
+      "reason": "Export uses result semantics and must propagate UNKNOWN/cleanup failure before atomic publication.",
+      "current_validation": {
+        "status": "RUNTIME_VALIDATED_BOUNDED",
+        "evidence": [
+          "evidence/phase4_3/runs/final6_export_a3f39b3_20260922T0907Z/run_status.json"
+        ],
+        "scope": "C12/C13 export, atomic failure behavior and bounded chunk access passed in the final export group; driver RSS does not measure engine cache."
+      },
+      "source_commit": "a3f39b3022b417e16c3087b8b35f1daa06f30b8a",
+      "source_tree": "5a3e1b72e95a9df8892def2ca0994a8737508612"
+    },
+    {
+      "area": "dispatch and native bridge",
+      "production_paths": [
+        "comsol_mcp/_domain_outcome.py",
+        "comsol_mcp/worker_java/PersistentComsolWorker.java",
+        "comsol_mcp/_g3_common.py",
+        "comsol_mcp/_g3_w16.py",
+        "comsol_mcp/_g3_w14.py"
+      ],
+      "required_control_tests": [
+        "tests/test_g3_domain_outcome.py",
+        "tests/test_execution_state_propagation.py",
+        "tests/test_java_worker.py",
+        "tests/test_coordinates_shape_bridge.py",
+        "tests/test_tool_classification.py",
+        "tests/test_execution_contract.py",
+        "tests/test_g3_w14.py",
+        "tests/test_g3_w16.py"
+      ],
+      "required_live_cases": [
+        "C02",
+        "C15",
+        "C02-native-study-fault"
+      ],
+      "reason": "Read/write classification and native getter aliases affect witnesses and original-job state.",
+      "current_validation": {
+        "status": "RUNTIME_VALIDATED_BOUNDED",
+        "evidence": [
+          "evidence/phase4_3/runs/final6_control_a3f39b3_20260922T0907Z/run_status.json",
+          "evidence/phase4_3/runs/final6_studyfault_a3f39b3_20260922T0907Z/run_status.json"
+        ],
+        "scope": "C15 active controls/no-replay and C02-native-study-fault passed; cleanup-fault and arbitrary injected branches remain control-only."
+      },
+      "source_commit": "a3f39b3022b417e16c3087b8b35f1daa06f30b8a",
+      "source_tree": "5a3e1b72e95a9df8892def2ca0994a8737508612"
+    },
+    {
+      "area": "saved model checker",
+      "production_paths": [
+        "comsol_mcp/_gate_a_reopen.py"
+      ],
+      "required_control_tests": [
+        "tests/test_g3_gate_a2_f02_reopen.py",
+        "tests/test_g3_gate_a_tolerance_semantics.py",
+        "tests/test_g33_reopen_fail_closed.py",
+        "tests/test_atomic_save.py"
+      ],
+      "required_live_cases": [
+        "C03"
+      ],
+      "reason": "Strict hash, scalar shape and settings checks require fresh same-file readback plus real negative models.",
+      "current_validation": {
+        "status": "RUNTIME_VALIDATED",
+        "evidence": [
+          "evidence/phase4_3/runs/final6_m3_a3f39b3_20260922T0907Z/run_status.json"
+        ],
+        "scope": "Three stored-solution chains and seven negative controls passed through the production checker without re-solving."
+      },
+      "source_commit": "a3f39b3022b417e16c3087b8b35f1daa06f30b8a",
+      "source_tree": "5a3e1b72e95a9df8892def2ca0994a8737508612"
+    },
+    {
+      "area": "public schemas and packaging",
+      "production_paths": [
+        "comsol_mcp/data/g2/02_ACTION_CATALOG.json",
+        "comsol_mcp/data/g2/common.schema.json"
+      ],
+      "required_control_tests": [
+        "tests/test_g2_registry_packaging.py",
+        "tests/test_registration.py",
+        "tests/test_g2_w08_w12.py",
+        "tests/test_mcp_gateway.py"
+      ],
+      "required_live_cases": [
+        "C16"
+      ],
+      "reason": "Catalog arguments and packaged resources must agree with actual public field export/chunk operations.",
+      "current_validation": {
+        "status": "SOFTWARE_VALIDATED",
+        "evidence": [
+          "evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z/run_status.json",
+          "evidence/phase4_3/runs/wheel_a3f39b3_20260922T091026Z/run_status.json"
+        ],
+        "scope": "Full software suite and source-outside wheel/resource checks passed; this does not establish native engine behavior."
+      },
+      "source_commit": "a3f39b3022b417e16c3087b8b35f1daa06f30b8a",
+      "source_tree": "5a3e1b72e95a9df8892def2ca0994a8737508612"
+    }
+  ],
+  "not_claimed": [
+    "Delivery, repaired-source recovery archive, clean publication snapshot and ordinary remote synchronization are still pending; overall acceptance remains false.",
+    "The publication snapshot must preserve the original development branch locally, be a separate child of verified origin/main PIN 2cb4627924d1a3240818ea7cd00453d4bd2d2da8, carry the same tested source hashes, exclude the three historical worker bearer-token blobs, and use no force push.",
+    "Injected unreadable/swapped getters and native cleanup-fault injection are CONTROL evidence only; dataset inspection partial diagnostics are not numerical certification.",
+    "Windows/6.3/Intel/GUI remain UNVERIFIED."
+  ],
+  "final_evidence": {
+    "source_commit": "a3f39b3022b417e16c3087b8b35f1daa06f30b8a",
+    "source_tree": "5a3e1b72e95a9df8892def2ca0994a8737508612",
+    "native_batch": "evidence/phase4_3/runs/final_batch_a3f39b3_20260922T0907Z/batch_status.json",
+    "native_public_summary": "evidence/phase4_3/runs/final_batch_a3f39b3_20260922T0907Z/public_batch_status.json",
+    "native_groups": [
+      "evidence/phase4_3/runs/final6_numeric_a3f39b3_20260922T0907Z/run_status.json",
+      "evidence/phase4_3/runs/final6_nodes_a3f39b3_20260922T0907Z/run_status.json",
+      "evidence/phase4_3/runs/final6_probe_a3f39b3_20260922T0907Z/run_status.json",
+      "evidence/phase4_3/runs/final6_m3_a3f39b3_20260922T0907Z/run_status.json",
+      "evidence/phase4_3/runs/final6_cutplane_a3f39b3_20260922T0907Z/run_status.json",
+      "evidence/phase4_3/runs/final6_export_a3f39b3_20260922T0907Z/run_status.json",
+      "evidence/phase4_3/runs/final6_control_a3f39b3_20260922T0907Z/run_status.json",
+      "evidence/phase4_3/runs/final6_studyfault_a3f39b3_20260922T0907Z/run_status.json"
+    ],
+    "native_group_count": 8,
+    "native_status": "PASS",
+    "software": {
+      "path": "evidence/phase4_3/runs/full_pytest_a3f39b3_20260922T090916Z/run_status.json",
+      "status": "PASS",
+      "passed": 1824,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 1,
+      "skip_scope": "Windows-only"
+    },
+    "wheel": {
+      "path": "evidence/phase4_3/runs/wheel_a3f39b3_20260922T091026Z/run_status.json",
+      "status": "PASS",
+      "scope": "source-outside install, pip check, import/entrypoint and packaged resource/hash checks"
+    },
+    "cleanup": {
+      "path": "evidence/phase4_3/runs/final_batch_a3f39b3_20260922T0907Z/final_process_inventory_after_cleanup.json",
+      "status": "PASS",
+      "owned_processes_remaining": 0,
+      "scope": "task-owned offline pytest control daemons only; shared servers and files were not selected"
+    },
+    "delivery": {
+      "status": "PENDING",
+      "recovery_archive": "PENDING",
+      "publication_snapshot": "PENDING",
+      "remote_sync": "PENDING",
+      "overall_acceptance": false,
+      "next_stage": "W18_NOT_AUTHORIZED"
+    }
+  },
+  "source_commit": "a3f39b3022b417e16c3087b8b35f1daa06f30b8a",
+  "source_tree": "5a3e1b72e95a9df8892def2ca0994a8737508612",
+  "historical_state": {
+    "generated_at": "2026-09-22T04:49:43.555252+00:00",
+    "status": "FINAL_VALIDATION_PENDING",
+    "final_evidence": null
+  }
+}

@@ -29,11 +29,14 @@ from comsol_mcp._domain_outcome import (
     STATE_PARTIAL,
     STATE_SUCCEEDED,
     STATE_UNKNOWN,
+    STAGE_POST_DISPATCH,
+    STAGE_VALIDATION,
     VERIFICATION_FAILED,
     VERIFICATION_NOT_APPLICABLE,
     VERIFICATION_NOT_RUN,
     classify,
     classify_envelope,
+    is_mutation_call,
     is_mutation_method,
     witness_scope,
 )
@@ -345,6 +348,145 @@ def test_an_operation_without_a_verification_axis_says_so(tmp_path, monkeypatch)
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.parametrize(
+    ("mutation_issued", "dispatch_stage", "expected_state", "expected_stage"),
+    [
+        (False, STAGE_VALIDATION, STATE_FAILED, STAGE_VALIDATION),
+        (True, STAGE_VALIDATION, STATE_UNKNOWN, STAGE_VALIDATION),
+        (None, STAGE_VALIDATION, STATE_UNKNOWN, STAGE_VALIDATION),
+        (False, STAGE_POST_DISPATCH, STATE_UNKNOWN, STAGE_POST_DISPATCH),
+        (None, STAGE_POST_DISPATCH, STATE_UNKNOWN, STAGE_POST_DISPATCH),
+    ],
+)
+def test_refusal_requires_explicit_clean_witness(
+    mutation_issued, dispatch_stage, expected_state, expected_stage
+):
+    """Only an explicit no-mutation witness proves a validation refusal."""
+    data = {
+        "status": "REFUSED",
+        "refused": True,
+        "dispatch_stage": dispatch_stage,
+        "refusal": {"code": "INVALID_REQUEST", "message": "bad request"},
+    }
+    witness = {"mutation_issued": mutation_issued}
+    outcome = classify("parameter.set", data, dispatch_stage=dispatch_stage, witness=witness)
+
+    assert outcome.state == expected_state
+    assert outcome.dispatch_stage == expected_stage
+    assert outcome.witness == witness
+    if expected_state == STATE_FAILED:
+        assert outcome.failure["code"] == "INVALID_REQUEST"
+        assert outcome.execution_state_unknown is False
+    else:
+        assert outcome.failure["code"] == "EXECUTION_STATE_UNKNOWN"
+        assert outcome.execution_state_unknown is True
+        assert outcome.details["unproven_pre_dispatch"] is True
+
+
+def test_refusal_without_witness_is_unresolved_even_at_validation_stage():
+    data = {
+        "status": "REFUSED",
+        "refused": True,
+        "dispatch_stage": STAGE_VALIDATION,
+        "refusal": {"code": "INVALID_REQUEST", "message": "bad request"},
+    }
+    outcome = classify("parameter.set", data, dispatch_stage=STAGE_VALIDATION)
+
+    assert outcome.state == STATE_UNKNOWN
+    assert outcome.failure["code"] == "EXECUTION_STATE_UNKNOWN"
+    assert outcome.dispatch_stage == STAGE_VALIDATION
+    assert outcome.witness is None
+    assert outcome.details["unproven_pre_dispatch"] is True
+
+
+def test_classify_reads_an_existing_nested_witness_when_argument_is_omitted():
+    data = {
+        "status": "REFUSED",
+        "refused": True,
+        "dispatch_stage": STAGE_VALIDATION,
+        "refusal": {"code": "INVALID_REQUEST", "message": "bad request"},
+        "witness": {"mutation_issued": True, "mutation_method": "set"},
+    }
+
+    outcome = classify("parameter.set", data, dispatch_stage=STAGE_VALIDATION)
+
+    assert outcome.state == STATE_UNKNOWN
+    assert outcome.witness["mutation_issued"] is True
+    assert outcome.details["refusal_proof"]["witness_mutation_issued"] is True
+
+
+def test_null_outer_witness_does_not_turn_inner_false_into_clean_proof():
+    inner = {
+        "status": "REFUSED",
+        "refused": True,
+        "dispatch_stage": STAGE_VALIDATION,
+        "refusal": {"code": "TAG_CONFLICT", "message": "already exists"},
+        "witness": {"mutation_issued": False},
+    }
+    outer = {
+        "success": False,
+        "dispatch_stage": STAGE_VALIDATION,
+        "witness": {"mutation_issued": None},
+        "data": inner,
+    }
+
+    outcome = classify_envelope(outer)
+
+    assert outcome.state == STATE_UNKNOWN
+    assert outcome.witness["mutation_issued"] is None
+    assert outcome.details["refusal_proof"]["witness_mutation_issued"] is None
+
+
+def test_classify_envelope_preserves_inner_witness_against_outer_false_flags():
+    """An outer success/false flag cannot clear an inner mutation witness."""
+    inner = {
+        "status": "REFUSED",
+        "refused": True,
+        "dispatch_stage": STAGE_VALIDATION,
+        "refusal": {"code": "TAG_CONFLICT", "message": "already exists"},
+        "witness": {"mutation_issued": True, "mutation_method": "set"},
+    }
+    outer = {
+        "success": False,
+        "execution_state_unknown": False,
+        "partial_change": False,
+        "dispatch_stage": STAGE_VALIDATION,
+        "witness": {"mutation_issued": False},
+        "data": inner,
+    }
+
+    outcome = classify_envelope(outer)
+
+    assert outcome.state == STATE_UNKNOWN
+    assert outcome.execution_state_unknown is True
+    assert outcome.dispatch_stage == STAGE_VALIDATION
+    assert outcome.witness["mutation_issued"] is True
+    assert outcome.witness["mutation_method"] == "set"
+    assert outcome.failure["code"] == "EXECUTION_STATE_UNKNOWN"
+
+
+def test_classify_envelope_uses_existing_outer_witness_without_creating_dispatch():
+    inner = {
+        "status": "REFUSED",
+        "refused": True,
+        "dispatch_stage": STAGE_VALIDATION,
+        "refusal": {"code": "TAG_CONFLICT", "message": "already exists"},
+    }
+    outer = {
+        "success": False,
+        "dispatch_stage": STAGE_VALIDATION,
+        "witness": {"mutation_issued": True, "mutation_method": "create"},
+        "data": inner,
+    }
+
+    outcome = classify_envelope(outer)
+
+    assert outcome.state == STATE_UNKNOWN
+    assert outcome.dispatch_stage == STAGE_VALIDATION
+    assert outcome.witness == {"mutation_issued": True, "mutation_method": "create"}
+    assert outcome.details["refusal_proof"]["witness_mutation_issued"] is True
+
+
 def test_a_validation_stage_alone_cannot_prove_nothing_was_dispatched(tmp_path, monkeypatch):
     """A mutation-class engine call during the callback denies the claim."""
     service, _adapter, _ref = _service(tmp_path)
@@ -399,6 +541,18 @@ def test_the_worker_funnel_feeds_the_witness_with_real_method_names(tmp_path):
     assert is_mutation_method("getType") is False
     assert is_mutation_method("setString") is True
     assert is_mutation_method("create") is True
+
+
+@pytest.mark.parametrize("method", [
+    "getLastComputationTime", "getLastComputationDate", "getLastComputationVersion",
+])
+def test_study_computation_metadata_getters_are_read_only(method):
+    assert is_mutation_call(method, args=()) is False
+
+
+def test_model_is_a_getter_without_arguments_and_setter_with_model_argument():
+    assert is_mutation_call("model", args=()) is False
+    assert is_mutation_call("model", args=("comp1",)) is True
 
 
 # ---------------------------------------------------------------------------
@@ -582,3 +736,19 @@ def test_the_matrix_states_are_the_only_states_published(tmp_path, monkeypatch):
     assert {STATE_SUCCEEDED, STATE_PARTIAL, STATE_FAILED, STATE_UNKNOWN} == {
         STATE_SUCCEEDED, STATE_PARTIAL, STATE_FAILED, STATE_UNKNOWN}
     assert VERIFICATION_FAILED == "FAILED"
+
+
+def test_modelnode_navigation_is_read_but_creation_remains_mutating():
+    """Model.modelNode() and modelNode(String) navigate; create remains a write."""
+    from comsol_mcp._domain_outcome import is_mutation_call
+    assert not is_mutation_call("modelNode", ())
+    assert not is_mutation_call("modelNode", ("comp1",))
+    assert is_mutation_call("create", ("comp2", True))
+    assert is_mutation_call("unverifiedMethod", ())
+
+
+def test_domain_outcome_star_exports_are_defined() -> None:
+    namespace: dict[str, object] = {}
+    exec("from comsol_mcp._domain_outcome import *", namespace)
+    assert "MUTATION_METHOD_PREFIXES" in namespace
+    assert "STAGE_POST_DISPATCH" in namespace

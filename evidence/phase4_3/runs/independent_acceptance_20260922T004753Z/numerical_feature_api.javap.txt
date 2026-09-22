@@ -1,0 +1,32 @@
+Compiled from "SourceFile"
+public interface com.comsol.model.NumericalFeature extends com.comsol.model.NumericalBaseFeature,com.comsol.model.ResultBaseFeature {
+  public abstract void appendResult();
+  public abstract double[][][] computeResult();
+  public abstract com.comsol.model.PropFeatureList<com.comsol.model.PropFeature> feature();
+  public abstract double[][][] getComplex();
+  public abstract double[][][] getComplex(boolean);
+  public abstract double[][][] getComplex(int);
+  public abstract double[][][] getComplex(boolean, int);
+  public abstract double[][] getCoordinates();
+  public abstract double[][][] getData();
+  public abstract double[][] getData(int);
+  public abstract int[][] getElements();
+  public abstract double[][] getImag();
+  public abstract double[][] getImag(int);
+  public abstract double[][] getImag(boolean, boolean);
+  public abstract double[][] getImag(boolean, boolean, int);
+  public abstract double[][][] getImagData();
+  public abstract double[][] getImagData(int);
+  public abstract int getNData();
+  public abstract int getNData(int);
+  public abstract double[][] getReal();
+  public abstract double[][] getReal(boolean);
+  public abstract double[][] getReal(int);
+  public abstract double[][] getReal(boolean, int);
+  public abstract int[] getVertexElements();
+  public abstract boolean isComplex();
+  public abstract boolean isComplex(int);
+  public abstract void run();
+  public abstract void setInterpolationCoordinates(double[][]);
+  public abstract void setResult();
+}

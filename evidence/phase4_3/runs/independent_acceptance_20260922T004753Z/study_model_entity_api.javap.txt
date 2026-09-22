@@ -1,0 +1,62 @@
+Compiled from "SourceFile"
+public interface com.comsol.model.Study extends com.comsol.model.ModelEntity {
+  public abstract void continueRun();
+  public abstract com.comsol.model.StudyFeature create(java.lang.String, java.lang.String);
+  public abstract void createAutoSequences(java.lang.String);
+  public abstract com.comsol.model.StudyFeatureList feature();
+  public abstract com.comsol.model.StudyFeature feature(java.lang.String);
+  public abstract long getLastComputationDate();
+  public abstract long getLastComputationTime();
+  public abstract java.lang.String getLastComputationTime(java.lang.String);
+  public abstract java.lang.String getLastComputationVersion();
+  public abstract java.lang.String[] getSolverSequences(java.lang.String);
+  public abstract boolean isGenConv();
+  public abstract boolean isGenIntermediatePlots();
+  public abstract boolean isGenPlots();
+  public abstract boolean isPlotUndefVals();
+  public abstract boolean isStoreCompleteHistory();
+  public abstract boolean isStoreSolution();
+  public abstract void run();
+  public abstract void run(boolean);
+  public abstract void runNoGen();
+  public abstract void runNoGen(java.lang.String);
+  public abstract void setGenConv(boolean);
+  public abstract void setGenIntermediatePlots(boolean);
+  public abstract void setGenPlots(boolean);
+  public abstract void setPlotUndefVals(boolean);
+  public abstract void setStoreCompleteHistory(boolean);
+  public abstract void setStoreSolution(boolean);
+  public abstract void showAutoSequences(java.lang.String);
+}
+Compiled from "SourceFile"
+public interface com.comsol.model.ModelEntity extends com.comsol.model.PrimitiveModelEntity {
+  public abstract com.comsol.model.ModelEntity active(boolean);
+  public abstract java.lang.String author();
+  public abstract com.comsol.model.ModelEntity author(java.lang.String);
+  public abstract java.lang.String comments();
+  public abstract com.comsol.model.ModelEntity comments(java.lang.String);
+  public abstract java.lang.String dateCreated();
+  public abstract java.lang.String dateModified();
+  public abstract java.lang.String docMarker();
+  public abstract java.lang.String docMarker(java.lang.String);
+  public abstract java.lang.String help();
+  public abstract java.lang.String help(java.lang.String);
+  public abstract java.lang.String icon();
+  public abstract boolean isActive();
+  public abstract boolean isactive();
+  public abstract java.lang.String label();
+  public abstract com.comsol.model.ModelEntity label(java.lang.String);
+  public abstract java.lang.String lastModifiedBy();
+  public abstract java.lang.String model();
+  public abstract com.comsol.model.ModelEntity model(java.lang.String);
+  public abstract java.lang.String name();
+  public abstract com.comsol.model.ModelEntity name(java.lang.String);
+  public abstract com.comsol.model.ModelEntity resetAuthor(java.lang.String);
+  public abstract java.lang.String scope();
+  public abstract java.lang.String tag();
+  public abstract com.comsol.model.ModelEntity tag(java.lang.String);
+  public abstract long timeCreated();
+  public abstract long timeModified();
+  public abstract java.lang.String version();
+  public abstract com.comsol.model.ModelEntity version(java.lang.String);
+}

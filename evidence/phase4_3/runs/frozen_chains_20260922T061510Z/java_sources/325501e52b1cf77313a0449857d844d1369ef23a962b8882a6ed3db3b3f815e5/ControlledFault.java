@@ -1,0 +1,1 @@
+import com.comsol.model.*; import java.util.*; public final class ControlledFault {public static Object run(Model model, Map<String,Object> args) {throw new RuntimeException("G33 intentional completed API fault"); }}

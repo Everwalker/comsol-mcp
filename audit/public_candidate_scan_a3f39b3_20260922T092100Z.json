@@ -1,0 +1,25 @@
+{
+  "candidate_file_count": 74,
+  "candidate_manifest": "audit/public_path_manifest_a3f39b3_20260922T092100Z.json",
+  "disposition": "FALSE_POSITIVE_INTEGRITY_HASHES",
+  "generated_at_utc": "2026-09-22T09:25:51.035497+00:00",
+  "matched_file_count": 8,
+  "matched_paths": [
+    "evidence/phase4_3/runs/final6_control_a3f39b3_20260922T0907Z/final_source_files.json",
+    "evidence/phase4_3/runs/final6_cutplane_a3f39b3_20260922T0907Z/final_source_files.json",
+    "evidence/phase4_3/runs/final6_export_a3f39b3_20260922T0907Z/final_source_files.json",
+    "evidence/phase4_3/runs/final6_m3_a3f39b3_20260922T0907Z/final_source_files.json",
+    "evidence/phase4_3/runs/final6_nodes_a3f39b3_20260922T0907Z/final_source_files.json",
+    "evidence/phase4_3/runs/final6_numeric_a3f39b3_20260922T0907Z/final_source_files.json",
+    "evidence/phase4_3/runs/final6_probe_a3f39b3_20260922T0907Z/final_source_files.json",
+    "evidence/phase4_3/runs/final6_studyfault_a3f39b3_20260922T0907Z/final_source_files.json"
+  ],
+  "matches": 8,
+  "rule_counts": {
+    "generic-api-key": 8
+  },
+  "scanner": "gitleaks dir with redacted output; exit code forced to report findings",
+  "schema": "comsol-mcp/public-candidate-secret-scan.v1",
+  "secret_value_retained": false,
+  "triage": "Each match is a source integrity SHA-256 value in final_source_files.json. No credential-shaped field, bearer value, endpoint token, private key, or password was found in the exact public candidate. The full new-blob audit remains the authoritative history scan and reports three historical worker bearer-token blobs outside the final tree."
+}

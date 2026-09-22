@@ -1,0 +1,754 @@
+{
+  "schema": "comsol-mcp-g3/phase4_3-acceptance/1",
+  "goal": "NEXT_GOAL.md: G3.3 clean-room recovery, evidence correction, and W17 verification",
+  "status": "ACCEPTANCE_FAILED",
+  "run_id": "frozen_19case_20260922T055332Z",
+  "run_dir": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T055332Z",
+  "generated_at": "2026-09-22T05:54:14.335581+00:00",
+  "elapsed_seconds": 41.802704042056575,
+  "platform": "darwin",
+  "python_version": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.3.34.2)]",
+  "comsol_version": null,
+  "comsol_version_source": "unavailable: the engine did not report a version in this run",
+  "source_manifest": {
+    "head": "65d1c51c3d1221ad7649d2b9d2253dd0d83250db",
+    "tree": "a00fdf8d1c546fbc8bb4be253876ed73025b8831",
+    "branch": "acceptance/independent-20260922",
+    "dirty_paths": [],
+    "tracked_dirty_paths": [],
+    "untracked_paths": [],
+    "untracked_paths_in_source_tree": [],
+    "tracked_files": 5959,
+    "tracked_files_listed": 5959,
+    "tracked_files_present_in_worktree": 5959,
+    "source_blob_map_sha256": "bca5245750e5cf16590363040700ad2887c2c66a9a9847413f52e7e824c3754c",
+    "captured_at": "2026-09-22T05:53:35.899460+00:00"
+  },
+  "source_identity": {
+    "repository": "Everwalker/comsol-mcp (delivered source workpack)",
+    "commit": "65d1c51c3d1221ad7649d2b9d2253dd0d83250db",
+    "tree": "a00fdf8d1c546fbc8bb4be253876ed73025b8831",
+    "branch": "acceptance/independent-20260922",
+    "tracked_files": 5959,
+    "source_blob_map_sha256": "bca5245750e5cf16590363040700ad2887c2c66a9a9847413f52e7e824c3754c",
+    "lock": "repository/constraints-macos-arm64-py313.txt installs this tree via '-e .'",
+    "how_to_check": "In the recovered clone: git rev-parse HEAD == commit, git rev-parse 'HEAD^{tree}' == tree, git ls-files | wc -l == tracked_files",
+    "regenerated": "written at the start of every acceptance run; records the commit under test",
+    "file": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/SOURCE_TREE_IDENTITY.json",
+    "file_sha256": "e46b4c8c5ade8fce17bded6d11909d01e0a3817ddffffe1048fe6570ab1a7eed",
+    "note": "D6: the dependency lock installs this tree; this file is what a recovering agent compares a fresh clone against"
+  },
+  "runner_sha256": "2679820e9298a5fa6d4491d02a7e2c2a09a42261a508c31ec27d96ca1c0735a9",
+  "runner_command": [
+    "tests/run_g3_3_live_acceptance.py",
+    "--run-dir",
+    "evidence/phase4_3/runs/frozen_19case_20260922T055332Z"
+  ],
+  "total_cases": 19,
+  "request_reply_trail": {
+    "file": "request_reply_trail.jsonl",
+    "records": 6856,
+    "truncated": false,
+    "note": "one record per worker request event: the 'submitted' request and the matching 'observed' reply (or 'unknown'/'unresponsive' when none arrived), each with the redacted payload and a request hash.  §11 asks for a per-run request/reply record; the in-process operation calls the runner makes are in assertions.json."
+  },
+  "numeric_evidence": {
+    "file": "numeric.json",
+    "cases": [
+      "C03",
+      "C03R",
+      "C04",
+      "C05",
+      "C06",
+      "C07",
+      "C08",
+      "C09",
+      "C10",
+      "C11",
+      "C14"
+    ],
+    "note": "numeric checks, comparisons, tolerances and peak-memory records extracted from the case details"
+  },
+  "aborted_cases": [],
+  "passed_cases": 14,
+  "failed_cases": 5,
+  "scope": {
+    "verified_workstream": "W17",
+    "stop_boundary": "W17 (do not advance to W18-W26)",
+    "target_platform": "macOS-aarch64 (Apple Silicon commercial installation)",
+    "unverified_platforms": [
+      "windows",
+      "linux",
+      "intel-mac",
+      "comsol-6.3",
+      "gui"
+    ]
+  },
+  "cases": {
+    "C00": {
+      "case_id": "C00",
+      "name": "Clean Recovery, Source Binding & Wheel Verification",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "source_manifest": {
+          "head": "65d1c51c3d1221ad7649d2b9d2253dd0d83250db",
+          "tree": "a00fdf8d1c546fbc8bb4be253876ed73025b8831",
+          "branch": "acceptance/independent-20260922",
+          "dirty_paths": [],
+          "tracked_dirty_paths": [],
+          "untracked_paths": [],
+          "untracked_paths_in_source_tree": [],
+          "tracked_files": 5959,
+          "tracked_files_listed": 5959,
+          "tracked_files_present_in_worktree": 5959,
+          "source_blob_map_sha256": "bca5245750e5cf16590363040700ad2887c2c66a9a9847413f52e7e824c3754c",
+          "captured_at": "2026-09-22T05:53:35.899460+00:00"
+        },
+        "run_evidence_paths_excluded_from_dirty_check": [
+          "evidence/phase4_3/runs/frozen_19case_20260922T055332Z"
+        ],
+        "pack_pin_commit": "2cb4627924d1a3240818ea7cd00453d4bd2d2da8",
+        "pack_pin_tree": "dd3095e89c640c19aeb151cd0e8efe4af3c55802",
+        "pack_inventory_file_count": 3580,
+        "pack_inventory_source_commit": "2cb4627924d1a3240818ea7cd00453d4bd2d2da8",
+        "tracked_files": 5959,
+        "tracked_file_count_source": "git ls-tree -r HEAD (actual list)",
+        "wheel_path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T055332Z/wheel_dist/comsol_mcp-0.1.9-py3-none-any.whl",
+        "wheel_sha256": "b4decbc9bccd7a95ef07e01495d38d38eab648990ce6e553084bcd43e7478066",
+        "out_of_tree_import": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T055332Z/test_venv/lib/python3.14/site-packages/comsol_mcp/__init__.py",
+        "out_of_tree_import_cwd": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T055332Z/neutral_cwd",
+        "import_source_is_repository_package": false,
+        "import_resolved_into_fresh_venv": true
+      },
+      "timestamp": "2026-09-22T05:53:40.356170+00:00"
+    },
+    "C01": {
+      "case_id": "C01",
+      "name": "Evidence Correction & Ledger Auditing",
+      "status": "PASS",
+      "evidence_level": "static",
+      "error": null,
+      "details": {
+        "phase4_1_sha256": "a2e91f37d021274c5a5f1321f03961c57271e1e614d17f23d3b0ef6627335278",
+        "phase4_2_sha256": "741e702cf019bfede8564cc032bccdbd30c83ee830ec46ce6a3e16356faa52c4",
+        "w17_acceptance_sha256": "53daf14f51720f59e5fb8ed731083cd851b80bd3392c4fdeb7fee4a89a225197",
+        "correction_ledger": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/w17_correction.json",
+        "baseline_review": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/BASELINE_REVIEW.json",
+        "reopen_test_level": "CONTROL_UNIT",
+        "w17_test_level": "UNIT_CONTRACT"
+      },
+      "timestamp": "2026-09-22T05:53:40.358274+00:00"
+    },
+    "C02": {
+      "case_id": "C02",
+      "name": "Dangerous States & Safe Refusal",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "cleanup_failure_outcome_state": "unknown",
+        "export_refusal_verified": true,
+        "fail_closed_verified": true
+      },
+      "timestamp": "2026-09-22T05:53:40.359742+00:00"
+    },
+    "C03": {
+      "case_id": "C03",
+      "name": "Gate A Reopen & Stored Solution Acceptance",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "chain_a_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T055332Z/artifacts/chain_a_solved.mph",
+        "chain_a_sha256": "8b4d3a4bc9ab25ec9b32ddb0b75449ffc9a648c69093abc681c8e37eaea6c39c",
+        "chain_a_points_checked": 3,
+        "chain_a_gradient_values": [
+          308.1500000000069,
+          323.15000000001123,
+          338.15000000000975
+        ],
+        "chain_b_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T055332Z/artifacts/chain_b_solved.mph",
+        "chain_b_sha256": "06a3e6f67e97d86d07e920097d9700321819acf4ceeb5ef80522fba38db030c4",
+        "chain_c_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T055332Z/artifacts/chain_c_solved.mph",
+        "chain_c_sha256": "b5f65297218c4295829575e5ae8a431570d40c63f9b003e57d96a3e4de12ebaa",
+        "bench_c04_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T055332Z/artifacts/bench_c04_solved.mph",
+        "bench_c05_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T055332Z/artifacts/bench_c05_solved.mph",
+        "bench_c06_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T055332Z/artifacts/bench_c06_solved.mph",
+        "bench_c07_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T055332Z/artifacts/bench_c07_solved.mph",
+        "expectation_source": {
+          "chain_a": "analytic linear profile 293.15 + 1200*x K at x = 0.0125/0.025/0.0375 m",
+          "chain_b": "pre-save read of the build worker (stored-value preservation across save/reopen)",
+          "chain_c": "pre-save read of the build worker (stored-value preservation across save/reopen)"
+        },
+        "chain_b_values_checked": 3,
+        "chain_b_bound_check": "293.15 K <= T <= 353.15 K on every stored value",
+        "chain_c_derived_value_source": "engine read of result/numerical tags in the reopened worker",
+        "independent_resolve": "separate case C03R (§8); not part of this case",
+        "negative_controls_tested": [
+          "ARTIFACT_HASH_MISMATCH",
+          "DATASET_NOT_FOUND",
+          "DERIVED_VALUES_MISSING",
+          "STORED_VALUE_MISMATCH (wrong expected value)",
+          "SOLUTION_CLEARED_OR_EMPTY (stored solution cleared in a copy)",
+          "STORED_VALUE_MISMATCH (field values modified in a copy, digest updated)"
+        ],
+        "negative_control_details": {
+          "cleared_stored_solution": {
+            "expected_code": "SOLUTION_CLEARED_OR_EMPTY",
+            "observed_code": "SOLUTION_CLEARED_OR_EMPTY",
+            "artifact_sha256": "faecc82925d452add9a9fd325a55bb3dd142bde2a166823167633318cd2239df",
+            "artifact_is_a_copy": true,
+            "clear_steps": {
+              "ok": true,
+              "request_id": "wrk-b8fa3a2e-cbb2-4dd0-b7c9-c67da41e7903",
+              "type": "code_execute",
+              "status": "SUCCEEDED",
+              "queued_at_ms": "1790056440549",
+              "started_at_ms": "1790056440549",
+              "completed_at_ms": "1790056440778",
+              "result": {
+                "executed": true,
+                "model_tag": "reopen_a_cleared",
+                "source_sha256": "7c8eac692ce3ceb0ef6098e9b7f764ead73890dc0c2b4bb359f2ce01da32e6f0",
+                "entrypoint": "ClearStoredSolution",
+                "readback": {
+                  "status": "CLEARED",
+                  "clear_solution_data": true,
+                  "clear_solution": true,
+                  "remove_solution_node": true
+                }
+              }
+            },
+            "cleared_artifact_read": {
+              "read_raised": "PreWriteRefusal: dataset 'dset1' does not exist"
+            }
+          },
+          "modified_field_values": {
+            "expected_code": "STORED_VALUE_MISMATCH",
+            "observed_code": "STORED_VALUE_MISMATCH",
+            "artifact_sha256": "25368c61c5e0a2c24e31d583c67ffd78189861d17c211d88b3cc4329ad927b49",
+            "artifact_is_a_copy": true,
+            "receipt_sha256_matches_mutated_artifact": true,
+            "deviation": {
+              "expected": 308.15,
+              "actual": 310.6500000000081,
+              "abs_diff": 2.5000000000081286,
+              "effective_abs_window": 0.001
+            }
+          }
+        }
+      },
+      "timestamp": "2026-09-22T05:54:01.920522+00:00"
+    },
+    "C03R": {
+      "case_id": "C03R",
+      "name": "Independent Re-solve & Indistinguishability",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "model": "reopen_a",
+        "solve_result": "None",
+        "elapsed_seconds": 0.6765271669719368,
+        "values_compared": 3,
+        "max_abs_delta": 0.0,
+        "tolerance": 0.001,
+        "stored_values": [
+          308.1500000000069,
+          323.15000000001123,
+          338.15000000000975
+        ],
+        "resolved_values": [
+          308.1500000000069,
+          323.15000000001123,
+          338.15000000000975
+        ],
+        "resolved_artifact": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T055332Z/artifacts/chain_a_resolved.mph",
+        "resolved_artifact_sha256": "d63fbcdf9aa3944536571aa4598b5b31450872a07214a418f6184ee1c373133c",
+        "solution_tags": [
+          "sol1"
+        ],
+        "dof": null,
+        "dof_note": "mesh/DoF statistics are not exposed by this worker method surface",
+        "why_separate": "§8: a re-solve may not be folded into the Gate A reopen verdict; the delivered suite ran it inside the case documented '(NO RE-SOLVE)'"
+      },
+      "timestamp": "2026-09-22T05:54:02.748787+00:00"
+    },
+    "C04": {
+      "case_id": "C04",
+      "name": "Constant Field Statistics (f=2, V=3)",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "formula_measure": 2.999999999999969,
+        "formula_integral": 5.999999999999938,
+        "computed_average": 2.0,
+        "computed_std": 0.0,
+        "computed_rms": 2.0,
+        "denominator_verified_as_measure": true,
+        "numeric_checks": {
+          "integral": {
+            "observed": 5.999999999999938,
+            "expected": 6.0,
+            "abs_error": 6.217248937900877e-14,
+            "rel_error": 1.0362081563168127e-14,
+            "tolerance": 1e-09,
+            "tolerance_rationale": "f=2 over a unit square: the integrand is constant, so the quadrature is exact up to binary64 roundoff (order 1e-16 relative); 1e-9 leaves about seven orders of margin.",
+            "margin_factor": 16084.284383466058
+          },
+          "average": {
+            "observed": 2.0,
+            "expected": 2.0,
+            "abs_error": 0.0,
+            "rel_error": 0.0,
+            "tolerance": 1e-09,
+            "tolerance_rationale": "integral/measure for a constant field is 2 exactly; same roundoff-only allowance as the integral.",
+            "margin_factor": null
+          },
+          "std": {
+            "observed": 0.0,
+            "expected": 0.0,
+            "abs_error": 0.0,
+            "rel_error": null,
+            "tolerance": 1e-09,
+            "tolerance_rationale": "a constant field has zero variance; the tolerance is an absolute one because the expected value is zero.",
+            "margin_factor": null
+          },
+          "rms": {
+            "observed": 2.0,
+            "expected": 2.0,
+            "abs_error": 0.0,
+            "rel_error": 0.0,
+            "tolerance": 1e-09,
+            "tolerance_rationale": "sqrt(measure-weighted mean of f^2) with f=2 is again exact up to roundoff.",
+            "margin_factor": null
+          },
+          "denominator": {
+            "observed": 2.999999999999969,
+            "expected": 3.0,
+            "abs_error": 3.108624468950438e-14,
+            "rel_error": 1.0362081563168127e-14,
+            "tolerance": 1e-09,
+            "tolerance_rationale": "the reported denominator must be the domain measure V=3, not the element count; both are integers here, so the check is exact.",
+            "margin_factor": 32168.568766932116
+          }
+        }
+      },
+      "timestamp": "2026-09-22T05:54:03.127253+00:00"
+    },
+    "C05": {
+      "case_id": "C05",
+      "name": "Multi-dimensional Support",
+      "status": "FAIL",
+      "evidence_level": "numerical",
+      "error": "{'label': '1-D domain 99 (geometry has 2)', 'refused': True, 'code': 'SELECTION_APPLY_FAILED', 'message': 'selection.set failed for entities [99]: {\"completed_at_ms\": \"1790056446321\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: com.comsol.model.data.SelectionOutOfBoundsException: Illegal in', 'details': {}}",
+      "details": {},
+      "timestamp": "2026-09-22T05:54:06.359971+00:00"
+    },
+    "C06": {
+      "case_id": "C06",
+      "name": "Non-Uniform Field Analytical Verification",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "analytic_area": 6.0,
+        "analytic_integral": 24.0,
+        "analytic_average": 4.0,
+        "analytic_variance": 3.3333333333333335,
+        "analytic_std": 1.8257418583505538,
+        "analytic_rms": 4.396968652757639,
+        "live_integral": 23.999999999999982,
+        "live_average": 3.9999999999999853,
+        "live_std": 1.8257418583505494,
+        "live_rms": 4.396968652757634,
+        "live_denominator_measure": 6.000000000000018,
+        "numeric_checks": {
+          "denominator": {
+            "observed": 6.000000000000018,
+            "expected": 6.0,
+            "abs_error": 1.7763568394002505e-14,
+            "rel_error": 2.960594732333751e-15,
+            "tolerance": 1e-09,
+            "tolerance_rationale": "the unit square has measure 1, but the field f=x+2y is defined on the y in [0,3] strip, so the reference area is 6; planar measure integration is exact up to roundoff.",
+            "margin_factor": 56294.9953421312
+          },
+          "integral": {
+            "observed": 23.999999999999982,
+            "expected": 24.0,
+            "abs_error": 1.7763568394002505e-14,
+            "rel_error": 7.401486830834377e-16,
+            "tolerance": 1e-09,
+            "tolerance_rationale": "integral of x+2y over the strip is 24 analytically; the integrand is degree 1, so COMSOL's quadrature is exact up to binary64 roundoff and 1e-9 leaves ~7 orders of margin.",
+            "margin_factor": 56294.9953421312
+          },
+          "average": {
+            "observed": 3.9999999999999853,
+            "expected": 4.0,
+            "abs_error": 1.4654943925052066e-14,
+            "rel_error": 3.6637359812630166e-15,
+            "tolerance": 1e-09,
+            "tolerance_rationale": "24/6 = 4 exactly; the tolerance covers division roundoff only.",
+            "margin_factor": 68236.35799046207
+          },
+          "std": {
+            "observed": 1.8257418583505494,
+            "expected": 1.8257418583505538,
+            "abs_error": 4.440892098500626e-15,
+            "rel_error": 2.432376777795247e-15,
+            "tolerance": 1e-09,
+            "tolerance_rationale": "sqrt(10/3) comes from the analytic variance of x+2y over the strip; a square root adds at most a few ulp, so the same roundoff-only allowance applies.",
+            "margin_factor": 225179.9813685248
+          },
+          "rms": {
+            "observed": 4.396968652757634,
+            "expected": 4.396968652757639,
+            "abs_error": 5.329070518200751e-15,
+            "rel_error": 1.2119873801826009e-15,
+            "tolerance": 1e-09,
+            "tolerance_rationale": "sqrt(58/3) from the analytic second moment; same roundoff allowance as the std.",
+            "margin_factor": 187649.9844737707
+          }
+        }
+      },
+      "timestamp": "2026-09-22T05:54:06.600492+00:00"
+    },
+    "C07": {
+      "case_id": "C07",
+      "name": "Axisymmetric Cylinder Verification",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "cylinder_radius": 2.0,
+        "cylinder_height": 3.0,
+        "live_revolved_volume": 37.69911184307756,
+        "expected_volume": 37.69911184307752,
+        "live_average_r": 1.3333333333333304,
+        "expected_average_r": 1.3333333333333333,
+        "cross_section_measure": 6.000000000000018,
+        "expected_cross_section_measure": 6.0,
+        "axisymmetric_flag": true,
+        "axisymmetric_applied_count": 1,
+        "numeric_checks": {
+          "revolved_volume": {
+            "observed": 37.69911184307756,
+            "expected": 37.69911184307752,
+            "abs_error": 4.263256414560601e-14,
+            "rel_error": 1.1308638867425838e-15,
+            "tolerance": 1e-06,
+            "tolerance_rationale": "pi*r^2*h = 12*pi measures a revolved solid, so the volume comes from curved-boundary quadrature over a triangulated surface rather than an exact planar formula; 1e-6 is about four orders above the observed deviation and is the same allowance the axisymmetric measure has always used here.",
+            "margin_factor": 23456248.05922133
+          },
+          "average_r": {
+            "observed": 1.3333333333333304,
+            "expected": 1.3333333333333333,
+            "abs_error": 2.886579864025407e-15,
+            "rel_error": 2.1649348980190553e-15,
+            "tolerance": 1e-06,
+            "tolerance_rationale": "the volume-weighted mean radius of a solid cylinder is 4/3; it inherits the revolved-measure allowance.",
+            "margin_factor": 346430740.5669612
+          },
+          "cross_section_measure": {
+            "observed": 6.000000000000018,
+            "expected": 6.0,
+            "abs_error": 1.7763568394002505e-14,
+            "rel_error": 2.960594732333751e-15,
+            "tolerance": 1e-06,
+            "tolerance_rationale": "the revolved 2-D cross-section measure must be 6 as well; same curved-quadrature allowance.",
+            "margin_factor": 56294995.3421312
+          }
+        }
+      },
+      "timestamp": "2026-09-22T05:54:06.759841+00:00"
+    },
+    "C08": {
+      "case_id": "C08",
+      "name": "Solution Axis Slicing",
+      "status": "FAIL",
+      "evidence_level": "numerical",
+      "error": "{'solution_axis_length': 1, 'engine_time_values': [0.0, 0.5, 1.0, 1.5, 2.0], 'binding_complete': True, 'expected_time_values': [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]}",
+      "details": {},
+      "timestamp": "2026-09-22T05:54:06.829421+00:00"
+    },
+    "C09": {
+      "case_id": "C09",
+      "name": "Complex Field Transformations",
+      "status": "FAIL",
+      "evidence_level": "numerical",
+      "error": "",
+      "details": {},
+      "timestamp": "2026-09-22T05:54:07.024802+00:00"
+    },
+    "C10": {
+      "case_id": "C10",
+      "name": "Point Coordinates Scaling (m vs mm)",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "evaluated_point_m": [
+          1.0,
+          1.5
+        ],
+        "evaluated_point_mm": [
+          1000.0,
+          1500.0
+        ],
+        "value_m": 3.9999999999999996,
+        "value_mm": 3.9999999999999996,
+        "unit_equivalence_verified": true,
+        "non_finite_rejection_verified": true,
+        "dimension_mismatch_rejected": true,
+        "unsupported_frame_rejected": true
+      },
+      "timestamp": "2026-09-22T05:54:07.115039+00:00"
+    },
+    "C11": {
+      "case_id": "C11",
+      "name": "Dataset Dependency Graph & CutPoint2D",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "cutpoint_dataset": "cpt1",
+        "cutpoint_evaluated_value": 3.9999999999999996,
+        "acyclic_chain": [
+          "dset1",
+          "dset2",
+          "dset3"
+        ],
+        "cycle_detected": true
+      },
+      "timestamp": "2026-09-22T05:54:07.186782+00:00"
+    },
+    "C12": {
+      "case_id": "C12",
+      "name": "Export Path Traversal Protection & Atomic Rollback",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "traversal_rejection": {
+          "rejected": true,
+          "error_code": "ACCESS_VIOLATION",
+          "message": "Export destination '../../etc/passwd' escapes authorized project root /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository"
+        },
+        "export_failure_rejection": {
+          "rejected": true,
+          "error_code": "EXPORT_FAILED",
+          "message": "evaluation status is not publishable: {'ok': False, 'engine_error': 'SIMULATED_FAILURE'}"
+        },
+        "absolute_destination_rejection": {
+          "rejected": true,
+          "error_code": "ACCESS_VIOLATION"
+        },
+        "atomic_rollback": {
+          "rejected": true,
+          "error_type": "AtomicSaveError",
+          "message": "Candidate save callback failed: simulated engine failure during export"
+        },
+        "writer_reached": true,
+        "writer_staged_content": "PARTIAL_CONTENT",
+        "preserved_original_sha256": "1d545b940633ab0ee38f4a06a4bd3a199c4b7ec83373e0a56d8454f862399628",
+        "retained_failure_candidate": [
+          ".preserved.txt.64c5f087c9bc4ee2a7126b4bfe91a567.tmp.mph"
+        ],
+        "retained_candidate_policy": "_atomic_save keeps the failed candidate as incident evidence; ACCEPTANCE.md C12 requires the original hash to survive, not its removal",
+        "artifacts_dir_entries_before": [
+          "bench_c04_solved.mph",
+          "bench_c05_solved.mph",
+          "bench_c06_solved.mph",
+          "bench_c07_solved.mph",
+          "chain_a_cleared.mph",
+          "chain_a_mutated.mph",
+          "chain_a_resolved.mph",
+          "chain_a_solved.mph",
+          "chain_b_solved.mph",
+          "chain_c_solved.mph",
+          "preserved.txt"
+        ],
+        "successful_publish": {
+          "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T055332Z/artifacts/atomic_success.mph",
+          "size": 128,
+          "sha256": "4e12e75ab908465f307bf4f5f6840600f91ee16959c692e3e9653daa4b407929",
+          "checkpoint": {
+            "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T055332Z/artifacts/atomic_success.mph",
+            "size": 128,
+            "sha256": "4e12e75ab908465f307bf4f5f6840600f91ee16959c692e3e9653daa4b407929",
+            "verified": true,
+            "publish_mode": "atomic_replace",
+            "parent_fsync": true
+          },
+          "artifact": {
+            "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T055332Z/artifacts/atomic_success.mph",
+            "size": 128,
+            "sha256": "4e12e75ab908465f307bf4f5f6840600f91ee16959c692e3e9653daa4b407929",
+            "verified": true
+          }
+        },
+        "candidates_after_success": [
+          ".preserved.txt.64c5f087c9bc4ee2a7126b4bfe91a567.tmp.mph"
+        ],
+        "published_artifact": {
+          "file_path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/g2_artifacts/results/result_8c45c2793a0341aa9bafb010ef5f00ac.json",
+          "sha256": "e2226b0e733ff8a7db77ae4f82a11c526ad03f3dfc872e896be727b9eff9de34",
+          "byte_size": 103,
+          "inside_project_root": true,
+          "candidates_left": []
+        },
+        "export_root_policy": "the delivered store admits the project root plus the process temp tree; anything else is refused with ACCESS_VIOLATION before a file is created"
+      },
+      "timestamp": "2026-09-22T05:54:07.191323+00:00"
+    },
+    "C13": {
+      "case_id": "C13",
+      "name": "Chunk Streaming & Bounded Memory",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "file_size": 526792,
+        "full_sha256": "cf4e286d2a4e2f068155557a707225919be710fd45a92d73faadc20f96be84b1",
+        "chunk_bytes": 32768,
+        "chunk_reads": 17,
+        "reconstructed_sha256": "cf4e286d2a4e2f068155557a707225919be710fd45a92d73faadc20f96be84b1",
+        "chunk_digests_verified": true,
+        "host_dispatch_operation": "artifact.read",
+        "refusals": {
+          "path_escape": "ACCESS_VIOLATION",
+          "offset_out_of_range": "INVALID_CHUNK_RANGE",
+          "forged_whole_digest": "ARTIFACT_HASH_MISMATCH",
+          "forged_chunk_digest": "CHUNK_HASH_MISMATCH"
+        },
+        "peak_memory": {
+          "small_bytes": 526792,
+          "big_bytes": 5666757,
+          "small_stream_no_pin_kib": 1720.2,
+          "small_stream_pinned_kib": 1716.7,
+          "small_full_read_kib": 514.7,
+          "big_stream_no_pin_kib": 2227.7,
+          "big_stream_pinned_kib": 2225.6,
+          "big_full_read_kib": 5534.2,
+          "stream_is_size_independent": true,
+          "pinned_stream_is_size_independent": true,
+          "full_read_tracks_file_size": true,
+          "file_size_ratio": 10.76,
+          "instrument": "tracemalloc peak python allocations (KiB)",
+          "note": "a pinned expected_sha256 costs one bounded 1 MiB-block pass per call; the measured peak is therefore block-bounded, not file-bounded"
+        }
+      },
+      "timestamp": "2026-09-22T05:54:09.070889+00:00"
+    },
+    "C14": {
+      "case_id": "C14",
+      "name": "Probe Separation",
+      "status": "FAIL",
+      "evidence_level": "numerical",
+      "error": "table create path must be a NodePath object",
+      "details": {},
+      "timestamp": "2026-09-22T05:54:09.140084+00:00"
+    },
+    "C15": {
+      "case_id": "C15",
+      "name": "Control Responsiveness",
+      "status": "FAIL",
+      "evidence_level": "protocol",
+      "error": "{'refused': False, 'returned': [[[[{'real': 0.029350580093791816, 'imag': 0.0}], [{'real': 0.030109244708104235, 'imag': 0.0}], [{'real': 0.030438535780786896, 'imag': 0.0}], [{'real': 0.030697094955265212, 'imag': 0.0}], [{'real': 0.030904123384173393, 'imag': 0.0}], [{'real': 0.031097028738091302, 'imag': 0.0}], [{'real': 0.03126947591664693, 'imag': 0.0}], [{'real': 0.03142018608266691, 'imag': 0.0}], [{'real': 0.031561189771622374, 'imag': 0.0}], [{'real': 0.03170219346057789, 'imag': 0.0}], [{'real': 0.03183209057109261, 'imag': 0.0}], [{'real': 0.03195218516200373, 'imag': 0.0}], [{'real': 0.03207227975291486, 'imag': 0.0}], [{'real': 0.03218283005783561, 'imag': 0.0}], [{'real': 0.03227720324301673, 'imag': 0.0}], [{'real': 0.03237157642819771, 'imag': 0.0}], [{'real': 0.03246594961337888, 'imag': 0.0}], [{'real': 0.032560322798560096, 'imag': 0.0}], [{'real': 0.032654695983741266, 'imag': 0.0}], [{'real': 0.032748121008611804, 'imag': 0.0}], [{'real': 0.032823838357790514, 'imag': 0.0}], [{'real': 0.03289955570696913, 'imag': 0.0}], [{'real': 0.032975273056147794, 'imag': 0.0}], [{'real': 0.033050990405326455, 'imag': 0.0}], [{'real': 0.03312670775450524, 'imag': 0.0}], [{'real': 0.033202425103683715, 'imag': 0.0}], [{'real': 0.03326764136858059, 'imag': 0.0}], [{'real': 0.03332898516271811, 'imag': 0.0}], [{'real': 0.03339032895685568, 'imag': 0.0}], [{'real': 0.03345167275099312, 'imag': 0.0}], [{'real': 0.03351301654513067, 'imag': 0.0}], [{'real': 0.03357436033926803, 'imag': 0.0}], [{'real': 0.03363385298317742, 'imag': 0.0}], [{'real': 0.03368974026370196, 'imag': 0.0}], [{'real': 0.03374428703017706, 'imag': 0.0}], [{'real': 0.033797493282602606, 'imag': 0.0}], [{'real': 0.03384935902097871, 'imag': 0.0}], [{'real': 0.03389988424530522, 'imag': 0.0}], [{'real': 0.03394906895558231, 'imag': 0.0}], [{'real': 0.03399691315180993, 'imag': 0.0}], [{'real': 0.03404341683398805, 'imag': 0.0}], [{'real': 0.03408858000211663, 'imag': 0.0}], [{'real': 0.03413240265619583, 'imag': 0.0}], [{'real': 0.03417488479622543, 'imag': 0.0}], [{'real': 0.034216026422205593, 'imag': 0.0}], [{'real': 0.03425611298128456, 'imag': 0.0}], [{'real': 0.03429499328974864, 'imag': 0.0}], [{'real': 0.03433258838124702, 'imag': 0.0}], [{'real': 0.03436889825578001, 'imag': 0.0}], [{'real': 0.034403922913347484, 'imag': 0.0}], [{'real': 0.03443766235394943, 'imag': 0.0}], [{'real': 0.03447011657758586, 'imag': 0.0}], [{'real': 0.03450128558425669, 'imag': 0.0}], [{'real': 0.034531169373962035, 'imag': 0.0}], [{'real': 0.03455976794670189, 'imag': 0.0}], [{'real': 0.034587081302476, 'imag': 0.0}], [{'real': 0.0346131094412846, 'imag': 0.0}], [{'real': 0.03463830596701544, 'imag': 0.0}], [{'real': 0.03466557964029637, 'imag': 0.0}], [{'real': 0.03469211718659254, 'imag': 0.0}], [{'real': 0.034717918605904244, 'imag': 0.0}], [{'real': 0.03474298389823118, 'imag': 0.0}], [{'real': 0.03476731306357356, 'imag': 0.0}], [{'real': 0.03479090610193142, 'imag': 0.0}], [{'real': 0.03481376301330466, 'imag': 0.0}], [{'real': 0.034835883797693194, 'imag': 0.0}], [{'real': 0.034857268455097054, 'imag': 0.0}], [{'real': 0.03487791698551655, 'imag': 0.0}], [{'real': 0.03489782938895131, 'imag': 0.0}], [{'real': 0.03491700566540151, 'imag': 0.0}], [{'real': 0.034935445814867176, 'imag': 0.0}], [{'real': 0.03495314983734797, 'imag': 0.0}], [{'real': 0.0349701177328443, 'imag': 0.0}], [{'real': 0.03498634950135607, 'imag': 0.0}], [{'real': 0.03500184514288325, 'imag': 0.0}], [{'real': 0.03501660465742577, 'imag': 0.0}], [{'real': 0.03503062804498368, 'imag': 0.0}], [{'real': 0.035043915305556894, 'imag': 0.0}], [{'real': 0.035056466439145686, 'imag': 0.0}], [{'real': 0.03506828144574973, 'imag': 0.0}], [{'real': 0.03507936032536925, 'imag': 0.0}], [{'real': 0.035089703078004124, 'imag': 0.0}], [{'real': 0.035099309703654366, 'imag': 0.0}], [{'real': 0.03511130521551799, 'imag': 0.0}], [{'real': 0.03512338347215303, 'imag': 0.0}], [{'real': 0.035135007531347975, 'imag': 0.0}], [{'real': 0.035146177393103016, 'imag': 0.0}], [{'real': 0.03515689305741808, 'imag': 0.0}], [{'real': 0.03516715452429322, 'imag': 0.0}], [{'real': 0.035176961793728326, 'imag': 0.0}], [{'real': 0.03518631486572335, 'imag': 0.0}], [{'real': 0.035195213740278626, 'imag': 0.0}], [{'real': 0.035203658417393806, 'imag': 0.0}], [{'real': 0.03521164889706893, 'imag': 0.0}], [{'real': 0.0352191851793042, 'imag': 0.0}], [{'real': 0.03522626726409951, 'imag': 0.0}], [{'real': 0.0352328951514547, 'imag': 0.0}], [{'real': 0.03523906884137008, 'imag': 0.0}], [{'real': 0.035244788333845437, 'imag': 0.0}], [{'real': 0.03525005362888084, 'imag': 0.0}], [{'real': 0.03525486472647608, 'imag': 0.0}], [{'real': 0.035259221626631476, 'imag': 0.0}], [{'real': 0.035263124329347015, 'imag': 0.0}], [{'real': 0.03526657283462241, 'imag': 0.0}], [{'real': 0.03526956714245802, 'imag': 0.0}], [{'real': 0.035272107252853444, 'imag': 0.0}], [{'real': 0.03527419316580904, 'imag': 0.0}], [{'real': 0.03527582488132448, 'imag': 0.0}], [{'real': 0.035278884404803534, 'imag': 0.0}], [{'real': 0.03528312537405171, 'imag': 0.0}], [{'real': 0.03528716875976974, 'imag': 0.0}], [{'real': 0.03529101456195757, 'imag': 0.0}], [{'real': 0.03529466278061526, 'imag': 0.0}], [{'real': 0.03529811341574283, 'imag': 0.0}], [{'real': 0.03530136646734026, 'imag': 0.0}], [{'real': 0.03530442193540752, 'imag': 0.0}], [{'real': 0.035307279819944734, 'imag': 0.0}], [{'real': 0.035309940120951636, 'imag': 0.0}], [{'real': 0.03531240283842842, 'imag': 0.0}], [{'real': 0.035314667972375105, 'imag': 0.0}], [{'real': 0.03531673552279159, 'imag': 0.0}], [{'real': 0.03531860548967797, 'imag': 0.0}], [{'real': 0.03532027787303413, 'imag': 0.0}], [{'real': 0.03532175267286024, 'imag': 0.0}], [{'real': 0.03532302988915608, 'imag': 0.0}], [{'real': 0.03532410952192183, 'imag': 0.0}], [{'real': 0.03532499157115748, 'imag': 0.0}], [{'real': 0.035325676036862846, 'imag': 0.0}], [{'real': 0.03532616291903817, 'imag': 0.0}], [{'real': 0.03532645221768342, 'imag': 0.0}], [{'real': 0.035326543932798354, 'imag': 0.0}], [{'real': 0.03532643806438322, 'imag': 0.0}], [{'real': 0.03532613461243797, 'imag': 0.0}], [{'real': 0.0353261049625236, 'imag': 0.0}], [{'real': 0.035327134450267014, 'imag': 0.0}], [{'real': 0.035328095058519055, 'imag': 0.0}], [{'real': 0.03532898678727969, 'imag': 0.0}], [{'real': 0.03532980963654887, 'imag': 0.0}], [{'real': 0.03533056360632687, 'imag': 0.0}], [{'real': 0.035331248696613415, 'imag': 0.0}], [{'real': 0.0353318649074086, 'imag': 0.0}], [{'real': 0.035332412238712564, 'imag': 0.0}], [{'real': 0.035332890690524914, 'imag': 0.0}], [{'real': 0.03533330026284613, 'imag': 0.0}], [{'real': 0.03533364095567591, 'imag': 0.0}], [{'real': 0.03533391276901428, 'imag': 0.0}], [{'real': 0.035334115702861386, 'imag': 0.0}], [{'real': 0.03533424975721716, 'imag': 0.0}], [{'real': 0.03533431493208154, 'imag': 0.0}], [{'real': 0.0353343112274544, 'imag': 0.0}], [{'real': 0.035334238643336124, 'imag': 0.0}], [{'real': 0.03533409717972642, 'imag': 0.0}], [{'real': 0.03533388683662532, 'imag': 0.0}], [{'real': 0.0353336076140329, 'imag': 0.0}], [{'real': 0.0353332595119492, 'imag': 0.0}], [{'real': 0.03533284253037405, 'imag': 0.0}], [{'real': 0.035332356669307556, 'imag': 0.0}], [{'real': 0.035331801928749726, 'imag': 0.0}], [{'real': 0.035331181962445404, 'imag': 0.0}], [{'real': 0.03533117512933969, 'imag': 0.0}], [{'real': 0.03533115157445932, 'imag': 0.0}], [{'real': 0.03533111129780414, 'imag': 0.0}], [{'real': 0.03533105429937435, 'imag': 0.0}], [{'real': 0.035330980579169835, 'imag': 0.0}], [{'real': 0.03533089013719044, 'imag': 0.0}], [{'real': 0.035330782973436496, 'imag': 0.0}], [{'real': 0.035330659087907765, 'imag': 0.0}], [{'real': 0.0353305184806043, 'imag': 0.0}], [{'real': 0.03533036115152613, 'imag': 0.0}], [{'real': 0.035330187100673115, 'imag': 0.0}], [{'real': 0.03532999632804559, 'imag': 0.0}], [{'real': 0.0353297888336431, 'imag': 0.0}], [{'real': 0.03532956461746607, 'imag': 0.0}], [{'real': 0.035329323679514316, 'imag': 0.0}], [{'real': 0.035329066019787754, 'imag': 0.0}], [{'real': 0.03532879163828649, 'imag': 0.0}], [{'real': 0.03532850053501059, 'imag': 0.0}], [{'real': 0.03532819270995978, 'imag': 0.0}], [{'real': 0.03532786816313449, 'imag': 0.0}], [{'real': 0.03532752689453422, 'imag': 0.0}], [{'real': 0.035327168904159385, 'imag': 0.0}], [{'real': 0.03532679419200967, 'imag': 0.0}], [{'real': 0.03532640275808537, 'imag': 0.0}], [{'real': 0.03532599460238639, 'imag': 0.0}], [{'real': 0.035325759660902296, 'imag': 0.0}], [{'real': 0.035325594613175706, 'imag': 0.0}], [{'real': 0.03532542956544919, 'imag': 0.0}], [{'real': 0.035325264517722575, 'imag': 0.0}], [{'real': 0.03532509946999609, 'imag': 0.0}], [{'real': 0.035324934422269416, 'imag': 0.0}], [{'real': 0.03532476937454296, 'imag': 0.0}], [{'real': 0.03532460432681629, 'imag': 0.0}], [{'real': 0.03532443927908973, 'imag': 0.0}], [{'real': 0.03532427423136313, 'imag': 0.0}], [{'real': 0.035324109183636515, 'imag': 0.0}], [{'real': 0.03532394413591003, 'imag': 0.0}], [{'real': 0.03532377908818339, 'imag': 0.0}], [{'real': 0.035323614040456836, 'imag': 0.0}], [{'real': 0.0353234489927302, 'imag': 0.0}], [{'real': 0.03532328394500374, 'imag': 0.0}], [{'real': 0.035323118897277184, 'imag': 0.0}], [{'real': 0.035322953849550504, 'imag': 0.0}], [{'real': 0.035322788801824004, 'imag': 0.0}], [{'real': 0.03532262375409735, 'imag': 0.0}], [{'real': 0.03532245870637073, 'imag': 0.0}], [{'real': 0.03532229365864429, 'imag': 0.0}], [{'real': 0.03532212861091764, 'imag': 0.0}], [{'real': 0.03532196356319112, 'imag': 0.0}], [{'real': 0.03532179851546452, 'imag': 0.0}], [{'real': 0.03532163346773795, 'imag': 0.0}], [{'real': 0.03532146842001142, 'imag': 0.0}], [{'real': 0.03532130337228488, 'imag': 0.0}], [{'real': 0.035321138324558174, 'imag': 0.0}], [{'real': 0.035320973276831646, 'imag': 0.0}], [{'real': 0.03532080822910512, 'imag': 0.0}], [{'real': 0.03532064318137852, 'imag': 0.0}], [{'real': 0.03532047813365194, 'imag': 0.0}], [{'real': 0.0353203130859253, 'imag': 0.0}], [{'real': 0.035320148038198725, 'imag': 0.0}], [{'real': 0.035319982990472135, 'imag': 0.0}], [{'real': 0.03531981794274564, 'imag': 0.0}], [{'real': 0.03531965289501898, 'imag': 0.0}], [{'real': 0.035319487847292344, 'imag': 0.0}], [{'real': 0.0353193227995659, 'imag': 0.0}], [{'real': 0.03531922433985091, 'imag': 0.0}], [{'real': 0.035319151190885176, 'imag': 0.0}], [{'real': 0.0353190780419194, 'imag': 0.0}], [{'real': 0.035319004892953504, 'imag': 0.0}], [{'real': 0.03531893174398787, 'imag': 0.0}], [{'real': 0.035318858595022096, 'imag': 0.0}], [{'real': 0.03531878544605631, 'imag': 0.0}], [{'real': 0.03531871229709055, 'imag': 0.0}], [{'real': 0.03531863914812473, 'imag': 0.0}], [{'real': 0.0353185659991591, 'imag': 0.0}], [{'real': 0.03531849285019315, 'imag': 0.0}], [{'real': 0.03531841970122748, 'imag': 0.0}], [{'real': 0.03531834655226168, 'imag': 0.0}], [{'real': 0.03531827340329595, 'imag': 0.0}], [{'real': 0.035318200254330134, 'imag': 0.0}], [{'real': 0.035318127105364486, 'imag': 0.0}], [{'real': 0.03531805395639867, 'imag': 0.0}], [{'real': 0.035317980807432786, 'imag': 0.0}], [{'real': 0.035317907658467054, 'imag': 0.0}], [{'real': 0.035317834509501336, 'imag': 0.0}], [{'real': 0.03531776136053546, 'imag': 0.0}], [{'real': 0.035317688211569775, 'imag': 0.0}], [{'real': 0.03531761506260399, 'imag': 0.0}], [{'real': 0.035317541913638284, 'imag': 0.0}], [{'real': 0.03531746876467247, 'imag': 0.0}], [{'real': 0.03531739561570674, 'imag': 0.0}], [{'real': 0.03531732246674088, 'imag': 0.0}], [{'real': 0.03531724931777523, 'imag': 0.0}], [{'real': 0.03531717616880933, 'imag': 0.0}], [{'real': 0.035317103019843754, 'imag': 0.0}], [{'real': 0.03531702987087784, 'imag': 0.0}], [{'real': 0.03531695672191215, 'imag': 0.0}], [{'real': 0.03531688357294628, 'imag': 0.0}], [{'real': 0.035316810423980556, 'imag': 0.0}], [{'real': 0.03531673727501481, 'imag': 0.0}], [{'real': 0.03531666412604914, 'imag': 0.0}], [{'real': 0.03531659097708334, 'imag': 0.0}], [{'real': 0.035316517828117434, 'imag': 0.0}], [{'real': 0.03531644467915171, 'imag': 0.0}], [{'real': 0.03531637153018599, 'imag': 0.0}], [{'real': 0.0353163331161329, 'imag': 0.0}], [{'real': 0.03531630790515698, 'imag': 0.0}], [{'real': 0.03531628269418119, 'imag': 0.0}], [{'real': 0.03531625748320538, 'imag': 0.0}], [{'real': 0.03531623227222966, 'imag': 0.0}], [{'real': 0.03531620706125367, 'imag': 0.0}], [{'real': 0.03531618185027774, 'imag': 0.0}], [{'real': 0.035316156639302, 'imag': 0.0}], [{'real': 0.035316131428326146, 'imag': 0.0}], [{'real': 0.03531610621735025, 'imag': 0.0}], [{'real': 0.03531608100637448, 'imag': 0.0}], [{'real': 0.03531605579539862, 'imag': 0.0}], [{'real': 0.03531603058442277, 'imag': 0.0}], [{'real': 0.035316005373446945, 'imag': 0.0}], [{'real': 0.03531598016247123, 'imag': 0.0}], [{'real': 0.03531595495149531, 'imag': 0.0}], [{'real': 0.035315929740519336, 'imag': 0.0}], [{'real': 0.03531590452954349, 'imag': 0.0}], [{'real': 0.03531587931856778, 'imag': 0.0}], [{'real': 0.03531585410759199, 'imag': 0.0}], [{'real': 0.03531582889661612, 'imag': 0.0}], [{'real': 0.03531580368564031, 'imag': 0.0}], [{'real': 0.0353157784746645, 'imag': 0.0}], [{'real': 0.035315753263688604, 'imag': 0.0}], [{'real': 0.035315728052712804, 'imag': 0.0}], [{'real': 0.03531570284173684, 'imag': 0.0}], [{'real': 0.03531567763076101, 'imag': 0.0}], [{'real': 0.03531565241978511, 'imag': 0.0}], [{'real': 0.03531562720880939, 'imag': 0.0}], [{'real': 0.03531560199783351, 'imag': 0.0}], [{'real': 0.035315576786857636, 'imag': 0.0}], [{'real': 0.035315551575881905, 'imag': 0.0}], [{'real': 0.03531552636490601, 'imag': 0.0}], [{'real': 0.03531550115393016, 'imag': 0.0}], [{'real': 0.035315475942954255, 'imag': 0.0}], [{'real': 0.03531545073197843, 'imag': 0.0}], [{'real': 0.03531542552100267, 'imag': 0.0}], [{'real': 0.035315400310026834, 'imag': 0.0}], [{'real': 0.03531537509905105, 'imag': 0.0}], [{'real': 0.035315349888075165, 'imag': 0.0}], [{'real': 0.035315337827037066, 'imag': 0.0}], [{'real': 0.03531533076441774, 'imag': 0.0}], [{'real': 0.035315323701798434, 'imag': 0.0}], [{'real': 0.03531531663917922, 'imag': 0.0}], [{'real': 0.03531530957655995, 'imag': 0.0}], [{'real': 0.03531530251394069, 'imag': 0.0}], [{'real': 0.03531529545132151, 'imag': 0.0}], [{'real': 0.03531528838870216, 'imag': 0.0}], [{'real': 0.03531528132608294, 'imag': 0.0}], [{'real': 0.03531527426346366, 'imag': 0.0}], [{'real': 0.035315267200844484, 'imag': 0.0}], [{'real': 0.03531526013822523, 'imag': 0.0}], [{'real': 0.03531525307560597, 'imag': 0.0}], [{'real': 0.03531524601298672, 'imag': 0.0}], [{'real': 0.03531523895036753, 'imag': 0.0}], [{'real': 0.03531523188774814, 'imag': 0.0}], [{'real': 0.03531522482512889, 'imag': 0.0}], [{'real': 0.03531521776250951, 'imag': 0.0}], [{'real': 0.03531521069989045, 'imag': 0.0}], [{'real': 0.035315203637271114, 'imag': 0.0}], [{'real': 0.03531519657465192, 'imag': 0.0}], [{'real': 0.03531518951203261, 'imag': 0.0}], [{'real': 0.035315182449413354, 'imag': 0.0}], [{'real': 0.035315175386794136, 'imag': 0.0}], [{'real': 0.03531516832417491, 'imag': 0.0}], [{'real': 0.03531516126155557, 'imag': 0.0}], [{'real': 0.035315154198936397, 'imag': 0.0}], [{'real': 0.03531514713631713, 'imag': 0.0}], [{'real': 0.0353151400736979, 'imag': 0.0}], [{'real': 0.03531513301107862, 'imag': 0.0}], [{'real': 0.03531512594845944, 'imag': 0.0}], [{'real': 0.03531511888584015, 'imag': 0.0}], [{'real': 0.035315111823220946, 'imag': 0.0}], [{'real': 0.03531510476060169, 'imag': 0.0}], [{'real': 0.035315097697982384, 'imag': 0.0}], [{'real': 0.035315090635363144, 'imag': 0.0}], [{'real': 0.035315083572743905, 'imag': 0.0}], [{'real': 0.03531507651012453, 'imag': 0.0}], [{'real': 0.03531506944750529, 'imag': 0.0}], [{'real': 0.03531506238488607, 'imag': 0.0}], [{'real': 0.035315059348012386, 'imag': 0.0}], [{'real': 0.03531505784136375, 'imag': 0.0}], [{'real': 0.03531505633471489, 'imag': 0.0}], [{'real': 0.0353150548280661, 'imag': 0.0}], [{'real': 0.035315053321417364, 'imag': 0.0}], [{'real': 0.03531505181476857, 'imag': 0.0}], [{'real': 0.035315050308119836, 'imag': 0.0}], [{'real': 0.03531504880147103, 'imag': 0.0}], [{'real': 0.03531504729482236, 'imag': 0.0}], [{'real': 0.03531504578817358, 'imag': 0.0}], [{'real': 0.03531504428152474, 'imag': 0.0}], [{'real': 0.03531504277487594, 'imag': 0.0}], [{'real': 0.03531504126822726, 'imag': 0.0}], [{'real': 0.03531503976157843, 'imag': 0.0}], [{'real': 0.03531503825492966, 'imag': 0.0}], [{'real': 0.0353150367482809, 'imag': 0.0}], [{'real': 0.03531503524163215, 'imag': 0.0}], [{'real': 0.03531503373498334, 'imag': 0.0}], [{'real': 0.03531503222833464, 'imag': 0.0}], [{'real': 0.035315030721685854, 'imag': 0.0}], [{'real': 0.03531502921503711, 'imag': 0.0}], [{'real': 0.03531502770838829, 'imag': 0.0}], [{'real': 0.03531502620173951, 'imag': 0.0}], [{'real': 0.03531502469509086, 'imag': 0.0}], [{'real': 0.03531502318844193, 'imag': 0.0}], [{'real': 0.03531502168179327, 'imag': 0.0}], [{'real': 0.035315020175144485, 'imag': 0.0}], [{'real': 0.035315018668495665, 'imag': 0.0}], [{'real': 0.03531501716184686, 'imag': 0.0}], [{'real': 0.03531501565519822, 'imag': 0.0}], [{'real': 0.03531501414854944, 'imag': 0.0}], [{'real': 0.035315012641900526, 'imag': 0.0}], [{'real': 0.03531501113525186, 'imag': 0.0}], [{'real': 0.03531500962860322, 'imag': 0.0}], [{'real': 0.03531500812195436, 'imag': 0.0}], [{'real': 0.03531500661530554, 'imag': 0.0}], [{'real': 0.03531500510865686, 'imag': 0.0}], [{'real': 0.035315003602008066, 'imag': 0.0}], [{'real': 0.03531500209535933, 'imag': 0.0}], [{'real': 0.035315000588710545, 'imag': 0.0}], [{'real': 0.035315000062913215, 'imag': 0.0}], [{'real': 0.03531499990994719, 'imag': 0.0}], [{'real': 0.03531499975698094, 'imag': 0.0}], [{'real': 0.03531499960401484, 'imag': 0.0}], [{'real': 0.035314999451048754, 'imag': 0.0}], [{'real': 0.03531499929808264, 'imag': 0.0}], [{'real': 0.03531499914511654, 'imag': 0.0}], [{'real': 0.035314998992150404, 'imag': 0.0}], [{'real': 0.03531499883918434, 'imag': 0.0}], [{'real': 0.03531499868621815, 'imag': 0.0}], [{'real': 0.03531499853325214, 'imag': 0.0}], [{'real': 0.03531499838028591, 'imag': 0.0}], [{'real': 0.03531499822731986, 'imag': 0.0}], [{'real': 0.035314998074353655, 'imag': 0.0}], [{'real': 0.03531499792138754, 'imag': 0.0}], [{'real': 0.03531499776842146, 'imag': 0.0}], [{'real': 0.035314997615455326, 'imag': 0.0}]]]], 'reference': 'mcp10'}",
+      "details": {},
+      "timestamp": "2026-09-22T05:54:13.158592+00:00"
+    },
+    "C16": {
+      "case_id": "C16",
+      "name": "Packaging & Dependencies Lock",
+      "status": "PASS",
+      "evidence_level": "static",
+      "error": null,
+      "details": {
+        "pyproject": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/pyproject.toml",
+        "pyproject_sha256": "f790aad3d19091be562bad1f02c7ef1d4291fa83426251ae311b944cbde2524d",
+        "dependency_lock_files": {
+          "constraints-macos-arm64-py313.txt": "5aec7b9076fc04a512473ab67b9a8241c31f3462542802184a96fc6ce1d0163e",
+          "requirements-windows-cp312.txt": "30b1fc65aace6117aaf0548183913664fcefd3baad20b10fd9e6fd8e29150ed2",
+          "pip-freeze-fresh.txt": "6d51641b39744925e726243e3fef3c0d48d9ae003d34c675bd8105c288436832"
+        },
+        "lock_binds_delivered_tree": {
+          "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/SOURCE_TREE_IDENTITY.json",
+          "commit": "65d1c51c3d1221ad7649d2b9d2253dd0d83250db",
+          "tree": "a00fdf8d1c546fbc8bb4be253876ed73025b8831",
+          "tracked_files": 5959,
+          "source_blob_map_sha256": "bca5245750e5cf16590363040700ad2887c2c66a9a9847413f52e7e824c3754c",
+          "head_matches": true,
+          "tree_matches": true,
+          "lock_installs_delivered_tree": true,
+          "matches_the_ledger_manifest": true
+        },
+        "wheel_file": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T055332Z/wheel_dist/comsol_mcp-0.1.9-py3-none-any.whl",
+        "wheel_sha256": "b4decbc9bccd7a95ef07e01495d38d38eab648990ce6e553084bcd43e7478066",
+        "wheel_resource_manifest_source": "read out of the built wheel with zipfile",
+        "wheel_resources": {
+          "comsol_mcp/data/g2/02_ACTION_CATALOG.json": {
+            "entry": "comsol_mcp/data/g2/02_ACTION_CATALOG.json",
+            "size": 531638,
+            "sha256": "63e00e31cd6ecce3fb651c5c2428445d9c28eb771ac709252996c73cd6ca2c18"
+          },
+          "comsol_mcp/data/g2/common.schema.json": {
+            "entry": "comsol_mcp/data/g2/common.schema.json",
+            "size": 7757,
+            "sha256": "1beb031c1da5fedcdbfbb43750aa4e4d0e8b7c07ce4513a832ff3fe535dd7afa"
+          },
+          "comsol_mcp/worker_java/PersistentComsolWorker.java": {
+            "entry": "comsol_mcp/worker_java/PersistentComsolWorker.java",
+            "size": 68100,
+            "sha256": "ab428fd95de0a97cb05b22990f38ce813d7acf47db61e9a935a9b6ffc352d7a2"
+          }
+        },
+        "action_catalog_entries": 7,
+        "schema_top_level_keys": [
+          "$defs",
+          "$id",
+          "$schema"
+        ]
+      },
+      "timestamp": "2026-09-22T05:54:13.203441+00:00"
+    },
+    "C17": {
+      "case_id": "C17",
+      "name": "Teardown & Verification Ledger Finalization",
+      "status": "PASS",
+      "evidence_level": "protocol",
+      "error": null,
+      "details": {
+        "isolated_server_pid": 88124,
+        "isolated_server_alive_after_teardown": false,
+        "isolated_server_stopped": true,
+        "lock_files_remaining": [
+          {
+            "name": "endpoint-9b2891a2c263276710e506939b95409216a067cc041927281275d69d24dc6da2.lock",
+            "size": 0,
+            "sha256": null,
+            "held": false
+          }
+        ],
+        "locks_held": 0,
+        "lock_probe": "fcntl.lockf(LOCK_EX|LOCK_NB) per endpoint lock file",
+        "teardown_errors": [],
+        "status_tag": "G3_3_ACCEPTANCE_FAILED",
+        "status_tag_derived_from": "every case recorded in this run",
+        "cases_recorded_before_teardown": 18,
+        "failed_cases": [
+          "C05",
+          "C08",
+          "C09",
+          "C14",
+          "C15"
+        ],
+        "engine_reported_comsol_version": null,
+        "stop_boundary": "W17 (not entering W18)"
+      },
+      "timestamp": "2026-09-22T05:54:14.335107+00:00"
+    }
+  }
+}

@@ -1,0 +1,125 @@
+{
+  "run_id": "c13_shape_bridge_20260922T034659Z",
+  "created_at_utc": "2026-09-22T03:47:45.119543+00:00",
+  "scope": "software/control validation; no COMSOL Server, Worker connection, model, or solve started",
+  "fresh_interpreter": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/bin/python",
+  "commands": [
+    {
+      "name": "py_compile",
+      "command": [
+        "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/bin/python",
+        "-m",
+        "py_compile",
+        "comsol_mcp/_result_budget.py",
+        "comsol_mcp/_domain_outcome.py",
+        "tests/test_result_budget.py",
+        "tests/test_coordinates_shape_bridge.py"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "pytest_targeted",
+      "command": [
+        "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_result_budget.py",
+        "tests/test_coordinates_shape_bridge.py",
+        "tests/test_g3_domain_outcome.py"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "pytest_known_allowlist_regression",
+      "command": [
+        "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_java_worker.py",
+        "-k",
+        "every_engine_method_is_allowlisted"
+      ],
+      "exit_code": 5
+    },
+    {
+      "name": "javac_worker",
+      "command": [
+        "python3",
+        "/private/tmp/compile_c13_worker.py"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "documentation_probes": [
+    {
+      "name": "doc_numerical_feature",
+      "command": [
+        "python3",
+        "/Users/everwalker/Documents/KnowledgeBases/COMSOL-6.4-KB/kb.py",
+        "read",
+        "7657",
+        "--chunk",
+        "22986"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "doc_interp",
+      "command": [
+        "python3",
+        "/Users/everwalker/Documents/KnowledgeBases/COMSOL-6.4-KB/kb.py",
+        "read",
+        "4485",
+        "--chunk",
+        "17293"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "doc_eval",
+      "command": [
+        "python3",
+        "/Users/everwalker/Documents/KnowledgeBases/COMSOL-6.4-KB/kb.py",
+        "read",
+        "4452",
+        "--chunk",
+        "17232"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "doc_mesh",
+      "command": [
+        "python3",
+        "/Users/everwalker/Documents/KnowledgeBases/COMSOL-6.4-KB/kb.py",
+        "read",
+        "4332",
+        "--chunk",
+        "17080"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "claims": {
+    "budget_and_shape_control_tests": "PASS",
+    "worker_java_compile": "PASS",
+    "existing_allowlist_regression": "FAIL_OUT_OF_SCOPE",
+    "raw_shape_contract": "CONTROL_UNIT",
+    "numeric_payload_budget_scope": "numeric_payload_only",
+    "engine_internal_cache_peak": "UNMEASURED",
+    "client_transport_array_peak": "NOT_MEASURED_IN_THIS_RUN"
+  },
+  "known_failure": {
+    "test": "tests/test_java_worker.py::TestWorkerAllowlist::test_every_dispatched_engine_method_is_allowlisted",
+    "observed_error": "setColumnHeaders is dispatched by current _g3_results.py but absent from Java METHODS allowlist",
+    "owner": "out_of_scope_current_numeric/results work; this run did not modify _g3_results.py"
+  },
+  "compile_warnings": "javac exited 0 with two existing missing-path warnings from the COMSOL manifest and two existing lint warnings; see javac_worker.stdout",
+  "limitations": [
+    "Native shape alias only proves bridge-side shape validation and transport suppression; it does not measure COMSOL internal cache memory.",
+    "No live model proves that one shape witness remains valid for every outer/inner solution; core integration must query native shape per outer and reject mismatches.",
+    "The budget bytes limit is float64 numeric payload only, not JSON/wire/Python nested-list/process peak."
+  ]
+}

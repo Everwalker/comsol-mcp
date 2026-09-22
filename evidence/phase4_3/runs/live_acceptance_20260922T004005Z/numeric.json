@@ -1,0 +1,89 @@
+{
+  "C04": {
+    "name": "Constant Field Statistics",
+    "status": "FAIL",
+    "evidence_level": "numerical",
+    "numeric": {}
+  },
+  "C05": {
+    "name": "Multi-dimensional Support",
+    "status": "FAIL",
+    "evidence_level": "numerical",
+    "numeric": {}
+  },
+  "C06": {
+    "name": "Non-Uniform Field",
+    "status": "FAIL",
+    "evidence_level": "numerical",
+    "numeric": {}
+  },
+  "C07": {
+    "name": "Axisymmetric Cylinder",
+    "status": "FAIL",
+    "evidence_level": "numerical",
+    "numeric": {}
+  },
+  "C08": {
+    "name": "Solution Axis Slicing",
+    "status": "FAIL",
+    "evidence_level": "numerical",
+    "numeric": {}
+  },
+  "C09": {
+    "name": "Complex Field Transformations",
+    "status": "FAIL",
+    "evidence_level": "numerical",
+    "numeric": {}
+  },
+  "C10": {
+    "name": "Point Coordinates Scaling",
+    "status": "FAIL",
+    "evidence_level": "numerical",
+    "numeric": {}
+  },
+  "C11": {
+    "name": "Dataset Graph & CutPoint2D",
+    "status": "FAIL",
+    "evidence_level": "numerical",
+    "numeric": {}
+  },
+  "C13": {
+    "name": "Chunk Streaming & Bounded Memory",
+    "status": "PASS",
+    "evidence_level": "protocol",
+    "numeric": {
+      "full_sha256": "0c5d68bf207cfa70a2fe56dafdfa04de82c3ab070fff962da024c9b092409d7a",
+      "chunk_reads": 17,
+      "reconstructed_sha256": "0c5d68bf207cfa70a2fe56dafdfa04de82c3ab070fff962da024c9b092409d7a",
+      "refusals": {
+        "path_escape": "ACCESS_VIOLATION",
+        "offset_out_of_range": "INVALID_CHUNK_RANGE",
+        "forged_whole_digest": "ARTIFACT_HASH_MISMATCH",
+        "forged_chunk_digest": "CHUNK_HASH_MISMATCH"
+      },
+      "peak_memory": {
+        "small_bytes": 526876,
+        "big_bytes": 5666876,
+        "small_stream_no_pin_kib": 165.4,
+        "small_stream_pinned_kib": 1591.3,
+        "small_full_read_kib": 519.0,
+        "big_stream_no_pin_kib": 167.1,
+        "big_stream_pinned_kib": 2098.5,
+        "big_full_read_kib": 5538.6,
+        "stream_is_size_independent": true,
+        "pinned_stream_is_size_independent": true,
+        "full_read_tracks_file_size": true,
+        "file_size_ratio": 10.76,
+        "instrument": "tracemalloc peak python allocations (KiB)",
+        "note": "a pinned expected_sha256 costs one bounded 1 MiB-block pass per call; the measured peak is therefore block-bounded, not file-bounded"
+      }
+    }
+  },
+  "C14": {
+    "name": "Probe Separation",
+    "status": "FAIL",
+    "evidence_level": "numerical",
+    "numeric": {}
+  },
+  "tolerance_policy": "Case-level tolerances and their rationale are recorded per comparison in numeric_checks; the reopen checker refuses a receipt expectation that states no tolerance and records the effective absolute window it applied."
+}

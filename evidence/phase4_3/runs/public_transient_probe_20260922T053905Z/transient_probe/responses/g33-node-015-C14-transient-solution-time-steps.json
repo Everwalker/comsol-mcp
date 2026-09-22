@@ -1,0 +1,345 @@
+{
+  "_outer_isError": false,
+  "_structuredContent": {
+    "data": {
+      "axis_metadata_complete": true,
+      "axis_metadata_source": "SolutionInfo.getSolnum(outer, strict) + getPNames/getPvals/getUnits",
+      "binding_complete": true,
+      "binding_source": "dataset property 'solution'/'data' resolved against model.sol().tags(); SolutionInfo.getSolnum(outer, strict)",
+      "dataset": "dset1",
+      "dataset_binding": {
+        "binding_complete": true,
+        "component": "comp1",
+        "dataset": "dset1",
+        "dataset_chain": [
+          "dset1"
+        ],
+        "dataset_edges": [],
+        "dataset_type": "Solution",
+        "error": null,
+        "geometry": "geom1",
+        "properties": {
+          "comp": "comp1",
+          "geom": "geom1",
+          "solution": "sol1"
+        },
+        "provenance": {
+          "dataset_tags": [
+            "dset1",
+            "dset2"
+          ],
+          "mutation_methods_called": [],
+          "read_only": true,
+          "solution_tags": [
+            "sol1"
+          ]
+        },
+        "read_errors": [],
+        "requested_solution": null,
+        "solution": "sol1",
+        "sources": {
+          "component": "dataset.comp -> modelNode.tags()/model.component()",
+          "geometry": "dataset.geom -> component.geom.tags()/getter",
+          "solution": "dataset.solution -> model.sol().tags()"
+        }
+      },
+      "inner_indices": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "level_names": [
+        "t"
+      ],
+      "outer_indices": [
+        1
+      ],
+      "pair_mapping_complete": true,
+      "parameters": {
+        "by_pair": {
+          "1:1": {
+            "names": [],
+            "solnum": 1,
+            "units": [],
+            "values": []
+          },
+          "1:2": {
+            "names": [],
+            "solnum": 2,
+            "units": [],
+            "values": []
+          },
+          "1:3": {
+            "names": [],
+            "solnum": 3,
+            "units": [],
+            "values": []
+          },
+          "1:4": {
+            "names": [],
+            "solnum": 4,
+            "units": [],
+            "values": []
+          },
+          "1:5": {
+            "names": [],
+            "solnum": 5,
+            "units": [],
+            "values": []
+          }
+        }
+      },
+      "parameters_complete": false,
+      "parameters_source": "SolutionInfo.getPNames(int[][])/getPvals(int[][])/getUnits(int[][])",
+      "read_errors": [
+        {
+          "code": "SOLUTION_METADATA_ERROR",
+          "message": "{\"completed_at_ms\": \"1790055566973\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1790055566971\", \"request_id\": \"wrk-28531fed-58a2-4cd4-b988-9c4baea8879d\", \"started_at_ms\": \"1790055566971\", \"status\": \"FAILED\", \"type\": \"call\"}",
+          "method": "getPNames"
+        },
+        {
+          "code": "SOLUTION_METADATA_ERROR",
+          "message": "{\"completed_at_ms\": \"1790055566975\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1790055566974\", \"request_id\": \"wrk-11992197-dde0-4488-a31a-21f6c45f711b\", \"started_at_ms\": \"1790055566974\", \"status\": \"FAILED\", \"type\": \"call\"}",
+          "method": "getPvals"
+        },
+        {
+          "code": "SOLUTION_METADATA_ERROR",
+          "message": "{\"completed_at_ms\": \"1790055566977\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1790055566976\", \"request_id\": \"wrk-4d2aca62-ed9c-4d49-96dd-a5fab234c2d9\", \"started_at_ms\": \"1790055566976\", \"status\": \"FAILED\", \"type\": \"call\"}",
+          "method": "getUnits"
+        }
+      ],
+      "solnum_pairs": [
+        {
+          "inner": 1,
+          "outer": 1,
+          "solnum": 1
+        },
+        {
+          "inner": 2,
+          "outer": 1,
+          "solnum": 2
+        },
+        {
+          "inner": 3,
+          "outer": 1,
+          "solnum": 3
+        },
+        {
+          "inner": 4,
+          "outer": 1,
+          "solnum": 4
+        },
+        {
+          "inner": 5,
+          "outer": 1,
+          "solnum": 5
+        }
+      ],
+      "solution": "sol1",
+      "solution_count": 5,
+      "study": "std1",
+      "time_axis_source": "stored output times from SolverSequence.getPVals()",
+      "time_values": [
+        0.0,
+        0.5,
+        1.0,
+        1.5,
+        2.0
+      ]
+    },
+    "error": null,
+    "execution": {
+      "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+      "dirty": false,
+      "idempotency_key": "g33-node-015-C14-transient-solution-time-steps",
+      "job_id": "a5da67d1-8ebe-4e28-972b-ff06fb083be4",
+      "model_ownership": "mcp_owned",
+      "model_ref": {
+        "generation": 1,
+        "model_tag": "mcp1",
+        "schema_version": 1,
+        "server_instance_id": "c7b7af3d978d89922c12c54999a3f270697aaa9207abe1333199a1be56946786",
+        "session_id": "session-94cc3894c03d07c623e95a58"
+      },
+      "operation_id": "e5b47da7-f0de-4b1d-8386-86459555c6db",
+      "request_hash": "8fcd9d41474c02c29267774c2b5eef20cc5bd1091f85e5d69dfa448244520be4",
+      "request_id": "g33-node-C14-transient-solution-time-steps",
+      "revision": 7,
+      "server_ownership": "shared",
+      "session_id": "session-94cc3894c03d07c623e95a58"
+    },
+    "success": true
+  },
+  "data": {
+    "axis_metadata_complete": true,
+    "axis_metadata_source": "SolutionInfo.getSolnum(outer, strict) + getPNames/getPvals/getUnits",
+    "binding_complete": true,
+    "binding_source": "dataset property 'solution'/'data' resolved against model.sol().tags(); SolutionInfo.getSolnum(outer, strict)",
+    "dataset": "dset1",
+    "dataset_binding": {
+      "binding_complete": true,
+      "component": "comp1",
+      "dataset": "dset1",
+      "dataset_chain": [
+        "dset1"
+      ],
+      "dataset_edges": [],
+      "dataset_type": "Solution",
+      "error": null,
+      "geometry": "geom1",
+      "properties": {
+        "comp": "comp1",
+        "geom": "geom1",
+        "solution": "sol1"
+      },
+      "provenance": {
+        "dataset_tags": [
+          "dset1",
+          "dset2"
+        ],
+        "mutation_methods_called": [],
+        "read_only": true,
+        "solution_tags": [
+          "sol1"
+        ]
+      },
+      "read_errors": [],
+      "requested_solution": null,
+      "solution": "sol1",
+      "sources": {
+        "component": "dataset.comp -> modelNode.tags()/model.component()",
+        "geometry": "dataset.geom -> component.geom.tags()/getter",
+        "solution": "dataset.solution -> model.sol().tags()"
+      }
+    },
+    "inner_indices": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "level_names": [
+      "t"
+    ],
+    "outer_indices": [
+      1
+    ],
+    "pair_mapping_complete": true,
+    "parameters": {
+      "by_pair": {
+        "1:1": {
+          "names": [],
+          "solnum": 1,
+          "units": [],
+          "values": []
+        },
+        "1:2": {
+          "names": [],
+          "solnum": 2,
+          "units": [],
+          "values": []
+        },
+        "1:3": {
+          "names": [],
+          "solnum": 3,
+          "units": [],
+          "values": []
+        },
+        "1:4": {
+          "names": [],
+          "solnum": 4,
+          "units": [],
+          "values": []
+        },
+        "1:5": {
+          "names": [],
+          "solnum": 5,
+          "units": [],
+          "values": []
+        }
+      }
+    },
+    "parameters_complete": false,
+    "parameters_source": "SolutionInfo.getPNames(int[][])/getPvals(int[][])/getUnits(int[][])",
+    "read_errors": [
+      {
+        "code": "SOLUTION_METADATA_ERROR",
+        "message": "{\"completed_at_ms\": \"1790055566973\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1790055566971\", \"request_id\": \"wrk-28531fed-58a2-4cd4-b988-9c4baea8879d\", \"started_at_ms\": \"1790055566971\", \"status\": \"FAILED\", \"type\": \"call\"}",
+        "method": "getPNames"
+      },
+      {
+        "code": "SOLUTION_METADATA_ERROR",
+        "message": "{\"completed_at_ms\": \"1790055566975\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1790055566974\", \"request_id\": \"wrk-11992197-dde0-4488-a31a-21f6c45f711b\", \"started_at_ms\": \"1790055566974\", \"status\": \"FAILED\", \"type\": \"call\"}",
+        "method": "getPvals"
+      },
+      {
+        "code": "SOLUTION_METADATA_ERROR",
+        "message": "{\"completed_at_ms\": \"1790055566977\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1790055566976\", \"request_id\": \"wrk-4d2aca62-ed9c-4d49-96dd-a5fab234c2d9\", \"started_at_ms\": \"1790055566976\", \"status\": \"FAILED\", \"type\": \"call\"}",
+        "method": "getUnits"
+      }
+    ],
+    "solnum_pairs": [
+      {
+        "inner": 1,
+        "outer": 1,
+        "solnum": 1
+      },
+      {
+        "inner": 2,
+        "outer": 1,
+        "solnum": 2
+      },
+      {
+        "inner": 3,
+        "outer": 1,
+        "solnum": 3
+      },
+      {
+        "inner": 4,
+        "outer": 1,
+        "solnum": 4
+      },
+      {
+        "inner": 5,
+        "outer": 1,
+        "solnum": 5
+      }
+    ],
+    "solution": "sol1",
+    "solution_count": 5,
+    "study": "std1",
+    "time_axis_source": "stored output times from SolverSequence.getPVals()",
+    "time_values": [
+      0.0,
+      0.5,
+      1.0,
+      1.5,
+      2.0
+    ]
+  },
+  "error": null,
+  "execution": {
+    "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+    "dirty": false,
+    "idempotency_key": "g33-node-015-C14-transient-solution-time-steps",
+    "job_id": "a5da67d1-8ebe-4e28-972b-ff06fb083be4",
+    "model_ownership": "mcp_owned",
+    "model_ref": {
+      "generation": 1,
+      "model_tag": "mcp1",
+      "schema_version": 1,
+      "server_instance_id": "c7b7af3d978d89922c12c54999a3f270697aaa9207abe1333199a1be56946786",
+      "session_id": "session-94cc3894c03d07c623e95a58"
+    },
+    "operation_id": "e5b47da7-f0de-4b1d-8386-86459555c6db",
+    "request_hash": "8fcd9d41474c02c29267774c2b5eef20cc5bd1091f85e5d69dfa448244520be4",
+    "request_id": "g33-node-C14-transient-solution-time-steps",
+    "revision": 7,
+    "server_ownership": "shared",
+    "session_id": "session-94cc3894c03d07c623e95a58"
+  },
+  "success": true
+}

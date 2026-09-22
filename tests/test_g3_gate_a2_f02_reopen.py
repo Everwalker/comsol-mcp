@@ -171,6 +171,13 @@ class FakeReopenModel:
                 return ["comp1"]
         return FakeCompCollection()
 
+    def clear_solution_data(self) -> None:
+        """Model the native clearSolutionData() mutation while retaining dset1."""
+        self.stored_solutions.clear()
+
+
+from comsol_mcp._gate_a_reopen import verify_reopen, ReopenVerificationError
+
 
 # ---------------------------------------------------------------------------
 # Tests: Chain A Reopen Check & Comparisons
@@ -201,19 +208,20 @@ def test_chain_a_reopen_compares_stored_spatial_gradient_and_heat_flux():
     model = FakeReopenModel(sha256=file_sha256, stored_solutions=stored_data)
     assert model.sha256 == file_sha256
 
-    # 3. Read directly from stored solution without re-solving
-    from comsol_mcp._model_ops import _evaluate_expression_safely
-
-    t_x025 = _evaluate_expression_safely(model, "T_x025")
-    t_x050 = _evaluate_expression_safely(model, "T_x050")
-    t_x075 = _evaluate_expression_safely(model, "T_x075")
-    flux = _evaluate_expression_safely(model, "heat_flux")
-
-    # Assert non-boundary values match analytic expectations
-    assert abs(t_x025[0][0] - 308.15) < 1e-3
-    assert abs(t_x050[0][0] - 323.15) < 1e-3
-    assert abs(t_x075[0][0] - 338.15) < 1e-3
-    assert abs(flux[0][0] - 480000.0) < 1e-1
+    receipt = {
+        "model_sha256": file_sha256,
+        "dataset": "dset1",
+        "solution": "sol1",
+        "expectations": {
+            "T_x025": {"expected": 308.15, "tolerance": 1e-3},
+            "T_x050": {"expected": 323.15, "tolerance": 1e-3},
+            "T_x075": {"expected": 338.15, "tolerance": 1e-3},
+            "heat_flux": {"expected": 480000.0, "tolerance": 1e-1},
+        },
+    }
+    report = verify_reopen(model, receipt)
+    assert report["status"] == "PASS"
+    assert len(report["comparisons"]) == 4
 
 
 def test_chain_b_reopen_compares_stored_temporal_and_spatial_series():
@@ -240,12 +248,15 @@ def test_chain_b_reopen_compares_stored_temporal_and_spatial_series():
     model = FakeReopenModel(sha256=file_sha256, stored_solutions=stored_data)
     assert model.sha256 == file_sha256
 
-    from comsol_mcp._model_ops import _evaluate_expression_safely
-
-    # Check that non-initial times and distinct spatial points exist
-    for expr, expected in stored_data.items():
-        val = _evaluate_expression_safely(model, expr)
-        assert abs(val[0][0] - expected[0][0]) < 1e-3
+    receipt = {
+        "model_sha256": file_sha256,
+        "dataset": "dset1",
+        "solution": "sol1",
+        "expectations": {expr: {"expected": val[0][0], "tolerance": 1e-3} for expr, val in stored_data.items()},
+    }
+    report = verify_reopen(model, receipt)
+    assert report["status"] == "PASS"
+    assert len(report["comparisons"]) == 9
 
 
 def test_chain_c_reopen_verifies_modified_continuation_model():
@@ -268,56 +279,149 @@ def test_chain_c_reopen_verifies_modified_continuation_model():
         solver_settings={"maxiter": 50, "rtol": 1e-6, "manual_tuning": True},
     )
 
-    assert model.sha256 == file_sha256
-    assert model.solver_settings["maxiter"] == 50
-    assert model.solver_settings["rtol"] == 1e-6
-    assert "user_derived_probe" in model.derived_values
-
-    from comsol_mcp._model_ops import _evaluate_expression_safely
-    val = _evaluate_expression_safely(model, "T_sample")
-    assert abs(val[0][0] - 315.42) < 1e-3
+    receipt = {
+        "model_sha256": file_sha256,
+        "dataset": "dset1",
+        "solution": "sol1",
+        "solver_settings": {"maxiter": 50, "rtol": 1e-6},
+        "derived_values": ["user_derived_probe"],
+        "expectations": {
+            "T_sample": {"expected": 315.42, "tolerance": 1e-3},
+        },
+    }
+    report = verify_reopen(model, receipt)
+    assert report["status"] == "PASS"
 
 
 # ---------------------------------------------------------------------------
-# Negative Controls: Proving the checker detects defects
+# Negative Controls: Calling the SAME production checker on defects
 # ---------------------------------------------------------------------------
 
 def test_negative_control_cleared_solution_is_detected():
-    """Negative Control 1: Cleared solution in saved model fails check."""
-    model = FakeReopenModel(sha256="fake_sha", stored_solutions={})  # empty solutions
-
-    from comsol_mcp._model_ops import _evaluate_expression_safely
-    with pytest.raises(Exception) as exc_info:
-        _evaluate_expression_safely(model, "T_x025")
-    assert exc_info.value is not None
+    """Native clearSolutionData leaves the Solution dataset but no numeric data."""
+    model = FakeReopenModel(sha256="fake_sha", stored_solutions={"T_x025": [[308.15]]})
+    model.clear_solution_data()
+    receipt = {
+        "model_sha256": "fake_sha",
+        "dataset": "dset1",
+        "expectations": {"T_x025": {"expected": 308.15}},
+    }
+    with pytest.raises(ReopenVerificationError) as exc_info:
+        verify_reopen(model, receipt)
+    assert exc_info.value.code == "SOLUTION_CLEARED_OR_EMPTY"
 
 
 def test_negative_control_corrupted_values_are_detected():
     """Negative Control 2: If field values deviate from pre-save records, check fails."""
     stored_data = {
         "T_x025": [[293.15]],  # WRONG: boundary temp instead of gradient temp (308.15)
-        "T_x050": [[293.15]],  # WRONG
-        "T_x075": [[293.15]],  # WRONG
     }
     model = FakeReopenModel(sha256="corrupted_sha", stored_solutions=stored_data)
-
-    from comsol_mcp._model_ops import _evaluate_expression_safely
-    val = _evaluate_expression_safely(model, "T_x025")
-    expected = 308.15
-    tolerance = 0.1
-    deviation = abs(val[0][0] - expected)
-    # Proves the negative control is detected!
-    assert deviation > tolerance, "Deviation must exceed tolerance for corrupted solution"
+    receipt = {
+        "model_sha256": "corrupted_sha",
+        "dataset": "dset1",
+        "expectations": {"T_x025": {"expected": 308.15, "tolerance": 0.1}},
+    }
+    with pytest.raises(ReopenVerificationError) as exc_info:
+        verify_reopen(model, receipt)
+    assert exc_info.value.code == "STORED_VALUE_MISMATCH"
 
 
 def test_negative_control_wrong_model_sha_mismatch():
     """Negative Control 3: SHA256 mismatch between save receipt and reopened file."""
-    original_sha = "aabbcc112233"
-    reopened_file_sha = "ddeeff445566"
-    assert original_sha != reopened_file_sha, "Different files must fail identity verification"
+    model = FakeReopenModel(sha256="ddeeff445566", stored_solutions={})
+    receipt = {
+        "model_sha256": "aabbcc112233",
+        "expectations": {"T_x025": {"expected": 308.15}},
+    }
+    with pytest.raises(ReopenVerificationError) as exc_info:
+        verify_reopen(model, receipt)
+    assert exc_info.value.code == "ARTIFACT_HASH_MISMATCH"
 
 
 def test_negative_control_missing_derived_values_detected():
     """Negative Control 4: Missing user derived values node is detected."""
-    model = FakeReopenModel(sha256="mod_sha", stored_solutions={}, derived_values=[])
-    assert "user_derived_probe" not in model.derived_values
+    model = FakeReopenModel(sha256="mod_sha", stored_solutions={"T_x025": [[308.15]]}, derived_values=[])
+    receipt = {
+        "model_sha256": "mod_sha",
+        "dataset": "dset1",
+        "derived_values": ["user_derived_probe"],
+        "expectations": {"T_x025": {"expected": 308.15}},
+    }
+    with pytest.raises(ReopenVerificationError) as exc_info:
+        verify_reopen(model, receipt)
+    assert exc_info.value.code == "DERIVED_VALUES_MISSING"
+
+
+def test_negative_control_wrong_dataset_detected():
+    """Negative Control 5: Wrong dataset tag in receipt is detected."""
+    model = FakeReopenModel(sha256="fake_sha", stored_solutions={"T_x025": [[308.15]]})
+    receipt = {
+        "model_sha256": "fake_sha",
+        "dataset": "nonexistent_dset",
+        "expectations": {"T_x025": {"expected": 308.15}},
+    }
+    with pytest.raises(ReopenVerificationError) as exc_info:
+        verify_reopen(model, receipt)
+    assert exc_info.value.code == "DATASET_NOT_FOUND"
+
+
+
+def test_cleared_solution_empty_at_any_depth_is_the_contract_error():
+    """A cleared artifact is empty at whatever depth the engine nests its answer.
+
+    Reopening a copy whose stored solution was cleared made COMSOL 6.4 build 293 answer
+    [[[]]] (expression -> point -> no sub-values).  The verifier must classify that as
+    SOLUTION_CLEARED_OR_EMPTY; it used to reach float([]) and die with a TypeError, which
+    reports a crash instead of the contract's error code.
+    """
+    model = FakeReopenModel(sha256="fake_sha", stored_solutions={"T_x025": [[308.15]]})
+    receipt = {
+        "model_sha256": "fake_sha",
+        "dataset": "dset1",
+        "expectations": {"T_x025": {"expected": 308.15}},
+    }
+    for empty in ([], [[]], [[[]]], ()):
+        with pytest.raises(ReopenVerificationError) as exc_info:
+            verify_reopen(model, receipt, evaluator=lambda _m, _e, value=empty: value)
+        assert exc_info.value.code == "SOLUTION_CLEARED_OR_EMPTY", empty
+
+
+def test_nested_numeric_result_still_uses_the_first_number():
+    """A deeply nested but populated answer keeps its meaning (first number wins)."""
+    model = FakeReopenModel(sha256="fake_sha", stored_solutions={"T_x025": [[308.15]]})
+    receipt = {
+        "model_sha256": "fake_sha",
+        "dataset": "dset1",
+        "expectations": {"T_x025": {"expected": 308.15, "tolerance": 1e-3}},
+    }
+    verify_reopen(model, receipt, evaluator=lambda _m, _e: [[[308.15]]])
+
+    with pytest.raises(ReopenVerificationError) as exc_info:
+        verify_reopen(model, receipt, evaluator=lambda _m, _e: [[[309.15]]])
+    assert exc_info.value.code == "STORED_VALUE_MISMATCH"
+
+
+def test_empty_model_with_no_datasets_is_not_found_not_cleared():
+    """An empty Results tree cannot prove that a stored solution was cleared."""
+    cleared = FakeReopenModel(sha256="fake_sha", stored_solutions={})
+    # Empty the dataset collection in place: the fake list holds the same mapping.
+    cleared.dataset_dict.clear()
+    receipt = {
+        "model_sha256": "fake_sha",
+        "dataset": "dset1",
+        "expectations": {"T_x025": {"expected": 308.15}},
+    }
+    with pytest.raises(ReopenVerificationError) as exc_info:
+        verify_reopen(cleared, receipt)
+    assert exc_info.value.code == "DATASET_NOT_FOUND"
+    assert exc_info.value.details["available_datasets"] == []
+
+    mismatched = FakeReopenModel(
+        sha256="fake_sha",
+        stored_solutions={},
+        datasets={"dset2": FakeDatasetFeature("dset2", "Solution", "sol1")},
+    )
+    with pytest.raises(ReopenVerificationError) as exc_info:
+        verify_reopen(mismatched, receipt)
+    assert exc_info.value.code == "DATASET_NOT_FOUND"

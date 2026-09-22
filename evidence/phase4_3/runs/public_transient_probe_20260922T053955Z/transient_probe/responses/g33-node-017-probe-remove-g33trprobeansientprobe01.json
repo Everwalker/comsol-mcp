@@ -1,0 +1,545 @@
+{
+  "_outer_isError": false,
+  "_structuredContent": {
+    "data": {
+      "applied": [
+        {
+          "step": "remove",
+          "tag": "g33trprobeansientprobe01"
+        }
+      ],
+      "applied_count": 1,
+      "cleanup_failed": false,
+      "dispatch_stage": "post_dispatch",
+      "domain_outcome": {
+        "applied_count": 1,
+        "cleanup_failed": false,
+        "details": {
+          "status_token": "APPLIED"
+        },
+        "dispatch_stage": "post_dispatch",
+        "execution_state_unknown": false,
+        "failed_count": 0,
+        "not_executed_count": 0,
+        "operation": "probe.remove",
+        "state": "succeeded",
+        "status_token": "APPLIED",
+        "verification_status": "NOT_APPLICABLE",
+        "witness": {
+          "dispatches": [
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "component",
+              "receiver": "h-4a085cad-3179-4f01-82a3-3f58d7a6f9b0"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "probe",
+              "receiver": "h-fe305edd-c43a-42c9-899e-988da6660890"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "probe",
+              "receiver": "h-691c6200-6ec4-4c46-8d73-3eabedb57fd9"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "modelNode",
+              "receiver": "h-691c6200-6ec4-4c46-8d73-3eabedb57fd9"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "tags",
+              "receiver": "h-9adcd6b5-8f37-477c-b7d4-cdc991b19055"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "component",
+              "receiver": "h-691c6200-6ec4-4c46-8d73-3eabedb57fd9"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "probe",
+              "receiver": "h-71c8acc1-1088-4e82-881e-021b5f82278f"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "tags",
+              "receiver": "h-584e3a7c-ed4c-431f-a114-a1a53dcf3b20"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "get",
+              "receiver": "h-584e3a7c-ed4c-431f-a114-a1a53dcf3b20"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "model",
+              "receiver": "h-3b07178e-35d1-4d96-be29-d8574392923c"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "tags",
+              "receiver": "h-d6039a05-e99e-46f1-9dee-23001f2bdb6d"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "get",
+              "receiver": "h-d6039a05-e99e-46f1-9dee-23001f2bdb6d"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": true,
+              "method": "remove",
+              "receiver": "h-584e3a7c-ed4c-431f-a114-a1a53dcf3b20"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "tags",
+              "receiver": "h-584e3a7c-ed4c-431f-a114-a1a53dcf3b20"
+            }
+          ],
+          "engine_calls": 14,
+          "methods": [
+            "component",
+            "get",
+            "model",
+            "modelNode",
+            "probe",
+            "remove",
+            "tags"
+          ],
+          "mutation_issued": true,
+          "mutation_method": "remove"
+        }
+      },
+      "domain_state": "succeeded",
+      "effect": "project_write",
+      "execution_state_unknown": false,
+      "failed": [],
+      "failed_count": 0,
+      "isolation_proof": {
+        "api_probe": {
+          "authenticated_api_success": true,
+          "denial_evidence_source": "server_access_log",
+          "loopback_address": "127.0.0.1",
+          "loopback_port": 60775,
+          "nonloopback_address": "192.168.100.152",
+          "nonloopback_api_exception_http_status": null,
+          "nonloopback_port": 60775,
+          "observed_at": "2026-09-22T05:40:09Z",
+          "probe_kind": "comsol_java_api",
+          "server_access_log": {
+            "entries": [
+              {
+                "http_status": 101,
+                "method": "GET",
+                "peer": "127.0.0.1",
+                "route": "/webbridge/websocket"
+              },
+              {
+                "http_status": 101,
+                "method": "GET",
+                "peer": "127.0.0.1",
+                "route": "/webbridge/websocket"
+              },
+              {
+                "http_status": 403,
+                "method": "GET",
+                "peer": "192.168.100.152",
+                "route": "/webbridge/websocket"
+              }
+            ],
+            "finished_at": "2026-09-22T05:40:09Z",
+            "inode": 29985320,
+            "java_request_id": "g2-valve-nonloopback-connect",
+            "offset_after": 261,
+            "offset_before": 0,
+            "parsed_nonloopback_entry": {
+              "http_status": 403,
+              "method": "GET",
+              "peer": "192.168.100.152",
+              "route": "/webbridge/websocket"
+            },
+            "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_transient_probe_20260922T053955Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+            "phase": "java_connect_only",
+            "raw_probe_started_after_capture": true,
+            "segment_sha256": "a40314811468495c33d53081bf85e304d727444f072d3f688a1738056dec772f",
+            "started_at": "2026-09-22T05:40:00Z",
+            "status": "PASS"
+          }
+        },
+        "birth": "Tue Sep 22 13:39:56 2026",
+        "config_inode": 14720294,
+        "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+        "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+        "endpoint": "127.0.0.1:60775",
+        "established_client_pids": [
+          83667,
+          83768
+        ],
+        "listener": {
+          "endpoint": "*:60775",
+          "local_endpoint": "*:60775",
+          "pid": 83667,
+          "raw": "java    83667 everwalker   59u  IPv6 0x637a181757690705      0t0  TCP *:60775 (LISTEN)",
+          "remote_endpoint": null,
+          "state": "LISTEN"
+        },
+        "listener_binding": "wildcard",
+        "loopback_listener": false,
+        "pid": 83667,
+        "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+        "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_transient_probe_20260922T053955Z/isolation_receipt.json",
+        "verified": true,
+        "worker_pid": 83768
+      },
+      "not_executed": [],
+      "not_executed_count": 0,
+      "ok": true,
+      "partial_change": true,
+      "path": {
+        "segments": [
+          {
+            "collection": "component",
+            "tag": "comp1"
+          },
+          {
+            "collection": "probe",
+            "tag": "g33trprobeansientprobe01"
+          }
+        ]
+      },
+      "readback": {
+        "match": true,
+        "readable": true,
+        "tags": []
+      },
+      "readback_match": true,
+      "removed": true,
+      "status": "APPLIED",
+      "tag": "g33trprobeansientprobe01",
+      "verification_status": "NOT_APPLICABLE",
+      "verified_removed": true
+    },
+    "error": null,
+    "execution": {
+      "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+      "dirty": false,
+      "idempotency_key": "g33-node-017-probe-remove-g33trprobeansientprobe01",
+      "job_id": "c4ee2d16-1b5c-432e-8c46-29661e908337",
+      "model_ownership": "mcp_owned",
+      "model_ref": {
+        "generation": 1,
+        "model_tag": "mcp1",
+        "schema_version": 1,
+        "server_instance_id": "60936c2a9590639999e700ce05aa60383541ae64d65a4b45638b087717394bbd",
+        "session_id": "session-c19aea31e440ede7ac9e01f3"
+      },
+      "operation_id": "73ff7497-0391-4341-a280-a90af6b47ebe",
+      "request_hash": "c9563d34c27be7a0fc520be37e1cf079f1956e7b0ddc8463635617f3aded1dee",
+      "request_id": "g33-node-probe-remove-g33trprobeansientprobe01",
+      "revision": 8,
+      "server_ownership": "shared",
+      "session_id": "session-c19aea31e440ede7ac9e01f3"
+    },
+    "success": true
+  },
+  "data": {
+    "applied": [
+      {
+        "step": "remove",
+        "tag": "g33trprobeansientprobe01"
+      }
+    ],
+    "applied_count": 1,
+    "cleanup_failed": false,
+    "dispatch_stage": "post_dispatch",
+    "domain_outcome": {
+      "applied_count": 1,
+      "cleanup_failed": false,
+      "details": {
+        "status_token": "APPLIED"
+      },
+      "dispatch_stage": "post_dispatch",
+      "execution_state_unknown": false,
+      "failed_count": 0,
+      "not_executed_count": 0,
+      "operation": "probe.remove",
+      "state": "succeeded",
+      "status_token": "APPLIED",
+      "verification_status": "NOT_APPLICABLE",
+      "witness": {
+        "dispatches": [
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "component",
+            "receiver": "h-4a085cad-3179-4f01-82a3-3f58d7a6f9b0"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "probe",
+            "receiver": "h-fe305edd-c43a-42c9-899e-988da6660890"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "probe",
+            "receiver": "h-691c6200-6ec4-4c46-8d73-3eabedb57fd9"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "modelNode",
+            "receiver": "h-691c6200-6ec4-4c46-8d73-3eabedb57fd9"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "tags",
+            "receiver": "h-9adcd6b5-8f37-477c-b7d4-cdc991b19055"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "component",
+            "receiver": "h-691c6200-6ec4-4c46-8d73-3eabedb57fd9"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "probe",
+            "receiver": "h-71c8acc1-1088-4e82-881e-021b5f82278f"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "tags",
+            "receiver": "h-584e3a7c-ed4c-431f-a114-a1a53dcf3b20"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "get",
+            "receiver": "h-584e3a7c-ed4c-431f-a114-a1a53dcf3b20"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "model",
+            "receiver": "h-3b07178e-35d1-4d96-be29-d8574392923c"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "tags",
+            "receiver": "h-d6039a05-e99e-46f1-9dee-23001f2bdb6d"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "get",
+            "receiver": "h-d6039a05-e99e-46f1-9dee-23001f2bdb6d"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": true,
+            "method": "remove",
+            "receiver": "h-584e3a7c-ed4c-431f-a114-a1a53dcf3b20"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "tags",
+            "receiver": "h-584e3a7c-ed4c-431f-a114-a1a53dcf3b20"
+          }
+        ],
+        "engine_calls": 14,
+        "methods": [
+          "component",
+          "get",
+          "model",
+          "modelNode",
+          "probe",
+          "remove",
+          "tags"
+        ],
+        "mutation_issued": true,
+        "mutation_method": "remove"
+      }
+    },
+    "domain_state": "succeeded",
+    "effect": "project_write",
+    "execution_state_unknown": false,
+    "failed": [],
+    "failed_count": 0,
+    "isolation_proof": {
+      "api_probe": {
+        "authenticated_api_success": true,
+        "denial_evidence_source": "server_access_log",
+        "loopback_address": "127.0.0.1",
+        "loopback_port": 60775,
+        "nonloopback_address": "192.168.100.152",
+        "nonloopback_api_exception_http_status": null,
+        "nonloopback_port": 60775,
+        "observed_at": "2026-09-22T05:40:09Z",
+        "probe_kind": "comsol_java_api",
+        "server_access_log": {
+          "entries": [
+            {
+              "http_status": 101,
+              "method": "GET",
+              "peer": "127.0.0.1",
+              "route": "/webbridge/websocket"
+            },
+            {
+              "http_status": 101,
+              "method": "GET",
+              "peer": "127.0.0.1",
+              "route": "/webbridge/websocket"
+            },
+            {
+              "http_status": 403,
+              "method": "GET",
+              "peer": "192.168.100.152",
+              "route": "/webbridge/websocket"
+            }
+          ],
+          "finished_at": "2026-09-22T05:40:09Z",
+          "inode": 29985320,
+          "java_request_id": "g2-valve-nonloopback-connect",
+          "offset_after": 261,
+          "offset_before": 0,
+          "parsed_nonloopback_entry": {
+            "http_status": 403,
+            "method": "GET",
+            "peer": "192.168.100.152",
+            "route": "/webbridge/websocket"
+          },
+          "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_transient_probe_20260922T053955Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+          "phase": "java_connect_only",
+          "raw_probe_started_after_capture": true,
+          "segment_sha256": "a40314811468495c33d53081bf85e304d727444f072d3f688a1738056dec772f",
+          "started_at": "2026-09-22T05:40:00Z",
+          "status": "PASS"
+        }
+      },
+      "birth": "Tue Sep 22 13:39:56 2026",
+      "config_inode": 14720294,
+      "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+      "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+      "endpoint": "127.0.0.1:60775",
+      "established_client_pids": [
+        83667,
+        83768
+      ],
+      "listener": {
+        "endpoint": "*:60775",
+        "local_endpoint": "*:60775",
+        "pid": 83667,
+        "raw": "java    83667 everwalker   59u  IPv6 0x637a181757690705      0t0  TCP *:60775 (LISTEN)",
+        "remote_endpoint": null,
+        "state": "LISTEN"
+      },
+      "listener_binding": "wildcard",
+      "loopback_listener": false,
+      "pid": 83667,
+      "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+      "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_transient_probe_20260922T053955Z/isolation_receipt.json",
+      "verified": true,
+      "worker_pid": 83768
+    },
+    "not_executed": [],
+    "not_executed_count": 0,
+    "ok": true,
+    "partial_change": true,
+    "path": {
+      "segments": [
+        {
+          "collection": "component",
+          "tag": "comp1"
+        },
+        {
+          "collection": "probe",
+          "tag": "g33trprobeansientprobe01"
+        }
+      ]
+    },
+    "readback": {
+      "match": true,
+      "readable": true,
+      "tags": []
+    },
+    "readback_match": true,
+    "removed": true,
+    "status": "APPLIED",
+    "tag": "g33trprobeansientprobe01",
+    "verification_status": "NOT_APPLICABLE",
+    "verified_removed": true
+  },
+  "error": null,
+  "execution": {
+    "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+    "dirty": false,
+    "idempotency_key": "g33-node-017-probe-remove-g33trprobeansientprobe01",
+    "job_id": "c4ee2d16-1b5c-432e-8c46-29661e908337",
+    "model_ownership": "mcp_owned",
+    "model_ref": {
+      "generation": 1,
+      "model_tag": "mcp1",
+      "schema_version": 1,
+      "server_instance_id": "60936c2a9590639999e700ce05aa60383541ae64d65a4b45638b087717394bbd",
+      "session_id": "session-c19aea31e440ede7ac9e01f3"
+    },
+    "operation_id": "73ff7497-0391-4341-a280-a90af6b47ebe",
+    "request_hash": "c9563d34c27be7a0fc520be37e1cf079f1956e7b0ddc8463635617f3aded1dee",
+    "request_id": "g33-node-probe-remove-g33trprobeansientprobe01",
+    "revision": 8,
+    "server_ownership": "shared",
+    "session_id": "session-c19aea31e440ede7ac9e01f3"
+  },
+  "success": true
+}

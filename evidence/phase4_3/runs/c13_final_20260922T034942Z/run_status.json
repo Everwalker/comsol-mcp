@@ -1,0 +1,126 @@
+{
+  "run_id": "c13_final_20260922T034942Z",
+  "created_at_utc": "2026-09-22T03:50:21.001666+00:00",
+  "scope": "software/control validation; no COMSOL Server connection, model, or solve started by this run",
+  "fresh_interpreter": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/bin/python",
+  "commands": [
+    {
+      "name": "py_compile",
+      "command": [
+        "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/bin/python",
+        "-m",
+        "py_compile",
+        "comsol_mcp/_result_budget.py",
+        "comsol_mcp/_domain_outcome.py",
+        "tests/test_result_budget.py",
+        "tests/test_coordinates_shape_bridge.py"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "pytest_targeted",
+      "command": [
+        "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_result_budget.py",
+        "tests/test_coordinates_shape_bridge.py",
+        "tests/test_g3_domain_outcome.py"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "javac_worker",
+      "command": [
+        "python3",
+        "/private/tmp/compile_c13_worker.py"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "pytest_known_allowlist_regression",
+      "command": [
+        "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_java_worker.py",
+        "-k",
+        "every_dispatched_engine_method_is_allowlisted"
+      ],
+      "exit_code": 1
+    }
+  ],
+  "documentation_probes": [
+    {
+      "name": "doc_numerical_feature",
+      "command": [
+        "python3",
+        "/Users/everwalker/Documents/KnowledgeBases/COMSOL-6.4-KB/kb.py",
+        "read",
+        "7657",
+        "--chunk",
+        "22986"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "doc_interp",
+      "command": [
+        "python3",
+        "/Users/everwalker/Documents/KnowledgeBases/COMSOL-6.4-KB/kb.py",
+        "read",
+        "4485",
+        "--chunk",
+        "17293"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "doc_eval",
+      "command": [
+        "python3",
+        "/Users/everwalker/Documents/KnowledgeBases/COMSOL-6.4-KB/kb.py",
+        "read",
+        "4452",
+        "--chunk",
+        "17232"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "doc_mesh",
+      "command": [
+        "python3",
+        "/Users/everwalker/Documents/KnowledgeBases/COMSOL-6.4-KB/kb.py",
+        "read",
+        "4332",
+        "--chunk",
+        "17080"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "claims": {
+    "budget_shape_domain_tests": "PASS",
+    "worker_java_compile": "PASS",
+    "full_current_allowlist_regression": "FAIL_OUT_OF_SCOPE",
+    "numeric_payload_budget": "CONTROL_UNIT",
+    "raw_shape_transport_suppression": "CONTROL_UNIT",
+    "engine_internal_cache_peak": "UNMEASURED",
+    "client_transport_and_python_array_peak": "NOT_MEASURED_IN_THIS_RUN"
+  },
+  "known_failure": {
+    "test": "tests/test_java_worker.py::TestWorkerAllowlist::test_every_dispatched_engine_method_is_allowlisted",
+    "exit_code": 1,
+    "observed": "setColumnHeaders is dispatched by current _g3_results.py but absent from PersistentComsolWorker.METHODS",
+    "scope": "other numeric/results owner; C13 did not modify _g3_results.py or add this unrelated allowlist entry"
+  },
+  "javac_warnings": "exit 0 with 4 warnings: 2 manifest missing-path warnings and 2 existing lint warnings; see javac_worker.stdout",
+  "limitations": [
+    "getCoordinatesShape validates native matrix shape and returns only shape metadata; it does not measure COMSOL internal cache or solver-side allocation.",
+    "Core must query native shape per outer solution and reject mismatches before getData; this run does not wire _g3_results.py.",
+    "numeric_payload_bytes/max_numeric_payload_bytes are float64 scalar payload estimates only, excluding JSON/wire/Python/process overhead."
+  ]
+}

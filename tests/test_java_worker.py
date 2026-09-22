@@ -395,14 +395,20 @@ def test_unknown_command_is_rejected_and_parallel_control_queries_remain_respons
     unknown = worker._request({"type": "not_a_worker_command"}, timeout_s=1)
     assert unknown["code"] == "UNKNOWN_COMMAND"
     codec = worker._request({"type": "codec_selftest"}, timeout_s=1)
-    assert codec["result"] == {"kind": "map", "nested": {"value": 7}, "array": ["x", 2]}
+    assert codec["result"]["kind"] == "map"
+    assert codec["result"]["nested"] == {"value": 7}
+    assert codec["result"]["array"] == ["x", 2]
+    assert codec["result"]["nonfinite_rejected"] is True
+    assert codec["result"]["nonfinite_rejected_count"] == 4
+    assert codec["result"]["nonfinite_code"] == "NON_FINITE_JSON_VALUE"
+    assert codec["result"]["finite_passed"] is True
+    assert codec["result"]["structured_failure_verified"] is True
     reflection = worker._request({"type": "reflection_selftest"}, timeout_s=1)
     assert reflection["result"]["duplicate_interface_tag"] == "resolved"
     assert reflection["result"]["numerical_allowed"] is True
     with ThreadPoolExecutor(max_workers=8) as executor:
         replies = list(executor.map(lambda _: worker.health(timeout_s=1), range(16)))
     assert all(reply["status"] == "HEALTHY" for reply in replies)
-
 
 def test_operation_context_publishes_request_linkage_and_redacts_credentials(worker):
     events: list[dict] = []
@@ -495,6 +501,9 @@ def test_two_workers_cannot_own_the_same_global_endpoint_lock(tmp_path):
 # ---------------------------------------------------------------------------
 
 WORKER_SOURCE = Path(java_worker.__file__).resolve().parent / "worker_java" / "PersistentComsolWorker.java"
+TABLE_API_JAVAP = (Path(__file__).resolve().parents[1]
+                   / "evidence" / "phase4_3" / "runs"
+                   / "independent_acceptance_20260922T004753Z" / "api_probe_table.javap.txt")
 
 #: Names that would give a caller a global, cross-model side effect.  They must
 #: never appear in MODEL_UTIL (the ModelUtil surface the worker exposes).
@@ -587,6 +596,15 @@ class TestWorkerAllowlist:
         # dispatch has to be resolved by the allow-list, never by adding it here.
         assert set(KNOWN_NON_API_PROBES) <= set(dispatched)
         assert set(WITHHELD_PENDING_TABLE_REPAIR) <= set(dispatched)
+
+    def test_table_column_header_setter_is_javap_verified_and_allowlisted(self):
+        """The typed table header mutation reaches the reviewed COMSOL API."""
+        methods = _allowlist_block("METHODS")
+        assert "setColumnHeaders" in methods
+        assert TABLE_API_JAVAP.is_file()
+        assert "public abstract void setColumnHeaders(java.lang.String[]);" in TABLE_API_JAVAP.read_text()
+        source = WORKER_SOURCE.read_text()
+        assert "TableBaseFeature.setColumnHeaders(String[])" in source
 
     def test_the_c06_merge_entries_are_present_with_their_api_evidence(self):
         methods = _allowlist_block("METHODS")

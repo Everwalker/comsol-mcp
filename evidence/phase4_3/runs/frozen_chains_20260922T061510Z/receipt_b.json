@@ -1,0 +1,1079 @@
+{
+  "model_sha256": "883a07e690cb6da56ece0fcb2fb0a61acc05baf14a8cf397a316b01499b0ab7b",
+  "byte_size": 1738794,
+  "dataset": "dset1",
+  "solution": "sol1",
+  "initial_state": {
+    "datasets": [
+      "dset1"
+    ],
+    "solutions": [
+      "sol1"
+    ],
+    "derived_values": [],
+    "material_k": [
+      "400[W/(m*K)]"
+    ],
+    "left_T": "293.15[K]",
+    "right_T": "353.15[K]",
+    "solver_features": [
+      "st1",
+      "v1",
+      "t1"
+    ],
+    "solution_parameters": [
+      "t"
+    ],
+    "solution_values": [
+      0.0,
+      0.5,
+      1.0,
+      1.5,
+      2.0
+    ],
+    "study_tlist": "range(0, 0.5, 2.0)",
+    "solver_tlist": "range(0, 0.5, 2.0)",
+    "solver_rtol": "0.01"
+  },
+  "solver_settings": {
+    "datasets": [
+      "dset1"
+    ],
+    "solutions": [
+      "sol1"
+    ],
+    "derived_values": [],
+    "material_k": [
+      "400[W/(m*K)]"
+    ],
+    "left_T": "293.15[K]",
+    "right_T": "353.15[K]",
+    "solver_features": [
+      "st1",
+      "v1",
+      "t1"
+    ],
+    "solution_parameters": [
+      "t"
+    ],
+    "solution_values": [
+      0.0,
+      0.5,
+      1.0,
+      1.5,
+      2.0
+    ],
+    "study_tlist": "range(0, 0.5, 2.0)",
+    "solver_tlist": "range(0, 0.5, 2.0)",
+    "solver_rtol": "0.01"
+  },
+  "derived_values": [],
+  "builder_model_ref": {
+    "schema_version": 1,
+    "session_id": "session-94fac6295af2fc44bb6b26e9",
+    "server_instance_id": "8bd0d215e65e80a08f84d2aeeb02f3209b2d4a25b9fe283dad91075f246226ec",
+    "model_tag": "mcp2",
+    "generation": 1
+  },
+  "point_readback": {
+    "values": [
+      [
+        [
+          [
+            293.1499999999978,
+            293.1500000011541,
+            293.15001296154196
+          ],
+          [
+            293.27411927033944,
+            294.70068776489126,
+            306.9005043736273
+          ],
+          [
+            294.22506680583274,
+            299.1022967213646,
+            316.69880809545685
+          ],
+          [
+            295.858256490612,
+            303.5689550042192,
+            322.46338003179017
+          ],
+          [
+            297.74128924098557,
+            307.4843865655843,
+            326.37255575551274
+          ]
+        ]
+      ]
+    ],
+    "points": [
+      {
+        "x": 0.0125,
+        "y": 0.005
+      },
+      {
+        "x": 0.025,
+        "y": 0.005
+      },
+      {
+        "x": 0.0375,
+        "y": 0.005
+      }
+    ],
+    "point_count": 3,
+    "expressions": [
+      "T"
+    ],
+    "dataset": "dset1",
+    "solution": "sol1",
+    "binding_source": "resolve_dataset_binding(model, dataset_tag)",
+    "dataset_binding": {
+      "dataset": "dset1",
+      "dataset_type": "Solution",
+      "solution": "sol1",
+      "component": "comp1",
+      "geometry": "geom1",
+      "dataset_chain": [
+        "dset1"
+      ],
+      "dataset_edges": [],
+      "binding_complete": true,
+      "sources": {
+        "solution": "dataset.solution -> model.sol().tags()",
+        "component": "dataset.comp -> modelNode.tags()/model.component()",
+        "geometry": "dataset.geom -> component.geom.tags()/getter"
+      },
+      "properties": {
+        "solution": "sol1",
+        "comp": "comp1",
+        "geom": "geom1"
+      },
+      "read_errors": [],
+      "error": null,
+      "requested_solution": null,
+      "provenance": {
+        "dataset_tags": [
+          "dset1"
+        ],
+        "solution_tags": [
+          "sol1"
+        ],
+        "read_only": true,
+        "mutation_methods_called": []
+      }
+    },
+    "feature_readback": {
+      "data": "dset1",
+      "data_status": "VERIFIED",
+      "source": "NumericalFeature.getString('data') after set('data')"
+    },
+    "coordinate_unit": "m",
+    "frame": "spatial",
+    "coordinate_readback": {
+      "status": "VERIFIED",
+      "coordinates": [
+        [
+          0.0125,
+          0.025,
+          0.0375
+        ],
+        [
+          0.005,
+          0.005,
+          0.005
+        ]
+      ],
+      "unit": "m"
+    },
+    "complex_mode": "real",
+    "is_complex": false,
+    "field_array": {
+      "values": [
+        [
+          [
+            [
+              293.1499999999978,
+              293.1500000011541,
+              293.15001296154196
+            ],
+            [
+              293.27411927033944,
+              294.70068776489126,
+              306.9005043736273
+            ],
+            [
+              294.22506680583274,
+              299.1022967213646,
+              316.69880809545685
+            ],
+            [
+              295.858256490612,
+              303.5689550042192,
+              322.46338003179017
+            ],
+            [
+              297.74128924098557,
+              307.4843865655843,
+              326.37255575551274
+            ]
+          ]
+        ]
+      ],
+      "data": [
+        [
+          [
+            [
+              293.1499999999978,
+              293.1500000011541,
+              293.15001296154196
+            ],
+            [
+              293.27411927033944,
+              294.70068776489126,
+              306.9005043736273
+            ],
+            [
+              294.22506680583274,
+              299.1022967213646,
+              316.69880809545685
+            ],
+            [
+              295.858256490612,
+              303.5689550042192,
+              322.46338003179017
+            ],
+            [
+              297.74128924098557,
+              307.4843865655843,
+              326.37255575551274
+            ]
+          ]
+        ]
+      ],
+      "axes": [
+        "expression",
+        "outer",
+        "inner",
+        "point"
+      ],
+      "shape": [
+        1,
+        1,
+        5,
+        3
+      ],
+      "coords": {
+        "expression": [
+          "T"
+        ],
+        "outer": [
+          1
+        ],
+        "inner": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "point": [
+          1,
+          2,
+          3
+        ],
+        "parameters": [
+          {},
+          {},
+          {},
+          {},
+          {}
+        ],
+        "params": [
+          {},
+          {},
+          {},
+          {},
+          {}
+        ],
+        "spatial": [
+          [
+            0.0125,
+            0.005
+          ],
+          [
+            0.025,
+            0.005
+          ],
+          [
+            0.0375,
+            0.005
+          ]
+        ]
+      },
+      "units": {
+        "expression": {
+          "T": "K"
+        },
+        "outer": "index",
+        "inner": "index",
+        "point": "m",
+        "parameters": {}
+      },
+      "metadata": {
+        "binding_source": "SolutionInfo.getSolnum(outer, strict)",
+        "pair_mapping_complete": true,
+        "solution_pairs": [
+          {
+            "outer": 1,
+            "inner": 1,
+            "solnum": 1,
+            "parameters": {},
+            "parameter_units": {}
+          },
+          {
+            "outer": 1,
+            "inner": 2,
+            "solnum": 2,
+            "parameters": {},
+            "parameter_units": {}
+          },
+          {
+            "outer": 1,
+            "inner": 3,
+            "solnum": 3,
+            "parameters": {},
+            "parameter_units": {}
+          },
+          {
+            "outer": 1,
+            "inner": 4,
+            "solnum": 4,
+            "parameters": {},
+            "parameter_units": {}
+          },
+          {
+            "outer": 1,
+            "inner": 5,
+            "solnum": 5,
+            "parameters": {},
+            "parameter_units": {}
+          }
+        ],
+        "parameter_names": [],
+        "expression_units": {
+          "T": "K"
+        },
+        "unit_readback_status": "VERIFIED",
+        "point_coordinate_source": "request"
+      },
+      "is_complex": false
+    },
+    "result_budget": {
+      "status": "PASS",
+      "limits": {
+        "max_elements": 1000000,
+        "max_bytes": 67108864,
+        "scope": "numeric_payload_only",
+        "engine_internal_cache": "UNMEASURED"
+      },
+      "records": [
+        {
+          "status": "PASS",
+          "allowed": true,
+          "verification": "VERIFIED",
+          "reason_code": "BUDGET_WITHIN_LIMIT",
+          "reason": "verified pre-getData result allocation is within both configured limits",
+          "operation": "result.at_points",
+          "feature_kind": "Interp",
+          "raw_getter": "getData",
+          "raw_layout": "expression,solnum,vertex",
+          "pre_getdata": true,
+          "getdata_called": true,
+          "publish_allowed": true,
+          "requested": {
+            "expression_count": 1,
+            "point_count": 3,
+            "outer_count": 1,
+            "inner_count": 5,
+            "inner_counts_by_outer": null,
+            "complex_components": 1,
+            "scalar_bytes": 8,
+            "max_elements": 1000000,
+            "max_bytes": 67108864,
+            "reported_data_vector_count": null,
+            "raw_point_upper_bound": 3,
+            "raw_upper_bound_verified": true,
+            "raw_upper_bound_source": "validated-Interp-request-coordinates;interp-coordinate-columns",
+            "raw_point_upper_bounds_by_outer": [
+              3
+            ]
+          },
+          "computed": {
+            "expression_count": 1,
+            "outer_count": 1,
+            "inner_count_total": 5,
+            "inner_counts_by_outer": null,
+            "requested_point_count": 3,
+            "raw_point_upper_bound": 3,
+            "raw_point_upper_bounds_by_outer": [
+              3
+            ],
+            "complex_components": 1,
+            "scalar_bytes": 8,
+            "numeric_payload_scalar_bytes": 8,
+            "elements": 15,
+            "bytes": 120,
+            "numeric_payload_bytes": 120,
+            "numeric_payload_scope": "float64 scalar payload only; excludes JSON, wire, Python-list, and engine-cache overhead",
+            "raw_upper_bound_source": "validated-Interp-request-coordinates;interp-coordinate-columns"
+          },
+          "limits": {
+            "max_elements": 1000000,
+            "max_bytes": 67108864,
+            "max_numeric_payload_bytes": 67108864
+          },
+          "budget_scope": "numeric_payload_only",
+          "data_vector_count": {
+            "value": null,
+            "used_for_point_bound": false,
+            "interpretation": "observation only; never treated as coordinate count"
+          },
+          "metadata_sources": {
+            "expression": "validated-request-expressions",
+            "point_count": "validated-Interp-request-coordinates",
+            "solution_axes": "validated-SolutionBinding.outer/inner-pairs",
+            "raw_point_upper_bound": "validated-Interp-request-coordinates;interp-coordinate-columns"
+          },
+          "request_progress": {
+            "consumed_numeric_payload_elements": 15,
+            "consumed_numeric_payload_bytes": 120,
+            "max_elements": 1000000,
+            "max_bytes": 67108864
+          }
+        }
+      ],
+      "publish_allowed": true
+    },
+    "cleanup": {
+      "tag": "cmssp1",
+      "type_id": "Interp",
+      "created": true,
+      "removed": true,
+      "cleanup_failed": false,
+      "error": null,
+      "verified_removed": true
+    },
+    "status": {
+      "ok": true,
+      "engine_error": null,
+      "cleanup_failed": false,
+      "verification_status": "PASSED"
+    },
+    "verification_status": "PASSED",
+    "domain_state": "succeeded",
+    "execution_state_unknown": false,
+    "partial_change": false,
+    "cleanup_failed": false,
+    "dispatch_stage": "post_dispatch",
+    "domain_outcome": {
+      "operation": "result.at_points",
+      "state": "succeeded",
+      "verification_status": "PASSED",
+      "cleanup_failed": false,
+      "execution_state_unknown": false,
+      "dispatch_stage": "post_dispatch",
+      "verification": {
+        "declared_by": [
+          "verification_status"
+        ],
+        "raw_status": "PASSED"
+      },
+      "witness": {
+        "engine_calls": 57,
+        "mutation_method": "create",
+        "mutation_issued": true,
+        "methods": [
+          "component",
+          "create",
+          "dataset",
+          "geom",
+          "get",
+          "getCoordinates",
+          "getData",
+          "getLevelNames",
+          "getOuterSolnum",
+          "getPNames",
+          "getPvals",
+          "getSDim",
+          "getSolnum",
+          "getSolnums",
+          "getSolutioninfo",
+          "getString",
+          "getStringArray",
+          "getType",
+          "getUnits",
+          "isAxisymmetric",
+          "isComplex",
+          "lengthUnit",
+          "modelNode",
+          "numerical",
+          "properties",
+          "remove",
+          "result",
+          "run",
+          "set",
+          "setInterpolationCoordinates",
+          "sol",
+          "tags"
+        ],
+        "dispatches": [
+          {
+            "command": "call",
+            "method": "result",
+            "args_count": 0,
+            "receiver": "h-d173d4d9-12f9-46bd-abfc-88cacf39285e",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "numerical",
+            "args_count": 0,
+            "receiver": "h-3a443805-9f79-44c6-946b-2d57263642cc",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "dataset",
+            "args_count": 0,
+            "receiver": "h-3a443805-9f79-44c6-946b-2d57263642cc",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-a0c878bb-b875-48df-a0b5-78d98989cad6",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "get",
+            "args_count": 1,
+            "receiver": "h-a0c878bb-b875-48df-a0b5-78d98989cad6",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "result",
+            "args_count": 0,
+            "receiver": "h-d173d4d9-12f9-46bd-abfc-88cacf39285e",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "dataset",
+            "args_count": 0,
+            "receiver": "h-5a7dbbfe-4046-4ed8-b8b0-3dcb4c8324a5",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-804b2965-55bc-45cf-99f9-44df953771fb",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "sol",
+            "args_count": 0,
+            "receiver": "h-d173d4d9-12f9-46bd-abfc-88cacf39285e",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-52972e16-f7b2-45d0-a6a3-c3b976e8df59",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "get",
+            "args_count": 1,
+            "receiver": "h-804b2965-55bc-45cf-99f9-44df953771fb",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getType",
+            "args_count": 0,
+            "receiver": "h-a1efa56a-d3e0-42fc-8c20-d5fe14997df3",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "properties",
+            "args_count": 0,
+            "receiver": "h-a1efa56a-d3e0-42fc-8c20-d5fe14997df3",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getString",
+            "args_count": 1,
+            "receiver": "h-a1efa56a-d3e0-42fc-8c20-d5fe14997df3",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "properties",
+            "args_count": 0,
+            "receiver": "h-a1efa56a-d3e0-42fc-8c20-d5fe14997df3",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "properties",
+            "args_count": 0,
+            "receiver": "h-a1efa56a-d3e0-42fc-8c20-d5fe14997df3",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "properties",
+            "args_count": 0,
+            "receiver": "h-a1efa56a-d3e0-42fc-8c20-d5fe14997df3",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getString",
+            "args_count": 1,
+            "receiver": "h-a1efa56a-d3e0-42fc-8c20-d5fe14997df3",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "properties",
+            "args_count": 0,
+            "receiver": "h-a1efa56a-d3e0-42fc-8c20-d5fe14997df3",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getString",
+            "args_count": 1,
+            "receiver": "h-a1efa56a-d3e0-42fc-8c20-d5fe14997df3",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "modelNode",
+            "args_count": 0,
+            "receiver": "h-d173d4d9-12f9-46bd-abfc-88cacf39285e",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-be3937bb-1f32-4d6d-90dd-8d6b88df1e7c",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "component",
+            "args_count": 1,
+            "receiver": "h-d173d4d9-12f9-46bd-abfc-88cacf39285e",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "geom",
+            "args_count": 0,
+            "receiver": "h-0a6a45fa-b23c-4ae4-8e6c-634cbe4104e2",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-f5fa3e5b-3ff3-467d-8cf7-1a96baf36cee",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "get",
+            "args_count": 1,
+            "receiver": "h-f5fa3e5b-3ff3-467d-8cf7-1a96baf36cee",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "component",
+            "args_count": 1,
+            "receiver": "h-d173d4d9-12f9-46bd-abfc-88cacf39285e",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "geom",
+            "args_count": 1,
+            "receiver": "h-d995dd1c-ac09-482f-b1cf-e214cfd5e155",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "lengthUnit",
+            "args_count": 0,
+            "receiver": "h-44192f22-8167-44ea-b380-b215e21db6c0",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getSDim",
+            "args_count": 0,
+            "receiver": "h-44192f22-8167-44ea-b380-b215e21db6c0",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "isAxisymmetric",
+            "args_count": 0,
+            "receiver": "h-44192f22-8167-44ea-b380-b215e21db6c0",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "sol",
+            "args_count": 0,
+            "receiver": "h-d173d4d9-12f9-46bd-abfc-88cacf39285e",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-22f6945b-5131-44a4-8373-bb657e33678c",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "get",
+            "args_count": 1,
+            "receiver": "h-22f6945b-5131-44a4-8373-bb657e33678c",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getSolutioninfo",
+            "args_count": 0,
+            "receiver": "h-0a4ce081-c52d-463f-8acf-71c109591fdd",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getOuterSolnum",
+            "args_count": 0,
+            "receiver": "h-a24cb32d-a59c-4bff-b666-7ef441b8a13b",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getSolnums",
+            "args_count": 1,
+            "receiver": "h-a24cb32d-a59c-4bff-b666-7ef441b8a13b",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getSolnum",
+            "args_count": 2,
+            "receiver": "h-a24cb32d-a59c-4bff-b666-7ef441b8a13b",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getSolnum",
+            "args_count": 2,
+            "receiver": "h-a24cb32d-a59c-4bff-b666-7ef441b8a13b",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getPNames",
+            "args_count": 1,
+            "receiver": "h-a24cb32d-a59c-4bff-b666-7ef441b8a13b",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getPvals",
+            "args_count": 1,
+            "receiver": "h-a24cb32d-a59c-4bff-b666-7ef441b8a13b",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getUnits",
+            "args_count": 1,
+            "receiver": "h-a24cb32d-a59c-4bff-b666-7ef441b8a13b",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getLevelNames",
+            "args_count": 0,
+            "receiver": "h-a24cb32d-a59c-4bff-b666-7ef441b8a13b",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-dff2469e-c461-49eb-af42-53ba297ad02c",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "create",
+            "args_count": 2,
+            "receiver": "h-dff2469e-c461-49eb-af42-53ba297ad02c",
+            "is_mutation": true
+          },
+          {
+            "command": "call",
+            "method": "set",
+            "args_count": 2,
+            "receiver": "h-4e450695-4d36-4281-ad93-1ad741dbfe26",
+            "is_mutation": true
+          },
+          {
+            "command": "call",
+            "method": "getString",
+            "args_count": 1,
+            "receiver": "h-4e450695-4d36-4281-ad93-1ad741dbfe26",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "set",
+            "args_count": 2,
+            "receiver": "h-4e450695-4d36-4281-ad93-1ad741dbfe26",
+            "is_mutation": true
+          },
+          {
+            "command": "call",
+            "method": "setInterpolationCoordinates",
+            "args_count": 1,
+            "receiver": "h-4e450695-4d36-4281-ad93-1ad741dbfe26",
+            "is_mutation": true
+          },
+          {
+            "command": "call",
+            "method": "run",
+            "args_count": 0,
+            "receiver": "h-4e450695-4d36-4281-ad93-1ad741dbfe26",
+            "is_mutation": true
+          },
+          {
+            "command": "call",
+            "method": "isComplex",
+            "args_count": 0,
+            "receiver": "h-4e450695-4d36-4281-ad93-1ad741dbfe26",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "isComplex",
+            "args_count": 0,
+            "receiver": "h-4e450695-4d36-4281-ad93-1ad741dbfe26",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getData",
+            "args_count": 0,
+            "receiver": "h-4e450695-4d36-4281-ad93-1ad741dbfe26",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getStringArray",
+            "args_count": 1,
+            "receiver": "h-4e450695-4d36-4281-ad93-1ad741dbfe26",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "getCoordinates",
+            "args_count": 0,
+            "receiver": "h-4e450695-4d36-4281-ad93-1ad741dbfe26",
+            "is_mutation": false
+          },
+          {
+            "command": "call",
+            "method": "remove",
+            "args_count": 1,
+            "receiver": "h-dff2469e-c461-49eb-af42-53ba297ad02c",
+            "is_mutation": true
+          },
+          {
+            "command": "call",
+            "method": "tags",
+            "args_count": 0,
+            "receiver": "h-dff2469e-c461-49eb-af42-53ba297ad02c",
+            "is_mutation": false
+          }
+        ]
+      },
+      "details": {
+        "status_unexpected_keys": [
+          "cleanup_failed",
+          "verification_status"
+        ]
+      }
+    },
+    "effect": "evaluate",
+    "isolation_proof": {
+      "verified": true,
+      "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_chains_20260922T061510Z/isolation_receipt.json",
+      "pid": 95912,
+      "birth": "Tue Sep 22 14:16:05 2026",
+      "endpoint": "127.0.0.1:61964",
+      "listener": {
+        "pid": 95912,
+        "endpoint": "*:61964",
+        "local_endpoint": "*:61964",
+        "remote_endpoint": null,
+        "state": "LISTEN",
+        "raw": "java    95912 everwalker   59u  IPv6 0xfe8f06fae063a85f      0t0  TCP *:61964 (LISTEN)"
+      },
+      "listener_binding": "wildcard",
+      "loopback_listener": false,
+      "worker_pid": 96013,
+      "established_client_pids": [
+        95912,
+        96013
+      ],
+      "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+      "config_inode": 14720294,
+      "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+      "api_probe": {
+        "probe_kind": "comsol_java_api",
+        "observed_at": "2026-09-22T06:16:18Z",
+        "loopback_address": "127.0.0.1",
+        "loopback_port": 61964,
+        "authenticated_api_success": true,
+        "nonloopback_address": "192.168.100.152",
+        "nonloopback_port": 61964,
+        "nonloopback_api_exception_http_status": null,
+        "denial_evidence_source": "server_access_log",
+        "server_access_log": {
+          "status": "PASS",
+          "phase": "java_connect_only",
+          "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_chains_20260922T061510Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+          "inode": 30047448,
+          "offset_before": 0,
+          "offset_after": 261,
+          "segment_sha256": "2c43304e2b3d891a39bb9e3a3e6f8875322c727cfbc0a63cdbef6d9219ceacec",
+          "java_request_id": "g2-valve-nonloopback-connect",
+          "started_at": "2026-09-22T06:16:09Z",
+          "finished_at": "2026-09-22T06:16:18Z",
+          "entries": [
+            {
+              "peer": "127.0.0.1",
+              "method": "GET",
+              "route": "/webbridge/websocket",
+              "http_status": 101
+            },
+            {
+              "peer": "127.0.0.1",
+              "method": "GET",
+              "route": "/webbridge/websocket",
+              "http_status": 101
+            },
+            {
+              "peer": "192.168.100.152",
+              "method": "GET",
+              "route": "/webbridge/websocket",
+              "http_status": 403
+            }
+          ],
+          "parsed_nonloopback_entry": {
+            "peer": "192.168.100.152",
+            "method": "GET",
+            "route": "/webbridge/websocket",
+            "http_status": 403
+          },
+          "raw_probe_started_after_capture": true
+        }
+      },
+      "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer"
+    }
+  },
+  "expectations": {
+    "sample_0": {
+      "expected": 293.1499999999978,
+      "tolerance": 0.001
+    },
+    "sample_1": {
+      "expected": 293.1500000011541,
+      "tolerance": 0.001
+    },
+    "sample_2": {
+      "expected": 293.15001296154196,
+      "tolerance": 0.001
+    },
+    "sample_3": {
+      "expected": 293.27411927033944,
+      "tolerance": 0.001
+    },
+    "sample_4": {
+      "expected": 294.70068776489126,
+      "tolerance": 0.001
+    },
+    "sample_5": {
+      "expected": 306.9005043736273,
+      "tolerance": 0.001
+    },
+    "sample_6": {
+      "expected": 294.22506680583274,
+      "tolerance": 0.001
+    },
+    "sample_7": {
+      "expected": 299.1022967213646,
+      "tolerance": 0.001
+    },
+    "sample_8": {
+      "expected": 316.69880809545685,
+      "tolerance": 0.001
+    },
+    "sample_9": {
+      "expected": 295.858256490612,
+      "tolerance": 0.001
+    },
+    "sample_10": {
+      "expected": 303.5689550042192,
+      "tolerance": 0.001
+    },
+    "sample_11": {
+      "expected": 322.46338003179017,
+      "tolerance": 0.001
+    },
+    "sample_12": {
+      "expected": 297.74128924098557,
+      "tolerance": 0.001
+    },
+    "sample_13": {
+      "expected": 307.4843865655843,
+      "tolerance": 0.001
+    },
+    "sample_14": {
+      "expected": 326.37255575551274,
+      "tolerance": 0.001
+    }
+  }
+}

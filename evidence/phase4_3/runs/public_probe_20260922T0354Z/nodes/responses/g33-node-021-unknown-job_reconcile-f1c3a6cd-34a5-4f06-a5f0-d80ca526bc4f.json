@@ -1,0 +1,411 @@
+{
+  "_outer_isError": false,
+  "_structuredContent": {
+    "data": {
+      "created_at": "2026-09-22 03:53:26",
+      "effective_timeouts": {
+        "execution_timeout_s": null,
+        "no_progress_warning_s": null,
+        "queue_timeout_s": null,
+        "rpc_timeout_s": 30.0
+      },
+      "finished_at": null,
+      "job_id": "f1c3a6cd-34a5-4f06-a5f0-d80ca526bc4f",
+      "metadata": {
+        "arguments": {
+          "arguments": {
+            "definition": {
+              "properties": {
+                "__g33_unknown_property__": 1,
+                "expr": "T"
+              }
+            },
+            "expected_revision": 8,
+            "model_ref": {
+              "generation": 1,
+              "model_tag": "mcp1",
+              "schema_version": 1,
+              "server_instance_id": "98ac6424135ec2fea0c20fbbb51c1ce474eba94f4ec23f911ca91a093f0e770e",
+              "session_id": "session-c143e687185fa2a36400adc9"
+            },
+            "path": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                },
+                {
+                  "collection": "probe",
+                  "tag": "g33probenodes01"
+                }
+              ]
+            },
+            "project_id": "g33-public_probe_20260922T0354Z",
+            "session_id": "session-c143e687185fa2a36400adc9"
+          },
+          "operation_id": "probe.update"
+        },
+        "callback_completion_unknown": true,
+        "engine_started_at": 1790049206.750328,
+        "execution": {
+          "expected_revision": 8,
+          "idempotency_key": "g33-node-018-C14-property-failure-prevalidation",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp1",
+            "schema_version": 1,
+            "server_instance_id": "98ac6424135ec2fea0c20fbbb51c1ce474eba94f4ec23f911ca91a093f0e770e",
+            "session_id": "session-c143e687185fa2a36400adc9"
+          },
+          "request_id": "g33-node-C14-property-failure-prevalidation",
+          "session_id": "session-c143e687185fa2a36400adc9"
+        },
+        "finished_observed_at": 1790049206.78637,
+        "operation": "operation_call",
+        "queue_wait_s": 3.058300353586674e-05,
+        "reconciled_quiescent": true,
+        "reconciliation": [
+          {
+            "request_id": "wrk-00100178-8906-4729-8337-9cf919d7dd5a",
+            "source": "durable_worker_observation",
+            "status": "SUCCEEDED"
+          }
+        ],
+        "replay_performed": false
+      },
+      "operation": {
+        "created_at": "2026-09-22 03:53:26",
+        "effective_timeouts": {
+          "execution_timeout_s": null,
+          "no_progress_warning_s": null,
+          "queue_timeout_s": null,
+          "rpc_timeout_s": 30.0
+        },
+        "finished_at": null,
+        "idempotency_key": "g33-node-018-C14-property-failure-prevalidation",
+        "metadata": {
+          "arguments": {
+            "arguments": {
+              "definition": {
+                "properties": {
+                  "__g33_unknown_property__": 1,
+                  "expr": "T"
+                }
+              },
+              "expected_revision": 8,
+              "model_ref": {
+                "generation": 1,
+                "model_tag": "mcp1",
+                "schema_version": 1,
+                "server_instance_id": "98ac6424135ec2fea0c20fbbb51c1ce474eba94f4ec23f911ca91a093f0e770e",
+                "session_id": "session-c143e687185fa2a36400adc9"
+              },
+              "path": {
+                "segments": [
+                  {
+                    "collection": "component",
+                    "tag": "comp1"
+                  },
+                  {
+                    "collection": "probe",
+                    "tag": "g33probenodes01"
+                  }
+                ]
+              },
+              "project_id": "g33-public_probe_20260922T0354Z",
+              "session_id": "session-c143e687185fa2a36400adc9"
+            },
+            "operation_id": "probe.update"
+          },
+          "execution": {
+            "expected_revision": 8,
+            "idempotency_key": "g33-node-018-C14-property-failure-prevalidation",
+            "model_ref": {
+              "generation": 1,
+              "model_tag": "mcp1",
+              "schema_version": 1,
+              "server_instance_id": "98ac6424135ec2fea0c20fbbb51c1ce474eba94f4ec23f911ca91a093f0e770e",
+              "session_id": "session-c143e687185fa2a36400adc9"
+            },
+            "request_id": "g33-node-C14-property-failure-prevalidation",
+            "session_id": "session-c143e687185fa2a36400adc9"
+          },
+          "operation": "operation_call"
+        },
+        "operation": "operation_call",
+        "operation_id": "4fb7e5e6-8202-476f-abc8-98cc396bbb41",
+        "request_hash": "110886735d7315a653f36f9a2dd093b2a38879b93e7bd767472a7ca6c4713ce4",
+        "request_id": "g33-node-C14-property-failure-prevalidation",
+        "result": {
+          "data": {},
+          "error": {
+            "code": "EXECUTION_STATE_UNKNOWN",
+            "details": {
+              "cause_code": "INVALID_REQUEST",
+              "cause_message": "definition has unsupported probe properties: ['__g33_unknown_property__']; use a documented COMSOL property",
+              "dispatch_stage": "post_dispatch",
+              "unproven_pre_dispatch": false,
+              "witness": {
+                "dispatches": [],
+                "engine_calls": 0,
+                "methods": [],
+                "mutation_issued": false,
+                "mutation_method": null
+              }
+            },
+            "message": "probe.update failed with INVALID_REQUEST (definition has unsupported probe properties: ['__g33_unknown_property__']; use a documented COMSOL property); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+            "safe_retry": false,
+            "stage": "post_dispatch"
+          },
+          "execution": {
+            "idempotency_key": "g33-node-018-C14-property-failure-prevalidation",
+            "job_id": "f1c3a6cd-34a5-4f06-a5f0-d80ca526bc4f",
+            "operation_id": "4fb7e5e6-8202-476f-abc8-98cc396bbb41",
+            "request_hash": "110886735d7315a653f36f9a2dd093b2a38879b93e7bd767472a7ca6c4713ce4",
+            "request_id": "g33-node-C14-property-failure-prevalidation"
+          },
+          "success": false
+        },
+        "started_at": "2026-09-22 03:53:26",
+        "status": "UNKNOWN"
+      },
+      "operation_id": "4fb7e5e6-8202-476f-abc8-98cc396bbb41",
+      "result": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "details": {
+            "cause_code": "INVALID_REQUEST",
+            "cause_message": "definition has unsupported probe properties: ['__g33_unknown_property__']; use a documented COMSOL property",
+            "dispatch_stage": "post_dispatch",
+            "unproven_pre_dispatch": false,
+            "witness": {
+              "dispatches": [],
+              "engine_calls": 0,
+              "methods": [],
+              "mutation_issued": false,
+              "mutation_method": null
+            }
+          },
+          "message": "probe.update failed with INVALID_REQUEST (definition has unsupported probe properties: ['__g33_unknown_property__']; use a documented COMSOL property); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+          "safe_retry": false,
+          "stage": "post_dispatch"
+        },
+        "execution": {
+          "idempotency_key": "g33-node-018-C14-property-failure-prevalidation",
+          "job_id": "f1c3a6cd-34a5-4f06-a5f0-d80ca526bc4f",
+          "operation_id": "4fb7e5e6-8202-476f-abc8-98cc396bbb41",
+          "request_hash": "110886735d7315a653f36f9a2dd093b2a38879b93e7bd767472a7ca6c4713ce4",
+          "request_id": "g33-node-C14-property-failure-prevalidation"
+        },
+        "success": false
+      },
+      "started_at": "2026-09-22 03:53:26",
+      "status": "UNKNOWN"
+    },
+    "success": true
+  },
+  "data": {
+    "created_at": "2026-09-22 03:53:26",
+    "effective_timeouts": {
+      "execution_timeout_s": null,
+      "no_progress_warning_s": null,
+      "queue_timeout_s": null,
+      "rpc_timeout_s": 30.0
+    },
+    "finished_at": null,
+    "job_id": "f1c3a6cd-34a5-4f06-a5f0-d80ca526bc4f",
+    "metadata": {
+      "arguments": {
+        "arguments": {
+          "definition": {
+            "properties": {
+              "__g33_unknown_property__": 1,
+              "expr": "T"
+            }
+          },
+          "expected_revision": 8,
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp1",
+            "schema_version": 1,
+            "server_instance_id": "98ac6424135ec2fea0c20fbbb51c1ce474eba94f4ec23f911ca91a093f0e770e",
+            "session_id": "session-c143e687185fa2a36400adc9"
+          },
+          "path": {
+            "segments": [
+              {
+                "collection": "component",
+                "tag": "comp1"
+              },
+              {
+                "collection": "probe",
+                "tag": "g33probenodes01"
+              }
+            ]
+          },
+          "project_id": "g33-public_probe_20260922T0354Z",
+          "session_id": "session-c143e687185fa2a36400adc9"
+        },
+        "operation_id": "probe.update"
+      },
+      "callback_completion_unknown": true,
+      "engine_started_at": 1790049206.750328,
+      "execution": {
+        "expected_revision": 8,
+        "idempotency_key": "g33-node-018-C14-property-failure-prevalidation",
+        "model_ref": {
+          "generation": 1,
+          "model_tag": "mcp1",
+          "schema_version": 1,
+          "server_instance_id": "98ac6424135ec2fea0c20fbbb51c1ce474eba94f4ec23f911ca91a093f0e770e",
+          "session_id": "session-c143e687185fa2a36400adc9"
+        },
+        "request_id": "g33-node-C14-property-failure-prevalidation",
+        "session_id": "session-c143e687185fa2a36400adc9"
+      },
+      "finished_observed_at": 1790049206.78637,
+      "operation": "operation_call",
+      "queue_wait_s": 3.058300353586674e-05,
+      "reconciled_quiescent": true,
+      "reconciliation": [
+        {
+          "request_id": "wrk-00100178-8906-4729-8337-9cf919d7dd5a",
+          "source": "durable_worker_observation",
+          "status": "SUCCEEDED"
+        }
+      ],
+      "replay_performed": false
+    },
+    "operation": {
+      "created_at": "2026-09-22 03:53:26",
+      "effective_timeouts": {
+        "execution_timeout_s": null,
+        "no_progress_warning_s": null,
+        "queue_timeout_s": null,
+        "rpc_timeout_s": 30.0
+      },
+      "finished_at": null,
+      "idempotency_key": "g33-node-018-C14-property-failure-prevalidation",
+      "metadata": {
+        "arguments": {
+          "arguments": {
+            "definition": {
+              "properties": {
+                "__g33_unknown_property__": 1,
+                "expr": "T"
+              }
+            },
+            "expected_revision": 8,
+            "model_ref": {
+              "generation": 1,
+              "model_tag": "mcp1",
+              "schema_version": 1,
+              "server_instance_id": "98ac6424135ec2fea0c20fbbb51c1ce474eba94f4ec23f911ca91a093f0e770e",
+              "session_id": "session-c143e687185fa2a36400adc9"
+            },
+            "path": {
+              "segments": [
+                {
+                  "collection": "component",
+                  "tag": "comp1"
+                },
+                {
+                  "collection": "probe",
+                  "tag": "g33probenodes01"
+                }
+              ]
+            },
+            "project_id": "g33-public_probe_20260922T0354Z",
+            "session_id": "session-c143e687185fa2a36400adc9"
+          },
+          "operation_id": "probe.update"
+        },
+        "execution": {
+          "expected_revision": 8,
+          "idempotency_key": "g33-node-018-C14-property-failure-prevalidation",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp1",
+            "schema_version": 1,
+            "server_instance_id": "98ac6424135ec2fea0c20fbbb51c1ce474eba94f4ec23f911ca91a093f0e770e",
+            "session_id": "session-c143e687185fa2a36400adc9"
+          },
+          "request_id": "g33-node-C14-property-failure-prevalidation",
+          "session_id": "session-c143e687185fa2a36400adc9"
+        },
+        "operation": "operation_call"
+      },
+      "operation": "operation_call",
+      "operation_id": "4fb7e5e6-8202-476f-abc8-98cc396bbb41",
+      "request_hash": "110886735d7315a653f36f9a2dd093b2a38879b93e7bd767472a7ca6c4713ce4",
+      "request_id": "g33-node-C14-property-failure-prevalidation",
+      "result": {
+        "data": {},
+        "error": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "details": {
+            "cause_code": "INVALID_REQUEST",
+            "cause_message": "definition has unsupported probe properties: ['__g33_unknown_property__']; use a documented COMSOL property",
+            "dispatch_stage": "post_dispatch",
+            "unproven_pre_dispatch": false,
+            "witness": {
+              "dispatches": [],
+              "engine_calls": 0,
+              "methods": [],
+              "mutation_issued": false,
+              "mutation_method": null
+            }
+          },
+          "message": "probe.update failed with INVALID_REQUEST (definition has unsupported probe properties: ['__g33_unknown_property__']; use a documented COMSOL property); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+          "safe_retry": false,
+          "stage": "post_dispatch"
+        },
+        "execution": {
+          "idempotency_key": "g33-node-018-C14-property-failure-prevalidation",
+          "job_id": "f1c3a6cd-34a5-4f06-a5f0-d80ca526bc4f",
+          "operation_id": "4fb7e5e6-8202-476f-abc8-98cc396bbb41",
+          "request_hash": "110886735d7315a653f36f9a2dd093b2a38879b93e7bd767472a7ca6c4713ce4",
+          "request_id": "g33-node-C14-property-failure-prevalidation"
+        },
+        "success": false
+      },
+      "started_at": "2026-09-22 03:53:26",
+      "status": "UNKNOWN"
+    },
+    "operation_id": "4fb7e5e6-8202-476f-abc8-98cc396bbb41",
+    "result": {
+      "data": {},
+      "error": {
+        "code": "EXECUTION_STATE_UNKNOWN",
+        "details": {
+          "cause_code": "INVALID_REQUEST",
+          "cause_message": "definition has unsupported probe properties: ['__g33_unknown_property__']; use a documented COMSOL property",
+          "dispatch_stage": "post_dispatch",
+          "unproven_pre_dispatch": false,
+          "witness": {
+            "dispatches": [],
+            "engine_calls": 0,
+            "methods": [],
+            "mutation_issued": false,
+            "mutation_method": null
+          }
+        },
+        "message": "probe.update failed with INVALID_REQUEST (definition has unsupported probe properties: ['__g33_unknown_property__']; use a documented COMSOL property); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+        "safe_retry": false,
+        "stage": "post_dispatch"
+      },
+      "execution": {
+        "idempotency_key": "g33-node-018-C14-property-failure-prevalidation",
+        "job_id": "f1c3a6cd-34a5-4f06-a5f0-d80ca526bc4f",
+        "operation_id": "4fb7e5e6-8202-476f-abc8-98cc396bbb41",
+        "request_hash": "110886735d7315a653f36f9a2dd093b2a38879b93e7bd767472a7ca6c4713ce4",
+        "request_id": "g33-node-C14-property-failure-prevalidation"
+      },
+      "success": false
+    },
+    "started_at": "2026-09-22 03:53:26",
+    "status": "UNKNOWN"
+  },
+  "success": true
+}

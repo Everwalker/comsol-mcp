@@ -1,0 +1,1 @@
+/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/bin/python -c import platform,sys,sysconfig; print(sys.version); print(sys.executable); print(platform.platform()); print(platform.machine()); print(sysconfig.get_platform())

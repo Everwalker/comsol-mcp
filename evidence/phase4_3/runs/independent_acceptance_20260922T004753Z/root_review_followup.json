@@ -1,0 +1,33 @@
+{
+  "observed_at": "2026-09-22T01:22:32.874197+00:00",
+  "status": "IMPLEMENTED_WITH_OPEN_ACCEPTANCE_DEFECTS",
+  "findings": [
+    {
+      "id": "R6",
+      "scope": "protocol",
+      "finding": "Legacy direct-worker driver passed list coordinates that the actual MCP schema rejects; fresh stdio succeeded with {x,y} objects.",
+      "fresh_evidence": "../protocol_probe_20260922T0126Z/transcript.json"
+    },
+    {
+      "id": "R7",
+      "scope": "solution axes",
+      "finding": "SolutionInfo.getSolnum returns inner numbers local to each outer, not globally unique indices. Four-axis mapping must use (outer,inner), and metadata labels cannot be reconstructed by enumerating returned inner numbers.",
+      "source": "https://doc.comsol.com/6.4/doc/com.comsol.help.comsol/api/com/comsol/model/SolutionInfo.html",
+      "action": "Assigned core agent correction with repeated-inner-index two-outer counterexample."
+    },
+    {
+      "id": "R8",
+      "scope": "lifecycle",
+      "finding": "First fresh protocol Chain C stored-solution comparison passes 27 values, but cleanup reported Worker STILL_RUNNING before next host. Complete Gate A remains unverified until actual exit is confirmed.",
+      "fresh_evidence": "../protocol_c_20260922T0124Z/reopen_c.json",
+      "action": "Owned-only shutdown identity checks and exit assertion added; fresh rerun required."
+    },
+    {
+      "id": "R9",
+      "scope": "native API",
+      "finding": "GeomSequence.isAxisymmetric is present in installed API; missing Worker allowlist made old fallback assume false.",
+      "evidence": "api_geometry_solutioninfo.javap.txt",
+      "action": "Verified native methods added to Worker allowlist and read classification. Core agent removes guesses."
+    }
+  ]
+}

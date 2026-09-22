@@ -295,7 +295,8 @@ class FNode:
                  run_log: list[Any] | None = None,
                  selection_override: Any = None,
                  sdim: int | None = None,
-                 length_unit_value: str | None = None) -> None:
+                 length_unit_value: str | None = None,
+                 axisymmetric_value: bool = False) -> None:
         self.tag_ = tag
         self.type_id = type_id
         self.label_ = label if label is not None else f"{tag} label"
@@ -318,6 +319,7 @@ class FNode:
         self.selection_override = selection_override
         self.sdim = sdim
         self.length_unit_value = length_unit_value
+        self.axisymmetric_value = bool(axisymmetric_value)
         self.selection_calls: dict[str, FSelection] = {}
         self.removed = False
 
@@ -530,6 +532,12 @@ class FNode:
         if "getNFiniteVoids" in self.unavailable:
             raise _rejected("getNFiniteVoids")
         return int(self.measure_metrics.get("finite_voids", 0))
+
+    def isAxisymmetric(self) -> bool:
+        self.calls.append(("isAxisymmetric", ()))
+        if "isAxisymmetric" in self.unavailable:
+            raise _rejected("isAxisymmetric")
+        return self.axisymmetric_value
 
     def getBoundingBox(self) -> list[float]:
         self.calls.append(("getBoundingBox", ()))
@@ -879,6 +887,7 @@ class TestSequenceCreate:
         assert result["path"] == geom_path("geom2")
         assert result["dimension"] == 2 and result["dimension_readback"] == 2
         assert result["length_unit"] == "m"
+        assert result["axisymmetric_readback"] == {"ok": True, "value": False, "error": None}
         assert comp.collections["geom"].items["geom2"] is not None
         assert result["unavailable"]["axisymmetric"]["allowlist_entry_required"] == "axisymmetric"
 
@@ -935,7 +944,7 @@ class TestSequenceCreate:
 class TestInspect:
     def test_reads_features_counters_and_boxes(self):
         wp = workplane_feature("wp1", inner=geometry("wp_geom", sdim=2))
-        geom = geometry("geom1", features={"r1": rectangle_feature("r1"), "wp1": wp})
+        geom = geometry("geom1", features={"r1": rectangle_feature("r1"), "wp1": wp}, axisymmetric_value=True)
         worker, _, _ = world(geometries={"geom1": geom})
         result = call("geometry.inspect", worker, {"path": geom_path("geom1")})
         assert result["kind"] == "geometry_sequence"
@@ -946,6 +955,7 @@ class TestInspect:
         assert "size" in result["features"][0]["properties"]
         assert result["geometry_state"]["entity_counters"]["n_entities"] == [8, 12, 6, 1]
         assert result["geometry_state"]["bounding_box"]["value"][0] == 0.0
+        assert result["geometry_state"]["axisymmetric_readback"] == {"ok": True, "value": True, "error": None}
         assert result["geometry_state"]["unavailable"]["problems"]["allowlist_entry_required"] == "problems"
 
     def test_resolves_a_workplanes_nested_sequence(self):

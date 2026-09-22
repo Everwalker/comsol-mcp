@@ -1,0 +1,1215 @@
+{
+  "_outer_isError": true,
+  "_structuredContent": {
+    "data": {
+      "applied": [
+        {
+          "method": "result.dataset.create",
+          "requested": {
+            "tag": "g33cpcutplane01",
+            "type_id": "CutPlane"
+          },
+          "step": "create"
+        },
+        {
+          "property": "data",
+          "readback": {
+            "match": true,
+            "method": "getString",
+            "readable": true,
+            "value": "dset1"
+          },
+          "requested": "dset1",
+          "step": "property"
+        },
+        {
+          "property": "planetype",
+          "readback": {
+            "match": true,
+            "method": "getString",
+            "readable": true,
+            "value": "quick"
+          },
+          "requested": "quick",
+          "step": "property"
+        },
+        {
+          "property": "quickplane",
+          "readback": {
+            "match": true,
+            "method": "getString",
+            "readable": true,
+            "value": "xy"
+          },
+          "requested": "xy",
+          "step": "property"
+        },
+        {
+          "property": "quickx",
+          "readback": {
+            "match": true,
+            "method": "getDouble",
+            "readable": true,
+            "value": 0.0
+          },
+          "requested": 0.0,
+          "step": "property"
+        },
+        {
+          "property": "quicky",
+          "readback": {
+            "match": true,
+            "method": "getDouble",
+            "readable": true,
+            "value": 0.0
+          },
+          "requested": 0.0,
+          "step": "property"
+        },
+        {
+          "property": "quickz",
+          "readback": {
+            "match": true,
+            "method": "getDouble",
+            "readable": true,
+            "value": 0.005
+          },
+          "requested": 0.005,
+          "step": "property"
+        }
+      ],
+      "applied_count": 7,
+      "cleanup_failed": false,
+      "created": true,
+      "definition": {
+        "comp": "comp1",
+        "data": "dset1",
+        "geom": "geom1",
+        "planetype": "quick",
+        "quickplane": "xy",
+        "quickx": 0.0,
+        "quicky": 0.0,
+        "quickz": 0.005
+      },
+      "dispatch_stage": "post_dispatch",
+      "domain_outcome": {
+        "applied_count": 7,
+        "cleanup_failed": false,
+        "details": {
+          "status_token": "PARTIAL_FAILURE"
+        },
+        "dispatch_stage": "post_dispatch",
+        "execution_state_unknown": true,
+        "failed_count": 1,
+        "failure": {
+          "code": "ENGINE_CALL_FAILED",
+          "message": "COMSOL set call failed: JavaWorkerError: {\"completed_at_ms\": \"1790049320338\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u5c5e\\u6027\\u3002\\n  - \\u5c5e\\u6027: comp\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1790049320336\", \"request_id\": \"wrk-6a714696-3ce0-4930-8d3e-74100cfbbe8c\", \"started_at_ms\": \"1790049320336\", \"status\": \"FAILED\", \"type\": \"call\"}"
+        },
+        "not_executed_count": 1,
+        "operation": "dataset.create",
+        "state": "unknown",
+        "status_token": "PARTIAL_FAILURE",
+        "verification": {
+          "declared_by": [],
+          "declared_status": null,
+          "readback_match": false,
+          "reason": "the engine readback did not confirm the requested values"
+        },
+        "verification_status": "FAILED",
+        "witness": {
+          "dispatches": [
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "result",
+              "receiver": "h-68b02d53-ea70-4461-8dd6-0b7355f31bad"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "dataset",
+              "receiver": "h-c2844f2f-b2a5-4e7b-99aa-e4565bccedb5"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "tags",
+              "receiver": "h-141e1c16-cfcf-48fe-8d00-4441d5399758"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "result",
+              "receiver": "h-68b02d53-ea70-4461-8dd6-0b7355f31bad"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "dataset",
+              "receiver": "h-7095bde8-7783-4548-8566-bae4cc45ac6c"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "tags",
+              "receiver": "h-ff00fe93-d876-4411-9655-c8b2388671b5"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "get",
+              "receiver": "h-ff00fe93-d876-4411-9655-c8b2388671b5"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getString",
+              "receiver": "h-98e163ca-da9c-4668-9bfb-b4beb2173a91"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getString",
+              "receiver": "h-98e163ca-da9c-4668-9bfb-b4beb2173a91"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "component",
+              "receiver": "h-68b02d53-ea70-4461-8dd6-0b7355f31bad"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "geom",
+              "receiver": "h-18ec9ca1-90a1-4ce3-8cba-85b7dc14de85"
+            },
+            {
+              "args_count": 2,
+              "command": "call",
+              "is_mutation": true,
+              "method": "create",
+              "receiver": "h-141e1c16-cfcf-48fe-8d00-4441d5399758"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "tags",
+              "receiver": "h-141e1c16-cfcf-48fe-8d00-4441d5399758"
+            },
+            {
+              "args_count": 2,
+              "command": "call",
+              "is_mutation": true,
+              "method": "set",
+              "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getString",
+              "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+            },
+            {
+              "args_count": 2,
+              "command": "call",
+              "is_mutation": true,
+              "method": "set",
+              "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getString",
+              "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+            },
+            {
+              "args_count": 2,
+              "command": "call",
+              "is_mutation": true,
+              "method": "set",
+              "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getString",
+              "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+            },
+            {
+              "args_count": 2,
+              "command": "call",
+              "is_mutation": true,
+              "method": "set",
+              "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getDouble",
+              "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+            },
+            {
+              "args_count": 2,
+              "command": "call",
+              "is_mutation": true,
+              "method": "set",
+              "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getDouble",
+              "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+            },
+            {
+              "args_count": 2,
+              "command": "call",
+              "is_mutation": true,
+              "method": "set",
+              "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getDouble",
+              "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+            },
+            {
+              "args_count": 2,
+              "command": "call",
+              "is_mutation": true,
+              "method": "set",
+              "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getString",
+              "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getString",
+              "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getString",
+              "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getDouble",
+              "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getDouble",
+              "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getDouble",
+              "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getString",
+              "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getString",
+              "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getType",
+              "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+            }
+          ],
+          "engine_calls": 35,
+          "methods": [
+            "component",
+            "create",
+            "dataset",
+            "geom",
+            "get",
+            "getDouble",
+            "getString",
+            "getType",
+            "result",
+            "set",
+            "tags"
+          ],
+          "mutation_issued": true,
+          "mutation_method": "create"
+        }
+      },
+      "domain_state": "unknown",
+      "effect": "project_write",
+      "execution_state_unknown": true,
+      "failed": [
+        {
+          "error": {
+            "code": "ENGINE_CALL_FAILED",
+            "message": "COMSOL set call failed: JavaWorkerError: {\"completed_at_ms\": \"1790049320338\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u5c5e\\u6027\\u3002\\n  - \\u5c5e\\u6027: comp\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1790049320336\", \"request_id\": \"wrk-6a714696-3ce0-4930-8d3e-74100cfbbe8c\", \"started_at_ms\": \"1790049320336\", \"status\": \"FAILED\", \"type\": \"call\"}"
+          },
+          "property": "comp",
+          "step": "property"
+        }
+      ],
+      "failed_count": 1,
+      "isolation_proof": {
+        "api_probe": {
+          "authenticated_api_success": true,
+          "denial_evidence_source": "server_access_log",
+          "loopback_address": "127.0.0.1",
+          "loopback_port": 54320,
+          "nonloopback_address": "192.168.100.152",
+          "nonloopback_api_exception_http_status": null,
+          "nonloopback_port": 54320,
+          "observed_at": "2026-09-22T03:55:12Z",
+          "probe_kind": "comsol_java_api",
+          "server_access_log": {
+            "entries": [
+              {
+                "http_status": 101,
+                "method": "GET",
+                "peer": "127.0.0.1",
+                "route": "/webbridge/websocket"
+              },
+              {
+                "http_status": 101,
+                "method": "GET",
+                "peer": "127.0.0.1",
+                "route": "/webbridge/websocket"
+              },
+              {
+                "http_status": 403,
+                "method": "GET",
+                "peer": "192.168.100.152",
+                "route": "/webbridge/websocket"
+              }
+            ],
+            "finished_at": "2026-09-22T03:55:12Z",
+            "inode": 29903163,
+            "java_request_id": "g2-valve-nonloopback-connect",
+            "offset_after": 261,
+            "offset_before": 0,
+            "parsed_nonloopback_entry": {
+              "http_status": 403,
+              "method": "GET",
+              "peer": "192.168.100.152",
+              "route": "/webbridge/websocket"
+            },
+            "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_cutplane_20260922T0357Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+            "phase": "java_connect_only",
+            "raw_probe_started_after_capture": true,
+            "segment_sha256": "68709519d5c29b5f0f187f9d9e74bdc402f45e8f81594ff2147b7555ec998a98",
+            "started_at": "2026-09-22T03:55:03Z",
+            "status": "PASS"
+          }
+        },
+        "birth": "Tue Sep 22 11:54:59 2026",
+        "config_inode": 14720294,
+        "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+        "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+        "endpoint": "127.0.0.1:54320",
+        "established_client_pids": [
+          46148,
+          46433
+        ],
+        "listener": {
+          "endpoint": "*:54320",
+          "local_endpoint": "*:54320",
+          "pid": 46148,
+          "raw": "java    46148 everwalker   59u  IPv6 0x4fa9c8bd73eac3b0      0t0  TCP *:54320 (LISTEN)",
+          "remote_endpoint": null,
+          "state": "LISTEN"
+        },
+        "listener_binding": "wildcard",
+        "loopback_listener": false,
+        "pid": 46148,
+        "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+        "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_cutplane_20260922T0357Z/isolation_receipt.json",
+        "verified": true,
+        "worker_pid": 46433
+      },
+      "not_executed": [
+        {
+          "property": "geom",
+          "step": "property"
+        }
+      ],
+      "not_executed_count": 1,
+      "ok": false,
+      "partial_change": false,
+      "path": {
+        "segments": [
+          {
+            "accessor": "result"
+          },
+          {
+            "collection": "dataset",
+            "tag": "g33cpcutplane01"
+          }
+        ]
+      },
+      "readback": {
+        "match": false,
+        "properties": [
+          {
+            "match": true,
+            "method": "getString",
+            "property": "data",
+            "readable": true,
+            "value": "dset1"
+          },
+          {
+            "match": true,
+            "method": "getString",
+            "property": "planetype",
+            "readable": true,
+            "value": "quick"
+          },
+          {
+            "match": true,
+            "method": "getString",
+            "property": "quickplane",
+            "readable": true,
+            "value": "xy"
+          },
+          {
+            "match": true,
+            "method": "getDouble",
+            "property": "quickx",
+            "readable": true,
+            "value": 0.0
+          },
+          {
+            "match": true,
+            "method": "getDouble",
+            "property": "quicky",
+            "readable": true,
+            "value": 0.0
+          },
+          {
+            "match": true,
+            "method": "getDouble",
+            "property": "quickz",
+            "readable": true,
+            "value": 0.005
+          },
+          {
+            "errors": [
+              {
+                "allowlist_entry_required": null,
+                "code": "ENGINE_CALL_FAILED",
+                "message": "COMSOL getString probe failed: JavaWorkerError"
+              }
+            ],
+            "match": false,
+            "method": null,
+            "property": "comp",
+            "readable": false,
+            "value": null
+          },
+          {
+            "errors": [
+              {
+                "allowlist_entry_required": null,
+                "code": "ENGINE_CALL_FAILED",
+                "message": "COMSOL getString probe failed: JavaWorkerError"
+              }
+            ],
+            "match": false,
+            "method": null,
+            "property": "geom",
+            "readable": false,
+            "value": null
+          }
+        ],
+        "readable": false,
+        "tags": [
+          "dset1",
+          "g33cpcutplane01"
+        ],
+        "type_id": "CutPlane"
+      },
+      "readback_match": false,
+      "requires_model_reconciliation": true,
+      "status": "PARTIAL_FAILURE",
+      "tag": "g33cpcutplane01",
+      "type_id": "CutPlane",
+      "verification_status": "FAILED",
+      "verified_outcome": "unknown"
+    },
+    "error": {
+      "code": "ENGINE_CALL_FAILED",
+      "message": "COMSOL set call failed: JavaWorkerError: {\"completed_at_ms\": \"1790049320338\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u5c5e\\u6027\\u3002\\n  - \\u5c5e\\u6027: comp\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1790049320336\", \"request_id\": \"wrk-6a714696-3ce0-4930-8d3e-74100cfbbe8c\", \"started_at_ms\": \"1790049320336\", \"status\": \"FAILED\", \"type\": \"call\"}"
+    },
+    "execution": {
+      "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+      "dirty": true,
+      "idempotency_key": "g33-node-001-dataset-create-g33cpcutplane01",
+      "job_id": "15d14cd9-5da4-4c1c-9e62-6acec012823e",
+      "model_ownership": "mcp_owned",
+      "model_ref": {
+        "generation": 1,
+        "model_tag": "mcp1",
+        "schema_version": 1,
+        "server_instance_id": "af6808bf96baba46a8e9c01456005b57f8d2d5b4c6bc9ae741961aa053a18749",
+        "session_id": "session-5eb8ff314e8a9b407bc83f79"
+      },
+      "operation_id": "f01107c7-f871-4e39-8af5-e92dc4d7f92a",
+      "request_hash": "7bc357d20065f2bb101f16fb2cf15745002af455fd0e6080e97d27c7f629e7c3",
+      "request_id": "g33-node-dataset-create-g33cpcutplane01",
+      "revision": 2,
+      "server_ownership": "shared",
+      "session_id": "session-5eb8ff314e8a9b407bc83f79"
+    },
+    "success": false
+  },
+  "data": {
+    "applied": [
+      {
+        "method": "result.dataset.create",
+        "requested": {
+          "tag": "g33cpcutplane01",
+          "type_id": "CutPlane"
+        },
+        "step": "create"
+      },
+      {
+        "property": "data",
+        "readback": {
+          "match": true,
+          "method": "getString",
+          "readable": true,
+          "value": "dset1"
+        },
+        "requested": "dset1",
+        "step": "property"
+      },
+      {
+        "property": "planetype",
+        "readback": {
+          "match": true,
+          "method": "getString",
+          "readable": true,
+          "value": "quick"
+        },
+        "requested": "quick",
+        "step": "property"
+      },
+      {
+        "property": "quickplane",
+        "readback": {
+          "match": true,
+          "method": "getString",
+          "readable": true,
+          "value": "xy"
+        },
+        "requested": "xy",
+        "step": "property"
+      },
+      {
+        "property": "quickx",
+        "readback": {
+          "match": true,
+          "method": "getDouble",
+          "readable": true,
+          "value": 0.0
+        },
+        "requested": 0.0,
+        "step": "property"
+      },
+      {
+        "property": "quicky",
+        "readback": {
+          "match": true,
+          "method": "getDouble",
+          "readable": true,
+          "value": 0.0
+        },
+        "requested": 0.0,
+        "step": "property"
+      },
+      {
+        "property": "quickz",
+        "readback": {
+          "match": true,
+          "method": "getDouble",
+          "readable": true,
+          "value": 0.005
+        },
+        "requested": 0.005,
+        "step": "property"
+      }
+    ],
+    "applied_count": 7,
+    "cleanup_failed": false,
+    "created": true,
+    "definition": {
+      "comp": "comp1",
+      "data": "dset1",
+      "geom": "geom1",
+      "planetype": "quick",
+      "quickplane": "xy",
+      "quickx": 0.0,
+      "quicky": 0.0,
+      "quickz": 0.005
+    },
+    "dispatch_stage": "post_dispatch",
+    "domain_outcome": {
+      "applied_count": 7,
+      "cleanup_failed": false,
+      "details": {
+        "status_token": "PARTIAL_FAILURE"
+      },
+      "dispatch_stage": "post_dispatch",
+      "execution_state_unknown": true,
+      "failed_count": 1,
+      "failure": {
+        "code": "ENGINE_CALL_FAILED",
+        "message": "COMSOL set call failed: JavaWorkerError: {\"completed_at_ms\": \"1790049320338\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u5c5e\\u6027\\u3002\\n  - \\u5c5e\\u6027: comp\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1790049320336\", \"request_id\": \"wrk-6a714696-3ce0-4930-8d3e-74100cfbbe8c\", \"started_at_ms\": \"1790049320336\", \"status\": \"FAILED\", \"type\": \"call\"}"
+      },
+      "not_executed_count": 1,
+      "operation": "dataset.create",
+      "state": "unknown",
+      "status_token": "PARTIAL_FAILURE",
+      "verification": {
+        "declared_by": [],
+        "declared_status": null,
+        "readback_match": false,
+        "reason": "the engine readback did not confirm the requested values"
+      },
+      "verification_status": "FAILED",
+      "witness": {
+        "dispatches": [
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "result",
+            "receiver": "h-68b02d53-ea70-4461-8dd6-0b7355f31bad"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "dataset",
+            "receiver": "h-c2844f2f-b2a5-4e7b-99aa-e4565bccedb5"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "tags",
+            "receiver": "h-141e1c16-cfcf-48fe-8d00-4441d5399758"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "result",
+            "receiver": "h-68b02d53-ea70-4461-8dd6-0b7355f31bad"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "dataset",
+            "receiver": "h-7095bde8-7783-4548-8566-bae4cc45ac6c"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "tags",
+            "receiver": "h-ff00fe93-d876-4411-9655-c8b2388671b5"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "get",
+            "receiver": "h-ff00fe93-d876-4411-9655-c8b2388671b5"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-98e163ca-da9c-4668-9bfb-b4beb2173a91"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-98e163ca-da9c-4668-9bfb-b4beb2173a91"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "component",
+            "receiver": "h-68b02d53-ea70-4461-8dd6-0b7355f31bad"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "geom",
+            "receiver": "h-18ec9ca1-90a1-4ce3-8cba-85b7dc14de85"
+          },
+          {
+            "args_count": 2,
+            "command": "call",
+            "is_mutation": true,
+            "method": "create",
+            "receiver": "h-141e1c16-cfcf-48fe-8d00-4441d5399758"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "tags",
+            "receiver": "h-141e1c16-cfcf-48fe-8d00-4441d5399758"
+          },
+          {
+            "args_count": 2,
+            "command": "call",
+            "is_mutation": true,
+            "method": "set",
+            "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+          },
+          {
+            "args_count": 2,
+            "command": "call",
+            "is_mutation": true,
+            "method": "set",
+            "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+          },
+          {
+            "args_count": 2,
+            "command": "call",
+            "is_mutation": true,
+            "method": "set",
+            "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+          },
+          {
+            "args_count": 2,
+            "command": "call",
+            "is_mutation": true,
+            "method": "set",
+            "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getDouble",
+            "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+          },
+          {
+            "args_count": 2,
+            "command": "call",
+            "is_mutation": true,
+            "method": "set",
+            "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getDouble",
+            "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+          },
+          {
+            "args_count": 2,
+            "command": "call",
+            "is_mutation": true,
+            "method": "set",
+            "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getDouble",
+            "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+          },
+          {
+            "args_count": 2,
+            "command": "call",
+            "is_mutation": true,
+            "method": "set",
+            "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getDouble",
+            "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getDouble",
+            "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getDouble",
+            "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getString",
+            "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getType",
+            "receiver": "h-151015f5-e9c1-4538-85d2-9c82755c26d2"
+          }
+        ],
+        "engine_calls": 35,
+        "methods": [
+          "component",
+          "create",
+          "dataset",
+          "geom",
+          "get",
+          "getDouble",
+          "getString",
+          "getType",
+          "result",
+          "set",
+          "tags"
+        ],
+        "mutation_issued": true,
+        "mutation_method": "create"
+      }
+    },
+    "domain_state": "unknown",
+    "effect": "project_write",
+    "execution_state_unknown": true,
+    "failed": [
+      {
+        "error": {
+          "code": "ENGINE_CALL_FAILED",
+          "message": "COMSOL set call failed: JavaWorkerError: {\"completed_at_ms\": \"1790049320338\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u5c5e\\u6027\\u3002\\n  - \\u5c5e\\u6027: comp\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1790049320336\", \"request_id\": \"wrk-6a714696-3ce0-4930-8d3e-74100cfbbe8c\", \"started_at_ms\": \"1790049320336\", \"status\": \"FAILED\", \"type\": \"call\"}"
+        },
+        "property": "comp",
+        "step": "property"
+      }
+    ],
+    "failed_count": 1,
+    "isolation_proof": {
+      "api_probe": {
+        "authenticated_api_success": true,
+        "denial_evidence_source": "server_access_log",
+        "loopback_address": "127.0.0.1",
+        "loopback_port": 54320,
+        "nonloopback_address": "192.168.100.152",
+        "nonloopback_api_exception_http_status": null,
+        "nonloopback_port": 54320,
+        "observed_at": "2026-09-22T03:55:12Z",
+        "probe_kind": "comsol_java_api",
+        "server_access_log": {
+          "entries": [
+            {
+              "http_status": 101,
+              "method": "GET",
+              "peer": "127.0.0.1",
+              "route": "/webbridge/websocket"
+            },
+            {
+              "http_status": 101,
+              "method": "GET",
+              "peer": "127.0.0.1",
+              "route": "/webbridge/websocket"
+            },
+            {
+              "http_status": 403,
+              "method": "GET",
+              "peer": "192.168.100.152",
+              "route": "/webbridge/websocket"
+            }
+          ],
+          "finished_at": "2026-09-22T03:55:12Z",
+          "inode": 29903163,
+          "java_request_id": "g2-valve-nonloopback-connect",
+          "offset_after": 261,
+          "offset_before": 0,
+          "parsed_nonloopback_entry": {
+            "http_status": 403,
+            "method": "GET",
+            "peer": "192.168.100.152",
+            "route": "/webbridge/websocket"
+          },
+          "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_cutplane_20260922T0357Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+          "phase": "java_connect_only",
+          "raw_probe_started_after_capture": true,
+          "segment_sha256": "68709519d5c29b5f0f187f9d9e74bdc402f45e8f81594ff2147b7555ec998a98",
+          "started_at": "2026-09-22T03:55:03Z",
+          "status": "PASS"
+        }
+      },
+      "birth": "Tue Sep 22 11:54:59 2026",
+      "config_inode": 14720294,
+      "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+      "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+      "endpoint": "127.0.0.1:54320",
+      "established_client_pids": [
+        46148,
+        46433
+      ],
+      "listener": {
+        "endpoint": "*:54320",
+        "local_endpoint": "*:54320",
+        "pid": 46148,
+        "raw": "java    46148 everwalker   59u  IPv6 0x4fa9c8bd73eac3b0      0t0  TCP *:54320 (LISTEN)",
+        "remote_endpoint": null,
+        "state": "LISTEN"
+      },
+      "listener_binding": "wildcard",
+      "loopback_listener": false,
+      "pid": 46148,
+      "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+      "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_cutplane_20260922T0357Z/isolation_receipt.json",
+      "verified": true,
+      "worker_pid": 46433
+    },
+    "not_executed": [
+      {
+        "property": "geom",
+        "step": "property"
+      }
+    ],
+    "not_executed_count": 1,
+    "ok": false,
+    "partial_change": false,
+    "path": {
+      "segments": [
+        {
+          "accessor": "result"
+        },
+        {
+          "collection": "dataset",
+          "tag": "g33cpcutplane01"
+        }
+      ]
+    },
+    "readback": {
+      "match": false,
+      "properties": [
+        {
+          "match": true,
+          "method": "getString",
+          "property": "data",
+          "readable": true,
+          "value": "dset1"
+        },
+        {
+          "match": true,
+          "method": "getString",
+          "property": "planetype",
+          "readable": true,
+          "value": "quick"
+        },
+        {
+          "match": true,
+          "method": "getString",
+          "property": "quickplane",
+          "readable": true,
+          "value": "xy"
+        },
+        {
+          "match": true,
+          "method": "getDouble",
+          "property": "quickx",
+          "readable": true,
+          "value": 0.0
+        },
+        {
+          "match": true,
+          "method": "getDouble",
+          "property": "quicky",
+          "readable": true,
+          "value": 0.0
+        },
+        {
+          "match": true,
+          "method": "getDouble",
+          "property": "quickz",
+          "readable": true,
+          "value": 0.005
+        },
+        {
+          "errors": [
+            {
+              "allowlist_entry_required": null,
+              "code": "ENGINE_CALL_FAILED",
+              "message": "COMSOL getString probe failed: JavaWorkerError"
+            }
+          ],
+          "match": false,
+          "method": null,
+          "property": "comp",
+          "readable": false,
+          "value": null
+        },
+        {
+          "errors": [
+            {
+              "allowlist_entry_required": null,
+              "code": "ENGINE_CALL_FAILED",
+              "message": "COMSOL getString probe failed: JavaWorkerError"
+            }
+          ],
+          "match": false,
+          "method": null,
+          "property": "geom",
+          "readable": false,
+          "value": null
+        }
+      ],
+      "readable": false,
+      "tags": [
+        "dset1",
+        "g33cpcutplane01"
+      ],
+      "type_id": "CutPlane"
+    },
+    "readback_match": false,
+    "requires_model_reconciliation": true,
+    "status": "PARTIAL_FAILURE",
+    "tag": "g33cpcutplane01",
+    "type_id": "CutPlane",
+    "verification_status": "FAILED",
+    "verified_outcome": "unknown"
+  },
+  "error": {
+    "code": "ENGINE_CALL_FAILED",
+    "message": "COMSOL set call failed: JavaWorkerError: {\"completed_at_ms\": \"1790049320338\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u5c5e\\u6027\\u3002\\n  - \\u5c5e\\u6027: comp\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1790049320336\", \"request_id\": \"wrk-6a714696-3ce0-4930-8d3e-74100cfbbe8c\", \"started_at_ms\": \"1790049320336\", \"status\": \"FAILED\", \"type\": \"call\"}"
+  },
+  "execution": {
+    "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+    "dirty": true,
+    "idempotency_key": "g33-node-001-dataset-create-g33cpcutplane01",
+    "job_id": "15d14cd9-5da4-4c1c-9e62-6acec012823e",
+    "model_ownership": "mcp_owned",
+    "model_ref": {
+      "generation": 1,
+      "model_tag": "mcp1",
+      "schema_version": 1,
+      "server_instance_id": "af6808bf96baba46a8e9c01456005b57f8d2d5b4c6bc9ae741961aa053a18749",
+      "session_id": "session-5eb8ff314e8a9b407bc83f79"
+    },
+    "operation_id": "f01107c7-f871-4e39-8af5-e92dc4d7f92a",
+    "request_hash": "7bc357d20065f2bb101f16fb2cf15745002af455fd0e6080e97d27c7f629e7c3",
+    "request_id": "g33-node-dataset-create-g33cpcutplane01",
+    "revision": 2,
+    "server_ownership": "shared",
+    "session_id": "session-5eb8ff314e8a9b407bc83f79"
+  },
+  "success": false
+}

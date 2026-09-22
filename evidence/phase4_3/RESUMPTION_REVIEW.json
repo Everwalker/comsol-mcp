@@ -1,0 +1,35 @@
+{
+  "status": "INDEPENDENT_REACCEPTANCE_IN_PROGRESS",
+  "source_head": "c0510652804b87404eaf4bc07d3db513383be81c",
+  "previous_claim": "G3_3_MAC_W17_VERIFIED_SCOPED",
+  "previous_ledger_sha256": "ee5608ff0dd125aeb8cd4df043d10fa8ed7d9f96747e2db6d88cc667f0f25f62",
+  "previous_ledger_copy": "evidence/phase4_3/runs/resumption_review_20260922T0719Z/prior_acceptance_c051065.json",
+  "reason": "Completion must be proven against NEXT_GOAL; legacy 19-case labels are narrower than required public protocol, axes and Probe history contracts. Preserve prior evidence, supplement or correct with fresh independent public MCP runs.",
+  "observed_gaps": [
+    {
+      "case": "C15",
+      "evidence": "prior ledger identical_retry_same_request_hash=false; values equality is not same-key no-replay evidence"
+    },
+    {
+      "case": "C14",
+      "evidence": "prior ledger history_rows_after_link=[]; does not prove actual nonempty solver-produced history"
+    },
+    {
+      "case": "C01",
+      "evidence": "audit/semantic_module_review.json still contains80 NOT_REVIEWED and7 prior_review_only; automated inventory semantic_reviewed=0"
+    },
+    {
+      "case": "C17",
+      "evidence": "current RECOVERY still says final repaired source archive and publication pending; final synchronization not established by a local PASS label"
+    }
+  ],
+  "fresh_runs": [
+    {
+      "path": "evidence/phase4_3/runs/resumed_numeric_20260922T0715Z",
+      "status": "PASS",
+      "source_drift": false,
+      "scope": "C04-C10 native assertions; C10 control-negative evidence mapping remains separate"
+    }
+  ],
+  "generated_at": "2026-09-22T07:16:03.165675+00:00"
+}

@@ -1,0 +1,1 @@
+import com.comsol.model.*; import java.util.*; public final class NegativeMutationCleared {public static Object run(Model model, Map<String,Object> args) {model.sol("sol1").clearSolutionData();return Collections.singletonMap("mutation", args.get("name")); }}

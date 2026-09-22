@@ -1,0 +1,1 @@
+/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/bin/python -m pytest -q tests/test_g3_artifact_hardening.py tests/test_g3_d17_artifact_service.py tests/test_g2_registry_packaging.py tests/test_g3_w17.py::test_field_export_large_data_and_chunk_verification

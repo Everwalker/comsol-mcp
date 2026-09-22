@@ -1,0 +1,243 @@
+{
+  "C03": {
+    "name": "Gate A Reopen & Stored Solution Acceptance",
+    "status": "PASS",
+    "evidence_level": "numerical",
+    "numeric": {}
+  },
+  "C03R": {
+    "name": "Independent Re-solve & Indistinguishability",
+    "status": "PASS",
+    "evidence_level": "numerical",
+    "numeric": {}
+  },
+  "C04": {
+    "name": "Constant Field Statistics (f=2, V=3)",
+    "status": "PASS",
+    "evidence_level": "numerical",
+    "numeric": {
+      "numeric_checks": {
+        "integral": {
+          "observed": 5.999999999999938,
+          "expected": 6.0,
+          "abs_error": 6.217248937900877e-14,
+          "rel_error": 1.0362081563168127e-14,
+          "tolerance": 1e-09,
+          "tolerance_rationale": "f=2 over a unit square: the integrand is constant, so the quadrature is exact up to binary64 roundoff (order 1e-16 relative); 1e-9 leaves about seven orders of margin.",
+          "margin_factor": 16084.284383466058
+        },
+        "average": {
+          "observed": 2.0,
+          "expected": 2.0,
+          "abs_error": 0.0,
+          "rel_error": 0.0,
+          "tolerance": 1e-09,
+          "tolerance_rationale": "integral/measure for a constant field is 2 exactly; same roundoff-only allowance as the integral.",
+          "margin_factor": null
+        },
+        "std": {
+          "observed": 0.0,
+          "expected": 0.0,
+          "abs_error": 0.0,
+          "rel_error": null,
+          "tolerance": 1e-09,
+          "tolerance_rationale": "a constant field has zero variance; the tolerance is an absolute one because the expected value is zero.",
+          "margin_factor": null
+        },
+        "rms": {
+          "observed": 2.0,
+          "expected": 2.0,
+          "abs_error": 0.0,
+          "rel_error": 0.0,
+          "tolerance": 1e-09,
+          "tolerance_rationale": "sqrt(measure-weighted mean of f^2) with f=2 is again exact up to roundoff.",
+          "margin_factor": null
+        },
+        "denominator": {
+          "observed": 2.999999999999969,
+          "expected": 3.0,
+          "abs_error": 3.108624468950438e-14,
+          "rel_error": 1.0362081563168127e-14,
+          "tolerance": 1e-09,
+          "tolerance_rationale": "the reported denominator must be the domain measure V=3, not the element count; both are integers here, so the check is exact.",
+          "margin_factor": 32168.568766932116
+        }
+      }
+    }
+  },
+  "C05": {
+    "name": "Multi-dimensional & Selection Support",
+    "status": "PASS",
+    "evidence_level": "numerical",
+    "numeric": {}
+  },
+  "C06": {
+    "name": "Non-Uniform Field Analytical Verification",
+    "status": "PASS",
+    "evidence_level": "numerical",
+    "numeric": {
+      "analytic_area": 6.0,
+      "analytic_integral": 24.0,
+      "analytic_average": 4.0,
+      "analytic_variance": 3.3333333333333335,
+      "analytic_std": 1.8257418583505538,
+      "analytic_rms": 4.396968652757639,
+      "live_integral": 23.999999999999982,
+      "live_average": 3.9999999999999853,
+      "live_std": 1.8257418583505494,
+      "live_rms": 4.396968652757634,
+      "live_denominator_measure": 6.000000000000018,
+      "numeric_checks": {
+        "denominator": {
+          "observed": 6.000000000000018,
+          "expected": 6.0,
+          "abs_error": 1.7763568394002505e-14,
+          "rel_error": 2.960594732333751e-15,
+          "tolerance": 1e-09,
+          "tolerance_rationale": "the unit square has measure 1, but the field f=x+2y is defined on the y in [0,3] strip, so the reference area is 6; planar measure integration is exact up to roundoff.",
+          "margin_factor": 56294.9953421312
+        },
+        "integral": {
+          "observed": 23.999999999999982,
+          "expected": 24.0,
+          "abs_error": 1.7763568394002505e-14,
+          "rel_error": 7.401486830834377e-16,
+          "tolerance": 1e-09,
+          "tolerance_rationale": "integral of x+2y over the strip is 24 analytically; the integrand is degree 1, so COMSOL's quadrature is exact up to binary64 roundoff and 1e-9 leaves ~7 orders of margin.",
+          "margin_factor": 56294.9953421312
+        },
+        "average": {
+          "observed": 3.9999999999999853,
+          "expected": 4.0,
+          "abs_error": 1.4654943925052066e-14,
+          "rel_error": 3.6637359812630166e-15,
+          "tolerance": 1e-09,
+          "tolerance_rationale": "24/6 = 4 exactly; the tolerance covers division roundoff only.",
+          "margin_factor": 68236.35799046207
+        },
+        "std": {
+          "observed": 1.8257418583505494,
+          "expected": 1.8257418583505538,
+          "abs_error": 4.440892098500626e-15,
+          "rel_error": 2.432376777795247e-15,
+          "tolerance": 1e-09,
+          "tolerance_rationale": "sqrt(10/3) comes from the analytic variance of x+2y over the strip; a square root adds at most a few ulp, so the same roundoff-only allowance applies.",
+          "margin_factor": 225179.9813685248
+        },
+        "rms": {
+          "observed": 4.396968652757634,
+          "expected": 4.396968652757639,
+          "abs_error": 5.329070518200751e-15,
+          "rel_error": 1.2119873801826009e-15,
+          "tolerance": 1e-09,
+          "tolerance_rationale": "sqrt(58/3) from the analytic second moment; same roundoff allowance as the std.",
+          "margin_factor": 187649.9844737707
+        }
+      }
+    }
+  },
+  "C07": {
+    "name": "Axisymmetric Cylinder Verification",
+    "status": "PASS",
+    "evidence_level": "numerical",
+    "numeric": {
+      "live_revolved_volume": 37.69911184307756,
+      "expected_volume": 37.69911184307752,
+      "live_average_r": 1.3333333333333304,
+      "expected_average_r": 1.3333333333333333,
+      "expected_cross_section_measure": 6.0,
+      "numeric_checks": {
+        "revolved_volume": {
+          "observed": 37.69911184307756,
+          "expected": 37.69911184307752,
+          "abs_error": 4.263256414560601e-14,
+          "rel_error": 1.1308638867425838e-15,
+          "tolerance": 1e-06,
+          "tolerance_rationale": "pi*r^2*h = 12*pi measures a revolved solid, so the volume comes from curved-boundary quadrature over a triangulated surface rather than an exact planar formula; 1e-6 is about four orders above the observed deviation and is the same allowance the axisymmetric measure has always used here.",
+          "margin_factor": 23456248.05922133
+        },
+        "average_r": {
+          "observed": 1.3333333333333304,
+          "expected": 1.3333333333333333,
+          "abs_error": 2.886579864025407e-15,
+          "rel_error": 2.1649348980190553e-15,
+          "tolerance": 1e-06,
+          "tolerance_rationale": "the volume-weighted mean radius of a solid cylinder is 4/3; it inherits the revolved-measure allowance.",
+          "margin_factor": 346430740.5669612
+        },
+        "cross_section_measure": {
+          "observed": 6.000000000000018,
+          "expected": 6.0,
+          "abs_error": 1.7763568394002505e-14,
+          "rel_error": 2.960594732333751e-15,
+          "tolerance": 1e-06,
+          "tolerance_rationale": "the revolved 2-D cross-section measure must be 6 as well; same curved-quadrature allowance.",
+          "margin_factor": 56294995.3421312
+        }
+      }
+    }
+  },
+  "C08": {
+    "name": "Solution Axis Slicing & Metadata",
+    "status": "PASS",
+    "evidence_level": "numerical",
+    "numeric": {}
+  },
+  "C09": {
+    "name": "Complex Field Transformations",
+    "status": "PASS",
+    "evidence_level": "numerical",
+    "numeric": {}
+  },
+  "C10": {
+    "name": "Point Coordinates Scaling (m vs mm)",
+    "status": "PASS",
+    "evidence_level": "numerical",
+    "numeric": {}
+  },
+  "C11": {
+    "name": "Dataset Dependency Graph & CutPoint2D",
+    "status": "PASS",
+    "evidence_level": "numerical",
+    "numeric": {}
+  },
+  "C13": {
+    "name": "Chunk Streaming & Bounded Memory",
+    "status": "PASS",
+    "evidence_level": "protocol",
+    "numeric": {
+      "full_sha256": "cf4e286d2a4e2f068155557a707225919be710fd45a92d73faadc20f96be84b1",
+      "chunk_reads": 17,
+      "reconstructed_sha256": "cf4e286d2a4e2f068155557a707225919be710fd45a92d73faadc20f96be84b1",
+      "refusals": {
+        "path_escape": "ACCESS_VIOLATION",
+        "offset_out_of_range": "INVALID_CHUNK_RANGE",
+        "forged_whole_digest": "ARTIFACT_HASH_MISMATCH",
+        "forged_chunk_digest": "CHUNK_HASH_MISMATCH"
+      },
+      "peak_memory": {
+        "small_bytes": 526792,
+        "big_bytes": 5666757,
+        "small_stream_no_pin_kib": 1593.8,
+        "small_stream_pinned_kib": 1591.3,
+        "small_full_read_kib": 519.0,
+        "big_stream_no_pin_kib": 2101.7,
+        "big_stream_pinned_kib": 2100.2,
+        "big_full_read_kib": 5538.5,
+        "stream_is_size_independent": true,
+        "pinned_stream_is_size_independent": true,
+        "full_read_tracks_file_size": true,
+        "file_size_ratio": 10.76,
+        "instrument": "tracemalloc peak python allocations (KiB)",
+        "note": "a pinned expected_sha256 costs one bounded 1 MiB-block pass per call; the measured peak is therefore block-bounded, not file-bounded"
+      }
+    }
+  },
+  "C14": {
+    "name": "Definitions Probe vs Derived Values Separation & Table Management",
+    "status": "PASS",
+    "evidence_level": "numerical",
+    "numeric": {}
+  },
+  "tolerance_policy": "Case-level tolerances and their rationale are recorded per comparison in numeric_checks; the reopen checker refuses a receipt expectation that states no tolerance and records the effective absolute window it applied."
+}

@@ -1,0 +1,447 @@
+{
+  "schema": "comsol-mcp-g3/phase4_3-acceptance/1",
+  "goal": "NEXT_GOAL.md: G3.3 clean-room recovery, evidence correction, and W17 verification",
+  "status": "ACCEPTANCE_FAILED",
+  "run_id": "frozen_only_20260922T055936Z",
+  "run_dir": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_only_20260922T055936Z",
+  "generated_at": "2026-09-22T06:00:10.850984+00:00",
+  "elapsed_seconds": 33.85293683304917,
+  "platform": "darwin",
+  "python_version": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.3.34.2)]",
+  "comsol_version": null,
+  "comsol_version_source": "unavailable: the engine did not report a version in this run",
+  "source_manifest": {
+    "head": "65d1c51c3d1221ad7649d2b9d2253dd0d83250db",
+    "tree": "a00fdf8d1c546fbc8bb4be253876ed73025b8831",
+    "branch": "acceptance/independent-20260922",
+    "dirty_paths": [
+      "comsol_mcp/_measure_spec.py",
+      "evidence/phase4_3_acceptance.json",
+      "tests/run_g3_3_live_acceptance.py",
+      "evidence/phase4_3/runs/frozen_19case_20260922T055332Z/"
+    ],
+    "tracked_dirty_paths": [
+      "comsol_mcp/_measure_spec.py",
+      "evidence/phase4_3_acceptance.json",
+      "tests/run_g3_3_live_acceptance.py"
+    ],
+    "untracked_paths": [
+      "evidence/phase4_3/runs/frozen_19case_20260922T055332Z/"
+    ],
+    "untracked_paths_in_source_tree": [],
+    "tracked_files": 5959,
+    "tracked_files_listed": 5959,
+    "tracked_files_present_in_worktree": 5959,
+    "source_blob_map_sha256": "bca5245750e5cf16590363040700ad2887c2c66a9a9847413f52e7e824c3754c",
+    "captured_at": "2026-09-22T06:00:10.850680+00:00"
+  },
+  "source_identity": {
+    "repository": "Everwalker/comsol-mcp (delivered source workpack)",
+    "commit": "65d1c51c3d1221ad7649d2b9d2253dd0d83250db",
+    "tree": "a00fdf8d1c546fbc8bb4be253876ed73025b8831",
+    "branch": "acceptance/independent-20260922",
+    "tracked_files": 5959,
+    "source_blob_map_sha256": "bca5245750e5cf16590363040700ad2887c2c66a9a9847413f52e7e824c3754c",
+    "lock": "repository/constraints-macos-arm64-py313.txt installs this tree via '-e .'",
+    "how_to_check": "In the recovered clone: git rev-parse HEAD == commit, git rev-parse 'HEAD^{tree}' == tree, git ls-files | wc -l == tracked_files",
+    "regenerated": "written at the start of every acceptance run; records the commit under test",
+    "file": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/SOURCE_TREE_IDENTITY.json",
+    "file_sha256": "e46b4c8c5ade8fce17bded6d11909d01e0a3817ddffffe1048fe6570ab1a7eed",
+    "note": "D6: the dependency lock installs this tree; this file is what a recovering agent compares a fresh clone against"
+  },
+  "runner_sha256": "6246a1ed53bf88d475b37dea3ded7ba8d6f053974505629fc354933587f64d81",
+  "runner_command": [
+    "tests/run_g3_3_live_acceptance.py",
+    "--run-dir",
+    "evidence/phase4_3/runs/frozen_only_20260922T055936Z",
+    "--only",
+    "C03,C05,C08,C09,C14,C15"
+  ],
+  "total_cases": 7,
+  "request_reply_trail": {
+    "file": "request_reply_trail.jsonl",
+    "records": 6022,
+    "truncated": false,
+    "note": "one record per worker request event: the 'submitted' request and the matching 'observed' reply (or 'unknown'/'unresponsive' when none arrived), each with the redacted payload and a request hash.  §11 asks for a per-run request/reply record; the in-process operation calls the runner makes are in assertions.json."
+  },
+  "numeric_evidence": {
+    "file": "numeric.json",
+    "cases": [
+      "C03",
+      "C03R",
+      "C05",
+      "C08",
+      "C09",
+      "C14"
+    ],
+    "note": "numeric checks, comparisons, tolerances and peak-memory records extracted from the case details"
+  },
+  "aborted_cases": [],
+  "passed_cases": 3,
+  "failed_cases": 4,
+  "scope": {
+    "verified_workstream": "W17",
+    "stop_boundary": "W17 (do not advance to W18-W26)",
+    "target_platform": "macOS-aarch64 (Apple Silicon commercial installation)",
+    "unverified_platforms": [
+      "windows",
+      "linux",
+      "intel-mac",
+      "comsol-6.3",
+      "gui"
+    ]
+  },
+  "cases": {
+    "C03": {
+      "case_id": "C03",
+      "name": "Gate A Reopen & Stored Solution Acceptance",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "chain_a_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_only_20260922T055936Z/artifacts/chain_a_solved.mph",
+        "chain_a_sha256": "c3da1ffe92fb97ad15df95fb0dc5cc19c31129a8ff2b972c0201c1272968a305",
+        "chain_a_points_checked": 3,
+        "chain_a_gradient_values": [
+          308.1500000000069,
+          323.15000000001123,
+          338.15000000000975
+        ],
+        "chain_b_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_only_20260922T055936Z/artifacts/chain_b_solved.mph",
+        "chain_b_sha256": "fbbd1ab920423bc114d0511d444f9eb369f29b6f1db1774ab10995e6a3a32a4e",
+        "chain_c_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_only_20260922T055936Z/artifacts/chain_c_solved.mph",
+        "chain_c_sha256": "9e05060eb4bda67d45cd374758f9909576ec22ddf102380c8d0e0e2995554384",
+        "bench_c04_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_only_20260922T055936Z/artifacts/bench_c04_solved.mph",
+        "bench_c05_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_only_20260922T055936Z/artifacts/bench_c05_solved.mph",
+        "bench_c06_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_only_20260922T055936Z/artifacts/bench_c06_solved.mph",
+        "bench_c07_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_only_20260922T055936Z/artifacts/bench_c07_solved.mph",
+        "expectation_source": {
+          "chain_a": "analytic linear profile 293.15 + 1200*x K at x = 0.0125/0.025/0.0375 m",
+          "chain_b": "pre-save read of the build worker (stored-value preservation across save/reopen)",
+          "chain_c": "pre-save read of the build worker (stored-value preservation across save/reopen)"
+        },
+        "chain_b_values_checked": 3,
+        "chain_b_bound_check": "293.15 K <= T <= 353.15 K on every stored value",
+        "chain_c_derived_value_source": "engine read of result/numerical tags in the reopened worker",
+        "independent_resolve": "separate case C03R (§8); not part of this case",
+        "negative_controls_tested": [
+          "ARTIFACT_HASH_MISMATCH",
+          "DATASET_NOT_FOUND",
+          "DERIVED_VALUES_MISSING",
+          "STORED_VALUE_MISMATCH (wrong expected value)",
+          "SOLUTION_CLEARED_OR_EMPTY (stored solution cleared in a copy)",
+          "STORED_VALUE_MISMATCH (field values modified in a copy, digest updated)"
+        ],
+        "negative_control_details": {
+          "cleared_stored_solution": {
+            "expected_code": "SOLUTION_CLEARED_OR_EMPTY",
+            "observed_code": "SOLUTION_CLEARED_OR_EMPTY",
+            "artifact_sha256": "315f019c19f637f0e1e36077dd0c7075a5b10258bedde7a3218125925756a2da",
+            "artifact_is_a_copy": true,
+            "clear_steps": {
+              "ok": true,
+              "request_id": "wrk-85635d7a-b788-4968-8e18-357ac1416f77",
+              "type": "code_execute",
+              "status": "SUCCEEDED",
+              "queued_at_ms": "1790056799167",
+              "started_at_ms": "1790056799167",
+              "completed_at_ms": "1790056799451",
+              "result": {
+                "executed": true,
+                "model_tag": "reopen_a_cleared",
+                "source_sha256": "7c8eac692ce3ceb0ef6098e9b7f764ead73890dc0c2b4bb359f2ce01da32e6f0",
+                "entrypoint": "ClearStoredSolution",
+                "readback": {
+                  "status": "CLEARED",
+                  "clear_solution_data": true,
+                  "clear_solution": true,
+                  "remove_solution_node": true
+                }
+              }
+            },
+            "cleared_artifact_read": {
+              "read_raised": "PreWriteRefusal: dataset 'dset1' does not exist"
+            }
+          },
+          "modified_field_values": {
+            "expected_code": "STORED_VALUE_MISMATCH",
+            "observed_code": "STORED_VALUE_MISMATCH",
+            "artifact_sha256": "880fa05fa8a0f1513f03df578a22ca3e39201d8c450dc6dc03eaa8970d284391",
+            "artifact_is_a_copy": true,
+            "receipt_sha256_matches_mutated_artifact": true,
+            "deviation": {
+              "expected": 308.15,
+              "actual": 310.6500000000081,
+              "abs_diff": 2.5000000000081286,
+              "effective_abs_window": 0.001
+            }
+          }
+        }
+      },
+      "timestamp": "2026-09-22T06:00:00.520227+00:00"
+    },
+    "C03R": {
+      "case_id": "C03R",
+      "name": "Independent Re-solve & Indistinguishability",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "model": "reopen_a",
+        "solve_result": "None",
+        "elapsed_seconds": 0.6048262090189382,
+        "values_compared": 3,
+        "max_abs_delta": 0.0,
+        "tolerance": 0.001,
+        "stored_values": [
+          308.1500000000069,
+          323.15000000001123,
+          338.15000000000975
+        ],
+        "resolved_values": [
+          308.1500000000069,
+          323.15000000001123,
+          338.15000000000975
+        ],
+        "resolved_artifact": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_only_20260922T055936Z/artifacts/chain_a_resolved.mph",
+        "resolved_artifact_sha256": "075212321baa058f18ad0059e33e26b1cbea0f0c7f45579efbd0131699d69d34",
+        "solution_tags": [
+          "sol1"
+        ],
+        "dof": null,
+        "dof_note": "mesh/DoF statistics are not exposed by this worker method surface",
+        "why_separate": "§8: a re-solve may not be folded into the Gate A reopen verdict; the delivered suite ran it inside the case documented '(NO RE-SOLVE)'"
+      },
+      "timestamp": "2026-09-22T06:00:01.296769+00:00"
+    },
+    "C05": {
+      "case_id": "C05",
+      "name": "Multi-dimensional & Selection Support",
+      "status": "PASS",
+      "evidence_level": "numerical",
+      "error": null,
+      "details": {
+        "domain_1_integral": 1.9999999999999878,
+        "domain_2_integral": 3.9999999999999853,
+        "all_domains_integral": 5.999999999999971,
+        "partition_delta_2d": 2.6645352591003757e-15,
+        "dimension_coverage": {
+          "worker": "c03_reopen_verifier (shared run worker)",
+          "one_d_wire": {
+            "interval_1": {
+              "observed": 0.03,
+              "expected": 0.03,
+              "abs_error": 0.0,
+              "rel_error": 0.0,
+              "tolerance": 1e-12,
+              "tolerance_rationale": "a 1-D integral of 1 over an interval is that interval's length; the values come from the engine measure, not from the geometry model, and the intervals are 0.03 m and 0.07 m by construction, so only double rounding remains",
+              "margin_factor": null
+            },
+            "interval_2": {
+              "observed": 0.06999999999999999,
+              "expected": 0.07,
+              "abs_error": 1.3877787807814457e-17,
+              "rel_error": 1.982541115402065e-16,
+              "tolerance": 1e-12,
+              "tolerance_rationale": "a 1-D integral of 1 over an interval is that interval's length; the values come from the engine measure, not from the geometry model, and the intervals are 0.03 m and 0.07 m by construction, so only double rounding remains",
+              "margin_factor": 72057.59403792793
+            },
+            "all_intervals": {
+              "observed": 0.09999999999999992,
+              "expected": 0.1,
+              "abs_error": 8.326672684688674e-17,
+              "rel_error": 8.326672684688674e-16,
+              "tolerance": 1e-12,
+              "tolerance_rationale": "a 1-D integral of 1 over an interval is that interval's length; the values come from the engine measure, not from the geometry model, and the intervals are 0.03 m and 0.07 m by construction, so only double rounding remains",
+              "margin_factor": 12009.599006321323
+            },
+            "partition_delta": 6.938893903907228e-17,
+            "feature_type": "IntLine",
+            "selection_measure_recorded": true,
+            "endpoint_temperature": {
+              "at_x_0": {
+                "observed": 293.15,
+                "expected": 293.15,
+                "abs_error": 0.0,
+                "rel_error": 0.0,
+                "tolerance": 1e-09,
+                "tolerance_rationale": "both 1-D endpoints carry a Dirichlet temperature; a point read exactly on the boundary returns the prescribed value, so the only error is the engine's own double rounding (observed |delta| ~1e-13 K)",
+                "margin_factor": null
+              },
+              "at_x_0_10": {
+                "observed": 353.15,
+                "expected": 353.15,
+                "abs_error": 0.0,
+                "rel_error": 0.0,
+                "tolerance": 1e-09,
+                "tolerance_rationale": "both 1-D endpoints carry a Dirichlet temperature; a point read exactly on the boundary returns the prescribed value, so the only error is the engine's own double rounding (observed |delta| ~1e-13 K)",
+                "margin_factor": null
+              }
+            }
+          },
+          "three_d_block": {
+            "volume": {
+              "observed": 1.999999999999995e-06,
+              "expected": 2e-06,
+              "abs_error": 5.082197683525802e-21,
+              "rel_error": 2.541098841762901e-15,
+              "tolerance": 1e-15,
+              "tolerance_rationale": "the 3-D integral of 1 over the block is its volume 0.02*0.01*0.01 = 2e-6 m^3; the measure comes from the engine, the geometry is exact",
+              "margin_factor": 196765.27011956857
+            },
+            "face_1_area": {
+              "observed": 9.999999999999998e-05,
+              "expected": 0.0001,
+              "abs_error": 2.710505431213761e-20,
+              "rel_error": 2.710505431213761e-16,
+              "tolerance": 1e-15,
+              "tolerance_rationale": "boundary integrals of 1 over the block's faces give their areas: the two x-faces bound the 0.01 x 0.01 cross-section (1e-4 m^2), the four others are 0.02 x 0.01 (2e-4 m^2); both are exact by construction",
+              "margin_factor": 36893.488147419106
+            },
+            "face_6_area": {
+              "observed": 0.00010000000000000002,
+              "expected": 0.0001,
+              "abs_error": 1.3552527156068805e-20,
+              "rel_error": 1.3552527156068805e-16,
+              "tolerance": 1e-15,
+              "tolerance_rationale": "boundary integrals of 1 over the block's faces give their areas: the two x-faces bound the 0.01 x 0.01 cross-section (1e-4 m^2), the four others are 0.02 x 0.01 (2e-4 m^2); both are exact by construction",
+              "margin_factor": 73786.97629483821
+            },
+            "face_2_area": {
+              "observed": 0.00019999999999999936,
+              "expected": 0.0002,
+              "abs_error": 6.505213034913027e-19,
+              "rel_error": 3.2526065174565133e-15,
+              "tolerance": 1e-15,
+              "tolerance_rationale": "boundary integrals of 1 over the block's faces give their areas: the two x-faces bound the 0.01 x 0.01 cross-section (1e-4 m^2), the four others are 0.02 x 0.01 (2e-4 m^2); both are exact by construction",
+              "margin_factor": 1537.2286728091294
+            },
+            "total_surface_area": {
+              "observed": 0.001,
+              "expected": 0.001,
+              "abs_error": 0.0,
+              "rel_error": 0.0,
+              "tolerance": 1e-15,
+              "tolerance_rationale": "boundary integrals of 1 over the block's faces give their areas: the two x-faces bound the 0.01 x 0.01 cross-section (1e-4 m^2), the four others are 0.02 x 0.01 (2e-4 m^2); both are exact by construction",
+              "margin_factor": null
+            },
+            "face_areas_by_entity": {
+              "1": 9.999999999999998e-05,
+              "2": 0.00019999999999999936,
+              "3": 0.00020000000000000047,
+              "4": 0.0001999999999999999,
+              "5": 0.0002000000000000003,
+              "6": 0.00010000000000000002
+            },
+            "feature_type": "IntVolume"
+          },
+          "three_d_temperature": {
+            "x_0_face_centre": {
+              "observed": 293.1499999999999,
+              "expected": 293.15,
+              "abs_error": 5.684341886080802e-14,
+              "rel_error": 1.93905573463442e-16,
+              "tolerance": 1e-06,
+              "tolerance_rationale": "with the two x-faces held at 293.15 K and 353.15 K and the other faces adiabatic, the steady solution of the homogeneous block is exactly linear in x, so the centre is (293.15+353.15)/2 = 323.15 K and the boundary reads equal the prescribed values; a linear field is reproduced exactly by the FEM up to solver tolerance",
+              "margin_factor": 17592186.044416
+            },
+            "x_0_02_face_centre": {
+              "observed": 353.1500000000002,
+              "expected": 353.15,
+              "abs_error": 2.2737367544323206e-13,
+              "rel_error": 6.438444724429621e-16,
+              "tolerance": 1e-06,
+              "tolerance_rationale": "with the two x-faces held at 293.15 K and 353.15 K and the other faces adiabatic, the steady solution of the homogeneous block is exactly linear in x, so the centre is (293.15+353.15)/2 = 323.15 K and the boundary reads equal the prescribed values; a linear field is reproduced exactly by the FEM up to solver tolerance",
+              "margin_factor": 4398046.511104
+            },
+            "centre": {
+              "observed": 323.1500000000001,
+              "expected": 323.15,
+              "abs_error": 1.1368683772161603e-13,
+              "rel_error": 3.518082553662882e-16,
+              "tolerance": 1e-06,
+              "tolerance_rationale": "with the two x-faces held at 293.15 K and 353.15 K and the other faces adiabatic, the steady solution of the homogeneous block is exactly linear in x, so the centre is (293.15+353.15)/2 = 323.15 K and the boundary reads equal the prescribed values; a linear field is reproduced exactly by the FEM up to solver tolerance",
+              "margin_factor": 8796093.022208
+            }
+          },
+          "empty_selection_refusals": [
+            {
+              "label": "1-D domain 99 (geometry has 2)",
+              "refused": true,
+              "code": "SELECTION_MATCHED_NO_ENTITIES",
+              "message": "selection.set named entities [99] that this geometry does not expose: JavaWorkerError: {\"completed_at_ms\": \"1790056804172\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: com.comsol.model",
+              "details": {
+                "selection": [
+                  99
+                ],
+                "matched_entities": [],
+                "selection_measure": null,
+                "engine_error": "JavaWorkerError: {\"completed_at_ms\": \"1790056804172\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: com.comsol.model.data.SelectionOutOfBoundsException: Illegal input vector illegal entity number (cause: UnexpectedServerException: com.comsol.model.data.SelectionOutOfBoundsException: Illegal_input_vector_illegal_entity_number)\", \"ok\": false}, \"o"
+              }
+            },
+            {
+              "label": "3-D boundary 7 (block has 6 faces)",
+              "refused": true,
+              "code": "SELECTION_MATCHED_NO_ENTITIES",
+              "message": "selection.set named entities [7] that this geometry does not expose: JavaWorkerError: {\"completed_at_ms\": \"1790056804203\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: com.comsol.model.",
+              "details": {
+                "selection": [
+                  7
+                ],
+                "matched_entities": [],
+                "selection_measure": null,
+                "engine_error": "JavaWorkerError: {\"completed_at_ms\": \"1790056804203\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: com.comsol.model.data.SelectionOutOfBoundsException: Illegal input vector illegal entity number (cause: UnexpectedServerException: com.comsol.model.data.SelectionOutOfBoundsException: Illegal_input_vector_illegal_entity_number)\", \"ok\": false}, \"o"
+              }
+            }
+          ],
+          "models_built_and_solved_inside_this_case": true
+        }
+      },
+      "timestamp": "2026-09-22T06:00:04.205591+00:00"
+    },
+    "C08": {
+      "case_id": "C08",
+      "name": "Solution Axis Slicing",
+      "status": "FAIL",
+      "evidence_level": "numerical",
+      "error": "{'step': 0, 'refused': True, 'code': 'INVALID_REQUEST', 'message': 'inner index 0 out of range'}",
+      "details": {
+        "traceback": "Traceback (most recent call last):\n  File \"/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tests/run_g3_3_live_acceptance.py\", line 2351, in run_c08\n    assert f\"out of range [1, {n_solutions}]\" in record[\"message\"], record\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: {'step': 0, 'refused': True, 'code': 'INVALID_REQUEST', 'message': 'inner index 0 out of range'}\n"
+      },
+      "timestamp": "2026-09-22T06:00:04.783644+00:00"
+    },
+    "C09": {
+      "case_id": "C09",
+      "name": "Complex Field Transformations",
+      "status": "FAIL",
+      "evidence_level": "numerical",
+      "error": "",
+      "details": {
+        "traceback": "Traceback (most recent call last):\n  File \"/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tests/run_g3_3_live_acceptance.py\", line 2419, in run_c09\n    assert abs(val_phase - math.atan2(24.0, 18.0)) < 1e-6\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+      },
+      "timestamp": "2026-09-22T06:00:04.972834+00:00"
+    },
+    "C14": {
+      "case_id": "C14",
+      "name": "Probe Separation",
+      "status": "FAIL",
+      "evidence_level": "numerical",
+      "error": "{'path': {'segments': [{'collection': 'probe', 'tag': 'prb1'}]}, 'tag': 'prb1', 'component': 'comp1', 'type_id': 'Domain', 'updated': True, 'ok': True, 'status': 'APPLIED', 'partial_change': True, 'execution_state_unknown': False, 'applied': [{'step': 'property', 'property': 'expr', 'requested': 'x + 2*y', 'readback': {'readable': True, 'method': 'getString', 'value': 'x + 2*y', 'match': True}}, {'step': 'property', 'property': 'unit', 'requested': '1', 'readback': {'readable': True, 'method': 'getString', 'value': '1', 'match': True}}, {'step': 'property', 'property': 'table', 'requested': 'tbl_prb1', 'readback': {'readable': True, 'method': 'getString', 'value': 'tbl_prb1', 'match': True}}], 'failed': [], 'not_executed': [], 'applied_count': 3, 'failed_count': 0, 'not_executed_count': 0, 'readback': {'readable': True, 'properties': [{'property': 'expr', 'readable': True, 'method': 'getString', 'value': 'x + 2*y', 'match': True}, {'property': 'unit', 'readable': True, 'method': 'getString', 'value': '1', 'match': True}, {'property': 'table', 'readable': True, 'method': 'getString', 'value': 'tbl_prb1', 'match': True}], 'match': True, 'type': 'Domain', 'table': 'tbl_prb1'}, 'readback_match': True, 'domain_outcome': {'state': 'SUCCEEDED', 'verification_status': 'VERIFIED', 'execution_state_unknown': False, 'partial_change': True, 'applied_count': 3, 'failed_count': 0, 'not_executed_count': 0}}",
+      "details": {
+        "traceback": "Traceback (most recent call last):\n  File \"/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tests/run_g3_3_live_acceptance.py\", line 3080, in run_c14\n    assert dispatched_update.get(\"type_id\") == \"DomainProbe\", dispatched_update\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: {'path': {'segments': [{'collection': 'probe', 'tag': 'prb1'}]}, 'tag': 'prb1', 'component': 'comp1', 'type_id': 'Domain', 'updated': True, 'ok': True, 'status': 'APPLIED', 'partial_change': True, 'execution_state_unknown': False, 'applied': [{'step': 'property', 'property': 'expr', 'requested': 'x + 2*y', 'readback': {'readable': True, 'method': 'getString', 'value': 'x + 2*y', 'match': True}}, {'step': 'property', 'property': 'unit', 'requested': '1', 'readback': {'readable': True, 'method': 'getString', 'value': '1', 'match': True}}, {'step': 'property', 'property': 'table', 'requested': 'tbl_prb1', 'readback': {'readable': True, 'method': 'getString', 'value': 'tbl_prb1', 'match': True}}], 'failed': [], 'not_executed': [], 'applied_count': 3, 'failed_count': 0, 'not_executed_count': 0, 'readback': {'readable': True, 'properties': [{'property': 'expr', 'readable': True, 'method': 'getString', 'value': 'x + 2*y', 'match': True}, {'property': 'unit', 'readable': True, 'method': 'getString', 'value': '1', 'match': True}, {'property': 'table', 'readable': True, 'method': 'getString', 'value': 'tbl_prb1', 'match': True}], 'match': True, 'type': 'Domain', 'table': 'tbl_prb1'}, 'readback_match': True, 'domain_outcome': {'state': 'SUCCEEDED', 'verification_status': 'VERIFIED', 'execution_state_unknown': False, 'partial_change': True, 'applied_count': 3, 'failed_count': 0, 'not_executed_count': 0}}\n"
+      },
+      "timestamp": "2026-09-22T06:00:05.065826+00:00"
+    },
+    "C15": {
+      "case_id": "C15",
+      "name": "Control Responsiveness",
+      "status": "FAIL",
+      "evidence_level": "protocol",
+      "error": "{'refused': False, 'returned': [[[[{'real': 0.029350580093791816, 'imag': 0.0}], [{'real': 0.030109244708104235, 'imag': 0.0}], [{'real': 0.030438535780786896, 'imag': 0.0}], [{'real': 0.030697094955265212, 'imag': 0.0}], [{'real': 0.030904123384173393, 'imag': 0.0}], [{'real': 0.031097028738091302, 'imag': 0.0}], [{'real': 0.03126947591664693, 'imag': 0.0}], [{'real': 0.03142018608266691, 'imag': 0.0}], [{'real': 0.031561189771622374, 'imag': 0.0}], [{'real': 0.03170219346057789, 'imag': 0.0}], [{'real': 0.03183209057109261, 'imag': 0.0}], [{'real': 0.03195218516200373, 'imag': 0.0}], [{'real': 0.03207227975291486, 'imag': 0.0}], [{'real': 0.03218283005783561, 'imag': 0.0}], [{'real': 0.03227720324301673, 'imag': 0.0}], [{'real': 0.03237157642819771, 'imag': 0.0}], [{'real': 0.03246594961337888, 'imag': 0.0}], [{'real': 0.032560322798560096, 'imag': 0.0}], [{'real': 0.032654695983741266, 'imag': 0.0}], [{'real': 0.032748121008611804, 'imag': 0.0}], [{'real': 0.032823838357790514, 'imag': 0.0}], [{'real': 0.03289955570696913, 'imag': 0.0}], [{'real': 0.032975273056147794, 'imag': 0.0}], [{'real': 0.033050990405326455, 'imag': 0.0}], [{'real': 0.03312670775450524, 'imag': 0.0}], [{'real': 0.033202425103683715, 'imag': 0.0}], [{'real': 0.03326764136858059, 'imag': 0.0}], [{'real': 0.03332898516271811, 'imag': 0.0}], [{'real': 0.03339032895685568, 'imag': 0.0}], [{'real': 0.03345167275099312, 'imag': 0.0}], [{'real': 0.03351301654513067, 'imag': 0.0}], [{'real': 0.03357436033926803, 'imag': 0.0}], [{'real': 0.03363385298317742, 'imag': 0.0}], [{'real': 0.03368974026370196, 'imag': 0.0}], [{'real': 0.03374428703017706, 'imag': 0.0}], [{'real': 0.033797493282602606, 'imag': 0.0}], [{'real': 0.03384935902097871, 'imag': 0.0}], [{'real': 0.03389988424530522, 'imag': 0.0}], [{'real': 0.03394906895558231, 'imag': 0.0}], [{'real': 0.03399691315180993, 'imag': 0.0}], [{'real': 0.03404341683398805, 'imag': 0.0}], [{'real': 0.03408858000211663, 'imag': 0.0}], [{'real': 0.03413240265619583, 'imag': 0.0}], [{'real': 0.03417488479622543, 'imag': 0.0}], [{'real': 0.034216026422205593, 'imag': 0.0}], [{'real': 0.03425611298128456, 'imag': 0.0}], [{'real': 0.03429499328974864, 'imag': 0.0}], [{'real': 0.03433258838124702, 'imag': 0.0}], [{'real': 0.03436889825578001, 'imag': 0.0}], [{'real': 0.034403922913347484, 'imag': 0.0}], [{'real': 0.03443766235394943, 'imag': 0.0}], [{'real': 0.03447011657758586, 'imag': 0.0}], [{'real': 0.03450128558425669, 'imag': 0.0}], [{'real': 0.034531169373962035, 'imag': 0.0}], [{'real': 0.03455976794670189, 'imag': 0.0}], [{'real': 0.034587081302476, 'imag': 0.0}], [{'real': 0.0346131094412846, 'imag': 0.0}], [{'real': 0.03463830596701544, 'imag': 0.0}], [{'real': 0.03466557964029637, 'imag': 0.0}], [{'real': 0.03469211718659254, 'imag': 0.0}], [{'real': 0.034717918605904244, 'imag': 0.0}], [{'real': 0.03474298389823118, 'imag': 0.0}], [{'real': 0.03476731306357356, 'imag': 0.0}], [{'real': 0.03479090610193142, 'imag': 0.0}], [{'real': 0.03481376301330466, 'imag': 0.0}], [{'real': 0.034835883797693194, 'imag': 0.0}], [{'real': 0.034857268455097054, 'imag': 0.0}], [{'real': 0.03487791698551655, 'imag': 0.0}], [{'real': 0.03489782938895131, 'imag': 0.0}], [{'real': 0.03491700566540151, 'imag': 0.0}], [{'real': 0.034935445814867176, 'imag': 0.0}], [{'real': 0.03495314983734797, 'imag': 0.0}], [{'real': 0.0349701177328443, 'imag': 0.0}], [{'real': 0.03498634950135607, 'imag': 0.0}], [{'real': 0.03500184514288325, 'imag': 0.0}], [{'real': 0.03501660465742577, 'imag': 0.0}], [{'real': 0.03503062804498368, 'imag': 0.0}], [{'real': 0.035043915305556894, 'imag': 0.0}], [{'real': 0.035056466439145686, 'imag': 0.0}], [{'real': 0.03506828144574973, 'imag': 0.0}], [{'real': 0.03507936032536925, 'imag': 0.0}], [{'real': 0.035089703078004124, 'imag': 0.0}], [{'real': 0.035099309703654366, 'imag': 0.0}], [{'real': 0.03511130521551799, 'imag': 0.0}], [{'real': 0.03512338347215303, 'imag': 0.0}], [{'real': 0.035135007531347975, 'imag': 0.0}], [{'real': 0.035146177393103016, 'imag': 0.0}], [{'real': 0.03515689305741808, 'imag': 0.0}], [{'real': 0.03516715452429322, 'imag': 0.0}], [{'real': 0.035176961793728326, 'imag': 0.0}], [{'real': 0.03518631486572335, 'imag': 0.0}], [{'real': 0.035195213740278626, 'imag': 0.0}], [{'real': 0.035203658417393806, 'imag': 0.0}], [{'real': 0.03521164889706893, 'imag': 0.0}], [{'real': 0.0352191851793042, 'imag': 0.0}], [{'real': 0.03522626726409951, 'imag': 0.0}], [{'real': 0.0352328951514547, 'imag': 0.0}], [{'real': 0.03523906884137008, 'imag': 0.0}], [{'real': 0.035244788333845437, 'imag': 0.0}], [{'real': 0.03525005362888084, 'imag': 0.0}], [{'real': 0.03525486472647608, 'imag': 0.0}], [{'real': 0.035259221626631476, 'imag': 0.0}], [{'real': 0.035263124329347015, 'imag': 0.0}], [{'real': 0.03526657283462241, 'imag': 0.0}], [{'real': 0.03526956714245802, 'imag': 0.0}], [{'real': 0.035272107252853444, 'imag': 0.0}], [{'real': 0.03527419316580904, 'imag': 0.0}], [{'real': 0.03527582488132448, 'imag': 0.0}], [{'real': 0.035278884404803534, 'imag': 0.0}], [{'real': 0.03528312537405171, 'imag': 0.0}], [{'real': 0.03528716875976974, 'imag': 0.0}], [{'real': 0.03529101456195757, 'imag': 0.0}], [{'real': 0.03529466278061526, 'imag': 0.0}], [{'real': 0.03529811341574283, 'imag': 0.0}], [{'real': 0.03530136646734026, 'imag': 0.0}], [{'real': 0.03530442193540752, 'imag': 0.0}], [{'real': 0.035307279819944734, 'imag': 0.0}], [{'real': 0.035309940120951636, 'imag': 0.0}], [{'real': 0.03531240283842842, 'imag': 0.0}], [{'real': 0.035314667972375105, 'imag': 0.0}], [{'real': 0.03531673552279159, 'imag': 0.0}], [{'real': 0.03531860548967797, 'imag': 0.0}], [{'real': 0.03532027787303413, 'imag': 0.0}], [{'real': 0.03532175267286024, 'imag': 0.0}], [{'real': 0.03532302988915608, 'imag': 0.0}], [{'real': 0.03532410952192183, 'imag': 0.0}], [{'real': 0.03532499157115748, 'imag': 0.0}], [{'real': 0.035325676036862846, 'imag': 0.0}], [{'real': 0.03532616291903817, 'imag': 0.0}], [{'real': 0.03532645221768342, 'imag': 0.0}], [{'real': 0.035326543932798354, 'imag': 0.0}], [{'real': 0.03532643806438322, 'imag': 0.0}], [{'real': 0.03532613461243797, 'imag': 0.0}], [{'real': 0.0353261049625236, 'imag': 0.0}], [{'real': 0.035327134450267014, 'imag': 0.0}], [{'real': 0.035328095058519055, 'imag': 0.0}], [{'real': 0.03532898678727969, 'imag': 0.0}], [{'real': 0.03532980963654887, 'imag': 0.0}], [{'real': 0.03533056360632687, 'imag': 0.0}], [{'real': 0.035331248696613415, 'imag': 0.0}], [{'real': 0.0353318649074086, 'imag': 0.0}], [{'real': 0.035332412238712564, 'imag': 0.0}], [{'real': 0.035332890690524914, 'imag': 0.0}], [{'real': 0.03533330026284613, 'imag': 0.0}], [{'real': 0.03533364095567591, 'imag': 0.0}], [{'real': 0.03533391276901428, 'imag': 0.0}], [{'real': 0.035334115702861386, 'imag': 0.0}], [{'real': 0.03533424975721716, 'imag': 0.0}], [{'real': 0.03533431493208154, 'imag': 0.0}], [{'real': 0.0353343112274544, 'imag': 0.0}], [{'real': 0.035334238643336124, 'imag': 0.0}], [{'real': 0.03533409717972642, 'imag': 0.0}], [{'real': 0.03533388683662532, 'imag': 0.0}], [{'real': 0.0353336076140329, 'imag': 0.0}], [{'real': 0.0353332595119492, 'imag': 0.0}], [{'real': 0.03533284253037405, 'imag': 0.0}], [{'real': 0.035332356669307556, 'imag': 0.0}], [{'real': 0.035331801928749726, 'imag': 0.0}], [{'real': 0.035331181962445404, 'imag': 0.0}], [{'real': 0.03533117512933969, 'imag': 0.0}], [{'real': 0.03533115157445932, 'imag': 0.0}], [{'real': 0.03533111129780414, 'imag': 0.0}], [{'real': 0.03533105429937435, 'imag': 0.0}], [{'real': 0.035330980579169835, 'imag': 0.0}], [{'real': 0.03533089013719044, 'imag': 0.0}], [{'real': 0.035330782973436496, 'imag': 0.0}], [{'real': 0.035330659087907765, 'imag': 0.0}], [{'real': 0.0353305184806043, 'imag': 0.0}], [{'real': 0.03533036115152613, 'imag': 0.0}], [{'real': 0.035330187100673115, 'imag': 0.0}], [{'real': 0.03532999632804559, 'imag': 0.0}], [{'real': 0.0353297888336431, 'imag': 0.0}], [{'real': 0.03532956461746607, 'imag': 0.0}], [{'real': 0.035329323679514316, 'imag': 0.0}], [{'real': 0.035329066019787754, 'imag': 0.0}], [{'real': 0.03532879163828649, 'imag': 0.0}], [{'real': 0.03532850053501059, 'imag': 0.0}], [{'real': 0.03532819270995978, 'imag': 0.0}], [{'real': 0.03532786816313449, 'imag': 0.0}], [{'real': 0.03532752689453422, 'imag': 0.0}], [{'real': 0.035327168904159385, 'imag': 0.0}], [{'real': 0.03532679419200967, 'imag': 0.0}], [{'real': 0.03532640275808537, 'imag': 0.0}], [{'real': 0.03532599460238639, 'imag': 0.0}], [{'real': 0.035325759660902296, 'imag': 0.0}], [{'real': 0.035325594613175706, 'imag': 0.0}], [{'real': 0.03532542956544919, 'imag': 0.0}], [{'real': 0.035325264517722575, 'imag': 0.0}], [{'real': 0.03532509946999609, 'imag': 0.0}], [{'real': 0.035324934422269416, 'imag': 0.0}], [{'real': 0.03532476937454296, 'imag': 0.0}], [{'real': 0.03532460432681629, 'imag': 0.0}], [{'real': 0.03532443927908973, 'imag': 0.0}], [{'real': 0.03532427423136313, 'imag': 0.0}], [{'real': 0.035324109183636515, 'imag': 0.0}], [{'real': 0.03532394413591003, 'imag': 0.0}], [{'real': 0.03532377908818339, 'imag': 0.0}], [{'real': 0.035323614040456836, 'imag': 0.0}], [{'real': 0.0353234489927302, 'imag': 0.0}], [{'real': 0.03532328394500374, 'imag': 0.0}], [{'real': 0.035323118897277184, 'imag': 0.0}], [{'real': 0.035322953849550504, 'imag': 0.0}], [{'real': 0.035322788801824004, 'imag': 0.0}], [{'real': 0.03532262375409735, 'imag': 0.0}], [{'real': 0.03532245870637073, 'imag': 0.0}], [{'real': 0.03532229365864429, 'imag': 0.0}], [{'real': 0.03532212861091764, 'imag': 0.0}], [{'real': 0.03532196356319112, 'imag': 0.0}], [{'real': 0.03532179851546452, 'imag': 0.0}], [{'real': 0.03532163346773795, 'imag': 0.0}], [{'real': 0.03532146842001142, 'imag': 0.0}], [{'real': 0.03532130337228488, 'imag': 0.0}], [{'real': 0.035321138324558174, 'imag': 0.0}], [{'real': 0.035320973276831646, 'imag': 0.0}], [{'real': 0.03532080822910512, 'imag': 0.0}], [{'real': 0.03532064318137852, 'imag': 0.0}], [{'real': 0.03532047813365194, 'imag': 0.0}], [{'real': 0.0353203130859253, 'imag': 0.0}], [{'real': 0.035320148038198725, 'imag': 0.0}], [{'real': 0.035319982990472135, 'imag': 0.0}], [{'real': 0.03531981794274564, 'imag': 0.0}], [{'real': 0.03531965289501898, 'imag': 0.0}], [{'real': 0.035319487847292344, 'imag': 0.0}], [{'real': 0.0353193227995659, 'imag': 0.0}], [{'real': 0.03531922433985091, 'imag': 0.0}], [{'real': 0.035319151190885176, 'imag': 0.0}], [{'real': 0.0353190780419194, 'imag': 0.0}], [{'real': 0.035319004892953504, 'imag': 0.0}], [{'real': 0.03531893174398787, 'imag': 0.0}], [{'real': 0.035318858595022096, 'imag': 0.0}], [{'real': 0.03531878544605631, 'imag': 0.0}], [{'real': 0.03531871229709055, 'imag': 0.0}], [{'real': 0.03531863914812473, 'imag': 0.0}], [{'real': 0.0353185659991591, 'imag': 0.0}], [{'real': 0.03531849285019315, 'imag': 0.0}], [{'real': 0.03531841970122748, 'imag': 0.0}], [{'real': 0.03531834655226168, 'imag': 0.0}], [{'real': 0.03531827340329595, 'imag': 0.0}], [{'real': 0.035318200254330134, 'imag': 0.0}], [{'real': 0.035318127105364486, 'imag': 0.0}], [{'real': 0.03531805395639867, 'imag': 0.0}], [{'real': 0.035317980807432786, 'imag': 0.0}], [{'real': 0.035317907658467054, 'imag': 0.0}], [{'real': 0.035317834509501336, 'imag': 0.0}], [{'real': 0.03531776136053546, 'imag': 0.0}], [{'real': 0.035317688211569775, 'imag': 0.0}], [{'real': 0.03531761506260399, 'imag': 0.0}], [{'real': 0.035317541913638284, 'imag': 0.0}], [{'real': 0.03531746876467247, 'imag': 0.0}], [{'real': 0.03531739561570674, 'imag': 0.0}], [{'real': 0.03531732246674088, 'imag': 0.0}], [{'real': 0.03531724931777523, 'imag': 0.0}], [{'real': 0.03531717616880933, 'imag': 0.0}], [{'real': 0.035317103019843754, 'imag': 0.0}], [{'real': 0.03531702987087784, 'imag': 0.0}], [{'real': 0.03531695672191215, 'imag': 0.0}], [{'real': 0.03531688357294628, 'imag': 0.0}], [{'real': 0.035316810423980556, 'imag': 0.0}], [{'real': 0.03531673727501481, 'imag': 0.0}], [{'real': 0.03531666412604914, 'imag': 0.0}], [{'real': 0.03531659097708334, 'imag': 0.0}], [{'real': 0.035316517828117434, 'imag': 0.0}], [{'real': 0.03531644467915171, 'imag': 0.0}], [{'real': 0.03531637153018599, 'imag': 0.0}], [{'real': 0.0353163331161329, 'imag': 0.0}], [{'real': 0.03531630790515698, 'imag': 0.0}], [{'real': 0.03531628269418119, 'imag': 0.0}], [{'real': 0.03531625748320538, 'imag': 0.0}], [{'real': 0.03531623227222966, 'imag': 0.0}], [{'real': 0.03531620706125367, 'imag': 0.0}], [{'real': 0.03531618185027774, 'imag': 0.0}], [{'real': 0.035316156639302, 'imag': 0.0}], [{'real': 0.035316131428326146, 'imag': 0.0}], [{'real': 0.03531610621735025, 'imag': 0.0}], [{'real': 0.03531608100637448, 'imag': 0.0}], [{'real': 0.03531605579539862, 'imag': 0.0}], [{'real': 0.03531603058442277, 'imag': 0.0}], [{'real': 0.035316005373446945, 'imag': 0.0}], [{'real': 0.03531598016247123, 'imag': 0.0}], [{'real': 0.03531595495149531, 'imag': 0.0}], [{'real': 0.035315929740519336, 'imag': 0.0}], [{'real': 0.03531590452954349, 'imag': 0.0}], [{'real': 0.03531587931856778, 'imag': 0.0}], [{'real': 0.03531585410759199, 'imag': 0.0}], [{'real': 0.03531582889661612, 'imag': 0.0}], [{'real': 0.03531580368564031, 'imag': 0.0}], [{'real': 0.0353157784746645, 'imag': 0.0}], [{'real': 0.035315753263688604, 'imag': 0.0}], [{'real': 0.035315728052712804, 'imag': 0.0}], [{'real': 0.03531570284173684, 'imag': 0.0}], [{'real': 0.03531567763076101, 'imag': 0.0}], [{'real': 0.03531565241978511, 'imag': 0.0}], [{'real': 0.03531562720880939, 'imag': 0.0}], [{'real': 0.03531560199783351, 'imag': 0.0}], [{'real': 0.035315576786857636, 'imag': 0.0}], [{'real': 0.035315551575881905, 'imag': 0.0}], [{'real': 0.03531552636490601, 'imag': 0.0}], [{'real': 0.03531550115393016, 'imag': 0.0}], [{'real': 0.035315475942954255, 'imag': 0.0}], [{'real': 0.03531545073197843, 'imag': 0.0}], [{'real': 0.03531542552100267, 'imag': 0.0}], [{'real': 0.035315400310026834, 'imag': 0.0}], [{'real': 0.03531537509905105, 'imag': 0.0}], [{'real': 0.035315349888075165, 'imag': 0.0}], [{'real': 0.035315337827037066, 'imag': 0.0}], [{'real': 0.03531533076441774, 'imag': 0.0}], [{'real': 0.035315323701798434, 'imag': 0.0}], [{'real': 0.03531531663917922, 'imag': 0.0}], [{'real': 0.03531530957655995, 'imag': 0.0}], [{'real': 0.03531530251394069, 'imag': 0.0}], [{'real': 0.03531529545132151, 'imag': 0.0}], [{'real': 0.03531528838870216, 'imag': 0.0}], [{'real': 0.03531528132608294, 'imag': 0.0}], [{'real': 0.03531527426346366, 'imag': 0.0}], [{'real': 0.035315267200844484, 'imag': 0.0}], [{'real': 0.03531526013822523, 'imag': 0.0}], [{'real': 0.03531525307560597, 'imag': 0.0}], [{'real': 0.03531524601298672, 'imag': 0.0}], [{'real': 0.03531523895036753, 'imag': 0.0}], [{'real': 0.03531523188774814, 'imag': 0.0}], [{'real': 0.03531522482512889, 'imag': 0.0}], [{'real': 0.03531521776250951, 'imag': 0.0}], [{'real': 0.03531521069989045, 'imag': 0.0}], [{'real': 0.035315203637271114, 'imag': 0.0}], [{'real': 0.03531519657465192, 'imag': 0.0}], [{'real': 0.03531518951203261, 'imag': 0.0}], [{'real': 0.035315182449413354, 'imag': 0.0}], [{'real': 0.035315175386794136, 'imag': 0.0}], [{'real': 0.03531516832417491, 'imag': 0.0}], [{'real': 0.03531516126155557, 'imag': 0.0}], [{'real': 0.035315154198936397, 'imag': 0.0}], [{'real': 0.03531514713631713, 'imag': 0.0}], [{'real': 0.0353151400736979, 'imag': 0.0}], [{'real': 0.03531513301107862, 'imag': 0.0}], [{'real': 0.03531512594845944, 'imag': 0.0}], [{'real': 0.03531511888584015, 'imag': 0.0}], [{'real': 0.035315111823220946, 'imag': 0.0}], [{'real': 0.03531510476060169, 'imag': 0.0}], [{'real': 0.035315097697982384, 'imag': 0.0}], [{'real': 0.035315090635363144, 'imag': 0.0}], [{'real': 0.035315083572743905, 'imag': 0.0}], [{'real': 0.03531507651012453, 'imag': 0.0}], [{'real': 0.03531506944750529, 'imag': 0.0}], [{'real': 0.03531506238488607, 'imag': 0.0}], [{'real': 0.035315059348012386, 'imag': 0.0}], [{'real': 0.03531505784136375, 'imag': 0.0}], [{'real': 0.03531505633471489, 'imag': 0.0}], [{'real': 0.0353150548280661, 'imag': 0.0}], [{'real': 0.035315053321417364, 'imag': 0.0}], [{'real': 0.03531505181476857, 'imag': 0.0}], [{'real': 0.035315050308119836, 'imag': 0.0}], [{'real': 0.03531504880147103, 'imag': 0.0}], [{'real': 0.03531504729482236, 'imag': 0.0}], [{'real': 0.03531504578817358, 'imag': 0.0}], [{'real': 0.03531504428152474, 'imag': 0.0}], [{'real': 0.03531504277487594, 'imag': 0.0}], [{'real': 0.03531504126822726, 'imag': 0.0}], [{'real': 0.03531503976157843, 'imag': 0.0}], [{'real': 0.03531503825492966, 'imag': 0.0}], [{'real': 0.0353150367482809, 'imag': 0.0}], [{'real': 0.03531503524163215, 'imag': 0.0}], [{'real': 0.03531503373498334, 'imag': 0.0}], [{'real': 0.03531503222833464, 'imag': 0.0}], [{'real': 0.035315030721685854, 'imag': 0.0}], [{'real': 0.03531502921503711, 'imag': 0.0}], [{'real': 0.03531502770838829, 'imag': 0.0}], [{'real': 0.03531502620173951, 'imag': 0.0}], [{'real': 0.03531502469509086, 'imag': 0.0}], [{'real': 0.03531502318844193, 'imag': 0.0}], [{'real': 0.03531502168179327, 'imag': 0.0}], [{'real': 0.035315020175144485, 'imag': 0.0}], [{'real': 0.035315018668495665, 'imag': 0.0}], [{'real': 0.03531501716184686, 'imag': 0.0}], [{'real': 0.03531501565519822, 'imag': 0.0}], [{'real': 0.03531501414854944, 'imag': 0.0}], [{'real': 0.035315012641900526, 'imag': 0.0}], [{'real': 0.03531501113525186, 'imag': 0.0}], [{'real': 0.03531500962860322, 'imag': 0.0}], [{'real': 0.03531500812195436, 'imag': 0.0}], [{'real': 0.03531500661530554, 'imag': 0.0}], [{'real': 0.03531500510865686, 'imag': 0.0}], [{'real': 0.035315003602008066, 'imag': 0.0}], [{'real': 0.03531500209535933, 'imag': 0.0}], [{'real': 0.035315000588710545, 'imag': 0.0}], [{'real': 0.035315000062913215, 'imag': 0.0}], [{'real': 0.03531499990994719, 'imag': 0.0}], [{'real': 0.03531499975698094, 'imag': 0.0}], [{'real': 0.03531499960401484, 'imag': 0.0}], [{'real': 0.035314999451048754, 'imag': 0.0}], [{'real': 0.03531499929808264, 'imag': 0.0}], [{'real': 0.03531499914511654, 'imag': 0.0}], [{'real': 0.035314998992150404, 'imag': 0.0}], [{'real': 0.03531499883918434, 'imag': 0.0}], [{'real': 0.03531499868621815, 'imag': 0.0}], [{'real': 0.03531499853325214, 'imag': 0.0}], [{'real': 0.03531499838028591, 'imag': 0.0}], [{'real': 0.03531499822731986, 'imag': 0.0}], [{'real': 0.035314998074353655, 'imag': 0.0}], [{'real': 0.03531499792138754, 'imag': 0.0}], [{'real': 0.03531499776842146, 'imag': 0.0}], [{'real': 0.035314997615455326, 'imag': 0.0}]]]], 'reference': 'mcp10'}",
+      "details": {
+        "traceback": "Traceback (most recent call last):\n  File \"/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tests/run_g3_3_live_acceptance.py\", line 3295, in run_c15\n    assert stale_reference[\"refused\"] is True, stale_reference\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: {'refused': False, 'returned': [[[[{'real': 0.029350580093791816, 'imag': 0.0}], [{'real': 0.030109244708104235, 'imag': 0.0}], [{'real': 0.030438535780786896, 'imag': 0.0}], [{'real': 0.030697094955265212, 'imag': 0.0}], [{'real': 0.030904123384173393, 'imag': 0.0}], [{'real': 0.031097028738091302, 'imag': 0.0}], [{'real': 0.03126947591664693, 'imag': 0.0}], [{'real': 0.03142018608266691, 'imag': 0.0}], [{'real': 0.031561189771622374, 'imag': 0.0}], [{'real': 0.03170219346057789, 'imag': 0.0}], [{'real': 0.03183209057109261, 'imag': 0.0}], [{'real': 0.03195218516200373, 'imag': 0.0}], [{'real': 0.03207227975291486, 'imag': 0.0}], [{'real': 0.03218283005783561, 'imag': 0.0}], [{'real': 0.03227720324301673, 'imag': 0.0}], [{'real': 0.03237157642819771, 'imag': 0.0}], [{'real': 0.03246594961337888, 'imag': 0.0}], [{'real': 0.032560322798560096, 'imag': 0.0}], [{'real': 0.032654695983741266, 'imag': 0.0}], [{'real': 0.032748121008611804, 'imag': 0.0}], [{'real': 0.032823838357790514, 'imag': 0.0}], [{'real': 0.03289955570696913, 'imag': 0.0}], [{'real': 0.032975273056147794, 'imag': 0.0}], [{'real': 0.033050990405326455, 'imag': 0.0}], [{'real': 0.03312670775450524, 'imag': 0.0}], [{'real': 0.033202425103683715, 'imag': 0.0}], [{'real': 0.03326764136858059, 'imag': 0.0}], [{'real': 0.03332898516271811, 'imag': 0.0}], [{'real': 0.03339032895685568, 'imag': 0.0}], [{'real': 0.03345167275099312, 'imag': 0.0}], [{'real': 0.03351301654513067, 'imag': 0.0}], [{'real': 0.03357436033926803, 'imag': 0.0}], [{'real': 0.03363385298317742, 'imag': 0.0}], [{'real': 0.03368974026370196, 'imag': 0.0}], [{'real': 0.03374428703017706, 'imag': 0.0}], [{'real': 0.033797493282602606, 'imag': 0.0}], [{'real': 0.03384935902097871, 'imag': 0.0}], [{'real': 0.03389988424530522, 'imag': 0.0}], [{'real': 0.03394906895558231, 'imag': 0.0}], [{'real': 0.03399691315180993, 'imag': 0.0}], [{'real': 0.03404341683398805, 'imag': 0.0}], [{'real': 0.03408858000211663, 'imag': 0.0}], [{'real': 0.03413240265619583, 'imag': 0.0}], [{'real': 0.03417488479622543, 'imag': 0.0}], [{'real': 0.034216026422205593, 'imag': 0.0}], [{'real': 0.03425611298128456, 'imag': 0.0}], [{'real': 0.03429499328974864, 'imag': 0.0}], [{'real': 0.03433258838124702, 'imag': 0.0}], [{'real': 0.03436889825578001, 'imag': 0.0}], [{'real': 0.034403922913347484, 'imag': 0.0}], [{'real': 0.03443766235394943, 'imag': 0.0}], [{'real': 0.03447011657758586, 'imag': 0.0}], [{'real': 0.03450128558425669, 'imag': 0.0}], [{'real': 0.034531169373962035, 'imag': 0.0}], [{'real': 0.03455976794670189, 'imag': 0.0}], [{'real': 0.034587081302476, 'imag': 0.0}], [{'real': 0.0346131094412846, 'imag': 0.0}], [{'real': 0.03463830596701544, 'imag': 0.0}], [{'real': 0.03466557964029637, 'imag': 0.0}], [{'real': 0.03469211718659254, 'imag': 0.0}], [{'real': 0.034717918605904244, 'imag': 0.0}], [{'real': 0.03474298389823118, 'imag': 0.0}], [{'real': 0.03476731306357356, 'imag': 0.0}], [{'real': 0.03479090610193142, 'imag': 0.0}], [{'real': 0.03481376301330466, 'imag': 0.0}], [{'real': 0.034835883797693194, 'imag': 0.0}], [{'real': 0.034857268455097054, 'imag': 0.0}], [{'real': 0.03487791698551655, 'imag': 0.0}], [{'real': 0.03489782938895131, 'imag': 0.0}], [{'real': 0.03491700566540151, 'imag': 0.0}], [{'real': 0.034935445814867176, 'imag': 0.0}], [{'real': 0.03495314983734797, 'imag': 0.0}], [{'real': 0.0349701177328443, 'imag': 0.0}], [{'real': 0.03498634950135607, 'imag': 0.0}], [{'real': 0.03500184514288325, 'imag': 0.0}], [{'real': 0.03501660465742577, 'imag': 0.0}], [{'real': 0.03503062804498368, 'imag': 0.0}], [{'real': 0.035043915305556894, 'imag': 0.0}], [{'real': 0.035056466439145686, 'imag': 0.0}], [{'real': 0.03506828144574973, 'imag': 0.0}], [{'real': 0.03507936032536925, 'imag': 0.0}], [{'real': 0.035089703078004124, 'imag': 0.0}], [{'real': 0.035099309703654366, 'imag': 0.0}], [{'real': 0.03511130521551799, 'imag': 0.0}], [{'real': 0.03512338347215303, 'imag': 0.0}], [{'real': 0.035135007531347975, 'imag': 0.0}], [{'real': 0.035146177393103016, 'imag': 0.0}], [{'real': 0.03515689305741808, 'imag': 0.0}], [{'real': 0.03516715452429322, 'imag': 0.0}], [{'real': 0.035176961793728326, 'imag': 0.0}], [{'real': 0.03518631486572335, 'imag': 0.0}], [{'real': 0.035195213740278626, 'imag': 0.0}], [{'real': 0.035203658417393806, 'imag': 0.0}], [{'real': 0.03521164889706893, 'imag': 0.0}], [{'real': 0.0352191851793042, 'imag': 0.0}], [{'real': 0.03522626726409951, 'imag': 0.0}], [{'real': 0.0352328951514547, 'imag': 0.0}], [{'real': 0.03523906884137008, 'imag': 0.0}], [{'real': 0.035244788333845437, 'imag': 0.0}], [{'real': 0.03525005362888084, 'imag': 0.0}], [{'real': 0.03525486472647608, 'imag': 0.0}], [{'real': 0.035259221626631476, 'imag': 0.0}], [{'real': 0.035263124329347015, 'imag': 0.0}], [{'real': 0.03526657283462241, 'imag': 0.0}], [{'real': 0.03526956714245802, 'imag': 0.0}], [{'real': 0.035272107252853444, 'imag': 0.0}], [{'real': 0.03527419316580904, 'imag': 0.0}], [{'real': 0.03527582488132448, 'imag': 0.0}], [{'real': 0.035278884404803534, 'imag': 0.0}], [{'real': 0.03528312537405171, 'imag': 0.0}], [{'real': 0.03528716875976974, 'imag': 0.0}], [{'real': 0.03529101456195757, 'imag': 0.0}], [{'real': 0.03529466278061526, 'imag': 0.0}], [{'real': 0.03529811341574283, 'imag': 0.0}], [{'real': 0.03530136646734026, 'imag': 0.0}], [{'real': 0.03530442193540752, 'imag': 0.0}], [{'real': 0.035307279819944734, 'imag': 0.0}], [{'real': 0.035309940120951636, 'imag': 0.0}], [{'real': 0.03531240283842842, 'imag': 0.0}], [{'real': 0.035314667972375105, 'imag': 0.0}], [{'real': 0.03531673552279159, 'imag': 0.0}], [{'real': 0.03531860548967797, 'imag': 0.0}], [{'real': 0.03532027787303413, 'imag': 0.0}], [{'real': 0.03532175267286024, 'imag': 0.0}], [{'real': 0.03532302988915608, 'imag': 0.0}], [{'real': 0.03532410952192183, 'imag': 0.0}], [{'real': 0.03532499157115748, 'imag': 0.0}], [{'real': 0.035325676036862846, 'imag': 0.0}], [{'real': 0.03532616291903817, 'imag': 0.0}], [{'real': 0.03532645221768342, 'imag': 0.0}], [{'real': 0.035326543932798354, 'imag': 0.0}], [{'real': 0.03532643806438322, 'imag': 0.0}], [{'real': 0.03532613461243797, 'imag': 0.0}], [{'real': 0.0353261049625236, 'imag': 0.0}], [{'real': 0.035327134450267014, 'imag': 0.0}], [{'real': 0.035328095058519055, 'imag': 0.0}], [{'real': 0.03532898678727969, 'imag': 0.0}], [{'real': 0.03532980963654887, 'imag': 0.0}], [{'real': 0.03533056360632687, 'imag': 0.0}], [{'real': 0.035331248696613415, 'imag': 0.0}], [{'real': 0.0353318649074086, 'imag': 0.0}], [{'real': 0.035332412238712564, 'imag': 0.0}], [{'real': 0.035332890690524914, 'imag': 0.0}], [{'real': 0.03533330026284613, 'imag': 0.0}], [{'real': 0.03533364095567591, 'imag': 0.0}], [{'real': 0.03533391276901428, 'imag': 0.0}], [{'real': 0.035334115702861386, 'imag': 0.0}], [{'real': 0.03533424975721716, 'imag': 0.0}], [{'real': 0.03533431493208154, 'imag': 0.0}], [{'real': 0.0353343112274544, 'imag': 0.0}], [{'real': 0.035334238643336124, 'imag': 0.0}], [{'real': 0.03533409717972642, 'imag': 0.0}], [{'real': 0.03533388683662532, 'imag': 0.0}], [{'real': 0.0353336076140329, 'imag': 0.0}], [{'real': 0.0353332595119492, 'imag': 0.0}], [{'real': 0.03533284253037405, 'imag': 0.0}], [{'real': 0.035332356669307556, 'imag': 0.0}], [{'real': 0.035331801928749726, 'imag': 0.0}], [{'real': 0.035331181962445404, 'imag': 0.0}], [{'real': 0.03533117512933969, 'imag': 0.0}], [{'real': 0.03533115157445932, 'imag': 0.0}], [{'real': 0.03533111129780414, 'imag': 0.0}], [{'real': 0.03533105429937435, 'imag': 0.0}], [{'real': 0.035330980579169835, 'imag': 0.0}], [{'real': 0.03533089013719044, 'imag': 0.0}], [{'real': 0.035330782973436496, 'imag': 0.0}], [{'real': 0.035330659087907765, 'imag': 0.0}], [{'real': 0.0353305184806043, 'imag': 0.0}], [{'real': 0.03533036115152613, 'imag': 0.0}], [{'real': 0.035330187100673115, 'imag': 0.0}], [{'real': 0.03532999632804559, 'imag': 0.0}], [{'real': 0.0353297888336431, 'imag': 0.0}], [{'real': 0.03532956461746607, 'imag': 0.0}], [{'real': 0.035329323679514316, 'imag': 0.0}], [{'real': 0.035329066019787754, 'imag': 0.0}], [{'real': 0.03532879163828649, 'imag': 0.0}], [{'real': 0.03532850053501059, 'imag': 0.0}], [{'real': 0.03532819270995978, 'imag': 0.0}], [{'real': 0.03532786816313449, 'imag': 0.0}], [{'real': 0.03532752689453422, 'imag': 0.0}], [{'real': 0.035327168904159385, 'imag': 0.0}], [{'real': 0.03532679419200967, 'imag': 0.0}], [{'real': 0.03532640275808537, 'imag': 0.0}], [{'real': 0.03532599460238639, 'imag': 0.0}], [{'real': 0.035325759660902296, 'imag': 0.0}], [{'real': 0.035325594613175706, 'imag': 0.0}], [{'real': 0.03532542956544919, 'imag': 0.0}], [{'real': 0.035325264517722575, 'imag': 0.0}], [{'real': 0.03532509946999609, 'imag': 0.0}], [{'real': 0.035324934422269416, 'imag': 0.0}], [{'real': 0.03532476937454296, 'imag': 0.0}], [{'real': 0.03532460432681629, 'imag': 0.0}], [{'real': 0.03532443927908973, 'imag': 0.0}], [{'real': 0.03532427423136313, 'imag': 0.0}], [{'real': 0.035324109183636515, 'imag': 0.0}], [{'real': 0.03532394413591003, 'imag': 0.0}], [{'real': 0.03532377908818339, 'imag': 0.0}], [{'real': 0.035323614040456836, 'imag': 0.0}], [{'real': 0.0353234489927302, 'imag': 0.0}], [{'real': 0.03532328394500374, 'imag': 0.0}], [{'real': 0.035323118897277184, 'imag': 0.0}], [{'real': 0.035322953849550504, 'imag': 0.0}], [{'real': 0.035322788801824004, 'imag': 0.0}], [{'real': 0.03532262375409735, 'imag': 0.0}], [{'real': 0.03532245870637073, 'imag': 0.0}], [{'real': 0.03532229365864429, 'imag': 0.0}], [{'real': 0.03532212861091764, 'imag': 0.0}], [{'real': 0.03532196356319112, 'imag': 0.0}], [{'real': 0.03532179851546452, 'imag': 0.0}], [{'real': 0.03532163346773795, 'imag': 0.0}], [{'real': 0.03532146842001142, 'imag': 0.0}], [{'real': 0.03532130337228488, 'imag': 0.0}], [{'real': 0.035321138324558174, 'imag': 0.0}], [{'real': 0.035320973276831646, 'imag': 0.0}], [{'real': 0.03532080822910512, 'imag': 0.0}], [{'real': 0.03532064318137852, 'imag': 0.0}], [{'real': 0.03532047813365194, 'imag': 0.0}], [{'real': 0.0353203130859253, 'imag': 0.0}], [{'real': 0.035320148038198725, 'imag': 0.0}], [{'real': 0.035319982990472135, 'imag': 0.0}], [{'real': 0.03531981794274564, 'imag': 0.0}], [{'real': 0.03531965289501898, 'imag': 0.0}], [{'real': 0.035319487847292344, 'imag': 0.0}], [{'real': 0.0353193227995659, 'imag': 0.0}], [{'real': 0.03531922433985091, 'imag': 0.0}], [{'real': 0.035319151190885176, 'imag': 0.0}], [{'real': 0.0353190780419194, 'imag': 0.0}], [{'real': 0.035319004892953504, 'imag': 0.0}], [{'real': 0.03531893174398787, 'imag': 0.0}], [{'real': 0.035318858595022096, 'imag': 0.0}], [{'real': 0.03531878544605631, 'imag': 0.0}], [{'real': 0.03531871229709055, 'imag': 0.0}], [{'real': 0.03531863914812473, 'imag': 0.0}], [{'real': 0.0353185659991591, 'imag': 0.0}], [{'real': 0.03531849285019315, 'imag': 0.0}], [{'real': 0.03531841970122748, 'imag': 0.0}], [{'real': 0.03531834655226168, 'imag': 0.0}], [{'real': 0.03531827340329595, 'imag': 0.0}], [{'real': 0.035318200254330134, 'imag': 0.0}], [{'real': 0.035318127105364486, 'imag': 0.0}], [{'real': 0.03531805395639867, 'imag': 0.0}], [{'real': 0.035317980807432786, 'imag': 0.0}], [{'real': 0.035317907658467054, 'imag': 0.0}], [{'real': 0.035317834509501336, 'imag': 0.0}], [{'real': 0.03531776136053546, 'imag': 0.0}], [{'real': 0.035317688211569775, 'imag': 0.0}], [{'real': 0.03531761506260399, 'imag': 0.0}], [{'real': 0.035317541913638284, 'imag': 0.0}], [{'real': 0.03531746876467247, 'imag': 0.0}], [{'real': 0.03531739561570674, 'imag': 0.0}], [{'real': 0.03531732246674088, 'imag': 0.0}], [{'real': 0.03531724931777523, 'imag': 0.0}], [{'real': 0.03531717616880933, 'imag': 0.0}], [{'real': 0.035317103019843754, 'imag': 0.0}], [{'real': 0.03531702987087784, 'imag': 0.0}], [{'real': 0.03531695672191215, 'imag': 0.0}], [{'real': 0.03531688357294628, 'imag': 0.0}], [{'real': 0.035316810423980556, 'imag': 0.0}], [{'real': 0.03531673727501481, 'imag': 0.0}], [{'real': 0.03531666412604914, 'imag': 0.0}], [{'real': 0.03531659097708334, 'imag': 0.0}], [{'real': 0.035316517828117434, 'imag': 0.0}], [{'real': 0.03531644467915171, 'imag': 0.0}], [{'real': 0.03531637153018599, 'imag': 0.0}], [{'real': 0.0353163331161329, 'imag': 0.0}], [{'real': 0.03531630790515698, 'imag': 0.0}], [{'real': 0.03531628269418119, 'imag': 0.0}], [{'real': 0.03531625748320538, 'imag': 0.0}], [{'real': 0.03531623227222966, 'imag': 0.0}], [{'real': 0.03531620706125367, 'imag': 0.0}], [{'real': 0.03531618185027774, 'imag': 0.0}], [{'real': 0.035316156639302, 'imag': 0.0}], [{'real': 0.035316131428326146, 'imag': 0.0}], [{'real': 0.03531610621735025, 'imag': 0.0}], [{'real': 0.03531608100637448, 'imag': 0.0}], [{'real': 0.03531605579539862, 'imag': 0.0}], [{'real': 0.03531603058442277, 'imag': 0.0}], [{'real': 0.035316005373446945, 'imag': 0.0}], [{'real': 0.03531598016247123, 'imag': 0.0}], [{'real': 0.03531595495149531, 'imag': 0.0}], [{'real': 0.035315929740519336, 'imag': 0.0}], [{'real': 0.03531590452954349, 'imag': 0.0}], [{'real': 0.03531587931856778, 'imag': 0.0}], [{'real': 0.03531585410759199, 'imag': 0.0}], [{'real': 0.03531582889661612, 'imag': 0.0}], [{'real': 0.03531580368564031, 'imag': 0.0}], [{'real': 0.0353157784746645, 'imag': 0.0}], [{'real': 0.035315753263688604, 'imag': 0.0}], [{'real': 0.035315728052712804, 'imag': 0.0}], [{'real': 0.03531570284173684, 'imag': 0.0}], [{'real': 0.03531567763076101, 'imag': 0.0}], [{'real': 0.03531565241978511, 'imag': 0.0}], [{'real': 0.03531562720880939, 'imag': 0.0}], [{'real': 0.03531560199783351, 'imag': 0.0}], [{'real': 0.035315576786857636, 'imag': 0.0}], [{'real': 0.035315551575881905, 'imag': 0.0}], [{'real': 0.03531552636490601, 'imag': 0.0}], [{'real': 0.03531550115393016, 'imag': 0.0}], [{'real': 0.035315475942954255, 'imag': 0.0}], [{'real': 0.03531545073197843, 'imag': 0.0}], [{'real': 0.03531542552100267, 'imag': 0.0}], [{'real': 0.035315400310026834, 'imag': 0.0}], [{'real': 0.03531537509905105, 'imag': 0.0}], [{'real': 0.035315349888075165, 'imag': 0.0}], [{'real': 0.035315337827037066, 'imag': 0.0}], [{'real': 0.03531533076441774, 'imag': 0.0}], [{'real': 0.035315323701798434, 'imag': 0.0}], [{'real': 0.03531531663917922, 'imag': 0.0}], [{'real': 0.03531530957655995, 'imag': 0.0}], [{'real': 0.03531530251394069, 'imag': 0.0}], [{'real': 0.03531529545132151, 'imag': 0.0}], [{'real': 0.03531528838870216, 'imag': 0.0}], [{'real': 0.03531528132608294, 'imag': 0.0}], [{'real': 0.03531527426346366, 'imag': 0.0}], [{'real': 0.035315267200844484, 'imag': 0.0}], [{'real': 0.03531526013822523, 'imag': 0.0}], [{'real': 0.03531525307560597, 'imag': 0.0}], [{'real': 0.03531524601298672, 'imag': 0.0}], [{'real': 0.03531523895036753, 'imag': 0.0}], [{'real': 0.03531523188774814, 'imag': 0.0}], [{'real': 0.03531522482512889, 'imag': 0.0}], [{'real': 0.03531521776250951, 'imag': 0.0}], [{'real': 0.03531521069989045, 'imag': 0.0}], [{'real': 0.035315203637271114, 'imag': 0.0}], [{'real': 0.03531519657465192, 'imag': 0.0}], [{'real': 0.03531518951203261, 'imag': 0.0}], [{'real': 0.035315182449413354, 'imag': 0.0}], [{'real': 0.035315175386794136, 'imag': 0.0}], [{'real': 0.03531516832417491, 'imag': 0.0}], [{'real': 0.03531516126155557, 'imag': 0.0}], [{'real': 0.035315154198936397, 'imag': 0.0}], [{'real': 0.03531514713631713, 'imag': 0.0}], [{'real': 0.0353151400736979, 'imag': 0.0}], [{'real': 0.03531513301107862, 'imag': 0.0}], [{'real': 0.03531512594845944, 'imag': 0.0}], [{'real': 0.03531511888584015, 'imag': 0.0}], [{'real': 0.035315111823220946, 'imag': 0.0}], [{'real': 0.03531510476060169, 'imag': 0.0}], [{'real': 0.035315097697982384, 'imag': 0.0}], [{'real': 0.035315090635363144, 'imag': 0.0}], [{'real': 0.035315083572743905, 'imag': 0.0}], [{'real': 0.03531507651012453, 'imag': 0.0}], [{'real': 0.03531506944750529, 'imag': 0.0}], [{'real': 0.03531506238488607, 'imag': 0.0}], [{'real': 0.035315059348012386, 'imag': 0.0}], [{'real': 0.03531505784136375, 'imag': 0.0}], [{'real': 0.03531505633471489, 'imag': 0.0}], [{'real': 0.0353150548280661, 'imag': 0.0}], [{'real': 0.035315053321417364, 'imag': 0.0}], [{'real': 0.03531505181476857, 'imag': 0.0}], [{'real': 0.035315050308119836, 'imag': 0.0}], [{'real': 0.03531504880147103, 'imag': 0.0}], [{'real': 0.03531504729482236, 'imag': 0.0}], [{'real': 0.03531504578817358, 'imag': 0.0}], [{'real': 0.03531504428152474, 'imag': 0.0}], [{'real': 0.03531504277487594, 'imag': 0.0}], [{'real': 0.03531504126822726, 'imag': 0.0}], [{'real': 0.03531503976157843, 'imag': 0.0}], [{'real': 0.03531503825492966, 'imag': 0.0}], [{'real': 0.0353150367482809, 'imag': 0.0}], [{'real': 0.03531503524163215, 'imag': 0.0}], [{'real': 0.03531503373498334, 'imag': 0.0}], [{'real': 0.03531503222833464, 'imag': 0.0}], [{'real': 0.035315030721685854, 'imag': 0.0}], [{'real': 0.03531502921503711, 'imag': 0.0}], [{'real': 0.03531502770838829, 'imag': 0.0}], [{'real': 0.03531502620173951, 'imag': 0.0}], [{'real': 0.03531502469509086, 'imag': 0.0}], [{'real': 0.03531502318844193, 'imag': 0.0}], [{'real': 0.03531502168179327, 'imag': 0.0}], [{'real': 0.035315020175144485, 'imag': 0.0}], [{'real': 0.035315018668495665, 'imag': 0.0}], [{'real': 0.03531501716184686, 'imag': 0.0}], [{'real': 0.03531501565519822, 'imag': 0.0}], [{'real': 0.03531501414854944, 'imag': 0.0}], [{'real': 0.035315012641900526, 'imag': 0.0}], [{'real': 0.03531501113525186, 'imag': 0.0}], [{'real': 0.03531500962860322, 'imag': 0.0}], [{'real': 0.03531500812195436, 'imag': 0.0}], [{'real': 0.03531500661530554, 'imag': 0.0}], [{'real': 0.03531500510865686, 'imag': 0.0}], [{'real': 0.035315003602008066, 'imag': 0.0}], [{'real': 0.03531500209535933, 'imag': 0.0}], [{'real': 0.035315000588710545, 'imag': 0.0}], [{'real': 0.035315000062913215, 'imag': 0.0}], [{'real': 0.03531499990994719, 'imag': 0.0}], [{'real': 0.03531499975698094, 'imag': 0.0}], [{'real': 0.03531499960401484, 'imag': 0.0}], [{'real': 0.035314999451048754, 'imag': 0.0}], [{'real': 0.03531499929808264, 'imag': 0.0}], [{'real': 0.03531499914511654, 'imag': 0.0}], [{'real': 0.035314998992150404, 'imag': 0.0}], [{'real': 0.03531499883918434, 'imag': 0.0}], [{'real': 0.03531499868621815, 'imag': 0.0}], [{'real': 0.03531499853325214, 'imag': 0.0}], [{'real': 0.03531499838028591, 'imag': 0.0}], [{'real': 0.03531499822731986, 'imag': 0.0}], [{'real': 0.035314998074353655, 'imag': 0.0}], [{'real': 0.03531499792138754, 'imag': 0.0}], [{'real': 0.03531499776842146, 'imag': 0.0}], [{'real': 0.035314997615455326, 'imag': 0.0}]]]], 'reference': 'mcp10'}\n"
+      },
+      "timestamp": "2026-09-22T06:00:10.586969+00:00"
+    }
+  }
+}

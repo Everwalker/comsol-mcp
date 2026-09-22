@@ -1,0 +1,617 @@
+{
+  "_outer_isError": false,
+  "_structuredContent": {
+    "data": {
+      "action": "get",
+      "cleanup_failed": false,
+      "data": [
+        [
+          {
+            "imag": 0.1,
+            "real": 1.0
+          },
+          {
+            "imag": 0.2,
+            "real": 2.0
+          }
+        ],
+        [
+          {
+            "imag": 0.3,
+            "real": 3.0
+          },
+          {
+            "imag": 0.4,
+            "real": 4.0
+          }
+        ]
+      ],
+      "dispatch_stage": "post_dispatch",
+      "domain_outcome": {
+        "cleanup_failed": false,
+        "dispatch_stage": "post_dispatch",
+        "execution_state_unknown": false,
+        "operation": "result.table_manage",
+        "state": "succeeded",
+        "verification_status": "NOT_APPLICABLE",
+        "witness": {
+          "dispatches": [
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "result",
+              "receiver": "h-7d7a2085-ae69-4138-a7ed-2badb4c4fa95"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "table",
+              "receiver": "h-6c419b06-cb81-46cb-a18d-bd32427f5cde"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "tags",
+              "receiver": "h-7cffd846-1500-4316-a1e5-da80eccd8626"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "result",
+              "receiver": "h-f22519d0-3918-4b03-a36c-d55913dcf724"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "table",
+              "receiver": "h-a110ae4b-81b4-43da-ae5c-50fd8785951c"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "result",
+              "receiver": "h-c6ed1d4a-0cc1-48bf-890b-f23574a12304"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "table",
+              "receiver": "h-d851c58c-d79f-4b04-a1e3-0643bb3f92fa"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "tags",
+              "receiver": "h-59692347-0dc6-49a7-b7e8-d9885810749a"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "get",
+              "receiver": "h-59692347-0dc6-49a7-b7e8-d9885810749a"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getColumnHeaders",
+              "receiver": "h-1b4754fb-14e3-4fb3-aee0-da436c3887c7"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getReal",
+              "receiver": "h-1b4754fb-14e3-4fb3-aee0-da436c3887c7"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getImag",
+              "receiver": "h-1b4754fb-14e3-4fb3-aee0-da436c3887c7"
+            }
+          ],
+          "engine_calls": 12,
+          "methods": [
+            "get",
+            "getColumnHeaders",
+            "getImag",
+            "getReal",
+            "result",
+            "table",
+            "tags"
+          ],
+          "mutation_issued": false,
+          "mutation_method": null
+        }
+      },
+      "domain_state": "succeeded",
+      "effect": "project_write",
+      "execution_state_unknown": false,
+      "headers": [
+        "T",
+        "u"
+      ],
+      "imaginary": [
+        [
+          0.1,
+          0.2
+        ],
+        [
+          0.3,
+          0.4
+        ]
+      ],
+      "isolation_proof": {
+        "api_probe": {
+          "authenticated_api_success": true,
+          "denial_evidence_source": "server_access_log",
+          "loopback_address": "127.0.0.1",
+          "loopback_port": 57626,
+          "nonloopback_address": "192.168.100.152",
+          "nonloopback_api_exception_http_status": null,
+          "nonloopback_port": 57626,
+          "observed_at": "2026-09-22T04:00:03Z",
+          "probe_kind": "comsol_java_api",
+          "server_access_log": {
+            "entries": [
+              {
+                "http_status": 101,
+                "method": "GET",
+                "peer": "127.0.0.1",
+                "route": "/webbridge/websocket"
+              },
+              {
+                "http_status": 101,
+                "method": "GET",
+                "peer": "127.0.0.1",
+                "route": "/webbridge/websocket"
+              },
+              {
+                "http_status": 403,
+                "method": "GET",
+                "peer": "192.168.100.152",
+                "route": "/webbridge/websocket"
+              }
+            ],
+            "finished_at": "2026-09-22T04:00:03Z",
+            "inode": 29905210,
+            "java_request_id": "g2-valve-nonloopback-connect",
+            "offset_after": 261,
+            "offset_before": 0,
+            "parsed_nonloopback_entry": {
+              "http_status": 403,
+              "method": "GET",
+              "peer": "192.168.100.152",
+              "route": "/webbridge/websocket"
+            },
+            "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_probe_20260922T0403Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+            "phase": "java_connect_only",
+            "raw_probe_started_after_capture": true,
+            "segment_sha256": "cba7c3f7ecb581df64666ff65153b6f6233219e4e1d97d817fac7fd22ea82f26",
+            "started_at": "2026-09-22T03:59:54Z",
+            "status": "PASS"
+          }
+        },
+        "birth": "Tue Sep 22 11:59:50 2026",
+        "config_inode": 14720294,
+        "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+        "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+        "endpoint": "127.0.0.1:57626",
+        "established_client_pids": [
+          49015,
+          49179
+        ],
+        "listener": {
+          "endpoint": "*:57626",
+          "local_endpoint": "*:57626",
+          "pid": 49015,
+          "raw": "java    49015 everwalker   59u  IPv6 0xef12e154154ae854      0t0  TCP *:57626 (LISTEN)",
+          "remote_endpoint": null,
+          "state": "LISTEN"
+        },
+        "listener_binding": "wildcard",
+        "loopback_listener": false,
+        "pid": 49015,
+        "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+        "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_probe_20260922T0403Z/isolation_receipt.json",
+        "verified": true,
+        "worker_pid": 49179
+      },
+      "partial_change": false,
+      "path": {
+        "segments": [
+          {
+            "accessor": "result"
+          },
+          {
+            "collection": "table",
+            "tag": "g33sentinelnodes01"
+          }
+        ]
+      },
+      "readback": {
+        "data": [
+          [
+            {
+              "imag": 0.1,
+              "real": 1.0
+            },
+            {
+              "imag": 0.2,
+              "real": 2.0
+            }
+          ],
+          [
+            {
+              "imag": 0.3,
+              "real": 3.0
+            },
+            {
+              "imag": 0.4,
+              "real": 4.0
+            }
+          ]
+        ],
+        "data_readback": null,
+        "header_readback": null,
+        "headers": [
+          "T",
+          "u"
+        ],
+        "imaginary": [
+          [
+            0.1,
+            0.2
+          ],
+          [
+            0.3,
+            0.4
+          ]
+        ],
+        "match": true,
+        "readable": true
+      },
+      "tag": "g33sentinelnodes01",
+      "verification_status": "NOT_APPLICABLE"
+    },
+    "error": null,
+    "execution": {
+      "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+      "dirty": false,
+      "idempotency_key": "g33-node-011-C14-complex-table-sentinel-preservation",
+      "job_id": "2fa40eae-e950-4b1b-b7eb-b44cf8963ace",
+      "model_ownership": "mcp_owned",
+      "model_ref": {
+        "generation": 1,
+        "model_tag": "mcp1",
+        "schema_version": 1,
+        "server_instance_id": "e6ba8b2ce14098260e9816c5a025b2fda38b41a6bb1a014c3f2b06b56b0a9156",
+        "session_id": "session-886f28b053f1272a9ca93575"
+      },
+      "operation_id": "d328f91f-94ba-427f-ad69-9390e6f3f658",
+      "request_hash": "c4f56dfb547331c4bcd0e0a759f1d6e7d7bb7f639cb0772f11d0bea036097644",
+      "request_id": "g33-node-C14-complex-table-sentinel-preservation",
+      "revision": 9,
+      "server_ownership": "shared",
+      "session_id": "session-886f28b053f1272a9ca93575"
+    },
+    "success": true
+  },
+  "data": {
+    "action": "get",
+    "cleanup_failed": false,
+    "data": [
+      [
+        {
+          "imag": 0.1,
+          "real": 1.0
+        },
+        {
+          "imag": 0.2,
+          "real": 2.0
+        }
+      ],
+      [
+        {
+          "imag": 0.3,
+          "real": 3.0
+        },
+        {
+          "imag": 0.4,
+          "real": 4.0
+        }
+      ]
+    ],
+    "dispatch_stage": "post_dispatch",
+    "domain_outcome": {
+      "cleanup_failed": false,
+      "dispatch_stage": "post_dispatch",
+      "execution_state_unknown": false,
+      "operation": "result.table_manage",
+      "state": "succeeded",
+      "verification_status": "NOT_APPLICABLE",
+      "witness": {
+        "dispatches": [
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "result",
+            "receiver": "h-7d7a2085-ae69-4138-a7ed-2badb4c4fa95"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "table",
+            "receiver": "h-6c419b06-cb81-46cb-a18d-bd32427f5cde"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "tags",
+            "receiver": "h-7cffd846-1500-4316-a1e5-da80eccd8626"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "result",
+            "receiver": "h-f22519d0-3918-4b03-a36c-d55913dcf724"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "table",
+            "receiver": "h-a110ae4b-81b4-43da-ae5c-50fd8785951c"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "result",
+            "receiver": "h-c6ed1d4a-0cc1-48bf-890b-f23574a12304"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "table",
+            "receiver": "h-d851c58c-d79f-4b04-a1e3-0643bb3f92fa"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "tags",
+            "receiver": "h-59692347-0dc6-49a7-b7e8-d9885810749a"
+          },
+          {
+            "args_count": 1,
+            "command": "call",
+            "is_mutation": false,
+            "method": "get",
+            "receiver": "h-59692347-0dc6-49a7-b7e8-d9885810749a"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getColumnHeaders",
+            "receiver": "h-1b4754fb-14e3-4fb3-aee0-da436c3887c7"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getReal",
+            "receiver": "h-1b4754fb-14e3-4fb3-aee0-da436c3887c7"
+          },
+          {
+            "args_count": 0,
+            "command": "call",
+            "is_mutation": false,
+            "method": "getImag",
+            "receiver": "h-1b4754fb-14e3-4fb3-aee0-da436c3887c7"
+          }
+        ],
+        "engine_calls": 12,
+        "methods": [
+          "get",
+          "getColumnHeaders",
+          "getImag",
+          "getReal",
+          "result",
+          "table",
+          "tags"
+        ],
+        "mutation_issued": false,
+        "mutation_method": null
+      }
+    },
+    "domain_state": "succeeded",
+    "effect": "project_write",
+    "execution_state_unknown": false,
+    "headers": [
+      "T",
+      "u"
+    ],
+    "imaginary": [
+      [
+        0.1,
+        0.2
+      ],
+      [
+        0.3,
+        0.4
+      ]
+    ],
+    "isolation_proof": {
+      "api_probe": {
+        "authenticated_api_success": true,
+        "denial_evidence_source": "server_access_log",
+        "loopback_address": "127.0.0.1",
+        "loopback_port": 57626,
+        "nonloopback_address": "192.168.100.152",
+        "nonloopback_api_exception_http_status": null,
+        "nonloopback_port": 57626,
+        "observed_at": "2026-09-22T04:00:03Z",
+        "probe_kind": "comsol_java_api",
+        "server_access_log": {
+          "entries": [
+            {
+              "http_status": 101,
+              "method": "GET",
+              "peer": "127.0.0.1",
+              "route": "/webbridge/websocket"
+            },
+            {
+              "http_status": 101,
+              "method": "GET",
+              "peer": "127.0.0.1",
+              "route": "/webbridge/websocket"
+            },
+            {
+              "http_status": 403,
+              "method": "GET",
+              "peer": "192.168.100.152",
+              "route": "/webbridge/websocket"
+            }
+          ],
+          "finished_at": "2026-09-22T04:00:03Z",
+          "inode": 29905210,
+          "java_request_id": "g2-valve-nonloopback-connect",
+          "offset_after": 261,
+          "offset_before": 0,
+          "parsed_nonloopback_entry": {
+            "http_status": 403,
+            "method": "GET",
+            "peer": "192.168.100.152",
+            "route": "/webbridge/websocket"
+          },
+          "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_probe_20260922T0403Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+          "phase": "java_connect_only",
+          "raw_probe_started_after_capture": true,
+          "segment_sha256": "cba7c3f7ecb581df64666ff65153b6f6233219e4e1d97d817fac7fd22ea82f26",
+          "started_at": "2026-09-22T03:59:54Z",
+          "status": "PASS"
+        }
+      },
+      "birth": "Tue Sep 22 11:59:50 2026",
+      "config_inode": 14720294,
+      "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+      "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+      "endpoint": "127.0.0.1:57626",
+      "established_client_pids": [
+        49015,
+        49179
+      ],
+      "listener": {
+        "endpoint": "*:57626",
+        "local_endpoint": "*:57626",
+        "pid": 49015,
+        "raw": "java    49015 everwalker   59u  IPv6 0xef12e154154ae854      0t0  TCP *:57626 (LISTEN)",
+        "remote_endpoint": null,
+        "state": "LISTEN"
+      },
+      "listener_binding": "wildcard",
+      "loopback_listener": false,
+      "pid": 49015,
+      "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+      "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_probe_20260922T0403Z/isolation_receipt.json",
+      "verified": true,
+      "worker_pid": 49179
+    },
+    "partial_change": false,
+    "path": {
+      "segments": [
+        {
+          "accessor": "result"
+        },
+        {
+          "collection": "table",
+          "tag": "g33sentinelnodes01"
+        }
+      ]
+    },
+    "readback": {
+      "data": [
+        [
+          {
+            "imag": 0.1,
+            "real": 1.0
+          },
+          {
+            "imag": 0.2,
+            "real": 2.0
+          }
+        ],
+        [
+          {
+            "imag": 0.3,
+            "real": 3.0
+          },
+          {
+            "imag": 0.4,
+            "real": 4.0
+          }
+        ]
+      ],
+      "data_readback": null,
+      "header_readback": null,
+      "headers": [
+        "T",
+        "u"
+      ],
+      "imaginary": [
+        [
+          0.1,
+          0.2
+        ],
+        [
+          0.3,
+          0.4
+        ]
+      ],
+      "match": true,
+      "readable": true
+    },
+    "tag": "g33sentinelnodes01",
+    "verification_status": "NOT_APPLICABLE"
+  },
+  "error": null,
+  "execution": {
+    "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+    "dirty": false,
+    "idempotency_key": "g33-node-011-C14-complex-table-sentinel-preservation",
+    "job_id": "2fa40eae-e950-4b1b-b7eb-b44cf8963ace",
+    "model_ownership": "mcp_owned",
+    "model_ref": {
+      "generation": 1,
+      "model_tag": "mcp1",
+      "schema_version": 1,
+      "server_instance_id": "e6ba8b2ce14098260e9816c5a025b2fda38b41a6bb1a014c3f2b06b56b0a9156",
+      "session_id": "session-886f28b053f1272a9ca93575"
+    },
+    "operation_id": "d328f91f-94ba-427f-ad69-9390e6f3f658",
+    "request_hash": "c4f56dfb547331c4bcd0e0a759f1d6e7d7bb7f639cb0772f11d0bea036097644",
+    "request_id": "g33-node-C14-complex-table-sentinel-preservation",
+    "revision": 9,
+    "server_ownership": "shared",
+    "session_id": "session-886f28b053f1272a9ca93575"
+  },
+  "success": true
+}

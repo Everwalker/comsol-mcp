@@ -1,0 +1,1437 @@
+{
+  "status": "PASS",
+  "original": {
+    "success": false,
+    "data": {
+      "source_sha256": "325501e52b1cf77313a0449857d844d1369ef23a962b8882a6ed3db3b3f815e5",
+      "entrypoint": "ControlledFault",
+      "worker": {
+        "ok": false,
+        "request_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+        "type": "code_execute",
+        "status": "FAILED",
+        "queued_at_ms": "1790052308048",
+        "started_at_ms": "1790052308048",
+        "completed_at_ms": "1790052308091",
+        "failure": {
+          "ok": false,
+          "code": "ENGINE_CALL_FAILED",
+          "message": "InvocationTargetException: null (cause: RuntimeException: G33 intentional completed API fault)",
+          "execution_state_unknown": true
+        }
+      },
+      "before": {
+        "tag": "mcp_1f0d37ce92d9",
+        "model_tag": "mcp_1f0d37ce92d9",
+        "fingerprint": "0f76a32538b63cf98dbc9cdaae81d8a6f4a8e2d6fc7baf227d05ecce16cc34a1",
+        "fingerprint_scope": [
+          "tag",
+          "label",
+          "file_path",
+          "time_modified",
+          "parameters"
+        ],
+        "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+        "external_event_counter": 0,
+        "changed_tags": [],
+        "server_instance_id": "127.0.0.1:50034",
+        "worker_instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4",
+        "instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4",
+        "generation": 2
+      },
+      "after": {
+        "tag": "mcp_1f0d37ce92d9",
+        "model_tag": "mcp_1f0d37ce92d9",
+        "fingerprint": "0f76a32538b63cf98dbc9cdaae81d8a6f4a8e2d6fc7baf227d05ecce16cc34a1",
+        "fingerprint_scope": [
+          "tag",
+          "label",
+          "file_path",
+          "time_modified",
+          "parameters"
+        ],
+        "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+        "external_event_counter": 0,
+        "changed_tags": [],
+        "server_instance_id": "127.0.0.1:50034",
+        "worker_instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4",
+        "instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4",
+        "generation": 2
+      },
+      "readback": {},
+      "partial_change": false,
+      "execution_state_unknown": true,
+      "domain_state": "unknown",
+      "verification_status": "NOT_APPLICABLE",
+      "cleanup_failed": false,
+      "dispatch_stage": "post_dispatch",
+      "operation": "code.execute_java",
+      "effect": "project_write",
+      "domain_outcome": {
+        "operation": "",
+        "state": "unknown",
+        "verification_status": "NOT_APPLICABLE",
+        "cleanup_failed": false,
+        "execution_state_unknown": true,
+        "dispatch_stage": "post_dispatch",
+        "failure": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "{'ok': False, 'code': 'ENGINE_CALL_FAILED', 'message': 'InvocationTargetException: null (cause: RuntimeException: G33 intentional completed API fault)', 'execution_state_unknown': True}",
+          "safe_retry": false
+        }
+      },
+      "verified_outcome": "unknown",
+      "isolation_proof": {
+        "verified": true,
+        "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_m3_20260922T0503Z/isolation_receipt.json",
+        "pid": 66757,
+        "birth": "Tue Sep 22 12:44:17 2026",
+        "endpoint": "127.0.0.1:50034",
+        "listener": {
+          "pid": 66757,
+          "endpoint": "*:50034",
+          "local_endpoint": "*:50034",
+          "remote_endpoint": null,
+          "state": "LISTEN",
+          "raw": "java    66757 everwalker   59u  IPv6 0x6308c214d18e0955      0t0  TCP *:50034 (LISTEN)"
+        },
+        "listener_binding": "wildcard",
+        "loopback_listener": false,
+        "worker_pid": 67464,
+        "established_client_pids": [
+          66757,
+          67464
+        ],
+        "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+        "config_inode": 14720294,
+        "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+        "api_probe": {
+          "probe_kind": "comsol_java_api",
+          "observed_at": "2026-09-22T04:44:30Z",
+          "loopback_address": "127.0.0.1",
+          "loopback_port": 50034,
+          "authenticated_api_success": true,
+          "nonloopback_address": "192.168.100.152",
+          "nonloopback_port": 50034,
+          "nonloopback_api_exception_http_status": null,
+          "denial_evidence_source": "server_access_log",
+          "server_access_log": {
+            "status": "PASS",
+            "phase": "java_connect_only",
+            "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_m3_20260922T0503Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+            "inode": 29931291,
+            "offset_before": 0,
+            "offset_after": 261,
+            "segment_sha256": "95a3ee8b3ce82873f15291fbb47dc4416252f079b4b94b716362753e76f422d3",
+            "java_request_id": "g2-valve-nonloopback-connect",
+            "started_at": "2026-09-22T04:44:21Z",
+            "finished_at": "2026-09-22T04:44:30Z",
+            "entries": [
+              {
+                "peer": "127.0.0.1",
+                "method": "GET",
+                "route": "/webbridge/websocket",
+                "http_status": 101
+              },
+              {
+                "peer": "127.0.0.1",
+                "method": "GET",
+                "route": "/webbridge/websocket",
+                "http_status": 101
+              },
+              {
+                "peer": "192.168.100.152",
+                "method": "GET",
+                "route": "/webbridge/websocket",
+                "http_status": 403
+              }
+            ],
+            "parsed_nonloopback_entry": {
+              "peer": "192.168.100.152",
+              "method": "GET",
+              "route": "/webbridge/websocket",
+              "http_status": 403
+            },
+            "raw_probe_started_after_capture": true
+          }
+        },
+        "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer"
+      },
+      "requires_model_reconciliation": true
+    },
+    "error": {
+      "code": "EXECUTION_STATE_UNKNOWN",
+      "phase": "execute",
+      "message": "{'ok': False, 'code': 'ENGINE_CALL_FAILED', 'message': 'InvocationTargetException: null (cause: RuntimeException: G33 intentional completed API fault)', 'execution_state_unknown': True}",
+      "partial_changes": false,
+      "safe_retry": false,
+      "engine_state": "UNKNOWN"
+    },
+    "execution": {
+      "session_id": "session-aa2b98dc44866ddb822e724f",
+      "model_ref": {
+        "schema_version": 1,
+        "session_id": "session-aa2b98dc44866ddb822e724f",
+        "server_instance_id": "fa909983c0bc5d276619b0a6682154ec2ed5973f20aba2de69d88d99d6d0d7db",
+        "model_tag": "mcp_1f0d37ce92d9",
+        "generation": 1
+      },
+      "revision": 2,
+      "dirty": true,
+      "server_ownership": "shared",
+      "model_ownership": "mcp_owned",
+      "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+      "request_id": "public_m3_20260922T0503Z-run-code-execute_java-4",
+      "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+      "request_hash": "5e9d207c356864d0b8ada223bb856d02057af9b10eaad4d951a443756cc09f65",
+      "idempotency_key": "public_m3_20260922T0503Z-run-code-execute_java-4",
+      "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc"
+    },
+    "_outer_isError": true,
+    "_structuredContent": {
+      "success": false,
+      "data": {
+        "source_sha256": "325501e52b1cf77313a0449857d844d1369ef23a962b8882a6ed3db3b3f815e5",
+        "entrypoint": "ControlledFault",
+        "worker": {
+          "ok": false,
+          "request_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+          "type": "code_execute",
+          "status": "FAILED",
+          "queued_at_ms": "1790052308048",
+          "started_at_ms": "1790052308048",
+          "completed_at_ms": "1790052308091",
+          "failure": {
+            "ok": false,
+            "code": "ENGINE_CALL_FAILED",
+            "message": "InvocationTargetException: null (cause: RuntimeException: G33 intentional completed API fault)",
+            "execution_state_unknown": true
+          }
+        },
+        "before": {
+          "tag": "mcp_1f0d37ce92d9",
+          "model_tag": "mcp_1f0d37ce92d9",
+          "fingerprint": "0f76a32538b63cf98dbc9cdaae81d8a6f4a8e2d6fc7baf227d05ecce16cc34a1",
+          "fingerprint_scope": [
+            "tag",
+            "label",
+            "file_path",
+            "time_modified",
+            "parameters"
+          ],
+          "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+          "external_event_counter": 0,
+          "changed_tags": [],
+          "server_instance_id": "127.0.0.1:50034",
+          "worker_instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4",
+          "instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4",
+          "generation": 2
+        },
+        "after": {
+          "tag": "mcp_1f0d37ce92d9",
+          "model_tag": "mcp_1f0d37ce92d9",
+          "fingerprint": "0f76a32538b63cf98dbc9cdaae81d8a6f4a8e2d6fc7baf227d05ecce16cc34a1",
+          "fingerprint_scope": [
+            "tag",
+            "label",
+            "file_path",
+            "time_modified",
+            "parameters"
+          ],
+          "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+          "external_event_counter": 0,
+          "changed_tags": [],
+          "server_instance_id": "127.0.0.1:50034",
+          "worker_instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4",
+          "instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4",
+          "generation": 2
+        },
+        "readback": {},
+        "partial_change": false,
+        "execution_state_unknown": true,
+        "domain_state": "unknown",
+        "verification_status": "NOT_APPLICABLE",
+        "cleanup_failed": false,
+        "dispatch_stage": "post_dispatch",
+        "operation": "code.execute_java",
+        "effect": "project_write",
+        "domain_outcome": {
+          "operation": "",
+          "state": "unknown",
+          "verification_status": "NOT_APPLICABLE",
+          "cleanup_failed": false,
+          "execution_state_unknown": true,
+          "dispatch_stage": "post_dispatch",
+          "failure": {
+            "code": "EXECUTION_STATE_UNKNOWN",
+            "message": "{'ok': False, 'code': 'ENGINE_CALL_FAILED', 'message': 'InvocationTargetException: null (cause: RuntimeException: G33 intentional completed API fault)', 'execution_state_unknown': True}",
+            "safe_retry": false
+          }
+        },
+        "verified_outcome": "unknown",
+        "isolation_proof": {
+          "verified": true,
+          "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_m3_20260922T0503Z/isolation_receipt.json",
+          "pid": 66757,
+          "birth": "Tue Sep 22 12:44:17 2026",
+          "endpoint": "127.0.0.1:50034",
+          "listener": {
+            "pid": 66757,
+            "endpoint": "*:50034",
+            "local_endpoint": "*:50034",
+            "remote_endpoint": null,
+            "state": "LISTEN",
+            "raw": "java    66757 everwalker   59u  IPv6 0x6308c214d18e0955      0t0  TCP *:50034 (LISTEN)"
+          },
+          "listener_binding": "wildcard",
+          "loopback_listener": false,
+          "worker_pid": 67464,
+          "established_client_pids": [
+            66757,
+            67464
+          ],
+          "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+          "config_inode": 14720294,
+          "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+          "api_probe": {
+            "probe_kind": "comsol_java_api",
+            "observed_at": "2026-09-22T04:44:30Z",
+            "loopback_address": "127.0.0.1",
+            "loopback_port": 50034,
+            "authenticated_api_success": true,
+            "nonloopback_address": "192.168.100.152",
+            "nonloopback_port": 50034,
+            "nonloopback_api_exception_http_status": null,
+            "denial_evidence_source": "server_access_log",
+            "server_access_log": {
+              "status": "PASS",
+              "phase": "java_connect_only",
+              "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_m3_20260922T0503Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+              "inode": 29931291,
+              "offset_before": 0,
+              "offset_after": 261,
+              "segment_sha256": "95a3ee8b3ce82873f15291fbb47dc4416252f079b4b94b716362753e76f422d3",
+              "java_request_id": "g2-valve-nonloopback-connect",
+              "started_at": "2026-09-22T04:44:21Z",
+              "finished_at": "2026-09-22T04:44:30Z",
+              "entries": [
+                {
+                  "peer": "127.0.0.1",
+                  "method": "GET",
+                  "route": "/webbridge/websocket",
+                  "http_status": 101
+                },
+                {
+                  "peer": "127.0.0.1",
+                  "method": "GET",
+                  "route": "/webbridge/websocket",
+                  "http_status": 101
+                },
+                {
+                  "peer": "192.168.100.152",
+                  "method": "GET",
+                  "route": "/webbridge/websocket",
+                  "http_status": 403
+                }
+              ],
+              "parsed_nonloopback_entry": {
+                "peer": "192.168.100.152",
+                "method": "GET",
+                "route": "/webbridge/websocket",
+                "http_status": 403
+              },
+              "raw_probe_started_after_capture": true
+            }
+          },
+          "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer"
+        },
+        "requires_model_reconciliation": true
+      },
+      "error": {
+        "code": "EXECUTION_STATE_UNKNOWN",
+        "phase": "execute",
+        "message": "{'ok': False, 'code': 'ENGINE_CALL_FAILED', 'message': 'InvocationTargetException: null (cause: RuntimeException: G33 intentional completed API fault)', 'execution_state_unknown': True}",
+        "partial_changes": false,
+        "safe_retry": false,
+        "engine_state": "UNKNOWN"
+      },
+      "execution": {
+        "session_id": "session-aa2b98dc44866ddb822e724f",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-aa2b98dc44866ddb822e724f",
+          "server_instance_id": "fa909983c0bc5d276619b0a6682154ec2ed5973f20aba2de69d88d99d6d0d7db",
+          "model_tag": "mcp_1f0d37ce92d9",
+          "generation": 1
+        },
+        "revision": 2,
+        "dirty": true,
+        "server_ownership": "shared",
+        "model_ownership": "mcp_owned",
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "request_id": "public_m3_20260922T0503Z-run-code-execute_java-4",
+        "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+        "request_hash": "5e9d207c356864d0b8ada223bb856d02057af9b10eaad4d951a443756cc09f65",
+        "idempotency_key": "public_m3_20260922T0503Z-run-code-execute_java-4",
+        "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc"
+      }
+    }
+  },
+  "retry": {
+    "data": {
+      "after": {
+        "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+        "changed_tags": [],
+        "external_event_counter": 0,
+        "fingerprint": "0f76a32538b63cf98dbc9cdaae81d8a6f4a8e2d6fc7baf227d05ecce16cc34a1",
+        "fingerprint_scope": [
+          "tag",
+          "label",
+          "file_path",
+          "time_modified",
+          "parameters"
+        ],
+        "generation": 2,
+        "instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4",
+        "model_tag": "mcp_1f0d37ce92d9",
+        "server_instance_id": "127.0.0.1:50034",
+        "tag": "mcp_1f0d37ce92d9",
+        "worker_instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4"
+      },
+      "before": {
+        "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+        "changed_tags": [],
+        "external_event_counter": 0,
+        "fingerprint": "0f76a32538b63cf98dbc9cdaae81d8a6f4a8e2d6fc7baf227d05ecce16cc34a1",
+        "fingerprint_scope": [
+          "tag",
+          "label",
+          "file_path",
+          "time_modified",
+          "parameters"
+        ],
+        "generation": 2,
+        "instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4",
+        "model_tag": "mcp_1f0d37ce92d9",
+        "server_instance_id": "127.0.0.1:50034",
+        "tag": "mcp_1f0d37ce92d9",
+        "worker_instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4"
+      },
+      "cleanup_failed": false,
+      "dispatch_stage": "post_dispatch",
+      "domain_outcome": {
+        "cleanup_failed": false,
+        "dispatch_stage": "post_dispatch",
+        "execution_state_unknown": true,
+        "failure": {
+          "code": "EXECUTION_STATE_UNKNOWN",
+          "message": "{'ok': False, 'code': 'ENGINE_CALL_FAILED', 'message': 'InvocationTargetException: null (cause: RuntimeException: G33 intentional completed API fault)', 'execution_state_unknown': True}",
+          "safe_retry": false
+        },
+        "operation": "",
+        "state": "unknown",
+        "verification_status": "NOT_APPLICABLE"
+      },
+      "domain_state": "unknown",
+      "effect": "project_write",
+      "entrypoint": "ControlledFault",
+      "execution_state_unknown": true,
+      "isolation_proof": {
+        "api_probe": {
+          "authenticated_api_success": true,
+          "denial_evidence_source": "server_access_log",
+          "loopback_address": "127.0.0.1",
+          "loopback_port": 50034,
+          "nonloopback_address": "192.168.100.152",
+          "nonloopback_api_exception_http_status": null,
+          "nonloopback_port": 50034,
+          "observed_at": "2026-09-22T04:44:30Z",
+          "probe_kind": "comsol_java_api",
+          "server_access_log": {
+            "entries": [
+              {
+                "http_status": 101,
+                "method": "GET",
+                "peer": "127.0.0.1",
+                "route": "/webbridge/websocket"
+              },
+              {
+                "http_status": 101,
+                "method": "GET",
+                "peer": "127.0.0.1",
+                "route": "/webbridge/websocket"
+              },
+              {
+                "http_status": 403,
+                "method": "GET",
+                "peer": "192.168.100.152",
+                "route": "/webbridge/websocket"
+              }
+            ],
+            "finished_at": "2026-09-22T04:44:30Z",
+            "inode": 29931291,
+            "java_request_id": "g2-valve-nonloopback-connect",
+            "offset_after": 261,
+            "offset_before": 0,
+            "parsed_nonloopback_entry": {
+              "http_status": 403,
+              "method": "GET",
+              "peer": "192.168.100.152",
+              "route": "/webbridge/websocket"
+            },
+            "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_m3_20260922T0503Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+            "phase": "java_connect_only",
+            "raw_probe_started_after_capture": true,
+            "segment_sha256": "95a3ee8b3ce82873f15291fbb47dc4416252f079b4b94b716362753e76f422d3",
+            "started_at": "2026-09-22T04:44:21Z",
+            "status": "PASS"
+          }
+        },
+        "birth": "Tue Sep 22 12:44:17 2026",
+        "config_inode": 14720294,
+        "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+        "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+        "endpoint": "127.0.0.1:50034",
+        "established_client_pids": [
+          66757,
+          67464
+        ],
+        "listener": {
+          "endpoint": "*:50034",
+          "local_endpoint": "*:50034",
+          "pid": 66757,
+          "raw": "java    66757 everwalker   59u  IPv6 0x6308c214d18e0955      0t0  TCP *:50034 (LISTEN)",
+          "remote_endpoint": null,
+          "state": "LISTEN"
+        },
+        "listener_binding": "wildcard",
+        "loopback_listener": false,
+        "pid": 66757,
+        "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+        "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_m3_20260922T0503Z/isolation_receipt.json",
+        "verified": true,
+        "worker_pid": 67464
+      },
+      "operation": "code.execute_java",
+      "partial_change": false,
+      "readback": {},
+      "requires_model_reconciliation": true,
+      "source_sha256": "325501e52b1cf77313a0449857d844d1369ef23a962b8882a6ed3db3b3f815e5",
+      "verification_status": "NOT_APPLICABLE",
+      "verified_outcome": "unknown",
+      "worker": {
+        "completed_at_ms": "1790052308091",
+        "failure": {
+          "code": "ENGINE_CALL_FAILED",
+          "execution_state_unknown": true,
+          "message": "InvocationTargetException: null (cause: RuntimeException: G33 intentional completed API fault)",
+          "ok": false
+        },
+        "ok": false,
+        "queued_at_ms": "1790052308048",
+        "request_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+        "started_at_ms": "1790052308048",
+        "status": "FAILED",
+        "type": "code_execute"
+      }
+    },
+    "error": {
+      "code": "EXECUTION_STATE_UNKNOWN",
+      "engine_state": "UNKNOWN",
+      "message": "{'ok': False, 'code': 'ENGINE_CALL_FAILED', 'message': 'InvocationTargetException: null (cause: RuntimeException: G33 intentional completed API fault)', 'execution_state_unknown': True}",
+      "partial_changes": false,
+      "phase": "execute",
+      "safe_retry": false
+    },
+    "execution": {
+      "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+      "dirty": true,
+      "idempotency_key": "public_m3_20260922T0503Z-run-code-execute_java-4",
+      "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc",
+      "model_ownership": "mcp_owned",
+      "model_ref": {
+        "generation": 1,
+        "model_tag": "mcp_1f0d37ce92d9",
+        "schema_version": 1,
+        "server_instance_id": "fa909983c0bc5d276619b0a6682154ec2ed5973f20aba2de69d88d99d6d0d7db",
+        "session_id": "session-aa2b98dc44866ddb822e724f"
+      },
+      "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+      "request_hash": "5e9d207c356864d0b8ada223bb856d02057af9b10eaad4d951a443756cc09f65",
+      "request_id": "public_m3_20260922T0503Z-run-code-execute_java-4",
+      "revision": 2,
+      "server_ownership": "shared",
+      "session_id": "session-aa2b98dc44866ddb822e724f"
+    },
+    "success": false,
+    "_outer_isError": true,
+    "_structuredContent": {
+      "data": {
+        "after": {
+          "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+          "changed_tags": [],
+          "external_event_counter": 0,
+          "fingerprint": "0f76a32538b63cf98dbc9cdaae81d8a6f4a8e2d6fc7baf227d05ecce16cc34a1",
+          "fingerprint_scope": [
+            "tag",
+            "label",
+            "file_path",
+            "time_modified",
+            "parameters"
+          ],
+          "generation": 2,
+          "instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4",
+          "model_tag": "mcp_1f0d37ce92d9",
+          "server_instance_id": "127.0.0.1:50034",
+          "tag": "mcp_1f0d37ce92d9",
+          "worker_instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4"
+        },
+        "before": {
+          "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+          "changed_tags": [],
+          "external_event_counter": 0,
+          "fingerprint": "0f76a32538b63cf98dbc9cdaae81d8a6f4a8e2d6fc7baf227d05ecce16cc34a1",
+          "fingerprint_scope": [
+            "tag",
+            "label",
+            "file_path",
+            "time_modified",
+            "parameters"
+          ],
+          "generation": 2,
+          "instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4",
+          "model_tag": "mcp_1f0d37ce92d9",
+          "server_instance_id": "127.0.0.1:50034",
+          "tag": "mcp_1f0d37ce92d9",
+          "worker_instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4"
+        },
+        "cleanup_failed": false,
+        "dispatch_stage": "post_dispatch",
+        "domain_outcome": {
+          "cleanup_failed": false,
+          "dispatch_stage": "post_dispatch",
+          "execution_state_unknown": true,
+          "failure": {
+            "code": "EXECUTION_STATE_UNKNOWN",
+            "message": "{'ok': False, 'code': 'ENGINE_CALL_FAILED', 'message': 'InvocationTargetException: null (cause: RuntimeException: G33 intentional completed API fault)', 'execution_state_unknown': True}",
+            "safe_retry": false
+          },
+          "operation": "",
+          "state": "unknown",
+          "verification_status": "NOT_APPLICABLE"
+        },
+        "domain_state": "unknown",
+        "effect": "project_write",
+        "entrypoint": "ControlledFault",
+        "execution_state_unknown": true,
+        "isolation_proof": {
+          "api_probe": {
+            "authenticated_api_success": true,
+            "denial_evidence_source": "server_access_log",
+            "loopback_address": "127.0.0.1",
+            "loopback_port": 50034,
+            "nonloopback_address": "192.168.100.152",
+            "nonloopback_api_exception_http_status": null,
+            "nonloopback_port": 50034,
+            "observed_at": "2026-09-22T04:44:30Z",
+            "probe_kind": "comsol_java_api",
+            "server_access_log": {
+              "entries": [
+                {
+                  "http_status": 101,
+                  "method": "GET",
+                  "peer": "127.0.0.1",
+                  "route": "/webbridge/websocket"
+                },
+                {
+                  "http_status": 101,
+                  "method": "GET",
+                  "peer": "127.0.0.1",
+                  "route": "/webbridge/websocket"
+                },
+                {
+                  "http_status": 403,
+                  "method": "GET",
+                  "peer": "192.168.100.152",
+                  "route": "/webbridge/websocket"
+                }
+              ],
+              "finished_at": "2026-09-22T04:44:30Z",
+              "inode": 29931291,
+              "java_request_id": "g2-valve-nonloopback-connect",
+              "offset_after": 261,
+              "offset_before": 0,
+              "parsed_nonloopback_entry": {
+                "http_status": 403,
+                "method": "GET",
+                "peer": "192.168.100.152",
+                "route": "/webbridge/websocket"
+              },
+              "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_m3_20260922T0503Z/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-22.txt",
+              "phase": "java_connect_only",
+              "raw_probe_started_after_capture": true,
+              "segment_sha256": "95a3ee8b3ce82873f15291fbb47dc4416252f079b4b94b716362753e76f422d3",
+              "started_at": "2026-09-22T04:44:21Z",
+              "status": "PASS"
+            }
+          },
+          "birth": "Tue Sep 22 12:44:17 2026",
+          "config_inode": 14720294,
+          "config_sha256": "1a029e30e3b0218adfdc8ac01e15379a68ae48bb2fb658bdf397c0ba6de5c357",
+          "config_target": "/Applications/COMSOL64/Multiphysics/bin/servers/webbridge/conf/server.xml",
+          "endpoint": "127.0.0.1:50034",
+          "established_client_pids": [
+            66757,
+            67464
+          ],
+          "listener": {
+            "endpoint": "*:50034",
+            "local_endpoint": "*:50034",
+            "pid": 66757,
+            "raw": "java    66757 everwalker   59u  IPv6 0x6308c214d18e0955      0t0  TCP *:50034 (LISTEN)",
+            "remote_endpoint": null,
+            "state": "LISTEN"
+          },
+          "listener_binding": "wildcard",
+          "loopback_listener": false,
+          "pid": 66757,
+          "proof_scope": "owned process identity + in-place RemoteAddrValve config + authenticated loopback API PASS + server_access_log + exact IPv4 loopback Worker peer",
+          "receipt": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_m3_20260922T0503Z/isolation_receipt.json",
+          "verified": true,
+          "worker_pid": 67464
+        },
+        "operation": "code.execute_java",
+        "partial_change": false,
+        "readback": {},
+        "requires_model_reconciliation": true,
+        "source_sha256": "325501e52b1cf77313a0449857d844d1369ef23a962b8882a6ed3db3b3f815e5",
+        "verification_status": "NOT_APPLICABLE",
+        "verified_outcome": "unknown",
+        "worker": {
+          "completed_at_ms": "1790052308091",
+          "failure": {
+            "code": "ENGINE_CALL_FAILED",
+            "execution_state_unknown": true,
+            "message": "InvocationTargetException: null (cause: RuntimeException: G33 intentional completed API fault)",
+            "ok": false
+          },
+          "ok": false,
+          "queued_at_ms": "1790052308048",
+          "request_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+          "started_at_ms": "1790052308048",
+          "status": "FAILED",
+          "type": "code_execute"
+        }
+      },
+      "error": {
+        "code": "EXECUTION_STATE_UNKNOWN",
+        "engine_state": "UNKNOWN",
+        "message": "{'ok': False, 'code': 'ENGINE_CALL_FAILED', 'message': 'InvocationTargetException: null (cause: RuntimeException: G33 intentional completed API fault)', 'execution_state_unknown': True}",
+        "partial_changes": false,
+        "phase": "execute",
+        "safe_retry": false
+      },
+      "execution": {
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "dirty": true,
+        "idempotency_key": "public_m3_20260922T0503Z-run-code-execute_java-4",
+        "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc",
+        "model_ownership": "mcp_owned",
+        "model_ref": {
+          "generation": 1,
+          "model_tag": "mcp_1f0d37ce92d9",
+          "schema_version": 1,
+          "server_instance_id": "fa909983c0bc5d276619b0a6682154ec2ed5973f20aba2de69d88d99d6d0d7db",
+          "session_id": "session-aa2b98dc44866ddb822e724f"
+        },
+        "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+        "request_hash": "5e9d207c356864d0b8ada223bb856d02057af9b10eaad4d951a443756cc09f65",
+        "request_id": "public_m3_20260922T0503Z-run-code-execute_java-4",
+        "revision": 2,
+        "server_ownership": "shared",
+        "session_id": "session-aa2b98dc44866ddb822e724f"
+      },
+      "success": false
+    }
+  },
+  "before_events": [
+    {
+      "id": 427,
+      "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc",
+      "event": "RUNNING",
+      "metadata": {
+        "at": 1790052308.0075,
+        "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266"
+      },
+      "created_at": "2026-09-22 04:45:08"
+    },
+    {
+      "id": 428,
+      "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc",
+      "event": "worker_request",
+      "metadata": {
+        "kind": "model_snapshot",
+        "metadata": {
+          "request_id": "wrk-8061a9c1-dc17-4f4e-b64b-0f7b8c7f2961",
+          "tag": "mcp_1f0d37ce92d9",
+          "type": "model_snapshot"
+        },
+        "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+        "phase": "submitted",
+        "request_hash": "dbfd9b848f99ba2d50c0ba02e0f54c70b55ff8d4ecbfecdd79e4afd612f38f1e",
+        "request_id": "wrk-8061a9c1-dc17-4f4e-b64b-0f7b8c7f2961"
+      },
+      "created_at": "2026-09-22 04:45:08"
+    },
+    {
+      "id": 429,
+      "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc",
+      "event": "worker_request",
+      "metadata": {
+        "kind": "model_snapshot",
+        "metadata": {
+          "request_id": "wrk-8061a9c1-dc17-4f4e-b64b-0f7b8c7f2961",
+          "tag": "mcp_1f0d37ce92d9",
+          "type": "model_snapshot"
+        },
+        "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+        "phase": "observed",
+        "reply": {
+          "completed_at_ms": "1790052308045",
+          "ok": true,
+          "queued_at_ms": "1790052308042",
+          "request_id": "wrk-8061a9c1-dc17-4f4e-b64b-0f7b8c7f2961",
+          "result": {
+            "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+            "changed_tags": [],
+            "external_event_counter": 0,
+            "fingerprint": "0f76a32538b63cf98dbc9cdaae81d8a6f4a8e2d6fc7baf227d05ecce16cc34a1",
+            "fingerprint_scope": [
+              "tag",
+              "label",
+              "file_path",
+              "time_modified",
+              "parameters"
+            ],
+            "generation": 2,
+            "instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4",
+            "model_tag": "mcp_1f0d37ce92d9",
+            "server_instance_id": "127.0.0.1:50034",
+            "tag": "mcp_1f0d37ce92d9",
+            "worker_instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4"
+          },
+          "started_at_ms": "1790052308042",
+          "status": "SUCCEEDED",
+          "type": "model_snapshot"
+        },
+        "request_hash": "dbfd9b848f99ba2d50c0ba02e0f54c70b55ff8d4ecbfecdd79e4afd612f38f1e",
+        "request_id": "wrk-8061a9c1-dc17-4f4e-b64b-0f7b8c7f2961",
+        "status": "SUCCEEDED"
+      },
+      "created_at": "2026-09-22 04:45:08"
+    },
+    {
+      "id": 430,
+      "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc",
+      "event": "worker_request",
+      "metadata": {
+        "kind": "model_snapshot",
+        "metadata": {
+          "request_id": "wrk-53571ca6-18af-4983-93ea-3081ae0ae98d",
+          "tag": "mcp_1f0d37ce92d9",
+          "type": "model_snapshot"
+        },
+        "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+        "phase": "submitted",
+        "request_hash": "dbfd9b848f99ba2d50c0ba02e0f54c70b55ff8d4ecbfecdd79e4afd612f38f1e",
+        "request_id": "wrk-53571ca6-18af-4983-93ea-3081ae0ae98d"
+      },
+      "created_at": "2026-09-22 04:45:08"
+    },
+    {
+      "id": 431,
+      "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc",
+      "event": "worker_request",
+      "metadata": {
+        "kind": "model_snapshot",
+        "metadata": {
+          "request_id": "wrk-53571ca6-18af-4983-93ea-3081ae0ae98d",
+          "tag": "mcp_1f0d37ce92d9",
+          "type": "model_snapshot"
+        },
+        "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+        "phase": "observed",
+        "reply": {
+          "completed_at_ms": "1790052308048",
+          "ok": true,
+          "queued_at_ms": "1790052308047",
+          "request_id": "wrk-53571ca6-18af-4983-93ea-3081ae0ae98d",
+          "result": {
+            "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+            "changed_tags": [],
+            "external_event_counter": 0,
+            "fingerprint": "0f76a32538b63cf98dbc9cdaae81d8a6f4a8e2d6fc7baf227d05ecce16cc34a1",
+            "fingerprint_scope": [
+              "tag",
+              "label",
+              "file_path",
+              "time_modified",
+              "parameters"
+            ],
+            "generation": 2,
+            "instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4",
+            "model_tag": "mcp_1f0d37ce92d9",
+            "server_instance_id": "127.0.0.1:50034",
+            "tag": "mcp_1f0d37ce92d9",
+            "worker_instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4"
+          },
+          "started_at_ms": "1790052308047",
+          "status": "SUCCEEDED",
+          "type": "model_snapshot"
+        },
+        "request_hash": "dbfd9b848f99ba2d50c0ba02e0f54c70b55ff8d4ecbfecdd79e4afd612f38f1e",
+        "request_id": "wrk-53571ca6-18af-4983-93ea-3081ae0ae98d",
+        "status": "SUCCEEDED"
+      },
+      "created_at": "2026-09-22 04:45:08"
+    },
+    {
+      "id": 432,
+      "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc",
+      "event": "worker_request",
+      "metadata": {
+        "kind": "code_execute",
+        "metadata": {
+          "arguments": {},
+          "entrypoint": "ControlledFault",
+          "request_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+          "source_artifact": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_m3_20260922T0503Z/java_sources/325501e52b1cf77313a0449857d844d1369ef23a962b8882a6ed3db3b3f815e5/ControlledFault.java",
+          "tag": "mcp_1f0d37ce92d9",
+          "type": "code_execute"
+        },
+        "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+        "phase": "submitted",
+        "request_hash": "fb7bf4663820a3fc9f5d007c31ea76cc8d7e9ca464a6ccc8cd52ad87de91752f",
+        "request_id": "34763945-cd27-4552-a7e4-fea9dd6ed266"
+      },
+      "created_at": "2026-09-22 04:45:08"
+    },
+    {
+      "id": 433,
+      "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc",
+      "event": "worker_request",
+      "metadata": {
+        "kind": "code_execute",
+        "metadata": {
+          "arguments": {},
+          "entrypoint": "ControlledFault",
+          "request_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+          "source_artifact": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_m3_20260922T0503Z/java_sources/325501e52b1cf77313a0449857d844d1369ef23a962b8882a6ed3db3b3f815e5/ControlledFault.java",
+          "tag": "mcp_1f0d37ce92d9",
+          "type": "code_execute"
+        },
+        "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+        "phase": "observed",
+        "reply": {
+          "completed_at_ms": "1790052308091",
+          "failure": {
+            "code": "ENGINE_CALL_FAILED",
+            "execution_state_unknown": true,
+            "message": "InvocationTargetException: null (cause: RuntimeException: G33 intentional completed API fault)",
+            "ok": false
+          },
+          "ok": false,
+          "queued_at_ms": "1790052308048",
+          "request_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+          "started_at_ms": "1790052308048",
+          "status": "FAILED",
+          "type": "code_execute"
+        },
+        "request_hash": "fb7bf4663820a3fc9f5d007c31ea76cc8d7e9ca464a6ccc8cd52ad87de91752f",
+        "request_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+        "status": "FAILED"
+      },
+      "created_at": "2026-09-22 04:45:08"
+    },
+    {
+      "id": 434,
+      "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc",
+      "event": "worker_request",
+      "metadata": {
+        "kind": "model_snapshot",
+        "metadata": {
+          "request_id": "wrk-2d7ee0e7-d2ad-4a00-a75d-c07e98835a8b",
+          "tag": "mcp_1f0d37ce92d9",
+          "type": "model_snapshot"
+        },
+        "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+        "phase": "submitted",
+        "request_hash": "dbfd9b848f99ba2d50c0ba02e0f54c70b55ff8d4ecbfecdd79e4afd612f38f1e",
+        "request_id": "wrk-2d7ee0e7-d2ad-4a00-a75d-c07e98835a8b"
+      },
+      "created_at": "2026-09-22 04:45:08"
+    },
+    {
+      "id": 435,
+      "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc",
+      "event": "worker_request",
+      "metadata": {
+        "kind": "model_snapshot",
+        "metadata": {
+          "request_id": "wrk-2d7ee0e7-d2ad-4a00-a75d-c07e98835a8b",
+          "tag": "mcp_1f0d37ce92d9",
+          "type": "model_snapshot"
+        },
+        "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+        "phase": "observed",
+        "reply": {
+          "completed_at_ms": "1790052308095",
+          "ok": true,
+          "queued_at_ms": "1790052308092",
+          "request_id": "wrk-2d7ee0e7-d2ad-4a00-a75d-c07e98835a8b",
+          "result": {
+            "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+            "changed_tags": [],
+            "external_event_counter": 0,
+            "fingerprint": "0f76a32538b63cf98dbc9cdaae81d8a6f4a8e2d6fc7baf227d05ecce16cc34a1",
+            "fingerprint_scope": [
+              "tag",
+              "label",
+              "file_path",
+              "time_modified",
+              "parameters"
+            ],
+            "generation": 2,
+            "instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4",
+            "model_tag": "mcp_1f0d37ce92d9",
+            "server_instance_id": "127.0.0.1:50034",
+            "tag": "mcp_1f0d37ce92d9",
+            "worker_instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4"
+          },
+          "started_at_ms": "1790052308092",
+          "status": "SUCCEEDED",
+          "type": "model_snapshot"
+        },
+        "request_hash": "dbfd9b848f99ba2d50c0ba02e0f54c70b55ff8d4ecbfecdd79e4afd612f38f1e",
+        "request_id": "wrk-2d7ee0e7-d2ad-4a00-a75d-c07e98835a8b",
+        "status": "SUCCEEDED"
+      },
+      "created_at": "2026-09-22 04:45:08"
+    },
+    {
+      "id": 436,
+      "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc",
+      "event": "worker_request",
+      "metadata": {
+        "kind": "model_snapshot",
+        "metadata": {
+          "request_id": "wrk-36cceb1a-17e2-4a99-92d2-12d512864de2",
+          "tag": "mcp_1f0d37ce92d9",
+          "type": "model_snapshot"
+        },
+        "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+        "phase": "submitted",
+        "request_hash": "dbfd9b848f99ba2d50c0ba02e0f54c70b55ff8d4ecbfecdd79e4afd612f38f1e",
+        "request_id": "wrk-36cceb1a-17e2-4a99-92d2-12d512864de2"
+      },
+      "created_at": "2026-09-22 04:45:08"
+    },
+    {
+      "id": 437,
+      "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc",
+      "event": "worker_request",
+      "metadata": {
+        "kind": "model_snapshot",
+        "metadata": {
+          "request_id": "wrk-36cceb1a-17e2-4a99-92d2-12d512864de2",
+          "tag": "mcp_1f0d37ce92d9",
+          "type": "model_snapshot"
+        },
+        "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+        "phase": "observed",
+        "reply": {
+          "completed_at_ms": "1790052308099",
+          "ok": true,
+          "queued_at_ms": "1790052308096",
+          "request_id": "wrk-36cceb1a-17e2-4a99-92d2-12d512864de2",
+          "result": {
+            "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+            "changed_tags": [],
+            "external_event_counter": 0,
+            "fingerprint": "0f76a32538b63cf98dbc9cdaae81d8a6f4a8e2d6fc7baf227d05ecce16cc34a1",
+            "fingerprint_scope": [
+              "tag",
+              "label",
+              "file_path",
+              "time_modified",
+              "parameters"
+            ],
+            "generation": 2,
+            "instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4",
+            "model_tag": "mcp_1f0d37ce92d9",
+            "server_instance_id": "127.0.0.1:50034",
+            "tag": "mcp_1f0d37ce92d9",
+            "worker_instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4"
+          },
+          "started_at_ms": "1790052308096",
+          "status": "SUCCEEDED",
+          "type": "model_snapshot"
+        },
+        "request_hash": "dbfd9b848f99ba2d50c0ba02e0f54c70b55ff8d4ecbfecdd79e4afd612f38f1e",
+        "request_id": "wrk-36cceb1a-17e2-4a99-92d2-12d512864de2",
+        "status": "SUCCEEDED"
+      },
+      "created_at": "2026-09-22 04:45:08"
+    },
+    {
+      "id": 438,
+      "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc",
+      "event": "UNKNOWN",
+      "metadata": {
+        "at": 1790052308.1000352,
+        "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266"
+      },
+      "created_at": "2026-09-22 04:45:08"
+    }
+  ],
+  "after_events": [
+    {
+      "id": 427,
+      "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc",
+      "event": "RUNNING",
+      "metadata": {
+        "at": 1790052308.0075,
+        "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266"
+      },
+      "created_at": "2026-09-22 04:45:08"
+    },
+    {
+      "id": 428,
+      "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc",
+      "event": "worker_request",
+      "metadata": {
+        "kind": "model_snapshot",
+        "metadata": {
+          "request_id": "wrk-8061a9c1-dc17-4f4e-b64b-0f7b8c7f2961",
+          "tag": "mcp_1f0d37ce92d9",
+          "type": "model_snapshot"
+        },
+        "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+        "phase": "submitted",
+        "request_hash": "dbfd9b848f99ba2d50c0ba02e0f54c70b55ff8d4ecbfecdd79e4afd612f38f1e",
+        "request_id": "wrk-8061a9c1-dc17-4f4e-b64b-0f7b8c7f2961"
+      },
+      "created_at": "2026-09-22 04:45:08"
+    },
+    {
+      "id": 429,
+      "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc",
+      "event": "worker_request",
+      "metadata": {
+        "kind": "model_snapshot",
+        "metadata": {
+          "request_id": "wrk-8061a9c1-dc17-4f4e-b64b-0f7b8c7f2961",
+          "tag": "mcp_1f0d37ce92d9",
+          "type": "model_snapshot"
+        },
+        "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+        "phase": "observed",
+        "reply": {
+          "completed_at_ms": "1790052308045",
+          "ok": true,
+          "queued_at_ms": "1790052308042",
+          "request_id": "wrk-8061a9c1-dc17-4f4e-b64b-0f7b8c7f2961",
+          "result": {
+            "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+            "changed_tags": [],
+            "external_event_counter": 0,
+            "fingerprint": "0f76a32538b63cf98dbc9cdaae81d8a6f4a8e2d6fc7baf227d05ecce16cc34a1",
+            "fingerprint_scope": [
+              "tag",
+              "label",
+              "file_path",
+              "time_modified",
+              "parameters"
+            ],
+            "generation": 2,
+            "instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4",
+            "model_tag": "mcp_1f0d37ce92d9",
+            "server_instance_id": "127.0.0.1:50034",
+            "tag": "mcp_1f0d37ce92d9",
+            "worker_instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4"
+          },
+          "started_at_ms": "1790052308042",
+          "status": "SUCCEEDED",
+          "type": "model_snapshot"
+        },
+        "request_hash": "dbfd9b848f99ba2d50c0ba02e0f54c70b55ff8d4ecbfecdd79e4afd612f38f1e",
+        "request_id": "wrk-8061a9c1-dc17-4f4e-b64b-0f7b8c7f2961",
+        "status": "SUCCEEDED"
+      },
+      "created_at": "2026-09-22 04:45:08"
+    },
+    {
+      "id": 430,
+      "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc",
+      "event": "worker_request",
+      "metadata": {
+        "kind": "model_snapshot",
+        "metadata": {
+          "request_id": "wrk-53571ca6-18af-4983-93ea-3081ae0ae98d",
+          "tag": "mcp_1f0d37ce92d9",
+          "type": "model_snapshot"
+        },
+        "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+        "phase": "submitted",
+        "request_hash": "dbfd9b848f99ba2d50c0ba02e0f54c70b55ff8d4ecbfecdd79e4afd612f38f1e",
+        "request_id": "wrk-53571ca6-18af-4983-93ea-3081ae0ae98d"
+      },
+      "created_at": "2026-09-22 04:45:08"
+    },
+    {
+      "id": 431,
+      "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc",
+      "event": "worker_request",
+      "metadata": {
+        "kind": "model_snapshot",
+        "metadata": {
+          "request_id": "wrk-53571ca6-18af-4983-93ea-3081ae0ae98d",
+          "tag": "mcp_1f0d37ce92d9",
+          "type": "model_snapshot"
+        },
+        "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+        "phase": "observed",
+        "reply": {
+          "completed_at_ms": "1790052308048",
+          "ok": true,
+          "queued_at_ms": "1790052308047",
+          "request_id": "wrk-53571ca6-18af-4983-93ea-3081ae0ae98d",
+          "result": {
+            "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+            "changed_tags": [],
+            "external_event_counter": 0,
+            "fingerprint": "0f76a32538b63cf98dbc9cdaae81d8a6f4a8e2d6fc7baf227d05ecce16cc34a1",
+            "fingerprint_scope": [
+              "tag",
+              "label",
+              "file_path",
+              "time_modified",
+              "parameters"
+            ],
+            "generation": 2,
+            "instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4",
+            "model_tag": "mcp_1f0d37ce92d9",
+            "server_instance_id": "127.0.0.1:50034",
+            "tag": "mcp_1f0d37ce92d9",
+            "worker_instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4"
+          },
+          "started_at_ms": "1790052308047",
+          "status": "SUCCEEDED",
+          "type": "model_snapshot"
+        },
+        "request_hash": "dbfd9b848f99ba2d50c0ba02e0f54c70b55ff8d4ecbfecdd79e4afd612f38f1e",
+        "request_id": "wrk-53571ca6-18af-4983-93ea-3081ae0ae98d",
+        "status": "SUCCEEDED"
+      },
+      "created_at": "2026-09-22 04:45:08"
+    },
+    {
+      "id": 432,
+      "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc",
+      "event": "worker_request",
+      "metadata": {
+        "kind": "code_execute",
+        "metadata": {
+          "arguments": {},
+          "entrypoint": "ControlledFault",
+          "request_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+          "source_artifact": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_m3_20260922T0503Z/java_sources/325501e52b1cf77313a0449857d844d1369ef23a962b8882a6ed3db3b3f815e5/ControlledFault.java",
+          "tag": "mcp_1f0d37ce92d9",
+          "type": "code_execute"
+        },
+        "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+        "phase": "submitted",
+        "request_hash": "fb7bf4663820a3fc9f5d007c31ea76cc8d7e9ca464a6ccc8cd52ad87de91752f",
+        "request_id": "34763945-cd27-4552-a7e4-fea9dd6ed266"
+      },
+      "created_at": "2026-09-22 04:45:08"
+    },
+    {
+      "id": 433,
+      "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc",
+      "event": "worker_request",
+      "metadata": {
+        "kind": "code_execute",
+        "metadata": {
+          "arguments": {},
+          "entrypoint": "ControlledFault",
+          "request_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+          "source_artifact": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/public_m3_20260922T0503Z/java_sources/325501e52b1cf77313a0449857d844d1369ef23a962b8882a6ed3db3b3f815e5/ControlledFault.java",
+          "tag": "mcp_1f0d37ce92d9",
+          "type": "code_execute"
+        },
+        "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+        "phase": "observed",
+        "reply": {
+          "completed_at_ms": "1790052308091",
+          "failure": {
+            "code": "ENGINE_CALL_FAILED",
+            "execution_state_unknown": true,
+            "message": "InvocationTargetException: null (cause: RuntimeException: G33 intentional completed API fault)",
+            "ok": false
+          },
+          "ok": false,
+          "queued_at_ms": "1790052308048",
+          "request_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+          "started_at_ms": "1790052308048",
+          "status": "FAILED",
+          "type": "code_execute"
+        },
+        "request_hash": "fb7bf4663820a3fc9f5d007c31ea76cc8d7e9ca464a6ccc8cd52ad87de91752f",
+        "request_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+        "status": "FAILED"
+      },
+      "created_at": "2026-09-22 04:45:08"
+    },
+    {
+      "id": 434,
+      "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc",
+      "event": "worker_request",
+      "metadata": {
+        "kind": "model_snapshot",
+        "metadata": {
+          "request_id": "wrk-2d7ee0e7-d2ad-4a00-a75d-c07e98835a8b",
+          "tag": "mcp_1f0d37ce92d9",
+          "type": "model_snapshot"
+        },
+        "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+        "phase": "submitted",
+        "request_hash": "dbfd9b848f99ba2d50c0ba02e0f54c70b55ff8d4ecbfecdd79e4afd612f38f1e",
+        "request_id": "wrk-2d7ee0e7-d2ad-4a00-a75d-c07e98835a8b"
+      },
+      "created_at": "2026-09-22 04:45:08"
+    },
+    {
+      "id": 435,
+      "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc",
+      "event": "worker_request",
+      "metadata": {
+        "kind": "model_snapshot",
+        "metadata": {
+          "request_id": "wrk-2d7ee0e7-d2ad-4a00-a75d-c07e98835a8b",
+          "tag": "mcp_1f0d37ce92d9",
+          "type": "model_snapshot"
+        },
+        "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+        "phase": "observed",
+        "reply": {
+          "completed_at_ms": "1790052308095",
+          "ok": true,
+          "queued_at_ms": "1790052308092",
+          "request_id": "wrk-2d7ee0e7-d2ad-4a00-a75d-c07e98835a8b",
+          "result": {
+            "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+            "changed_tags": [],
+            "external_event_counter": 0,
+            "fingerprint": "0f76a32538b63cf98dbc9cdaae81d8a6f4a8e2d6fc7baf227d05ecce16cc34a1",
+            "fingerprint_scope": [
+              "tag",
+              "label",
+              "file_path",
+              "time_modified",
+              "parameters"
+            ],
+            "generation": 2,
+            "instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4",
+            "model_tag": "mcp_1f0d37ce92d9",
+            "server_instance_id": "127.0.0.1:50034",
+            "tag": "mcp_1f0d37ce92d9",
+            "worker_instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4"
+          },
+          "started_at_ms": "1790052308092",
+          "status": "SUCCEEDED",
+          "type": "model_snapshot"
+        },
+        "request_hash": "dbfd9b848f99ba2d50c0ba02e0f54c70b55ff8d4ecbfecdd79e4afd612f38f1e",
+        "request_id": "wrk-2d7ee0e7-d2ad-4a00-a75d-c07e98835a8b",
+        "status": "SUCCEEDED"
+      },
+      "created_at": "2026-09-22 04:45:08"
+    },
+    {
+      "id": 436,
+      "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc",
+      "event": "worker_request",
+      "metadata": {
+        "kind": "model_snapshot",
+        "metadata": {
+          "request_id": "wrk-36cceb1a-17e2-4a99-92d2-12d512864de2",
+          "tag": "mcp_1f0d37ce92d9",
+          "type": "model_snapshot"
+        },
+        "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+        "phase": "submitted",
+        "request_hash": "dbfd9b848f99ba2d50c0ba02e0f54c70b55ff8d4ecbfecdd79e4afd612f38f1e",
+        "request_id": "wrk-36cceb1a-17e2-4a99-92d2-12d512864de2"
+      },
+      "created_at": "2026-09-22 04:45:08"
+    },
+    {
+      "id": 437,
+      "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc",
+      "event": "worker_request",
+      "metadata": {
+        "kind": "model_snapshot",
+        "metadata": {
+          "request_id": "wrk-36cceb1a-17e2-4a99-92d2-12d512864de2",
+          "tag": "mcp_1f0d37ce92d9",
+          "type": "model_snapshot"
+        },
+        "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266",
+        "phase": "observed",
+        "reply": {
+          "completed_at_ms": "1790052308099",
+          "ok": true,
+          "queued_at_ms": "1790052308096",
+          "request_id": "wrk-36cceb1a-17e2-4a99-92d2-12d512864de2",
+          "result": {
+            "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+            "changed_tags": [],
+            "external_event_counter": 0,
+            "fingerprint": "0f76a32538b63cf98dbc9cdaae81d8a6f4a8e2d6fc7baf227d05ecce16cc34a1",
+            "fingerprint_scope": [
+              "tag",
+              "label",
+              "file_path",
+              "time_modified",
+              "parameters"
+            ],
+            "generation": 2,
+            "instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4",
+            "model_tag": "mcp_1f0d37ce92d9",
+            "server_instance_id": "127.0.0.1:50034",
+            "tag": "mcp_1f0d37ce92d9",
+            "worker_instance_id": "9512ef96-2478-486f-a678-97eafa9b93b4"
+          },
+          "started_at_ms": "1790052308096",
+          "status": "SUCCEEDED",
+          "type": "model_snapshot"
+        },
+        "request_hash": "dbfd9b848f99ba2d50c0ba02e0f54c70b55ff8d4ecbfecdd79e4afd612f38f1e",
+        "request_id": "wrk-36cceb1a-17e2-4a99-92d2-12d512864de2",
+        "status": "SUCCEEDED"
+      },
+      "created_at": "2026-09-22 04:45:08"
+    },
+    {
+      "id": 438,
+      "job_id": "e873b8b2-1660-452a-88e9-1f3768b461bc",
+      "event": "UNKNOWN",
+      "metadata": {
+        "at": 1790052308.1000352,
+        "operation_id": "34763945-cd27-4552-a7e4-fea9dd6ed266"
+      },
+      "created_at": "2026-09-22 04:45:08"
+    }
+  ]
+}
