@@ -89,6 +89,11 @@ def trusted_project_root(worker: Any) -> Path:
         raise _contract_error("RUNTIME_CONFIGURATION_REQUIRED", "trusted project root could not be resolved") from exc
     if not root.is_dir() or root.is_symlink():
         raise _contract_error("RUNTIME_CONFIGURATION_REQUIRED", "trusted project root is not a directory")
+    if any(p in root.parts for p in ("site-packages", "dist-packages")):
+        raise _contract_error(
+            "RUNTIME_CONFIGURATION_REQUIRED",
+            f"site-packages is not an authorized project root: {root!r}",
+        )
     return root
 
 
@@ -192,6 +197,10 @@ def _row_for_leaf(path: tuple[Any, ...], value: Any, eval_result: Mapping[str, A
         field_axes = list(getattr(field_info, "axes", None) or [])
         raw_units = getattr(field_info, "units", None)
         field_units = dict(raw_units) if isinstance(raw_units, Mapping) else {}
+
+    _VALID_AXES = {"expression", "outer", "inner", "point", "component", "time", "parameter"}
+    if field_axes and any(ax not in _VALID_AXES for ax in field_axes):
+        raise _contract_error("DATA_INTEGRITY_ERROR", f"Invalid or unknown axes in field array: {field_axes}")
 
     if not field_axes:
         if len(path) == 4:
@@ -610,10 +619,13 @@ class ArtifactStore:
         }
         for part in rel.parts:
             part_lower = part.lower()
+            stem_lower = Path(part_lower).stem
             if (
                 part.startswith(".")
                 or any(part_lower.startswith(prefix) for prefix in _PROTECTED_DIR_PREFIXES)
                 or part_lower in _PROTECTED_TOKENS
+                or stem_lower in _PROTECTED_TOKENS
+                or any(part_lower.endswith(ext) for ext in (".pem", ".key", ".crt", ".pfx", ".p12"))
             ):
                 raise _contract_error(
                     "ACCESS_VIOLATION",
@@ -634,10 +646,13 @@ class ArtifactStore:
 
         for part in rel_resolved.parts:
             part_lower = part.lower()
+            stem_lower = Path(part_lower).stem
             if (
                 part.startswith(".")
                 or any(part_lower.startswith(prefix) for prefix in _PROTECTED_DIR_PREFIXES)
                 or part_lower in _PROTECTED_TOKENS
+                or stem_lower in _PROTECTED_TOKENS
+                or any(part_lower.endswith(ext) for ext in (".pem", ".key", ".crt", ".pfx", ".p12"))
             ):
                 raise _contract_error(
                     "ACCESS_VIOLATION",

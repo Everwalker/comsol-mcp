@@ -52,15 +52,20 @@ class MockPropFeature:
 
     def run(self) -> None:
         self.ran = True
-        # If filename set, create the file to simulate export
-        filename = self.props.get("filename")
+        filename = self.props.get("pngfilename") or self.props.get("filename")
         if filename:
             p = Path(filename)
             p.parent.mkdir(parents=True, exist_ok=True)
-            if not p.exists():
-                p.write_bytes(
-                    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
-                )
+            w = int(self.props.get("width") or 640)
+            h = int(self.props.get("height") or 480)
+            import struct
+            import zlib
+            ihdr_data = struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0)
+            ihdr_crc = struct.pack(">I", zlib.crc32(b"IHDR" + ihdr_data))
+            idat_data = zlib.compress(b"\x00" * (w * 4 + 1) * h)
+            idat_chunk = struct.pack(">I", len(idat_data)) + b"IDAT" + idat_data + struct.pack(">I", zlib.crc32(b"IDAT" + idat_data))
+            png_bytes = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR" + ihdr_data + ihdr_crc + idat_chunk + b"\x00\x00\x00\x00IEND\xaeB`\x82"
+            p.write_bytes(png_bytes)
 
 
 class MockFeatureList:

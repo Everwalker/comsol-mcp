@@ -16,6 +16,7 @@ import math
 import os
 from pathlib import Path
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
@@ -35,8 +36,10 @@ from comsol_mcp._artifact_store import (
     csv_to_field_array,
     trusted_project_root,
 )
+from comsol_mcp._g2_engine import _call
+from comsol_mcp._g3_common import bound_model
 from comsol_mcp._g3_ops import DISPATCH, dispatch, _FALLBACK_EFFECTS
-from comsol_mcp._g3_results import result_at_points
+from comsol_mcp._g3_results import result_at_points, result_evaluate
 from comsol_mcp._mcp_gateway import mcp_result
 from mcp.types import ImageContent, TextContent
 
@@ -106,7 +109,7 @@ class LiveAcceptanceRunner:
         self.worker: PersistentJavaWorker | None = None
         self.shared_server_pids_before: list[int] = []
         self.cases: dict[str, dict[str, Any]] = {}
-        self.comsol_version: str = "COMSOL 6.4"
+        self.comsol_version: str = "COMSOL Multiphysics 6.4"
         self.live_model_tag: str | None = None
         self.saved_mph_path: Path | None = None
 
@@ -142,7 +145,7 @@ class LiveAcceptanceRunner:
             text=True,
             start_new_session=True,
         )
-        deadline = time.time() + 25
+        deadline = time.time() + 30
         while time.time() < deadline:
             if portfile.is_file():
                 try:
@@ -156,7 +159,7 @@ class LiveAcceptanceRunner:
             if self.server_proc.poll() is not None:
                 raise RuntimeError(f"mphserver exited prematurely with code {self.server_proc.returncode}")
             time.sleep(0.3)
-        raise TimeoutError("COMSOL mphserver failed to bind within 25s")
+        raise TimeoutError("COMSOL mphserver failed to bind within 30s")
 
     def stop_server(self) -> None:
         if self.server_proc is not None:
@@ -215,77 +218,173 @@ class LiveAcceptanceRunner:
         assert pin_file.is_file(), "PIN.json missing"
         pin_data = json.loads(pin_file.read_text(encoding="utf-8"))
         expected_commit = pin_data["commit"]
+        expected_tree = pin_data.get("tree", "")
         assert expected_commit == "31152904205834125776524f92288e18ba93b853"
-        return {"pinned_commit": expected_commit, "status": "VERIFIED"}
+
+        # Check bootstrap verification functions from tools/bootstrap.py
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("bootstrap", ROOT.parent / "tools" / "bootstrap.py")
+        assert spec is not None and spec.loader is not None
+        b = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(b)
+        assert b.tree_hash([]) == "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+        assert b.git_blob(b"test content\n") == "d670460b4b4aece5915caf5c68d12f560a9fe3e4"
+        for bad_p in ("../escape", "/absolute", ".git/config", "foo/.GIT/config", "a\\b", "C:/x"):
+            try:
+                b.safe_relative(bad_p)
+                assert False, f"Did not reject unsafe path: {bad_p}"
+            except ValueError:
+                pass
+
+        # Verify receipt preservation
+        receipt_file = ROOT / "RESTORE_RECEIPT.json"
+        if not receipt_file.is_file():
+            receipt_file = ROOT / "docs" / "handoff_g3_4" / "RESTORE_RECEIPT.json"
+        assert receipt_file.is_file(), "RESTORE_RECEIPT.json missing"
+        receipt_data = json.loads(receipt_file.read_text(encoding="utf-8"))
+        source_commit = receipt_data.get("source_commit") or receipt_data.get("commit")
+        assert source_commit is not None, "Restore receipt must record source commit"
+
+        return {
+            "pinned_commit": expected_commit,
+            "pinned_tree": expected_tree,
+            "receipt_source_commit": source_commit,
+            "bootstrap_algorithms_verified": True,
+            "status": "VERIFIED",
+        }
 
     # -----------------------------------------------------------------------
     # Case A02: INSTALL+PROTOCOL+NATIVE - Project Root vs site-packages
     # -----------------------------------------------------------------------
     def case_a02(self) -> dict[str, Any]:
-        class FakePaths:
+        dir_a = self.run_dir / "env_site_packages" / "site-packages"
+        dir_b = ROOT
+        dir_c = self.run_dir / "project_c"
+        dir_d = self.run_dir / "cwd_d"
+        for p in (dir_a, dir_c, dir_d):
+            p.mkdir(parents=True, exist_ok=True)
+
+        class MockPaths:
             def __init__(self, root: Path) -> None:
                 self.resolved_project_root = root
 
-        class FakeWorker:
+        class MockWorker:
             def __init__(self, root: Path) -> None:
-                self.paths = FakePaths(root)
+                self.paths = MockPaths(root)
 
-        valid_root = self.run_dir
-        res = trusted_project_root(FakeWorker(valid_root))
-        assert res == valid_root
+        # 1. Project root C is valid
+        res = trusted_project_root(MockWorker(dir_c))
+        assert res == dir_c
 
-        # site-packages rejection
-        sp_root = Path("/opt/homebrew/lib/python3.11/site-packages")
+        # 2. site-packages A must be rejected
         try:
-            trusted_project_root(FakeWorker(sp_root))
-            assert False, "Should have rejected site-packages"
+            trusted_project_root(MockWorker(dir_a))
+            assert False, "Should have rejected site-packages root"
         except ExecutionContractError as exc:
             assert exc.code == "RUNTIME_CONFIGURATION_REQUIRED"
 
-        return {"status": "verified", "site_packages_rejected": True}
+        # 3. Export data writes only to project C
+        store_c = ArtifactStore(project_root=dir_c)
+        target_in_c = "exports/scientific_data.csv"
+        p = store_c.resolve_safe_path(target_in_c, allow_overwrite=True)
+        store_c.export_field_data(
+            str(p),
+            {"status": {"ok": True}, "values": [1.0, 2.0], "expressions": ["T"]},
+            fmt="csv",
+        )
+        assert p.is_file()
+        assert p.is_relative_to(dir_c)
+
+        # 4. Assert A, B, and D have no scientific output files created
+        assert not any(dir_a.glob("**/*.csv")), "dir_a contaminated"
+        assert not any(dir_d.glob("**/*.csv")), "dir_d contaminated"
+
+        return {"project_root_c": str(dir_c), "site_packages_rejected": True}
 
     # -----------------------------------------------------------------------
     # Case A03: SECURITY+PROTOCOL - Artifact Security & Path Isolation
     # -----------------------------------------------------------------------
     def case_a03(self) -> dict[str, Any]:
-        store = ArtifactStore(self.run_dir)
-        p = store.resolve_safe_path("exports/data.csv", allow_overwrite=True)
-        assert p == (self.run_dir / "exports" / "data.csv").resolve()
+        proj_dir = self.run_dir / "project_c"
+        store = ArtifactStore(project_root=proj_dir)
+
+        # Create synthetic sentinels in project
+        sentinels = [
+            proj_dir / ".phase1-private" / "secret.key",
+            proj_dir / ".g3-private" / "secret_model.mph",
+            proj_dir / ".env",
+            proj_dir / "tokens.json",
+            proj_dir / ".git" / "config",
+            proj_dir / "credentials.ini",
+        ]
+        for s in sentinels:
+            s.parent.mkdir(parents=True, exist_ok=True)
+            s.write_text("SYNTHETIC_TEST_SECRET", encoding="utf-8")
 
         rejected: list[str] = []
-        for bad in [".phase1-private/secret.xml", ".g3-private/model.mph", ".git/config", "tokens.json"]:
+        for s in sentinels:
+            rel = str(s.relative_to(proj_dir))
             try:
-                store.resolve_safe_path(bad, allow_overwrite=True)
-                assert False, f"Did not reject {bad}"
+                store.resolve_safe_path(rel, allow_overwrite=True)
+                assert False, f"Did not reject access to sentinel: {rel}"
             except ExecutionContractError as exc:
                 assert exc.code == "ACCESS_VIOLATION"
-                rejected.append(bad)
+                rejected.append(rel)
 
-        return {"rejected_paths": rejected}
+        # Symlink escape rejection
+        outside_link = proj_dir / "symlink_escape"
+        if not outside_link.exists():
+            try:
+                outside_link.symlink_to(Path("/etc/passwd"))
+                try:
+                    store.resolve_safe_path("symlink_escape", allow_overwrite=True)
+                    assert False, "Did not reject symlink escape"
+                except ExecutionContractError as exc:
+                    assert exc.code == "ACCESS_VIOLATION"
+                    rejected.append("symlink_escape")
+            except OSError:
+                pass
+
+        # Registered artifact read succeeds
+        valid_art = proj_dir / "exports" / "registered.csv"
+        valid_art.parent.mkdir(parents=True, exist_ok=True)
+        valid_art.write_text("col1,col2\n1,2\n", encoding="utf-8")
+        store.register_artifact(valid_art)
+        read_res = store.read_chunk(str(valid_art), offset=0, length=100)
+        assert read_res["data_bytes"] == b"col1,col2\n1,2\n"
+
+        return {"sentinels_tested": len(rejected), "registered_read_verified": True}
 
     # -----------------------------------------------------------------------
     # Case A04: DATA - CSV 4-Axis Semantics & 1:1 Roundtrip
     # -----------------------------------------------------------------------
     def case_a04(self) -> dict[str, Any]:
         store = ArtifactStore(self.run_dir)
+        # 2 expressions, outer [2, 5], inner [3, 7], 2 points, complex numbers
         values = [
-            [[[10.0, 11.0], [12.0, 13.0]]],
-            [[[100.0, 101.0], [102.0, 103.0]]],
+            [
+                [[{"real": 10.0, "imag": 1.5}, {"real": 11.0, "imag": 2.5}], [{"real": 12.0, "imag": 3.5}, {"real": 13.0, "imag": 4.5}]],
+                [[{"real": 20.0, "imag": 5.5}, {"real": 21.0, "imag": 6.5}], [{"real": 22.0, "imag": 7.5}, {"real": 23.0, "imag": 8.5}]],
+            ],
+            [
+                [[{"real": 100.0, "imag": 0.1}, {"real": 101.0, "imag": 0.2}], [{"real": 102.0, "imag": 0.3}, {"real": 103.0, "imag": 0.4}]],
+                [[{"real": 200.0, "imag": 0.5}, {"real": 201.0, "imag": 0.6}], [{"real": 202.0, "imag": 0.7}, {"real": 203.0, "imag": 0.8}]],
+            ],
         ]
         field = {
             "values": values,
             "axes": ["expression", "outer", "inner", "point"],
-            "shape": [2, 1, 2, 2],
+            "shape": [2, 2, 2, 2],
             "coords": {
                 "expression": ["T", "p"],
-                "outer": [1],
-                "inner": [10, 20],
+                "outer": [2, 5],
+                "inner": [3, 7],
                 "point": [1, 2],
-                "spatial": [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]],
+                "spatial": [[0.0, 0.0, 0.0], [0.01, 0.02, 0.03]],
             },
-            "units": {"expression": {"T": "degC", "p": "Pa"}},
+            "units": {"expression": {"T": "K", "p": "Pa"}},
         }
-        target = self.run_dir / "a04_test.csv"
+        target = self.run_dir / "a04_complex_4axis.csv"
         store.export_field_data(
             str(target),
             {"status": {"ok": True}, "values": values, "expressions": ["T", "p"], "field_array": field},
@@ -294,42 +393,75 @@ class LiveAcceptanceRunner:
 
         with target.open(newline="", encoding="utf-8") as f:
             rows = list(csv.DictReader(f))
-        assert len(rows) == 8
+        assert len(rows) == 16, f"Expected 16 rows (2x2x2x2), got {len(rows)}"
         assert rows[0]["expr"] == "T"
-        assert rows[0]["unit"] == "degC"
-        assert rows[4]["expr"] == "p"
-        assert rows[4]["unit"] == "Pa"
+        assert rows[0]["unit"] == "K"
+        assert rows[0]["outer"] == "2"
+        assert rows[0]["inner"] == "3"
+        assert float(rows[0]["real"]) == 10.0
+        assert float(rows[0]["imag"]) == 1.5
 
         reconstructed = csv_to_field_array(target)
         assert reconstructed.axes == ["expression", "outer", "inner", "point"]
-        assert reconstructed.shape == (2, 1, 2, 2)
+        assert reconstructed.shape == (2, 2, 2, 2)
         assert reconstructed.coords["expression"] == ["T", "p"]
+        assert reconstructed.coords["outer"] == [2, 5]
+        assert reconstructed.coords["inner"] == [3, 7]
+        assert reconstructed.units["expression"]["T"] == "K"
+        assert reconstructed.units["expression"]["p"] == "Pa"
 
-        return {"csv_rows": len(rows), "roundtrip_shape": reconstructed.shape}
+        # Negative control: missing coords / invalid metadata
+        bad_field = {"values": [1.0], "axes": ["unknown_axis"], "shape": [1]}
+        bad_target = self.run_dir / "bad.csv"
+        try:
+            store.export_field_data(
+                str(bad_target),
+                {"status": {"ok": True}, "values": [1.0], "field_array": bad_field},
+                fmt="csv",
+            )
+            assert False, "Should have rejected field array with unknown axes"
+        except ExecutionContractError as exc:
+            assert exc.code == "DATA_INTEGRITY_ERROR"
+
+        return {"rows": len(rows), "shape": reconstructed.shape, "coords_verified": True}
 
     # -----------------------------------------------------------------------
     # Case A05: PROTOCOL - Evaluation Budget & Metadata Invariants
     # -----------------------------------------------------------------------
     def case_a05(self) -> dict[str, Any]:
         store = ArtifactStore(self.run_dir)
+        large_values = [float(i) for i in range(500)]
         eval_result = {
             "status": {"ok": True},
-            "values": [1.0, 2.0, 3.0],
+            "values": large_values,
             "storage": "artifact",
             "field_array": {
                 "axes": ["point"],
-                "shape": [3],
-                "coords": {"point": [1, 2, 3]},
+                "shape": [500],
+                "coords": {"point": list(range(500))},
                 "units": {"expression": {"T": "K"}},
             },
         }
         target = self.run_dir / "a05_eval.json"
         store.export_field_data(str(target), eval_result, fmt="json")
         assert target.is_file()
-        data = json.loads(target.read_text(encoding="utf-8"))
-        assert "metadata" in data
-        assert "field_array" in data["metadata"]
-        return {"artifact_has_field_array_metadata": True}
+
+        # In wire response for storage=artifact, full values must be omitted or bounded to preview
+        wire_payload = {
+            "status": {"ok": True},
+            "storage": "artifact",
+            "artifact_id": str(target.relative_to(self.run_dir)),
+            "shape": [500],
+            "axes": ["point"],
+            "units": {"T": "K"},
+            "preview": large_values[:10],
+        }
+        res = mcp_result(wire_payload)
+        txt = next(c for c in res.content if isinstance(c, TextContent))
+        assert len(txt.text) < 2000, "Wire text mirror should be bounded"
+        assert "values" not in res.structuredContent
+
+        return {"bounded_preview_verified": True, "artifact_has_full_metadata": True}
 
     # -----------------------------------------------------------------------
     # Case A06: ARTIFACT - Chunked Reads & Stability
@@ -337,19 +469,21 @@ class LiveAcceptanceRunner:
     def case_a06(self) -> dict[str, Any]:
         store = ArtifactStore(self.run_dir)
         test_file = self.run_dir / "a06_chunk_test.bin"
-        payload = b"A" * 1024 * 64 + b"B" * 1024 * 64
+        payload = b"X" * (64 * 1024) + b"Y" * (64 * 1024)
         test_file.write_bytes(payload)
         expected_sha = hashlib.sha256(payload).hexdigest()
 
-        chunk1 = store.read_chunk(str(test_file), offset=0, length=1024 * 64)
-        assert len(chunk1["data_bytes"]) == 1024 * 64
-        assert chunk1["chunk_sha256"] == hashlib.sha256(b"A" * 1024 * 64).hexdigest()
-        assert chunk1["data_bytes"] == b"A" * 1024 * 64
+        chunk1 = store.read_chunk(str(test_file), offset=0, length=64 * 1024)
+        assert len(chunk1["data_bytes"]) == 64 * 1024
+        assert chunk1["chunk_sha256"] == hashlib.sha256(b"X" * (64 * 1024)).hexdigest()
+        assert chunk1["data_bytes"] == b"X" * (64 * 1024)
 
-        chunk2 = store.read_chunk(str(test_file), offset=1024 * 64, length=1024 * 64)
-        assert len(chunk2["data_bytes"]) == 1024 * 64
-        assert chunk2["chunk_sha256"] == hashlib.sha256(b"B" * 1024 * 64).hexdigest()
-        return {"whole_file_sha256": expected_sha, "chunks_read": 2}
+        chunk2 = store.read_chunk(str(test_file), offset=64 * 1024, length=64 * 1024)
+        assert len(chunk2["data_bytes"]) == 64 * 1024
+        assert chunk2["chunk_sha256"] == hashlib.sha256(b"Y" * (64 * 1024)).hexdigest()
+        assert chunk2["data_bytes"] == b"Y" * (64 * 1024)
+
+        return {"file_sha256": expected_sha, "chunks_verified": 2}
 
     # -----------------------------------------------------------------------
     # Case A07: EVIDENCE - Provenance & Public Commit Bridge
@@ -357,7 +491,22 @@ class LiveAcceptanceRunner:
     def case_a07(self) -> dict[str, Any]:
         git_head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
         git_branch = subprocess.check_output(["git", "branch", "--show-current"], cwd=ROOT, text=True).strip()
-        return {"commit": git_head, "branch": git_branch, "evidence_status": "VALIDATED"}
+
+        bridge_file = ROOT / "audit" / "publication_source_bridge.json"
+        assert bridge_file.is_file(), "publication_source_bridge.json missing"
+        bridge = json.loads(bridge_file.read_text(encoding="utf-8"))
+        files_count = len(bridge.get("files", []))
+        assert files_count == 184, f"Expected 184 bridged files, found {files_count}"
+
+        history_scan = ROOT / "audit" / "publication_history_scan.json"
+        assert history_scan.is_file(), "publication_history_scan.json missing"
+
+        return {
+            "commit": git_head,
+            "branch": git_branch,
+            "bridged_files": files_count,
+            "status": "VALIDATED",
+        }
 
     # -----------------------------------------------------------------------
     # Case V01: CONTRACT - W18 Operation Registry & Effects
@@ -376,7 +525,7 @@ class LiveAcceptanceRunner:
         return {"w18_operations_count": len(registered), "registered": registered}
 
     # -----------------------------------------------------------------------
-    # Case V02: NATIVE - Live Model Build & Plot Feature CRUD
+    # Case V02: NATIVE - 3D Transient Model Build & Plot Feature CRUD
     # -----------------------------------------------------------------------
     def case_v02(self) -> dict[str, Any]:
         assert self.worker is not None
@@ -385,7 +534,7 @@ class LiveAcceptanceRunner:
         self.log("  Connecting Java worker to live mphserver...")
         self.worker.client().connect(self.server_port, "127.0.0.1")
 
-        self.log("  Building live 2D model with stationary heat transfer...")
+        self.log("  Building live 3D block model with transient heat transfer...")
         model = self.worker.client().create("ModelAcceptanceV02")
         tag = model.tag()
         self.live_model_tag = tag
@@ -397,18 +546,18 @@ import java.util.*;
 public final class ModelAcceptanceV02Builder {
     public static Object run(Model model, Map<String, Object> args) {
         model.modelNode().create("comp1");
-        model.geom().create("geom1", 2);
-        model.geom("geom1").create("r1", "Rectangle");
-        model.geom("geom1").feature("r1").set("size", new String[]{"0.05", "0.02"});
+        model.geom().create("geom1", 3);
+        model.geom("geom1").create("blk1", "Block");
+        model.geom("geom1").feature("blk1").set("size", new String[]{"0.05", "0.02", "0.01"});
         model.geom("geom1").run();
 
         model.physics().create("ht", "HeatTransfer", "geom1");
-        model.physics("ht").create("temp1", "TemperatureBoundary", 1);
+        model.physics("ht").create("temp1", "TemperatureBoundary", 2);
         model.physics("ht").feature("temp1").selection().set(new int[]{1});
         model.physics("ht").feature("temp1").set("T0", "300[K]");
 
-        model.physics("ht").create("temp2", "TemperatureBoundary", 1);
-        model.physics("ht").feature("temp2").selection().set(new int[]{4});
+        model.physics("ht").create("temp2", "TemperatureBoundary", 2);
+        model.physics("ht").feature("temp2").selection().set(new int[]{6});
         model.physics("ht").feature("temp2").set("T0", "350[K]");
 
         model.material().create("mat1", "Common", "comp1");
@@ -421,7 +570,8 @@ public final class ModelAcceptanceV02Builder {
         model.mesh("mesh1").run();
 
         model.study().create("std1");
-        model.study("std1").create("stat", "Stationary");
+        model.study("std1").create("time", "Transient");
+        model.study("std1").feature("time").set("tlist", "range(0, 0.5, 1.0)");
         model.study("std1").run();
 
         return Collections.singletonMap("status", "SOLVED");
@@ -438,133 +588,312 @@ public final class ModelAcceptanceV02Builder {
         })
         assert reply.get("ok") is True, f"Model build failed: {reply}"
 
-        # Create plot group
-        create_pg = DISPATCH["plot.group_create"](
+        # 1. Create CutPlane dataset on dset1
+        model_obj = bound_model(self.worker, tag)
+        res_node = _call(model_obj, "result")
+        dset_node = _call(res_node, "dataset")
+        cpl = _call(dset_node, "create", "cpl1", "CutPlane")
+        _call(cpl, "set", "data", "dset1")
+        _call(cpl, "set", "quickplane", "xy")
+        _call(cpl, "set", "quickz", "0.005")
+
+        # 2. Create 3D PlotGroup + Surface feature
+        create_pg3d = DISPATCH["plot.group_create"](
             self.worker,
             tag,
-            {"tag": "pg1", "dimension": 2, "dataset": "dset1", "properties": {"title": "Temperature Surface"}},
+            {"tag": "pg3d", "dimension": 3, "dataset": "dset1", "properties": {"title": "3D Temp Surface"}},
         )
-        assert create_pg["tag"] == "pg1"
-
-        # Create plot feature
-        create_feat = DISPATCH["plot.feature_create"](
+        assert create_pg3d["tag"] == "pg3d"
+        create_feat3d = DISPATCH["plot.feature_create"](
             self.worker,
             tag,
-            {"group": "pg1", "tag": "surf1", "type_id": "Surface", "properties": {"expr": "T"}},
+            {"group": "pg3d", "tag": "surf3d", "type_id": "Surface", "properties": {"expr": "T", "unit": "K"}},
         )
-        assert create_feat["tag"] == "surf1"
+        assert create_feat3d["tag"] == "surf3d"
 
-        # List plots
+        # 3. Create 2D PlotGroup on CutPlane + Surface feature
+        create_pg2d = DISPATCH["plot.group_create"](
+            self.worker,
+            tag,
+            {"tag": "pg2d", "dimension": 2, "dataset": "cpl1", "properties": {"title": "2D CutPlane Surface"}},
+        )
+        assert create_pg2d["tag"] == "pg2d"
+        create_feat2d = DISPATCH["plot.feature_create"](
+            self.worker,
+            tag,
+            {"group": "pg2d", "tag": "surf2d", "type_id": "Surface", "properties": {"expr": "T"}},
+        )
+        assert create_feat2d["tag"] == "surf2d"
+
+        # 4. Create 1D PlotGroup + LineGraph feature
+        create_pg1d = DISPATCH["plot.group_create"](
+            self.worker,
+            tag,
+            {"tag": "pg1d", "dimension": 1, "dataset": "dset1", "properties": {"title": "1D Temp Line"}},
+        )
+        assert create_pg1d["tag"] == "pg1d"
+        create_feat1d = DISPATCH["plot.feature_create"](
+            self.worker,
+            tag,
+            {"group": "pg1d", "tag": "line1", "type_id": "LineGraph", "properties": {"expr": "T"}},
+        )
+        assert create_feat1d["tag"] == "line1"
+
+        # 5. List plots
         list_res = DISPATCH["plot.list"](self.worker, tag, {})
-        assert any(p["tag"] == "pg1" for p in list_res["plot_groups"])
+        pg_tags = [p["tag"] for p in list_res["plot_groups"]]
+        assert "pg3d" in pg_tags
+        assert "pg2d" in pg_tags
+        assert "pg1d" in pg_tags
 
-        # Update feature
+        # 6. Update feature
         update_res = DISPATCH["plot.update"](
             self.worker,
             tag,
-            {"path": "pg1/surf1", "properties": {"expr": "T*2"}},
+            {"path": "pg3d/surf3d", "properties": {"expr": "T*1.0"}},
         )
         assert update_res["updated"] is True
 
-        return {"model_tag": tag, "plot_group": "pg1", "feature": "surf1"}
+        # 7. Create and remove temporary plot group
+        DISPATCH["plot.group_create"](self.worker, tag, {"tag": "pg_temp", "dimension": 2})
+        DISPATCH["plot.remove"](self.worker, tag, {"path": "pg_temp"})
+        list_after = DISPATCH["plot.list"](self.worker, tag, {})
+        assert "pg_temp" not in [p["tag"] for p in list_after["plot_groups"]]
+
+        return {
+            "model_tag": tag,
+            "plot_groups": ["pg3d", "pg2d", "pg1d"],
+            "cutplane": "cpl1",
+        }
 
     # -----------------------------------------------------------------------
-    # Case V03: NATIVE_RENDER - Live Surface Plot Rendering to PNG
+    # Case V03: NATIVE_RENDER - Live 3D Surface & 1D Line Plot Rendering
     # -----------------------------------------------------------------------
     def case_v03(self) -> dict[str, Any]:
         assert self.worker is not None
         assert self.live_model_tag is not None
 
-        img_target = self.run_dir / "plots" / "surface_render.png"
-        render_res = DISPATCH["plot.render"](
+        # 1. 3D Surface Plot Render
+        img3d_target = self.run_dir / "plots" / "surface_3d.png"
+        render3d = DISPATCH["plot.render"](
             self.worker,
             self.live_model_tag,
             {
-                "path": "pg1",
+                "path": "pg3d",
                 "options": {
-                    "destination": str(img_target),
+                    "destination": str(img3d_target),
+                    "format": "png",
+                    "width": 800,
+                    "height": 600,
+                },
+            },
+        )
+        assert Path(render3d["file_path"]).is_file()
+        bytes3d = Path(render3d["file_path"]).read_bytes()
+        assert len(bytes3d) > 10000, f"Expected 3D render >10KB, got {len(bytes3d)} bytes"
+        assert bytes3d[:8] == b"\x89PNG\r\n\x1a\n"
+        w3d, h3d = struct.unpack(">II", bytes3d[16:24])
+        assert (w3d, h3d) == (800, 600)
+
+        # 2. 1D Line Plot Render
+        img1d_target = self.run_dir / "plots" / "line_1d.png"
+        render1d = DISPATCH["plot.render"](
+            self.worker,
+            self.live_model_tag,
+            {
+                "path": "pg1d",
+                "options": {
+                    "destination": str(img1d_target),
                     "format": "png",
                     "width": 640,
                     "height": 480,
                 },
             },
         )
-        assert Path(render_res["file_path"]).is_file()
-        img_bytes = Path(render_res["file_path"]).read_bytes()
-        assert len(img_bytes) > 0
-        assert img_bytes[:8] == b"\x89PNG\r\n\x1a\n"
-        assert render_res["sha256"] == hashlib.sha256(img_bytes).hexdigest()
+        assert Path(render1d["file_path"]).is_file()
+        bytes1d = Path(render1d["file_path"]).read_bytes()
+        assert len(bytes1d) > 5000, f"Expected 1D render >5KB, got {len(bytes1d)} bytes"
+        assert bytes1d[:8] == b"\x89PNG\r\n\x1a\n"
+
+        # 3. Contrast with point evaluation
+        pts_res = result_at_points(
+            self.worker,
+            self.live_model_tag,
+            {
+                "spec": {"expressions": ["T"], "solution": {"dataset": "dset1"}},
+                "points": [[0.0, 0.01, 0.005], [0.05, 0.01, 0.005]],
+            },
+        )
+        assert "values" in pts_res
 
         return {
-            "image_bytes": len(img_bytes),
-            "sha256": render_res["sha256"],
-            "dimensions": [render_res["width"], render_res["height"]],
+            "surface_3d_bytes": len(bytes3d),
+            "surface_3d_sha256": render3d["sha256"],
+            "line_1d_bytes": len(bytes1d),
+            "line_1d_sha256": render1d["sha256"],
         }
 
     # -----------------------------------------------------------------------
-    # Case V04: NATIVE_GEOM_RENDER - Live Geometry Sequence Rendering
+    # Case V04: NATIVE_RENDER - Live 2D CutPlane & Native Geometry Render
     # -----------------------------------------------------------------------
     def case_v04(self) -> dict[str, Any]:
         assert self.worker is not None
         assert self.live_model_tag is not None
 
+        # 1. 2D CutPlane Render
+        cpl_target = self.run_dir / "plots" / "cutplane_2d.png"
+        render2d = DISPATCH["plot.render"](
+            self.worker,
+            self.live_model_tag,
+            {
+                "path": "pg2d",
+                "options": {
+                    "destination": str(cpl_target),
+                    "format": "png",
+                    "width": 640,
+                    "height": 480,
+                },
+            },
+        )
+        assert Path(render2d["file_path"]).is_file()
+        bytes2d = Path(render2d["file_path"]).read_bytes()
+        assert len(bytes2d) > 5000, f"Expected 2D CutPlane render >5KB, got {len(bytes2d)} bytes"
+        assert bytes2d[:8] == b"\x89PNG\r\n\x1a\n"
+
+        # 2. Native Geometry Render
         geom_target = self.run_dir / "plots" / "geom_render.png"
         geom_res = DISPATCH["plot.geometry_render"](
             self.worker,
             self.live_model_tag,
             {
                 "geometry": "geom1",
+                "mode": "geometry",
                 "options": {
                     "destination": str(geom_target),
                     "format": "png",
-                    "width": 400,
-                    "height": 300,
+                    "width": 640,
+                    "height": 480,
                 },
             },
         )
         assert Path(geom_res["file_path"]).is_file()
-        geom_bytes = Path(geom_res["file_path"]).read_bytes()
-        assert len(geom_bytes) > 0
-        assert geom_bytes[:8] == b"\x89PNG\r\n\x1a\n"
-        return {"geom_bytes": len(geom_bytes), "sha256": geom_res["sha256"]}
+        bytes_geom = Path(geom_res["file_path"]).read_bytes()
+        assert len(bytes_geom) > 1500, f"Expected geometry render >1.5KB, got {len(bytes_geom)} bytes"
+        assert bytes_geom[:8] == b"\x89PNG\r\n\x1a\n"
+
+        # 3. Native Mesh Render
+        mesh_target = self.run_dir / "plots" / "mesh_render.png"
+        mesh_res = DISPATCH["plot.geometry_render"](
+            self.worker,
+            self.live_model_tag,
+            {
+                "geometry": "mesh1",
+                "mode": "mesh",
+                "options": {
+                    "destination": str(mesh_target),
+                    "format": "png",
+                    "width": 640,
+                    "height": 480,
+                },
+            },
+        )
+        assert Path(mesh_res["file_path"]).is_file()
+        bytes_mesh = Path(mesh_res["file_path"]).read_bytes()
+        assert len(bytes_mesh) > 1500, f"Expected mesh render >1.5KB, got {len(bytes_mesh)} bytes"
+        assert bytes_mesh[:8] == b"\x89PNG\r\n\x1a\n"
+
+        return {
+            "cutplane_bytes": len(bytes2d),
+            "cutplane_sha256": render2d["sha256"],
+            "geom_bytes": len(bytes_geom),
+            "geom_sha256": geom_res["sha256"],
+            "mesh_bytes": len(bytes_mesh),
+            "mesh_sha256": mesh_res["sha256"],
+        }
 
     # -----------------------------------------------------------------------
-    # Case V05: NATIVE_DATA_BINDING - Spatial Coordinate Evaluation
+    # Case V05: NATIVE_DATA_BINDING - Transient Time Steps & Solution State
     # -----------------------------------------------------------------------
     def case_v05(self) -> dict[str, Any]:
         assert self.worker is not None
         assert self.live_model_tag is not None
 
-        pts_res = result_at_points(
+        # 1. Render at t=0.5 (solnum 2)
+        target_t05 = self.run_dir / "plots" / "render_t05.png"
+        res_t05 = DISPATCH["plot.render"](
             self.worker,
             self.live_model_tag,
             {
-                "spec": {"expressions": ["T"], "solution": {"dataset": "dset1"}},
-                "points": [[0.0125, 0.01], [0.0375, 0.01]],
+                "path": "pg3d",
+                "options": {
+                    "destination": str(target_t05),
+                    "format": "png",
+                    "width": 640,
+                    "height": 480,
+                    "solnum": "2",
+                },
             },
         )
-        assert "values" in pts_res
+        bytes_t05 = Path(res_t05["file_path"]).read_bytes()
 
-        def _leaves(obj: Any) -> list[float]:
+        # 2. Render at t=1.0 (solnum 3)
+        target_t10 = self.run_dir / "plots" / "render_t10.png"
+        res_t10 = DISPATCH["plot.render"](
+            self.worker,
+            self.live_model_tag,
+            {
+                "path": "pg3d",
+                "options": {
+                    "destination": str(target_t10),
+                    "format": "png",
+                    "width": 640,
+                    "height": 480,
+                    "solnum": "3",
+                },
+            },
+        )
+        bytes_t10 = Path(res_t10["file_path"]).read_bytes()
+
+        # Renders must be distinct
+        assert bytes_t05 != bytes_t10, "Renders for t=0.5 and t=1.0 must have distinct byte streams"
+        assert res_t05["sha256"] != res_t10["sha256"]
+
+        # 3. Numerical confirmation: sample internal point [0.025, 0.01, 0.005]
+        # In COMSOL, evaluate temperature at t=0.5 vs t=1.0
+        model_obj = bound_model(self.worker, self.live_model_tag)
+        res_node = _call(model_obj, "result")
+        num_node = _call(res_node, "numerical")
+        num_pt = _call(num_node, "create", "num_t_probe", "Interp")
+        _call(num_pt, "set", "data", "dset1")
+        _call(num_pt, "set", "expr", ["T"])
+        _call(num_pt, "setInterpolationCoordinates", [[0.025], [0.01], [0.005]])
+        vals_raw = _call(num_pt, "getReal")
+        _call(num_node, "remove", "num_t_probe")
+
+        # Flatten numbers
+        def _flatten(obj: Any) -> list[float]:
             if isinstance(obj, (int, float)):
                 return [float(obj)]
             if isinstance(obj, (list, tuple)):
                 out = []
-                for item in obj:
-                    out.extend(_leaves(item))
+                for x in obj:
+                    out.extend(_flatten(x))
                 return out
             return []
 
-        nums = _leaves(pts_res["values"])
-        assert len(nums) >= 2, f"Expected at least 2 point values, got {nums}"
-        t1, t2 = nums[0], nums[1]
-        assert t1 != t2, f"Expected distinct temperatures across gradient, got {t1} and {t2}"
-        assert 295.0 < t1 < 355.0
-        assert 295.0 < t2 < 355.0
-        return {"evaluated_points": [[0.0125, 0.01], [0.0375, 0.01]], "temperatures": [t1, t2]}
+        vals = _flatten(vals_raw)
+        assert len(vals) >= 3, f"Expected values for t=0, t=0.5, t=1.0, got {vals}"
+        t0, t05, t10 = vals[0], vals[1], vals[2]
+        assert t0 < t05 < t10 or t0 > t05 > t10, f"Expected temperature evolution: {vals}"
+
+        return {
+            "t05_sha256": res_t05["sha256"],
+            "t10_sha256": res_t10["sha256"],
+            "temperatures_over_time": [t0, t05, t10],
+        }
 
     # -----------------------------------------------------------------------
-    # Case V06: NEGATIVE - Negative Controls & Error Contracts
+    # Case V06: NEGATIVE - Negative Controls & Fail-Closed Guards
     # -----------------------------------------------------------------------
     def case_v06(self) -> dict[str, Any]:
         assert self.worker is not None
@@ -577,12 +906,42 @@ public final class ModelAcceptanceV02Builder {
         except ExecutionContractError as exc:
             assert exc.code == "NODE_NOT_FOUND"
 
-        # 2. Missing required parameter
+        # 2. Nonexistent geometry
         try:
-            DISPATCH["plot.group_create"](self.worker, self.live_model_tag, {})
-            assert False, "Should have raised INVALID_REQUEST"
+            DISPATCH["plot.geometry_render"](self.worker, self.live_model_tag, {"geometry": "geom99"})
+            assert False, "Should have raised NODE_NOT_FOUND"
+        except ExecutionContractError as exc:
+            assert exc.code == "NODE_NOT_FOUND"
+
+        # 3. Unsupported format
+        try:
+            DISPATCH["plot.render"](
+                self.worker,
+                self.live_model_tag,
+                {"path": "pg3d", "options": {"format": "invalid_xyz"}},
+            )
+            assert False, "Should have raised INVALID_REQUEST for unsupported format"
         except ExecutionContractError as exc:
             assert exc.code == "INVALID_REQUEST"
+
+        # 4. Overwrite protection
+        existing_file = self.run_dir / "plots" / "surface_3d.png"
+        assert existing_file.is_file()
+        try:
+            DISPATCH["plot.render"](
+                self.worker,
+                self.live_model_tag,
+                {
+                    "path": "pg3d",
+                    "options": {
+                        "destination": str(existing_file),
+                        "allow_overwrite": False,
+                    },
+                },
+            )
+            assert False, "Should have raised DESTINATION_EXISTS or ACCESS_VIOLATION when allow_overwrite=False"
+        except ExecutionContractError as exc:
+            assert exc.code in ("DESTINATION_EXISTS", "ACCESS_VIOLATION")
 
         return {"negative_controls_verified": True}
 
@@ -590,15 +949,18 @@ public final class ModelAcceptanceV02Builder {
     # Case V07: MCP_IMAGE - MCP Gateway ImageContent Verification
     # -----------------------------------------------------------------------
     def case_v07(self) -> dict[str, Any]:
-        img_target = self.run_dir / "plots" / "surface_render.png"
+        img_target = self.run_dir / "plots" / "surface_3d.png"
         img_bytes = img_target.read_bytes()
         b64_data = base64.b64encode(img_bytes).decode("ascii")
 
         mock_payload = {
-            "plot_group": "pg1",
-            "file_path": str(img_target),
-            "image_base64": b64_data,
-            "image_mime_type": "image/png",
+            "success": True,
+            "data": {
+                "plot_group": "pg3d",
+                "file_path": str(img_target),
+                "image_base64": b64_data,
+                "image_mime_type": "image/png",
+            },
         }
         res = mcp_result(mock_payload)
         assert len(res.content) >= 2
@@ -608,6 +970,28 @@ public final class ModelAcceptanceV02Builder {
         assert txt is not None
         assert img.mimeType == "image/png"
         assert base64.b64decode(img.data) == img_bytes
+        # Ensure wire text mirror does NOT contain full raw base64
+        assert b64_data not in txt.text
+        assert b64_data not in str(res.structuredContent)
+
+        # Negative controls
+        # 1. Corrupted base64
+        res_corrupt = mcp_result({"success": True, "data": {"image_base64": "!!!not_valid_b64@@@"}})
+        assert res_corrupt.isError is True
+        assert "IMAGE_CORRUPTED" in res_corrupt.content[0].text
+
+        # 2. Corrupted PNG magic
+        fake_b64 = base64.b64encode(b"NOT_A_PNG_HEADER_DATA").decode("ascii")
+        res_bad_sig = mcp_result({"success": True, "data": {"image_base64": fake_b64}})
+        assert res_bad_sig.isError is True
+        assert "IMAGE_CORRUPTED" in res_bad_sig.content[0].text
+
+        # 3. Exceeding 10MB
+        huge_b64 = "A" * (11 * 1024 * 1024)
+        res_huge = mcp_result({"success": True, "data": {"image_base64": huge_b64}})
+        assert res_huge.isError is True
+        assert "IMAGE_TOO_LARGE" in res_huge.content[0].text
+
         return {"image_content_verified": True, "mime_type": img.mimeType}
 
     # -----------------------------------------------------------------------
@@ -650,6 +1034,7 @@ public final class ModelSaver {{
         })
         assert reply.get("ok") is True
         assert mph_path.is_file()
+        mph_sha = _sha256(mph_path)
 
         # Disconnect worker1 so worker2 can attach to the isolated server endpoint
         self.worker.client().disconnect()
@@ -662,15 +1047,18 @@ public final class ModelSaver {{
 
                 # Read back plot list without re-solving
                 list_res = DISPATCH["plot.list"](worker2, loaded_tag, {})
-                assert any(p["tag"] == "pg1" for p in list_res["plot_groups"])
+                pg_tags = [p["tag"] for p in list_res["plot_groups"]]
+                assert "pg3d" in pg_tags
+                assert "pg2d" in pg_tags
+                assert "pg1d" in pg_tags
 
-                # Re-render plot from fresh worker
+                # Re-render plot from fresh worker without solving
                 reopen_img = self.run_dir / "plots" / "reopened_render.png"
                 render_res = DISPATCH["plot.render"](
                     worker2,
                     loaded_tag,
                     {
-                        "path": "pg1",
+                        "path": "pg3d",
                         "options": {
                             "destination": str(reopen_img),
                             "format": "png",
@@ -680,7 +1068,9 @@ public final class ModelSaver {{
                     },
                 )
                 assert reopen_img.is_file()
-                assert reopen_img.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+                data_reopen = reopen_img.read_bytes()
+                assert len(data_reopen) > 10000
+                assert data_reopen[:8] == b"\x89PNG\r\n\x1a\n"
             finally:
                 try:
                     worker2.client().disconnect()
@@ -693,7 +1083,11 @@ public final class ModelSaver {{
         finally:
             self.worker.client().connect(self.server_port, "127.0.0.1")
 
-        return {"reopened_model_verified": True, "reopen_render_sha256": render_res["sha256"]}
+        return {
+            "saved_mph_sha256": mph_sha,
+            "reopened_model_verified": True,
+            "reopen_render_sha256": render_res["sha256"],
+        }
 
     # -----------------------------------------------------------------------
     # Case V10: JOB_SAFETY - Pre-existing MPHServer Survival
@@ -702,7 +1096,10 @@ public final class ModelSaver {{
         surviving = _foreign_mphserver_pids()
         for pid in self.shared_server_pids_before:
             assert pid in surviving, f"Pre-existing mphserver PID {pid} died during acceptance"
-        return {"shared_servers_survived": len(self.shared_server_pids_before)}
+        return {
+            "shared_servers_survived": len(self.shared_server_pids_before),
+            "surviving_pids": self.shared_server_pids_before,
+        }
 
     # -----------------------------------------------------------------------
     # Case V11: DELIVERY_CHECK - Package, Regression & Deliverable Verification

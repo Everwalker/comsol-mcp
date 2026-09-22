@@ -6,6 +6,7 @@ calls always pass through this adapter, including the legacy tool names.
 from __future__ import annotations
 
 import asyncio
+import base64
 import inspect
 import json
 from typing import Any, Callable, get_type_hints
@@ -25,9 +26,7 @@ def mcp_result(value: str | dict[str, Any]) -> CallToolResult:
     else:
         payload = value
 
-    if isinstance(payload, dict) and "success" not in payload:
-        payload = {"success": True, "data": payload}
-    elif not isinstance(payload, dict) or not isinstance(payload.get("success"), bool):
+    if not isinstance(payload, dict) or not isinstance(payload.get("success"), bool):
         payload = {"success": False, "error": "Missing backend success status", "data": {}}
 
     contents: list[TextContent | ImageContent] = []
@@ -46,13 +45,43 @@ def mcp_result(value: str | dict[str, Any]) -> CallToolResult:
         text_payload = payload
 
     if image_b64 is not None:
+        if len(image_b64) > 10 * 1024 * 1024:
+            return CallToolResult(
+                content=[TextContent(type="text", text="IMAGE_TOO_LARGE: Base64 payload exceeds 10MB limit")],
+                structuredContent={"success": False, "error": "IMAGE_TOO_LARGE"},
+                isError=True,
+            )
+        try:
+            raw_bytes = base64.b64decode(image_b64)
+        except Exception:
+            return CallToolResult(
+                content=[TextContent(type="text", text="IMAGE_CORRUPTED: Failed to decode base64 image")],
+                structuredContent={"success": False, "error": "IMAGE_CORRUPTED"},
+                isError=True,
+            )
+        if not (raw_bytes.startswith(b"\x89PNG\r\n\x1a\n") or raw_bytes.startswith(b"\xff\xd8\xff") or raw_bytes.startswith(b"GIF8")):
+            return CallToolResult(
+                content=[TextContent(type="text", text="IMAGE_CORRUPTED: Invalid image header signature")],
+                structuredContent={"success": False, "error": "IMAGE_CORRUPTED"},
+                isError=True,
+            )
+        if raw_bytes.startswith(b"\x89PNG\r\n\x1a\n") and len(raw_bytes) >= 24:
+            import struct
+            w, h = struct.unpack(">II", raw_bytes[16:24])
+            if w * h > 16 * 1024 * 1024:
+                return CallToolResult(
+                    content=[TextContent(type="text", text=f"EXCESSIVE_PIXELS: Image dimensions {w}x{h} ({w*h} px) exceed 16M pixel limit")],
+                    structuredContent={"success": False, "error": "EXCESSIVE_PIXELS"},
+                    isError=True,
+                )
+
         contents.append(ImageContent(type="image", data=image_b64, mimeType=mime_type))
 
     contents.append(TextContent(type="text", text=json.dumps(text_payload, ensure_ascii=False, default=str)))
 
     return CallToolResult(
         content=contents,
-        structuredContent=payload,
+        structuredContent=text_payload,
         isError=not payload["success"],
     )
 

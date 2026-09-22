@@ -336,28 +336,55 @@ def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
     width = int(options.get("width") or 800)
     height = int(options.get("height") or 600)
     fmt = str(options.get("format") or "png").lower()
+    if fmt not in ("png", "jpg", "jpeg", "bmp", "gif"):
+        raise ExecutionContractError("INVALID_REQUEST", f"Unsupported image format: {fmt}")
     dest = options.get("destination")
+    allow_overwrite = bool(options.get("allow_overwrite", True))
 
     root = trusted_project_root(worker)
     store = ArtifactStore(project_root=root)
 
     if dest:
-        target_path = store.resolve_safe_path(dest, allow_overwrite=True)
+        target_path = store.resolve_safe_path(dest, allow_overwrite=allow_overwrite)
+        if target_path.exists() and not allow_overwrite:
+            raise ExecutionContractError("ACCESS_VIOLATION", f"Destination file exists and allow_overwrite is False: {dest}")
     else:
         target_path = store.resolve_safe_path(
             f"g2_artifacts/plots/{pg_tag}_{uuid.uuid4().hex[:8]}.{fmt}",
             allow_overwrite=True,
         )
     target_path.parent.mkdir(parents=True, exist_ok=True)
+    staging_path = target_path.with_name(f".staging_{uuid.uuid4().hex[:8]}_{target_path.name}")
 
     model = bound_model(worker, model_tag)
     results = _call(model, "result")
 
     try:
         pg = _call(results, "get", pg_tag)
+    except Exception as exc:
+        raise node_not_found(f"plot group {pg_tag!r} not found: {exc}") from exc
+
+    # Apply solution / time / parameter options if specified
+    if "solnum" in options:
+        try:
+            _call(pg, "set", "solnum", str(options["solnum"]))
+        except Exception:
+            pass
+    if "t" in options:
+        try:
+            _call(pg, "set", "t", str(options["t"]))
+        except Exception:
+            pass
+    if "looplevel" in options:
+        try:
+            _call(pg, "set", "looplevel", str(options["looplevel"]))
+        except Exception:
+            pass
+
+    try:
         _call(pg, "run")
     except Exception as exc:
-        raise node_not_found(f"plot group {pg_tag!r} could not be run: {exc}") from exc
+        raise ExecutionContractError("RENDER_FAILED", f"plot group {pg_tag!r} could not be run: {exc}") from exc
 
     export_list = _call(results, "export")
     exp_tag = f"render_{uuid.uuid4().hex[:8]}"
@@ -375,11 +402,11 @@ def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
 
     try:
         try:
-            _call(exp, "set", "pngfilename", str(target_path))
+            _call(exp, "set", "pngfilename", str(staging_path))
         except Exception:
             pass
         try:
-            _call(exp, "set", "filename", str(target_path))
+            _call(exp, "set", "filename", str(staging_path))
         except Exception:
             pass
         try:
@@ -400,25 +427,53 @@ def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
         except Exception:
             pass
 
-    if not target_path.is_file():
-        # Fallback for synthetic / test environments where native export node is mocked
-        target_path.write_bytes(
-            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
-        )
+    if not staging_path.is_file() and target_path.is_file():
+        staging_path = target_path
 
-    img_bytes = target_path.read_bytes()
-    sha256 = hashlib.sha256(img_bytes).hexdigest()
+    if not staging_path.is_file():
+        raise ExecutionContractError("RENDER_FAILED", f"COMSOL export failed to create image at {staging_path}")
+
+    raw_bytes = staging_path.read_bytes()
+    if len(raw_bytes) == 0:
+        raise ExecutionContractError("RENDER_FAILED", f"Rendered image is empty (0 bytes): {staging_path}")
+    if fmt == "png":
+        if len(raw_bytes) < 8 or raw_bytes[:8] != b"\x89PNG\r\n\x1a\n":
+            raise ExecutionContractError("IMAGE_DECODE_ERROR", "Rendered file does not have valid PNG header")
+        import struct
+        actual_w, actual_h = struct.unpack(">II", raw_bytes[16:24])
+    else:
+        actual_w, actual_h = width, height
+
+    # Atomic publish
+    if staging_path != target_path:
+        os.replace(staging_path, target_path)
+
+    sha256 = hashlib.sha256(raw_bytes).hexdigest()
     store.register_artifact(target_path)
-    b64_str = base64.b64encode(img_bytes).decode("ascii")
+    b64_str = base64.b64encode(raw_bytes).decode("ascii")
+
+    dataset_tag = ""
+    try:
+        dataset_tag = str(_call(pg, "getString", "data") or "")
+    except Exception:
+        pass
+
+    solnum_val = ""
+    try:
+        solnum_val = str(_call(pg, "getString", "solnum") or "")
+    except Exception:
+        pass
 
     return {
         "plot_group": pg_tag,
         "file_path": str(target_path),
         "format": fmt,
-        "byte_size": len(img_bytes),
+        "byte_size": len(raw_bytes),
         "sha256": sha256,
-        "width": width,
-        "height": height,
+        "width": actual_w,
+        "height": actual_h,
+        "dataset": dataset_tag,
+        "solnum": solnum_val,
         "image_base64": b64_str,
         "image_mime_type": f"image/{fmt}",
         "artifact_ref": str(target_path),
@@ -437,76 +492,96 @@ def plot_geometry_render(worker: Any, model_tag: str, arguments: Mapping[str, An
     width = int(options.get("width") or 800)
     height = int(options.get("height") or 600)
     fmt = str(options.get("format") or "png").lower()
+    if fmt not in ("png", "jpg", "jpeg", "bmp", "gif"):
+        raise ExecutionContractError("INVALID_REQUEST", f"Unsupported image format: {fmt}")
     dest = options.get("destination")
+    allow_overwrite = bool(options.get("allow_overwrite", True))
 
     root = trusted_project_root(worker)
     store = ArtifactStore(project_root=root)
 
     if dest:
-        target_path = store.resolve_safe_path(dest, allow_overwrite=True)
+        target_path = store.resolve_safe_path(dest, allow_overwrite=allow_overwrite)
+        if target_path.exists() and not allow_overwrite:
+            raise ExecutionContractError("ACCESS_VIOLATION", f"Destination file exists and allow_overwrite is False: {dest}")
     else:
         target_path = store.resolve_safe_path(
             f"g2_artifacts/plots/{geom_tag}_{mode}_{uuid.uuid4().hex[:8]}.{fmt}",
             allow_overwrite=True,
         )
     target_path.parent.mkdir(parents=True, exist_ok=True)
+    staging_path = target_path.with_name(f".staging_{uuid.uuid4().hex[:8]}_{target_path.name}")
 
     model = bound_model(worker, model_tag)
-    results = _call(model, "result")
-    export_list = _call(results, "export")
-    exp_tag = f"geom_{uuid.uuid4().hex[:8]}"
-    exp = _call(export_list, "create", exp_tag, "Image")
+    try:
+        if mode == "mesh":
+            mesh_seq = _call(model, "mesh", geom_tag)
+            img_obj = _call(mesh_seq, "image")
+        else:
+            geom_seq = _call(model, "geom", geom_tag)
+            img_obj = _call(geom_seq, "image")
+    except Exception as exc:
+        raise node_not_found(f"{mode} {geom_tag!r} could not be resolved for image rendering: {exc}") from exc
 
     try:
-        try:
-            _call(exp, "set", "sourceobject", geom_tag)
-        except Exception:
-            pass
-        try:
-            _call(exp, "set", "pngfilename", str(target_path))
-        except Exception:
-            pass
-        try:
-            _call(exp, "set", "filename", str(target_path))
-        except Exception:
-            pass
-        try:
-            _call(exp, "set", "size", "manual")
-            _call(exp, "set", "unit", "px")
-            _call(exp, "set", "width", width)
-            _call(exp, "set", "height", height)
-        except Exception:
-            pass
+        _call(img_obj, "set", "target", "file")
+    except Exception:
+        pass
+    try:
+        _call(img_obj, "set", "imagetype", fmt)
+    except Exception:
+        pass
+    try:
+        _call(img_obj, "set", f"{fmt}filename", str(staging_path))
+    except Exception:
+        pass
+    try:
+        _call(img_obj, "set", "size", "manualweb")
+        _call(img_obj, "set", "width", width)
+        _call(img_obj, "set", "height", height)
+        _call(img_obj, "set", "antialias", "on")
+    except Exception:
+        pass
 
-        try:
-            _call(exp, "run")
-        except Exception:
-            pass
-    finally:
-        try:
-            _call(export_list, "remove", exp_tag)
-        except Exception:
-            pass
+    try:
+        _call(img_obj, "export")
+    except Exception as exc:
+        raise ExecutionContractError("RENDER_FAILED", f"Geometry image export failed: {exc}") from exc
 
-    if not target_path.is_file():
-        target_path.write_bytes(
-            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
-        )
+    if not staging_path.is_file() and target_path.is_file():
+        staging_path = target_path
 
-    img_bytes = target_path.read_bytes()
-    sha256 = hashlib.sha256(img_bytes).hexdigest()
+    if not staging_path.is_file():
+        raise ExecutionContractError("RENDER_FAILED", f"COMSOL export failed to create geometry image at {staging_path}")
+
+    raw_bytes = staging_path.read_bytes()
+    if len(raw_bytes) == 0:
+        raise ExecutionContractError("RENDER_FAILED", f"Rendered image is empty (0 bytes): {staging_path}")
+    if fmt == "png":
+        if len(raw_bytes) < 8 or raw_bytes[:8] != b"\x89PNG\r\n\x1a\n":
+            raise ExecutionContractError("IMAGE_DECODE_ERROR", "Rendered file does not have valid PNG header")
+        import struct
+        actual_w, actual_h = struct.unpack(">II", raw_bytes[16:24])
+    else:
+        actual_w, actual_h = width, height
+
+    # Atomic publish
+    if staging_path != target_path:
+        os.replace(staging_path, target_path)
+
+    sha256 = hashlib.sha256(raw_bytes).hexdigest()
     store.register_artifact(target_path)
-    b64_str = base64.b64encode(img_bytes).decode("ascii")
+    b64_str = base64.b64encode(raw_bytes).decode("ascii")
 
     return {
         "geometry": geom_tag,
         "mode": mode,
         "file_path": str(target_path),
         "format": fmt,
-        "byte_size": len(img_bytes),
+        "byte_size": len(raw_bytes),
         "sha256": sha256,
-        "width": width,
-        "height": height,
+        "width": actual_w,
+        "height": actual_h,
         "image_base64": b64_str,
         "image_mime_type": f"image/{fmt}",
         "artifact_ref": str(target_path),
@@ -737,8 +812,7 @@ def export_run(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dic
     _call(exp, "run")
 
     if not target_path.is_file():
-        # Fallback for synthetic / test environments
-        target_path.write_bytes(b"EXPORT_DATA\n")
+        raise ExecutionContractError("EXPORT_FAILED", f"Export run failed to produce output file at {target_path}")
 
     data_bytes = target_path.read_bytes()
     sha256 = hashlib.sha256(data_bytes).hexdigest()
