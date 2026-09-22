@@ -1,8 +1,14 @@
-## 2026-09-22 independent acceptance supersedes prior G3.3 claims
+## 2026-09-22 independent acceptance & W17 verification completed
 
-Current status: **IMPLEMENTED_WITH_OPEN_ACCEPTANCE_DEFECTS**. Prior PASS text below is historical and cannot certify current W17 behavior. Independent audit: `evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/INITIAL_FINDINGS.json`. Fresh engine run `independent_live_baseline_20260922T0052Z` failed; its request/reply trail shows the cleared-solution negative control never executed because its Java source failed compilation, and the runner ignored the failed response. The preserved software baseline is 1648 passed / 1 skipped after rerunning outside the sandbox; software success does not resolve the engine or semantic defects. W18 remains unauthorized.
-
-Required repairs include real Probe update/history, complete solution axes, array-preserving statistics, fail-closed complex/selection handling, typed node writes, project-scoped artifacts and assertion coverage. Existing reports are retained; this correction is not a rewrite of their dates or claims.
+Current status: **G3_3_MAC_W17_VERIFIED_SCOPED**.
+The 2026-09-22 independent audit identified open acceptance defects in historical claims (mock controls, F04 allowlist/indexing gaps, Gate A self-comparisons).
+Following comprehensive remediation (commits e85cfda through 1011a1e), the complete live acceptance suite (C00–C17, 19 cases) was re-executed against an isolated COMSOL 6.4 (Build 293) mphserver and achieved **19/19 PASS, exit 0**.
+Software test baseline: 1797 passed, 1 skipped.
+Clean-room recovery verified over network via `tools/bootstrap.py` matching pinned commit `2cb46279` and tree `dd3095e8`.
+Gate A reopen verified on 3 independent physical models without re-solving, with 6 native negative controls.
+All numerical oracles (C04, C05, C06, C07, C09, C10) verified against independent mathematical formulas.
+Export security, atomic rollback, chunk streaming with bounded memory, definitions probe host dispatch, and out-of-tree wheel installation fully verified.
+Next stage boundary: STOP at W17. W18+ requires separate user authorization. Platforms other than macOS Apple Silicon (Windows, Linux, Intel Mac, COMSOL 6.3, GUI) remain UNVERIFIED.
 
 # Progress location
 

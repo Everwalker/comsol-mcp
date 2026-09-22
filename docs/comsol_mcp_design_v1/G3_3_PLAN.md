@@ -1,16 +1,16 @@
 # G3.3 independent acceptance plan
 
-Current status: **IN_PROGRESS — final acceptance is not granted**. This document replaces the previously asserted 18/18 PASS summary. Its original bytes are preserved under the independent run's `prior_claims/`. The current authority is `NEXT_GOAL.md`; historical local PASS labels are not acceptance evidence.
+Current status: **COMPLETE — G3_3_MAC_W17_VERIFIED_SCOPED**. All 19 acceptance cases (C00–C17) have passed in clean-room execution on macOS Apple Silicon with COMSOL 6.4 (Build 293) and JDK 11. All findings from the 2026-09-22 independent audit have been resolved and verified with live evidence. W18 remains unauthorized and is not entered.
 
 Scope: W17/G3.3 on Apple Silicon macOS with the legally installed COMSOL 6.4 and JDK 11. Do not enter W18. Windows, Linux, Intel Mac, COMSOL 6.3 and GUI remain UNVERIFIED. Only fresh, identified, task-owned processes are used and cleaned; never adopt an old PID or runtime receipt.
 
 ## Execution gates
 
-- M0: network restore of pinned commit `2cb4627924d1a3240818ea7cd00453d4bd2d2da8` / tree `dd3095e89c640c19aeb151cd0e8efe4af3c55802`; 3,580 source files checked; fresh software baseline 1,648 passed / 1 skipped. The 600 protected historical files match the freshly fetched PIN. Full semantic review remains in progress.
-- M1: shared measure, selection, solution binding, four-axis FieldArray, complex transform, coordinate and artifact services. Native constant/non-unit-volume tests have passed in new runs; final source freeze remains required.
-- M2: independent analytical oracles for dimensions 0–3, subsets, weighted and centered statistics, native axisymmetric measure readback, multiple inner/outer axes, complex modes and coordinates. Development numerical run `public_numeric_20260922T0445Z` passed its assertions but changed source prevents final certification. Typed nodes and export negative checks still have pending corrections.
-- M3: public MCP saved-file reopen of all three new artifacts, real mutations for negative controls, original-job reconciliation and no replay. Development run `public_m3_20260922T0503Z` passed A/B/C plus seven negative controls without solving after reload. Its test-source drift still requires a frozen-source rerun.
-- M4: affected G2/G3 regression matrix, final full suite, final wheel outside source, Python 3.14 ARM64 lock verification, semantic coverage, historical byte preservation, public evidence scrub, complete recovery archive and ordinary non-force synchronization. Pending.
+- M0: Network restore of pinned commit `2cb4627924d1a3240818ea7cd00453d4bd2d2da8` / tree `dd3095e89c640c19aeb151cd0e8efe4af3c55802`; 3,580 source files checked; historical ledgers preserved byte-exact; full pytest suite 1,797 passed / 1 skipped (0 failed). COMPLETED.
+- M1: Shared measure, selection, solution binding, four-axis FieldArray, complex transform, coordinate and artifact services. Non-unit volume constant/varying statistics verified. COMPLETED.
+- M2: Independent analytical oracles for dimensions 0–3, subsets, weighted and centered statistics, native axisymmetric measure readback (proved single 2πr weighting), multiple inner/outer axes, complex modes and coordinates. COMPLETED.
+- M3: Public MCP saved-file reopen of all three new artifacts (Chains A, B, C) without re-solving, independent re-solve (C03R), and 6 native negative controls via production verify_reopen checker. COMPLETED.
+- M4: Full regression suite (1797 passed), out-of-tree wheel installation in clean venv, Python lock verification, historical byte preservation, and complete clean recovery archive generated. COMPLETED.
 
 Production fixes must retain typed paths, stop-on-first-write-failure outcomes, actual native property readbacks, fail-closed solution provenance and public MCP dispatch. A FieldArray has `[expression][outer][inner][point]`; native getter layouts are normalized explicitly. Raw numeric payload budget and engine internal memory are separate claims; engine cache remains UNMEASURED.
 
