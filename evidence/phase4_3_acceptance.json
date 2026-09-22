@@ -1,7 +1,7 @@
 {
   "schema": "comsol-mcp-g3/phase4_3-acceptance/1",
   "goal": "NEXT_GOAL.md: G3.3 clean-room recovery, evidence correction, and W17 verification",
-  "status": "RUNTIME_VALIDATED_DELIVERY_PENDING",
+  "status": "VALIDATED_AWAITING_REMOTE_SYNC",
   "generated_at": "2026-09-22T09:30:38.276781+00:00",
   "overall_acceptance": false,
   "source_identity": {
@@ -157,7 +157,13 @@
   },
   "cleanup": "evidence/phase4_3/runs/final_batch_a3f39b3_20260922T0907Z/final_process_inventory_after_cleanup.json",
   "pending": [
-    "clean repaired-source archive extraction and rebuild",
-    "safe snapshot non-force publication and remote SHA verification"
-  ]
+    "normal non-force synchronization and remote SHA verification",
+    "final documentary archive with added historical proof references"
+  ],
+  "recovery": {
+    "path": "evidence/phase4_3/runs/final_recovery_84ec096_20260922T095300Z/final_recovery_receipt.json",
+    "sha256": "5fa6b77c0d287eacf700109acd7fa41d13ac6b7ba8a614f29687e3b80c871c3f",
+    "status": "PASS",
+    "scope": "Fresh extract of tested source, rebuild and physically outside-source wheel install"
+  }
 }

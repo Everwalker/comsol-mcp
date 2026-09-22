@@ -1,3 +1,5 @@
+> Delivery update: repaired source snapshot `84ec0962a6424cd54c523770e4898bf42b7af645` has passed fresh extraction, wheel rebuild, and physically outside-source installation (64 source/package files, 272 operations, four Java resources; pip check clean). Remote synchronization and final documentary archive remain pending. See `evidence/phase4_3/runs/final_recovery_84ec096_20260922T095300Z/final_recovery_receipt.json`.
+
 > Current status: **RUNTIME_VALIDATED_DELIVERY_PENDING** at source `a3f39b3022b417e16c3087b8b35f1daa06f30b8a`. The eight final6 public-MCP groups, full software suite (1824 passed, one Windows-only skip), source-outside wheel/resource check, and task-owned cleanup inventory have PASS receipts. Repaired-source recovery/archive, clean publication, and ordinary remote synchronization remain required; overall acceptance remains false. W18 is not authorized.
 
 # G3.3 independent acceptance operations

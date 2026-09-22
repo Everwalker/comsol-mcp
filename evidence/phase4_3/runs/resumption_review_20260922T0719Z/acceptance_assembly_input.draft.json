@@ -128,38 +128,91 @@
         ]
       }
     ],
-    "recovery": {
-      "ref": {
-        "path": "evidence/phase4_3/runs/resumption_review_20260922T0719Z/recovery_pending.json",
-        "sha256": "290b89e8eb4a0fa06a8c29d5c802fd07ce5057b72c9e958af0b26f5a3b54d4bd"
+    "recovery": [
+      {
+        "ref": {
+          "path": "evidence/phase4_3/runs/resumption_review_20260922T0719Z/recovery_pending.json",
+          "sha256": "ef736a108ed36430c9efc50393ae0d3479ac8b0217653ed4a1a8e1c58884702f"
+        },
+        "assertions": [
+          {
+            "path": "evidence/phase4_3/runs/resumption_review_20260922T0719Z/recovery_pending.json",
+            "sha256": "ef736a108ed36430c9efc50393ae0d3479ac8b0217653ed4a1a8e1c58884702f",
+            "json_pointer": "/status",
+            "equals": "PASS"
+          },
+          {
+            "path": "evidence/phase4_3/runs/resumption_review_20260922T0719Z/recovery_pending.json",
+            "sha256": "ef736a108ed36430c9efc50393ae0d3479ac8b0217653ed4a1a8e1c58884702f",
+            "json_pointer": "/source_commit",
+            "equals": "a3f39b3022b417e16c3087b8b35f1daa06f30b8a"
+          },
+          {
+            "path": "evidence/phase4_3/runs/resumption_review_20260922T0719Z/recovery_pending.json",
+            "sha256": "ef736a108ed36430c9efc50393ae0d3479ac8b0217653ed4a1a8e1c58884702f",
+            "json_pointer": "/source_tree",
+            "equals": "5a3e1b72e95a9df8892def2ca0994a8737508612"
+          },
+          {
+            "path": "evidence/phase4_3/runs/resumption_review_20260922T0719Z/recovery_pending.json",
+            "sha256": "ef736a108ed36430c9efc50393ae0d3479ac8b0217653ed4a1a8e1c58884702f",
+            "json_pointer": "/reason",
+            "non_empty": true
+          }
+        ]
       },
-      "assertions": [
-        {
-          "path": "evidence/phase4_3/runs/resumption_review_20260922T0719Z/recovery_pending.json",
-          "sha256": "290b89e8eb4a0fa06a8c29d5c802fd07ce5057b72c9e958af0b26f5a3b54d4bd",
-          "json_pointer": "/status",
-          "equals": "PASS"
+      {
+        "name": "fresh_extracted_source_rebuild_and_outside_install",
+        "ref": {
+          "path": "evidence/phase4_3/runs/final_recovery_84ec096_20260922T095300Z/final_recovery_receipt.json",
+          "sha256": "5fa6b77c0d287eacf700109acd7fa41d13ac6b7ba8a614f29687e3b80c871c3f"
         },
-        {
-          "path": "evidence/phase4_3/runs/resumption_review_20260922T0719Z/recovery_pending.json",
-          "sha256": "290b89e8eb4a0fa06a8c29d5c802fd07ce5057b72c9e958af0b26f5a3b54d4bd",
-          "json_pointer": "/source_commit",
-          "equals": "a3f39b3022b417e16c3087b8b35f1daa06f30b8a"
-        },
-        {
-          "path": "evidence/phase4_3/runs/resumption_review_20260922T0719Z/recovery_pending.json",
-          "sha256": "290b89e8eb4a0fa06a8c29d5c802fd07ce5057b72c9e958af0b26f5a3b54d4bd",
-          "json_pointer": "/source_tree",
-          "equals": "5a3e1b72e95a9df8892def2ca0994a8737508612"
-        },
-        {
-          "path": "evidence/phase4_3/runs/resumption_review_20260922T0719Z/recovery_pending.json",
-          "sha256": "290b89e8eb4a0fa06a8c29d5c802fd07ce5057b72c9e958af0b26f5a3b54d4bd",
-          "json_pointer": "/reason",
-          "non_empty": true
-        }
-      ]
-    },
+        "assertions": [
+          {
+            "path": "evidence/phase4_3/runs/final_recovery_84ec096_20260922T095300Z/final_recovery_receipt.json",
+            "sha256": "5fa6b77c0d287eacf700109acd7fa41d13ac6b7ba8a614f29687e3b80c871c3f",
+            "json_pointer": "/status",
+            "equals": "PASS"
+          },
+          {
+            "path": "evidence/phase4_3/runs/final_recovery_84ec096_20260922T095300Z/final_recovery_receipt.json",
+            "sha256": "5fa6b77c0d287eacf700109acd7fa41d13ac6b7ba8a614f29687e3b80c871c3f",
+            "json_pointer": "/outside_install/module_outside_extracted_source",
+            "equals": true
+          },
+          {
+            "path": "evidence/phase4_3/runs/final_recovery_84ec096_20260922T095300Z/final_recovery_receipt.json",
+            "sha256": "5fa6b77c0d287eacf700109acd7fa41d13ac6b7ba8a614f29687e3b80c871c3f",
+            "json_pointer": "/outside_install/pip_check_exit",
+            "equals": 0
+          },
+          {
+            "path": "evidence/phase4_3/runs/final_recovery_84ec096_20260922T095300Z/final_recovery_receipt.json",
+            "sha256": "5fa6b77c0d287eacf700109acd7fa41d13ac6b7ba8a614f29687e3b80c871c3f",
+            "json_pointer": "/resource_hash_compare/missing",
+            "equals": []
+          },
+          {
+            "path": "evidence/phase4_3/runs/final_recovery_84ec096_20260922T095300Z/final_recovery_receipt.json",
+            "sha256": "5fa6b77c0d287eacf700109acd7fa41d13ac6b7ba8a614f29687e3b80c871c3f",
+            "json_pointer": "/resource_hash_compare/changed",
+            "equals": []
+          },
+          {
+            "path": "evidence/phase4_3/runs/final_recovery_84ec096_20260922T095300Z/final_recovery_receipt.json",
+            "sha256": "5fa6b77c0d287eacf700109acd7fa41d13ac6b7ba8a614f29687e3b80c871c3f",
+            "json_pointer": "/schema_and_operations/operation_count",
+            "equals": 272
+          },
+          {
+            "path": "evidence/phase4_3/runs/final_recovery_84ec096_20260922T095300Z/final_recovery_receipt.json",
+            "sha256": "5fa6b77c0d287eacf700109acd7fa41d13ac6b7ba8a614f29687e3b80c871c3f",
+            "json_pointer": "/runtime_source_bridge/source_file_count",
+            "equals": 184
+          }
+        ]
+      }
+    ],
     "audit": [
       {
         "name": "semantic_coverage_final_a3f39b3",
@@ -329,6 +382,134 @@
           "sha256": "941b8716d9549efe94c8281f78ff7e068d0882555794c7bdd14a0c412f2732ce",
           "json_pointer": "/scope",
           "equals": "Historical bytes only, not acceptance correctness"
+        },
+        {
+          "path": "evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/fresh_restore/RESTORE_RECEIPT.json",
+          "sha256": "e3c20e81026c96c04805e6fcde5e4135ba47a7f26b6886f24a8c9f86e4e6544e",
+          "json_pointer": "/status",
+          "equals": "SOURCE_RECOVERED_HASH_VERIFIED"
+        },
+        {
+          "path": "evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/fresh_restore/RESTORE_RECEIPT.json",
+          "sha256": "e3c20e81026c96c04805e6fcde5e4135ba47a7f26b6886f24a8c9f86e4e6544e",
+          "json_pointer": "/source_commit",
+          "equals": "2cb4627924d1a3240818ea7cd00453d4bd2d2da8"
+        },
+        {
+          "path": "evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/fresh_restore/RESTORE_RECEIPT.json",
+          "sha256": "e3c20e81026c96c04805e6fcde5e4135ba47a7f26b6886f24a8c9f86e4e6544e",
+          "json_pointer": "/source_tree",
+          "equals": "dd3095e89c640c19aeb151cd0e8efe4af3c55802"
+        },
+        {
+          "path": "evidence/phase4_3/BASELINE_REVIEW.json",
+          "sha256": "cf488493d80aba6c0b57f5d34cdee32d5867b56ada8cfc1fb38504cfb0715365",
+          "json_pointer": "/claims/2/evidence_level",
+          "equals": "CONTROL_UNIT"
+        },
+        {
+          "path": "evidence/phase4_3/BASELINE_REVIEW.json",
+          "sha256": "cf488493d80aba6c0b57f5d34cdee32d5867b56ada8cfc1fb38504cfb0715365",
+          "json_pointer": "/claims/2/status",
+          "equals": "NOT_LIVE_EVIDENCE"
+        },
+        {
+          "path": "evidence/phase4_3/BASELINE_REVIEW.json",
+          "sha256": "cf488493d80aba6c0b57f5d34cdee32d5867b56ada8cfc1fb38504cfb0715365",
+          "json_pointer": "/claims/3/evidence_level",
+          "equals": "UNIT_CONTRACT"
+        },
+        {
+          "path": "evidence/phase4_3/BASELINE_REVIEW.json",
+          "sha256": "cf488493d80aba6c0b57f5d34cdee32d5867b56ada8cfc1fb38504cfb0715365",
+          "json_pointer": "/claims/3/status",
+          "equals": "NOT_LIVE_EVIDENCE"
+        },
+        {
+          "path": "evidence/phase4_3/BASELINE_REVIEW.json",
+          "sha256": "cf488493d80aba6c0b57f5d34cdee32d5867b56ada8cfc1fb38504cfb0715365",
+          "json_pointer": "/missing_references/0/status",
+          "equals": "MISSING"
+        },
+        {
+          "path": "evidence/w17_correction.json",
+          "sha256": "b1bfcda3fe23d407e500b2f4fd2cca6ce7dccfa87d8bba9288f93f8d398a5f1d",
+          "json_pointer": "/corrections",
+          "non_empty": true,
+          "assertions": [
+            {
+              "selectors": [
+                {
+                  "where": {
+                    "case_id": "T013"
+                  },
+                  "count": 1,
+                  "expect": {
+                    "corrected_status": "DEFECTIVE_IN_G3_2",
+                    "corrected_evidence_level": "UNIT_CONTRACT"
+                  }
+                },
+                {
+                  "where": {
+                    "case_id": "T014"
+                  },
+                  "count": 1,
+                  "expect": {
+                    "corrected_status": "DEFECTIVE_IN_G3_2",
+                    "corrected_evidence_level": "UNIT_CONTRACT"
+                  }
+                },
+                {
+                  "where": {
+                    "case_id": "T021"
+                  },
+                  "count": 1,
+                  "expect": {
+                    "corrected_status": "DEFECTIVE_IN_G3_2",
+                    "corrected_evidence_level": "UNIT_CONTRACT"
+                  }
+                },
+                {
+                  "where": {
+                    "case_id": "T049"
+                  },
+                  "count": 1,
+                  "expect": {
+                    "corrected_status": "DEFECTIVE_IN_G3_2",
+                    "corrected_evidence_level": "UNIT_CONTRACT"
+                  }
+                },
+                {
+                  "where": {
+                    "case_id": "Gate_A"
+                  },
+                  "count": 1,
+                  "expect": {
+                    "corrected_status": "MOCK_CONTROL_ONLY_IN_G3_2",
+                    "corrected_evidence_level": "CONTROL_UNIT"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "path": "audit/protected_history_final.json",
+          "sha256": "3967eae2bdec47e480b14ad0dd6d2a90a8aab3a64f84e7d99bdbbdd87e61b678",
+          "assertions": [
+            {
+              "json_pointer": "/status",
+              "equals": "PASS"
+            },
+            {
+              "json_pointer": "/file_count",
+              "equals": 596
+            },
+            {
+              "json_pointer": "/pin",
+              "equals": "2cb4627924d1a3240818ea7cd00453d4bd2d2da8"
+            }
+          ]
         }
       ],
       "request_reply_assertion_refs": [],
@@ -336,8 +517,46 @@
         {
           "path": "evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/current_history_vs_fresh_pin.json",
           "sha256": "941b8716d9549efe94c8281f78ff7e068d0882555794c7bdd14a0c412f2732ce"
+        },
+        {
+          "path": "audit/protected_history_final.json",
+          "sha256": "3967eae2bdec47e480b14ad0dd6d2a90a8aab3a64f84e7d99bdbbdd87e61b678"
+        },
+        {
+          "path": "evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/fresh_restore/RESTORE_RECEIPT.json",
+          "sha256": "e3c20e81026c96c04805e6fcde5e4135ba47a7f26b6886f24a8c9f86e4e6544e"
+        },
+        {
+          "path": "evidence/phase4_3/BASELINE_REVIEW.json",
+          "sha256": "cf488493d80aba6c0b57f5d34cdee32d5867b56ada8cfc1fb38504cfb0715365"
+        },
+        {
+          "path": "evidence/w17_correction.json",
+          "sha256": "b1bfcda3fe23d407e500b2f4fd2cca6ce7dccfa87d8bba9288f93f8d398a5f1d"
         }
-      ]
+      ],
+      "expected_source_commit": "2cb4627924d1a3240818ea7cd00453d4bd2d2da8",
+      "expected_source_tree": "dd3095e89c640c19aeb151cd0e8efe4af3c55802",
+      "historical_baseline_identity": {
+        "source_commit": "2cb4627924d1a3240818ea7cd00453d4bd2d2da8",
+        "source_tree": "dd3095e89c640c19aeb151cd0e8efe4af3c55802",
+        "restore_status": "SOURCE_RECOVERED_HASH_VERIFIED",
+        "restore_receipt": {
+          "path": "evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/fresh_restore/RESTORE_RECEIPT.json",
+          "sha256": "e3c20e81026c96c04805e6fcde5e4135ba47a7f26b6886f24a8c9f86e4e6544e"
+        }
+      },
+      "baseline_review_ref": {
+        "path": "evidence/phase4_3/BASELINE_REVIEW.json",
+        "sha256": "cf488493d80aba6c0b57f5d34cdee32d5867b56ada8cfc1fb38504cfb0715365",
+        "scope": "historical evidence-level corrections and missing-reference disposition only"
+      },
+      "corrections_review_ref": {
+        "path": "evidence/w17_correction.json",
+        "sha256": "b1bfcda3fe23d407e500b2f4fd2cca6ce7dccfa87d8bba9288f93f8d398a5f1d",
+        "json_pointer": "/corrections",
+        "scope": "corrections array only; current status and live-matrix fields are excluded"
+      }
     },
     "C02": {
       "scope": "native study-fault outcome plus cleanup-fault control mapping",
@@ -2208,7 +2427,7 @@
         },
         {
           "path": "evidence/phase4_3/runs/resumption_review_20260922T0719Z/recovery_pending.json",
-          "sha256": "290b89e8eb4a0fa06a8c29d5c802fd07ce5057b72c9e958af0b26f5a3b54d4bd"
+          "sha256": "ef736a108ed36430c9efc50393ae0d3479ac8b0217653ed4a1a8e1c58884702f"
         },
         {
           "path": "evidence/phase4_3/runs/final_batch_a3f39b3_20260922T0907Z/final_process_inventory_after_cleanup.json",

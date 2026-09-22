@@ -1,0 +1,70 @@
+{
+ "generated_at": "2026-09-22T09:50:00.355068+00:00",
+ "import_identity": {
+  "console_script": "comsol_mcp.mcp_server:main",
+  "file_count": 122,
+  "has_action_catalog": true,
+  "has_schema": true,
+  "java_sources": [
+   "phase1_java/BoundPhase1Poc.java",
+   "phase1_java/BoundPhase1ProductProbe.java",
+   "phase1_java/BoundPhase1Reopen.java",
+   "worker_java/PersistentComsolWorker.java"
+  ],
+  "module": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/final_recovery_84ec096_20260922T095300Z/fresh_extract/repository/rebuild_runtime/install_venv/lib/python3.14/site-packages/comsol_mcp"
+ },
+ "install_venv": "rebuild_runtime/install_venv",
+ "installed_outside_source": true,
+ "pip_check": "No broken requirements found.",
+ "schema": "comsol-mcp-g3/wheel-install-verification/1",
+ "status": "PASS",
+ "step_exit_codes": {
+  "entry_point_import": 0,
+  "import_identity": 0,
+  "venv_create": 0,
+  "wheel_build": 0,
+  "wheel_install_with_constraints": 0
+ },
+ "steps": [
+  {
+   "cmd": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/bin/python -m pip wheel . --no-deps -w /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/final_recovery_84ec096_20260922T095300Z/fresh_extract/repository/rebuild_runtime/wheelhouse",
+   "exit_code": 0,
+   "stderr": "",
+   "stdout": "Processing ./.\n  Installing build dependencies: started\n  Installing build dependencies: finished with status 'done'\n  Getting requirements to build wheel: started\n  Getting requirements to build wheel: finished with status 'done'\n  Preparing metadata (pyproject.toml): started\n  Preparing metadata (pyproject.toml): finished with status 'done'\nBuilding wheels for collected packages: comsol-mcp\n  Building wheel for comsol-mcp (pyproject.toml): started\n  Building wheel for comsol-mcp (pyproject.toml): finished with status 'done'\n  Created wheel for comsol-mcp: filename=comsol_mcp-0.1.9-py3-none-any.whl size=544568 sha256=8d0207f876c70610ecdf8af7e8c7705c44314e5119a8203d1262c96a655aaa82\n  Stored in directory: /private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pip-ephem-wheel-cache-ca3cu3u8/wheels/20/d2/0e/29fde5b924cbbc2a4f32972b364442fb9eb2a7bcaf800d2955\nSuccessfully built comsol-mcp\n",
+   "step": "wheel_build"
+  },
+  {
+   "cmd": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/software_validation_20260922T004801Z/software_venv/bin/python -m venv /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/final_recovery_84ec096_20260922T095300Z/fresh_extract/repository/rebuild_runtime/install_venv",
+   "exit_code": 0,
+   "stderr": "",
+   "stdout": "",
+   "step": "venv_create"
+  },
+  {
+   "cmd": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/final_recovery_84ec096_20260922T095300Z/fresh_extract/repository/rebuild_runtime/install_venv/bin/python -m pip install --upgrade -c /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/final_recovery_84ec096_20260922T095300Z/fresh_extract/repository/constraints-macos-arm64-py314.txt /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/final_recovery_84ec096_20260922T095300Z/fresh_extract/repository/rebuild_runtime/wheelhouse/comsol_mcp-0.1.9-py3-none-any.whl",
+   "exit_code": 0,
+   "stderr": "",
+   "stdout": "Processing ./rebuild_runtime/wheelhouse/comsol_mcp-0.1.9-py3-none-any.whl\nCollecting mcp<2,>=1.30 (from comsol-mcp==0.1.9)\n  Using cached mcp-1.30.0-py3-none-any.whl.metadata (9.3 kB)\nCollecting MPh (from comsol-mcp==0.1.9)\n  Using cached mph-1.4.0-py3-none-any.whl.metadata (1.9 kB)\nCollecting JPype1 (from comsol-mcp==0.1.9)\n  Using cached jpype1-1.7.1-1-cp314-cp314-macosx_11_0_universal2.whl.metadata (4.3 kB)\nCollecting anyio>=4.5 (from mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached anyio-4.15.1-py3-none-any.whl.metadata (4.7 kB)\nCollecting httpx-sse>=0.4 (from mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached httpx_sse-0.4.3-py3-none-any.whl.metadata (9.7 kB)\nCollecting httpx<1.0.0,>=0.27.1 (from mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)\nCollecting jsonschema>=4.20.0 (from mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached jsonschema-4.26.0-py3-none-any.whl.metadata (7.6 kB)\nCollecting pydantic-settings>=2.5.2 (from mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached pydantic_settings-2.15.0-py3-none-any.whl.metadata (3.9 kB)\nCollecting pydantic<3.0.0,>=2.12.0 (from mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached pydantic-2.13.5-py3-none-any.whl.metadata (110 kB)\nCollecting pyjwt>=2.10.1 (from pyjwt[crypto]>=2.10.1->mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached pyjwt-2.14.0-py3-none-any.whl.metadata (3.4 kB)\nCollecting python-multipart>=0.0.9 (from mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached python_multipart-0.0.32-py3-none-any.whl.metadata (2.1 kB)\nCollecting sse-starlette>=1.6.1 (from mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached sse_starlette-3.4.11-py3-none-any.whl.metadata (15 kB)\nCollecting starlette>=0.48.0 (from mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached starlette-1.6.0-py3-none-any.whl.metadata (6.4 kB)\nCollecting typing-extensions>=4.9.0 (from mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)\nCollecting typing-inspection>=0.4.1 (from mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached typing_inspection-0.4.4-py3-none-any.whl.metadata (2.6 kB)\nCollecting uvicorn>=0.31.1 (from mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached uvicorn-0.53.0-py3-none-any.whl.metadata (6.6 kB)\nCollecting certifi (from httpx<1.0.0,>=0.27.1->mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached certifi-2026.7.22-py3-none-any.whl.metadata (2.5 kB)\nCollecting httpcore==1.* (from httpx<1.0.0,>=0.27.1->mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)\nCollecting idna (from httpx<1.0.0,>=0.27.1->mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached idna-3.20-py3-none-any.whl.metadata (7.2 kB)\nCollecting h11>=0.16 (from httpcore==1.*->httpx<1.0.0,>=0.27.1->mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)\nCollecting annotated-types>=0.6.0 (from pydantic<3.0.0,>=2.12.0->mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached annotated_types-0.8.0-py3-none-any.whl.metadata (15 kB)\nCollecting pydantic-core==2.46.5 (from pydantic<3.0.0,>=2.12.0->mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached pydantic_core-2.46.5-cp314-cp314-macosx_11_0_arm64.whl.metadata (6.6 kB)\nCollecting attrs>=22.2.0 (from jsonschema>=4.20.0->mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached attrs-26.1.0-py3-none-any.whl.metadata (8.8 kB)\nCollecting jsonschema-specifications>=2023.03.6 (from jsonschema>=4.20.0->mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached jsonschema_specifications-2025.9.1-py3-none-any.whl.metadata (2.9 kB)\nCollecting referencing>=0.28.4 (from jsonschema>=4.20.0->mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached referencing-0.37.0-py3-none-any.whl.metadata (2.8 kB)\nCollecting rpds-py>=0.25.0 (from jsonschema>=4.20.0->mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached rpds_py-2026.6.3-cp314-cp314-macosx_11_0_arm64.whl.metadata (4.1 kB)\nCollecting python-dotenv>=0.21.0 (from pydantic-settings>=2.5.2->mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached python_dotenv-1.2.3-py3-none-any.whl.metadata (29 kB)\nCollecting cryptography>=3.4.0 (from pyjwt[crypto]>=2.10.1->mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached cryptography-50.0.1-cp311-abi3-macosx_11_0_arm64.whl.metadata (4.3 kB)\nCollecting cffi>=2.0.0 (from cryptography>=3.4.0->pyjwt[crypto]>=2.10.1->mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached cffi-2.1.1-cp314-cp314-macosx_11_0_arm64.whl.metadata (2.5 kB)\nCollecting pycparser (from cffi>=2.0.0->cryptography>=3.4.0->pyjwt[crypto]>=2.10.1->mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached pycparser-3.0-py3-none-any.whl.metadata (8.2 kB)\nCollecting click>=7.0 (from uvicorn>=0.31.1->mcp<2,>=1.30->comsol-mcp==0.1.9)\n  Using cached click-8.5.0-py3-none-any.whl.metadata (2.6 kB)\nCollecting packaging (from JPype1->comsol-mcp==0.1.9)\n  Using cached packaging-26.3-py3-none-any.whl.metadata (3.5 kB)\nCollecting numpy (from MPh->comsol-mcp==0.1.9)\n  Using cached numpy-2.5.3-cp314-cp314-macosx_14_0_arm64.whl.metadata (6.6 kB)\nUsing cached mcp-1.30.0-py3-none-any.whl (234 kB)\nUsing cached httpx-0.28.1-py3-none-any.whl (73 kB)\nUsing cached httpcore-1.0.9-py3-none-any.whl (78 kB)\nUsing cached pydantic-2.13.5-py3-none-any.whl (472 kB)\nUsing cached pydantic_core-2.46.5-cp314-cp314-macosx_11_0_arm64.whl (1.9 MB)\nUsing cached annotated_types-0.8.0-py3-none-any.whl (13 kB)\nUsing cached anyio-4.15.1-py3-none-any.whl (132 kB)\nUsing cached h11-0.16.0-py3-none-any.whl (37 kB)\nUsing cached httpx_sse-0.4.3-py3-none-any.whl (9.0 kB)\nUsing cached idna-3.20-py3-none-any.whl (69 kB)\nUsing cached jsonschema-4.26.0-py3-none-any.whl (90 kB)\nUsing cached attrs-26.1.0-py3-none-any.whl (67 kB)\nUsing cached jsonschema_specifications-2025.9.1-py3-none-any.whl (18 kB)\nUsing cached pydantic_settings-2.15.0-py3-none-any.whl (69 kB)\nUsing cached pyjwt-2.14.0-py3-none-any.whl (32 kB)\nUsing cached cryptography-50.0.1-cp311-abi3-macosx_11_0_arm64.whl (4.0 MB)\nUsing cached cffi-2.1.1-cp314-cp314-macosx_11_0_arm64.whl (184 kB)\nUsing cached python_dotenv-1.2.3-py3-none-any.whl (22 kB)\nUsing cached python_multipart-0.0.32-py3-none-any.whl (30 kB)\nUsing cached referencing-0.37.0-py3-none-any.whl (26 kB)\nUsing cached rpds_py-2026.6.3-cp314-cp314-macosx_11_0_arm64.whl (339 kB)\nUsing cached sse_starlette-3.4.11-py3-none-any.whl (17 kB)\nUsing cached starlette-1.6.0-py3-none-any.whl (75 kB)\nUsing cached typing_extensions-4.16.0-py3-none-any.whl (45 kB)\nUsing cached typing_inspection-0.4.4-py3-none-any.whl (14 kB)\nUsing cached uvicorn-0.53.0-py3-none-any.whl (87 kB)\nUsing cached click-8.5.0-py3-none-any.whl (125 kB)\nUsing cached certifi-2026.7.22-py3-none-any.whl (136 kB)\nUsing cached jpype1-1.7.1-1-cp314-cp314-macosx_11_0_universal2.whl (569 kB)\nUsing cached mph-1.4.0-py3-none-any.whl (65 kB)\nUsing cached numpy-2.5.3-cp314-cp314-macosx_14_0_arm64.whl (5.4 MB)\nUsing cached packaging-26.3-py3-none-any.whl (129 kB)\nUsing cached pycparser-3.0-py3-none-any.whl (48 kB)\nInstalling collected packages: typing-extensions, rpds-py, python-multipart, python-dotenv, pyjwt, pycparser, packaging, numpy, idna, httpx-sse, h11, click, certifi, attrs, annotated-types, uvicorn, typing-inspection, referencing, pydantic-core, JPype1, httpcore, cffi, anyio, starlette, pydantic, MPh, jsonschema-specifications, httpx, cryptography, sse-starlette, pydantic-settings, jsonschema, mcp, comsol-mcp\n\nSuccessfully installed JPype1-1.7.1 MPh-1.4.0 annotated-types-0.8.0 anyio-4.15.1 attrs-26.1.0 certifi-2026.7.22 cffi-2.1.1 click-8.5.0 comsol-mcp-0.1.9 cryptography-50.0.1 h11-0.16.0 httpcore-1.0.9 httpx-0.28.1 httpx-sse-0.4.3 idna-3.20 jsonschema-4.26.0 jsonschema-specifications-2025.9.1 mcp-1.30.0 numpy-2.5.3 packaging-26.3 pycparser-3.0 pydantic-2.13.5 pydantic-core-2.46.5 pydantic-settings-2.15.0 pyjwt-2.14.0 python-dotenv-1.2.3 python-multipart-0.0.32 referencing-0.37.0 rpds-py-2026.6.3 sse-starlette-3.4.11 starlette-1.6.0 typing-extensions-4.16.0 typing-inspection-0.4.4 uvicorn-0.53.0\n",
+   "step": "wheel_install_with_constraints"
+  },
+  {
+   "cmd": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/final_recovery_84ec096_20260922T095300Z/fresh_extract/repository/rebuild_runtime/install_venv/bin/python /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/final_recovery_84ec096_20260922T095300Z/fresh_extract/repository/rebuild_runtime/probe_import.py",
+   "exit_code": 0,
+   "stderr": "",
+   "stdout": "{\"module\": \"/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/final_recovery_84ec096_20260922T095300Z/fresh_extract/repository/rebuild_runtime/install_venv/lib/python3.14/site-packages/comsol_mcp\", \"file_count\": 122, \"java_sources\": [\"phase1_java/BoundPhase1Poc.java\", \"phase1_java/BoundPhase1ProductProbe.java\", \"phase1_java/BoundPhase1Reopen.java\", \"worker_java/PersistentComsolWorker.java\"], \"has_action_catalog\": true, \"has_schema\": true, \"console_script\": \"comsol_mcp.mcp_server:main\"}\n",
+   "step": "import_identity"
+  },
+  {
+   "cmd": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/final_recovery_84ec096_20260922T095300Z/fresh_extract/repository/rebuild_runtime/install_venv/bin/python -c from comsol_mcp.mcp_server import main; print(callable(main))",
+   "exit_code": 0,
+   "stderr": "",
+   "stdout": "True\n",
+   "step": "entry_point_import"
+  }
+ ],
+ "wheel": {
+  "path": "rebuild_runtime/wheelhouse/comsol_mcp-0.1.9-py3-none-any.whl",
+  "sha256": "8d0207f876c70610ecdf8af7e8c7705c44314e5119a8203d1262c96a655aaa82",
+  "size": 544568
+ }
+}

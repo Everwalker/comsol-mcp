@@ -1,3 +1,5 @@
+> Source recovery is now verified for snapshot `84ec0962a6424cd54c523770e4898bf42b7af645`: evidence/phase4_3/runs/final_recovery_84ec096_20260922T095300Z/final_recovery_receipt.json. The initial 698-member archive is a source-rebuild checkpoint; the final documentary archive adds historical proof references and final delivery records. Remote synchronization is still pending.
+
 # G3.3 clean-room recovery and continuation
 
 ## Fixed-baseline bootstrap boundary
@@ -79,3 +81,13 @@ file hashes, exclude the three historical worker bearer-token blobs, and synchro
 an ordinary non-force push. Recovery, publication and remote sync remain pending, so keep
 overall acceptance false and do not enter W18. Windows, Intel Mac, COMSOL 6.3 and GUI
 remain unverified unless separately run.
+
+## Repaired source recovery
+
+The first clean publication snapshot is `84ec0962a6424cd54c523770e4898bf42b7af645`, with real parent `2cb4627924d1a3240818ea7cd00453d4bd2d2da8`. The actual native tests ran at local development commit `a3f39b3022b417e16c3087b8b35f1daa06f30b8a`; `audit/publication_source_bridge.json` verifies all 184 tested source/config files against the publication snapshot. The original development ancestry remains local because it contains deleted credentials. It is not needed for rebuilding the repaired source.
+
+For network recovery, clone the published repository into a new directory and detach at the explicit delivery commit recorded in the final receipt. Do not bootstrap the old PIN expecting repaired behavior. For source workpack recovery, extract into an empty directory and verify each entry in `ARCHIVE_MANIFEST.json`; use the extracted `repository/` directory. The source archive is a source snapshot, not a Git-history mirror.
+
+Use Python 3.14 on the verified macOS arm64 environment, create a new venv, then install `.[dev]` with `constraints-macos-arm64-py314.txt`. COMSOL 6.4, a legal license, and JDK 11 remain external prerequisites for native tests. The package includes source, tests, public runtime reports, and fixture-generating drivers; it excludes credentials, installed JARs, virtual environments and generated MPH files. Recreate the A/B/C fixtures with `tools/g3_3_protocol_acceptance.py` under a fresh run directory; those newly generated files will have new run identities and must undergo their own same-hash fresh-worker reopen checks. Do not substitute a fresh solve for stored-solution verification.
+
+Recorded absolute paths in historical receipts are provenance only. No recovery step requires those original directories or credentials. Windows, Linux, Intel Mac, COMSOL 6.3 and GUI remain unverified; W18 is not authorized.

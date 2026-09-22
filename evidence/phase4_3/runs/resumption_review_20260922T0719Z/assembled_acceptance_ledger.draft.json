@@ -1,8 +1,8 @@
 {
   "schema": "comsol-mcp-g3/phase4_3-acceptance-assembly/1",
-  "generated_at_utc": "2026-09-22T09:40:13.538207+00:00",
+  "generated_at_utc": "2026-09-22T10:00:47.835998+00:00",
   "input_mapping": "acceptance_assembly_input.draft.json",
-  "input_mapping_sha256": "3a2a3901b2c94bff1e97482f750b4afce9967df6f3deb77be3359dbb8fc579ad",
+  "input_mapping_sha256": "0abf4fb36030866fb11523015bdc304bd56af24194035ac2268b2db05f82a024",
   "repository_root": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository",
   "policy": {
     "required_cases": [
@@ -192,14 +192,14 @@
       {
         "label": "proofs.recovery[0]",
         "path": "evidence/phase4_3/runs/resumption_review_20260922T0719Z/recovery_pending.json",
-        "sha256": "290b89e8eb4a0fa06a8c29d5c802fd07ce5057b72c9e958af0b26f5a3b54d4bd",
-        "expected_sha256": "290b89e8eb4a0fa06a8c29d5c802fd07ce5057b72c9e958af0b26f5a3b54d4bd",
+        "sha256": "ef736a108ed36430c9efc50393ae0d3479ac8b0217653ed4a1a8e1c58884702f",
+        "expected_sha256": "ef736a108ed36430c9efc50393ae0d3479ac8b0217653ed4a1a8e1c58884702f",
         "assertions": [
           {
             "label": "proofs.recovery[0].assertions[0]",
             "json_pointer": "/status",
             "found": true,
-            "actual": "NOT_RUN"
+            "actual": "PASS"
           },
           {
             "label": "proofs.recovery[0].assertions[1]",
@@ -217,10 +217,61 @@
             "label": "proofs.recovery[0].assertions[3]",
             "json_pointer": "/reason",
             "found": true,
-            "actual": "A committed archive plus fresh extraction and rebuild receipt for the current a3 source freeze is pending; PIN restore evidence remains historical C00/C01 evidence only."
+            "actual": "Actual committed source84ec archive fresh extraction, wheel rebuild and physically outside-source installation passed. All184tested sourcefiles unchanged. Initialarchive omissions concern historical documentation only; final documentary archive must add them."
           }
         ],
         "proof_name": "recovery"
+      },
+      {
+        "label": "proofs.recovery[1]",
+        "path": "evidence/phase4_3/runs/final_recovery_84ec096_20260922T095300Z/final_recovery_receipt.json",
+        "sha256": "5fa6b77c0d287eacf700109acd7fa41d13ac6b7ba8a614f29687e3b80c871c3f",
+        "expected_sha256": "5fa6b77c0d287eacf700109acd7fa41d13ac6b7ba8a614f29687e3b80c871c3f",
+        "assertions": [
+          {
+            "label": "proofs.recovery[1].assertions[0]",
+            "json_pointer": "/status",
+            "found": true,
+            "actual": "PASS"
+          },
+          {
+            "label": "proofs.recovery[1].assertions[1]",
+            "json_pointer": "/outside_install/module_outside_extracted_source",
+            "found": true,
+            "actual": true
+          },
+          {
+            "label": "proofs.recovery[1].assertions[2]",
+            "json_pointer": "/outside_install/pip_check_exit",
+            "found": true,
+            "actual": 0
+          },
+          {
+            "label": "proofs.recovery[1].assertions[3]",
+            "json_pointer": "/resource_hash_compare/missing",
+            "found": true,
+            "actual": []
+          },
+          {
+            "label": "proofs.recovery[1].assertions[4]",
+            "json_pointer": "/resource_hash_compare/changed",
+            "found": true,
+            "actual": []
+          },
+          {
+            "label": "proofs.recovery[1].assertions[5]",
+            "json_pointer": "/schema_and_operations/operation_count",
+            "found": true,
+            "actual": 272
+          },
+          {
+            "label": "proofs.recovery[1].assertions[6]",
+            "json_pointer": "/runtime_source_bridge/source_file_count",
+            "found": true,
+            "actual": 184
+          }
+        ],
+        "proof_name": "fresh_extracted_source_rebuild_and_outside_install"
       }
     ],
     "audit": [
@@ -477,6 +528,244 @@
               "actual": "Historical bytes only, not acceptance correctness"
             }
           ]
+        },
+        {
+          "label": "cases.C01.assertion_refs[3]",
+          "path": "evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/fresh_restore/RESTORE_RECEIPT.json",
+          "sha256": "e3c20e81026c96c04805e6fcde5e4135ba47a7f26b6886f24a8c9f86e4e6544e",
+          "expected_sha256": "e3c20e81026c96c04805e6fcde5e4135ba47a7f26b6886f24a8c9f86e4e6544e",
+          "assertions": [
+            {
+              "label": "cases.C01.assertion_refs[3]",
+              "json_pointer": "/status",
+              "found": true,
+              "actual": "SOURCE_RECOVERED_HASH_VERIFIED"
+            }
+          ]
+        },
+        {
+          "label": "cases.C01.assertion_refs[4]",
+          "path": "evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/fresh_restore/RESTORE_RECEIPT.json",
+          "sha256": "e3c20e81026c96c04805e6fcde5e4135ba47a7f26b6886f24a8c9f86e4e6544e",
+          "expected_sha256": "e3c20e81026c96c04805e6fcde5e4135ba47a7f26b6886f24a8c9f86e4e6544e",
+          "assertions": [
+            {
+              "label": "cases.C01.assertion_refs[4]",
+              "json_pointer": "/source_commit",
+              "found": true,
+              "actual": "2cb4627924d1a3240818ea7cd00453d4bd2d2da8"
+            }
+          ]
+        },
+        {
+          "label": "cases.C01.assertion_refs[5]",
+          "path": "evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/fresh_restore/RESTORE_RECEIPT.json",
+          "sha256": "e3c20e81026c96c04805e6fcde5e4135ba47a7f26b6886f24a8c9f86e4e6544e",
+          "expected_sha256": "e3c20e81026c96c04805e6fcde5e4135ba47a7f26b6886f24a8c9f86e4e6544e",
+          "assertions": [
+            {
+              "label": "cases.C01.assertion_refs[5]",
+              "json_pointer": "/source_tree",
+              "found": true,
+              "actual": "dd3095e89c640c19aeb151cd0e8efe4af3c55802"
+            }
+          ]
+        },
+        {
+          "label": "cases.C01.assertion_refs[6]",
+          "path": "evidence/phase4_3/BASELINE_REVIEW.json",
+          "sha256": "cf488493d80aba6c0b57f5d34cdee32d5867b56ada8cfc1fb38504cfb0715365",
+          "expected_sha256": "cf488493d80aba6c0b57f5d34cdee32d5867b56ada8cfc1fb38504cfb0715365",
+          "assertions": [
+            {
+              "label": "cases.C01.assertion_refs[6]",
+              "json_pointer": "/claims/2/evidence_level",
+              "found": true,
+              "actual": "CONTROL_UNIT"
+            }
+          ]
+        },
+        {
+          "label": "cases.C01.assertion_refs[7]",
+          "path": "evidence/phase4_3/BASELINE_REVIEW.json",
+          "sha256": "cf488493d80aba6c0b57f5d34cdee32d5867b56ada8cfc1fb38504cfb0715365",
+          "expected_sha256": "cf488493d80aba6c0b57f5d34cdee32d5867b56ada8cfc1fb38504cfb0715365",
+          "assertions": [
+            {
+              "label": "cases.C01.assertion_refs[7]",
+              "json_pointer": "/claims/2/status",
+              "found": true,
+              "actual": "NOT_LIVE_EVIDENCE"
+            }
+          ]
+        },
+        {
+          "label": "cases.C01.assertion_refs[8]",
+          "path": "evidence/phase4_3/BASELINE_REVIEW.json",
+          "sha256": "cf488493d80aba6c0b57f5d34cdee32d5867b56ada8cfc1fb38504cfb0715365",
+          "expected_sha256": "cf488493d80aba6c0b57f5d34cdee32d5867b56ada8cfc1fb38504cfb0715365",
+          "assertions": [
+            {
+              "label": "cases.C01.assertion_refs[8]",
+              "json_pointer": "/claims/3/evidence_level",
+              "found": true,
+              "actual": "UNIT_CONTRACT"
+            }
+          ]
+        },
+        {
+          "label": "cases.C01.assertion_refs[9]",
+          "path": "evidence/phase4_3/BASELINE_REVIEW.json",
+          "sha256": "cf488493d80aba6c0b57f5d34cdee32d5867b56ada8cfc1fb38504cfb0715365",
+          "expected_sha256": "cf488493d80aba6c0b57f5d34cdee32d5867b56ada8cfc1fb38504cfb0715365",
+          "assertions": [
+            {
+              "label": "cases.C01.assertion_refs[9]",
+              "json_pointer": "/claims/3/status",
+              "found": true,
+              "actual": "NOT_LIVE_EVIDENCE"
+            }
+          ]
+        },
+        {
+          "label": "cases.C01.assertion_refs[10]",
+          "path": "evidence/phase4_3/BASELINE_REVIEW.json",
+          "sha256": "cf488493d80aba6c0b57f5d34cdee32d5867b56ada8cfc1fb38504cfb0715365",
+          "expected_sha256": "cf488493d80aba6c0b57f5d34cdee32d5867b56ada8cfc1fb38504cfb0715365",
+          "assertions": [
+            {
+              "label": "cases.C01.assertion_refs[10]",
+              "json_pointer": "/missing_references/0/status",
+              "found": true,
+              "actual": "MISSING"
+            }
+          ]
+        },
+        {
+          "label": "cases.C01.assertion_refs[11]",
+          "path": "evidence/w17_correction.json",
+          "sha256": "b1bfcda3fe23d407e500b2f4fd2cca6ce7dccfa87d8bba9288f93f8d398a5f1d",
+          "expected_sha256": "b1bfcda3fe23d407e500b2f4fd2cca6ce7dccfa87d8bba9288f93f8d398a5f1d",
+          "assertions": [
+            {
+              "label": "cases.C01.assertion_refs[11]",
+              "json_pointer": "/corrections",
+              "found": true,
+              "actual": [
+                {
+                  "case_id": "T013",
+                  "name": "Measures & Axisymmetric 2*pi*r Weighting",
+                  "historical_status": "PASS",
+                  "corrected_status": "DEFECTIVE_IN_G3_2",
+                  "corrected_evidence_level": "UNIT_CONTRACT",
+                  "defect_summary": "All aggregates mapped to IntVolume regardless of geometric dimension; average denominator hardcoded to 1.0; std and rms formulas unimplemented; axisymmetric count boolean reflection only."
+                },
+                {
+                  "case_id": "T014",
+                  "name": "Complex Field Transformation Modes",
+                  "historical_status": "PASS",
+                  "corrected_status": "DEFECTIVE_IN_G3_2",
+                  "corrected_evidence_level": "UNIT_CONTRACT",
+                  "defect_summary": "_transform_complex_data silently padded 0.0 when imag extraction failed, masking complex data errors as real numbers."
+                },
+                {
+                  "case_id": "T021",
+                  "name": "SolutionSpec Inner/Outer & Time Indexing",
+                  "historical_status": "PASS",
+                  "corrected_status": "DEFECTIVE_IN_G3_2",
+                  "corrected_evidence_level": "UNIT_CONTRACT",
+                  "defect_summary": "Sliced outer array [expr][solnum][vertex] as inner-1, mistakenly slicing expression axis instead of solution step; hardcoded outer_indices=[1]."
+                },
+                {
+                  "case_id": "T049",
+                  "name": "Large Array Export & Chunk Pagination",
+                  "historical_status": "PASS",
+                  "corrected_status": "DEFECTIVE_IN_G3_2",
+                  "corrected_evidence_level": "UNIT_CONTRACT",
+                  "defect_summary": "Path(dest).resolve() unconstrained; failed evaluations exported successful empty files; verify_artifact_chunks loaded entire file in RAM; no bounded memory chunk stream."
+                },
+                {
+                  "case_id": "Gate_A",
+                  "name": "Identical-SHA Model Reopen",
+                  "historical_status": "PASS",
+                  "corrected_status": "MOCK_CONTROL_ONLY_IN_G3_2",
+                  "corrected_evidence_level": "CONTROL_UNIT",
+                  "defect_summary": "FakeReopenModel used static byte fixtures and string inequality comparisons; no live COMSOL file reopen without re-solve was performed."
+                }
+              ]
+            },
+            {
+              "label": "cases.C01.assertion_refs[11].assertions[0]",
+              "selected": [
+                {
+                  "case_id": "T013",
+                  "name": "Measures & Axisymmetric 2*pi*r Weighting",
+                  "historical_status": "PASS",
+                  "corrected_status": "DEFECTIVE_IN_G3_2",
+                  "corrected_evidence_level": "UNIT_CONTRACT",
+                  "defect_summary": "All aggregates mapped to IntVolume regardless of geometric dimension; average denominator hardcoded to 1.0; std and rms formulas unimplemented; axisymmetric count boolean reflection only."
+                },
+                {
+                  "case_id": "T014",
+                  "name": "Complex Field Transformation Modes",
+                  "historical_status": "PASS",
+                  "corrected_status": "DEFECTIVE_IN_G3_2",
+                  "corrected_evidence_level": "UNIT_CONTRACT",
+                  "defect_summary": "_transform_complex_data silently padded 0.0 when imag extraction failed, masking complex data errors as real numbers."
+                },
+                {
+                  "case_id": "T021",
+                  "name": "SolutionSpec Inner/Outer & Time Indexing",
+                  "historical_status": "PASS",
+                  "corrected_status": "DEFECTIVE_IN_G3_2",
+                  "corrected_evidence_level": "UNIT_CONTRACT",
+                  "defect_summary": "Sliced outer array [expr][solnum][vertex] as inner-1, mistakenly slicing expression axis instead of solution step; hardcoded outer_indices=[1]."
+                },
+                {
+                  "case_id": "T049",
+                  "name": "Large Array Export & Chunk Pagination",
+                  "historical_status": "PASS",
+                  "corrected_status": "DEFECTIVE_IN_G3_2",
+                  "corrected_evidence_level": "UNIT_CONTRACT",
+                  "defect_summary": "Path(dest).resolve() unconstrained; failed evaluations exported successful empty files; verify_artifact_chunks loaded entire file in RAM; no bounded memory chunk stream."
+                },
+                {
+                  "case_id": "Gate_A",
+                  "name": "Identical-SHA Model Reopen",
+                  "historical_status": "PASS",
+                  "corrected_status": "MOCK_CONTROL_ONLY_IN_G3_2",
+                  "corrected_evidence_level": "CONTROL_UNIT",
+                  "defect_summary": "FakeReopenModel used static byte fixtures and string inequality comparisons; no live COMSOL file reopen without re-solve was performed."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "label": "cases.C01.assertion_refs[12]",
+          "path": "audit/protected_history_final.json",
+          "sha256": "3967eae2bdec47e480b14ad0dd6d2a90a8aab3a64f84e7d99bdbbdd87e61b678",
+          "expected_sha256": "3967eae2bdec47e480b14ad0dd6d2a90a8aab3a64f84e7d99bdbbdd87e61b678",
+          "assertions": [
+            {
+              "label": "cases.C01.assertion_refs[12].assertions[0]",
+              "json_pointer": "/status",
+              "found": true,
+              "actual": "PASS"
+            },
+            {
+              "label": "cases.C01.assertion_refs[12].assertions[1]",
+              "json_pointer": "/file_count",
+              "found": true,
+              "actual": 596
+            },
+            {
+              "label": "cases.C01.assertion_refs[12].assertions[2]",
+              "json_pointer": "/pin",
+              "found": true,
+              "actual": "2cb4627924d1a3240818ea7cd00453d4bd2d2da8"
+            }
+          ]
         }
       ],
       "request_reply_assertion_refs": [],
@@ -486,6 +775,34 @@
           "path": "evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/current_history_vs_fresh_pin.json",
           "sha256": "941b8716d9549efe94c8281f78ff7e068d0882555794c7bdd14a0c412f2732ce",
           "expected_sha256": "941b8716d9549efe94c8281f78ff7e068d0882555794c7bdd14a0c412f2732ce",
+          "assertions": []
+        },
+        {
+          "label": "cases.C01.artifact_refs[1]",
+          "path": "audit/protected_history_final.json",
+          "sha256": "3967eae2bdec47e480b14ad0dd6d2a90a8aab3a64f84e7d99bdbbdd87e61b678",
+          "expected_sha256": "3967eae2bdec47e480b14ad0dd6d2a90a8aab3a64f84e7d99bdbbdd87e61b678",
+          "assertions": []
+        },
+        {
+          "label": "cases.C01.artifact_refs[2]",
+          "path": "evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/fresh_restore/RESTORE_RECEIPT.json",
+          "sha256": "e3c20e81026c96c04805e6fcde5e4135ba47a7f26b6886f24a8c9f86e4e6544e",
+          "expected_sha256": "e3c20e81026c96c04805e6fcde5e4135ba47a7f26b6886f24a8c9f86e4e6544e",
+          "assertions": []
+        },
+        {
+          "label": "cases.C01.artifact_refs[3]",
+          "path": "evidence/phase4_3/BASELINE_REVIEW.json",
+          "sha256": "cf488493d80aba6c0b57f5d34cdee32d5867b56ada8cfc1fb38504cfb0715365",
+          "expected_sha256": "cf488493d80aba6c0b57f5d34cdee32d5867b56ada8cfc1fb38504cfb0715365",
+          "assertions": []
+        },
+        {
+          "label": "cases.C01.artifact_refs[4]",
+          "path": "evidence/w17_correction.json",
+          "sha256": "b1bfcda3fe23d407e500b2f4fd2cca6ce7dccfa87d8bba9288f93f8d398a5f1d",
+          "expected_sha256": "b1bfcda3fe23d407e500b2f4fd2cca6ce7dccfa87d8bba9288f93f8d398a5f1d",
           "assertions": []
         }
       ],
@@ -3034,8 +3351,8 @@
         {
           "label": "cases.C17.artifact_refs[1]",
           "path": "evidence/phase4_3/runs/resumption_review_20260922T0719Z/recovery_pending.json",
-          "sha256": "290b89e8eb4a0fa06a8c29d5c802fd07ce5057b72c9e958af0b26f5a3b54d4bd",
-          "expected_sha256": "290b89e8eb4a0fa06a8c29d5c802fd07ce5057b72c9e958af0b26f5a3b54d4bd",
+          "sha256": "ef736a108ed36430c9efc50393ae0d3479ac8b0217653ed4a1a8e1c58884702f",
+          "expected_sha256": "ef736a108ed36430c9efc50393ae0d3479ac8b0217653ed4a1a8e1c58884702f",
           "assertions": []
         },
         {
@@ -3108,11 +3425,10 @@
   "overall_acceptance": false,
   "validation": {
     "errors": [
-      "proofs.recovery[0].assertions[0]: value mismatch (expected 'PASS', got 'NOT_RUN')",
       "proofs.remote_sync[0]: verified_pointer is not true",
       "proofs.remote_sync[0]: local/remote sync identities are missing"
     ],
     "warnings": [],
-    "error_count": 3
+    "error_count": 2
   }
 }

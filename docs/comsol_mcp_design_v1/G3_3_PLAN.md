@@ -1,3 +1,5 @@
+> Delivery update: repaired source snapshot `84ec0962a6424cd54c523770e4898bf42b7af645` has passed fresh extraction, wheel rebuild, and physically outside-source installation (64 source/package files, 272 operations, four Java resources; pip check clean). Remote synchronization and final documentary archive remain pending. See `evidence/phase4_3/runs/final_recovery_84ec096_20260922T095300Z/final_recovery_receipt.json`.
+
 # G3.3 independent acceptance plan
 
 Current status: **RUNTIME_VALIDATED_DELIVERY_PENDING** at source `a3f39b3022b417e16c3087b8b35f1daa06f30b8a` (tree `5a3e1b72e95a9df8892def2ca0994a8737508612`). The table completion regression is repaired. All eight fresh public-MCP final6 groups passed, full software validation passed with 1824 tests and one Windows-only skip, the source-outside wheel/resource check passed, and the final task-owned process inventory after cleanup passed with zero selected processes remaining. Repaired-source recovery/archive, clean publication, and ordinary remote synchronization remain pending; overall acceptance remains false. W18 is not authorized.
