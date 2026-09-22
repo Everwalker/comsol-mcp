@@ -1,53 +1,96 @@
 {
-  "schema": "comsol-mcp-g3/w17-correction/2",
-  "generated_at": "2026-09-22T01:45:44.232068+00:00",
-  "corrected_status": "IMPLEMENTED_WITH_OPEN_ACCEPTANCE_DEFECTS",
-  "source": {
-    "commit": "e14c946616f1b9c24c6faffa9f51f29f0e70a337",
-    "tree": "00536965d04f4dc5b35613be9c3db2a558bf4843",
-    "dirty": true
+ "schema": "comsol-mcp-g3/w17-correction/2",
+ "generated_at": "2026-09-22T01:45:44.232068+00:00",
+ "corrected_status": "IMPLEMENTED_WITH_OPEN_ACCEPTANCE_DEFECTS",
+ "source": {
+  "commit": "e14c946616f1b9c24c6faffa9f51f29f0e70a337",
+  "tree": "00536965d04f4dc5b35613be9c3db2a558bf4843",
+  "dirty": true
+ },
+ "previous_reviews_preserved": [
+  {
+   "path": "evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/prior_state/BASELINE_REVIEW.json",
+   "sha256": "037830c38c3eb05ae72249b360c499578f3e420729d8aba3934e647666a40b63"
   },
-  "previous_reviews_preserved": [
-    {
-      "path": "evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/prior_state/BASELINE_REVIEW.json",
-      "sha256": "037830c38c3eb05ae72249b360c499578f3e420729d8aba3934e647666a40b63"
-    },
-    {
-      "path": "evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/prior_state/w17_correction.json",
-      "sha256": "82db0acafff143744f54b47edecffa38d5bdb46e3c03b6ccef815220b8866cb7"
-    }
-  ],
-  "historical_ledger": {
-    "path": "evidence/w17_acceptance.json",
-    "sha256": "53daf14f51720f59e5fb8ed731083cd851b80bd3392c4fdeb7fee4a89a225197",
-    "preserved_byte_exact": true
-  },
-  "baseline_review": "evidence/phase4_3/BASELINE_REVIEW.json",
-  "active_failures": [
-    "M1 multi-expression standard deviation shape mismatch",
-    "Gate A full public protocol and exit-confirmed negatives not complete",
-    "C05-C15 remaining required live matrix not complete"
-  ],
-  "implemented_controls": [
-    "Artifact hardening targeted tests pass; real exports pending",
-    "Probe/typed CRUD 17 control tests pass; live matrix pending"
-  ],
-  "overall_acceptance": false,
-  "next_stage": "M1 repair before full M2-M4 acceptance; keep historical claims unchanged in originals",
-  "latest_independent_observations": {
-    "scope": "DEVELOPMENT_RUNS_NOT_FINAL_FROZEN_SOURCE_ACCEPTANCE",
-    "passed_numeric_observations": [
-      "C04 two-expression integral/average/std/rms",
-      "C05 3D surface full/subset and volume; 2D boundary full/subset",
-      "C06 analytic polynomial integral/average/std/rms and positive nonconstant weighted mean",
-      "C09 constant complex modes and varying complex mean"
-    ],
-    "failed_numeric_observation": {
-      "case": "C09 phase-before-std",
-      "actual": 5.698548667161188,
-      "expected": 0,
-      "source": "evidence/phase4_3/runs/public_numeric_20260922T0215Z/numerics/C09-phase-before-std.json"
-    },
-    "notes": "Source changing during development; no overall PASS. Additional coordinate and point-feature native probes in independent root findings."
+  {
+   "path": "evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/prior_state/w17_correction.json",
+   "sha256": "82db0acafff143744f54b47edecffa38d5bdb46e3c03b6ccef815220b8866cb7"
   }
+ ],
+ "historical_ledger": {
+  "path": "evidence/w17_acceptance.json",
+  "sha256": "53daf14f51720f59e5fb8ed731083cd851b80bd3392c4fdeb7fee4a89a225197",
+  "preserved_byte_exact": true
+ },
+ "baseline_review": "evidence/phase4_3/BASELINE_REVIEW.json",
+ "active_failures": [
+  "M1 multi-expression standard deviation shape mismatch",
+  "Gate A full public protocol and exit-confirmed negatives not complete",
+  "C05-C15 remaining required live matrix not complete"
+ ],
+ "implemented_controls": [
+  "Artifact hardening targeted tests pass; real exports pending",
+  "Probe/typed CRUD 17 control tests pass; live matrix pending"
+ ],
+ "overall_acceptance": false,
+ "next_stage": "M1 repair before full M2-M4 acceptance; keep historical claims unchanged in originals",
+ "latest_independent_observations": {
+  "scope": "DEVELOPMENT_RUNS_NOT_FINAL_FROZEN_SOURCE_ACCEPTANCE",
+  "passed_numeric_observations": [
+   "C04 two-expression integral/average/std/rms",
+   "C05 3D surface full/subset and volume; 2D boundary full/subset",
+   "C06 analytic polynomial integral/average/std/rms and positive nonconstant weighted mean",
+   "C09 constant complex modes and varying complex mean"
+  ],
+  "failed_numeric_observation": {
+   "case": "C09 phase-before-std",
+   "actual": 5.698548667161188,
+   "expected": 0,
+   "source": "evidence/phase4_3/runs/public_numeric_20260922T0215Z/numerics/C09-phase-before-std.json"
+  },
+  "notes": "Source changing during development; no overall PASS. Additional coordinate and point-feature native probes in independent root findings."
+ },
+ "corrections": [
+  {
+   "case_id": "T013",
+   "name": "Measures & Axisymmetric 2*pi*r Weighting",
+   "historical_status": "PASS",
+   "corrected_status": "DEFECTIVE_IN_G3_2",
+   "corrected_evidence_level": "UNIT_CONTRACT",
+   "defect_summary": "All aggregates mapped to IntVolume regardless of geometric dimension; average denominator hardcoded to 1.0; std and rms formulas unimplemented; axisymmetric count boolean reflection only."
+  },
+  {
+   "case_id": "T014",
+   "name": "Complex Field Transformation Modes",
+   "historical_status": "PASS",
+   "corrected_status": "DEFECTIVE_IN_G3_2",
+   "corrected_evidence_level": "UNIT_CONTRACT",
+   "defect_summary": "_transform_complex_data silently padded 0.0 when imag extraction failed, masking complex data errors as real numbers."
+  },
+  {
+   "case_id": "T021",
+   "name": "SolutionSpec Inner/Outer & Time Indexing",
+   "historical_status": "PASS",
+   "corrected_status": "DEFECTIVE_IN_G3_2",
+   "corrected_evidence_level": "UNIT_CONTRACT",
+   "defect_summary": "Sliced outer array [expr][solnum][vertex] as inner-1, mistakenly slicing expression axis instead of solution step; hardcoded outer_indices=[1]."
+  },
+  {
+   "case_id": "T049",
+   "name": "Large Array Export & Chunk Pagination",
+   "historical_status": "PASS",
+   "corrected_status": "DEFECTIVE_IN_G3_2",
+   "corrected_evidence_level": "UNIT_CONTRACT",
+   "defect_summary": "Path(dest).resolve() unconstrained; failed evaluations exported successful empty files; verify_artifact_chunks loaded entire file in RAM; no bounded memory chunk stream."
+  },
+  {
+   "case_id": "Gate_A",
+   "name": "Identical-SHA Model Reopen",
+   "historical_status": "PASS",
+   "corrected_status": "MOCK_CONTROL_ONLY_IN_G3_2",
+   "corrected_evidence_level": "CONTROL_UNIT",
+   "defect_summary": "FakeReopenModel used static byte fixtures and string inequality comparisons; no live COMSOL file reopen without re-solve was performed."
+  }
+ ],
+ "corrections_note": "Per-case evidence-level corrections. Restored after the 2026-09-22 acceptance remediation rewrote this ledger around current status: the C01 acceptance case (and any reader) needs the per-case downgrades here, not only in the historical narrative. Gate_A is CONTROL_UNIT because its delivered receipts were tautological self-comparisons; T013/T014/T021/T049 are UNIT_CONTRACT because their delivered evidence came from mocks, not from the engine."
 }

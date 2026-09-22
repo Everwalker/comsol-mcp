@@ -2,10 +2,10 @@
   "schema": "comsol-mcp-g3/phase4_3-acceptance/1",
   "goal": "NEXT_GOAL.md: G3.3 clean-room recovery, evidence correction, and W17 verification",
   "status": "ACCEPTANCE_FAILED",
-  "run_id": "frozen_19case_20260922T054616Z",
-  "run_dir": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T054616Z",
-  "generated_at": "2026-09-22T05:46:40.854393+00:00",
-  "elapsed_seconds": 23.918539416976273,
+  "run_id": "frozen_19case_20260922T054301Z",
+  "run_dir": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T054301Z",
+  "generated_at": "2026-09-22T05:43:28.473148+00:00",
+  "elapsed_seconds": 26.805072125047445,
   "platform": "darwin",
   "python_version": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.3.34.2)]",
   "comsol_version": null,
@@ -14,30 +14,15 @@
     "head": "cccf32e55c56b264848d6425023f89316a3ed2d6",
     "tree": "a1c7b1d9643c7debfd18f654aaf6312680cd1a8b",
     "branch": "acceptance/independent-20260922",
-    "dirty_paths": [
-      "evidence/phase4_3_acceptance.json",
-      "evidence/w17_correction.json",
-      "tests/run_g3_3_live_acceptance.py",
-      "evidence/phase4_3/runs/frozen_19case_20260922T054301Z/",
-      "evidence/phase4_3/runs/frozen_m1_20260922T054301Z/",
-      "evidence/phase4_3/runs/frozen_numeric_20260922T054301Z/"
-    ],
-    "tracked_dirty_paths": [
-      "evidence/phase4_3_acceptance.json",
-      "evidence/w17_correction.json",
-      "tests/run_g3_3_live_acceptance.py"
-    ],
-    "untracked_paths": [
-      "evidence/phase4_3/runs/frozen_19case_20260922T054301Z/",
-      "evidence/phase4_3/runs/frozen_m1_20260922T054301Z/",
-      "evidence/phase4_3/runs/frozen_numeric_20260922T054301Z/"
-    ],
+    "dirty_paths": [],
+    "tracked_dirty_paths": [],
+    "untracked_paths": [],
     "untracked_paths_in_source_tree": [],
     "tracked_files": 5806,
     "tracked_files_listed": 5806,
     "tracked_files_present_in_worktree": 5806,
     "source_blob_map_sha256": "e3b5115e93562881b733fadca40be394768daafc13fc5d14af88629fbe880186",
-    "captured_at": "2026-09-22T05:46:20.331489+00:00"
+    "captured_at": "2026-09-22T05:43:05.060630+00:00"
   },
   "source_identity": {
     "repository": "Everwalker/comsol-mcp (delivered source workpack)",
@@ -53,11 +38,11 @@
     "file_sha256": "c32b15db2ee8492983412e32c81aef871f7e305e62001a41b1763a17fc4c9dc5",
     "note": "D6: the dependency lock installs this tree; this file is what a recovering agent compares a fresh clone against"
   },
-  "runner_sha256": "97a827ed3515a3ea03ef90f6527c55c0a4a303a45eb40aa69230332e26f479c2",
+  "runner_sha256": "0c86fa5475785cc90a3e3f65eeebf050a578f91b7c63351f38b731f88123c6da",
   "runner_command": [
     "tests/run_g3_3_live_acceptance.py",
     "--run-dir",
-    "evidence/phase4_3/runs/frozen_19case_20260922T054616Z"
+    "evidence/phase4_3/runs/frozen_19case_20260922T054301Z"
   ],
   "total_cases": 18,
   "request_reply_trail": {
@@ -88,8 +73,8 @@
       "error": "unsupported operand type(s) for -: 'list' and 'float'"
     }
   ],
-  "passed_cases": 5,
-  "failed_cases": 13,
+  "passed_cases": 4,
+  "failed_cases": 14,
   "scope": {
     "verified_workstream": "W17",
     "stop_boundary": "W17 (do not advance to W18-W26)",
@@ -105,29 +90,51 @@
   "cases": {
     "C00": {
       "case_id": "C00",
-      "name": "Clean Recovery",
-      "status": "FAIL",
+      "name": "Clean Recovery, Source Binding & Wheel Verification",
+      "status": "PASS",
       "evidence_level": "protocol",
-      "error": "C00 requires a committed source tree: the acceptance ledger has to be bound to a commit, but these tracked paths are modified: ['evidence/phase4_3_acceptance.json', 'evidence/w17_correction.json', 'tests/run_g3_3_live_acceptance.py']",
-      "details": {},
-      "timestamp": "2026-09-22T05:46:20.331674+00:00"
+      "error": null,
+      "details": {
+        "source_manifest": {
+          "head": "cccf32e55c56b264848d6425023f89316a3ed2d6",
+          "tree": "a1c7b1d9643c7debfd18f654aaf6312680cd1a8b",
+          "branch": "acceptance/independent-20260922",
+          "dirty_paths": [],
+          "tracked_dirty_paths": [],
+          "untracked_paths": [],
+          "untracked_paths_in_source_tree": [],
+          "tracked_files": 5806,
+          "tracked_files_listed": 5806,
+          "tracked_files_present_in_worktree": 5806,
+          "source_blob_map_sha256": "e3b5115e93562881b733fadca40be394768daafc13fc5d14af88629fbe880186",
+          "captured_at": "2026-09-22T05:43:05.060630+00:00"
+        },
+        "run_evidence_paths_excluded_from_dirty_check": [
+          "evidence/phase4_3/runs/frozen_19case_20260922T054301Z"
+        ],
+        "pack_pin_commit": "2cb4627924d1a3240818ea7cd00453d4bd2d2da8",
+        "pack_pin_tree": "dd3095e89c640c19aeb151cd0e8efe4af3c55802",
+        "pack_inventory_file_count": 3580,
+        "pack_inventory_source_commit": "2cb4627924d1a3240818ea7cd00453d4bd2d2da8",
+        "tracked_files": 5806,
+        "tracked_file_count_source": "git ls-tree -r HEAD (actual list)",
+        "wheel_path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T054301Z/wheel_dist/comsol_mcp-0.1.9-py3-none-any.whl",
+        "wheel_sha256": "f5dbd151abe1e7b40f61126de44b6898ebc988925aa70e08caf263f37bd6daf7",
+        "out_of_tree_import": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T054301Z/test_venv/lib/python3.14/site-packages/comsol_mcp/__init__.py",
+        "out_of_tree_import_cwd": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T054301Z/neutral_cwd",
+        "import_source_is_repository_package": false,
+        "import_resolved_into_fresh_venv": true
+      },
+      "timestamp": "2026-09-22T05:43:09.040796+00:00"
     },
     "C01": {
       "case_id": "C01",
-      "name": "Evidence Correction & Ledger Auditing",
-      "status": "PASS",
+      "name": "Evidence Correction",
+      "status": "FAIL",
       "evidence_level": "static",
-      "error": null,
-      "details": {
-        "phase4_1_sha256": "a2e91f37d021274c5a5f1321f03961c57271e1e614d17f23d3b0ef6627335278",
-        "phase4_2_sha256": "741e702cf019bfede8564cc032bccdbd30c83ee830ec46ce6a3e16356faa52c4",
-        "w17_acceptance_sha256": "53daf14f51720f59e5fb8ed731083cd851b80bd3392c4fdeb7fee4a89a225197",
-        "correction_ledger": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/w17_correction.json",
-        "baseline_review": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/BASELINE_REVIEW.json",
-        "reopen_test_level": "CONTROL_UNIT",
-        "w17_test_level": "UNIT_CONTRACT"
-      },
-      "timestamp": "2026-09-22T05:46:20.333029+00:00"
+      "error": "'corrections'",
+      "details": {},
+      "timestamp": "2026-09-22T05:43:09.042646+00:00"
     },
     "C02": {
       "case_id": "C02",
@@ -140,7 +147,7 @@
         "export_refusal_verified": true,
         "fail_closed_verified": true
       },
-      "timestamp": "2026-09-22T05:46:20.335090+00:00"
+      "timestamp": "2026-09-22T05:43:09.044144+00:00"
     },
     "C03": {
       "case_id": "C03",
@@ -148,11 +155,8 @@
       "status": "FAIL",
       "evidence_level": "protocol",
       "error": "TypeError: unsupported operand type(s) for -: 'list' and 'float'",
-      "details": {
-        "traceback": "Traceback (most recent call last):\n  File \"/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tests/run_g3_3_live_acceptance.py\", line 3446, in run_case_guarded\n    run_case()\n    ~~~~~~~~^^\n  File \"/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tests/run_g3_3_live_acceptance.py\", line 1713, in run_c03\n    raise exc\n  File \"/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tests/run_g3_3_live_acceptance.py\", line 1316, in run_c03\n    assert abs(vals_a[0] - 308.15) < 1e-3\n               ~~~~~~~~~~^~~~~~~~\nTypeError: unsupported operand type(s) for -: 'list' and 'float'\n",
-        "error_type": "TypeError"
-      },
-      "timestamp": "2026-09-22T05:46:38.019522+00:00"
+      "details": {},
+      "timestamp": "2026-09-22T05:43:27.282396+00:00"
     },
     "C04": {
       "case_id": "C04",
@@ -161,7 +165,7 @@
       "evidence_level": "numerical",
       "error": "bound model 'reopen_c04' is unavailable",
       "details": {},
-      "timestamp": "2026-09-22T05:46:38.020023+00:00"
+      "timestamp": "2026-09-22T05:43:27.282813+00:00"
     },
     "C05": {
       "case_id": "C05",
@@ -170,7 +174,7 @@
       "evidence_level": "numerical",
       "error": "bound model 'reopen_c05' is unavailable",
       "details": {},
-      "timestamp": "2026-09-22T05:46:38.020120+00:00"
+      "timestamp": "2026-09-22T05:43:27.282899+00:00"
     },
     "C06": {
       "case_id": "C06",
@@ -179,7 +183,7 @@
       "evidence_level": "numerical",
       "error": "bound model 'reopen_c06' is unavailable",
       "details": {},
-      "timestamp": "2026-09-22T05:46:38.020196+00:00"
+      "timestamp": "2026-09-22T05:43:27.282970+00:00"
     },
     "C07": {
       "case_id": "C07",
@@ -188,7 +192,7 @@
       "evidence_level": "numerical",
       "error": "bound model 'reopen_c07' is unavailable",
       "details": {},
-      "timestamp": "2026-09-22T05:46:38.020267+00:00"
+      "timestamp": "2026-09-22T05:43:27.283029+00:00"
     },
     "C08": {
       "case_id": "C08",
@@ -197,7 +201,7 @@
       "evidence_level": "numerical",
       "error": "bound model 'reopen_b' is unavailable",
       "details": {},
-      "timestamp": "2026-09-22T05:46:38.020358+00:00"
+      "timestamp": "2026-09-22T05:43:27.283131+00:00"
     },
     "C09": {
       "case_id": "C09",
@@ -206,7 +210,7 @@
       "evidence_level": "numerical",
       "error": "bound model 'reopen_c06' is unavailable",
       "details": {},
-      "timestamp": "2026-09-22T05:46:38.020482+00:00"
+      "timestamp": "2026-09-22T05:43:27.283199+00:00"
     },
     "C10": {
       "case_id": "C10",
@@ -215,7 +219,7 @@
       "evidence_level": "numerical",
       "error": "bound model 'reopen_c06' is unavailable",
       "details": {},
-      "timestamp": "2026-09-22T05:46:38.025562+00:00"
+      "timestamp": "2026-09-22T05:43:27.288379+00:00"
     },
     "C11": {
       "case_id": "C11",
@@ -224,92 +228,25 @@
       "evidence_level": "numerical",
       "error": "'NoneType' object has no attribute 'client'",
       "details": {},
-      "timestamp": "2026-09-22T05:46:38.025642+00:00"
+      "timestamp": "2026-09-22T05:43:27.288474+00:00"
     },
     "C12": {
       "case_id": "C12",
-      "name": "Export Path Traversal Protection & Atomic Rollback",
-      "status": "PASS",
+      "name": "Export Security",
+      "status": "FAIL",
       "evidence_level": "protocol",
-      "error": null,
-      "details": {
-        "traversal_rejection": {
-          "rejected": true,
-          "error_code": "ACCESS_VIOLATION",
-          "message": "Export destination '../../etc/passwd' escapes authorized project root /Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository"
-        },
-        "export_failure_rejection": {
-          "rejected": true,
-          "error_code": "EXPORT_FAILED",
-          "message": "evaluation status is not publishable: {'ok': False, 'engine_error': 'SIMULATED_FAILURE'}"
-        },
-        "absolute_destination_rejection": {
-          "rejected": true,
-          "error_code": "ACCESS_VIOLATION"
-        },
-        "atomic_rollback": {
-          "rejected": true,
-          "error_type": "AtomicSaveError",
-          "message": "Candidate save callback failed: simulated engine failure during export"
-        },
-        "writer_reached": true,
-        "writer_staged_content": "PARTIAL_CONTENT",
-        "preserved_original_sha256": "1d545b940633ab0ee38f4a06a4bd3a199c4b7ec83373e0a56d8454f862399628",
-        "retained_failure_candidate": [
-          ".preserved.txt.3cfea65ceedb4012a36e9cad33c5476d.tmp.mph"
-        ],
-        "retained_candidate_policy": "_atomic_save keeps the failed candidate as incident evidence; ACCEPTANCE.md C12 requires the original hash to survive, not its removal",
-        "artifacts_dir_entries_before": [
-          "bench_c04_solved.mph",
-          "bench_c05_solved.mph",
-          "bench_c06_solved.mph",
-          "bench_c07_solved.mph",
-          "chain_a_solved.mph",
-          "chain_b_solved.mph",
-          "chain_c_solved.mph",
-          "preserved.txt"
-        ],
-        "successful_publish": {
-          "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T054616Z/artifacts/atomic_success.mph",
-          "size": 128,
-          "sha256": "3b45f19f2250849aea5533dee1431ae4fa918c73c9e3f2dd311c5aac40f17d15",
-          "checkpoint": {
-            "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T054616Z/artifacts/atomic_success.mph",
-            "size": 128,
-            "sha256": "3b45f19f2250849aea5533dee1431ae4fa918c73c9e3f2dd311c5aac40f17d15",
-            "verified": true,
-            "publish_mode": "atomic_replace",
-            "parent_fsync": true
-          },
-          "artifact": {
-            "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T054616Z/artifacts/atomic_success.mph",
-            "size": 128,
-            "sha256": "3b45f19f2250849aea5533dee1431ae4fa918c73c9e3f2dd311c5aac40f17d15",
-            "verified": true
-          }
-        },
-        "candidates_after_success": [
-          ".preserved.txt.3cfea65ceedb4012a36e9cad33c5476d.tmp.mph"
-        ],
-        "published_artifact": {
-          "file_path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/g2_artifacts/results/result_cc37088ccadb4329a435e1dd36d10996.json",
-          "sha256": "e2226b0e733ff8a7db77ae4f82a11c526ad03f3dfc872e896be727b9eff9de34",
-          "byte_size": 103,
-          "inside_project_root": true,
-          "candidates_left": []
-        },
-        "export_root_policy": "the delivered store admits the project root plus the process temp tree; anything else is refused with ACCESS_VIOLATION before a file is created"
-      },
-      "timestamp": "2026-09-22T05:46:38.032618+00:00"
+      "error": "ArtifactStore requires an explicit trusted project root; cwd is not an authorization source",
+      "details": {},
+      "timestamp": "2026-09-22T05:43:27.292955+00:00"
     },
     "C13": {
       "case_id": "C13",
       "name": "Chunk Streaming",
       "status": "FAIL",
       "evidence_level": "protocol",
-      "error": "artifact operations require a trusted Worker project root; cwd is not an authorization source",
+      "error": "ArtifactStore requires an explicit trusted project root; cwd is not an authorization source",
       "details": {},
-      "timestamp": "2026-09-22T05:46:38.092194+00:00"
+      "timestamp": "2026-09-22T05:43:27.303669+00:00"
     },
     "C14": {
       "case_id": "C14",
@@ -318,7 +255,7 @@
       "evidence_level": "numerical",
       "error": "bound model 'reopen_c06' is unavailable",
       "details": {},
-      "timestamp": "2026-09-22T05:46:38.092448+00:00"
+      "timestamp": "2026-09-22T05:43:27.304067+00:00"
     },
     "C15": {
       "case_id": "C15",
@@ -327,7 +264,7 @@
       "evidence_level": "protocol",
       "error": "bound model 'reopen_c04' is unavailable",
       "details": {},
-      "timestamp": "2026-09-22T05:46:38.092483+00:00"
+      "timestamp": "2026-09-22T05:43:27.304138+00:00"
     },
     "C16": {
       "case_id": "C16",
@@ -354,8 +291,8 @@
           "lock_installs_delivered_tree": true,
           "matches_the_ledger_manifest": true
         },
-        "wheel_file": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T054616Z/c16_wheel_dist/comsol_mcp-0.1.9-py3-none-any.whl",
-        "wheel_sha256": "02273c429b084fa3d25b6c8fa7e79695f031592e481c4aa64e8b5721f4ec5d05",
+        "wheel_file": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T054301Z/wheel_dist/comsol_mcp-0.1.9-py3-none-any.whl",
+        "wheel_sha256": "f5dbd151abe1e7b40f61126de44b6898ebc988925aa70e08caf263f37bd6daf7",
         "wheel_resource_manifest_source": "read out of the built wheel with zipfile",
         "wheel_resources": {
           "comsol_mcp/data/g2/02_ACTION_CATALOG.json": {
@@ -381,7 +318,7 @@
           "$schema"
         ]
       },
-      "timestamp": "2026-09-22T05:46:39.716951+00:00"
+      "timestamp": "2026-09-22T05:43:27.335249+00:00"
     },
     "C17": {
       "case_id": "C17",
@@ -390,12 +327,12 @@
       "evidence_level": "protocol",
       "error": null,
       "details": {
-        "isolated_server_pid": 85650,
+        "isolated_server_pid": 84389,
         "isolated_server_alive_after_teardown": false,
         "isolated_server_stopped": true,
         "lock_files_remaining": [
           {
-            "name": "endpoint-214629450729717cfc9b8655bb53d008c26d7d043fa32e39f1e0c1b858c4eefb.lock",
+            "name": "endpoint-75e3d483696add38fad71a4b89075435087a08c44e469929e7bd134e4fdd92fa.lock",
             "size": 0,
             "sha256": null,
             "held": false
@@ -408,7 +345,7 @@
         "status_tag_derived_from": "every case recorded in this run",
         "cases_recorded_before_teardown": 17,
         "failed_cases": [
-          "C00",
+          "C01",
           "C03",
           "C04",
           "C05",
@@ -418,6 +355,7 @@
           "C09",
           "C10",
           "C11",
+          "C12",
           "C13",
           "C14",
           "C15"
@@ -425,7 +363,7 @@
         "engine_reported_comsol_version": null,
         "stop_boundary": "W17 (not entering W18)"
       },
-      "timestamp": "2026-09-22T05:46:40.853612+00:00"
+      "timestamp": "2026-09-22T05:43:28.472820+00:00"
     }
   }
 }

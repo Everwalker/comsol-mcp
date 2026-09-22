@@ -1,15 +1,6 @@
 {
-  "schema": "comsol-mcp-g3/phase4_3-acceptance/1",
-  "goal": "NEXT_GOAL.md: G3.3 clean-room recovery, evidence correction, and W17 verification",
-  "status": "ACCEPTANCE_FAILED",
   "run_id": "frozen_19case_20260922T054616Z",
-  "run_dir": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_19case_20260922T054616Z",
-  "generated_at": "2026-09-22T05:46:40.854393+00:00",
-  "elapsed_seconds": 23.918539416976273,
-  "platform": "darwin",
-  "python_version": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.3.34.2)]",
-  "comsol_version": null,
-  "comsol_version_source": "unavailable: the engine did not report a version in this run",
+  "generated_at": "2026-09-22T05:46:40.857140+00:00",
   "source_manifest": {
     "head": "cccf32e55c56b264848d6425023f89316a3ed2d6",
     "tree": "a1c7b1d9643c7debfd18f654aaf6312680cd1a8b",
@@ -39,71 +30,16 @@
     "source_blob_map_sha256": "e3b5115e93562881b733fadca40be394768daafc13fc5d14af88629fbe880186",
     "captured_at": "2026-09-22T05:46:20.331489+00:00"
   },
-  "source_identity": {
-    "repository": "Everwalker/comsol-mcp (delivered source workpack)",
-    "commit": "cccf32e55c56b264848d6425023f89316a3ed2d6",
-    "tree": "a1c7b1d9643c7debfd18f654aaf6312680cd1a8b",
-    "branch": "acceptance/independent-20260922",
-    "tracked_files": 5806,
-    "source_blob_map_sha256": "e3b5115e93562881b733fadca40be394768daafc13fc5d14af88629fbe880186",
-    "lock": "repository/constraints-macos-arm64-py313.txt installs this tree via '-e .'",
-    "how_to_check": "In the recovered clone: git rev-parse HEAD == commit, git rev-parse 'HEAD^{tree}' == tree, git ls-files | wc -l == tracked_files",
-    "regenerated": "written at the start of every acceptance run; records the commit under test",
-    "file": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/SOURCE_TREE_IDENTITY.json",
-    "file_sha256": "c32b15db2ee8492983412e32c81aef871f7e305e62001a41b1763a17fc4c9dc5",
-    "note": "D6: the dependency lock installs this tree; this file is what a recovering agent compares a fresh clone against"
-  },
-  "runner_sha256": "97a827ed3515a3ea03ef90f6527c55c0a4a303a45eb40aa69230332e26f479c2",
-  "runner_command": [
-    "tests/run_g3_3_live_acceptance.py",
-    "--run-dir",
-    "evidence/phase4_3/runs/frozen_19case_20260922T054616Z"
-  ],
-  "total_cases": 18,
-  "request_reply_trail": {
-    "file": "request_reply_trail.jsonl",
-    "records": 556,
-    "truncated": false,
-    "note": "one record per worker request event: the 'submitted' request and the matching 'observed' reply (or 'unknown'/'unresponsive' when none arrived), each with the redacted payload and a request hash.  §11 asks for a per-run request/reply record; the in-process operation calls the runner makes are in assertions.json."
-  },
-  "numeric_evidence": {
-    "file": "numeric.json",
-    "cases": [
-      "C04",
-      "C05",
-      "C06",
-      "C07",
-      "C08",
-      "C09",
-      "C10",
-      "C11",
-      "C14"
-    ],
-    "note": "numeric checks, comparisons, tolerances and peak-memory records extracted from the case details"
-  },
   "aborted_cases": [
     {
       "case_id": "C03",
       "error_type": "TypeError",
-      "error": "unsupported operand type(s) for -: 'list' and 'float'"
+      "error": "unsupported operand type(s) for -: 'list' and 'float'",
+      "traceback": "Traceback (most recent call last):\n  File \"/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tests/run_g3_3_live_acceptance.py\", line 3446, in run_case_guarded\n    run_case()\n    ~~~~~~~~^^\n  File \"/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tests/run_g3_3_live_acceptance.py\", line 1713, in run_c03\n    raise exc\n  File \"/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/tests/run_g3_3_live_acceptance.py\", line 1316, in run_c03\n    assert abs(vals_a[0] - 308.15) < 1e-3\n               ~~~~~~~~~~^~~~~~~~\nTypeError: unsupported operand type(s) for -: 'list' and 'float'\n"
     }
   ],
-  "passed_cases": 5,
-  "failed_cases": 13,
-  "scope": {
-    "verified_workstream": "W17",
-    "stop_boundary": "W17 (do not advance to W18-W26)",
-    "target_platform": "macOS-aarch64 (Apple Silicon commercial installation)",
-    "unverified_platforms": [
-      "windows",
-      "linux",
-      "intel-mac",
-      "comsol-6.3",
-      "gui"
-    ]
-  },
-  "cases": {
-    "C00": {
+  "assertions": [
+    {
       "case_id": "C00",
       "name": "Clean Recovery",
       "status": "FAIL",
@@ -112,7 +48,7 @@
       "details": {},
       "timestamp": "2026-09-22T05:46:20.331674+00:00"
     },
-    "C01": {
+    {
       "case_id": "C01",
       "name": "Evidence Correction & Ledger Auditing",
       "status": "PASS",
@@ -129,7 +65,7 @@
       },
       "timestamp": "2026-09-22T05:46:20.333029+00:00"
     },
-    "C02": {
+    {
       "case_id": "C02",
       "name": "Dangerous States & Safe Refusal",
       "status": "PASS",
@@ -142,7 +78,7 @@
       },
       "timestamp": "2026-09-22T05:46:20.335090+00:00"
     },
-    "C03": {
+    {
       "case_id": "C03",
       "name": "C03 (aborted before recording)",
       "status": "FAIL",
@@ -154,7 +90,7 @@
       },
       "timestamp": "2026-09-22T05:46:38.019522+00:00"
     },
-    "C04": {
+    {
       "case_id": "C04",
       "name": "Constant Field Statistics",
       "status": "FAIL",
@@ -163,7 +99,7 @@
       "details": {},
       "timestamp": "2026-09-22T05:46:38.020023+00:00"
     },
-    "C05": {
+    {
       "case_id": "C05",
       "name": "Multi-dimensional Support",
       "status": "FAIL",
@@ -172,7 +108,7 @@
       "details": {},
       "timestamp": "2026-09-22T05:46:38.020120+00:00"
     },
-    "C06": {
+    {
       "case_id": "C06",
       "name": "Non-Uniform Field",
       "status": "FAIL",
@@ -181,7 +117,7 @@
       "details": {},
       "timestamp": "2026-09-22T05:46:38.020196+00:00"
     },
-    "C07": {
+    {
       "case_id": "C07",
       "name": "Axisymmetric Cylinder",
       "status": "FAIL",
@@ -190,7 +126,7 @@
       "details": {},
       "timestamp": "2026-09-22T05:46:38.020267+00:00"
     },
-    "C08": {
+    {
       "case_id": "C08",
       "name": "Solution Axis Slicing",
       "status": "FAIL",
@@ -199,7 +135,7 @@
       "details": {},
       "timestamp": "2026-09-22T05:46:38.020358+00:00"
     },
-    "C09": {
+    {
       "case_id": "C09",
       "name": "Complex Field Transformations",
       "status": "FAIL",
@@ -208,7 +144,7 @@
       "details": {},
       "timestamp": "2026-09-22T05:46:38.020482+00:00"
     },
-    "C10": {
+    {
       "case_id": "C10",
       "name": "Point Coordinates Scaling",
       "status": "FAIL",
@@ -217,7 +153,7 @@
       "details": {},
       "timestamp": "2026-09-22T05:46:38.025562+00:00"
     },
-    "C11": {
+    {
       "case_id": "C11",
       "name": "Dataset Graph & CutPoint2D",
       "status": "FAIL",
@@ -226,7 +162,7 @@
       "details": {},
       "timestamp": "2026-09-22T05:46:38.025642+00:00"
     },
-    "C12": {
+    {
       "case_id": "C12",
       "name": "Export Path Traversal Protection & Atomic Rollback",
       "status": "PASS",
@@ -302,7 +238,7 @@
       },
       "timestamp": "2026-09-22T05:46:38.032618+00:00"
     },
-    "C13": {
+    {
       "case_id": "C13",
       "name": "Chunk Streaming",
       "status": "FAIL",
@@ -311,7 +247,7 @@
       "details": {},
       "timestamp": "2026-09-22T05:46:38.092194+00:00"
     },
-    "C14": {
+    {
       "case_id": "C14",
       "name": "Probe Separation",
       "status": "FAIL",
@@ -320,7 +256,7 @@
       "details": {},
       "timestamp": "2026-09-22T05:46:38.092448+00:00"
     },
-    "C15": {
+    {
       "case_id": "C15",
       "name": "Control Responsiveness",
       "status": "FAIL",
@@ -329,7 +265,7 @@
       "details": {},
       "timestamp": "2026-09-22T05:46:38.092483+00:00"
     },
-    "C16": {
+    {
       "case_id": "C16",
       "name": "Packaging & Dependencies Lock",
       "status": "PASS",
@@ -383,7 +319,7 @@
       },
       "timestamp": "2026-09-22T05:46:39.716951+00:00"
     },
-    "C17": {
+    {
       "case_id": "C17",
       "name": "Teardown & Verification Ledger Finalization",
       "status": "PASS",
@@ -427,5 +363,5 @@
       },
       "timestamp": "2026-09-22T05:46:40.853612+00:00"
     }
-  }
+  ]
 }

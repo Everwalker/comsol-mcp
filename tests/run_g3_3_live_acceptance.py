@@ -979,7 +979,11 @@ public final class ChainABuilder {
                 "coordinate_unit": "m",
                 "frame": "spatial",
             })
-            t_a = pre_a["values"][0][0]
+            # The published point array is nested (expression / solution step / point);
+            # flatten it and state the expected shape instead of indexing a fixed
+            # depth, so an extra nesting level cannot silently mis-select a value.
+            t_a = _flatten_scalars(pre_a["values"])
+            assert len(t_a) == 3, f"chain A pre-save read returned {len(t_a)} values: {t_a}"
             mph_a = self.artifacts_dir / "chain_a_solved.mph"
             model_a.save(str(mph_a))
             sha_a = _sha256(mph_a)
@@ -1312,7 +1316,8 @@ public final class C07Builder {
                 "coordinate_unit": "m",
                 "frame": "spatial",
             })
-            vals_a = read_a["values"][0][0]
+            vals_a = _flatten_scalars(read_a["values"])
+            assert len(vals_a) == 3, f"chain A reopened read returned {len(vals_a)} values: {vals_a}"
             assert abs(vals_a[0] - 308.15) < 1e-3
             assert abs(vals_a[1] - 323.15) < 1e-3
             assert abs(vals_a[2] - 338.15) < 1e-3
@@ -2690,7 +2695,7 @@ public final class C07Builder {
             #    atomically published (C13 completes the read side of the same contract).
             from comsol_mcp._g3_results import _export_to_artifact
 
-            published = _export_to_artifact({"x": [1.0, 2.0, 3.0]}, "c12")
+            published = _export_to_artifact({"x": [1.0, 2.0, 3.0]}, "c12", project_root=ROOT)
             published_ref = Path(published["artifact_ref"]).resolve()
             assert published_ref.is_relative_to(ROOT.resolve()), published_ref
             assert _sha256(published_ref) == published["sha256"]
@@ -2761,7 +2766,9 @@ public final class C07Builder {
             #    stay inside the project root, the pinned digest must match the bytes on
             #    disk, and an atomic publish must leave no candidate behind.
             payload = {"x": [i * 0.5 for i in range(20000)], "y": list(range(20000))}
-            meta = _export_to_artifact(payload, "c13", eval_context={"requested_storage": "auto"})
+            meta = _export_to_artifact(
+                payload, "c13", eval_context={"requested_storage": "auto"}, project_root=ROOT
+            )
             ref = Path(meta["artifact_ref"]).resolve()
             file_size = meta["byte_size"]
             pinned = meta["sha256"]
@@ -2858,7 +2865,8 @@ public final class C07Builder {
                 return peak / 1024
 
             big_meta = _export_to_artifact(
-                {"x": [i * 0.5 for i in range(200000)], "y": list(range(200000))}, "c13big"
+                {"x": [i * 0.5 for i in range(200000)], "y": list(range(200000))}, "c13big",
+                project_root=ROOT,
             )
             big_ref = Path(big_meta["artifact_ref"]).resolve()
             big_size = big_meta["byte_size"]
@@ -3452,7 +3460,12 @@ public final class C07Builder {
             self.aborts.append(aborted)
             existing = self.cases.get(case_id)
             if existing is None:
-                details: dict[str, Any] = {}
+                # The traceback belongs in the ledger: an aborted case must be
+                # diagnosable from the recorded evidence alone.
+                details: dict[str, Any] = {
+                    "traceback": aborted["traceback"],
+                    "error_type": aborted["error_type"],
+                }
                 # A case that depends on the artifacts C03 registers fails here when C03
                 # itself aborted; say so, so a reader of the ledger can tell a cascade from
                 # an independent defect.
