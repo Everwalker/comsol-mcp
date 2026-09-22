@@ -42,6 +42,28 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _first_number(value: Any) -> float | None:
+    """Return the first finite number inside an arbitrarily nested list, or None.
+
+    The engine answers with the expression/point nesting it used, and a cleared solution
+    can be empty at any depth; booleans are not numbers here.
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            return None
+        return number if math.isfinite(number) else None
+    if isinstance(value, (list, tuple)):
+        for item in value:
+            found = _first_number(item)
+            if found is not None:
+                return found
+    return None
+
+
 def _read_derived_value_tags(model: Any) -> list[str] | None:
     """List the derived-value (result/numerical) node tags of a reopened model.
 
@@ -259,29 +281,18 @@ def verify_reopen(
                 {"expression": expr, "error": str(exc)},
             ) from exc
 
-        # Extract scalar value from result
-        actual_val: float | None = None
-        if isinstance(raw_res, (int, float)):
-            actual_val = float(raw_res)
-        elif isinstance(raw_res, list):
-            if not raw_res or not raw_res[0]:
+        # Extract scalar value from result.  The engine nests the answer by expression and
+        # by point, and a cleared solution can come back empty at any depth ([[[]]] on
+        # COMSOL 6.4 build 293); scanning for the first number keeps a deeper empty from
+        # crashing the verifier with a TypeError instead of the contract's error code.
+        actual_val: float | None = _first_number(raw_res)
+        if actual_val is None:
+            if isinstance(raw_res, (list, tuple)):
                 raise ReopenVerificationError(
                     "SOLUTION_CLEARED_OR_EMPTY",
-                    f"Stored solution returned empty data for {expr!r}",
+                    f"Stored solution returned no numeric data for {expr!r}",
                     {"expression": expr, "raw_result": raw_res},
                 )
-            first = raw_res[0]
-            if isinstance(first, list):
-                if not first:
-                    raise ReopenVerificationError(
-                        "SOLUTION_CLEARED_OR_EMPTY",
-                        f"Stored solution returned empty inner data for {expr!r}",
-                        {"expression": expr},
-                    )
-                actual_val = float(first[0])
-            else:
-                actual_val = float(first)
-        else:
             raise ReopenVerificationError(
                 "UNEXPECTED_DATA_SHAPE",
                 f"Cannot parse evaluation result {raw_res!r} for {expr!r}",

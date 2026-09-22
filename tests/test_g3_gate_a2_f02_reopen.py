@@ -360,3 +360,38 @@ def test_negative_control_wrong_dataset_detected():
         verify_reopen(model, receipt)
     assert exc_info.value.code == "DATASET_NOT_FOUND"
 
+
+
+def test_cleared_solution_empty_at_any_depth_is_the_contract_error():
+    """A cleared artifact is empty at whatever depth the engine nests its answer.
+
+    Reopening a copy whose stored solution was cleared made COMSOL 6.4 build 293 answer
+    [[[]]] (expression -> point -> no sub-values).  The verifier must classify that as
+    SOLUTION_CLEARED_OR_EMPTY; it used to reach float([]) and die with a TypeError, which
+    reports a crash instead of the contract's error code.
+    """
+    model = FakeReopenModel(sha256="fake_sha", stored_solutions={"T_x025": [[308.15]]})
+    receipt = {
+        "model_sha256": "fake_sha",
+        "dataset": "dset1",
+        "expectations": {"T_x025": {"expected": 308.15}},
+    }
+    for empty in ([], [[]], [[[]]], ()):
+        with pytest.raises(ReopenVerificationError) as exc_info:
+            verify_reopen(model, receipt, evaluator=lambda _m, _e, value=empty: value)
+        assert exc_info.value.code == "SOLUTION_CLEARED_OR_EMPTY", empty
+
+
+def test_nested_numeric_result_still_uses_the_first_number():
+    """A deeply nested but populated answer keeps its meaning (first number wins)."""
+    model = FakeReopenModel(sha256="fake_sha", stored_solutions={"T_x025": [[308.15]]})
+    receipt = {
+        "model_sha256": "fake_sha",
+        "dataset": "dset1",
+        "expectations": {"T_x025": {"expected": 308.15, "tolerance": 1e-3}},
+    }
+    verify_reopen(model, receipt, evaluator=lambda _m, _e: [[[308.15]]])
+
+    with pytest.raises(ReopenVerificationError) as exc_info:
+        verify_reopen(model, receipt, evaluator=lambda _m, _e: [[[309.15]]])
+    assert exc_info.value.code == "STORED_VALUE_MISMATCH"
