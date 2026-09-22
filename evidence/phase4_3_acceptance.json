@@ -1,41 +1,44 @@
 {
   "schema": "comsol-mcp-g3/phase4_3-acceptance/1",
   "goal": "NEXT_GOAL.md: G3.3 clean-room recovery, evidence correction, and W17 verification",
-  "status": "G3_3_MAC_W17_VERIFIED_SCOPED",
-  "run_id": "live_acceptance_20260921T235704Z",
-  "run_dir": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z",
-  "generated_at": "2026-09-21T23:57:33.439510+00:00",
-  "elapsed_seconds": 29.14468604105059,
+  "status": "ACCEPTANCE_FAILED",
+  "run_id": "live_acceptance_20260922T000139Z",
+  "run_dir": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260922T000139Z",
+  "generated_at": "2026-09-22T00:02:05.566644+00:00",
+  "elapsed_seconds": 26.10145295795519,
   "platform": "darwin",
   "python_version": "3.13.14 (main, Jun 11 2026, 03:58:32) [Clang 22.1.3 ]",
   "comsol_version": "COMSOL Multiphysics 6.4 (开发版本: 293)",
   "comsol_version_source": "ModelUtil.getComsolVersion() via the run's worker",
   "source_manifest": {
-    "head": "a3862bdd5547bf182466bf87a79252952bf3499e",
-    "tree": "a3cf88ea91eb24f1f9bc5e34af0e586572c47228",
+    "head": "b5ec6c69d2544908758f4d4d78aeff8199443cdb",
+    "tree": "23cd351074eae53fe2a1c53f150551dea8323593",
     "branch": "handoff/g3_3_fix",
     "dirty_paths": [
-      "evidence/phase4_3/runs/live_acceptance_20260921T235704Z/"
+      "vidence/phase4_3_acceptance.json",
+      "evidence/phase4_3/runs/live_acceptance_20260922T000001Z/"
     ],
-    "tracked_dirty_paths": [],
+    "tracked_dirty_paths": [
+      "vidence/phase4_3_acceptance.json"
+    ],
     "untracked_paths": [
-      "evidence/phase4_3/runs/live_acceptance_20260921T235704Z/"
+      "evidence/phase4_3/runs/live_acceptance_20260922T000001Z/"
     ],
     "untracked_paths_in_source_tree": [],
-    "tracked_files": 3628,
-    "tracked_files_listed": 3628,
-    "tracked_files_present_in_worktree": 3628,
-    "source_blob_map_sha256": "7ccb8e6aff26588551cb69397b7003a1e514ce2481350127bfcf8f80b4d229c5",
-    "captured_at": "2026-09-21T23:57:07.484426+00:00"
+    "tracked_files": 3635,
+    "tracked_files_listed": 3635,
+    "tracked_files_present_in_worktree": 3635,
+    "source_blob_map_sha256": "e15c6c0ff6b22fa4b60368a622920d176f6e8f3e3068a2a7d11ec8177c54bab9",
+    "captured_at": "2026-09-22T00:01:42.314980+00:00"
   },
-  "runner_sha256": "c5ba57e21948406089743460c7a933a423c754a551e7e2155cc1ec82ae0de3ba",
+  "runner_sha256": "3fee8073e9b298e9dd52c6292873d43ba4dd4afcd5e37464cc432de4b6e649f6",
   "runner_command": [
     "tests/run_g3_3_live_acceptance.py"
   ],
   "total_cases": 19,
   "aborted_cases": [],
-  "passed_cases": 19,
-  "failed_cases": 0,
+  "passed_cases": 18,
+  "failed_cases": 1,
   "scope": {
     "verified_workstream": "W17",
     "stop_boundary": "W17 (do not advance to W18-W26)",
@@ -51,46 +54,12 @@
   "cases": {
     "C00": {
       "case_id": "C00",
-      "name": "Clean Recovery, Source Binding & Wheel Verification",
-      "status": "PASS",
+      "name": "Clean Recovery",
+      "status": "FAIL",
       "evidence_level": "protocol",
-      "error": null,
-      "details": {
-        "source_manifest": {
-          "head": "a3862bdd5547bf182466bf87a79252952bf3499e",
-          "tree": "a3cf88ea91eb24f1f9bc5e34af0e586572c47228",
-          "branch": "handoff/g3_3_fix",
-          "dirty_paths": [
-            "evidence/phase4_3/runs/live_acceptance_20260921T235704Z/"
-          ],
-          "tracked_dirty_paths": [],
-          "untracked_paths": [
-            "evidence/phase4_3/runs/live_acceptance_20260921T235704Z/"
-          ],
-          "untracked_paths_in_source_tree": [],
-          "tracked_files": 3628,
-          "tracked_files_listed": 3628,
-          "tracked_files_present_in_worktree": 3628,
-          "source_blob_map_sha256": "7ccb8e6aff26588551cb69397b7003a1e514ce2481350127bfcf8f80b4d229c5",
-          "captured_at": "2026-09-21T23:57:07.484426+00:00"
-        },
-        "run_evidence_paths_excluded_from_dirty_check": [
-          "evidence/phase4_3/runs/live_acceptance_20260921T235704Z"
-        ],
-        "pack_pin_commit": "2cb4627924d1a3240818ea7cd00453d4bd2d2da8",
-        "pack_pin_tree": "dd3095e89c640c19aeb151cd0e8efe4af3c55802",
-        "pack_inventory_file_count": 3580,
-        "pack_inventory_source_commit": "2cb4627924d1a3240818ea7cd00453d4bd2d2da8",
-        "tracked_files": 3628,
-        "tracked_file_count_source": "git ls-tree -r HEAD (actual list)",
-        "wheel_path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/wheel_dist/comsol_mcp-0.1.9-py3-none-any.whl",
-        "wheel_sha256": "b1aa39965ba6ef564d0ed4a36d36cbc2eb5666001bb2665e8700be3002b936cd",
-        "out_of_tree_import": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/test_venv/lib/python3.13/site-packages/comsol_mcp/__init__.py",
-        "out_of_tree_import_cwd": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/neutral_cwd",
-        "import_source_is_repository_package": false,
-        "import_resolved_into_fresh_venv": true
-      },
-      "timestamp": "2026-09-21T23:57:10.465527+00:00"
+      "error": "C00 requires a committed source tree: the acceptance ledger has to be bound to a commit, but these tracked paths are modified: ['vidence/phase4_3_acceptance.json']",
+      "details": {},
+      "timestamp": "2026-09-22T00:01:42.315024+00:00"
     },
     "C01": {
       "case_id": "C01",
@@ -107,7 +76,7 @@
         "reopen_test_level": "CONTROL_UNIT",
         "w17_test_level": "UNIT_CONTRACT"
       },
-      "timestamp": "2026-09-21T23:57:10.467552+00:00"
+      "timestamp": "2026-09-22T00:01:42.316310+00:00"
     },
     "C02": {
       "case_id": "C02",
@@ -120,7 +89,7 @@
         "export_refusal_verified": true,
         "fail_closed_verified": true
       },
-      "timestamp": "2026-09-21T23:57:10.469287+00:00"
+      "timestamp": "2026-09-22T00:01:42.317895+00:00"
     },
     "C03": {
       "case_id": "C03",
@@ -129,22 +98,22 @@
       "evidence_level": "numerical",
       "error": null,
       "details": {
-        "chain_a_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/artifacts/chain_a_solved.mph",
-        "chain_a_sha256": "32b47a5581732fb4ff0d508b80e3092f9cdd665a3fcbe6c2c2ea80edfc6688e8",
+        "chain_a_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260922T000139Z/artifacts/chain_a_solved.mph",
+        "chain_a_sha256": "5422d940d38a06f75e55915aa47f6d3c4d40d3e0be373bbdfda161e0d3ff0e2c",
         "chain_a_points_checked": 3,
         "chain_a_gradient_values": [
           308.1500000000069,
           323.15000000001123,
           338.15000000000975
         ],
-        "chain_b_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/artifacts/chain_b_solved.mph",
-        "chain_b_sha256": "8712d62764a30642f03a3a88f3d76d67ffadd1399e654c49a9329562bef6f79c",
-        "chain_c_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/artifacts/chain_c_solved.mph",
-        "chain_c_sha256": "cf4792a80097c9eef29ee95e155787b8824ebcebf31eba2e7f681a6d0e80c71e",
-        "bench_c04_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/artifacts/bench_c04_solved.mph",
-        "bench_c05_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/artifacts/bench_c05_solved.mph",
-        "bench_c06_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/artifacts/bench_c06_solved.mph",
-        "bench_c07_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/artifacts/bench_c07_solved.mph",
+        "chain_b_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260922T000139Z/artifacts/chain_b_solved.mph",
+        "chain_b_sha256": "5938d9a8a5b9046d975b394dc74a69f4a11218b4b00706ad023817c1b5c1fccf",
+        "chain_c_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260922T000139Z/artifacts/chain_c_solved.mph",
+        "chain_c_sha256": "fc3ad5874326408359fdf7eea8ee78ba142a9642face0c694688f1acb475ad91",
+        "bench_c04_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260922T000139Z/artifacts/bench_c04_solved.mph",
+        "bench_c05_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260922T000139Z/artifacts/bench_c05_solved.mph",
+        "bench_c06_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260922T000139Z/artifacts/bench_c06_solved.mph",
+        "bench_c07_mph": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260922T000139Z/artifacts/bench_c07_solved.mph",
         "expectation_source": {
           "chain_a": "analytic linear profile 293.15 + 1200*x K at x = 0.0125/0.025/0.0375 m",
           "chain_b": "pre-save read of the build worker (stored-value preservation across save/reopen)",
@@ -161,7 +130,7 @@
           "STORED_VALUE_MISMATCH"
         ]
       },
-      "timestamp": "2026-09-21T23:57:28.828435+00:00"
+      "timestamp": "2026-09-22T00:01:59.596305+00:00"
     },
     "C03R": {
       "case_id": "C03R",
@@ -172,7 +141,7 @@
       "details": {
         "model": "reopen_a",
         "solve_result": "None",
-        "elapsed_seconds": 0.6996951659675688,
+        "elapsed_seconds": 0.6093966249609366,
         "values_compared": 3,
         "max_abs_delta": 0.0,
         "tolerance": 0.001,
@@ -186,8 +155,8 @@
           323.15000000001123,
           338.15000000000975
         ],
-        "resolved_artifact": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/artifacts/chain_a_resolved.mph",
-        "resolved_artifact_sha256": "537d8584d3d9396d7e8d743692a706cd4a881fb6a74c31a86e69d055b27bf717",
+        "resolved_artifact": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260922T000139Z/artifacts/chain_a_resolved.mph",
+        "resolved_artifact_sha256": "77b9c3700d57f0f24ada9af806d9e154836a3999f4027c1b5c01f36c23a8d08b",
         "solution_tags": [
           "sol1"
         ],
@@ -195,7 +164,7 @@
         "dof_note": "mesh/DoF statistics are not exposed by this worker method surface",
         "why_separate": "§8: a re-solve may not be folded into the Gate A reopen verdict; the delivered suite ran it inside the case documented '(NO RE-SOLVE)'"
       },
-      "timestamp": "2026-09-21T23:57:29.656946+00:00"
+      "timestamp": "2026-09-22T00:02:00.329788+00:00"
     },
     "C04": {
       "case_id": "C04",
@@ -211,7 +180,7 @@
         "computed_rms": 2.0,
         "denominator_verified_as_measure": true
       },
-      "timestamp": "2026-09-21T23:57:29.974773+00:00"
+      "timestamp": "2026-09-22T00:02:00.623512+00:00"
     },
     "C05": {
       "case_id": "C05",
@@ -225,7 +194,7 @@
         "all_domains_integral": 5.999999999999971,
         "partition_conservation_verified": true
       },
-      "timestamp": "2026-09-21T23:57:30.084627+00:00"
+      "timestamp": "2026-09-22T00:02:00.726062+00:00"
     },
     "C06": {
       "case_id": "C06",
@@ -246,7 +215,7 @@
         "live_rms": 4.396968652757634,
         "live_denominator_measure": 6.000000000000018
       },
-      "timestamp": "2026-09-21T23:57:30.285114+00:00"
+      "timestamp": "2026-09-22T00:02:00.909881+00:00"
     },
     "C07": {
       "case_id": "C07",
@@ -266,7 +235,7 @@
         "axisymmetric_flag": true,
         "axisymmetric_applied_count": 1
       },
-      "timestamp": "2026-09-21T23:57:30.440344+00:00"
+      "timestamp": "2026-09-22T00:02:00.990850+00:00"
     },
     "C08": {
       "case_id": "C08",
@@ -292,7 +261,7 @@
         ],
         "bounds_check_verified": true
       },
-      "timestamp": "2026-09-21T23:57:30.464701+00:00"
+      "timestamp": "2026-09-22T00:02:01.009017+00:00"
     },
     "C09": {
       "case_id": "C09",
@@ -320,7 +289,7 @@
           "message": "imaginary component sequence missing for complex field evaluation"
         }
       },
-      "timestamp": "2026-09-21T23:57:30.654712+00:00"
+      "timestamp": "2026-09-22T00:02:01.168778+00:00"
     },
     "C10": {
       "case_id": "C10",
@@ -344,7 +313,7 @@
         "dimension_mismatch_rejected": true,
         "unsupported_frame_rejected": true
       },
-      "timestamp": "2026-09-21T23:57:30.709928+00:00"
+      "timestamp": "2026-09-22T00:02:01.217492+00:00"
     },
     "C11": {
       "case_id": "C11",
@@ -362,7 +331,7 @@
         ],
         "cycle_detected": true
       },
-      "timestamp": "2026-09-21T23:57:30.782337+00:00"
+      "timestamp": "2026-09-22T00:02:01.340149+00:00"
     },
     "C12": {
       "case_id": "C12",
@@ -390,7 +359,7 @@
         "writer_staged_content": "PARTIAL_CONTENT",
         "preserved_original_sha256": "1d545b940633ab0ee38f4a06a4bd3a199c4b7ec83373e0a56d8454f862399628",
         "retained_failure_candidate": [
-          ".preserved.txt.7ad93cf76b28480f963a7bb179739368.tmp.mph"
+          ".preserved.txt.c8af1e715c074f84ab49cf9ea5e2988f.tmp.mph"
         ],
         "retained_candidate_policy": "_atomic_save keeps the failed candidate as incident evidence; ACCEPTANCE.md C12 requires the original hash to survive, not its removal",
         "artifacts_dir_entries_before": [
@@ -405,29 +374,29 @@
           "preserved.txt"
         ],
         "successful_publish": {
-          "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/artifacts/atomic_success.mph",
+          "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260922T000139Z/artifacts/atomic_success.mph",
           "size": 128,
-          "sha256": "31f051b9f11a0c050b07e35aea2b0f11bc686c0e89d4bc9264299f59298ff10a",
+          "sha256": "a3b6401794ad90e9e305fbd429d23cce0c63c69553ed0bc7ad458b7afedb3d49",
           "checkpoint": {
-            "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/artifacts/atomic_success.mph",
+            "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260922T000139Z/artifacts/atomic_success.mph",
             "size": 128,
-            "sha256": "31f051b9f11a0c050b07e35aea2b0f11bc686c0e89d4bc9264299f59298ff10a",
+            "sha256": "a3b6401794ad90e9e305fbd429d23cce0c63c69553ed0bc7ad458b7afedb3d49",
             "verified": true,
             "publish_mode": "atomic_replace",
             "parent_fsync": true
           },
           "artifact": {
-            "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/artifacts/atomic_success.mph",
+            "path": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260922T000139Z/artifacts/atomic_success.mph",
             "size": 128,
-            "sha256": "31f051b9f11a0c050b07e35aea2b0f11bc686c0e89d4bc9264299f59298ff10a",
+            "sha256": "a3b6401794ad90e9e305fbd429d23cce0c63c69553ed0bc7ad458b7afedb3d49",
             "verified": true
           }
         },
         "candidates_after_success": [
-          ".preserved.txt.7ad93cf76b28480f963a7bb179739368.tmp.mph"
+          ".preserved.txt.c8af1e715c074f84ab49cf9ea5e2988f.tmp.mph"
         ]
       },
-      "timestamp": "2026-09-21T23:57:30.785277+00:00"
+      "timestamp": "2026-09-22T00:02:01.344465+00:00"
     },
     "C13": {
       "case_id": "C13",
@@ -443,7 +412,7 @@
         "reconstructed_sha256": "26be3b677fd0f096138bfb442988329fa7fe166bfb933802b052f71be9eaf6ef",
         "bounds_check_verified": true
       },
-      "timestamp": "2026-09-21T23:57:30.785589+00:00"
+      "timestamp": "2026-09-22T00:02:01.344791+00:00"
     },
     "C14": {
       "case_id": "C14",
@@ -476,9 +445,21 @@
             4.5
           ]
         ],
-        "validation_verified": true
+        "validation_verified": true,
+        "probe_host_dispatch": {
+          "reachable": [
+            "probe.list",
+            "probe.create",
+            "probe.remove"
+          ],
+          "dispatched_removed_verified": true,
+          "unimplemented_refusals": {
+            "probe.update": "UNSUPPORTED_OPERATION",
+            "probe.history": "UNSUPPORTED_OPERATION"
+          }
+        }
       },
-      "timestamp": "2026-09-21T23:57:30.863864+00:00"
+      "timestamp": "2026-09-22T00:02:01.464653+00:00"
     },
     "C15": {
       "case_id": "C15",
@@ -488,10 +469,10 @@
       "error": null,
       "details": {
         "worker_status": "HEALTHY",
-        "instance_id": "40c78bba-fa5e-4105-a1d7-524414df92f8",
+        "instance_id": "c017aa05-53ff-4b3b-8e5e-42da60b492d4",
         "control_responsive": true
       },
-      "timestamp": "2026-09-21T23:57:31.870487+00:00"
+      "timestamp": "2026-09-22T00:02:02.485332+00:00"
     },
     "C16": {
       "case_id": "C16",
@@ -507,8 +488,8 @@
           "requirements-windows-cp312.txt": "30b1fc65aace6117aaf0548183913664fcefd3baad20b10fd9e6fd8e29150ed2",
           "pip-freeze-fresh.txt": "6d51641b39744925e726243e3fef3c0d48d9ae003d34c675bd8105c288436832"
         },
-        "wheel_file": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260921T235704Z/wheel_dist/comsol_mcp-0.1.9-py3-none-any.whl",
-        "wheel_sha256": "b1aa39965ba6ef564d0ed4a36d36cbc2eb5666001bb2665e8700be3002b936cd",
+        "wheel_file": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/live_acceptance_20260922T000139Z/c16_wheel_dist/comsol_mcp-0.1.9-py3-none-any.whl",
+        "wheel_sha256": "e44dc902edcfe34a7641de12b2f3fe9643dd94f372cfce1bdcb6704f80e88600",
         "wheel_resource_manifest_source": "read out of the built wheel with zipfile",
         "wheel_resources": {
           "comsol_mcp/data/g2/02_ACTION_CATALOG.json": {
@@ -534,7 +515,7 @@
           "$schema"
         ]
       },
-      "timestamp": "2026-09-21T23:57:31.883411+00:00"
+      "timestamp": "2026-09-22T00:02:03.944956+00:00"
     },
     "C17": {
       "case_id": "C17",
@@ -543,12 +524,12 @@
       "evidence_level": "protocol",
       "error": null,
       "details": {
-        "isolated_server_pid": 39668,
+        "isolated_server_pid": 40956,
         "isolated_server_alive_after_teardown": false,
         "isolated_server_stopped": true,
         "lock_files_remaining": [
           {
-            "name": "endpoint-42771ce2a0fba3308d6a48033bec3ee3e0f9fd0af6bb5e4072f5c465c726f9a3.lock",
+            "name": "endpoint-d8435b5e3ef4a148ddceda20dd377eccbbf30a85818bbc99fade6ccf8987676b.lock",
             "size": 0,
             "sha256": null,
             "held": false
@@ -557,14 +538,16 @@
         "locks_held": 0,
         "lock_probe": "fcntl.lockf(LOCK_EX|LOCK_NB) per endpoint lock file",
         "teardown_errors": [],
-        "status_tag": "G3_3_MAC_W17_VERIFIED_SCOPED",
+        "status_tag": "G3_3_ACCEPTANCE_FAILED",
         "status_tag_derived_from": "every case recorded in this run",
         "cases_recorded_before_teardown": 18,
-        "failed_cases": [],
+        "failed_cases": [
+          "C00"
+        ],
         "engine_reported_comsol_version": "COMSOL Multiphysics 6.4 (开发版本: 293)",
         "stop_boundary": "W17 (not entering W18)"
       },
-      "timestamp": "2026-09-21T23:57:33.439238+00:00"
+      "timestamp": "2026-09-22T00:02:05.566374+00:00"
     }
   }
 }

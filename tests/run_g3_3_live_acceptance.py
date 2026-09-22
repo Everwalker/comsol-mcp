@@ -259,7 +259,10 @@ class AcceptanceRunner:
         for line in status.splitlines():
             if not line.strip():
                 continue
-            path = line[3:].strip()
+            # porcelain v1 is "XY<space>path"; slicing at 2 and stripping the
+            # separator keeps the path intact for every status pair (including the
+            # first line, where X is a space).
+            path = line[2:].lstrip()
             (untracked if line.startswith("??") else tracked_dirty).append(path)
         # An untracked file inside the source or test tree can be imported by the
         # run without ever showing up as a modified tracked file, so it is a
