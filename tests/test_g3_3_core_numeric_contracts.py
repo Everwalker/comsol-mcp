@@ -349,12 +349,17 @@ def test_centered_aggregate_selects_actual_inner_label_from_full_getter_axis() -
 
 
 class _Selection:
-    def __init__(self, *, fail: bool = False) -> None:
+    def __init__(self, *, fail: bool = False, out_of_range: bool = False) -> None:
         self.fail = fail
+        self.out_of_range = out_of_range
         self.calls: list[tuple[str, object]] = []
 
     def set(self, value: object) -> None:
         self.calls.append(("set", value))
+        if self.out_of_range:
+            # Names and shapes the engine's own refusal, which is what the product
+            # classifies: the ids are out of range for this geometry.
+            raise RuntimeError("SelectionOutOfBoundsException: entity 99 is out of range")
         if self.fail:
             raise RuntimeError("selection rejected")
 
@@ -375,6 +380,24 @@ def test_measure_selection_failure_is_not_swallowed() -> None:
     with pytest.raises(ExecutionContractError) as exc:
         spec.apply_selection(_Feature(_Selection(fail=True)))
     assert exc.value.code == "SELECTION_APPLY_FAILED"
+
+
+def test_out_of_range_entities_are_refused_as_an_empty_selection() -> None:
+    """A geometry that has no such entity is a selection that matched nothing.
+
+    The engine's own out-of-range refusal used to surface as a generic apply failure,
+    which hid the fact that nothing was selected at all (and a caller could mistake the
+    attempt for a real measurement attempt).
+    """
+    spec = MeasureSpec(entity_dim=1, selection={"entities": [99]})
+    with pytest.raises(ExecutionContractError) as exc:
+        spec.apply_selection(_Feature(_Selection(out_of_range=True)))
+    error = exc.value
+    assert error.code == "SELECTION_MATCHED_NO_ENTITIES"
+    assert error.details["matched_entities"] == []
+    assert error.details["selection_measure"] is None
+    assert error.details["engine_error"]
+    assert "99" in str(error)
 
 
 @pytest.mark.parametrize("bad_dimension", [True, 1.5, "1"])

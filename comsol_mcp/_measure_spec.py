@@ -14,6 +14,53 @@ from typing import Any, Mapping, Sequence
 
 from ._execution_contract import ExecutionContractError
 
+#: Engine refusals that mean "the ids you named do not exist in this geometry".
+#: A selection whose entities are out of range is a selection that matches nothing,
+#: so it is classified as such (and the engine's own text is kept as the cause)
+#: instead of being reported as a failed apply.
+_OUT_OF_RANGE_MARKERS = (
+    "outofbounds",
+    "out of bounds",
+    "out of range",
+    "indexoutofbounds",
+    "no such boundary",
+    "no such domain",
+    "no such edge",
+    "selection is empty",
+)
+
+
+def _entity_selection_failure(
+    entities: Any, first_exc: Exception, second_exc: Exception
+) -> ExecutionContractError:
+    """Classify a failed ``selection.set`` on explicit entity ids.
+
+    ``SELECTION_MATCHED_NO_ENTITIES`` when the engine says the ids are out of
+    range (the geometry exposes no such entity), otherwise the generic
+    ``SELECTION_APPLY_FAILED``.  No measure is claimed in the first case: nothing
+    was measured, the selection matched nothing.
+    """
+    text = (
+        f"{type(first_exc).__name__}: {first_exc}; "
+        f"varargs retry {type(second_exc).__name__}: {second_exc}"
+    )
+    lowered = text.lower()
+    if any(marker in lowered for marker in _OUT_OF_RANGE_MARKERS):
+        return ExecutionContractError(
+            "SELECTION_MATCHED_NO_ENTITIES",
+            f"selection.set named entities {entities!r} that this geometry does not expose: {text[:400]}",
+            details={
+                "selection": list(entities) if isinstance(entities, (list, tuple)) else entities,
+                "matched_entities": [],
+                "selection_measure": None,
+                "engine_error": text[:400],
+            },
+        )
+    return ExecutionContractError(
+        "SELECTION_APPLY_FAILED",
+        f"selection.set failed for entities {entities!r}: {first_exc}; varargs retry: {second_exc}",
+    )
+
 
 class MeasureSpec:
     """Encapsulates spatial measure, entity dimension, selection, and statistical aggregation."""
@@ -233,10 +280,7 @@ class MeasureSpec:
                     try:
                         method(*entities)
                     except Exception as second_exc:
-                        raise ExecutionContractError(
-                            "SELECTION_APPLY_FAILED",
-                            f"selection.set failed for entities {entities!r}: {first_exc}; varargs retry: {second_exc}",
-                        ) from second_exc
+                        raise _entity_selection_failure(entities, first_exc, second_exc) from second_exc
             elif all_selected:
                 method = getattr(target_sel, "all", None)
                 if not callable(method):

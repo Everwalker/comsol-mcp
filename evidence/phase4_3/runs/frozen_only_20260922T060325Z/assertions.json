@@ -1,15 +1,6 @@
 {
-  "schema": "comsol-mcp-g3/phase4_3-acceptance/1",
-  "goal": "NEXT_GOAL.md: G3.3 clean-room recovery, evidence correction, and W17 verification",
-  "status": "G3_3_MAC_W17_VERIFIED_SCOPED",
   "run_id": "frozen_only_20260922T060325Z",
-  "run_dir": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/repository/evidence/phase4_3/runs/frozen_only_20260922T060325Z",
-  "generated_at": "2026-09-22T06:03:52.088343+00:00",
-  "elapsed_seconds": 25.885573541978374,
-  "platform": "darwin",
-  "python_version": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.3.34.2)]",
-  "comsol_version": null,
-  "comsol_version_source": "unavailable: the engine did not report a version in this run",
+  "generated_at": "2026-09-22T06:03:52.089324+00:00",
   "source_manifest": {
     "head": "65d1c51c3d1221ad7649d2b9d2253dd0d83250db",
     "tree": "a00fdf8d1c546fbc8bb4be253876ed73025b8831",
@@ -41,61 +32,9 @@
     "source_blob_map_sha256": "bca5245750e5cf16590363040700ad2887c2c66a9a9847413f52e7e824c3754c",
     "captured_at": "2026-09-22T06:03:52.088124+00:00"
   },
-  "source_identity": {
-    "repository": "Everwalker/comsol-mcp (delivered source workpack)",
-    "commit": "65d1c51c3d1221ad7649d2b9d2253dd0d83250db",
-    "tree": "a00fdf8d1c546fbc8bb4be253876ed73025b8831",
-    "branch": "acceptance/independent-20260922",
-    "tracked_files": 5959,
-    "source_blob_map_sha256": "bca5245750e5cf16590363040700ad2887c2c66a9a9847413f52e7e824c3754c",
-    "lock": "repository/constraints-macos-arm64-py313.txt installs this tree via '-e .'",
-    "how_to_check": "In the recovered clone: git rev-parse HEAD == commit, git rev-parse 'HEAD^{tree}' == tree, git ls-files | wc -l == tracked_files",
-    "regenerated": "written at the start of every acceptance run; records the commit under test",
-    "file": "/Users/everwalker/Downloads/COMSOL_MCP_G3_3_WORKPACK/SOURCE_TREE_IDENTITY.json",
-    "file_sha256": "e46b4c8c5ade8fce17bded6d11909d01e0a3817ddffffe1048fe6570ab1a7eed",
-    "note": "D6: the dependency lock installs this tree; this file is what a recovering agent compares a fresh clone against"
-  },
-  "runner_sha256": "8fb8db105b3e609057b9a5d0e34f3602f6593b7ca61822c1631098a7f510e2d9",
-  "runner_command": [
-    "tests/run_g3_3_live_acceptance.py",
-    "--run-dir",
-    "evidence/phase4_3/runs/frozen_only_20260922T060325Z",
-    "--only",
-    "C03,C14"
-  ],
-  "total_cases": 3,
-  "request_reply_trail": {
-    "file": "request_reply_trail.jsonl",
-    "records": 1692,
-    "truncated": false,
-    "note": "one record per worker request event: the 'submitted' request and the matching 'observed' reply (or 'unknown'/'unresponsive' when none arrived), each with the redacted payload and a request hash.  §11 asks for a per-run request/reply record; the in-process operation calls the runner makes are in assertions.json."
-  },
-  "numeric_evidence": {
-    "file": "numeric.json",
-    "cases": [
-      "C03",
-      "C03R",
-      "C14"
-    ],
-    "note": "numeric checks, comparisons, tolerances and peak-memory records extracted from the case details"
-  },
   "aborted_cases": [],
-  "passed_cases": 3,
-  "failed_cases": 0,
-  "scope": {
-    "verified_workstream": "W17",
-    "stop_boundary": "W17 (do not advance to W18-W26)",
-    "target_platform": "macOS-aarch64 (Apple Silicon commercial installation)",
-    "unverified_platforms": [
-      "windows",
-      "linux",
-      "intel-mac",
-      "comsol-6.3",
-      "gui"
-    ]
-  },
-  "cases": {
-    "C03": {
+  "assertions": [
+    {
       "case_id": "C03",
       "name": "Gate A Reopen & Stored Solution Acceptance",
       "status": "PASS",
@@ -183,7 +122,7 @@
       },
       "timestamp": "2026-09-22T06:03:50.299474+00:00"
     },
-    "C03R": {
+    {
       "case_id": "C03R",
       "name": "Independent Re-solve & Indistinguishability",
       "status": "PASS",
@@ -217,7 +156,7 @@
       },
       "timestamp": "2026-09-22T06:03:51.096932+00:00"
     },
-    "C14": {
+    {
       "case_id": "C14",
       "name": "Definitions Probe vs Derived Values Separation & Table Management",
       "status": "PASS",
@@ -280,5 +219,5 @@
       },
       "timestamp": "2026-09-22T06:03:51.346886+00:00"
     }
-  }
+  ]
 }

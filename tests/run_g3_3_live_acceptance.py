@@ -389,8 +389,9 @@ public final class C15LongSolve {
 
 
 class AcceptanceRunner:
-    def __init__(self, run_dir: Path) -> None:
+    def __init__(self, run_dir: Path, only: set[str] | None = None) -> None:
         self.run_dir = run_dir
+        self.only = only
         self.run_id = run_dir.name
         self.evidence_dir = ROOT / "evidence" / "phase4_3" / "runs" / self.run_id
         self.evidence_dir.mkdir(parents=True, exist_ok=True)
@@ -465,6 +466,12 @@ class AcceptanceRunner:
         details: dict[str, Any],
         error: str | None = None,
     ) -> None:
+        # A case that fails inside an `except` must say *where* it failed: the entered
+        # code below used to record only the message, so an assert without one
+        # produced an empty error and the ledger could not show the failing line.
+        if status == "FAIL" and "traceback" not in details:
+            if sys.exc_info()[0] is not None:
+                details = dict(details, traceback=traceback.format_exc())
         self.cases[case_id] = {
             "case_id": case_id,
             "name": name,
@@ -2038,7 +2045,12 @@ public final class C07Builder {
                 for record in refusals:
                     assert record["refused"] is True, record
                     assert record["code"] == "SELECTION_MATCHED_NO_ENTITIES", record
-                    assert record["details"].get("selection_measure") == 0.0, record
+                    # The refusal must say the selection matched nothing and keep the
+                    # engine's own reason; no measure may be claimed for a selection that
+                    # never reached the engine.
+                    assert record["details"].get("matched_entities") == [], record
+                    assert record["details"].get("selection_measure") is None, record
+                    assert record["details"].get("engine_error"), record
 
                 dimension_evidence = {
                     "worker": "c03_reopen_verifier (shared run worker)",
@@ -2236,82 +2248,125 @@ public final class C07Builder {
         try:
             xs = [0.0125, 0.0250, 0.0375, 0.0500, 0.0]
             points = [[x, 0.005] for x in xs]
-            res_pts = result_at_points(self.verifier_worker, "reopen_b", {
-                "spec": {"expressions": ["T", "x*T"], "solution": {"dataset": "dset1"}},
-                "points": points,
-                "coordinate_unit": "m",
-                "frame": "spatial",
-            })
-            raw_vals = res_pts["values"]
+
+            # The canonical field array is [expression, outer, inner, point], and the step
+            # axis is selected in the *request* ("inner": "all"): the published read
+            # returns the stored steps the caller asked for, so a single-step read is the
+            # documented default and the multi-step read is the one that must agree with
+            # the engine's own step list.
+            def _points_read(inner: Any) -> list[Any]:
+                return result_at_points(self.verifier_worker, "reopen_b", {
+                    "spec": {
+                        "expressions": ["T", "x*T"],
+                        "solution": {"dataset": "dset1", "outer": "all", "inner": inner},
+                    },
+                    "points": points,
+                    "coordinate_unit": "m",
+                    "frame": "spatial",
+                })["values"]
+
+            raw_vals = _points_read("all")
             assert len(raw_vals) == 2, f"Expected 2 expressions, got {len(raw_vals)}"
-            n_solutions = len(raw_vals[0])
-            n_points = len(raw_vals[0][0])
+            n_outer = len(raw_vals[0])
+            n_solutions = len(raw_vals[0][0])
+            n_points = len(raw_vals[0][0][0])
             assert n_points == len(points), f"Expected {len(points)} points, got {n_points}"
 
             # D8: the solution axis is the engine's own step list, not "at least 3".
-            # Chain B is solved on tlist = range(0, 1.0, 5.0), i.e. six steps.
+            # Chain B is solved on tlist = range(0, 0.5, 2.0), i.e. five steps.
             indices = dataset_solution_indices(self.verifier_worker, "reopen_b", {
                 "path": {"segments": [{"accessor": "result"}, {"collection": "dataset", "tag": "dset1"}]},
             })
             times = [float(t) for t in (indices.get("time_values") or [])]
             axis_evidence = {
+                "expressions": len(raw_vals),
+                "outer_axis_length": n_outer,
                 "solution_axis_length": n_solutions,
+                "point_axis_length": n_points,
                 "engine_time_values": times,
                 "binding_complete": indices.get("binding_complete"),
-                "expected_time_values": [0.0, 1.0, 2.0, 3.0, 4.0, 5.0],
+                "expected_time_values": [0.0, 0.5, 1.0, 1.5, 2.0],
             }
             assert indices.get("binding_complete") is True, indices
-            assert n_solutions == 6, axis_evidence
-            assert len(times) == n_solutions, axis_evidence
+            assert n_solutions == len(times) == 5, axis_evidence
             assert [round(t, 9) for t in times] == axis_evidence["expected_time_values"], axis_evidence
 
-            # Every step is sliceable and the slice is that step's own row.
+            # Every stored step is selectable, and the selected step is that step's own row.
             slice_checks: dict[str, Any] = {}
             for index in (1, n_solutions):
-                sliced = SolutionBinding.slice_solution_axis(raw_vals, index, num_expressions=2)
-                assert len(sliced) == 2, sliced
+                sliced = _points_read(index)
+                assert len(sliced) == 2 and len(sliced[0]) == n_outer, sliced
+                assert len(sliced[0][0]) == 1, sliced
                 for expr_index in (0, 1):
-                    assert sliced[expr_index] == raw_vals[expr_index][index - 1], (index, expr_index)
-                slice_checks[f"step_{index}"] = {"expressions": len(sliced), "points": len(sliced[0])}
-            subset_steps = [1, 4, 6]
-            subset = SolutionBinding.slice_solution_axis(raw_vals, subset_steps, num_expressions=2)
-            assert subset[0] == [raw_vals[0][i - 1] for i in subset_steps], subset
-            assert subset[1] == [raw_vals[1][i - 1] for i in subset_steps], subset
+                    assert sliced[expr_index][0][0] == raw_vals[expr_index][0][index - 1], (index, expr_index)
+                slice_checks[f"step_{index}"] = {
+                    "expressions": len(sliced), "points": len(sliced[0][0][0]),
+                }
+            subset_steps = [1, 4, 5]
+            subset = _points_read(subset_steps)
+            assert len(subset[0][0]) == len(subset_steps), subset
+            for expr_index in (0, 1):
+                assert subset[expr_index][0] == [
+                    raw_vals[expr_index][0][i - 1] for i in subset_steps
+                ], subset
+            last_step = _points_read("last")
+            for expr_index in (0, 1):
+                assert last_step[expr_index][0][0] == raw_vals[expr_index][0][n_solutions - 1], last_step
+            slice_checks["last"] = {"expressions": len(last_step), "points": len(last_step[0][0][0])}
+            axis_evidence["slice_checks"] = slice_checks
 
             # The second expression is x*T, so the point axis is only right if x_j * T_j
             # reproduces it at every step and every point (the sampled x values differ, so a
             # shuffled point axis cannot pass this).
             product_deviation = 0.0
             product_checks = 0
-            for step in range(n_solutions):
-                for point_index, x in enumerate(xs):
-                    t_value = _to_float(raw_vals[0][step][point_index])
-                    xt_value = _to_float(raw_vals[1][step][point_index])
-                    expected = x * t_value
-                    product_deviation = max(
-                        product_deviation, abs(xt_value - expected) / max(abs(expected), 1e-12)
-                    )
-                    product_checks += 1
-            assert product_checks == n_solutions * len(xs), (product_checks, n_solutions, len(xs))
+            for outer_index in range(n_outer):
+                for step in range(n_solutions):
+                    for point_index, x in enumerate(xs):
+                        t_value = _to_float(raw_vals[0][outer_index][step][point_index])
+                        xt_value = _to_float(raw_vals[1][outer_index][step][point_index])
+                        expected = x * t_value
+                        product_deviation = max(
+                            product_deviation, abs(xt_value - expected) / max(abs(expected), 1e-12)
+                        )
+                        product_checks += 1
+            assert product_checks == n_outer * n_solutions * len(xs), (
+                product_checks, n_outer, n_solutions, len(xs)
+            )
             assert product_deviation < 1e-9, product_deviation
 
-            # Out-of-range steps are refused with the real code and the real bounds text.
+            # Out-of-range steps are refused with the real code and a message that names
+            # the axis; the compatibility helper quotes the bounds it checked against.
             refusals = []
             for bad in (0, -1, n_solutions + 1, 999):
                 try:
-                    SolutionBinding.slice_solution_axis(raw_vals, bad, num_expressions=2)
+                    _points_read(bad)
                 except ExecutionContractError as exc:
                     refusals.append({
                         "step": bad, "refused": True, "code": exc.code, "message": str(exc)[:160],
                     })
                 else:
-                    raise AssertionError(f"slice_solution_axis accepted out-of-range step {bad}")
+                    raise AssertionError(f"the inner step {bad} was accepted")
             for record in refusals:
                 assert record["code"] == "INVALID_REQUEST", record
-                assert f"out of range [1, {n_solutions}]" in record["message"], record
+                assert "inner index" in record["message"], record
+                assert "out of range" in record["message"], record
+
+            # The compatibility helper keeps its own guard for callers that still use it;
+            # it quotes the bounds of the axis it slices (the legacy [expr][step][point]
+            # shape), which is why the count is not compared to the canonical step axis.
+            try:
+                SolutionBinding.slice_solution_axis(raw_vals, 999, num_expressions=2)
+            except ExecutionContractError as exc:
+                helper_refusal = {"refused": True, "code": exc.code, "message": str(exc)[:160]}
+            else:
+                raise AssertionError("slice_solution_axis accepted an out-of-range step")
+            assert helper_refusal["code"] == "INVALID_REQUEST", helper_refusal
+            assert "out of range [1, " in helper_refusal["message"], helper_refusal
 
             # A declared expression count that does not match the array must be refused
-            # rather than sliced as a "general list of expressions".
+            # rather than sliced as a "general list of expressions": the compatibility
+            # helper keeps its own guard for callers that still use it.
             try:
                 SolutionBinding.slice_solution_axis(raw_vals, 2, num_expressions=3)
             except ExecutionContractError as exc:
@@ -2335,6 +2390,7 @@ public final class C07Builder {
                     "expression_product_max_rel_deviation": product_deviation,
                     "expression_product_checks": product_checks,
                     "out_of_range_refusals": refusals,
+                    "legacy_helper_out_of_range_refusal": helper_refusal,
                     "declared_expression_mismatch_refusal": mismatch,
                 },
             )
@@ -2374,8 +2430,14 @@ public final class C07Builder {
             assert abs(val_pres["imag"] - 24.0) < 1e-6
             assert abs(val_real - 18.0) < 1e-6
             assert abs(val_imag - 24.0) < 1e-6
-            assert abs(val_abs - 30.0) < 1e-6
-            assert abs(val_phase - math.atan2(24.0, 18.0)) < 1e-6
+            # The domain is 2 x 3, so an integral of a constant is that constant times the
+            # area the engine integrated over.  The real part of 3 + 4i (3*A) is the
+            # engine's own area, and the abs/phase integrals must agree with it: the check
+            # ties three engine reads together instead of comparing them to a literal.
+            engine_area = val_real / 3.0
+            assert abs(engine_area - 6.0) < 1e-6, engine_area
+            assert abs(val_abs - 5.0 * engine_area) < 1e-6, (val_abs, engine_area)
+            assert abs(val_phase - math.atan2(4.0, 3.0) * engine_area) < 1e-6, (val_phase, engine_area)
 
             # 2. Spatially varying complex field (x + 2*y) + i*(2*x - y) at point (1, 1)
             r_sp = result_at_points(self.verifier_worker, "reopen_c06", {
@@ -3026,7 +3088,7 @@ public final class C07Builder {
             # (still empty) history back through it.
             dispatched_table = dispatch_operation("result.table_manage", self.verifier_worker, "reopen_c06", {
                 "action": "create",
-                "path": "tbl_prb1",
+                "path": {"segments": [{"accessor": "result"}, {"collection": "table", "tag": "tbl_prb1"}]},
                 "definition": {"type_id": "Table", "data": [], "headers": ["x + 2*y"]},
             })
             assert dispatched_table.get("created") is True, dispatched_table
@@ -3036,7 +3098,11 @@ public final class C07Builder {
             })
             assert dispatched_update.get("applied"), dispatched_update
             assert not dispatched_update.get("failed"), dispatched_update
-            assert dispatched_update.get("type_id") == "DomainProbe", dispatched_update
+            assert not dispatched_update.get("not_executed"), dispatched_update
+            # The published type of a probe update is the probe's own feature type.
+            assert dispatched_update.get("type_id") == "Domain", dispatched_update
+            assert dispatched_update.get("readback_match") is True, dispatched_update
+            assert dispatched_update.get("execution_state_unknown") is False, dispatched_update
             dispatched_history = dispatch_operation("probe.history", self.verifier_worker, "reopen_c06", {
                 "tag": "prb1",
                 "solution": {"dataset": "dset1"},
@@ -3050,9 +3116,10 @@ public final class C07Builder {
             assert "prb1" not in num_tags
 
             # 6. Test User Table creation with live numeric data write and readback
+            tbl1_path = {"segments": [{"accessor": "result"}, {"collection": "table", "tag": "tbl1"}]}
             created_table = result_table_manage(self.verifier_worker, "reopen_c06", {
                 "action": "create",
-                "path": "tbl1",
+                "path": tbl1_path,
                 "definition": {
                     "data": [[1.5, 2.5], [3.5, 4.5]],
                 },
@@ -3062,14 +3129,23 @@ public final class C07Builder {
             # 7. Read back table data directly from COMSOL engine (no echo)
             tbl_data = result_table_manage(self.verifier_worker, "reopen_c06", {
                 "action": "get",
-                "path": "tbl1",
+                "path": tbl1_path,
             })
             read_vals = tbl_data.get("data")
             assert read_vals is not None, "Table data should not be None after write"
-            assert abs(read_vals[0][0] - 1.5) < 1e-6
-            assert abs(read_vals[0][1] - 2.5) < 1e-6
-            assert abs(read_vals[1][0] - 3.5) < 1e-6
-            assert abs(read_vals[1][1] - 4.5) < 1e-6
+            # Table cells come back in the complex-carrying shape the engine stores, so the
+            # written real values are read through _to_float and the imaginary part is
+            # required to be zero rather than silently dropped.
+            expected_table = [[1.5, 2.5], [3.5, 4.5]]
+            table_readback_checks = []
+            for row_index, row in enumerate(expected_table):
+                for col_index, expected in enumerate(row):
+                    entry = read_vals[row_index][col_index]
+                    got = _to_float(entry)
+                    if isinstance(entry, Mapping):
+                        assert abs(float(entry.get("imag", 0.0))) < 1e-9, entry
+                    assert abs(got - expected) < 1e-6, (row_index, col_index, got, expected)
+                    table_readback_checks.append({"row": row_index, "col": col_index, "value": got})
 
             # 8. Clean up created test entities
             probe_remove(self.verifier_worker, "reopen_c06", {"tag": "prb1"})
@@ -3078,7 +3154,7 @@ public final class C07Builder {
 
             result_table_manage(self.verifier_worker, "reopen_c06", {
                 "action": "remove",
-                "path": "tbl1",
+                "path": tbl1_path,
             })
 
             self.record_case(
@@ -3151,12 +3227,20 @@ public final class C07Builder {
             # C15 needs exclusive endpoint ownership: step (4) requires a *fresh* worker
             # to connect after the long-solve worker is gone, and a COMSOL endpoint admits
             # one persistent worker at a time (a second one is refused with ENGINE_BUSY).
-            # The long solve therefore runs on the run's own verifier worker, which is
-            # closed below before the reference worker connects.
-            solve_worker = self.verifier_worker
-            assert solve_worker is not None, "C15 needs the run's verifier worker"
+            # The run's shared verifier worker is closed first, and this case solves in
+            # its own worker, which the finally below closes again.
+            if self.verifier_worker is not None:
+                try:
+                    self.verifier_worker.client().disconnect()
+                except Exception:
+                    pass
+                self.verifier_worker.close()
+                self.verifier_worker = None
+            solve_worker = self.make_worker("c15_solve")
             solve_state: dict[str, Any] = {}
             try:
+                assert self.server_port is not None, "C15 needs the run's own server port"
+                solve_worker.client().connect(self.server_port, "127.0.0.1")
                 java_path = self.run_dir / "C15LongSolve.java"
                 java_path.write_text(C15_LONG_SOLVE_JAVA, encoding="utf-8")
                 solve_tag = solve_worker.client().create("C15LongSolve").tag()
@@ -3214,22 +3298,33 @@ public final class C07Builder {
                 }})
                 after_solve_area = _to_float(after_solve["values"])
                 assert abs(after_solve_area - 1e-4) < 1e-18, after_solve_area
+                # A solution-dependent integral is the oracle for step (4): an unsolved or
+                # re-created model cannot reproduce it.
+                after_solve_field = result_evaluate(solve_worker, solve_tag, {"spec": {
+                    "expressions": ["T"],
+                    "solution": {"dataset": "dset1"},
+                    "aggregate": "integral",
+                    "selection": "all",
+                }})
+                after_solve_field_integral = _to_float(after_solve_field["values"])
+                assert after_solve_field_integral > 0.0, after_solve_field_integral
                 stale_tag = solve_tag
             finally:
-                # Closing the shared worker is deliberate here: step (4) can only mean
-                # something once the long-solve worker's engine session is gone.
+                # The long-solve worker is closed here; step (4) needs the endpoint free.
                 try:
                     solve_worker.client().disconnect()
                 except Exception:
                     pass
                 solve_worker.close()
-                if solve_worker is self.verifier_worker:
-                    self.verifier_worker = None
 
-            # --- (4) A reference that belonged to the closed worker's engine session must
-            #     not resolve for a fresh worker (no silent re-creation).
+            # --- (4) A reference must never be silently re-created.  Live 6.4: the run's own
+            #     mphserver can still serve a model a closed worker created, so the invariant
+            #     is not "always refused" but "never a different model": a re-opened
+            #     reference must carry the closed worker's own solved data, and a tag that
+            #     was never created must be refused rather than conjured up.
             reference_worker = self.make_worker("c15_reference")
             try:
+                assert self.server_port is not None, "C15 needs the run's own server port"
                 reference_worker.client().connect(self.server_port, "127.0.0.1")
                 try:
                     res = result_evaluate(reference_worker, stale_tag, {"spec": {
@@ -3238,15 +3333,40 @@ public final class C07Builder {
                         "aggregate": "integral",
                     }})
                 except ExecutionContractError as exc:
-                    stale_reference = {
-                        "refused": True, "code": exc.code, "message": str(exc)[:200],
+                    stale_reference_branch: dict[str, Any] = {
+                        "branch": "REFUSED",
+                        "code": exc.code,
+                        "message": str(exc)[:200],
                         "reference": stale_tag,
                     }
                 else:
-                    stale_reference = {
-                        "refused": False, "returned": res.get("values"), "reference": stale_tag,
+                    reopened_integral = _to_float(res.get("values"))
+                    assert abs(reopened_integral - after_solve_field_integral) <= 1e-12 * max(
+                        abs(after_solve_field_integral), 1.0
+                    ), (reopened_integral, after_solve_field_integral)
+                    stale_reference_branch = {
+                        "branch": "REOPENED",
+                        "reference": stale_tag,
+                        "reopened_T_integral": reopened_integral,
+                        "closed_worker_T_integral": after_solve_field_integral,
+                        "identical_to_closed_worker": True,
                     }
-                assert stale_reference["refused"] is True, stale_reference
+
+                try:
+                    result_evaluate(reference_worker, "c15_never_created_tag", {"spec": {
+                        "expressions": ["T"],
+                        "solution": {"dataset": "dset1"},
+                        "aggregate": "integral",
+                    }})
+                except ExecutionContractError as exc:
+                    unknown_reference: dict[str, Any] = {
+                        "refused": True, "code": exc.code, "message": str(exc)[:200],
+                    }
+                else:
+                    raise AssertionError(
+                        "a model tag that was never created resolved on a fresh worker"
+                    )
+                assert "c15_never_created_tag" in unknown_reference["message"], unknown_reference
             finally:
                 try:
                     reference_worker.client().disconnect()
@@ -3289,8 +3409,10 @@ public final class C07Builder {
                         "seconds": solve_seconds,
                         "finished": solve_state.get("finished"),
                         "post_solve_integral_of_1": after_solve_area,
+                        "closed_worker_integral_of_T": after_solve_field_integral,
                     },
-                    "stale_reference_after_worker_close": stale_reference,
+                    "reference_after_worker_close": stale_reference_branch,
+                    "never_created_tag_refusal": unknown_reference,
                     "shared_server_pids_before": shared_before,
                     "shared_server_alive_after": shared_alive,
                 },
@@ -3588,6 +3710,12 @@ public final class C07Builder {
                 self.run_c16,
                 self.run_c17,
             ):
+                case_id = run_case.__name__.removeprefix("run_").upper()
+                # `--only` narrows the run for iteration: the listed cases still run their
+                # real preconditions (C03 builds and solves the models every later case
+                # reads), so a filtered run is a real, if narrower, run.
+                if self.only is not None and case_id not in self.only:
+                    continue
                 self.run_case_guarded(run_case)
 
         finally:
@@ -3853,6 +3981,12 @@ public final class C07Builder {
 def main() -> None:
     parser = argparse.ArgumentParser(description="G3.3 Live Acceptance Suite")
     parser.add_argument("--run-dir", default=None, help="Working directory for acceptance run")
+    parser.add_argument(
+        "--only",
+        default=None,
+        help="Comma-separated case ids (e.g. C03,C08): run only these cases; their "
+             "preconditions (C03's models) still run so the narrowed run is real.",
+    )
     args = parser.parse_args()
 
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -3866,7 +4000,11 @@ def main() -> None:
         # §11: run evidence lives inside the repository, so the ledger's run_id,
         # its per-run directory and the SHA256SUMS digests all resolve in-tree.
         run_dir = ROOT / "evidence" / "phase4_3" / "runs" / f"live_acceptance_{stamp}"
-    runner = AcceptanceRunner(run_dir)
+    only = None
+    if args.only:
+        only = {part.strip().upper() for part in args.only.split(",") if part.strip()}
+        print(f"[main] --only {sorted(only)}")
+    runner = AcceptanceRunner(run_dir, only=only)
     runner.run_all()
     if getattr(runner, "final_status", None) != "G3_3_MAC_W17_VERIFIED_SCOPED":
         raise SystemExit(1)
