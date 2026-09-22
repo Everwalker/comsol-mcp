@@ -2382,6 +2382,42 @@ public final class C07Builder {
             encoding="utf-8",
         )
         (self.evidence_dir / "runner.log").write_text("\n".join(self.log_lines) + "\n", encoding="utf-8")
+        (self.evidence_dir / "RUN_NOTES.md").write_text(
+            "# Run notes\n\n"
+            f"- run_id: `{self.run_id}`\n"
+            f"- goal: {summary['goal']}\n"
+            f"- status: `{summary['status']}`\n"
+            f"- source: `{source['head']}` (tree `{source['tree']}`, branch `{source['branch']}`)\n"
+            f"- engine: {self.comsol_version or 'unavailable'}\n\n"
+            "## What is tracked and what is not\n\n"
+            "This directory is tracked selectively.  The evidence documents are:\n\n"
+            "- `result.json` -- the ledger written for this run (same payload as\n"
+            "  `evidence/phase4_3_acceptance.json`);\n"
+            "- `assertions.json` -- per-case assertion records plus any aborted cases\n"
+            "  with their tracebacks;\n"
+            "- `runner.log` -- the runner's own log lines for this run;\n"
+            "- `source_manifest.json` -- HEAD, tree, branch, tracked-file count and the\n"
+            "  aggregate blob-map digest the ledger is bound to;\n"
+            "- `environment.json` -- COMSOL root, JDK, interpreter, cwd, command line;\n"
+            "- `case_inventory.json` -- the case ids recorded in this run;\n"
+            "- `SHA256SUMS.json` -- digests of the run artifacts and of the evidence\n"
+            "  files above, so a verifier can detect edits.\n\n"
+            "Run-local working state is deliberately *not* tracked (see `.gitignore`):\n"
+            "`artifacts/` (solved models and sentinel files), `prefs/` (the isolated\n"
+            "engine's private workspace), `tmp/`, `locks/`, `recovery/`, `worker_*/`,\n"
+            "`test_venv/`, `wheel_dist/`, generated `*.java` builders, `server.port` and\n"
+            "`mphserver.log`.  Those are inputs the run consumed or produced on disk;\n"
+            "they are reproducible by re-running the suite, and their digests are in\n"
+            "`SHA256SUMS.json`.\n\n"
+            "## How to re-verify\n\n"
+            "```\n"
+            f"cd {ROOT}\n"
+            f".venv/bin/python tests/run_g3_3_live_acceptance.py --run-dir {self.run_dir}\n"
+            "```\n\n"
+            "The run refuses to start from a tree with modified tracked files, so the\n"
+            "ledger it writes is always bound to a commit.\n",
+            encoding="utf-8",
+        )
         (self.evidence_dir / "source_manifest.json").write_text(
             json.dumps(source, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
         )
