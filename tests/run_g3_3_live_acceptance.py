@@ -18,6 +18,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import traceback
 from typing import Any, Mapping
@@ -165,9 +166,22 @@ import java.util.*;
 
 public final class ClearStoredSolution {
     public static Object run(Model model, Map<String, Object> args) {
-        model.sol("sol1").clearSolutionData();
+        // Make the artifact genuinely solution-free.  clearSolutionData() alone was not
+        // enough in COMSOL 6.4 (build 293): the "cleared" copy still answered a point read
+        // with the stored field value, so that control proved nothing.  The solution data
+        // is cleared, the solution is cleared and the solution node is removed; the dataset
+        // stays, so the artifact is exactly "a dataset whose solution is gone".
+        Map<String, Object> report = new LinkedHashMap<>();
+        boolean cleared_data = false, cleared_solution = false, removed_node = false;
+        try { model.sol("sol1").clearSolutionData(); cleared_data = true; } catch (Exception ignored) { }
+        try { model.sol("sol1").clearSolution(); cleared_solution = true; } catch (Exception ignored) { }
+        try { model.sol().remove("sol1"); removed_node = true; } catch (Exception ignored) { }
         model.save((String) args.get("path"));
-        return Collections.singletonMap("status", "CLEARED");
+        report.put("status", "CLEARED");
+        report.put("clear_solution_data", cleared_data);
+        report.put("clear_solution", cleared_solution);
+        report.put("remove_solution_node", removed_node);
+        return report;
     }
 }
 """
@@ -283,6 +297,47 @@ public final class ThreeDBlockBuilder {
 """
 
 
+C15_LONG_SOLVE_JAVA = """
+import com.comsol.model.*;
+import java.util.*;
+
+public final class C15LongSolve {
+    public static Object run(Model model, Map<String, Object> args) {
+        // A solve long enough to be observed while it is in flight: a 1 cm^2 2-D block with
+        // a physics-controlled fine mesh and 401 transient steps.  The control-plane probe
+        // in C15 needs the engine busy, so the case asserts the solve is still running and
+        // fails loudly if it was too short to observe.
+        model.modelNode().create("comp1");
+        model.geom().create("geom1", 2);
+        model.geom("geom1").create("r1", "Rectangle");
+        model.geom("geom1").feature("r1").set("size", new String[]{"0.01", "0.01"});
+        model.geom("geom1").run();
+
+        model.physics().create("ht", "HeatTransfer", "geom1");
+        model.physics("ht").create("temp1", "TemperatureBoundary", 1);
+        model.physics("ht").feature("temp1").selection().set(new int[]{1});
+        model.physics("ht").feature("temp1").set("T0", "353.15[K]");
+
+        model.material().create("mat1", "Common", "comp1");
+        model.material("mat1").selection().all();
+        model.material("mat1").propertyGroup("def").set("thermalconductivity", new String[]{"400[W/(m*K)]"});
+        model.material("mat1").propertyGroup("def").set("density", "8960[kg/m^3]");
+        model.material("mat1").propertyGroup("def").set("heatcapacity", "385[J/(kg*K)]");
+
+        model.mesh().create("mesh1", "geom1");
+        model.mesh("mesh1").feature("size").set("hauto", 3);
+        model.mesh("mesh1").run();
+
+        model.study().create("std1");
+        model.study("std1").create("time", "Transient");
+        model.study("std1").feature("time").set("tlist", "range(0, 0.0125, 5)");
+        model.study("std1").run();
+        return Collections.singletonMap("status", "SOLVED");
+    }
+}
+"""
+
+
 class AcceptanceRunner:
     def __init__(self, run_dir: Path) -> None:
         self.run_dir = run_dir
@@ -315,6 +370,8 @@ class AcceptanceRunner:
         self.exchange_truncated = False
         #: D6: the pack-level identity of the tree under test, written before the cases run.
         self.source_identity: dict[str, Any] | None = None
+        #: C15/C17: mphserver PIDs that existed before this suite started its own.
+        self.shared_server_pids_before: list[int] = []
 
     def record_exchange(self, worker_label: str, event: Mapping[str, Any]) -> None:
         """Append one worker request/reply event to the run's durable trail (D7, §11).
@@ -374,6 +431,12 @@ class AcceptanceRunner:
 
     def start_isolated_server(self) -> int:
         self.log("Starting dedicated clean-room COMSOL mphserver...")
+        # §C15/"does not stop the shared Server": record the mphserver processes that
+        # already exist before this suite starts its own, so the teardown case can assert
+        # they are still alive afterwards instead of only claiming it in prose.
+        self.shared_server_pids_before = self._foreign_mphserver_pids()
+        if self.shared_server_pids_before:
+            self.log(f"Pre-existing mphserver PID(s) that must survive this run: {self.shared_server_pids_before}")
         portfile = self.run_dir / "server.port"
         server_log = self.run_dir / "mphserver.log"
         cmd = [
@@ -439,6 +502,34 @@ class AcceptanceRunner:
         except PermissionError:
             return True
         return True
+
+    @staticmethod
+    def _foreign_mphserver_pids() -> list[int]:
+        """mphserver PIDs that exist before this suite starts its own (C15/C17).
+
+        The acceptance contract requires that the run does not stop a shared server it
+        did not start.  Recording the PIDs up front turns that from a claim into an
+        assertion at teardown time.
+        """
+        try:
+            out = subprocess.check_output(["ps", "-axo", "pid=,command="], text=True)
+        except Exception:
+            return []
+        pids: list[int] = []
+        for line in out.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                continue
+            pid_text, _, command = stripped.partition(" ")
+            if "mphserver" not in command:
+                continue
+            if "grep" in command:
+                continue
+            try:
+                pids.append(int(pid_text))
+            except ValueError:
+                continue
+        return sorted(pids)
 
     def source_manifest(self) -> dict[str, Any]:
         """The source identity every report of this run is bound to (§11/§12).
@@ -1397,7 +1488,7 @@ public final class C07Builder {
             clear_java = self.run_dir / "ClearStoredSolution.java"
             clear_java.write_text(CLEAR_STORED_SOLUTION_JAVA)
             cleared_model = worker2.client().load(str(cleared_mph), "reopen_a_cleared")
-            worker2.submit("code_execute", {
+            clear_report = worker2.submit("code_execute", {
                 "tag": cleared_model.tag(),
                 "source_artifact": str(clear_java),
                 "entrypoint": "ClearStoredSolution",
@@ -1406,14 +1497,31 @@ public final class C07Builder {
             cleared_sha = _sha256(cleared_mph)
             cleared_receipt = dict(receipt_a, model_sha256=cleared_sha)
 
-            def _cleared_artifact_read(_model: Any, _expr: str) -> Any:
-                read = result_at_points(worker2, "reopen_a_cleared", {
+            # The read is performed once, for real, and its outcome is what the evaluator
+            # replays: either the artifact still answers (a value, which is a defect this
+            # control must surface) or reading it fails (the cleared state we expect).
+            cleared_read_outcome: dict[str, Any] = {}
+            try:
+                cleared_probe = result_at_points(worker2, "reopen_a_cleared", {
                     "spec": {"expressions": ["T"], "solution": {"dataset": "dset1"}},
                     "points": [[0.0125, 0.005]],
                     "coordinate_unit": "m",
                     "frame": "spatial",
                 })
-                return read["values"][0][0][0]
+                cleared_read_outcome = {
+                    "read_returned_raw": cleared_probe.get("values"),
+                    "read_returned_flat": _flatten_scalars(cleared_probe.get("values")),
+                    "status": cleared_probe.get("status"),
+                }
+            except Exception as exc:
+                cleared_read_outcome = {"read_raised": f"{type(exc).__name__}: {exc}"}
+
+            def _cleared_artifact_read(_model: Any, _expr: str) -> Any:
+                # Replay the engine's answer verbatim -- including an empty one -- so the
+                # verifier classifies the cleared artifact from the real read.
+                if "read_raised" in cleared_read_outcome:
+                    raise RuntimeError(cleared_read_outcome["read_raised"])
+                return cleared_read_outcome["read_returned_raw"]
 
             try:
                 verify_reopen(
@@ -1422,12 +1530,18 @@ public final class C07Builder {
                 )
                 raise AssertionError("Expected SOLUTION_CLEARED_OR_EMPTY")
             except ReopenVerificationError as exc:
-                assert exc.code == "SOLUTION_CLEARED_OR_EMPTY", (exc.code, exc.message)
+                observed_code = exc.code
+                assert exc.code == "SOLUTION_CLEARED_OR_EMPTY", (
+                    exc.code, exc.message,
+                    f"the cleared artifact's read produced {cleared_read_outcome!r}",
+                )
             cleared_control = {
                 "expected_code": "SOLUTION_CLEARED_OR_EMPTY",
-                "observed_code": "SOLUTION_CLEARED_OR_EMPTY",
+                "observed_code": observed_code,
                 "artifact_sha256": cleared_sha,
                 "artifact_is_a_copy": True,
+                "clear_steps": clear_report,
+                "cleared_artifact_read": cleared_read_outcome,
             }
 
             # Neg 6 (D9): the field values are modified inside the artifact.  The copy is
@@ -2572,7 +2686,14 @@ public final class C07Builder {
             published_ref = Path(published["artifact_ref"]).resolve()
             assert published_ref.is_relative_to(ROOT.resolve()), published_ref
             assert _sha256(published_ref) == published["sha256"]
-            published_candidates = [p.name for p in published_ref.parent.iterdir() if p.name != published_ref.name]
+            # Leave-no-candidate is about *this* publish: the atomic writer stages
+            # ``.<name>.tmp.<hex>`` and must not leave one behind.  The delivered check
+            # asserted the whole project directory held exactly one file, which fails as
+            # soon as any other artifact (another run's output, a smoke test's output)
+            # lives there -- that is not this publish's residue.
+            published_candidates = sorted(
+                p.name for p in published_ref.parent.glob(f".{published_ref.name}.tmp.*")
+            )
             assert published_candidates == [], published_candidates
 
             self.record_case(
@@ -2638,8 +2759,8 @@ public final class C07Builder {
             pinned = meta["sha256"]
             assert ref.is_relative_to(ROOT.resolve()), f"{ref} is not inside {ROOT}"
             assert _sha256(ref) == pinned, "published digest does not match the file on disk"
-            leftovers = [p.name for p in ref.parent.iterdir() if p.name != ref.name]
-            assert leftovers == [], f"atomic publish left candidates behind: {leftovers}"
+            candidates = sorted(p.name for p in ref.parent.glob(f".{ref.name}.tmp.*"))
+            assert candidates == [], f"atomic publish left candidates behind: {candidates}"
 
             # 2. Reconstruct through the host-requested chunk read (the delivered suite
             #    called ArtifactStore.read_chunk directly, so the operation a host can
@@ -2910,16 +3031,145 @@ public final class C07Builder {
     # Case C15: T010/T012/T027 Idempotency & Control Plane Responsiveness
     # -----------------------------------------------------------------------
     def run_c15(self) -> None:
-        self.log("Executing C15: Idempotency and control plane responsiveness...")
+        self.log("Executing C15: Idempotency, control responsiveness during a solve, stale references...")
         try:
-            worker = self.make_worker("c15_probe")
+            # --- (1) The same evaluation retried once returns the same values; a changed
+            #     observation is a new request.  The request/reply trail carries the engine
+            #     request hash, so the two facts are recorded from the run's own evidence.
+            spec_c04 = {
+                "expressions": ["T"],
+                "solution": {"dataset": "dset1"},
+                "aggregate": "integral",
+            }
+            trail_start = len(self.exchanges)
+            first = result_evaluate(self.verifier_worker, "reopen_c04", {"spec": dict(spec_c04)})
+            retry = result_evaluate(self.verifier_worker, "reopen_c04", {"spec": dict(spec_c04)})
+            changed = result_evaluate(
+                self.verifier_worker, "reopen_c04",
+                {"spec": {**spec_c04, "expressions": ["T", "x"]}},
+            )
+            assert first["values"] == retry["values"], (first["values"], retry["values"])
+            assert changed["values"] != first["values"], (changed["values"], first["values"])
+            observed = [
+                entry for entry in self.exchanges[trail_start:]
+                if entry.get("phase") == "observed"
+            ]
+            request_hashes = [entry.get("request_hash") for entry in observed]
+            assert request_hashes, "the request/reply trail recorded no observed request"
+            # The two identical evaluations must carry the same request hash; the changed
+            # SPEC must not reuse it, or a "new observation" would be answered from the
+            # first request's identity.
+            hashes_by_kind = {
+                "identical_retry_same_request_hash": request_hashes[0] == request_hashes[1],
+                "changed_spec_new_request_hash": request_hashes[2] != request_hashes[0],
+            }
+            assert hashes_by_kind["changed_spec_new_request_hash"], request_hashes
+
+            # --- (2) The control plane answers while the engine is busy.  The worker runs
+            #     engine calls on a single thread and serves health/status outside it, so a
+            #     health probe during an in-flight solve must come back promptly and report
+            #     the queued/running request.
+            solve_worker = self.make_worker("c15_solve")
+            solve_state: dict[str, Any] = {}
             try:
-                health = worker.health(timeout_s=3.0)
-                assert health["status"] == "HEALTHY"
-                assert health["ok"] is True
-                assert isinstance(health["instance_id"], str)
+                solve_worker.client().connect(self.server_port, "127.0.0.1")
+                java_path = self.run_dir / "C15LongSolve.java"
+                java_path.write_text(C15_LONG_SOLVE_JAVA, encoding="utf-8")
+                solve_tag = solve_worker.client().create("C15LongSolve").tag()
+
+                def _run_long_solve() -> None:
+                    try:
+                        solve_worker.submit("code_execute", {
+                            "tag": solve_tag,
+                            "source_artifact": str(java_path),
+                            "entrypoint": "C15LongSolve",
+                            "arguments": {},
+                        })
+                        solve_state["finished"] = True
+                    except Exception as exc:  # noqa: BLE001
+                        solve_state["error"] = f"{type(exc).__name__}: {exc}"
+
+                solve_thread = threading.Thread(target=_run_long_solve, daemon=True)
+                started = time.perf_counter()
+                solve_thread.start()
+                time.sleep(1.0)
+                assert solve_thread.is_alive(), (
+                    "the long solve finished before the control plane could be probed; "
+                    "the case cannot claim responsiveness during a solve"
+                )
+                health_samples = []
+                for _ in range(5):
+                    probe_start = time.perf_counter()
+                    health = solve_worker.health(timeout_s=3.0)
+                    health_samples.append({
+                        "latency_s": time.perf_counter() - probe_start,
+                        "status": health.get("status"),
+                        "queued_or_running": health.get("queued_or_running"),
+                    })
+                    assert health.get("status") == "HEALTHY", health
+                max_latency = max(sample["latency_s"] for sample in health_samples)
+                busy_samples = [s for s in health_samples if (s["queued_or_running"] or 0) >= 1]
+                assert busy_samples, (
+                    "no health probe observed the solve in flight (queued_or_running stayed 0); "
+                    f"samples={health_samples}"
+                )
+                assert max_latency < 2.0, health_samples
+                solve_thread.join(timeout=300)
+                assert not solve_thread.is_alive(), "the long solve did not finish within 300 s"
+                assert solve_state.get("finished") is True, solve_state
+                solve_seconds = time.perf_counter() - started
+                assert solve_seconds > 1.0, solve_seconds
+
+                # --- (3) After the solve the engine path answers again, and the read is the
+                #     model's own measure (the block's area), not a stale value.
+                after_solve = result_evaluate(solve_worker, solve_tag, {"spec": {
+                    "expressions": ["1"],
+                    "solution": {"dataset": "dset1"},
+                    "aggregate": "integral",
+                    "selection": "all",
+                }})
+                after_solve_area = _to_float(after_solve["values"])
+                assert abs(after_solve_area - 1e-4) < 1e-18, after_solve_area
+                stale_tag = solve_tag
             finally:
-                worker.close()
+                try:
+                    solve_worker.client().disconnect()
+                except Exception:
+                    pass
+                solve_worker.close()
+
+            # --- (4) A reference that belonged to the closed worker's engine session must
+            #     not resolve for a fresh worker (no silent re-creation).
+            reference_worker = self.make_worker("c15_reference")
+            try:
+                reference_worker.client().connect(self.server_port, "127.0.0.1")
+                try:
+                    res = result_evaluate(reference_worker, stale_tag, {"spec": {
+                        "expressions": ["T"],
+                        "solution": {"dataset": "dset1"},
+                        "aggregate": "integral",
+                    }})
+                except ExecutionContractError as exc:
+                    stale_reference = {
+                        "refused": True, "code": exc.code, "message": str(exc)[:200],
+                        "reference": stale_tag,
+                    }
+                else:
+                    stale_reference = {
+                        "refused": False, "returned": res.get("values"), "reference": stale_tag,
+                    }
+                assert stale_reference["refused"] is True, stale_reference
+            finally:
+                try:
+                    reference_worker.client().disconnect()
+                except Exception:
+                    pass
+                reference_worker.close()
+
+            # --- (5) A shared mphserver that this run did not start must still be running.
+            shared_before = list(self.shared_server_pids_before)
+            shared_alive = {pid: self._pid_alive(pid) for pid in shared_before}
+            assert all(shared_alive.values()), shared_alive
 
             self.record_case(
                 "C15",
@@ -2927,9 +3177,34 @@ public final class C07Builder {
                 "PASS",
                 "protocol",
                 {
-                    "worker_status": health["status"],
-                    "instance_id": health["instance_id"],
-                    "control_responsive": True,
+                    "identical_retry_values_equal": True,
+                    "identical_retry_result": first["values"],
+                    "changed_spec_result": changed["values"],
+                    "request_hashes": {
+                        "first": request_hashes[0],
+                        "retry": request_hashes[1],
+                        "changed": request_hashes[2],
+                        **hashes_by_kind,
+                    },
+                    "control_plane_during_solve": {
+                        "samples": health_samples,
+                        "max_latency_s": max_latency,
+                        "budget_s": 2.0,
+                        "budget_rationale": (
+                            "health never enters the engine thread; the budget only has to "
+                            "exceed one socket round-trip, so 2 s is loose by orders of "
+                            "magnitude rather than tight"
+                        ),
+                        "samples_that_observed_the_solve": len(busy_samples),
+                    },
+                    "long_solve": {
+                        "seconds": solve_seconds,
+                        "finished": solve_state.get("finished"),
+                        "post_solve_integral_of_1": after_solve_area,
+                    },
+                    "stale_reference_after_worker_close": stale_reference,
+                    "shared_server_pids_before": shared_before,
+                    "shared_server_alive_after": shared_alive,
                 },
             )
         except Exception as exc:
@@ -2958,12 +3233,20 @@ public final class C07Builder {
             # delivered file pointed at the pre-remediation GitHub commit, so following the
             # recovery guide installed a different source tree than the one under test.
             lock_text = (ROOT / "constraints-macos-arm64-py313.txt").read_text(encoding="utf-8")
-            assert "\n-e .\n" in lock_text, (
-                "the dependency lock does not install the delivered tree (expected a '-e .' entry)"
+            # Only the *active* lines count: the file explains in a comment which remote pin
+            # it used to carry, and that mention must not read as an active pin.
+            active_lock_lines = [
+                line.strip() for line in lock_text.splitlines()
+                if line.strip() and not line.strip().startswith("#")
+            ]
+            assert any(line.startswith("-e .") for line in active_lock_lines), (
+                "the dependency lock does not install the delivered tree (expected a '-e .' entry): "
+                f"{active_lock_lines}"
             )
-            assert "git+https://github.com/Everwalker/comsol-mcp.git@" not in lock_text, (
-                "the lock still pins a remote commit instead of the delivered tree"
-            )
+            assert not any(
+                "git+https://github.com/Everwalker/comsol-mcp.git@" in line
+                for line in active_lock_lines
+            ), "the lock still pins a remote commit instead of the delivered tree"
             identity_path = ROOT.parent / "SOURCE_TREE_IDENTITY.json"
             assert identity_path.is_file(), (
                 f"the pack-level source identity is missing at {identity_path}; the lock's "
@@ -3161,8 +3444,18 @@ public final class C07Builder {
             self.aborts.append(aborted)
             existing = self.cases.get(case_id)
             if existing is None:
+                details: dict[str, Any] = {}
+                # A case that depends on the artifacts C03 registers fails here when C03
+                # itself aborted; say so, so a reader of the ledger can tell a cascade from
+                # an independent defect.
+                if "bound model 'reopen" in str(exc) and self.cases.get("C03", {}).get("status") != "PASS":
+                    details["cascade_of"] = "C03"
+                    details["cascade_note"] = (
+                        "C03 aborted before it registered the reopened artifacts, so this "
+                        "case's model was unavailable"
+                    )
                 self.record_case(
-                    case_id, f"{case_id} (aborted before recording)", "FAIL", "protocol", {},
+                    case_id, f"{case_id} (aborted before recording)", "FAIL", "protocol", details,
                     error=f"{type(exc).__name__}: {exc}",
                 )
             else:
@@ -3220,6 +3513,17 @@ public final class C07Builder {
         elapsed = time.monotonic() - start_time
         self.log(f"Suite completed in {elapsed:.2f}s")
         self.write_acceptance_evidence(elapsed)
+        # A failed acceptance run must not exit 0: the delivered suite wrote
+        # ACCEPTANCE_FAILED ledgers and still returned success to its caller, so a CI job
+        # or a reviewer reading only the exit code would see a green run.
+        self.final_status = (
+            "G3_3_MAC_W17_VERIFIED_SCOPED"
+            if all(c["status"] == "PASS" for c in self.cases.values())
+            else "ACCEPTANCE_FAILED"
+        )
+        failed = sorted(cid for cid, c in self.cases.items() if c["status"] != "PASS")
+        if failed:
+            self.log(f"Acceptance verdict: {self.final_status}; failed cases: {failed}")
 
     def write_acceptance_evidence(self, elapsed_s: float) -> None:
         # Build comprehensive phase4_3_acceptance.json
@@ -3471,6 +3775,8 @@ def main() -> None:
         run_dir = ROOT / "evidence" / "phase4_3" / "runs" / f"live_acceptance_{stamp}"
     runner = AcceptanceRunner(run_dir)
     runner.run_all()
+    if getattr(runner, "final_status", None) != "G3_3_MAC_W17_VERIFIED_SCOPED":
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

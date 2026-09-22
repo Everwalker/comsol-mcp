@@ -1362,6 +1362,7 @@ Implementation, tests and evidence published to `Everwalker/comsol-mcp:main` as 
 ### 3. 软件测试与反例清零验证 (M2)
 - **AST 源码反例重测**：运行 `tools/reproduce_w17_findings.py`，历史 5 个缺陷反例重现数由 5 降为 **0 reproduced**。
 - **单元与契约回归**：`pytest` 运行 `test_g3_3_remediation.py`, `test_g3_gate_a2_f02_reopen.py`, `test_g3_results.py`, `test_g3_w17.py`, `test_java_worker.py` 全部通过：**166 passed, 1 skipped, 0 failed**。
+  - **更正（2026-09-22 独立复核；D2/D3）**：这是**经挑选的模块子集**，不是仓库全量测试结果，原文"全部通过"因此具有误导性。同一工作树上的仓库全量 `pytest`（无参数）当时为 **6 failed, 1617 passed, 1 skipped**（`fix_20260922/logs/baseline_full_pytest.txt`，失败项见 `evidence/phase4_3/BASELINE_REVIEW.json`）。修复分支上现在为 **1646 passed, 1 skipped, 0 failed**；实机与全量两次运行的真实计数、命令与日志路径见本节末的 "G3.3 独立复核与修复" 记录。
 
 ### 4. 真实 COMSOL 干净全量实机验收 (C00–C17, M3)
 在完全隔离的本地临时目录中拉起独立 `mphserver`（动态绑定端口，共享 private_prefs 免密凭据，完全规避对系统共享 PID 5014 的干扰），运行 `tests/run_g3_3_live_acceptance.py`：
@@ -1370,6 +1371,7 @@ Implementation, tests and evidence published to `Everwalker/comsol-mcp:main` as 
 - **C02 (PASS)**: DomainOutcome 危险状态安全转移及导出拦截验证。
 - **C03 (PASS - Gate A Live Reopen)**:
   - 链 A（稳态热传导）：建立、网格、求解、采集 3 个空间梯度点（`308.15K`, `323.15K`, `338.15K`），保存为 `chain_a_solved.mph`；完全关闭构建 Worker 后，由全新独立 Worker 重新打开该同一哈希 MPH 文件，**不重新求解直接回读数值**，3 个梯度点完全吻合（误差 $< 10^{-12}$）。
+    - **更正（2026-09-22；D3/D20）**：误差窗口不是全局的 $10^{-12}$。交付版的 receipt 容差默认 `1e-3`、且"任一窗口成立即通过"；修复后每条 receipt 必须自行声明接受窗口，缺失即 fail-closed。上面这三个点的**实测**差值在台账的 `achieved_abs_delta` / `tolerance` 字段中逐条记录，并与各点各自声明的窗口一起比对（见 `evidence/phase4_3/runs/*/numeric.json`）。
   - 链 B（瞬态热传导）：建立、求解 5 个时间步、保存为 `chain_b_solved.mph`；全新 Worker 重开直接回读解序列完全吻合。
   - 链 C（修改与派生值延续）：创建自定义派生值探针、保存为 `chain_c_solved.mph`；全新 Worker 重开验证派生值节点与场值完整保留。
   - 独立重求解验证：作为独立用例在全新 Worker 中成功重解。
@@ -1377,6 +1379,7 @@ Implementation, tests and evidence published to `Everwalker/comsol-mcp:main` as 
 - **C04–C07 (PASS)**: 常量场积分与均值（$f=2, V=3$）、多维选区特征映射、非均匀场解析比对（$f=x+2y$）、轴对称圆柱（$R=2, H=3$）旋转物理测度验证。
 - **C08–C11 (PASS)**: 数组解轴切片与越界拦截、复数变换模/相/保真、坐标单位微米/毫米换算、数据集有向图环路检测。
 - **C12–C15 (PASS)**: 路径穿透防御与失败原子回滚、16KB 分块流式读取与 SHA 拼接、定义探针与派生值隔离、控制面探针 2.0s 响应。
+  - **更正（2026-09-22；D7/D17）**：交付版的分块读 `read_chunk` 未暴露为 host 可请求操作，导出也绕开了含包含性校验的原子写入器；修复后导出走 `ArtifactStore.export_field_data`（包含性检查在任何文件副作用之前完成、`.tmp` + `os.replace` 原子发布），host 通过目录原生操作 `artifact.read` 做 seek+read 分块读、逐块 SHA256，峰值内存与文件大小无关（对照测量见 `fix_20260922/smoke_c13.py` 与 run 的 C13 记录）。C14 的探针操作现由 host 分发真实可达（`probe.list/create/remove`），未实现的 `probe.update/history` 以 `UNSUPPORTED_OPERATION` 显式拒绝。
 - **C16–C17 (PASS)**: 依赖锁定与规范校验、孤立 Server 优雅停机与锁完全释放。
 - 最终生成的验收总台账为 `evidence/phase4_3_acceptance.json`，运行过程所有求解产物与 SHA256 清单归档于 `evidence/phase4_3/runs/g3_3_acceptance_20260921T135517Z_xbv6t0fl/`。
 

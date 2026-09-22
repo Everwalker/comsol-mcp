@@ -27,4 +27,6 @@ An independent clean-room audit of the pinned G3.2 commit (`2cb46279...`) identi
    - Counterexamples tested: 5
    - Reproduced defects: **0**
 2. **Unit Test Suite:** 166 passed, 1 skipped, 0 failed across all unit test modules.
+   - **Correction (2026-09-22 independent recheck, D2/D3):** that figure is a hand-picked module subset, not the repository suite. The full `pytest` run on the same worktree was **6 failed, 1617 passed, 1 skipped** at delivery (`fix_20260922/logs/baseline_full_pytest.txt`). On the fix branch the full suite is **1646 passed, 1 skipped, 0 failed**.
 3. **Live Acceptance (C00–C17):** 18 passed, 0 failed in clean-room live suite run `g3_3_acceptance_20260921T135429Z_9dozr6l_`.
+   - **Correction (2026-09-22, D14):** the delivered run recorded the C03 chain-A re-solve as verified while the driver called `solve("std1")` at line 838 with no assertion and hardcoded `independent_resolve_verified: True` at line 904. The re-solve is now its own case (C03R) that asserts the reopened model's staleness, re-solves and compares against independently computed expectations, so the live suite has 19 cases.
