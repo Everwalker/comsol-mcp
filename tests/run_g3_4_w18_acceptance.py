@@ -316,6 +316,11 @@ class LiveAcceptanceRunner:
             proj_dir / "tokens.json",
             proj_dir / ".git" / "config",
             proj_dir / "credentials.ini",
+            proj_dir / "comsol_prefs" / "login.properties",
+            proj_dir / "comsol.prefs",
+            proj_dir / "docs_index.sqlite3",
+            proj_dir / "transactions.json",
+            proj_dir / "comsol_mcp" / "__init__.py",
         ]
         for s in sentinels:
             s.parent.mkdir(parents=True, exist_ok=True)
@@ -1208,13 +1213,26 @@ public final class ModelSaver {{
                 "target_platform": "macOS-aarch64 (Apple Silicon commercial installation)",
                 "live_engine": "COMSOL Multiphysics 6.4",
             },
-            "cases": self.cases,
             "artifacts_generated": [
                 str(p.relative_to(ROOT))
-                for p in self.run_dir.glob("**/*")
+                for p in sorted(self.run_dir.glob("**/*"))
                 if p.is_file()
+                and not any(
+                    part in p.parts
+                    for part in (
+                        "comsol_prefs",
+                        "locks",
+                        "worker_main",
+                        "worker2",
+                        "comsol_tmp",
+                        "comsol_recovery",
+                        "cwd_d",
+                        "env_site_packages",
+                    )
+                )
+                and not p.name.startswith(".")
+                and p.suffix not in (".lock", ".log", ".port", ".java")
             ],
-        }
 
         payload = json.dumps(summary, indent=2, ensure_ascii=False) + "\n"
         evidence_file.parent.mkdir(parents=True, exist_ok=True)

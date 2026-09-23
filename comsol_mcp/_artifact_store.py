@@ -600,6 +600,15 @@ class ArtifactStore:
             ".credentials",
             ".token",
             ".secret",
+            "comsol_prefs",
+            ".comsol_prefs",
+            "comsol-server-home",
+            "site-packages",
+            "dist-packages",
+            "comsol_mcp",
+            ".venv",
+            "venv",
+            "__pycache__",
         )
         _PROTECTED_TOKENS = {
             "token",
@@ -608,25 +617,48 @@ class ArtifactStore:
             "tokens.json",
             "credential",
             "credentials",
+            "credentials.ini",
             "secret",
             "secrets",
+            "secret.key",
+            "secret_model.mph",
             "id_rsa",
             "id_dsa",
             "id_ecdsa",
             "id_ed25519",
             "master.key",
             "auth_token",
+            "comsol.prefs",
+            "login.properties",
+            "transactions.json",
+            "docs_index.sqlite3",
         }
+        _PROTECTED_EXTENSIONS = (
+            ".pem",
+            ".key",
+            ".crt",
+            ".pfx",
+            ".p12",
+            ".sqlite3",
+            ".db",
+            ".py",
+            ".pyc",
+            ".pyo",
+        )
+
+        def _is_protected(part_str: str) -> bool:
+            p_low = part_str.lower()
+            s_low = Path(p_low).stem
+            return (
+                part_str.startswith(".")
+                or any(p_low.startswith(prefix) for prefix in _PROTECTED_DIR_PREFIXES)
+                or p_low in _PROTECTED_TOKENS
+                or s_low in _PROTECTED_TOKENS
+                or any(p_low.endswith(ext) for ext in _PROTECTED_EXTENSIONS)
+            )
+
         for part in rel.parts:
-            part_lower = part.lower()
-            stem_lower = Path(part_lower).stem
-            if (
-                part.startswith(".")
-                or any(part_lower.startswith(prefix) for prefix in _PROTECTED_DIR_PREFIXES)
-                or part_lower in _PROTECTED_TOKENS
-                or stem_lower in _PROTECTED_TOKENS
-                or any(part_lower.endswith(ext) for ext in (".pem", ".key", ".crt", ".pfx", ".p12"))
-            ):
+            if _is_protected(part):
                 raise _contract_error(
                     "ACCESS_VIOLATION",
                     f"Destination {dest!r} enters protected or private path component {part!r}",
@@ -645,15 +677,7 @@ class ArtifactStore:
             ) from exc
 
         for part in rel_resolved.parts:
-            part_lower = part.lower()
-            stem_lower = Path(part_lower).stem
-            if (
-                part.startswith(".")
-                or any(part_lower.startswith(prefix) for prefix in _PROTECTED_DIR_PREFIXES)
-                or part_lower in _PROTECTED_TOKENS
-                or stem_lower in _PROTECTED_TOKENS
-                or any(part_lower.endswith(ext) for ext in (".pem", ".key", ".crt", ".pfx", ".p12"))
-            ):
+            if _is_protected(part):
                 raise _contract_error(
                     "ACCESS_VIOLATION",
                     f"Resolved destination {resolved!r} enters protected or private path component {part!r}",

@@ -54,3 +54,25 @@ def test_artifact_registration_tracks_published_files(tmp_path: Path) -> None:
     result = store.export_field_data(str(target), {"values": [1.0, 2.0], "status": {"ok": True}})
     assert ArtifactStore.is_registered_artifact(target)
     assert ArtifactStore.is_registered_artifact(result["file_path"])
+
+
+def test_resolve_safe_path_rejects_control_prefs_runtime_db_and_source(tmp_path: Path) -> None:
+    store = ArtifactStore(tmp_path)
+    # Control prefs
+    for p in ("comsol_prefs/login.properties", "comsol.prefs", "comsol-server-home/port"):
+        with pytest.raises(ExecutionContractError) as exc:
+            store.resolve_safe_path(p, allow_overwrite=True)
+        assert exc.value.code == "ACCESS_VIOLATION"
+
+    # Runtime DB and control transactions
+    for p in ("docs_index.sqlite3", "transactions.json", "data.db"):
+        with pytest.raises(ExecutionContractError) as exc:
+            store.resolve_safe_path(p, allow_overwrite=True)
+        assert exc.value.code == "ACCESS_VIOLATION"
+
+    # Installation source and python modules
+    for p in ("comsol_mcp/__init__.py", "site-packages/pkg.py", "secret.py", "module.pyc"):
+        with pytest.raises(ExecutionContractError) as exc:
+            store.resolve_safe_path(p, allow_overwrite=True)
+        assert exc.value.code == "ACCESS_VIOLATION"
+
