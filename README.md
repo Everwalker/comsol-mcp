@@ -10,28 +10,32 @@
 这个项目的目标不是把 COMSOL 当成黑盒批处理器，而是让自动化过程保持可见：
 你可以在 Desktop 中实时观察 MCP 对几何、参数、网格、求解和保存流程的修改。
 
-## 当前实现状态（2026-09-20，G3 进行中）
+## 当前实现状态（2026-09-23，G3.4 W18 验收完成）
 
-> 本节描述**当前** registry 与入口；下方“主要特性/最近功能更新/工具列表”保留为历史说明（50 个 legacy
-> 工具的基线快照），当前计数以下文为准。**live 验收未完成，不得声称已验收。**
+> 本节反映 G3.4（Gate A: R01–R05 缺陷定向修补与 W18: 真实绘图、导出与 MCP ImageContent 回传）的实机 live 验收状态。
+> 权威验收判定为 **PASS**，状态标识为 `W18_API_VISUAL_VERIFIED_SCOPED`，严格停止于 W18，未进入 W19–W26。
 
-- **MCP 工具面**：`full` profile 当前静态发布 **65 个工具**（51 legacy + 7 执行/控制 + 7 registry/fallback），
-  `domain`/`expert` 为收窄的展示过滤；legacy 名称与参数保持兼容。
-- **领域操作面**：G3 新增 **96 个 operation** —— W13 29 / W14 17 / W15 19 / W16 28 + runtime 2 + results 1，
-  经 `operation_call` / `registry_call`(别名) / `operation_describe` 调用（不是 96 个新增静态工具）；
-  其中 **72 个需要隔离执行路径**（所有非 READ 效果）。
-- **入口与文档**：`docs/comsol_mcp_design_v1/` 下的 `NEXT_GOAL_MAC_G3.md`（本轮 Goal）、
-  `G3_EXECUTION_PLAN.md`、`G3_REVIEW_FIXES.md`（R01–R06 补修与真实计数）、`G3_CAPABILITIES.md`（能力边界）、
-  `G3_OPERATIONS.md`（逐操作覆盖表）、`PROGRESS.md`（G3 段）。
-- **验收驱动**：`python tools/phase4_run_mcp.py`（仅生产 stdio；**从不**启动/停止 COMSOL）。不加 `--live`
-  跑离线/协议检查；`--live` 需要另行验证的任务自有运行时与隔离回执，并需按已批准的 webbridge 阀门流程
-  （`tools/phase3_remote_addr_valve_runtime.py`：临时启用已审查的 localhost RemoteAddrValve → 启动任务自有
-  Server → 收集隔离证明 → 验收 → 停止并恢复原文件/hash）。
-- **当前状态**：软件/协议面 **1359 passed, 1 skipped**；实机 live 运行（`driver`…`driver4`）中
-  `GUARD_T038`/`GUARD_T035`/`GUARD_T005` **PASS**，`GUARD_T010` **NOT_RUN**，`GUARD_T033` **FAIL**，
-  W13–W16 与 R01/R03/R04 的 live 子项因 managed-revision 记账 **BLOCKED/FAIL**；reopen-check 未运行。
-  记录为 `IMPLEMENTED_WITH_BLOCKED_ACCEPTANCE`，**不是** `G3_MAC_EXECUTABLE_SCOPE_PASS`。
-  Windows/Intel Mac/COMSOL 6.3/GUI 继续保持 UNVERIFIED。
+- **MCP 工具与接口面**：
+  - `full` profile 静态发布 **67 个工具**（包含新增的 `plot.render` 与 `plot_render` 图像工具）。
+  - 支持完整的 MCP `ImageContent(type="image", data=b64, mimeType="image/png")` 多模态图形返回与 TextContent 防膨胀摘要分离。
+- **Gate A (R01–R05) 关键缺陷修复**：
+  - **R01**: `project_root` 与 wheel 安装目录彻底解耦，拒绝将 `site-packages` 当作项目根。
+  - **R02**: `artifact.read` 默认强制限制为注册产物（`require_registered=True`），拦截项目内私有 control prefs、token、`.env`、SQLite 数据库及安装源码。
+  - **R03**: CSV 序列化保留 `[expression, outer, inner, point]` 真实四轴物理标签、空间坐标与单位，复数分离为 `real`/`imag`，提供 `csv_to_field_array` 1:1 双向重构。
+  - **R04**: storage=artifact 响应剥离全量 `values`/`data`，提供有界 preview 与完整元数据；分块读取引入 `(inode, mtime, size)` 哈希缓存。
+  - **R05**: 排除本地未公开历史分支依赖，全量拟发布 Git 对象通过零敏感信息安全审计。
+- **W18 真实图形、导出与 MCP 图像回传能力**：
+  - 原生支持 `plot.list`, `plot.group_create`, `plot.feature_create`, `plot.update`, `plot.remove`, `plot.view_manage` 以及 `export.*` 动作。
+  - 属性设置与科学数据绑定全面 fail-closed（消除任何 `except: pass`）。
+  - 真实 COMSOL 渲染：3D 表面图、1D 曲线图、2D CutPlane 截面图、几何渲染、网格渲染、瞬态多步对比渲染。
+  - 完整图像 provenance（包含模型/解/时间/参数/表达式/单位/特征元数据）。
+  - 模型存盘与重开（`saved_w18_model.mph` 由新独立 Worker 打开回读，无需重算直接重绘）。
+  - 外部已有 mphserver 保护（PID 16067, 16138 存活且未受任何干扰）。
+- **实机验收与交付状态**：
+  - 实机 live 验收套件（`tests/run_g3_4_w18_acceptance.py`，A01–A07 与 V01–V11 共 18 项用例）**18/18 全部 PASS**（用时 75.00s，exit 0）。
+  - 单元测试（pytest）**58/58 全部 PASS**。
+  - 独立离线交付包（`COMSOL_MCP_G3_4_W18_DELIVERABLE.tar.gz`）包含全量独立 Git Bundle（`comsol_mcp_g3_4_w18.bundle`，支持 standalone clone），未执行外部 `git push`。
+  - Windows/Linux/Intel Mac/COMSOL 6.3/GUI 及云端 Hermes 视觉接收继续保持 UNVERIFIED（云端界定为 `HOST_DELIVERY_UNVERIFIED`）。
 
 ## 主要特性
 
