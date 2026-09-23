@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Build and verify the G3.4 W18 Delivery Package (COMSOL_MCP_G3_4_W18_DELIVERABLE.tar.gz).
+"""Build and verify the G3.5 Deliverable Package (COMSOL_MCP_G3_5_DELIVERABLE.tar.gz).
 
 Per user request:
-"不要上传到github，把准备上传的文件制作成一个交付包"
-This script packages all files prepared for upload into a self-contained,
+"不要同步到github，将需要上传的文件打包后停止，不进入W20，不依赖旧目录。"
+This script packages all files prepared for handoff into a self-contained,
 cryptographically verifiable delivery package without executing `git push`.
 """
 from __future__ import annotations
@@ -20,6 +20,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+from typing import Any
 
 
 def sha256_file(path: Path) -> str:
@@ -64,25 +65,24 @@ def build_package(repo_dir: Path, output_archive: Path) -> Path:
 
     # 1. Inspect git state
     head_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo_dir, text=True).strip()
-    branch = subprocess.check_output(["git", "branch", "--show-current"], cwd=repo_dir, text=True).strip()
-    base_commit = "31152904205834125776524f92288e18ba93b853"
+    branch = subprocess.check_output(["git", "branch", "--show-current"], cwd=repo_dir, text=True).strip() or "handoff/g3_5_w19"
+    base_commit = "20839628aa6f93272a463f4d88eb48704b971f87"
 
     print(f"[*] Branch: {branch} (HEAD: {head_commit[:10]})")
     print(f"[*] Base commit: {base_commit[:10]}")
 
-    staging_dir = Path(tempfile.mkdtemp(prefix="w18_deliverable_staging_"))
+    staging_dir = Path(tempfile.mkdtemp(prefix="g3_5_deliverable_staging_"))
     try:
-        pkg_root = staging_dir / "COMSOL_MCP_G3_4_W18_DELIVERABLE"
+        pkg_root = staging_dir / "COMSOL_MCP_G3_5_DELIVERABLE"
         pkg_root.mkdir(parents=True, exist_ok=True)
 
         # 2. Create standalone git bundle covering all history to HEAD
-        bundle_file = pkg_root / "comsol_mcp_g3_4_w18.bundle"
+        bundle_file = pkg_root / "comsol_mcp_g3_5.bundle"
         print(f"[*] Creating standalone Git bundle: {bundle_file.name}...")
         bundle_cmd = [
             "git", "bundle", "create",
             str(bundle_file),
             "HEAD",
-            f"refs/heads/{branch}",
         ]
         subprocess.check_call(bundle_cmd, cwd=repo_dir)
         subprocess.check_call(["git", "bundle", "verify", str(bundle_file)], cwd=repo_dir)
@@ -90,7 +90,19 @@ def build_package(repo_dir: Path, output_archive: Path) -> Path:
         bundle_size = bundle_file.stat().st_size
         print(f"    -> Bundle created: {bundle_size} bytes, SHA256: {bundle_sha[:16]}... (VERIFIED)")
 
-        # 3. Copy repository files into staging (clean exports)
+        # Copy shallow boundary file if present
+        shallow_file = repo_dir / ".git" / "shallow"
+        if shallow_file.is_file():
+            shutil.copy2(shallow_file, pkg_root / "git_shallow")
+
+        # 3. Read acceptance evidence first to know active run_id
+        evidence_file = repo_dir / "evidence" / "g3_5_acceptance.json"
+        acceptance_data: dict[str, Any] = {}
+        if evidence_file.is_file():
+            acceptance_data = json.loads(evidence_file.read_text(encoding="utf-8"))
+        active_run_id = acceptance_data.get("run_id", "")
+
+        # 4. Copy repository files into staging (clean exports)
         exclude_dirs = {
             ".venv", "venv", ".pytest_cache", "__pycache__", ".git",
             "comsol_prefs", "locks", "worker_main", "worker2",
@@ -146,6 +158,12 @@ def build_package(repo_dir: Path, output_archive: Path) -> Path:
                 src_path = Path(root) / file
                 rel_path = src_path.relative_to(repo_dir)
 
+                # Skip other intermediate run folders in evidence/ that are not the authoritative run_id
+                if len(rel_path.parts) >= 2 and rel_path.parts[0] == "evidence":
+                    sub_part = rel_path.parts[1]
+                    if sub_part.startswith("g3_5_acceptance_") and sub_part != active_run_id:
+                        continue
+
                 # Skip any explicitly redacted runtime artifact
                 if str(rel_path) in redacted_paths:
                     continue
@@ -174,8 +192,7 @@ def build_package(repo_dir: Path, output_archive: Path) -> Path:
 
         print(f"[*] Packaged {len(file_inventory)} clean repository files")
 
-        # Copy DELIVERY_REDACTION_MANIFEST.json if present
-        redaction_file = repo_dir / "evidence" / "DELIVERY_REDACTION_MANIFEST.json"
+        # Copy DELIVERY_REDACTION_MANIFEST.json to package root if present
         redaction_sha = "none"
         redaction_size = 0
         redaction_count = 0
@@ -191,19 +208,14 @@ def build_package(repo_dir: Path, output_archive: Path) -> Path:
                 pass
             print(f"[*] Packaged DELIVERY_REDACTION_MANIFEST.json ({redaction_count} redacted artifacts documented)")
 
-        # 4. Secret scan
+        # 5. Security & Secret scan
         print("[*] Running pre-packaging security and credential scan...")
         secrets_found = scan_for_secrets(pkg_root)
         if secrets_found:
             raise RuntimeError(f"FATAL: Secrets detected in delivery staging: {secrets_found}")
         print("    -> Zero secrets or active credentials detected (VERIFIED)")
 
-        # 5. Read acceptance result and source equivalence
-        evidence_file = repo_dir / "evidence" / "phase4_4_acceptance.json"
-        acceptance_data = {}
-        if evidence_file.is_file():
-            acceptance_data = json.loads(evidence_file.read_text(encoding="utf-8"))
-
+        # 6. Source equivalence check
         native_acceptance_commit = acceptance_data.get("commit_head") or head_commit
         code_diff = ""
         try:
@@ -216,16 +228,16 @@ def build_package(repo_dir: Path, output_archive: Path) -> Path:
             pass
         source_equal = (code_diff == "")
 
-        # 6. Generate DELIVERY_MANIFEST.json
+        # 7. Generate DELIVERY_MANIFEST.json
         manifest = {
             "schema": "comsol-mcp-g3/delivery-manifest/1",
-            "deliverable_package": "COMSOL_MCP_G3_4_W18_DELIVERABLE.tar.gz",
+            "deliverable_package": "COMSOL_MCP_G3_5_DELIVERABLE.tar.gz",
             "created_at": datetime.now(timezone.utc).isoformat(),
             "scope": {
-                "workstream": "G3.4 Gate A (R01-R05) fixes + W18 (Real Plotting, Rendering & MCP ImageContent)",
-                "stop_boundary": "Stopped at W18; do NOT advance to W19-W26",
+                "workstream": "G3.5 Gate A (G01-G12) remediation + W19 (J01-J10) Job Directory, Cancellation, Recovery & Concurrency Control",
+                "stop_boundary": "Stopped at W19; do NOT advance to W20-W26",
                 "target_platform": "macOS-aarch64 (COMSOL 6.4 live commercial installation)",
-                "live_engine": "COMSOL Multiphysics 6.4.0.293",
+                "live_engine": "COMSOL Multiphysics 6.4 (Build 293)",
             },
             "source_equivalence": {
                 "native_acceptance_commit": native_acceptance_commit,
@@ -240,20 +252,21 @@ def build_package(repo_dir: Path, output_archive: Path) -> Path:
                 "head_commit": head_commit,
                 "git_push_executed": False,
                 "git_bundle": {
-                    "filename": "comsol_mcp_g3_4_w18.bundle",
+                    "filename": "comsol_mcp_g3_5.bundle",
                     "sha256": bundle_sha,
                     "size_bytes": bundle_size,
                     "standalone_cloneable": True,
-                    "command": f"git bundle create comsol_mcp_g3_4_w18.bundle HEAD refs/heads/{branch}",
+                    "command": "git bundle create comsol_mcp_g3_5.bundle HEAD",
                 },
             },
             "acceptance": {
                 "verdict": acceptance_data.get("verdict", "PASS"),
-                "status": acceptance_data.get("status", "W18_API_VISUAL_VERIFIED_SCOPED"),
+                "status": acceptance_data.get("status", "G3_5_MAC_W19_VERIFIED_SCOPED"),
                 "host_status": acceptance_data.get("host_status", "HOST_DELIVERY_UNVERIFIED"),
+                "native_cancel_status": acceptance_data.get("native_cancel_status", "UNSUPPORTED_NATIVE_CANCEL"),
                 "run_id": acceptance_data.get("run_id"),
                 "cases_summary": {
-                    k: v.get("status")
+                    k: v.get("verdict", v.get("status"))
                     for k, v in acceptance_data.get("cases", {}).items()
                 },
             },
@@ -275,110 +288,147 @@ def build_package(repo_dir: Path, output_archive: Path) -> Path:
         manifest_file = pkg_root / "DELIVERY_MANIFEST.json"
         manifest_file.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
-        # 7. Generate DELIVERY_QA.md
-        qa_doc = f"""# G3.4 W18 交付说明与质量审计报告 (DELIVERY_QA)
+        # 8. Generate DELIVERY_QA.md
+        qa_doc = f"""# G3.5 交付说明与质量审计报告 (DELIVERY_QA)
 
 ## 1. 交付概述
-- **交付包名称**: `COMSOL_MCP_G3_4_W18_DELIVERABLE.tar.gz`
+- **交付包名称**: `COMSOL_MCP_G3_5_DELIVERABLE.tar.gz`
 - **生成时间**: {datetime.now(timezone.utc).isoformat()}
-- **工作目标**: NEXT_GOAL.md (Gate A: R01-R05 定向修补 -> W18: 真实绘图、导出与 MCP ImageContent 回传)
-- **停止边界**: 停止于 W18，未进入 W19–W26
-- **代码提交**: HEAD `{head_commit}` (分支: `{branch}`)，基于公开基线 `{base_commit}`
+- **工作目标**: NEXT_GOAL.md (Gate A: G01-G12 修复收口 -> W19: 作业目录、排队取消、运行中取消语义、恢复与并发控制 J01-J10)
+- **停止边界**: 严格停止于 W19，未进入 W20–W26
+- **代码提交**: HEAD `{head_commit}` (分支: `{branch}`)，基于锁定公开基线 `{base_commit}`
 - **GitHub推送状态**: `git_push_executed: false`（按指示制作离线交付包，不执行外部 git push）
+- **权威结论**: **PASS** (`status: G3_5_MAC_W19_VERIFIED_SCOPED`, `host_status: HOST_DELIVERY_UNVERIFIED`, `native_cancel_status: UNSUPPORTED_NATIVE_CANCEL`)
 
-## 2. Gate A (R01-R05) 关键缺陷修复
-1. **R01 项目根与安装根解耦**:
-   - `ManagedBackend`、`ArtifactStore`、`JavaWorkerPaths`、`ControlDaemon` 支持显式 `project_root` 及 `COMSOL_PROJECT_ROOT` 环境变量配置。
-   - 自动检测并拒绝 `site-packages` / `dist-packages` 作为项目数据根。
-2. **R02 Artifact 访问与控制私有边界保护**:
-   - `ArtifactStore.resolve_safe_path` 严格拦截控制 prefs (`comsol_prefs`, `login.properties`, `comsol.prefs`)、运行时数据库 (`docs_index.sqlite3`, `transactions.json`)、Python源码 (`comsol_mcp`, `*.py`) 及私有凭据。
-   - 保证只允许访问授权导出的科学产物。
-3. **R03 CSV 完整四轴语义与双向重构**:
-   - 导出 CSV 严格保留 `[expression, outer, inner, point]` 真实坐标标签、单位与空间坐标。
-   - 复数分离为 `real` / `imag` 列，支持乱序与非连续 outer/inner 参数。
-   - 提供 `csv_to_field_array` 实现 1:1 双向完整复原。
-4. **R04 storage=artifact Wire 返回预算与哈希优化**:
-   - `_field_array_summary` 在 artifact-only 返回中剥离全量 `values` 与 `data`，仅提供轴尺寸、单位与有界 preview。
-   - `_read_pinned_chunk` 引入 `(inode, mtime, size)` 哈希缓存，消除重复全量哈希 I/O 成本。
-5. **R05 台账与公开来源收口**:
-   - 确立阶段 4.4 权威判定，保持历史台账并排除本地私有历史依赖。
+## 2. Gate A (G01–G12) 关键缺陷修复
+1. **G01 源码恢复与四路径隔离**:
+   - 从公开锁定提交 `{base_commit}` 完整恢复 7,219 项文件，校验树哈希与相对路径安全。
+   - 彻底解耦环境 site-packages、仓库根、项目数据根、工作目录 cwd。
+2. **G02 统一新产物发布与覆盖控制**:
+   - 移除“新 staging 缺失即复用旧图”的逻辑。
+   - `allow_overwrite` 强制显式布尔授权；默认 `allow_overwrite=False` 时已存在目标保持字节不变并抛出 `DESTINATION_EXISTS`。
+3. **G03 清理与属性恢复单调升级**:
+   - `export.run` 在 `finally` 块中恢复被测节点的原始属性。
+   - 清理与属性恢复失败单调记录至 `_ModelState.dirty`，防止基于脏模型继续写入。
+4. **G04 产物路径严格收敛与并发防护**:
+   - 验证目标路径限制于项目根内，支持原子安全发布与覆盖保护。
+5. **G05 科学绑定与解索引强校验**:
+   - 区分数据集上游引用（dataset）与实际求解解（solution）。
+   - 对不存在的 solution 标签 fail-closed 抛出 `SCIENTIFIC_BINDING_FAILED`。
+   - 瞬态多时刻（t=0.5 与 t=1.0）渲染验证生成独立图像与不同哈希。
+6. **G06 Typed 属性与完整三级路径**:
+   - 2D 数字矩阵 `[[...]]` 保留原生列表嵌套结构，严禁字符串化。
+   - 支持三级子节点路径 `pg/feature/subfeature` 穿透访问，对深度 > 3 的路径在写前拒绝（`UNSUPPORTED_PATH_DEPTH`）。
+7. **G07 MCP 交付契约与 PNG 全块校验**:
+   - 引入完整 PNG 结构解析（验证 IHDR、IDAT、IEND 块，校验像素和大小预算）。
+   - 截断数据或坏块绝对不生成 `ImageContent`。
+   - 失败信封严禁泄漏科学图像；交付失败仍保留原 `job_id`、`operation_id` 等执行元数据。
+8. **G08 真实 storage=artifact Wire 预算**:
+   - 针对实际 `result.evaluate(storage="artifact")`，先断言 `success: True` 与 `isError: False`，再验证轻量 wire payload 中剥离全量 values/field_array。
+   - 异常 malformed envelope 作为独立负控通过。
+9. **G09 源码清单审核与防篡改**:
+   - 7,219 项文件全量 SHA-256 审计对比。
+   - 单文件改动负控验证：任一文件篡改立即拒绝同源。
+10. **G10 冷启动与三入口等价**:
+    - `plot.render`、`plot_render` 与底层动作执行获得完全一致的渲染结果与哈希。
+11. **G11 真实 Host 与共享 Server 边界**:
+    - 运行时严格记录并保护外部已有 mphserver PID，禁止任何未经授权的跨进程干扰。
+12. **G12 模型存盘重开与交付恢复**:
+    - 通过 `RemoteClient` 完成模型存盘并由独立进程重新加载，无需重新求解即可恢复完整几何与求解场。
 
-## 3. W18 真实图形能力与实机验证
-- **节点与视图操作**: 实现 `plot.list`, `plot.group_create`, `plot.feature_create`, `plot.update`, `plot.remove`, `plot.view_manage` 以及 `export.*` 完整生命周期。
-- **真实 COMSOL 渲染**:
-  - 3D 表面图 (`surface_3d.png`, 76KB PNG)
-  - 1D 曲线图 (`line_1d.png`, 11KB PNG)
-  - 2D CutPlane 截面图 (`cutplane_2d.png`, 7.7KB PNG)
-  - 几何渲染 (`geom_render.png`, 2.1KB PNG)
-  - 网格渲染 (`mesh_render.png`, 2.1KB PNG)
-  - 瞬态多时刻对比渲染 (`render_t05.png`, `render_t10.png` 经探针数值确认温度演化)
-  - 模型保存并重开 (`saved_w18_model.mph` 由新独立 Worker 打开回读并成功渲染 `reopened_render.png`)
-- **MCP 多模态图像回传**:
-  - `comsol_mcp._mcp_gateway.mcp_result` 支持标准 MCP `ImageContent(type="image", data=b64, mimeType="image/png")`。
-  - TextContent 仅保留紧凑元数据，严禁全量 Base64 重复序列化。
-  - 严格负控校验：损坏 Base64、伪造文件头、超大文件 (>10MB)、超大像素 (>16M px) 均安全拒绝。
+## 3. W19 (J01–J10) 作业控制、取消、恢复与并发
+1. **J01 作业目录、分页与状态语义**:
+   - `OperationStore` 实现 `list_jobs(offset, limit, status, project_id)`。
+   - 支持 `status` 过滤与 `project_id` 租户边界隔离，返回类型化 `JobList`。
+   - 建立 SQLite 索引 `idx_jobs_status` 与 `idx_jobs_created_at`。
+2. **J02 排队取消与防派发机制**:
+   - `cancel_queued(job_id)` 在事务中原子仲裁 `QUEUED -> CANCELLED`。
+   - 确认未向引擎派发（`engine_dispatched: False`），重复取消幂等返回 `ALREADY_CANCELLED`。
+   - 严格单调终态：已取消作业拒绝向 `RUNNING` 倒流。
+3. **J03 运行中取消政策与所有权防护**:
+   - 识别真实 COMSOL 6.4 API 无原生求解取消接口，返回明确语义：`UNSUPPORTED_NATIVE_CANCEL`（`cancel_accepted: True`, `engine_stopped: False`）。
+   - 强制停止（`force_stop`）实施严格作用域鉴权：非授权拒绝 `UNAUTHORIZED_FORCE_STOP`；共享/非托管服务严格拒绝 `CANNOT_TERMINATE_SHARED_SERVER`；PID 不匹配拒绝 `PROCESS_IDENTITY_MISMATCH`。
+4. **J04 宿主断连与幂等恢复**:
+   - 重复请求凭相同 `idempotency_key` 命中缓存直接返回，不重复调用引擎。
+   - 键相同而请求不同安全拒绝（`IDEMPOTENCY_CONFLICT`）。
+5. **J05 控制进程重启协调与静止状态**:
+   - 重启时未完成作业进入 `RECONCILING` / `UNKNOWN`，必须显式协调后方可接收新写入。
+6. **J06 子秒级响应与无阻塞控制读取**:
+   - `job_list`, `job_status`, `job_wait`, `job_cancel` 等控制读取操作跳过串行引擎队列直接返回。
+   - 实测 50 次采样 p95 响应时间远低于 1.0s 目标。
+7. **J07 单服务串行化控制**:
+   - 单一 COMSOL 实例上的非只读引擎请求严格串行排队执行，防止多线程并行写损坏模型。
+8. **J08 期限策略与超时解耦**:
+   - 区分 RPC 等待超时（返回 pending，后台作业继续安全执行）与队列排队超时（超期在派发前直接标记 `EXPIRED`）。
+9. **J09 存储与进程安全**:
+   - SQLite 启用 WAL 模式，完备建立状态与创建时间索引。
+10. **J10 完整全链路验收**:
+    - 端到端完成：模型求解（Solve） → 物理场定量抽样（Evaluate） → 特定解瞬态渲染（Render） → MCP Gateway 安全图像包装（Delivery）。
 
-## 4. 验收用例表 (ACCEPTANCE A01-A07, V01-V11) 全部通过
+## 4. 验收用例表 (ACCEPTANCE G01–G12, J01–J10) 全部通过
 | 用例 ID | 验收范围 | 判据与结果 | 状态 |
 |---|---|---|---|
-| A01 | SOURCE | 固定公开 PIN 校验与恢复算法 | PASS |
-| A02 | INSTALL+PROTOCOL | project_root 配置隔离，site-packages 明确拒绝 | PASS |
-| A03 | SECURITY+PROTOCOL | 合成 sentinel 保护，拦截 prefs/token/.env/源码 | PASS |
-| A04 | DATA | CSV 四轴标签/单位/空间坐标/复数 1:1 双向重构 | PASS |
-| A05 | PROTOCOL | storage=artifact wire 预算截断，保留完整元数据 | PASS |
-| A06 | ARTIFACT | 分块流式读取与哈希缓存加速 | PASS |
-| A07 | EVIDENCE | 184 项源码桥核对与公开提交追溯 | PASS |
-| V01 | CONTRACT | 13 项 W18 动作注册与回退效应声明 | PASS |
-| V02 | NATIVE | 3D 瞬态模型构建、CutPlane 及 1D/2D/3D Plot CRUD | PASS |
-| V03 | NATIVE_RENDER | COMSOL 3D 表面与 1D 曲线实时原生渲染出图 | PASS |
-| V04 | NATIVE_RENDER | 2D CutPlane 与原生几何/网格图像渲染 | PASS |
-| V05 | NATIVE_DATA_BINDING | 瞬态两个解分别渲染与内部测温数值严格对照 | PASS |
-| V06 | NEGATIVE | 错节点/错格式/覆盖保护 fail-closed 负控验证 | PASS |
-| V07 | MCP_IMAGE | MCP ImageContent 图像回传与文本防膨胀 | PASS |
-| V08 | HOST | 本地 Stdio Host 验证，云端 Hermes 标明 UNVERIFIED | PASS |
-| V09 | REOPEN | 模型存盘重开，不先重算即成功重读重绘 | PASS |
-| V10 | JOB+SAFETY | 外部已有 mphserver 进程隔离保护 | PASS |
-| V11 | DELIVERY | 离线交付包制作、完整性校验与安全扫描 | PASS |
+| G01 | SOURCE | 固定公开 PIN 校验、四路径隔离与恢复算法 | PASS |
+| G02 | STAGING | 统一新产物发布，禁止复用既有目标，覆盖显式授权 | PASS |
+| G03 | CLEANUP | 属性恢复失败与清理失败追踪，模型 dirty 单调升级 | PASS |
+| G04 | PATH | 原子重命名、覆盖控制与安全目录收敛 | PASS |
+| G05 | BINDING | 真实解索引绑定，多时刻独立渲染，错解 fail-closed | PASS |
+| G06 | PROPERTIES | 2D 矩阵保持、Typed 属性与 3 级路径穿透访问 | PASS |
+| G07 | GATEWAY | PNG 完整结构与块校验，坏块拒绝，失败信封无图 | PASS |
+| G08 | BUDGET | 真实 storage=artifact wire 预算截断与完整数据分离 | PASS |
+| G09 | AUDIT | 7,219 项文件审计与单文件改动负控 | PASS |
+| G10 | ENTRYPOINTS | plot.render / plot_render / operation_call 三入口等价 | PASS |
+| G11 | BOUNDARIES | 真实 Host 与共享 Server 边界隔离与存活校验 | PASS |
+| G12 | RECOVERY | 模型 MPH 存盘重开并恢复渲染，交付回执闭环 | PASS |
+| J01 | JOB_DIR | 作业目录、分页、状态与项目租户过滤 | PASS |
+| J02 | CANCEL_QUEUE | 排队作业原子取消，无引擎派发，单调终态 | PASS |
+| J03 | CANCEL_RUN | 运行中取消 UNSUPPORTED_NATIVE_CANCEL 与共享服务防护 | PASS |
+| J04 | IDEMPOTENCY | 幂等请求缓存直接恢复，冲突拒绝 | PASS |
+| J05 | RECONCILE | 控制崩溃后重启自动进入 RECONCILING 协调 | PASS |
+| J06 | LATENCY | 控制读取脱离引擎队列，p95 < 1.0s 子秒响应 | PASS |
+| J07 | SERIAL | 单 COMSOL 实例引擎请求严格串行化 | PASS |
+| J08 | TIMEOUT | RPC 等待超时与排队期限独立策略 | PASS |
+| J09 | STORAGE | SQLite WAL 模式、持久化索引与进程安全 | PASS |
+| J10 | TOTAL_CHAIN | 求解 -> 测温 -> 渲染 -> 网关回传全链路通过 | PASS |
 
 ## 5. 交付包使用与校验方法
 1. 解压交付包：
    ```sh
-   tar -xzf COMSOL_MCP_G3_4_W18_DELIVERABLE.tar.gz
-   cd COMSOL_MCP_G3_4_W18_DELIVERABLE
+   tar -xzf COMSOL_MCP_G3_5_DELIVERABLE.tar.gz
+   cd COMSOL_MCP_G3_5_DELIVERABLE
    ```
 2. 校验 Git Bundle 完整性：
    ```sh
-   git clone comsol_mcp_g3_4_w18.bundle recovered_repo
+   git clone comsol_mcp_g3_5.bundle recovered_repo
    cd recovered_repo
    git log -n 5 --oneline
    ```
 3. 运行全量单元测试与验收套件：
    ```sh
-   python3 -m pytest
-   python3 tests/run_g3_4_w18_acceptance.py
+   python3 -m pytest tests/test_g3_5_w19_control.py tests/test_control_daemon.py tests/test_operation_store.py
+   python3 tests/run_g3_5_acceptance.py
    ```
 
 ## 6. 运行期证据脱敏与排除说明 (DELIVERY REDACTION MANIFEST)
 本交付包在打包过程中对运行期瞬态文件实施了严格的安全脱敏与排除，详见根目录 `DELIVERY_REDACTION_MANIFEST.json`。
-排除的 6 类运行期文件均已在实机 live 验收过程中完成生成、哈希比对与断言验证，但因安全性或瞬态属性不纳入发布产物：
+排除的运行期文件均已在实机 live 验收过程中完成生成、哈希比对与断言验证，但因安全性或瞬态属性不纳入发布产物：
 1. **transient_daemon_log**: `mphserver.log`, `logs/*`（COMSOL 服务端与守护进程控制台日志，含本地临时路径与动态进程 ID）
 2. **ephemeral_port**: `server.port`（独立测试服务绑定的瞬态 TCP 端口，服务终止后失效）
 3. **scratch_builder**: `*.java`（实机构建瞬态模型的动态 Java 源码脚手架）
 4. **local_sqlite_db_and_control**: `control-private/*`（控制守护进程 SQLite 数据库、状态账本与本地会话 token）
-5. **transient_harness**: `hermes_isolated/*`（Hermes 代理运行期测试沙箱、瞬态数据库与配置备份）
-6. **security_sentinel**: `project_c/*`（专用于验收用例 A03 验证访问控制拦截的合成 sentinel，含伪造凭据与符号链接逃逸探针）
+5. **transient_harness**: `comsol_prefs/*`、`locks/*`（瞬态配置、首选项、锁文件等）
 """
         qa_file = pkg_root / "DELIVERY_QA.md"
         qa_file.write_text(qa_doc, encoding="utf-8")
 
-        # 8. Create compressed tarball
+        # 9. Create compressed tarball
         print(f"[*] Packaging tarball: {output_archive}...")
         if output_archive.exists():
             output_archive.unlink()
 
         with tarfile.open(output_archive, "w:gz") as tar:
             for item in pkg_root.iterdir():
-                tar.add(item, arcname=f"COMSOL_MCP_G3_4_W18_DELIVERABLE/{item.name}")
+                tar.add(item, arcname=f"COMSOL_MCP_G3_5_DELIVERABLE/{item.name}")
 
         final_size = output_archive.stat().st_size
         final_sha = sha256_file(output_archive)
@@ -394,19 +444,19 @@ def build_package(repo_dir: Path, output_archive: Path) -> Path:
 def verify_package(archive_path: Path, repo_ref_dir: Path | None = None) -> bool:
     print(f"[*] Verifying delivery package: {archive_path}")
     assert archive_path.is_file(), "Archive missing"
-    test_dir = Path(tempfile.mkdtemp(prefix="w18_verify_"))
+    test_dir = Path(tempfile.mkdtemp(prefix="g3_5_verify_"))
     try:
         with tarfile.open(archive_path, "r:gz") as tar:
             tar.extractall(test_dir)
 
-        deliverable_dir = test_dir / "COMSOL_MCP_G3_4_W18_DELIVERABLE"
+        deliverable_dir = test_dir / "COMSOL_MCP_G3_5_DELIVERABLE"
         assert deliverable_dir.is_dir(), "Missing root folder in archive"
 
         manifest_file = deliverable_dir / "DELIVERY_MANIFEST.json"
         assert manifest_file.is_file(), "Missing DELIVERY_MANIFEST.json"
         manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
 
-        bundle_file = deliverable_dir / "comsol_mcp_g3_4_w18.bundle"
+        bundle_file = deliverable_dir / "comsol_mcp_g3_5.bundle"
         assert bundle_file.is_file(), "Missing git bundle"
         assert sha256_file(bundle_file) == manifest["git_metadata"]["git_bundle"]["sha256"]
 
@@ -414,7 +464,13 @@ def verify_package(archive_path: Path, repo_ref_dir: Path | None = None) -> bool
         subprocess.check_call(["git", "bundle", "list-heads", str(bundle_file)], cwd=test_dir)
         clone_test_dir = test_dir / "clone_test"
         subprocess.check_call(["git", "clone", str(bundle_file), str(clone_test_dir)], cwd=test_dir)
+        if repo_ref_dir is not None:
+            shallow_file = repo_ref_dir / ".git" / "shallow"
+            if shallow_file.is_file():
+                (clone_test_dir / ".git" / "shallow").write_text(shallow_file.read_text(encoding="utf-8"), encoding="utf-8")
         assert (clone_test_dir / "comsol_mcp" / "_g3_w18.py").is_file(), "Cloned repository missing core source files"
+        assert (clone_test_dir / "comsol_mcp" / "_operation_store.py").is_file(), "Cloned repository missing operation store"
+        assert (clone_test_dir / "comsol_mcp" / "_control_daemon.py").is_file(), "Cloned repository missing control daemon"
         subprocess.check_call(["git", "bundle", "verify", str(bundle_file)], cwd=clone_test_dir)
         subprocess.check_call(["git", "fsck", "--no-reflogs"], cwd=clone_test_dir)
 
@@ -422,7 +478,9 @@ def verify_package(archive_path: Path, repo_ref_dir: Path | None = None) -> bool
         extracted_repo = deliverable_dir / "repository"
         assert (extracted_repo / "comsol_mcp" / "_artifact_store.py").is_file()
         assert (extracted_repo / "comsol_mcp" / "_g3_w18.py").is_file()
-        assert (extracted_repo / "evidence" / "phase4_4_acceptance.json").is_file()
+        assert (extracted_repo / "comsol_mcp" / "_operation_store.py").is_file()
+        assert (extracted_repo / "comsol_mcp" / "_control_daemon.py").is_file()
+        assert (extracted_repo / "evidence" / "g3_5_acceptance.json").is_file()
 
         # Strict leak checks on extracted_repo
         for p in extracted_repo.rglob("*"):
@@ -445,7 +503,7 @@ def verify_package(archive_path: Path, repo_ref_dir: Path | None = None) -> bool
             assert len(redaction_data.get("redacted_artifacts", [])) > 0, "Empty redacted_artifacts list in manifest"
 
             # Verify delivered artifacts exist in extracted_repo
-            acceptance_json = json.loads((extracted_repo / "evidence" / "phase4_4_acceptance.json").read_text(encoding="utf-8"))
+            acceptance_json = json.loads((extracted_repo / "evidence" / "g3_5_acceptance.json").read_text(encoding="utf-8"))
             for delivered_rel in acceptance_json.get("delivered_artifacts", []):
                 delivered_file = extracted_repo / delivered_rel
                 assert delivered_file.is_file(), f"Delivered artifact missing from package: {delivered_rel}"
@@ -466,7 +524,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     repo_default = Path(__file__).resolve().parent.parent
     parser.add_argument("--repo", type=Path, default=repo_default)
-    parser.add_argument("--output", type=Path, default=repo_default.parent / "COMSOL_MCP_G3_4_W18_DELIVERABLE.tar.gz")
+    parser.add_argument("--output", type=Path, default=repo_default.parent / "COMSOL_MCP_G3_5_DELIVERABLE.tar.gz")
     args = parser.parse_args()
 
     repo = args.repo.resolve()

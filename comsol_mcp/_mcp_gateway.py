@@ -29,6 +29,25 @@ def mcp_result(value: str | dict[str, Any]) -> CallToolResult:
     if not isinstance(payload, dict) or not isinstance(payload.get("success"), bool):
         payload = {"success": False, "error": "Missing backend success status", "data": {}}
 
+    def _delivery_error(code: str, message: str) -> CallToolResult:
+        sc: dict[str, Any] = {"success": False, "error": code, "message": message}
+        for k in ("execution", "job_id", "operation_id", "request_id", "model_ref"):
+            if k in payload:
+                sc[k] = payload[k]
+        if "execution" in payload and isinstance(payload["execution"], dict):
+            for k in ("job_id", "operation_id", "request_id", "model_ref"):
+                if k in payload["execution"] and k not in sc:
+                    sc[k] = payload["execution"][k]
+        if isinstance(payload.get("data"), dict):
+            for k in ("job_id", "operation_id", "artifact_ref", "file_path"):
+                if k in payload["data"] and k not in sc:
+                    sc[k] = payload["data"][k]
+        return CallToolResult(
+            content=[TextContent(type="text", text=f"{code}: {message}")],
+            structuredContent=sc,
+            isError=True,
+        )
+
     contents: list[TextContent | ImageContent] = []
     data = payload.get("data")
     image_b64 = None
@@ -46,41 +65,50 @@ def mcp_result(value: str | dict[str, Any]) -> CallToolResult:
 
     if image_b64 is not None:
         if mime_type != "image/png":
-            return CallToolResult(
-                content=[TextContent(type="text", text=f"UNSUPPORTED_IMAGE_FORMAT: Only PNG is supported, got {mime_type}")],
-                structuredContent={"success": False, "error": "UNSUPPORTED_IMAGE_FORMAT"},
-                isError=True,
-            )
+            return _delivery_error("UNSUPPORTED_IMAGE_FORMAT", f"Only PNG is supported, got {mime_type}")
         if len(image_b64) > 10 * 1024 * 1024:
-            return CallToolResult(
-                content=[TextContent(type="text", text="IMAGE_TOO_LARGE: Base64 payload exceeds 10MB limit")],
-                structuredContent={"success": False, "error": "IMAGE_TOO_LARGE"},
-                isError=True,
-            )
+            return _delivery_error("IMAGE_TOO_LARGE", "Base64 payload exceeds 10MB limit")
         try:
             raw_bytes = base64.b64decode(image_b64)
         except Exception:
-            return CallToolResult(
-                content=[TextContent(type="text", text="IMAGE_CORRUPTED: Failed to decode base64 image")],
-                structuredContent={"success": False, "error": "IMAGE_CORRUPTED"},
-                isError=True,
-            )
-        if not raw_bytes.startswith(b"\x89PNG\r\n\x1a\n") or len(raw_bytes) < 24:
-            return CallToolResult(
-                content=[TextContent(type="text", text="IMAGE_CORRUPTED: Invalid PNG header signature")],
-                structuredContent={"success": False, "error": "IMAGE_CORRUPTED"},
-                isError=True,
-            )
-        import struct
-        w, h = struct.unpack(">II", raw_bytes[16:24])
-        if w * h > 16 * 1024 * 1024:
-            return CallToolResult(
-                content=[TextContent(type="text", text=f"EXCESSIVE_PIXELS: Image dimensions {w}x{h} ({w*h} px) exceed 16M pixel limit")],
-                structuredContent={"success": False, "error": "EXCESSIVE_PIXELS"},
-                isError=True,
-            )
+            return _delivery_error("IMAGE_CORRUPTED", "Failed to decode base64 image")
 
-        contents.append(ImageContent(type="image", data=image_b64, mimeType="image/png"))
+        # Full PNG verification (signature + chunks)
+        if not raw_bytes.startswith(b"\x89PNG\r\n\x1a\n") or len(raw_bytes) < 33:
+            return _delivery_error("IMAGE_CORRUPTED", "Invalid or truncated PNG header signature")
+
+        import struct
+        offset = 8
+        n_bytes = len(raw_bytes)
+        has_ihdr = False
+        has_iend = False
+        w, h = 0, 0
+        while offset + 8 <= n_bytes:
+            chunk_len = struct.unpack(">I", raw_bytes[offset:offset+4])[0]
+            chunk_type = raw_bytes[offset+4:offset+8]
+            if offset + 12 + chunk_len > n_bytes:
+                return _delivery_error("IMAGE_CORRUPTED", f"Truncated PNG chunk {chunk_type.decode('latin1', 'replace')}")
+            if chunk_type == b"IHDR":
+                if chunk_len < 13:
+                    return _delivery_error("IMAGE_CORRUPTED", "Corrupted IHDR chunk")
+                w, h = struct.unpack(">II", raw_bytes[offset+8:offset+16])
+                has_ihdr = True
+            elif chunk_type == b"IEND":
+                has_iend = True
+                break
+            offset += 12 + chunk_len
+
+        if not (has_ihdr and has_iend):
+            return _delivery_error("IMAGE_CORRUPTED", "Incomplete PNG missing IHDR or IEND chunk")
+
+        if w * h > 16 * 1024 * 1024 or w == 0 or h == 0:
+            return _delivery_error("EXCESSIVE_PIXELS", f"Image dimensions {w}x{h} ({w*h} px) exceed limit or are zero")
+
+        # Only return ImageContent for successful results (or explicit diagnostic mode)
+        is_success = bool(payload.get("success"))
+        is_diagnostic = bool(isinstance(data, dict) and data.get("diagnostic"))
+        if is_success or is_diagnostic:
+            contents.append(ImageContent(type="image", data=image_b64, mimeType="image/png"))
 
     contents.append(TextContent(type="text", text=json.dumps(text_payload, ensure_ascii=False, default=str)))
 

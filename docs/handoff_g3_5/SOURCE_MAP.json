@@ -1,0 +1,161 @@
+{
+  "schema_version": 1,
+  "repository": "Everwalker/comsol-mcp",
+  "commit": "20839628aa6f93272a463f4d88eb48704b971f87",
+  "tree": "2e72a4fa6eae809bbce92e4620592e6906d3e87b",
+  "review_scope": "Source/evidence review, not full line-by-line repository review; no native COMSOL or full repository pytest performed.",
+  "sources": [
+    {
+      "id": "SRC01",
+      "path": "PROGRESS.md",
+      "purpose": "本轮进度与报告测试计数、旧陈述冲突",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/20839628aa6f93272a463f4d88eb48704b971f87/PROGRESS.md",
+      "read_scope": "full"
+    },
+    {
+      "id": "SRC02",
+      "path": "evidence/phase4_4_acceptance.json",
+      "purpose": "18项记录、commit_head、Host未验证与V10无其他实例",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/20839628aa6f93272a463f4d88eb48704b971f87/evidence/phase4_4_acceptance.json",
+      "read_scope": "full"
+    },
+    {
+      "id": "SRC03",
+      "path": "comsol_mcp/_g3_w18.py",
+      "purpose": "旧图补位、清理、导出恢复、科学绑定、typed属性、嵌套路径",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/20839628aa6f93272a463f4d88eb48704b971f87/comsol_mcp/_g3_w18.py",
+      "read_scope": "full"
+    },
+    {
+      "id": "SRC04",
+      "path": "comsol_mcp/_mcp_gateway.py",
+      "purpose": "ImageContent边界、PNG验证、错误job身份",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/20839628aa6f93272a463f4d88eb48704b971f87/comsol_mcp/_mcp_gateway.py",
+      "read_scope": "full"
+    },
+    {
+      "id": "SRC05",
+      "path": "tests/run_g3_4_w18_acceptance.py",
+      "purpose": "A01/A02/A05/A07/V06/V07/V08/V10检查覆盖",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/20839628aa6f93272a463f4d88eb48704b971f87/tests/run_g3_4_w18_acceptance.py",
+      "read_scope": "selected ranges; source retrieval supports cited functions"
+    },
+    {
+      "id": "SRC06",
+      "path": "comsol_mcp/_tools_w18.py",
+      "purpose": "两种静态render名",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/20839628aa6f93272a463f4d88eb48704b971f87/comsol_mcp/_tools_w18.py",
+      "read_scope": "full"
+    },
+    {
+      "id": "SRC07",
+      "path": "comsol_mcp/_tools_control.py",
+      "purpose": "公开job状态/恢复操作，没有正式cancel入口",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/20839628aa6f93272a463f4d88eb48704b971f87/comsol_mcp/_tools_control.py",
+      "read_scope": "full"
+    },
+    {
+      "id": "SRC08",
+      "path": "comsol_mcp/_control_daemon.py",
+      "purpose": "队列、job协调、超时告警、关闭策略",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/20839628aa6f93272a463f4d88eb48704b971f87/comsol_mcp/_control_daemon.py",
+      "read_scope": "selected ranges"
+    },
+    {
+      "id": "SRC09",
+      "path": "comsol_mcp/_managed_backend.py",
+      "purpose": "项目根已支持配置、现有执行基础与alias路径",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/20839628aa6f93272a463f4d88eb48704b971f87/comsol_mcp/_managed_backend.py",
+      "read_scope": "selected ranges"
+    },
+    {
+      "id": "SRC10",
+      "path": "README.md",
+      "purpose": "当前结论与历史安装/数量/保护声明",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/20839628aa6f93272a463f4d88eb48704b971f87/README.md",
+      "read_scope": "selected ranges"
+    },
+    {
+      "id": "SRC11",
+      "path": "docs/comsol_mcp_design_v1/04_IMPLEMENTATION_PLAN.md",
+      "purpose": "W19范围、依赖、验收与后续边界",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/20839628aa6f93272a463f4d88eb48704b971f87/docs/comsol_mcp_design_v1/04_IMPLEMENTATION_PLAN.md",
+      "read_scope": "full"
+    }
+  ],
+  "excerpt_provenance": {
+    "comsol_mcp/_g3_w18.py": {
+      "git_blob": "b6369470c7dc2abd644642ec9e902f580f86c647",
+      "functions": [
+        "_resolve_tag",
+        "_resolve_plot_path",
+        "_apply_properties",
+        "plot_render"
+      ]
+    },
+    "comsol_mcp/_mcp_gateway.py": {
+      "git_blob": "bd863bf67c50bed7ff811f080c2d25868542efe4",
+      "functions": [
+        "mcp_result"
+      ]
+    },
+    "copied_functions": "verbatim source function bodies; imports and engine/Content dependencies supplied synthetically by probe runner"
+  },
+  "external_primary_sources": [
+    {
+      "url": "https://doc.comsol.com/6.4/doc/com.comsol.help.comsol/api/com/comsol/model/util/ModelUtil.html",
+      "use": "Public API reference for observing progress candidates; not proof of generic solver cancellation."
+    },
+    {
+      "url": "https://doc.comsol.com/6.4/doc/com.comsol.help.comsol/api/com/comsol/model/SolverSequence.html",
+      "use": "Inspect installed-version solver API; any running cancellation path still needs a native isolated verification."
+    },
+    {
+      "url": "https://doc.comsol.com/6.3/doc/com.comsol.help.comsol/api/com/comsol/model/SolverSequence.html",
+      "use": "Version-specific counterpart; 6.3 runtime remains unverified here."
+    }
+  ],
+  "findings_to_sources": {
+    "F01": [
+      "SRC03",
+      "SRC05"
+    ],
+    "F02": [
+      "SRC03"
+    ],
+    "F03": [
+      "SRC03"
+    ],
+    "F04": [
+      "SRC03"
+    ],
+    "F05": [
+      "SRC04"
+    ],
+    "F06": [
+      "SRC04",
+      "SRC05"
+    ],
+    "F07": [
+      "SRC02",
+      "SRC05"
+    ],
+    "F08": [
+      "SRC05"
+    ],
+    "F09": [
+      "SRC03"
+    ],
+    "F10": [
+      "SRC02",
+      "SRC05",
+      "SRC10"
+    ],
+    "F11": [
+      "SRC07",
+      "SRC08",
+      "SRC11"
+    ]
+  },
+  "network_restore_boundary": "All sources must be restored from this pinned public commit. Public docs may be consulted online; no private local path is an input dependency."
+}

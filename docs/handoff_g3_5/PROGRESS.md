@@ -1,44 +1,43 @@
-# G3.5: W18 定向收口与 W19 作业控制、取消、恢复与并发 (COMPLETED)
+# G3.5: W18 定向收口与 W19 作业控制、取消、恢复与并发进度记录
 
-- **验收日期**: 2026-09-23
-- **验收目标**: `NEXT_GOAL.md` (Gate A 定向修补 G01–G12 → W19 持久作业、取消、恢复与并发控制 J01–J10)
-- **权威结论**: **PASS** (`status: G3_5_MAC_W19_VERIFIED_SCOPED`, `host_status: HOST_DELIVERY_UNVERIFIED`, `native_cancel_status: UNSUPPORTED_NATIVE_CANCEL`)
-- **运行 ID**: `g3_5_acceptance_20260923T070835Z` (耗时 14.90s)
-- **停止边界**: 严格停止于 W19，未进入 W20–W26
-- **提交版本**: 基线 `20839628aa6f93272a463f4d88eb48704b971f87` (tree: `2e72a4fa6eae809bbce92e4620592e6906d3e87b`)
-- **全量测试**:
-  - G3.5 Live 验收测试: **22/22 PASS** 全部通过（Gate A G01–G12 + W19 J01–J10）
-  - 控制平面单元测试: **22/22 PASS** 全部通过
-  - 复现探针 review_probes: **8/8 目标缺陷确认修复**，P09 历史断言缺陷准确再现
-- **GitHub 推送**: 按指示离线制作交付包 `COMSOL_MCP_G3_5_DELIVERABLE.tar.gz`，**不执行外部 git push**
+- **阶段状态**: `G3_5_MAC_W19_VERIFIED_SCOPED` (COMPLETED)
+- **验收目标**: `NEXT_GOAL.md` (Gate A 定向修复 G01–G12 + W19 持久作业、取消、恢复与并发 J01–J10)
+- **权威判定**: **22/22 PASS**
+- **原生取消能力状态**: `UNSUPPORTED_NATIVE_CANCEL`（真实 COMSOL 6.4 API 无原生求解取消接口，如实报告取消已接受但引擎未停，严格拒绝未授权强制终止）
+- **云端宿主状态**: `HOST_DELIVERY_UNVERIFIED`（本地 Stdio 经由 MCP Gateway 验证，云端 Hermes 凭据未配置保持未验证）
+- **最新运行 ID**: `g3_5_acceptance_20260923T070835Z` (全量实机耗时 14.90s)
+- **基线提交**: `20839628aa6f93272a463f4d88eb48704b971f87`
+- **停止边界**: 严格收工于 W19，不进入 W20–W26，不扩展任何主机特权
+- **交付包**: `COMSOL_MCP_G3_5_DELIVERABLE.tar.gz`（不推送至 GitHub，打包全部交付产物后停止）
 
 ---
 
-## 1. Gate A (G01–G12) 关键缺陷修复
+## 1. Gate A (G01–G12) 关键修复清单
 
 1. **G01 源码恢复与四路径隔离**:
-   - 恢复自锁定公开提交 `20839628aa6f93272a463f4d88eb48704b971f87`。
+   - 恢复自锁定公开提交 `20839628aa6f93272a463f4d88eb48704b971f87`（tree: `2e72a4fa6eae809bbce92e4620592e6906d3e87b`）。
    - 验证 Bootstrap 树哈希与安全相对路径算法。
-   - 实现环境 site-packages、仓库根、项目数据根、工作目录 cwd 的严格四路径隔离。
-2. **G02 统一新产物发布与覆盖保护**:
-   - 移除“新 staging 缺失即复用既有 target”的错误逻辑。
-   - `allow_overwrite` 强制显式布尔授权；默认 `allow_overwrite=False` 时已存在目标保持字节不变并抛出 `DESTINATION_EXISTS`。
+   - 实现包安装路径 A、源码路径 B、项目数据根 C、启动 cwd D 的严格解耦。
+2. **G02 统一原子发布与覆盖防护**:
+   - 移除“新 staging 缺失即沿用旧图”的虚假逻辑。
+   - `allow_overwrite` 强制布尔判定，未显式授权覆盖时已存在目标绝对不被篡改（`DESTINATION_EXISTS`）。
+   - 失败不碰已有产物，成功原子发布新产物。
 3. **G03 清理与属性恢复单调升级**:
-   - `export.run` 在 `finally` 块中恢复被测节点的原始属性。
-   - 清理与属性恢复失败单调记录至 `_ModelState.dirty`，防止基于脏模型继续写入。
+   - `export.run` 在 `finally` 块中恢复原始属性；清理/恢复失败传播至错误信封与 `_ModelState.dirty`。
+   - dirty 状态单调上升，防止在未决模型上进行后续写入。
 4. **G04 产物路径严格收敛与并发防护**:
-   - 验证目标路径限制于项目根内，支持原子安全发布与覆盖保护。
+   - 验证路径逃逸拦截与原子重命名无截断保护。
 5. **G05 科学绑定与解索引强校验**:
    - 区分数据集上游引用（dataset）与实际求解解（solution）。
    - 对不存在的 solution 标签 fail-closed 抛出 `SCIENTIFIC_BINDING_FAILED`。
-   - 瞬态多时刻（t=0.5 与 t=1.0）渲染验证生成独立图像与不同哈希。
+   - 多时刻（t=0.5 与 t=1.0）瞬态渲染验证图像严格区别。
 6. **G06 Typed 属性与完整三级路径**:
-   - 2D 数字矩阵 `[[...]]` 保留原生列表嵌套结构，严禁字符串化。
-   - 支持三级子节点路径 `pg/feature/subfeature` 穿透访问，对深度 > 3 的路径在写前拒绝（`UNSUPPORTED_PATH_DEPTH`）。
+   - 2D 矩阵 `[[...]]` 保留原生数字嵌套数组结构，严禁字符串化为扁平文本。
+   - 支持三级子节点路径 `pg/feature/subfeature` 穿透访问，对深度 > 3 的路径在写前强拒绝（`UNSUPPORTED_PATH_DEPTH`）。
 7. **G07 MCP 交付契约与 PNG 全块校验**:
-   - 引入完整 PNG 结构解析（验证 IHDR、IDAT、IEND 块，校验像素和大小预算）。
+   - 实现完整 PNG 结构解析（验证 IHDR、IDAT、IEND 块，校验像素和大小预算）。
    - 截断数据或坏块绝对不生成 `ImageContent`。
-   - 失败信封严禁泄漏科学图像；交付失败仍保留原 `job_id`、`operation_id` 等执行元数据。
+   - 失败 envelope 严禁携带科学图像；交付失败仍完好保留原 `job_id`、`operation_id` 等执行元数据。
 8. **G08 真实 storage=artifact Wire 预算**:
    - 针对实际 `result.evaluate(storage="artifact")`，先断言 `success: True` 与 `isError: False`，再验证轻量 wire payload 中剥离全量 values/field_array。
    - 异常 malformed envelope 作为独立负控通过。
@@ -46,7 +45,7 @@
    - 7,219 项文件全量 SHA-256 审计对比。
    - 单文件改动负控验证：任一文件篡改立即拒绝同源。
 10. **G10 冷启动与三入口等价**:
-    - `plot.render`、`plot_render` 与底层动作执行获得完全一致的渲染结果与哈希。
+    - `plot.render`（点分命名）、`plot_render`（下划线命名）与底层动作执行获得完全一致的渲染结果与哈希。
 11. **G11 真实 Host 与共享 Server 边界**:
     - 运行时严格记录并保护外部已有 mphserver PID，禁止任何未经授权的跨进程干扰。
 12. **G12 模型存盘重开与交付恢复**:
@@ -59,7 +58,7 @@
 1. **J01 作业目录、分页与状态语义**:
    - `OperationStore` 实现 `list_jobs(offset, limit, status, project_id)`。
    - 支持 `status` 过滤与 `project_id` 租户边界隔离，返回类型化 `JobList`。
-   - 建立 SQLite 索引 `idx_jobs_status` 与 `idx_jobs_created_at`。
+   - 包含 SQLite 索引 `idx_jobs_status` 与 `idx_jobs_created_at`。
 2. **J02 排队取消与防派发机制**:
    - `cancel_queued(job_id)` 在事务中原子仲裁 `QUEUED -> CANCELLED`。
    - 确认未向引擎派发（`engine_dispatched: False`），重复取消幂等返回 `ALREADY_CANCELLED`。
@@ -86,7 +85,7 @@
 
 ---
 
-## 3. 验收用例表 (ACCEPTANCE G01–G12, J01–J10)
+## 3. 验收用例表 (ACCEPTANCE G01–G12, J01–J10) 全部通过
 
 | 用例 ID | 验收范围 | 判据与结果 | 状态 |
 |---|---|---|---|

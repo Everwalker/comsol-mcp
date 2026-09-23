@@ -168,7 +168,8 @@ def _legacy_input_schemas() -> dict[str, dict[str, Any]]:
     return schemas
 
 CONTROL_STATUS_TOOL_NAMES = frozenset({
-    "session_health", "model_inspect", "model_adopt", "job_status", "job_log", "job_result", "job_reconcile",
+    "session_health", "model_inspect", "model_adopt",
+    "job_list", "job_status", "job_log", "job_result", "job_wait", "job_cancel", "job_reconcile",
 })
 
 # Profile selection affects only the static MCP publication.  The backend
@@ -176,7 +177,8 @@ CONTROL_STATUS_TOOL_NAMES = frozenset({
 _PROFILE_ALWAYS_TOOLS = frozenset({
     "registry_list", "registry_describe", "registry_search", "registry_manifest", "registry_call",
     "operation_describe", "operation_call", "session_health", "model_inspect", "model_adopt",
-    "job_status", "job_log", "job_result", "job_reconcile", "mcp_tool_audit", "server_info", "check_server_port",
+    "job_list", "job_status", "job_log", "job_result", "job_wait", "job_cancel", "job_reconcile",
+    "mcp_tool_audit", "server_info", "check_server_port",
 })
 _PROFILE_DOMAIN_TOOLS = frozenset({
     "workflow_info", "visible_main_workflow_status", "verify_visible_main_session", "model_tree", "get_parameters",

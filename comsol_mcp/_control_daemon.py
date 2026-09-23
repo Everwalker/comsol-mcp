@@ -21,9 +21,15 @@ from ._operation_store import IdempotencyConflict, OperationStore
 from ._platform_process import process_identity
 
 TERMINAL = {"SUCCEEDED", "FAILED", "EXPIRED", "LOST", "CANCELLED"}
-CONTROL_READS = {"session_health", "server_info", "job_status", "job_log", "job_result", "job_reconcile", "run_study_status", "visible_main_workflow_status",
-                 "registry_list", "registry_describe", "registry_search", "registry_manifest", "operation_describe",
-                 "docs_search", "docs_get", "docs_examples", "docs_error_search", "checkpoint_list", "checkpoint_inspect", "checkpoint_diff"}
+CONTROL_READS = {
+    "session_health", "server_info", "job_status", "job_log", "job_result", "job_reconcile",
+    "job_list", "job_wait", "job_cancel",
+    "job.status", "job.log", "job.result", "job.reconcile",
+    "job.list", "job.wait", "job.cancel",
+    "run_study_status", "visible_main_workflow_status",
+    "registry_list", "registry_describe", "registry_search", "registry_manifest", "operation_describe",
+    "docs_search", "docs_get", "docs_examples", "docs_error_search", "checkpoint_list", "checkpoint_inspect", "checkpoint_diff",
+}
 
 
 def configure_remote_backend(worker):
@@ -110,6 +116,14 @@ class ControlDaemon:
 
     def _execute(self, record, operation, arguments, execution, timeouts, submitted):
         job_id, operation_id = record["job_id"], record["operation_id"]
+        current_job = self.store.job(job_id)
+        if current_job and current_job["status"] == "CANCELLED":
+            return current_job.get("result") or self._error(
+                "OPERATION_CANCELLED",
+                "request was cancelled while queued",
+                data={"status": "CANCELLED", "engine_dispatched": False},
+                safe_retry=True,
+            )
         now = time.monotonic()
         if timeouts["queue_timeout_s"] is not None and now - submitted > timeouts["queue_timeout_s"]:
             return self._finish(record, self._error("QUEUE_TIMEOUT", "request expired before engine dispatch", data={"status": "NOT_EXECUTED"}, safe_retry=True), "EXPIRED")
@@ -117,6 +131,14 @@ class ControlDaemon:
         if unresolved and operation not in {"server_connect", "model_inspect"}:
             return self._finish(record, self._error("EXECUTION_STATE_UNKNOWN", "reconcile unfinished engine work before new operations"), "FAILED")
         self.store.update_job(job_id, "RUNNING", {"queue_wait_s": now - submitted, "engine_started_at": time.time()})
+        current_job = self.store.job(job_id)
+        if current_job and current_job["status"] == "CANCELLED":
+            return current_job.get("result") or self._error(
+                "OPERATION_CANCELLED",
+                "request was cancelled before engine execution",
+                data={"status": "CANCELLED", "engine_dispatched": False},
+                safe_retry=True,
+            )
         self.store.add_event(job_id, "RUNNING", {"operation_id": operation_id, "at": time.time()})
         with self.lock:
             self.running[job_id] = {"started": now, "last_event": now, "timeouts": timeouts, "execution_warned": False, "progress_warned": False}
@@ -237,20 +259,210 @@ class ControlDaemon:
                 "worker_connected": self.backend.cached.get("connected", False),
                 "worker": dict(self.worker_health), "session": dict(self.backend.cached), "active_jobs": active},
                 "execution": {"session_id": self.backend.cached.get("session_id")}}
+        if operation in {"job_list", "job.list"}:
+            offset = arguments.get("offset", 0)
+            limit = arguments.get("limit", 50)
+            status = arguments.get("status")
+            project_id = arguments.get("project_id")
+            if type(offset) is not int or offset < 0:
+                return self._error("INVALID_REQUEST", "offset must be a non-negative integer")
+            if type(limit) is not int or not 1 <= limit <= 1000:
+                return self._error("INVALID_REQUEST", "limit must be an integer between 1 and 1000")
+            if status is not None and not isinstance(status, str):
+                return self._error("INVALID_REQUEST", "status filter must be a string")
+            if project_id is not None and not isinstance(project_id, str):
+                return self._error("INVALID_REQUEST", "project_id filter must be a string")
+            jobs = self.store.list_jobs(offset=offset, limit=limit, status=status, project_id=project_id)
+            return {
+                "success": True,
+                "data": {
+                    "jobs": list(jobs),
+                    "total": getattr(jobs, "total", len(jobs)),
+                    "offset": offset,
+                    "limit": limit,
+                    "has_more": getattr(jobs, "has_more", False),
+                },
+            }
+        if operation in {"job_wait", "job.wait"}:
+            job_id = arguments.get("job_id")
+            if not isinstance(job_id, str) or not job_id:
+                return self._error("INVALID_REQUEST", "job_id must be a non-empty string")
+            job = self.store.job(job_id)
+            if not job:
+                return self._error("NODE_NOT_FOUND", "job not found")
+            timeout_s = arguments.get("timeout_s", 30.0)
+            poll_interval_s = arguments.get("poll_interval_s", 0.05)
+            if timeout_s is not None and (type(timeout_s) not in (int, float) or timeout_s < 0 or not math.isfinite(timeout_s)):
+                return self._error("INVALID_REQUEST", "timeout_s must be a non-negative finite number or null")
+            if type(poll_interval_s) not in (int, float) or poll_interval_s <= 0 or not math.isfinite(poll_interval_s):
+                poll_interval_s = 0.05
+            poll_interval_s = max(0.01, min(poll_interval_s, 1.0))
+
+            start_wait = time.monotonic()
+            while True:
+                job = self.store.job(job_id)
+                if not job:
+                    return self._error("NODE_NOT_FOUND", "job not found")
+                if job["status"] in TERMINAL:
+                    return {"success": True, "data": job}
+                if timeout_s is not None and time.monotonic() - start_wait >= timeout_s:
+                    return {"success": True, "data": {**job, "wait_expired": True}}
+                time.sleep(poll_interval_s)
+        if operation in {"job_cancel", "job.cancel"}:
+            return self._cancel_job(arguments)
+
+        norm_op = operation.replace(".", "_")
         job_id = arguments.get("job_id")
         job = self.store.job(job_id) if isinstance(job_id, str) else None
         if not job:
             return self._error("NODE_NOT_FOUND", "job not found")
-        if operation == "job_log":
+        if norm_op == "job_log":
             offset, limit = arguments.get("offset", 0), arguments.get("limit", 100)
             if type(offset) is not int or type(limit) is not int or offset < 0 or not 1 <= limit <= 1000:
                 return self._error("INVALID_REQUEST", "invalid log offset/limit")
             events = self.store.events(job_id, offset=offset, limit=limit)
             return {"success": True, "data": {"job_id": job_id, "events": events, "next_offset": offset + len(events)}}
-        if operation == "job_reconcile" and job["status"] in {"UNKNOWN", "RECONCILING"}:
+        if norm_op == "job_reconcile" and job["status"] in {"UNKNOWN", "RECONCILING"}:
             return self._reconcile(job)
-        success = not (operation == "job_result" and job.get("result") is not None and not job["result"].get("success"))
+        success = not (norm_op == "job_result" and job.get("result") is not None and not job["result"].get("success"))
         return {"success": success, "data": job}
+
+    def _cancel_job(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        job_id = arguments.get("job_id")
+        if not isinstance(job_id, str) or not job_id:
+            return self._error("INVALID_REQUEST", "job_id must be a non-empty string")
+        job = self.store.job(job_id)
+        if not job:
+            return self._error("NODE_NOT_FOUND", "job not found")
+
+        reason = str(arguments.get("reason", "cancelled by user"))
+        status = job["status"]
+
+        if status in TERMINAL:
+            return {
+                "success": True,
+                "data": {
+                    "job_id": job_id,
+                    "status": status,
+                    "cancel_accepted": False,
+                    "reason": f"job already in terminal state {status}",
+                    "engine_stopped": False,
+                    "mode": "TERMINAL_NOOP",
+                },
+            }
+
+        if status == "QUEUED":
+            success, code, updated_job = self.store.cancel_queued(job_id, reason=reason)
+            if success:
+                return {
+                    "success": True,
+                    "data": {
+                        "job_id": job_id,
+                        "status": "CANCELLED",
+                        "cancel_accepted": True,
+                        "engine_dispatched": False,
+                        "engine_stopped": False,
+                        "mode": "QUEUED_ABORT",
+                    },
+                }
+            job = self.store.job(job_id) or job
+            status = job["status"]
+            if status in TERMINAL:
+                return {
+                    "success": True,
+                    "data": {
+                        "job_id": job_id,
+                        "status": status,
+                        "cancel_accepted": False,
+                        "reason": f"job transitioned to {status} during cancel",
+                        "engine_stopped": False,
+                        "mode": "TERMINAL_NOOP",
+                    },
+                }
+
+        force_stop = bool(arguments.get("force_stop", False))
+        if force_stop:
+            server_scope = arguments.get("server_scope")
+            return self._scoped_force_stop(job, reason=reason, server_scope=server_scope)
+
+        self.store.add_event(job_id, "CancelRequested", {
+            "reason": reason,
+            "mode": "UNSUPPORTED_NATIVE_CANCEL",
+            "cancel_accepted": True,
+            "engine_stopped": False,
+            "at": time.time(),
+        })
+        self.store.update_job(job_id, "RUNNING", {
+            "cancel_requested": True,
+            "cancel_reason": reason,
+        })
+        return {
+            "success": True,
+            "data": {
+                "job_id": job_id,
+                "status": "RUNNING",
+                "cancel_accepted": True,
+                "engine_stopped": False,
+                "cancel_requested": True,
+                "mode": "UNSUPPORTED_NATIVE_CANCEL",
+                "message": "native COMSOL solver cancel is not supported by COMSOL 6.4 API; cancel request recorded",
+            },
+        }
+
+    def _scoped_force_stop(self, job: dict[str, Any], *, reason: str, server_scope: Any) -> dict[str, Any]:
+        job_id = job["job_id"]
+        if not isinstance(server_scope, dict) or not server_scope.get("authorized"):
+            return self._error(
+                "UNAUTHORIZED_FORCE_STOP",
+                "force_stop requires explicit server_scope authorization with verified ownership",
+                data={"job_id": job_id, "cancel_accepted": False, "engine_stopped": False, "mode": "FORCE_STOP_REJECTED"},
+            )
+
+        service = self.service
+        if service is None or getattr(service, "is_shared", True):
+            return self._error(
+                "CANNOT_TERMINATE_SHARED_SERVER",
+                "force-stop is strictly forbidden on shared, external, or unverified servers",
+                data={"job_id": job_id, "cancel_accepted": False, "engine_stopped": False, "mode": "FORCE_STOP_REJECTED"},
+            )
+
+        managed_pid = getattr(service, "server_pid", None) or getattr(service, "pid", None)
+        target_pid = server_scope.get("pid")
+        if not managed_pid or target_pid != managed_pid:
+            return self._error(
+                "PROCESS_IDENTITY_MISMATCH",
+                f"server_scope pid {target_pid} does not match active managed server pid {managed_pid}",
+                data={"job_id": job_id, "cancel_accepted": False, "engine_stopped": False, "mode": "IDENTITY_REJECTED"},
+            )
+
+        ident = process_identity(managed_pid)
+        scope_start = server_scope.get("process_start_epoch_ms")
+        if scope_start and ident.get("start_epoch_ms") and scope_start != ident["start_epoch_ms"]:
+            return self._error(
+                "PROCESS_IDENTITY_MISMATCH",
+                "process start epoch does not match server_scope",
+                data={"job_id": job_id, "cancel_accepted": False, "engine_stopped": False, "mode": "IDENTITY_REJECTED"},
+            )
+
+        try:
+            os.kill(managed_pid, 9)
+        except ProcessLookupError:
+            pass
+        except Exception as exc:
+            return self._error("TERMINATION_FAILED", f"failed to stop managed server: {exc}", safe_retry=False)
+
+        self.store.update_job(job_id, "CANCELLED", {"engine_stopped": True, "mode": "SCOPED_PROCESS_TERMINATION", "reason": reason})
+        self.store.add_event(job_id, "CANCELLED", {"engine_stopped": True, "mode": "SCOPED_PROCESS_TERMINATION", "reason": reason})
+        return {
+            "success": True,
+            "data": {
+                "job_id": job_id,
+                "status": "CANCELLED",
+                "cancel_accepted": True,
+                "engine_stopped": True,
+                "mode": "SCOPED_PROCESS_TERMINATION",
+            },
+        }
 
     def _reconcile(self, job):
         # Query existing Java request ids only. Never submit the lost callback.

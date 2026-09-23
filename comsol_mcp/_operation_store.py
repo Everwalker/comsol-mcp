@@ -24,6 +24,24 @@ class IdempotencyConflict(RuntimeError):
     pass
 
 
+class JobList(list):
+    def __init__(self, items: list[dict[str, Any]], total: int, offset: int, limit: int):
+        super().__init__(items)
+        self.total = total
+        self.offset = offset
+        self.limit = limit
+        self.has_more = (offset + len(items)) < total
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "jobs": list(self),
+            "total": self.total,
+            "offset": self.offset,
+            "limit": self.limit,
+            "has_more": self.has_more,
+        }
+
+
 def _dumps_canonical(value: Any) -> str:
     try:
         return json.dumps(value, sort_keys=True)
@@ -87,6 +105,8 @@ class OperationStore:
                     f"CREATE TABLE IF NOT EXISTS {table}("
                     f"{key_column} TEXT PRIMARY KEY,metadata TEXT NOT NULL{revision})"
                 )
+            self.db.execute("CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status)")
+            self.db.execute("CREATE INDEX IF NOT EXISTS idx_jobs_created_at ON jobs(created_at)")
             self.db.execute("COMMIT")
         except Exception:
             self.db.execute("ROLLBACK")
@@ -207,9 +227,13 @@ class OperationStore:
         with self.lock:
             self.db.execute("BEGIN IMMEDIATE")
             try:
-                row = self.db.execute("SELECT metadata FROM jobs WHERE job_id=?", (job_id,)).fetchone()
+                row = self.db.execute("SELECT status, metadata FROM jobs WHERE job_id=?", (job_id,)).fetchone()
                 if row:
-                    merged = {**json.loads(row[0] or "{}"), **(metadata or {})}
+                    current_status = row["status"]
+                    if current_status in {"SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED", "LOST"} and status not in {"SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED", "LOST"}:
+                        self.db.execute("COMMIT")
+                        return
+                    merged = {**json.loads(row["metadata"] or "{}"), **(metadata or {})}
                     self.db.execute(
                         "UPDATE jobs SET status=?,metadata=?,"
                         "started_at=CASE WHEN ? IN ('STARTING','RUNNING') THEN COALESCE(started_at,CURRENT_TIMESTAMP) ELSE started_at END,"
@@ -225,6 +249,101 @@ class OperationStore:
                         (status, job_id, job_id, job_id),
                     )
                 self.db.execute("COMMIT")
+            except Exception:
+                self.db.execute("ROLLBACK")
+                raise
+
+    def list_jobs(
+        self,
+        offset: int = 0,
+        limit: int = 100,
+        status: str | None = None,
+        project_id: str | None = None,
+    ) -> JobList:
+        bound_offset = max(0, int(offset))
+        bound_limit = max(1, min(int(limit), 1000))
+        with self.lock:
+            conditions = ["1=1"]
+            params: list[Any] = []
+            if status is not None:
+                conditions.append("status=?")
+                params.append(str(status))
+            if project_id is not None:
+                conditions.append(
+                    "(json_extract(COALESCE(metadata, '{}'), '$.project_id') = ? "
+                    "OR json_extract(COALESCE(metadata, '{}'), '$.execution.project_id') = ? "
+                    "OR json_extract(COALESCE(metadata, '{}'), '$.project_root') = ?)"
+                )
+                params.extend([str(project_id), str(project_id), str(project_id)])
+
+            where_clause = " AND ".join(conditions)
+            total = self.db.execute(f"SELECT COUNT(*) FROM jobs WHERE {where_clause}", params).fetchone()[0]
+            page_params = list(params) + [bound_limit, bound_offset]
+            rows = self.db.execute(
+                f"SELECT * FROM jobs WHERE {where_clause} ORDER BY rowid DESC LIMIT ? OFFSET ?",
+                page_params,
+            ).fetchall()
+            items = [self._job(row) for row in rows]
+            return JobList(items, total=total, offset=bound_offset, limit=bound_limit)
+
+    def cancel_queued(self, job_id: str, reason: str = "cancelled by user") -> tuple[bool, str, dict[str, Any] | None]:
+        with self.lock:
+            self.db.execute("BEGIN IMMEDIATE")
+            try:
+                row = self.db.execute("SELECT * FROM jobs WHERE job_id=?", (job_id,)).fetchone()
+                if not row:
+                    self.db.execute("ROLLBACK")
+                    return False, "NOT_FOUND", None
+                current_status = row["status"]
+                operation_id = row["operation_id"]
+                if current_status == "CANCELLED":
+                    job_record = self._job(row)
+                    self.db.execute("COMMIT")
+                    return True, "ALREADY_CANCELLED", job_record
+                if current_status != "QUEUED":
+                    job_record = self._job(row)
+                    self.db.execute("COMMIT")
+                    return False, current_status, job_record
+
+                cancel_result = {
+                    "success": False,
+                    "data": {
+                        "status": "CANCELLED",
+                        "job_id": job_id,
+                        "engine_dispatched": False,
+                        "engine_stopped": False,
+                        "mode": "QUEUED_ABORT",
+                    },
+                    "error": {
+                        "code": "OPERATION_CANCELLED",
+                        "message": f"job was cancelled while queued: {reason}",
+                        "safe_retry": True,
+                        "engine_stopped": False,
+                    },
+                    "execution": {"job_id": job_id, "operation_id": operation_id},
+                }
+                serialized_result = _dumps_canonical(cancel_result)
+                self.db.execute(
+                    "UPDATE jobs SET status='CANCELLED', finished_at=CURRENT_TIMESTAMP WHERE job_id=? AND status='QUEUED'",
+                    (job_id,),
+                )
+                self.db.execute(
+                    "UPDATE operations SET status='CANCELLED', result=?, finished_at=CURRENT_TIMESTAMP WHERE operation_id=? AND status='QUEUED'",
+                    (serialized_result, operation_id),
+                )
+                event_meta = json.dumps({
+                    "reason": reason,
+                    "engine_dispatched": False,
+                    "cancelled_while": "QUEUED",
+                    "mode": "QUEUED_ABORT",
+                }, sort_keys=True)
+                self.db.execute(
+                    "INSERT INTO job_events(job_id, event, metadata) VALUES(?, 'CANCELLED', ?)",
+                    (job_id, event_meta),
+                )
+                self.db.execute("COMMIT")
+                updated = self.job(job_id)
+                return True, "CANCELLED", updated
             except Exception:
                 self.db.execute("ROLLBACK")
                 raise

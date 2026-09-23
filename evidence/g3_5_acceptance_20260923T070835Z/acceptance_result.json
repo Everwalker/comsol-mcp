@@ -1,0 +1,337 @@
+{
+  "schema": "comsol-mcp-g3/g3_5-acceptance/1",
+  "goal": "NEXT_GOAL.md: Gate A (G01-G12) remediation and W19 (J01-J10) job control, recovery, and concurrency",
+  "status": "G3_5_MAC_W19_VERIFIED_SCOPED",
+  "host_status": "HOST_DELIVERY_UNVERIFIED",
+  "native_cancel_status": "UNSUPPORTED_NATIVE_CANCEL",
+  "verdict": "PASS",
+  "run_id": "g3_5_acceptance_20260923T070835Z",
+  "generated_at": "2026-09-23T07:08:49.937971+00:00",
+  "elapsed_seconds": 14.897,
+  "commit_head": "859ceeb1d064566d431f094b696afc95f97d1fe3",
+  "platform": "darwin",
+  "python_version": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.3.34.2)]",
+  "comsol_version": "COMSOL Multiphysics 6.4 (Build 293)",
+  "scope": {
+    "verified_workstream": "Gate A (G01-G12) + W19 (J01-J10)",
+    "stop_boundary": "W19 completed; do not advance to W20-W26",
+    "target_platform": "macOS-aarch64 (Apple Silicon commercial installation)",
+    "live_engine": "COMSOL Multiphysics 6.4"
+  },
+  "delivered_artifacts": [
+    "evidence/g3_5_acceptance_20260923T070835Z/DELIVERY_REDACTION_MANIFEST.json",
+    "evidence/g3_5_acceptance_20260923T070835Z/exports/g04_atomic.csv",
+    "evidence/g3_5_acceptance_20260923T070835Z/g08_eval.json",
+    "evidence/g3_5_acceptance_20260923T070835Z/plots/g02_existing.png",
+    "evidence/g3_5_acceptance_20260923T070835Z/plots/g02_fresh.png",
+    "evidence/g3_5_acceptance_20260923T070835Z/plots/g05_render_t05.png",
+    "evidence/g3_5_acceptance_20260923T070835Z/plots/g05_render_t10.png",
+    "evidence/g3_5_acceptance_20260923T070835Z/plots/g10_dot.png",
+    "evidence/g3_5_acceptance_20260923T070835Z/plots/g10_underscore.png",
+    "evidence/g3_5_acceptance_20260923T070835Z/plots/j10_total_chain.png",
+    "evidence/g3_5_acceptance_20260923T070835Z/saved_g35_model.mph"
+  ],
+  "redacted_runtime_artifacts": [
+    "evidence/g3_5_acceptance_20260923T070835Z/ModelAcceptanceG35Builder.java",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/comsol.prefs",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/comsol.recoveries",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/comsolserver.prefs",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/configuration/comsol/org.eclipse.core.runtime/.manager/.fileTable.1",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/configuration/comsol/org.eclipse.core.runtime/.manager/.fileTable.2",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/configuration/comsol/org.eclipse.core.runtime/.manager/.fileTableLock",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/configuration/comsol/org.eclipse.equinox.app/.manager/.fileTableLock",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/configuration/comsol/org.eclipse.equinox.launcher/org.eclipse.equinox.launcher.cocoa.macosx.x86_64_1.2.1300.v20250331-1702/eclipse_11911.so",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/configuration/comsol/org.eclipse.osgi/.manager/.fileTable.1",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/configuration/comsol/org.eclipse.osgi/.manager/.fileTable.2",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/configuration/comsol/org.eclipse.osgi/.manager/.fileTableLock",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/configuration/comsol/org.eclipse.osgi/framework.info.1",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/configuration/comsol/org.eclipse.update/last.config.stamp",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/configuration/comsol/org.eclipse.update/platform.xml",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/icons/3dx_pivot.png",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/icons/3dx_pivot_locked.png",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/icons/3dx_pivot_manual.png",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/icons/logo_small_2d.png",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/icons/logo_small_3d.png",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/icons/work_plane_gizmo_24.png",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/login.properties",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/logs/mphserver1.log",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/logs/mphserver1_render.log",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/materials/User_Defined_Library.mph",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/tomcat/logs/mphservercatalina.2026-09-23.log",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/tomcat/logs/mphserverlocalhost.2026-09-23.log",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-23.txt",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/workspace/comsol/.metadata/.log",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/workspace/comsol/.metadata/.plugins/org.eclipse.core.resources/.root/.indexes/properties.version",
+    "evidence/g3_5_acceptance_20260923T070835Z/comsol_prefs/workspace/comsol/.metadata/.plugins/org.eclipse.core.runtime/.settings/org.eclipse.core.resources.prefs",
+    "evidence/g3_5_acceptance_20260923T070835Z/control-private/daemon_j03/docs_index.sqlite3",
+    "evidence/g3_5_acceptance_20260923T070835Z/control-private/daemon_j03/docs_index.sqlite3-shm",
+    "evidence/g3_5_acceptance_20260923T070835Z/control-private/daemon_j03/docs_index.sqlite3-wal",
+    "evidence/g3_5_acceptance_20260923T070835Z/control-private/daemon_j03/operations.sqlite3",
+    "evidence/g3_5_acceptance_20260923T070835Z/control-private/daemon_j04/docs_index.sqlite3",
+    "evidence/g3_5_acceptance_20260923T070835Z/control-private/daemon_j04/docs_index.sqlite3-shm",
+    "evidence/g3_5_acceptance_20260923T070835Z/control-private/daemon_j04/docs_index.sqlite3-wal",
+    "evidence/g3_5_acceptance_20260923T070835Z/control-private/daemon_j04/operations.sqlite3",
+    "evidence/g3_5_acceptance_20260923T070835Z/control-private/daemon_j06/docs_index.sqlite3",
+    "evidence/g3_5_acceptance_20260923T070835Z/control-private/daemon_j06/docs_index.sqlite3-shm",
+    "evidence/g3_5_acceptance_20260923T070835Z/control-private/daemon_j06/docs_index.sqlite3-wal",
+    "evidence/g3_5_acceptance_20260923T070835Z/control-private/daemon_j06/operations.sqlite3",
+    "evidence/g3_5_acceptance_20260923T070835Z/control-private/daemon_j07/docs_index.sqlite3",
+    "evidence/g3_5_acceptance_20260923T070835Z/control-private/daemon_j07/docs_index.sqlite3-shm",
+    "evidence/g3_5_acceptance_20260923T070835Z/control-private/daemon_j07/docs_index.sqlite3-wal",
+    "evidence/g3_5_acceptance_20260923T070835Z/control-private/daemon_j07/operations.sqlite3",
+    "evidence/g3_5_acceptance_20260923T070835Z/control-private/daemon_j08/docs_index.sqlite3",
+    "evidence/g3_5_acceptance_20260923T070835Z/control-private/daemon_j08/docs_index.sqlite3-shm",
+    "evidence/g3_5_acceptance_20260923T070835Z/control-private/daemon_j08/docs_index.sqlite3-wal",
+    "evidence/g3_5_acceptance_20260923T070835Z/control-private/daemon_j08/operations.sqlite3",
+    "evidence/g3_5_acceptance_20260923T070835Z/control-private/j01_ops.sqlite3",
+    "evidence/g3_5_acceptance_20260923T070835Z/control-private/j02_ops.sqlite3",
+    "evidence/g3_5_acceptance_20260923T070835Z/control-private/j05_ops.sqlite3",
+    "evidence/g3_5_acceptance_20260923T070835Z/control-private/j09_ops.sqlite3",
+    "evidence/g3_5_acceptance_20260923T070835Z/locks/endpoint-c2ca107f6fe61e0ca7673364c1a9b919cdaae44b0dac36a4f653ec7cf0cd2c7c.lock",
+    "evidence/g3_5_acceptance_20260923T070835Z/mphserver.log",
+    "evidence/g3_5_acceptance_20260923T070835Z/server.port",
+    "evidence/g3_5_acceptance_20260923T070835Z/worker_main/classes/1e7fb52c218be4e996e2/.compiled",
+    "evidence/g3_5_acceptance_20260923T070835Z/worker_main/classes/1e7fb52c218be4e996e2/comsol_mcp/worker_java/PersistentComsolWorker$ChangeHandler.class",
+    "evidence/g3_5_acceptance_20260923T070835Z/worker_main/classes/1e7fb52c218be4e996e2/comsol_mcp/worker_java/PersistentComsolWorker$CompiledArtifact.class",
+    "evidence/g3_5_acceptance_20260923T070835Z/worker_main/classes/1e7fb52c218be4e996e2/comsol_mcp/worker_java/PersistentComsolWorker$Conversion.class",
+    "evidence/g3_5_acceptance_20260923T070835Z/worker_main/classes/1e7fb52c218be4e996e2/comsol_mcp/worker_java/PersistentComsolWorker$DuplicateTagFixture.class",
+    "evidence/g3_5_acceptance_20260923T070835Z/worker_main/classes/1e7fb52c218be4e996e2/comsol_mcp/worker_java/PersistentComsolWorker$HasProductFixture.class",
+    "evidence/g3_5_acceptance_20260923T070835Z/worker_main/classes/1e7fb52c218be4e996e2/comsol_mcp/worker_java/PersistentComsolWorker$Json$NonFiniteJsonValue.class",
+    "evidence/g3_5_acceptance_20260923T070835Z/worker_main/classes/1e7fb52c218be4e996e2/comsol_mcp/worker_java/PersistentComsolWorker$Json$Parser.class",
+    "evidence/g3_5_acceptance_20260923T070835Z/worker_main/classes/1e7fb52c218be4e996e2/comsol_mcp/worker_java/PersistentComsolWorker$Json.class",
+    "evidence/g3_5_acceptance_20260923T070835Z/worker_main/classes/1e7fb52c218be4e996e2/comsol_mcp/worker_java/PersistentComsolWorker$RequestState.class",
+    "evidence/g3_5_acceptance_20260923T070835Z/worker_main/classes/1e7fb52c218be4e996e2/comsol_mcp/worker_java/PersistentComsolWorker$SourceSpec.class",
+    "evidence/g3_5_acceptance_20260923T070835Z/worker_main/classes/1e7fb52c218be4e996e2/comsol_mcp/worker_java/PersistentComsolWorker$TaggableA.class",
+    "evidence/g3_5_acceptance_20260923T070835Z/worker_main/classes/1e7fb52c218be4e996e2/comsol_mcp/worker_java/PersistentComsolWorker$TaggableB.class",
+    "evidence/g3_5_acceptance_20260923T070835Z/worker_main/classes/1e7fb52c218be4e996e2/comsol_mcp/worker_java/PersistentComsolWorker$WorkerFailure.class",
+    "evidence/g3_5_acceptance_20260923T070835Z/worker_main/classes/1e7fb52c218be4e996e2/comsol_mcp/worker_java/PersistentComsolWorker.class",
+    "evidence/g3_5_acceptance_20260923T070835Z/worker_main/worker.stderr.log",
+    "evidence/g3_5_acceptance_20260923T070835Z/worker_main/worker_endpoint.json"
+  ],
+  "redaction_manifest": "evidence/DELIVERY_REDACTION_MANIFEST.json",
+  "cases": {
+    "G01": {
+      "verdict": "PASS",
+      "elapsed_s": 0.002,
+      "detail": {
+        "pinned_commit": "20839628aa6f93272a463f4d88eb48704b971f87",
+        "pinned_tree": "2e72a4fa6eae809bbce92e4620592e6906d3e87b",
+        "bootstrap_verified": true,
+        "paths_isolated": true,
+        "single_file_modification_rejected": true
+      }
+    },
+    "G02": {
+      "verdict": "PASS",
+      "elapsed_s": 0.001,
+      "detail": {
+        "old_target_preserved": true,
+        "overwrite_refused_by_default": true,
+        "fresh_publish_verified": true
+      }
+    },
+    "G03": {
+      "verdict": "PASS",
+      "elapsed_s": 0.006,
+      "detail": {
+        "property_restore_handled": true,
+        "dirty_model_tracked": true
+      }
+    },
+    "G04": {
+      "verdict": "PASS",
+      "elapsed_s": 0.001,
+      "detail": {
+        "overwrite_guard_verified": true,
+        "path_containment_verified": true
+      }
+    },
+    "G05": {
+      "verdict": "PASS",
+      "elapsed_s": 0.912,
+      "detail": {
+        "distinct_time_steps_verified": true,
+        "t05_sha256": "22342eaafcde99206c0703c4392b07846413bab5807631e30d10c61d5722171d",
+        "t10_sha256": "11c9a935a35ee131235549c0f3916832a60bbcb19f38bc46e9e9c3207cf4b282",
+        "nonexistent_solution_rejected": true
+      }
+    },
+    "G06": {
+      "verdict": "PASS",
+      "elapsed_s": 0.007,
+      "detail": {
+        "matrix_structure_preserved": true,
+        "path_depth_enforced": true
+      }
+    },
+    "G07": {
+      "verdict": "PASS",
+      "elapsed_s": 0.0,
+      "detail": {
+        "valid_png_accepted": true,
+        "truncated_png_rejected": true,
+        "job_metadata_retained_on_delivery_error": true,
+        "failed_envelope_has_no_image": true
+      }
+    },
+    "G08": {
+      "verdict": "PASS",
+      "elapsed_s": 0.002,
+      "detail": {
+        "success_asserted_first": true,
+        "bounded_wire_payload_verified": true,
+        "artifact_retains_full_values": true,
+        "malformed_negative_control_passed": true
+      }
+    },
+    "G09": {
+      "verdict": "PASS",
+      "elapsed_s": 0.02,
+      "detail": {
+        "audit_file_verified": true,
+        "files_audited": 7219,
+        "single_file_modification_rejected": true
+      }
+    },
+    "G10": {
+      "verdict": "PASS",
+      "elapsed_s": 0.264,
+      "detail": {
+        "plot_render_dot_and_underscore_equivalent": true,
+        "render_sha256": "2183bc78e0d4a8a944f716cd39e4d51c6e4b1d40b2edeec9708801354398bb9c"
+      }
+    },
+    "G11": {
+      "verdict": "PASS",
+      "elapsed_s": 0.033,
+      "detail": {
+        "shared_servers_survived": 0,
+        "host_status": "HOST_DELIVERY_UNVERIFIED",
+        "server_isolation_intact": true
+      }
+    },
+    "G12": {
+      "verdict": "PASS",
+      "elapsed_s": 0.679,
+      "detail": {
+        "save_size_bytes": 2270830,
+        "save_and_reopen_verified": true
+      }
+    },
+    "J01": {
+      "verdict": "PASS",
+      "elapsed_s": 0.005,
+      "detail": {
+        "pagination_verified": true,
+        "status_filtering_verified": true,
+        "project_filtering_verified": true,
+        "events_verified": true
+      }
+    },
+    "J02": {
+      "verdict": "PASS",
+      "elapsed_s": 0.002,
+      "detail": {
+        "queued_cancelled_without_engine_dispatch": true,
+        "idempotent_cancel_verified": true,
+        "monotonic_terminal_state_enforced": true
+      }
+    },
+    "J03": {
+      "verdict": "PASS",
+      "elapsed_s": 0.011,
+      "detail": {
+        "unsupported_native_cancel_reported": true,
+        "engine_stopped_false_reported": true,
+        "unauthorized_force_stop_rejected": true,
+        "shared_server_protected": true
+      }
+    },
+    "J04": {
+      "verdict": "PASS",
+      "elapsed_s": 0.003,
+      "detail": {
+        "idempotent_cached_result_returned": true,
+        "zero_duplicate_engine_dispatches": true,
+        "idempotency_conflict_rejected": true
+      }
+    },
+    "J05": {
+      "verdict": "PASS",
+      "elapsed_s": 0.003,
+      "detail": {
+        "reconcile_after_restart_verified": true,
+        "job_transitions_to_reconciling": true
+      }
+    },
+    "J06": {
+      "verdict": "PASS",
+      "elapsed_s": 0.003,
+      "detail": {
+        "samples_count": 50,
+        "p95_latency_s": 0.0,
+        "sub_second_responsiveness_verified": true
+      }
+    },
+    "J07": {
+      "verdict": "PASS",
+      "elapsed_s": 0.221,
+      "detail": {
+        "server_serialization_verified": true,
+        "timeline": [
+          [
+            "job2",
+            684974.400294333,
+            684974.510320916
+          ],
+          [
+            "job1",
+            684974.511742583,
+            684974.614885583
+          ]
+        ]
+      }
+    },
+    "J08": {
+      "verdict": "PASS",
+      "elapsed_s": 0.841,
+      "detail": {
+        "rpc_timeout_leaves_job_running": true,
+        "null_execution_timeout_allowed": true
+      }
+    },
+    "J09": {
+      "verdict": "PASS",
+      "elapsed_s": 0.004,
+      "detail": {
+        "wal_mode_active": true,
+        "indexes_present": [
+          "idx_jobs_status",
+          "idx_jobs_created_at"
+        ]
+      }
+    },
+    "J10": {
+      "verdict": "PASS",
+      "elapsed_s": 0.303,
+      "detail": {
+        "temperature_sampled": [
+          [
+            [
+              293.15000000196
+            ],
+            [
+              294.73233293089174
+            ],
+            [
+              299.4999089382494
+            ]
+          ]
+        ],
+        "render_sha256": "bc19a4b9670763d533e1abfbe91ffffc0eb3bd2af8296e940275c625506f28ce",
+        "image_size_bytes": 76367,
+        "total_chain_delivery_verified": true
+      }
+    }
+  }
+}
