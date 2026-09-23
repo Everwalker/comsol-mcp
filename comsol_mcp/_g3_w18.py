@@ -883,22 +883,43 @@ def export_run(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dic
     target_path.parent.mkdir(parents=True, exist_ok=True)
     staging_path = target_path.with_name(f".staging_{uuid.uuid4().hex[:8]}_{target_path.name}")
 
+    # Bind staging path to the export node and verify readback
+    staging_bound = False
+    bound_prop = None
+    for prop in ("filename", "pngfilename", "imagefilename", "datafilename", "txtfilename"):
+        try:
+            _call(exp, "set", prop, str(staging_path))
+            readback = str(_call(exp, "getString", prop) or "")
+            if readback == str(staging_path):
+                staging_bound = True
+                bound_prop = prop
+                break
+        except Exception:
+            pass
+
+    if not staging_bound:
+        raise ExecutionContractError(
+            "EXPORT_BINDING_FAILED",
+            f"Failed to bind and verify staging destination path on export feature {tag!r}",
+        )
+
+    # Ensure staging path is clean before running
+    if staging_path.exists():
+        staging_path.unlink()
+
     try:
-        _call(exp, "set", "filename", str(staging_path))
-    except Exception:
-        pass
-    try:
-        _call(exp, "set", "pngfilename", str(staging_path))
-    except Exception:
-        pass
+        _call(exp, "run")
+    except Exception as exc:
+        raise ExecutionContractError(
+            "EXPORT_FAILED",
+            f"Export run execution failed on {tag!r}: {exc}",
+        ) from exc
 
-    _call(exp, "run")
-
-    if not staging_path.is_file() and target_path.is_file():
-        staging_path = target_path
-
-    if not staging_path.is_file():
-        raise ExecutionContractError("EXPORT_FAILED", f"Export run failed to produce output file at {staging_path}")
+    if not staging_path.is_file() or staging_path.stat().st_size == 0:
+        raise ExecutionContractError(
+            "EXPORT_FAILED",
+            f"Export run failed to produce output file at staging path: {staging_path}",
+        )
 
     # Stream hash and byte count
     hasher = hashlib.sha256()
@@ -912,6 +933,13 @@ def export_run(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dic
     # Atomic publish
     if staging_path != target_path:
         os.replace(staging_path, target_path)
+
+    # Restore target path on export node property
+    if bound_prop:
+        try:
+            _call(exp, "set", bound_prop, str(target_path))
+        except Exception:
+            pass
 
     store.register_artifact(target_path)
 

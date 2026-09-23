@@ -10,6 +10,7 @@ import pytest
 from mcp.types import ImageContent, TextContent
 
 from comsol_mcp._artifact_store import ArtifactStore
+from comsol_mcp._execution_contract import ExecutionContractError
 from comsol_mcp._g3_ops import DISPATCH, dispatch
 from comsol_mcp import _g3_w18 as w18
 from comsol_mcp._mcp_gateway import mcp_result
@@ -336,3 +337,50 @@ def test_export_lifecycle(tmp_path: Path) -> None:
     remove_res = DISPATCH["export.remove"](worker, "m1", {"path": "exp1"})
     assert remove_res["removed"] is True
     assert DISPATCH["export.list"](worker, "m1", {})["total_count"] == 0
+
+
+def test_export_staging_fallback_refused(tmp_path: Path) -> None:
+    worker = MockWorker(tmp_path)
+    target_file = tmp_path / "stale_target.png"
+    target_file.write_bytes(b"STALE_PREEXISTING_CONTENT")
+
+    DISPATCH["export.create"](
+        worker,
+        "m1",
+        {
+            "tag": "exp_fail",
+            "type_id": "Image",
+            "definition": {"filename": str(target_file)},
+        },
+    )
+
+    exp_feat = worker.model("m1").result().export("exp_fail")
+    exp_feat.run = lambda: None  # no-op: does not produce staging file
+
+    with pytest.raises(ExecutionContractError) as exc_info:
+        DISPATCH["export.run"](worker, "m1", {"path": "exp_fail"})
+    assert exc_info.value.code == "EXPORT_FAILED"
+    # Old target file must remain untouched
+    assert target_file.read_bytes() == b"STALE_PREEXISTING_CONTENT"
+
+
+def test_export_staging_binding_failed(tmp_path: Path) -> None:
+    worker = MockWorker(tmp_path)
+    DISPATCH["export.create"](
+        worker,
+        "m1",
+        {
+            "tag": "exp_nobind",
+            "type_id": "Image",
+            "definition": {"filename": str(tmp_path / "out.png")},
+        },
+    )
+
+    exp_feat = worker.model("m1").result().export("exp_nobind")
+    def fail_set(key: str, val: Any) -> None:
+        raise RuntimeError("Property assignment rejected")
+    exp_feat.set = fail_set
+
+    with pytest.raises(ExecutionContractError) as exc_info:
+        DISPATCH["export.run"](worker, "m1", {"path": "exp_nobind"})
+    assert exc_info.value.code == "EXPORT_BINDING_FAILED"

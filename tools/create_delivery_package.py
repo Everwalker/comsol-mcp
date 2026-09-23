@@ -97,11 +97,22 @@ def build_package(repo_dir: Path, output_archive: Path) -> Path:
             "comsol_tmp", "comsol_recovery", "cwd_d", "env_site_packages", "build",
             ".g3-private", ".phase1-private", "control-private", "comsol-server-home",
             "state", ".no-hooks", "comsol_mcp.egg-info", "hermes_isolated",
+            "project_c",
         }
         exclude_files = {".DS_Store", "server.port", "mphserver.log"}
 
         repo_stage = pkg_root / "repository"
         repo_stage.mkdir(parents=True, exist_ok=True)
+
+        redaction_file = repo_dir / "evidence" / "DELIVERY_REDACTION_MANIFEST.json"
+        redacted_paths: set[str] = set()
+        if redaction_file.is_file():
+            try:
+                rdata = json.loads(redaction_file.read_text(encoding="utf-8"))
+                for item in rdata.get("redacted_artifacts", []):
+                    redacted_paths.add(item.get("path", ""))
+            except Exception:
+                pass
 
         file_inventory: list[dict[str, Any]] = []
 
@@ -125,6 +136,7 @@ def build_package(repo_dir: Path, output_archive: Path) -> Path:
                     or file.endswith(".sqlite3-wal")
                     or file.endswith(".sqlite")
                     or file.endswith(".db")
+                    or file.endswith(".java")
                     or ".token" in file
                     or file.endswith(".token")
                     or ("token" in file.lower() and file.endswith((".json", ".ini", ".txt", ".key")))
@@ -134,10 +146,12 @@ def build_package(repo_dir: Path, output_archive: Path) -> Path:
                 src_path = Path(root) / file
                 rel_path = src_path.relative_to(repo_dir)
 
+                # Skip any explicitly redacted runtime artifact
+                if str(rel_path) in redacted_paths:
+                    continue
+
                 # Skip transient / project_c test files
                 if any(p in rel_path.parts for p in exclude_dirs):
-                    continue
-                if "project_c" in rel_path.parts and file.startswith("."):
                     continue
 
                 dest_path = repo_stage / rel_path
@@ -159,6 +173,23 @@ def build_package(repo_dir: Path, output_archive: Path) -> Path:
                 })
 
         print(f"[*] Packaged {len(file_inventory)} clean repository files")
+
+        # Copy DELIVERY_REDACTION_MANIFEST.json if present
+        redaction_file = repo_dir / "evidence" / "DELIVERY_REDACTION_MANIFEST.json"
+        redaction_sha = "none"
+        redaction_size = 0
+        redaction_count = 0
+        if redaction_file.is_file():
+            dest_redaction = pkg_root / "DELIVERY_REDACTION_MANIFEST.json"
+            shutil.copy2(redaction_file, dest_redaction)
+            redaction_sha = sha256_file(dest_redaction)
+            redaction_size = dest_redaction.stat().st_size
+            try:
+                rdata = json.loads(dest_redaction.read_text(encoding="utf-8"))
+                redaction_count = len(rdata.get("redacted_artifacts", []))
+            except Exception:
+                pass
+            print(f"[*] Packaged DELIVERY_REDACTION_MANIFEST.json ({redaction_count} redacted artifacts documented)")
 
         # 4. Secret scan
         print("[*] Running pre-packaging security and credential scan...")
@@ -226,7 +257,18 @@ def build_package(repo_dir: Path, output_archive: Path) -> Path:
                     for k, v in acceptance_data.get("cases", {}).items()
                 },
             },
-            "file_count": len(file_inventory) + 2,
+            "redaction_manifest": {
+                "filename": "DELIVERY_REDACTION_MANIFEST.json",
+                "sha256": redaction_sha,
+                "size_bytes": redaction_size,
+                "redacted_artifacts_count": redaction_count,
+                "description": (
+                    "Catalog of runtime evidence and test fixtures intentionally excluded "
+                    "from delivery to protect private host state, prevent credential/token leakage, "
+                    "and maintain package hygiene."
+                ),
+            },
+            "file_count": len(file_inventory) + (3 if redaction_file.is_file() else 2),
             "inventory": sorted(file_inventory, key=lambda x: x["path"]),
         }
 
@@ -312,9 +354,19 @@ def build_package(repo_dir: Path, output_archive: Path) -> Path:
    ```
 3. 运行全量单元测试与验收套件：
    ```sh
-   python3 -m pytest tests/test_g3_r01_project_root.py tests/test_g3_r02_artifact_security.py tests/test_g3_r03_csv_four_axis.py tests/test_g3_r04_artifact_budget.py tests/test_g3_w18_plot.py
+   python3 -m pytest
    python3 tests/run_g3_4_w18_acceptance.py
    ```
+
+## 6. 运行期证据脱敏与排除说明 (DELIVERY REDACTION MANIFEST)
+本交付包在打包过程中对运行期瞬态文件实施了严格的安全脱敏与排除，详见根目录 `DELIVERY_REDACTION_MANIFEST.json`。
+排除的 6 类运行期文件均已在实机 live 验收过程中完成生成、哈希比对与断言验证，但因安全性或瞬态属性不纳入发布产物：
+1. **transient_daemon_log**: `mphserver.log`, `logs/*`（COMSOL 服务端与守护进程控制台日志，含本地临时路径与动态进程 ID）
+2. **ephemeral_port**: `server.port`（独立测试服务绑定的瞬态 TCP 端口，服务终止后失效）
+3. **scratch_builder**: `*.java`（实机构建瞬态模型的动态 Java 源码脚手架）
+4. **local_sqlite_db_and_control**: `control-private/*`（控制守护进程 SQLite 数据库、状态账本与本地会话 token）
+5. **transient_harness**: `hermes_isolated/*`（Hermes 代理运行期测试沙箱、瞬态数据库与配置备份）
+6. **security_sentinel**: `project_c/*`（专用于验收用例 A03 验证访问控制拦截的合成 sentinel，含伪造凭据与符号链接逃逸探针）
 """
         qa_file = pkg_root / "DELIVERY_QA.md"
         qa_file.write_text(qa_doc, encoding="utf-8")
@@ -381,6 +433,28 @@ def verify_package(archive_path: Path, repo_ref_dir: Path | None = None) -> bool
             assert "control-private" not in p.parts, f"control-private leak: {p}"
             assert ".g3-private" not in p.parts, f".g3-private leak: {p}"
             assert "comsol-server-home" not in p.parts, f"comsol-server-home leak: {p}"
+            assert "hermes_isolated" not in p.parts, f"hermes_isolated leak: {p}"
+            assert "project_c" not in p.parts, f"project_c leak: {p}"
+            assert not p.name.endswith(".java"), f"Java scratch builder leak: {p}"
+
+        # Check delivery redaction manifest
+        redaction_manifest_file = deliverable_dir / "DELIVERY_REDACTION_MANIFEST.json"
+        if redaction_manifest_file.is_file():
+            redaction_data = json.loads(redaction_manifest_file.read_text(encoding="utf-8"))
+            assert redaction_data.get("schema") == "comsol-mcp-g3/delivery-redaction-manifest/1"
+            assert len(redaction_data.get("redacted_artifacts", [])) > 0, "Empty redacted_artifacts list in manifest"
+
+            # Verify delivered artifacts exist in extracted_repo
+            acceptance_json = json.loads((extracted_repo / "evidence" / "phase4_4_acceptance.json").read_text(encoding="utf-8"))
+            for delivered_rel in acceptance_json.get("delivered_artifacts", []):
+                delivered_file = extracted_repo / delivered_rel
+                assert delivered_file.is_file(), f"Delivered artifact missing from package: {delivered_rel}"
+
+            # Verify no redacted artifact leaked into extracted_repo
+            for redacted_item in redaction_data.get("redacted_artifacts", []):
+                redacted_rel = redacted_item["path"]
+                redacted_file = extracted_repo / redacted_rel
+                assert not redacted_file.exists(), f"Redacted runtime artifact leaked into package: {redacted_rel}"
 
         print("[+] Deliverable archive verification PASSED!")
         return True

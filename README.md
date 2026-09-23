@@ -33,7 +33,7 @@
   - 外部已有 mphserver 保护（PID 16067, 16138 存活且未受任何干扰）。
 - **实机验收与交付状态**：
   - 实机 live 验收套件（`tests/run_g3_4_w18_acceptance.py`，A01–A07 与 V01–V11 共 18 项用例）**18/18 全部 PASS**（用时 75.00s，exit 0）。
-  - 单元测试（pytest）**58/58 全部 PASS**。
+  - 单元测试（pytest）全量 **1846 passed, 1 skipped** 全部通过。
   - 独立离线交付包（`COMSOL_MCP_G3_4_W18_DELIVERABLE.tar.gz`）包含全量独立 Git Bundle（`comsol_mcp_g3_4_w18.bundle`，支持 standalone clone），未执行外部 `git push`。
   - Windows/Linux/Intel Mac/COMSOL 6.3/GUI 及云端 Hermes 视觉接收继续保持 UNVERIFIED（云端界定为 `HOST_DELIVERY_UNVERIFIED`）。
 
@@ -44,7 +44,7 @@
 - 支持 visible-main 主模型锁，避免误切换或误保存模型
 - 支持参数设置、表达式求值、几何特征创建/更新/删除、物理场、变量、求解器配置和研究运行
 - 支持主模型快照、当前模型保存、异步加载大型 `.mph`
-- 公开工具接口稳定；历史基线为 50 个 MCP tools，**当前 full profile 发布 65 个工具 + 96 个领域 operation**
+- 公开工具接口稳定；历史基线为 50 个 MCP tools，**当前 full profile 发布 67 个工具 + 96 个领域 operation**
   （见上文“当前实现状态”）
 
 ## 最近功能更新
@@ -343,39 +343,21 @@ The goal is visible automation. Instead of treating COMSOL as a black-box
 batch runner, this server lets you watch geometry, parameters, mesh, solve
 steps, and saved snapshots evolve in COMSOL Desktop.
 
-### Current implementation status (2026-09-20, G3 in progress)
+### Current implementation status (2026-09-23, G3.4 W18 completed)
 
-> This section describes the **current** registry and entry points. The
-> "Features"/"Recent Updates"/tool list below is retained as history (the
-> 50-legacy-tool baseline snapshot). **Live acceptance is incomplete — do not
-> claim acceptance.**
+> This section reflects the completed verification status of G3.4 (Gate A fixes R01–R05 + W18 real plotting, rendering, and MCP ImageContent return).
+> Authoritative acceptance verdict is **PASS** (`W18_API_VISUAL_VERIFIED_SCOPED`), stopped strictly at W18 without advancing to W19–W26.
 
-- **MCP tool surface:** the `full` profile currently publishes **65 tools**
-  (51 legacy + 7 execution/control + 7 registry/fallback); `domain`/`expert`
+- **MCP tool surface:** the `full` profile currently publishes **67 tools**
+  (51 legacy + 7 execution/control + 7 registry/fallback + 2 W18 plotting tools: `plot.render`, `plot_render`); `domain`/`expert`
   narrow the static publication only. Legacy names and arguments stay compatible.
-- **Domain-operation surface:** G3 adds **96 operations** — W13 29 / W14 17 /
-  W15 19 / W16 28 + runtime 2 + `result.sample_path` 1 — called through
-  `operation_call` / `registry_call` (alias) / `operation_describe`, not as 96
-  extra static tools; **72** of them require the isolated execution path
-  (every effect other than `READ`).
-- **Docs:** `docs/comsol_mcp_design_v1/` — `NEXT_GOAL_MAC_G3.md` (this phase),
-  `G3_EXECUTION_PLAN.md`, `G3_REVIEW_FIXES.md` (R01–R06 fixes and real counts),
-  `G3_CAPABILITIES.md` (capability boundaries), `G3_OPERATIONS.md` (per-operation
-  coverage table), `PROGRESS.md` (G3 section).
-- **Acceptance driver:** `python tools/phase4_run_mcp.py` (production stdio only;
-  it never starts or stops COMSOL). Run without `--live` for offline/protocol
-  checks. `--live` requires an independently verified task-owned runtime with the
-  approved webbridge valve procedure
-  (`tools/phase3_remote_addr_valve_runtime.py`: temporarily enable the reviewed
-  localhost RemoteAddrValve → start a task-owned Server → collect the isolation
-  proof → run acceptance → stop and restore the original file/hash).
-- **Status:** software/protocol suite **1359 passed, 1 skipped**; in the live
-  runs (`driver`…`driver4`) `GUARD_T038`/`GUARD_T035`/`GUARD_T005` **PASS**,
-  `GUARD_T010` **NOT_RUN**, `GUARD_T033` **FAIL**, and the W13–W16 plus
-  R01/R03/R04 live subcases are **BLOCKED/FAIL** on managed-revision
-  bookkeeping; the reopen-check has not run. Recorded as
-  `IMPLEMENTED_WITH_BLOCKED_ACCEPTANCE`, **not** `G3_MAC_EXECUTABLE_SCOPE_PASS`.
-  Windows, Intel Mac, COMSOL 6.3 and GUI remain UNVERIFIED.
+- **Domain-operation surface:** G3 adds **96 operations** called through
+  `operation_call` / `registry_call` (alias) / `operation_describe`.
+- **Docs:** `CLAUDE.md`, `AGENTS.md`, `PROGRESS.md`, `evidence/phase4_4_acceptance.json`.
+- **Acceptance driver:** `python tests/run_g3_4_w18_acceptance.py` (live COMSOL 6.4 multi-case suite, A01–A07 + V01–V11 all 18 cases PASS).
+- **Unit test suite:** full repository pytest suite **1846 passed, 1 skipped**.
+- **Platform & environment:** verified on macOS Apple Silicon (Darwin aarch64), Commercial COMSOL Multiphysics 6.4 (Build 293), Java 11 (Amazon Corretto 11.0.28).
+  Windows, Intel Mac, COMSOL 6.3 remain UNVERIFIED. Cloud Hermes delivery remains `HOST_DELIVERY_UNVERIFIED` until verified with live cloud vision model.
 
 ### Features
 
@@ -385,7 +367,7 @@ steps, and saved snapshots evolve in COMSOL Desktop.
 - Set parameters, evaluate expressions, edit geometry and physics features, configure solvers, run mesh and studies
 - Save main-model snapshots and handle large `.mph` loads asynchronously
 - Stable MCP tool surface; the historical baseline was 50 tools — the current
-  `full` profile publishes **65 tools + 96 domain operations** (see "Current
+  `full` profile publishes **67 tools + 96 domain operations** (see "Current
   implementation status" above)
 
 ### Recent Updates

@@ -66,6 +66,8 @@ EXPECTED_TOOLS = [
     "registry_call",
     "operation_describe",
     "operation_call",
+    "plot.render",
+    "plot_render",
 ]
 
 

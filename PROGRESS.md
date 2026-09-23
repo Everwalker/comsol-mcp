@@ -3,10 +3,11 @@
 - **验收日期**: 2026-09-23
 - **验收目标**: `NEXT_GOAL.md` (Gate A 定向修补 R01–R05 → W18 真实图形、导出与 MCP ImageContent 回传)
 - **权威结论**: **PASS** (`status: W18_API_VISUAL_VERIFIED_SCOPED`, `host_status: HOST_DELIVERY_UNVERIFIED`)
-- **运行 ID**: `g3_4_w18_acceptance_20260923T011312Z` (耗时 75.00s)
+- **运行 ID**: `g3_4_w18_acceptance_20260923T045512Z` (耗时 75.58s)
 - **停止边界**: 严格停止于 W18，未进入 W19–W26
 - **提交版本**: 分支 `handoff/g3_4_w18`，基线 `31152904205834125776524f92288e18ba93b853`
-- **GitHub 推送**: `git_push_executed: false`（按指示制作离线全量交付包，未执行远程推送）
+- **全量测试**: pytest 单元测试 **1846 passed, 1 skipped** 全部通过；live 验收 **18/18 PASS** 全部通过
+- **GitHub 推送**: 验收通过后执行分支同步推送 `origin handoff/g3_4_w18`
 
 ---
 
@@ -34,6 +35,7 @@
 
 1. **图形节点与视图生命周期 (CRUD)**:
    - 原生支持 `plot.list`, `plot.group_create`, `plot.feature_create`, `plot.update`, `plot.remove`, `plot.view_manage` 以及 `export.*` 完整动作族。
+   - MCP 工具面完整注册统一为 67 工具（51 既有 + 7 执行控制 + 7 注册回退 + 2 W18 绘图工具 `plot.render` / `plot_render`）。
 2. **Fail-Closed 科学绑定与属性设置**:
    - 消除 scientific bindings 和 `_apply_properties()` 中的 `except: pass`，属性缺失或数据绑定失败立即报错拒绝。
 3. **真实 COMSOL 渲染与物理验证**:
@@ -45,16 +47,20 @@
    - 存盘重开验证 (`saved_w18_model.mph` 由新独立 Worker 打开，不经重算即成功重读重绘 `reopened_render.png`)
 4. **完整 Image 数据 Provenance**:
    - 图像返回包含完整元数据：`model_tag`, `plot_group`, `dataset`, `solution`, `solnum`, `time`, `looplevel`, `expression`, `unit`, `expressions`, `units`, `features`, `options`。
-5. **原子导出与流式哈希**:
-   - `export.run` 使用 `.staging_<uuid>_<name>` 临时文件、流式 SHA-256 计算、`os.replace` 原子发布并自动完成 artifact 登记。
-6. **MCP 多模态 ImageContent 回传**:
+5. **原子导出、Staging 强校验与流式哈希**:
+   - `export.run` 强制执行 staging 路径绑定与回读断言（`getString == staging_path`），无静默 fallback；未生成或空文件 fail-closed 报错，绝不挪用旧 target 文件。
+   - 使用 `.staging_<uuid>_<name>` 临时文件、流式 SHA-256 计算、`os.replace` 原子发布并自动完成 artifact 登记与节点属性复原。
+6. **运行期证据脱敏清单 (DELIVERY REDACTION MANIFEST)**:
+   - 生成 `DELIVERY_REDACTION_MANIFEST.json`，详尽记录 28 项运行期瞬态文件（COMSOL 守护日志、瞬态端口、动态 Java builder、SQLite/WAL、Hermes 测试目录、A03 安全 sentinel）的路径、类型、哈希与脱敏原因。
+   - `phase4_4_acceptance.json` 交付产物清单 100% 存在于交付包中，零悬空链接。
+7. **MCP 多模态 ImageContent 回传**:
    - 统一 PNG 格式，强制验证 PNG 魔数头、10MB 大小上限及 16M 像素总量上限。
    - 真实 Public Stdio 调用：`tools/call` → `plot.render` → COMSOL → `ImageContent` 原生回传。
    - 文本防膨胀：TextContent 仅包含结构化摘要，严格禁止将原始 Base64 塞入文本响应。
-7. **宿主集成与作用域界定**:
+8. **宿主集成与作用域界定**:
    - 隔离 Hermes 环境通过 `hermes mcp add` / `test` 验证 stdio 传输与 67 项工具自动发现。
    - 云端 Hermes 视觉接收明确界定为 `HOST_DELIVERY_UNVERIFIED`（未配置云端 AI API key）。
-8. **安全保障**:
+9. **安全保障**:
    - 保护既有外部 COMSOL mphserver 进程（PID 16067, 16138 存活且未受任何干扰）。
 
 ---

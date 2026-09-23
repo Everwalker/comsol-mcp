@@ -1,0 +1,205 @@
+{
+  "schema": "comsol-mcp-g3/delivery-redaction-manifest/1",
+  "generated_at": "2026-09-23T04:56:28.053902+00:00",
+  "run_id": "g3_4_w18_acceptance_20260923T045512Z",
+  "statement": "This manifest documents all runtime and private evidence artifacts generated and verified during acceptance testing that are intentionally excluded from the public delivery package to prevent leakage of ephemeral ports, local SQLite databases, transient logs, and synthetic test security sentinels.",
+  "total_redacted_artifacts": 28,
+  "redacted_artifacts": [
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/ModelAcceptanceV02Builder.java",
+      "category": "scratch_builder",
+      "size_bytes": 1683,
+      "sha256": "d6c2cae9dbb5252b052c40f13d209259a5f870fe38ddb83b2f3132fc55d61ea2",
+      "justification": "Transient Java source builder compiled on-the-fly to construct acceptance model"
+    },
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/ModelSaver.java",
+      "category": "scratch_builder",
+      "size_bytes": 406,
+      "sha256": "e9a7eba26bb1571e91255ec818aeb1fd9df5df9b436f4b40f3abf1d55cad1cf7",
+      "justification": "Transient Java source builder compiled on-the-fly to construct acceptance model"
+    },
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/control-private/control.json",
+      "category": "local_sqlite_db_and_control",
+      "size_bytes": 117,
+      "sha256": "d3885da0d95257b27782bba367c96776ff56def7cebd449872932406db6d82dc",
+      "justification": "Local daemon SQLite databases, session ledgers, and transaction journals; contain ephemeral host tokens and process session state"
+    },
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/control-private/docs_index.sqlite3",
+      "category": "local_sqlite_db_and_control",
+      "size_bytes": 16384,
+      "sha256": "3eee15d4e2ced32ecd1e1263553a165693ee1e83cee103fdcfe4b44c7d81af0c",
+      "justification": "Local daemon SQLite databases, session ledgers, and transaction journals; contain ephemeral host tokens and process session state"
+    },
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/control-private/operations.sqlite3",
+      "category": "local_sqlite_db_and_control",
+      "size_bytes": 233472,
+      "sha256": "95b3738da8a37636423f2941f276583c3e582bb7ba3c723b31108401c261b2e2",
+      "justification": "Local daemon SQLite databases, session ledgers, and transaction journals; contain ephemeral host tokens and process session state"
+    },
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/hermes_isolated/SOUL.md",
+      "category": "transient_harness",
+      "size_bytes": 667,
+      "sha256": "36c1f5a2e92cd1d018311eaf4c8f1e8886672eae78212e033c681d0e3d5d506f",
+      "justification": "Ephemeral scratch directory and execution logs for isolated Hermes subagent testing; non-persistent scratch environment"
+    },
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/hermes_isolated/backups/config/config.yaml.good.20260923-125526",
+      "category": "transient_harness",
+      "size_bytes": 2377,
+      "sha256": "a02bef40faaf2c9a2dc7c5df89a6083b384209646ef472a1978b3e1dcb93efd2",
+      "justification": "Ephemeral scratch directory and execution logs for isolated Hermes subagent testing; non-persistent scratch environment"
+    },
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/hermes_isolated/config.yaml",
+      "category": "transient_harness",
+      "size_bytes": 2377,
+      "sha256": "a02bef40faaf2c9a2dc7c5df89a6083b384209646ef472a1978b3e1dcb93efd2",
+      "justification": "Ephemeral scratch directory and execution logs for isolated Hermes subagent testing; non-persistent scratch environment"
+    },
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/hermes_isolated/logs/agent.log",
+      "category": "transient_harness",
+      "size_bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "justification": "Ephemeral scratch directory and execution logs for isolated Hermes subagent testing; non-persistent scratch environment"
+    },
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/hermes_isolated/logs/errors.log",
+      "category": "transient_harness",
+      "size_bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "justification": "Ephemeral scratch directory and execution logs for isolated Hermes subagent testing; non-persistent scratch environment"
+    },
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/hermes_isolated/logs/mcp-stderr.log",
+      "category": "transient_harness",
+      "size_bytes": 224,
+      "sha256": "136df12198142f65932317b44214eadde8b4d45465ec901e610784562849b166",
+      "justification": "Ephemeral scratch directory and execution logs for isolated Hermes subagent testing; non-persistent scratch environment"
+    },
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/hermes_isolated/spawn-ledger.json",
+      "category": "transient_harness",
+      "size_bytes": 414,
+      "sha256": "5a153e6338179d935253188aee4c97d66aa07cd6e7f4e2c82ffe9a253ac04416",
+      "justification": "Ephemeral scratch directory and execution logs for isolated Hermes subagent testing; non-persistent scratch environment"
+    },
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/logs/server.log",
+      "category": "transient_daemon_log",
+      "size_bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "justification": "Temporary runner and subprocess execution logs"
+    },
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/mphserver.log",
+      "category": "transient_daemon_log",
+      "size_bytes": 164,
+      "sha256": "30e601698694251c9f27f8301ea20cd0a441611e696b46994d1e9005634cd0ee",
+      "justification": "Commercial COMSOL mphserver runtime log; contains ephemeral process IDs, timestamps, and local filesystem paths"
+    },
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/project_c/.env",
+      "category": "security_sentinel",
+      "size_bytes": 21,
+      "sha256": "51aba46a8c0c7730d8a7053de8563e87fdf9eb7f51ef3b33fbc3b19c94c162eb",
+      "justification": "Synthetic sentinel files and fake credentials created specifically to verify access violation fail-closed security guards; excluded to keep package clean"
+    },
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/project_c/.g3-private/secret_model.mph",
+      "category": "security_sentinel",
+      "size_bytes": 21,
+      "sha256": "51aba46a8c0c7730d8a7053de8563e87fdf9eb7f51ef3b33fbc3b19c94c162eb",
+      "justification": "Synthetic sentinel files and fake credentials created specifically to verify access violation fail-closed security guards; excluded to keep package clean"
+    },
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/project_c/.git/config",
+      "category": "security_sentinel",
+      "size_bytes": 21,
+      "sha256": "51aba46a8c0c7730d8a7053de8563e87fdf9eb7f51ef3b33fbc3b19c94c162eb",
+      "justification": "Synthetic sentinel files and fake credentials created specifically to verify access violation fail-closed security guards; excluded to keep package clean"
+    },
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/project_c/.phase1-private/secret.key",
+      "category": "security_sentinel",
+      "size_bytes": 21,
+      "sha256": "51aba46a8c0c7730d8a7053de8563e87fdf9eb7f51ef3b33fbc3b19c94c162eb",
+      "justification": "Synthetic sentinel files and fake credentials created specifically to verify access violation fail-closed security guards; excluded to keep package clean"
+    },
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/project_c/comsol.prefs",
+      "category": "security_sentinel",
+      "size_bytes": 21,
+      "sha256": "51aba46a8c0c7730d8a7053de8563e87fdf9eb7f51ef3b33fbc3b19c94c162eb",
+      "justification": "Synthetic sentinel files and fake credentials created specifically to verify access violation fail-closed security guards; excluded to keep package clean"
+    },
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/project_c/comsol_mcp/__init__.py",
+      "category": "security_sentinel",
+      "size_bytes": 21,
+      "sha256": "51aba46a8c0c7730d8a7053de8563e87fdf9eb7f51ef3b33fbc3b19c94c162eb",
+      "justification": "Synthetic sentinel files and fake credentials created specifically to verify access violation fail-closed security guards; excluded to keep package clean"
+    },
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/project_c/credentials.ini",
+      "category": "security_sentinel",
+      "size_bytes": 21,
+      "sha256": "51aba46a8c0c7730d8a7053de8563e87fdf9eb7f51ef3b33fbc3b19c94c162eb",
+      "justification": "Synthetic sentinel files and fake credentials created specifically to verify access violation fail-closed security guards; excluded to keep package clean"
+    },
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/project_c/docs_index.sqlite3",
+      "category": "security_sentinel",
+      "size_bytes": 21,
+      "sha256": "51aba46a8c0c7730d8a7053de8563e87fdf9eb7f51ef3b33fbc3b19c94c162eb",
+      "justification": "Synthetic sentinel files and fake credentials created specifically to verify access violation fail-closed security guards; excluded to keep package clean"
+    },
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/project_c/exports/registered.csv",
+      "category": "security_sentinel",
+      "size_bytes": 14,
+      "sha256": "999a997749ce7e62bf7d6d6303dbd64068043c35d9738435656027dde9bdc153",
+      "justification": "Synthetic sentinel files and fake credentials created specifically to verify access violation fail-closed security guards; excluded to keep package clean"
+    },
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/project_c/exports/scientific_data.csv",
+      "category": "security_sentinel",
+      "size_bytes": 114,
+      "sha256": "c9116c7611bc649d27e3bc50aa41127e6cb2263ec5584ebd6491dc0bb251c104",
+      "justification": "Synthetic sentinel files and fake credentials created specifically to verify access violation fail-closed security guards; excluded to keep package clean"
+    },
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/project_c/symlink_escape",
+      "category": "security_sentinel",
+      "size_bytes": 9350,
+      "sha256": "275dc70568226e13436d8a5afdcd0544eccc0178a7552c508c92aeeaadc28a1f",
+      "justification": "Synthetic sentinel files and fake credentials created specifically to verify access violation fail-closed security guards; excluded to keep package clean"
+    },
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/project_c/tokens.json",
+      "category": "security_sentinel",
+      "size_bytes": 21,
+      "sha256": "51aba46a8c0c7730d8a7053de8563e87fdf9eb7f51ef3b33fbc3b19c94c162eb",
+      "justification": "Synthetic sentinel files and fake credentials created specifically to verify access violation fail-closed security guards; excluded to keep package clean"
+    },
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/project_c/transactions.json",
+      "category": "security_sentinel",
+      "size_bytes": 21,
+      "sha256": "51aba46a8c0c7730d8a7053de8563e87fdf9eb7f51ef3b33fbc3b19c94c162eb",
+      "justification": "Synthetic sentinel files and fake credentials created specifically to verify access violation fail-closed security guards; excluded to keep package clean"
+    },
+    {
+      "path": "evidence/phase4_4/runs/g3_4_w18_acceptance_20260923T045512Z/server.port",
+      "category": "ephemeral_port",
+      "size_bytes": 6,
+      "sha256": "a2f4fdfcbc3b43c566fa18840aaeb427d794eb15514b3d6cb2cdd47e8d56c820",
+      "justification": "Ephemeral localhost TCP port file for isolated COMSOL daemon; invalid upon daemon shutdown"
+    }
+  ]
+}

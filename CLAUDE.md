@@ -23,8 +23,8 @@ comsol_mcp/
   mcp_server.py            # Thin entrypoint: imports + register + main()
 ```
 
-The full profile exposes **65 MCP tools**: 51 legacy names, 7 execution/control
-tools, and 7 G2 registry/fallback tools, driving 96 domain operations.
+The full profile exposes **67 MCP tools**: 51 legacy names, 7 execution/control
+tools, 7 G2 registry/fallback tools, and 2 W18 plotting tools (`plot.render`, `plot_render`), driving 96 domain operations.
 
 ## Build and Run
 
@@ -32,7 +32,7 @@ tools, and 7 G2 registry/fallback tools, driving 96 domain operations.
 pip install -e .          # install in editable mode
 pip install -e ".[dev]"   # with pytest
 python -m comsol_mcp.mcp_server   # start MCP server
-pytest                           # run the non-COMSOL unit suite (1588 passed)
+pytest                           # run the full non-COMSOL unit suite (1846 passed, 1 skipped)
 ```
 
 ## Module Dependency Graph
@@ -57,10 +57,10 @@ No circular imports.
 
 ## Key Constraints
 
-- **Target runtime matrix:** Windows x64, macOS Apple Silicon, and macOS Intel;
-  COMSOL 6.3 and 6.4. Current verification is limited to recorded accessible environments.
-- **Python 3.10+**
-- **51 legacy tool names** retain existing arguments; 65 MCP tools published in full profile.
+- **Target runtime matrix:** macOS Apple Silicon (Darwin aarch64), Commercial COMSOL Multiphysics 6.4 (Build 293), Java 11 (Amazon Corretto 11.0.28).
+  Other environments (Windows, Intel Mac, COMSOL 6.3) remain UNVERIFIED. Cloud Hermes delivery remains `HOST_DELIVERY_UNVERIFIED` until verified with live cloud vision model.
+- **Python 3.10+** (tested on Python 3.14.7)
+- **51 legacy tool names** retain existing arguments; 67 MCP tools published in full profile.
 - **Entrypoint backward compat**: `python -m comsol_mcp.mcp_server`, `from comsol_mcp.mcp_server import main`
 - **Visible-main lock**: After `load_visible_main_model()`, tools are guarded by identity check (tag/label/path)
 - **Global state**: All mutable state in `_server.py`, guarded by `_runtime_lock` (RLock)
@@ -96,6 +96,6 @@ These are resolved by importing the target function from the other module.
 
 ## Testing
 
-- `pytest` runs the non-COMSOL unit suite (1588 passed, 1 skipped)
+- `pytest` runs the full unit suite (1846 passed, 1 skipped)
 - Tests cover: sanitize_label, normalize_properties, coerce_eval, last_scalar, port_is_open, workflow_state IO, friendly_connection_error, numeric_result, resolve_path, normcase_path, tool registration, classification sets, G2/G3 domain outcomes, request chain, license marshalling, and replay fixtures.
 - Integration tests requiring a live COMSOL Server are marked `@pytest.mark.comsol_server` or run through acceptance drivers.
