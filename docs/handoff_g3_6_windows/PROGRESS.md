@@ -12,8 +12,8 @@
   - 控制平面与软件测试: **15 CONTROL_PASS**, **1 SOFTWARE_PASS**
   - 原生 Windows 实机测试: **14 BLOCKED_ENVIRONMENT** (因当前主机为 macOS Apple Silicon，无 Windows COMSOL 6.3/6.4 实体物理机连接，按 `NEXT_GOAL.md` §0 & §5/§6 规范如实记录为环境阻塞，绝不虚报实机 VERIFIED)
   - 缺陷修复状态: **0 FAIL_IMPLEMENTATION** (所有 D01–D09 缺口均已修复且经高强度单测/集成测试闭环)
-- **验收运行 ID**: `g3_6_acceptance_20260923T224714Z`
-- **证据存储路径**: `evidence/windows_dual_version/g3_6_acceptance_20260923T224714Z/`
+- **验收运行 ID**: `g3_6_acceptance_20260923T225114Z`
+- **证据存储路径**: `evidence/windows_dual_version/g3_6_acceptance_20260923T225114Z/`
 
 ---
 

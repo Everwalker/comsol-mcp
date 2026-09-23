@@ -4,7 +4,7 @@
 - **验收目标**: `NEXT_GOAL.md` (D01–D09 作业控制与生命周期修复 + Windows 6.3/6.4 原生独立适配与 WD00–WD29 验收)
 - **权威结论**: **PASS_WITH_ENVIRONMENT_CONSTRAINTS** (`control_and_software: PASS`, `native_windows_live: BLOCKED_ENVIRONMENT`, `fail_implementation: 0`)
 - **取消能力披露**: `native_cooperative_cancel: UNSUPPORTED`, `queued_cancel: VERIFIED`, `owned_process_termination: VERIFIED`
-- **运行 ID**: `g3_6_acceptance_20260923T224714Z` (耗时 15.16s)
+- **运行 ID**: `g3_6_acceptance_20260923T225114Z` (耗时 15.66s)
 - **测试状态分布**: 15 CONTROL_PASS, 1 SOFTWARE_PASS, 14 BLOCKED_ENVIRONMENT (无本地物理 Windows 机), 0 FAIL
 - **单元测试回归**: **124/124 PASS** 全部通过 (D01–D06 16/16, D07–D09 5/5, W19 control 5/5, operation_store 10/10, control_daemon 7/7, java_worker 30/30, remote_isolation 31/31, security_guards 20/20)
 - **详细台账**: 参见 `docs/handoff_g3_6_windows/PROGRESS.md` 与 `evidence/windows_dual_version/`
