@@ -39,7 +39,7 @@ def mcp_result(value: str | dict[str, Any]) -> CallToolResult:
                 if k in payload["execution"] and k not in sc:
                     sc[k] = payload["execution"][k]
         if isinstance(payload.get("data"), dict):
-            for k in ("job_id", "operation_id", "artifact_ref", "file_path"):
+            for k in ("job_id", "operation_id", "artifact_ref", "file_path", "sha256", "solution", "solution_binding"):
                 if k in payload["data"] and k not in sc:
                     sc[k] = payload["data"][k]
         return CallToolResult(
@@ -75,40 +75,63 @@ def mcp_result(value: str | dict[str, Any]) -> CallToolResult:
         if len(image_b64) > 10 * 1024 * 1024:
             return _delivery_error("IMAGE_TOO_LARGE", "Base64 payload exceeds 10MB limit")
         try:
-            raw_bytes = base64.b64decode(image_b64)
+            raw_bytes = base64.b64decode(image_b64, validate=True)
         except Exception:
-            return _delivery_error("IMAGE_CORRUPTED", "Failed to decode base64 image")
+            return _delivery_error("IMAGE_CORRUPTED", "Failed to decode base64 image: invalid base64 characters or padding")
 
-        # Full PNG verification (signature + chunks)
+        # Full PNG verification (signature + strict chunk CRC + IDAT check)
         if not raw_bytes.startswith(b"\x89PNG\r\n\x1a\n") or len(raw_bytes) < 33:
             return _delivery_error("IMAGE_CORRUPTED", "Invalid or truncated PNG header signature")
 
         import struct
+        import zlib
         offset = 8
         n_bytes = len(raw_bytes)
         has_ihdr = False
+        has_idat = False
         has_iend = False
         w, h = 0, 0
-        while offset + 8 <= n_bytes:
+        while offset + 12 <= n_bytes:
             chunk_len = struct.unpack(">I", raw_bytes[offset:offset+4])[0]
             chunk_type = raw_bytes[offset+4:offset+8]
             if offset + 12 + chunk_len > n_bytes:
                 return _delivery_error("IMAGE_CORRUPTED", f"Truncated PNG chunk {chunk_type.decode('latin1', 'replace')}")
+            chunk_data = raw_bytes[offset+8:offset+8+chunk_len]
+            crc = struct.unpack(">I", raw_bytes[offset+8+chunk_len:offset+12+chunk_len])[0]
+            calc_crc = zlib.crc32(raw_bytes[offset+4:offset+8+chunk_len])
+            if crc != calc_crc:
+                return _delivery_error("IMAGE_CORRUPTED", f"CRC mismatch in chunk {chunk_type.decode('latin1', 'replace')}")
+
             if chunk_type == b"IHDR":
-                if chunk_len < 13:
-                    return _delivery_error("IMAGE_CORRUPTED", "Corrupted IHDR chunk")
-                w, h = struct.unpack(">II", raw_bytes[offset+8:offset+16])
+                if has_ihdr:
+                    return _delivery_error("IMAGE_CORRUPTED", "Multiple IHDR chunks in PNG")
+                if offset != 8 or chunk_len != 13:
+                    return _delivery_error("IMAGE_CORRUPTED", "Corrupted or misplaced IHDR chunk")
+                w, h = struct.unpack(">II", chunk_data[:8])
+                if w <= 0 or h <= 0:
+                    return _delivery_error("INVALID_IMAGE_DIMENSIONS", f"Invalid dimensions {w}x{h}: must be positive integers")
                 has_ihdr = True
+            elif chunk_type == b"IDAT":
+                if not has_ihdr:
+                    return _delivery_error("IMAGE_CORRUPTED", "IDAT chunk appeared before IHDR")
+                if chunk_len > 0:
+                    has_idat = True
             elif chunk_type == b"IEND":
+                if not has_ihdr:
+                    return _delivery_error("IMAGE_CORRUPTED", "IEND chunk appeared before IHDR")
+                if not has_idat:
+                    return _delivery_error("IMAGE_CORRUPTED", "Incomplete PNG: missing IDAT image data before IEND")
+                if offset + 12 != n_bytes:
+                    return _delivery_error("IMAGE_CORRUPTED", "Trailing data found after IEND chunk")
                 has_iend = True
                 break
             offset += 12 + chunk_len
 
-        if not (has_ihdr and has_iend):
-            return _delivery_error("IMAGE_CORRUPTED", "Incomplete PNG missing IHDR or IEND chunk")
+        if not (has_ihdr and has_idat and has_iend):
+            return _delivery_error("IMAGE_CORRUPTED", "Incomplete PNG missing IHDR, IDAT, or IEND chunk")
 
-        if w * h > 16 * 1024 * 1024 or w == 0 or h == 0:
-            return _delivery_error("EXCESSIVE_PIXELS", f"Image dimensions {w}x{h} ({w*h} px) exceed limit or are zero")
+        if w * h > 16 * 1024 * 1024:
+            return _delivery_error("EXCESSIVE_PIXELS", f"Image dimensions {w}x{h} ({w*h} px) exceed 16M pixel limit")
 
         # Only return ImageContent for clean successful results (or explicit diagnostic mode)
         is_clean_success = bool(payload.get("success")) and not has_unknown_or_cleanup_fail

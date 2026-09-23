@@ -57,6 +57,8 @@ def _resolve_plot_path(path: Any) -> tuple[str, ...]:
             parts = parts[1:]
         if not parts:
             raise ExecutionContractError("INVALID_REQUEST", "plot path cannot be empty")
+        if len(parts) > 3:
+            raise ExecutionContractError("UNSUPPORTED_PATH_DEPTH", f"plot path depth {len(parts)} exceeds maximum supported depth 3")
         if len(parts) == 1:
             return (parts[0], None)
         return tuple(parts)
@@ -66,11 +68,117 @@ def _resolve_plot_path(path: Any) -> tuple[str, ...]:
         if not tags:
             tag = _resolve_tag(path)
             return (tag, None)
+        if len(tags) > 3:
+            raise ExecutionContractError("UNSUPPORTED_PATH_DEPTH", f"plot path depth {len(tags)} exceeds maximum supported depth 3")
         if len(tags) == 1:
             return (tags[0], None)
         return tuple(tags)
     tag = _resolve_tag(path)
     return (tag, None)
+
+
+def _stage_and_publish_image(
+    store: ArtifactStore,
+    staging_path: Path,
+    target_path: Path,
+    *,
+    allow_overwrite: bool,
+    expected_fmt: str = "png",
+    missing_error_code: str = "RENDER_FAILED",
+) -> tuple[bytes, str, int, int]:
+    """Validate freshly generated image at staging_path and atomically publish to target_path."""
+    if not staging_path.is_file():
+        raise ExecutionContractError(missing_error_code, f"COMSOL export failed to create file at {staging_path}")
+
+    raw_bytes = staging_path.read_bytes()
+    if len(raw_bytes) == 0:
+        try: staging_path.unlink(missing_ok=True)
+        except Exception: pass
+        raise ExecutionContractError(missing_error_code, f"Rendered file is empty (0 bytes): {staging_path}")
+
+    actual_w, actual_h = 0, 0
+    if expected_fmt == "png":
+        if not raw_bytes.startswith(b"\x89PNG\r\n\x1a\n") or len(raw_bytes) < 33:
+            try: staging_path.unlink(missing_ok=True)
+            except Exception: pass
+            raise ExecutionContractError("IMAGE_DECODE_ERROR", "Rendered file does not have valid PNG header signature")
+
+        import struct, zlib
+        offset = 8
+        n_bytes = len(raw_bytes)
+        has_ihdr = False
+        has_idat = False
+        has_iend = False
+        while offset + 12 <= n_bytes:
+            chunk_len = struct.unpack(">I", raw_bytes[offset:offset+4])[0]
+            chunk_type = raw_bytes[offset+4:offset+8]
+            if offset + 12 + chunk_len > n_bytes:
+                try: staging_path.unlink(missing_ok=True)
+                except Exception: pass
+                raise ExecutionContractError("IMAGE_DECODE_ERROR", f"Truncated PNG chunk {chunk_type.decode('latin1', 'replace')}")
+            chunk_data = raw_bytes[offset+8:offset+8+chunk_len]
+            crc = struct.unpack(">I", raw_bytes[offset+8+chunk_len:offset+12+chunk_len])[0]
+            calc_crc = zlib.crc32(raw_bytes[offset+4:offset+8+chunk_len])
+            if crc != calc_crc:
+                try: staging_path.unlink(missing_ok=True)
+                except Exception: pass
+                raise ExecutionContractError("IMAGE_DECODE_ERROR", f"CRC mismatch in chunk {chunk_type.decode('latin1', 'replace')}")
+            if chunk_type == b"IHDR":
+                if offset != 8 or chunk_len != 13:
+                    try: staging_path.unlink(missing_ok=True)
+                    except Exception: pass
+                    raise ExecutionContractError("IMAGE_DECODE_ERROR", "Corrupted or misplaced IHDR chunk")
+                actual_w, actual_h = struct.unpack(">II", chunk_data[:8])
+                if actual_w <= 0 or actual_h <= 0:
+                    try: staging_path.unlink(missing_ok=True)
+                    except Exception: pass
+                    raise ExecutionContractError("IMAGE_DECODE_ERROR", f"Invalid dimensions {actual_w}x{actual_h}")
+                has_ihdr = True
+            elif chunk_type == b"IDAT":
+                if chunk_len > 0:
+                    has_idat = True
+            elif chunk_type == b"IEND":
+                if not (has_ihdr and has_idat):
+                    try: staging_path.unlink(missing_ok=True)
+                    except Exception: pass
+                    raise ExecutionContractError("IMAGE_DECODE_ERROR", "IEND chunk before IHDR or IDAT")
+                has_iend = True
+                break
+            offset += 12 + chunk_len
+
+        if not (has_ihdr and has_idat and has_iend):
+            try: staging_path.unlink(missing_ok=True)
+            except Exception: pass
+            raise ExecutionContractError("IMAGE_DECODE_ERROR", "Incomplete PNG missing IHDR, IDAT, or IEND chunk")
+
+    # Atomic publish (never fallback to existing target)
+    if staging_path != target_path:
+        if allow_overwrite:
+            os.replace(staging_path, target_path)
+        else:
+            try:
+                os.link(staging_path, target_path)
+                staging_path.unlink()
+            except FileExistsError as exc:
+                try: staging_path.unlink(missing_ok=True)
+                except Exception: pass
+                raise ExecutionContractError(
+                    "DESTINATION_EXISTS",
+                    f"Destination appeared before atomic no-clobber publish: {target_path}",
+                ) from exc
+            except OSError:
+                if target_path.exists():
+                    try: staging_path.unlink(missing_ok=True)
+                    except Exception: pass
+                    raise ExecutionContractError(
+                        "DESTINATION_EXISTS",
+                        f"Destination already exists: {target_path}",
+                    )
+                os.replace(staging_path, target_path)
+
+    sha256 = hashlib.sha256(raw_bytes).hexdigest()
+    store.register_artifact(target_path)
+    return raw_bytes, sha256, actual_w, actual_h
 
 
 def _apply_properties(node: Any, props: Mapping[str, Any]) -> None:
@@ -394,11 +502,13 @@ def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
     if fmt != "png":
         raise ExecutionContractError("INVALID_REQUEST", f"Unsupported image format {fmt!r}: only 'png' is supported")
     dest = options.get("destination")
-    raw_ow = options.get("allow_overwrite", False)
-    if isinstance(raw_ow, str):
-        allow_overwrite = raw_ow.strip().lower() in ("true", "1", "yes")
+    if "allow_overwrite" in options:
+        raw_ow = options["allow_overwrite"]
+        if type(raw_ow) is not bool:
+            raise ExecutionContractError("INVALID_REQUEST", f"allow_overwrite must be a boolean, got {type(raw_ow).__name__}")
+        allow_overwrite = raw_ow
     else:
-        allow_overwrite = bool(raw_ow)
+        allow_overwrite = False
 
     root = trusted_project_root(worker)
     store = ArtifactStore(project_root=root)
@@ -426,12 +536,71 @@ def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
     except Exception as exc:
         raise node_not_found(f"plot group {pg_tag!r} not found: {exc}") from exc
 
-    # Apply solution / time / parameter options fail-closed
-    for opt_key in ("data", "dataset", "solution", "solnum", "t", "looplevel", "innerinput", "outerinput"):
+    available_dset_tags: list[str] = []
+    try:
+        dset_container = _call(results, "dataset")
+        available_dset_tags = list(_call(dset_container, "tags") or [])
+    except Exception:
+        pass
+
+    from ._dataset_binding import resolve_dataset_binding
+
+    # Apply solution / dataset options fail-closed
+    dataset_opt = options.get("dataset") or options.get("data")
+    solution_opt = options.get("solution")
+
+    if solution_opt is not None:
+        sol_str = str(solution_opt)
+        # Check if sol_str is directly a dataset tag or maps to one
+        target_dataset = None
+        if sol_str in available_dset_tags:
+            target_dataset = sol_str
+        else:
+            # Search available datasets to find one binding to this solution
+            for d_tag in available_dset_tags:
+                b = resolve_dataset_binding(model, d_tag)
+                if b.get("solution") == sol_str:
+                    target_dataset = d_tag
+                    break
+        if not target_dataset:
+            raise ExecutionContractError(
+                "SCIENTIFIC_BINDING_FAILED",
+                f"Specified solution {solution_opt!r} is a raw solver tag that does not map to any dataset in model",
+            )
+        if dataset_opt is not None and str(dataset_opt) != target_dataset:
+            b_specified = resolve_dataset_binding(model, str(dataset_opt))
+            if b_specified.get("solution") != sol_str:
+                raise ExecutionContractError(
+                    "SCIENTIFIC_BINDING_FAILED",
+                    f"Dataset {dataset_opt!r} does not bind to requested solution {solution_opt!r}",
+                )
+            target_dataset = str(dataset_opt)
+        try:
+            _call(pg, "set", "data", target_dataset)
+        except Exception as exc:
+            raise ExecutionContractError(
+                "SCIENTIFIC_BINDING_FAILED",
+                f"Failed to bind dataset {target_dataset!r} for solution {solution_opt!r} on plot group {pg_tag!r}: {exc}",
+            ) from exc
+    elif dataset_opt is not None:
+        d_str = str(dataset_opt)
+        if d_str != "none" and d_str not in available_dset_tags:
+            raise ExecutionContractError(
+                "SCIENTIFIC_BINDING_FAILED",
+                f"Dataset {d_str!r} does not exist in model.result.dataset.tags()",
+            )
+        try:
+            _call(pg, "set", "data", d_str)
+        except Exception as exc:
+            raise ExecutionContractError(
+                "SCIENTIFIC_BINDING_FAILED",
+                f"Failed to set dataset {d_str!r} on plot group {pg_tag!r}: {exc}",
+            ) from exc
+
+    for opt_key in ("solnum", "t", "looplevel", "innerinput", "outerinput"):
         if opt_key in options:
-            prop_name = "data" if opt_key in ("data", "dataset", "solution") else opt_key
             try:
-                _call(pg, "set", prop_name, str(options[opt_key]))
+                _call(pg, "set", opt_key, str(options[opt_key]))
             except Exception as exc:
                 raise ExecutionContractError(
                     "SCIENTIFIC_BINDING_FAILED",
@@ -507,48 +676,13 @@ def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
             cleanup_failed = True
             cleanup_error = str(exc)
 
-    if not staging_path.is_file():
-        raise ExecutionContractError("RENDER_FAILED", f"COMSOL export failed to create image at {staging_path}")
-
-    raw_bytes = staging_path.read_bytes()
-    if len(raw_bytes) == 0:
-        try: staging_path.unlink(missing_ok=True)
-        except Exception: pass
-        raise ExecutionContractError("RENDER_FAILED", f"Rendered image is empty (0 bytes): {staging_path}")
-    if len(raw_bytes) < 8 or raw_bytes[:8] != b"\x89PNG\r\n\x1a\n":
-        try: staging_path.unlink(missing_ok=True)
-        except Exception: pass
-        raise ExecutionContractError("IMAGE_DECODE_ERROR", "Rendered file does not have valid PNG header")
-    import struct
-    actual_w, actual_h = struct.unpack(">II", raw_bytes[16:24])
-
-    # Atomic publish (never fallback to existing target)
-    if staging_path != target_path:
-        if allow_overwrite:
-            os.replace(staging_path, target_path)
-        else:
-            try:
-                os.link(staging_path, target_path)
-                staging_path.unlink()
-            except FileExistsError as exc:
-                try: staging_path.unlink(missing_ok=True)
-                except Exception: pass
-                raise ExecutionContractError(
-                    "DESTINATION_EXISTS",
-                    f"Destination appeared before atomic no-clobber publish: {target_path}",
-                ) from exc
-            except OSError:
-                if target_path.exists():
-                    try: staging_path.unlink(missing_ok=True)
-                    except Exception: pass
-                    raise ExecutionContractError(
-                        "DESTINATION_EXISTS",
-                        f"Destination already exists: {target_path}",
-                    )
-                os.replace(staging_path, target_path)
-
-    sha256 = hashlib.sha256(raw_bytes).hexdigest()
-    store.register_artifact(target_path)
+    raw_bytes, sha256, actual_w, actual_h = _stage_and_publish_image(
+        store,
+        staging_path,
+        target_path,
+        allow_overwrite=allow_overwrite,
+        expected_fmt=fmt,
+    )
     b64_str = base64.b64encode(raw_bytes).decode("ascii")
 
     dataset_tag = ""
@@ -576,39 +710,29 @@ def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
         pass
 
     solution_tag = ""
-    if dataset_tag:
+    solution_binding_data: dict[str, Any] = {}
+    solution_state = "NO_DATASET_BINDING"
+    if dataset_tag and dataset_tag != "none":
         try:
-            dset = _call(results, "dataset", dataset_tag)
-            s_prop = str(_call(dset, "getString", "solution") or "")
-            if s_prop:
-                solution_tag = s_prop
+            solution_binding_data = resolve_dataset_binding(model, dataset_tag)
+            s = solution_binding_data.get("solution")
+            if s:
+                solution_tag = str(s)
+            if solution_binding_data.get("binding_complete"):
+                try:
+                    sol_container = _call(model, "sol")
+                    if sol_container and solution_tag:
+                        sol_node = _call(sol_container, "get", solution_tag)
+                        is_init = _call(sol_node, "isInitialized") if hasattr(sol_node, "isInitialized") else True
+                        solution_state = "CURRENT_SOLUTION" if is_init else "STALE_SOLUTION"
+                    else:
+                        solution_state = "CURRENT_SOLUTION"
+                except Exception:
+                    solution_state = "CURRENT_SOLUTION"
             else:
-                visited = {dataset_tag}
-                curr = dset
-                while True:
-                    upstream = str(_call(curr, "getString", "data") or "")
-                    if not upstream or upstream in visited:
-                        break
-                    visited.add(upstream)
-                    try:
-                        curr = _call(results, "dataset", upstream)
-                        s = str(_call(curr, "getString", "solution") or "")
-                        if s:
-                            solution_tag = s
-                            break
-                    except Exception:
-                        break
+                solution_state = "UNKNOWN_SOLUTION_STATE"
         except Exception:
-            pass
-
-        if not solution_tag:
-            try:
-                from ._dataset_binding import resolve_dataset_binding
-                binding = resolve_dataset_binding(model, dataset_tag)
-                if isinstance(binding, Mapping) and binding.get("solution"):
-                    solution_tag = str(binding["solution"])
-            except Exception:
-                pass
+            solution_state = "UNKNOWN_SOLUTION_STATE"
 
     expressions: list[str] = []
     units: list[str] = []
@@ -653,6 +777,7 @@ def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
         "plot_group": pg_tag,
         "dataset": dataset_tag,
         "solution": solution_tag or None,
+        "solution_state": solution_state,
         "solnum": solnum_val,
         "time": time_val,
         "looplevel": looplevel_val,
@@ -674,6 +799,8 @@ def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
         "height": actual_h,
         "dataset": dataset_tag,
         "solution": solution_tag or None,
+        "solution_state": solution_state,
+        "solution_binding": solution_binding_data,
         "solnum": solnum_val,
         "time": time_val,
         "expression": primary_expr,
@@ -684,9 +811,12 @@ def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
         "artifact_ref": str(target_path),
     }
     if cleanup_failed:
+        result["status"] = "RENDER_SUCCEEDED_BUT_MODEL_CLEANUP_FAILED"
         result["cleanup_failed"] = True
         result["cleanup"] = {"cleanup_failed": True, "error": cleanup_error}
         result["execution_state_unknown"] = True
+        result["requires_model_reconciliation"] = True
+        result["model_dirty"] = True
     return result
 
 
@@ -707,11 +837,13 @@ def plot_geometry_render(worker: Any, model_tag: str, arguments: Mapping[str, An
     if fmt != "png":
         raise ExecutionContractError("INVALID_REQUEST", f"Unsupported image format {fmt!r}: only 'png' is supported")
     dest = options.get("destination")
-    raw_ow = options.get("allow_overwrite", False)
-    if isinstance(raw_ow, str):
-        allow_overwrite = raw_ow.strip().lower() in ("true", "1", "yes")
+    if "allow_overwrite" in options:
+        raw_ow = options["allow_overwrite"]
+        if type(raw_ow) is not bool:
+            raise ExecutionContractError("INVALID_REQUEST", f"allow_overwrite must be a boolean, got {type(raw_ow).__name__}")
+        allow_overwrite = raw_ow
     else:
-        allow_overwrite = bool(raw_ow)
+        allow_overwrite = False
 
     root = trusted_project_root(worker)
     store = ArtifactStore(project_root=root)
@@ -767,48 +899,13 @@ def plot_geometry_render(worker: Any, model_tag: str, arguments: Mapping[str, An
     except Exception as exc:
         raise ExecutionContractError("RENDER_FAILED", f"Geometry image export failed: {exc}") from exc
 
-    if not staging_path.is_file():
-        raise ExecutionContractError("RENDER_FAILED", f"COMSOL export failed to create geometry image at {staging_path}")
-
-    raw_bytes = staging_path.read_bytes()
-    if len(raw_bytes) == 0:
-        try: staging_path.unlink(missing_ok=True)
-        except Exception: pass
-        raise ExecutionContractError("RENDER_FAILED", f"Rendered image is empty (0 bytes): {staging_path}")
-    if len(raw_bytes) < 8 or raw_bytes[:8] != b"\x89PNG\r\n\x1a\n":
-        try: staging_path.unlink(missing_ok=True)
-        except Exception: pass
-        raise ExecutionContractError("IMAGE_DECODE_ERROR", "Rendered file does not have valid PNG header")
-    import struct
-    actual_w, actual_h = struct.unpack(">II", raw_bytes[16:24])
-
-    # Atomic publish (never fallback to existing target)
-    if staging_path != target_path:
-        if allow_overwrite:
-            os.replace(staging_path, target_path)
-        else:
-            try:
-                os.link(staging_path, target_path)
-                staging_path.unlink()
-            except FileExistsError as exc:
-                try: staging_path.unlink(missing_ok=True)
-                except Exception: pass
-                raise ExecutionContractError(
-                    "DESTINATION_EXISTS",
-                    f"Destination appeared before atomic no-clobber publish: {target_path}",
-                ) from exc
-            except OSError:
-                if target_path.exists():
-                    try: staging_path.unlink(missing_ok=True)
-                    except Exception: pass
-                    raise ExecutionContractError(
-                        "DESTINATION_EXISTS",
-                        f"Destination already exists: {target_path}",
-                    )
-                os.replace(staging_path, target_path)
-
-    sha256 = hashlib.sha256(raw_bytes).hexdigest()
-    store.register_artifact(target_path)
+    raw_bytes, sha256, actual_w, actual_h = _stage_and_publish_image(
+        store,
+        staging_path,
+        target_path,
+        allow_overwrite=allow_overwrite,
+        expected_fmt=fmt,
+    )
     b64_str = base64.b64encode(raw_bytes).decode("ascii")
 
     provenance = {
@@ -1009,11 +1106,13 @@ def export_run(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dic
         raise ExecutionContractError("INVALID_REQUEST", "export.run requires 'path' or 'tag'")
     tag = _resolve_tag(path_spec)
 
-    raw_ow = arguments.get("allow_overwrite", False)
-    if isinstance(raw_ow, str):
-        allow_overwrite = raw_ow.strip().lower() in ("true", "1", "yes")
+    if "allow_overwrite" in arguments:
+        raw_ow = arguments["allow_overwrite"]
+        if type(raw_ow) is not bool:
+            raise ExecutionContractError("INVALID_REQUEST", f"allow_overwrite must be a boolean, got {type(raw_ow).__name__}")
+        allow_overwrite = raw_ow
     else:
-        allow_overwrite = bool(raw_ow)
+        allow_overwrite = False
 
     model = bound_model(worker, model_tag)
     results = _call(model, "result")
@@ -1095,50 +1194,16 @@ def export_run(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dic
                 restore_failed = True
                 restore_error = str(exc)
 
-    if not staging_path.is_file() or staging_path.stat().st_size == 0:
-        if staging_path.exists():
-            try: staging_path.unlink()
-            except Exception: pass
-        raise ExecutionContractError(
-            "EXPORT_FAILED",
-            f"Export run failed to produce output file at staging path: {staging_path}",
-        )
-
-    # Stream hash and byte count
-    hasher = hashlib.sha256()
-    file_size = 0
-    with staging_path.open("rb") as f:
-        while chunk := f.read(64 * 1024):
-            hasher.update(chunk)
-            file_size += len(chunk)
-    sha256 = hasher.hexdigest()
-
-    # Atomic publish
-    if staging_path != target_path:
-        if allow_overwrite:
-            os.replace(staging_path, target_path)
-        else:
-            try:
-                os.link(staging_path, target_path)
-                staging_path.unlink()
-            except FileExistsError as exc:
-                try: staging_path.unlink(missing_ok=True)
-                except Exception: pass
-                raise ExecutionContractError(
-                    "DESTINATION_EXISTS",
-                    f"Destination appeared before atomic no-clobber publish: {target_path}",
-                ) from exc
-            except OSError:
-                if target_path.exists():
-                    try: staging_path.unlink(missing_ok=True)
-                    except Exception: pass
-                    raise ExecutionContractError(
-                        "DESTINATION_EXISTS",
-                        f"Destination already exists: {target_path}",
-                    )
-                os.replace(staging_path, target_path)
-
-    store.register_artifact(target_path)
+    suffix = target_path.suffix.lower()
+    raw_bytes, sha256, actual_w, actual_h = _stage_and_publish_image(
+        store,
+        staging_path,
+        target_path,
+        allow_overwrite=allow_overwrite,
+        expected_fmt="png" if suffix == ".png" else "raw",
+        missing_error_code="EXPORT_FAILED",
+    )
+    file_size = len(raw_bytes)
 
     result_payload: dict[str, Any] = {
         "path": path_spec,
@@ -1150,16 +1215,19 @@ def export_run(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dic
         "artifact_ref": str(target_path),
     }
 
-    suffix = target_path.suffix.lower()
     if suffix == ".png":
-        raw_image_bytes = target_path.read_bytes()
-        result_payload["image_base64"] = base64.b64encode(raw_image_bytes).decode("ascii")
+        result_payload["image_base64"] = base64.b64encode(raw_bytes).decode("ascii")
         result_payload["image_mime_type"] = "image/png"
+        result_payload["width"] = actual_w
+        result_payload["height"] = actual_h
 
     if restore_failed:
+        result_payload["status"] = "EXPORT_SUCCEEDED_BUT_PROPERTY_RESTORE_FAILED"
         result_payload["property_restore_failed"] = True
         result_payload["property_restore_error"] = restore_error
         result_payload["execution_state_unknown"] = True
+        result_payload["requires_model_reconciliation"] = True
+        result_payload["model_dirty"] = True
 
     return result_payload
 

@@ -59,6 +59,7 @@ from comsol_mcp._g3_w18 import (
     plot_update,
 )
 from comsol_mcp._mcp_gateway import mcp_result
+from comsol_mcp._source_manifest import generate_source_manifest
 from mcp.types import ImageContent, TextContent
 
 
@@ -200,14 +201,15 @@ class LiveAcceptanceRunner:
         worker.start()
         return worker
 
-    def run_case_guarded(self, name: str, func: Any) -> bool:
-        self.log(f"=== [CASE {name}] Starting ===")
+    def run_case_guarded(self, name: str, func: Any, evidence_level: str = "NATIVE_COMSOL") -> bool:
+        self.log(f"=== [CASE {name}] ({evidence_level}) Starting ===")
         t0 = time.time()
         try:
             detail = func()
             elapsed = time.time() - t0
             self.cases[name] = {
                 "verdict": "PASS",
+                "evidence_level": evidence_level,
                 "elapsed_s": round(elapsed, 3),
                 "detail": detail or {},
             }
@@ -218,6 +220,7 @@ class LiveAcceptanceRunner:
             tb = traceback.format_exc()
             self.cases[name] = {
                 "verdict": "FAIL",
+                "evidence_level": evidence_level,
                 "elapsed_s": round(elapsed, 3),
                 "error": str(exc),
                 "traceback": tb,
@@ -667,12 +670,28 @@ print("OUTSIDE_INSTALL_VERIFIED")
         assert bytes_t05 != bytes_t10, "Renders for t=0.5 and t=1.0 must be distinct"
         assert res_t05["sha256"] != res_t10["sha256"]
 
-        # Provenance verification: solution tag is present, not just dataset
+        # Provenance and solution state verification
         prov_t05 = res_t05.get("provenance", {})
         assert prov_t05.get("dataset") == "dset1"
         assert prov_t05.get("solnum") == "2"
         assert prov_t05.get("expression") == "T"
         assert prov_t05.get("solution") is not None, "Provenance must report actual solver solution"
+        assert res_t05.get("solution_state") in {"CURRENT_SOLUTION", "STALE_SOLUTION", "UNKNOWN_SOLUTION_STATE"}
+        assert prov_t05.get("solution_state") in {"CURRENT_SOLUTION", "STALE_SOLUTION", "UNKNOWN_SOLUTION_STATE"}
+
+        # Negative control: raw unmapped solver tag rejected fail-closed
+        try:
+            DISPATCH["plot.render"](
+                self.worker,
+                self.live_model_tag,
+                {
+                    "path": "pg3d",
+                    "options": {"solution": "sol2"},
+                },
+            )
+            assert False, "Should reject unmapped solver tag"
+        except ExecutionContractError as exc:
+            assert exc.code == "SCIENTIFIC_BINDING_FAILED"
 
         # Negative control: nonexistent solution tag rejected
         try:
@@ -693,6 +712,8 @@ print("OUTSIDE_INSTALL_VERIFIED")
             "t05_sha256": res_t05["sha256"],
             "t10_sha256": res_t10["sha256"],
             "provenance_solution_verified": prov_t05.get("solution"),
+            "solution_state_recorded": res_t05.get("solution_state"),
+            "unmapped_solver_tag_rejected": True,
             "nonexistent_solution_rejected": True,
         }
 
@@ -761,8 +782,8 @@ print("OUTSIDE_INSTALL_VERIFIED")
         # 1. Valid full PNG
         valid_png = (
             b"\x89PNG\r\n\x1a\n"
-            b"\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4"
-            b"\x00\x00\x00\nIDATx\x9cc`\x00\x00\x00\x02\x00\x01H\xaf\xa4q"
+            b"\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89"
+            b"\x00\x00\x00\x0bIDATx\x9cc`\x00\x02\x00\x00\x05\x00\x01z^\xab?"
             b"\x00\x00\x00\x00IEND\xaeB`\x82"
         )
         b64_valid = base64.b64encode(valid_png).decode("ascii")
@@ -798,7 +819,8 @@ print("OUTSIDE_INSTALL_VERIFIED")
         # 4. Excessive pixels rejected (> 16M pixels)
         fake_huge_png = (
             b"\x89PNG\r\n\x1a\n"
-            b"\x00\x00\x00\rIHDR" + struct.pack(">II", 5000, 5000) + b"\x08\x06\x00\x00\x00\x00\x00\x00\x00"
+            b"\x00\x00\x00\rIHDR\x00\x00\x13\x88\x00\x00\x13\x88\x08\x06\x00\x00\x00]\x98\x87\xcb"
+            b"\x00\x00\x00\x0bIDATx\x9cc`\x00\x02\x00\x00\x05\x00\x01z^\xab?"
             b"\x00\x00\x00\x00IEND\xaeB`\x82"
         )
         res_huge = mcp_result({
@@ -839,6 +861,50 @@ print("OUTSIDE_INSTALL_VERIFIED")
         assert res_diag.isError is True
         assert any(isinstance(c, ImageContent) for c in res_diag.content)
 
+        # 8. PNG with corrupted CRC rejected
+        corrupt_crc_png = bytearray(valid_png)
+        corrupt_crc_png[len(corrupt_crc_png) - 2] ^= 0xFF
+        b64_corrupt_crc = base64.b64encode(corrupt_crc_png).decode("ascii")
+        res_corrupt_crc = mcp_result({
+            "success": True,
+            "data": {"image_base64": b64_corrupt_crc, "mime_type": "image/png"},
+            "execution": {"job_id": "j_crc"},
+        })
+        assert res_corrupt_crc.isError is True
+        assert not any(isinstance(c, ImageContent) for c in res_corrupt_crc.content)
+        assert res_corrupt_crc.structuredContent.get("job_id") == "j_crc"
+
+        # 9. PNG missing IDAT chunk rejected
+        missing_idat_png = (
+            b"\x89PNG\r\n\x1a\n"
+            b"\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89"
+            b"\x00\x00\x00\x00IEND\xaeB`\x82"
+        )
+        b64_missing_idat = base64.b64encode(missing_idat_png).decode("ascii")
+        res_missing_idat = mcp_result({
+            "success": True,
+            "data": {"image_base64": b64_missing_idat, "mime_type": "image/png"},
+            "execution": {"job_id": "j_noidat"},
+        })
+        assert res_missing_idat.isError is True
+        assert not any(isinstance(c, ImageContent) for c in res_missing_idat.content)
+
+        # 10. PNG with 0 dimensions (0x0) rejected
+        zero_dim_png = (
+            b"\x89PNG\r\n\x1a\n"
+            b"\x00\x00\x00\rIHDR\x00\x00\x00\x00\x00\x00\x00\x00\x08\x06\x00\x00\x00;\x8b|\x12"
+            b"\x00\x00\x00\x0bIDATx\x9cc`\x00\x02\x00\x00\x05\x00\x01z^\xab?"
+            b"\x00\x00\x00\x00IEND\xaeB`\x82"
+        )
+        b64_zero_dim = base64.b64encode(zero_dim_png).decode("ascii")
+        res_zero_dim = mcp_result({
+            "success": True,
+            "data": {"image_base64": b64_zero_dim, "mime_type": "image/png"},
+            "execution": {"job_id": "j_zerodim"},
+        })
+        assert res_zero_dim.isError is True
+        assert not any(isinstance(c, ImageContent) for c in res_zero_dim.content)
+
         return {
             "valid_png_accepted": True,
             "truncated_png_rejected": True,
@@ -848,6 +914,9 @@ print("OUTSIDE_INSTALL_VERIFIED")
             "failed_envelope_has_no_image": True,
             "unknown_cleanup_fail_has_no_image": True,
             "diagnostic_image_supported": True,
+            "corrupted_crc_rejected": True,
+            "missing_idat_rejected": True,
+            "zero_dimensions_rejected": True,
         }
 
     # -----------------------------------------------------------------------
@@ -1252,12 +1321,35 @@ print("OUTSIDE_INSTALL_VERIFIED")
             assert cancel_res["data"]["engine_stopped"] is False
             assert cancel_res["data"]["mode"] == "UNSUPPORTED_NATIVE_CANCEL"
 
-            # 2. Force-stop without scope authorization rejected
+            # 2. Strict boolean validation tests: reject non-boolean force_stop values fail-closed
+            for bad_fs in ("false", "true", "0", "1", 0, 1):
+                bad_res = daemon.dispatch({"operation": "job_cancel", "arguments": {"job_id": job_id, "force_stop": bad_fs}})
+                assert bad_res["success"] is False
+                assert bad_res["error"]["code"] == "INVALID_REQUEST", f"Non-boolean force_stop {bad_fs!r} must be rejected with INVALID_REQUEST"
+
+            # Strict boolean validation on server_scope.authorized: reject non-boolean strings/ints
+            for bad_auth in ("false", "true", "0", "1", 0, 1):
+                bad_auth_res = daemon.dispatch({
+                    "operation": "job_cancel",
+                    "arguments": {"job_id": job_id, "force_stop": True, "server_scope": {"authorized": bad_auth}},
+                })
+                assert bad_auth_res["success"] is False
+                assert bad_auth_res["error"]["code"] == "INVALID_REQUEST", f"Non-boolean server_scope.authorized {bad_auth!r} must be rejected with INVALID_REQUEST"
+
+            # server_scope with authorized=False explicitly rejected with UNAUTHORIZED_FORCE_STOP
+            unauth_res = daemon.dispatch({
+                "operation": "job_cancel",
+                "arguments": {"job_id": job_id, "force_stop": True, "server_scope": {"authorized": False}},
+            })
+            assert unauth_res["success"] is False
+            assert unauth_res["error"]["code"] == "UNAUTHORIZED_FORCE_STOP"
+
+            # 3. Force-stop without scope authorization rejected
             force_res1 = daemon.dispatch({"operation": "job_cancel", "arguments": {"job_id": job_id, "force_stop": True}})
             assert force_res1["success"] is False
             assert force_res1["error"]["code"] == "UNAUTHORIZED_FORCE_STOP"
 
-            # 3. Force-stop on shared/unmanaged server strictly rejected
+            # 4. Force-stop on shared/unmanaged server strictly rejected
             force_res2 = daemon.dispatch({
                 "operation": "job_cancel",
                 "arguments": {"job_id": job_id, "force_stop": True, "server_scope": {"authorized": True, "pid": 99999}},
@@ -1714,41 +1806,41 @@ public final class ModelAcceptanceG35Builder {
             self.worker = self.make_worker("worker_main")
             self.setup_live_model()
 
-            # Execute Gate A Cases: G01 to G12
+            # Execute Gate A Cases: G01 to G12 with evidence levels
             gate_a_cases = [
-                ("G01", self.case_g01),
-                ("G02", self.case_g02),
-                ("G03", self.case_g03),
-                ("G04", self.case_g04),
-                ("G05", self.case_g05),
-                ("G06", self.case_g06),
-                ("G07", self.case_g07),
-                ("G08", self.case_g08),
-                ("G09", self.case_g09),
-                ("G10", self.case_g10),
-                ("G11", self.case_g11),
-                ("G12", self.case_g12),
+                ("G01", self.case_g01, "STATIC"),
+                ("G02", self.case_g02, "NATIVE_COMSOL"),
+                ("G03", self.case_g03, "NATIVE_COMSOL"),
+                ("G04", self.case_g04, "NATIVE_COMSOL"),
+                ("G05", self.case_g05, "NATIVE_COMSOL"),
+                ("G06", self.case_g06, "NATIVE_COMSOL"),
+                ("G07", self.case_g07, "UNIT"),
+                ("G08", self.case_g08, "NUMERICAL"),
+                ("G09", self.case_g09, "STATIC"),
+                ("G10", self.case_g10, "NATIVE_COMSOL"),
+                ("G11", self.case_g11, "HOST"),
+                ("G12", self.case_g12, "NATIVE_COMSOL"),
             ]
-            for name, func in gate_a_cases:
-                ok = self.run_case_guarded(name, func)
+            for name, func, level in gate_a_cases:
+                ok = self.run_case_guarded(name, func, evidence_level=level)
                 if not ok:
                     all_passed = False
 
-            # Execute W19 Cases: J01 to J10
+            # Execute W19 Cases: J01 to J10 with evidence levels
             w19_cases = [
-                ("J01", self.case_j01),
-                ("J02", self.case_j02),
-                ("J03", self.case_j03),
-                ("J04", self.case_j04),
-                ("J05", self.case_j05),
-                ("J06", self.case_j06),
-                ("J07", self.case_j07),
-                ("J08", self.case_j08),
-                ("J09", self.case_j09),
-                ("J10", self.case_j10),
+                ("J01", self.case_j01, "CONTROL"),
+                ("J02", self.case_j02, "CONTROL"),
+                ("J03", self.case_j03, "PROCESS_OWNERSHIP_CONTROL"),
+                ("J04", self.case_j04, "CONTROL"),
+                ("J05", self.case_j05, "CONTROL"),
+                ("J06", self.case_j06, "CONTROL"),
+                ("J07", self.case_j07, "CONTROL"),
+                ("J08", self.case_j08, "CONTROL"),
+                ("J09", self.case_j09, "CONTROL"),
+                ("J10", self.case_j10, "NATIVE_COMSOL"),
             ]
-            for name, func in w19_cases:
-                ok = self.run_case_guarded(name, func)
+            for name, func, level in w19_cases:
+                ok = self.run_case_guarded(name, func, evidence_level=level)
                 if not ok:
                     all_passed = False
 
@@ -1777,8 +1869,19 @@ public final class ModelAcceptanceG35Builder {
         except Exception:
             head_commit = "unknown"
 
+        # Generate cryptographic source manifest
+        source_manifest = generate_source_manifest(ROOT)
+        source_manifest_file = ROOT / "evidence" / "RUN_SOURCE_MANIFEST.json"
+        run_source_manifest_file = self.run_dir / "RUN_SOURCE_MANIFEST.json"
+        source_manifest_payload = json.dumps(source_manifest, indent=2, ensure_ascii=False) + "\n"
+        source_manifest_file.parent.mkdir(parents=True, exist_ok=True)
+        source_manifest_file.write_text(source_manifest_payload, encoding="utf-8")
+        run_source_manifest_file.write_text(source_manifest_payload, encoding="utf-8")
+
         # Catalog artifacts
-        delivered_paths: list[str] = []
+        delivered_paths: list[str] = [
+            "evidence/RUN_SOURCE_MANIFEST.json",
+        ]
         redacted_entries: list[dict[str, Any]] = []
 
         for p in sorted(self.run_dir.glob("**/*")):
@@ -1788,7 +1891,7 @@ public final class ModelAcceptanceG35Builder {
             rel_to_run = p.relative_to(self.run_dir)
             if (
                 rel_to_run.parts[0] in ("plots", "exports")
-                or p.name in ("saved_g35_model.mph", "acceptance_result.json", "DELIVERY_REDACTION_MANIFEST.json")
+                or p.name in ("saved_g35_model.mph", "acceptance_result.json", "DELIVERY_REDACTION_MANIFEST.json", "RUN_SOURCE_MANIFEST.json")
             ) and not any(part in rel_to_run.parts for part in ("comsol_prefs", "control-private", "worker_main", "locks")):
                 delivered_paths.append(rel_str)
             else:
@@ -1827,6 +1930,7 @@ public final class ModelAcceptanceG35Builder {
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "elapsed_seconds": round(elapsed, 3),
             "commit_head": head_commit,
+            "tree_head": source_manifest["git_tree"],
             "platform": sys.platform,
             "python_version": sys.version,
             "comsol_version": self.comsol_version,
@@ -1836,6 +1940,14 @@ public final class ModelAcceptanceG35Builder {
                 "target_platform": "macOS-aarch64 (Apple Silicon commercial installation)",
                 "live_engine": "COMSOL Multiphysics 6.4",
             },
+            "source_manifest": {
+                "file": "evidence/RUN_SOURCE_MANIFEST.json",
+                "manifest_sha256": source_manifest["manifest_sha256"],
+                "git_commit": source_manifest["git_commit"],
+                "git_tree": source_manifest["git_tree"],
+                "is_dirty": source_manifest["is_dirty"],
+            },
+            "evidence_levels": {k: v.get("evidence_level", "NATIVE_COMSOL") for k, v in self.cases.items()},
             "delivered_artifacts": delivered_paths,
             "redacted_runtime_artifacts": [r["path"] for r in redaction_manifest["redacted_artifacts"]],
             "redaction_manifest": "evidence/DELIVERY_REDACTION_MANIFEST.json",

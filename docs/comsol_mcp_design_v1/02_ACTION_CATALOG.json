@@ -10968,11 +10968,11 @@
       "mcp_tool_name": "job_list",
       "domain": "job",
       "purpose": "列出项目内作业，可在引擎离线时调用",
-      "arguments_signature": "filter:object?,cursor:str?,limit:int?",
+      "arguments_signature": "offset:int?,limit:int?,status:str?,project_id:str?,filter:object?,cursor:str?",
       "effect": "READ",
       "scope": "project",
-      "gate": "G4",
-      "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+      "gate": "G3",
+      "implementation_status": "IMPLEMENTED",
       "route": "control plane",
       "capability_requirements": "common target with version capability probe",
       "input_schema": {
@@ -10980,11 +10980,19 @@
         "title": "job.list input",
         "type": "object",
         "properties": {
-          "project_id": {
-            "type": "string",
-            "minLength": 1
+          "offset": {
+            "type": "integer",
+            "minimum": 0
           },
-          "request_id": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "status": {
+            "type": "string"
+          },
+          "project_id": {
             "type": "string"
           },
           "filter": {
@@ -10992,14 +11000,8 @@
           },
           "cursor": {
             "type": "string"
-          },
-          "limit": {
-            "type": "integer"
           }
         },
-        "required": [
-          "project_id"
-        ],
         "additionalProperties": false
       },
       "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
@@ -11008,7 +11010,33 @@
         "normal_path",
         "failure_is_truthful"
       ],
-      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read."
+      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+      "output_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "job.list output",
+        "type": "object",
+        "properties": {
+          "jobs": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "total_count": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "jobs",
+          "total_count"
+        ]
+      }
     },
     {
       "operation_id": "job.status",
@@ -11018,8 +11046,8 @@
       "arguments_signature": "job_id:str",
       "effect": "READ",
       "scope": "project",
-      "gate": "G4",
-      "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+      "gate": "G3",
+      "implementation_status": "IMPLEMENTED",
       "route": "control plane",
       "capability_requirements": "common target with version capability probe",
       "input_schema": {
@@ -11027,19 +11055,12 @@
         "title": "job.status input",
         "type": "object",
         "properties": {
-          "project_id": {
+          "job_id": {
             "type": "string",
             "minLength": 1
-          },
-          "request_id": {
-            "type": "string"
-          },
-          "job_id": {
-            "type": "string"
           }
         },
         "required": [
-          "project_id",
           "job_id"
         ],
         "additionalProperties": false
@@ -11050,7 +11071,45 @@
         "normal_path",
         "failure_is_truthful"
       ],
-      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read."
+      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+      "output_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "job.status output",
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "SUCCEEDED",
+              "FAILED",
+              "CANCELLED",
+              "RECONCILING",
+              "UNKNOWN"
+            ]
+          },
+          "operation": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "number"
+          },
+          "started_at": {
+            "type": "number"
+          },
+          "finished_at": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "job_id",
+          "status"
+        ]
+      }
     },
     {
       "operation_id": "job.log",
@@ -11060,8 +11119,8 @@
       "arguments_signature": "job_id:str,cursor:str?,limit:int?",
       "effect": "READ",
       "scope": "project",
-      "gate": "G4",
-      "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+      "gate": "G3",
+      "implementation_status": "IMPLEMENTED",
       "route": "control plane",
       "capability_requirements": "common target with version capability probe",
       "input_schema": {
@@ -11069,25 +11128,20 @@
         "title": "job.log input",
         "type": "object",
         "properties": {
-          "project_id": {
+          "job_id": {
             "type": "string",
             "minLength": 1
-          },
-          "request_id": {
-            "type": "string"
-          },
-          "job_id": {
-            "type": "string"
           },
           "cursor": {
             "type": "string"
           },
           "limit": {
-            "type": "integer"
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
           }
         },
         "required": [
-          "project_id",
           "job_id"
         ],
         "additionalProperties": false
@@ -11098,7 +11152,30 @@
         "normal_path",
         "failure_is_truthful"
       ],
-      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read."
+      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+      "output_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "job.log output",
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "total_events": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "job_id",
+          "events"
+        ]
+      }
     },
     {
       "operation_id": "job.result",
@@ -11108,8 +11185,8 @@
       "arguments_signature": "job_id:str",
       "effect": "READ",
       "scope": "project",
-      "gate": "G4",
-      "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+      "gate": "G3",
+      "implementation_status": "IMPLEMENTED",
       "route": "control plane",
       "capability_requirements": "common target with version capability probe",
       "input_schema": {
@@ -11117,19 +11194,12 @@
         "title": "job.result input",
         "type": "object",
         "properties": {
-          "project_id": {
+          "job_id": {
             "type": "string",
             "minLength": 1
-          },
-          "request_id": {
-            "type": "string"
-          },
-          "job_id": {
-            "type": "string"
           }
         },
         "required": [
-          "project_id",
           "job_id"
         ],
         "additionalProperties": false
@@ -11140,18 +11210,38 @@
         "normal_path",
         "failure_is_truthful"
       ],
-      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read."
+      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+      "output_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "job.result output",
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "result": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "job_id",
+          "status"
+        ]
+      }
     },
     {
       "operation_id": "job.cancel",
       "mcp_tool_name": "job_cancel",
       "domain": "job",
       "purpose": "请求中止并等待独立确认状态",
-      "arguments_signature": "job_id:str,mode:str,reason:str",
+      "arguments_signature": "job_id:str,reason:str?,force_stop:bool?,server_scope:object?",
       "effect": "HOST_CONTROL",
       "scope": "project",
-      "gate": "G4",
-      "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+      "gate": "G3",
+      "implementation_status": "IMPLEMENTED",
       "route": "control plane",
       "capability_requirements": "common target with version capability probe",
       "input_schema": {
@@ -11159,33 +11249,37 @@
         "title": "job.cancel input",
         "type": "object",
         "properties": {
-          "project_id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "idempotency_key": {
-            "type": "string",
-            "minLength": 1
-          },
-          "request_id": {
-            "type": "string"
-          },
           "job_id": {
-            "type": "string"
-          },
-          "mode": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1
           },
           "reason": {
             "type": "string"
+          },
+          "force_stop": {
+            "type": "boolean"
+          },
+          "server_scope": {
+            "type": "object",
+            "properties": {
+              "authorized": {
+                "type": "boolean"
+              },
+              "pid": {
+                "type": "integer"
+              },
+              "process_start_epoch_ms": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "authorized"
+            ],
+            "additionalProperties": true
           }
         },
         "required": [
-          "project_id",
-          "idempotency_key",
-          "job_id",
-          "mode",
-          "reason"
+          "job_id"
         ],
         "additionalProperties": false
       },
@@ -11195,7 +11289,35 @@
         "normal_path",
         "failure_is_truthful"
       ],
-      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read."
+      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+      "output_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "job.cancel output",
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "cancel_accepted": {
+            "type": "boolean"
+          },
+          "engine_stopped": {
+            "type": "boolean"
+          },
+          "mode": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "cancel_accepted",
+          "engine_stopped",
+          "mode"
+        ]
+      }
     },
     {
       "operation_id": "job.reconcile",
@@ -11205,8 +11327,8 @@
       "arguments_signature": "job_id:str",
       "effect": "STATE_WRITE",
       "scope": "project",
-      "gate": "G4",
-      "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+      "gate": "G3",
+      "implementation_status": "IMPLEMENTED",
       "route": "control plane",
       "capability_requirements": "common target with version capability probe",
       "input_schema": {
@@ -11214,24 +11336,12 @@
         "title": "job.reconcile input",
         "type": "object",
         "properties": {
-          "project_id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "idempotency_key": {
-            "type": "string",
-            "minLength": 1
-          },
-          "request_id": {
-            "type": "string"
-          },
           "job_id": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1
           }
         },
         "required": [
-          "project_id",
-          "idempotency_key",
           "job_id"
         ],
         "additionalProperties": false
@@ -11242,7 +11352,27 @@
         "normal_path",
         "failure_is_truthful"
       ],
-      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read."
+      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+      "output_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "job.reconcile output",
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "reconciled": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "reconciled"
+        ]
+      }
     },
     {
       "operation_id": "job.resume",
@@ -11252,8 +11382,8 @@
       "arguments_signature": "job_id:str,checkpoint_id:str?",
       "effect": "COMPUTE",
       "scope": "project",
-      "gate": "G4",
-      "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+      "gate": "G3",
+      "implementation_status": "IMPLEMENTED",
       "route": "control plane",
       "capability_requirements": "common target with version capability probe",
       "input_schema": {
@@ -11261,27 +11391,15 @@
         "title": "job.resume input",
         "type": "object",
         "properties": {
-          "project_id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "idempotency_key": {
-            "type": "string",
-            "minLength": 1
-          },
-          "request_id": {
-            "type": "string"
-          },
           "job_id": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1
           },
           "checkpoint_id": {
             "type": "string"
           }
         },
         "required": [
-          "project_id",
-          "idempotency_key",
           "job_id"
         ],
         "additionalProperties": false
@@ -11292,18 +11410,37 @@
         "normal_path",
         "failure_is_truthful"
       ],
-      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read."
+      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+      "output_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "job.resume output",
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "resumed": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ]
+      }
     },
     {
       "operation_id": "job.wait",
       "mcp_tool_name": "job_wait",
       "domain": "job",
       "purpose": "有界等待并返回状态；不替代持久任务",
-      "arguments_signature": "job_id:str,max_wait_s:number",
+      "arguments_signature": "job_id:str,timeout_s:number?,poll_interval_s:number?",
       "effect": "READ",
       "scope": "project",
-      "gate": "G4",
-      "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+      "gate": "G3",
+      "implementation_status": "IMPLEMENTED",
       "route": "control plane",
       "capability_requirements": "common target with version capability probe",
       "input_schema": {
@@ -11311,24 +11448,21 @@
         "title": "job.wait input",
         "type": "object",
         "properties": {
-          "project_id": {
+          "job_id": {
             "type": "string",
             "minLength": 1
           },
-          "request_id": {
-            "type": "string"
+          "timeout_s": {
+            "type": "number",
+            "minimum": 0
           },
-          "job_id": {
-            "type": "string"
-          },
-          "max_wait_s": {
-            "type": "number"
+          "poll_interval_s": {
+            "type": "number",
+            "minimum": 0.001
           }
         },
         "required": [
-          "project_id",
-          "job_id",
-          "max_wait_s"
+          "job_id"
         ],
         "additionalProperties": false
       },
@@ -11338,18 +11472,38 @@
         "normal_path",
         "failure_is_truthful"
       ],
-      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read."
+      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+      "output_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "job.wait output",
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "timed_out": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "job_id",
+          "status"
+        ]
+      }
     },
     {
       "operation_id": "job.cleanup",
       "mcp_tool_name": "job_cleanup",
       "domain": "job",
       "purpose": "清理已完成job元数据/缓存，保留正式交付物",
-      "arguments_signature": "job_ids:strings,policy:object",
+      "arguments_signature": "job_ids:strings?,policy:object?",
       "effect": "HOST_CONTROL",
       "scope": "project",
-      "gate": "G6",
-      "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+      "gate": "G3",
+      "implementation_status": "IMPLEMENTED",
       "route": "control plane",
       "capability_requirements": "common target with version capability probe",
       "input_schema": {
@@ -11357,17 +11511,6 @@
         "title": "job.cleanup input",
         "type": "object",
         "properties": {
-          "project_id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "idempotency_key": {
-            "type": "string",
-            "minLength": 1
-          },
-          "request_id": {
-            "type": "string"
-          },
           "job_ids": {
             "type": "array",
             "items": {
@@ -11378,12 +11521,6 @@
             "type": "object"
           }
         },
-        "required": [
-          "project_id",
-          "idempotency_key",
-          "job_ids",
-          "policy"
-        ],
         "additionalProperties": false
       },
       "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
@@ -11392,7 +11529,27 @@
         "normal_path",
         "failure_is_truthful"
       ],
-      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read."
+      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+      "output_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "job.cleanup output",
+        "type": "object",
+        "properties": {
+          "cleaned_job_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "cleaned_count": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cleaned_job_ids",
+          "cleaned_count"
+        ]
+      }
     },
     {
       "operation_id": "dataset.list",

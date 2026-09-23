@@ -83,6 +83,7 @@ def build_package(repo_dir: Path, output_archive: Path) -> Path:
             "git", "bundle", "create",
             str(bundle_file),
             "HEAD",
+            f"refs/heads/{branch}",
         ]
         subprocess.check_call(bundle_cmd, cwd=repo_dir)
         subprocess.check_call(["git", "bundle", "verify", str(bundle_file)], cwd=repo_dir)
@@ -102,95 +103,50 @@ def build_package(repo_dir: Path, output_archive: Path) -> Path:
             acceptance_data = json.loads(evidence_file.read_text(encoding="utf-8"))
         active_run_id = acceptance_data.get("run_id", "")
 
-        # 4. Copy repository files into staging (clean exports)
-        exclude_dirs = {
-            ".venv", "venv", ".pytest_cache", "__pycache__", ".git",
-            "comsol_prefs", "locks", "worker_main", "worker2",
-            "comsol_tmp", "comsol_recovery", "cwd_d", "env_site_packages", "build",
-            ".g3-private", ".phase1-private", "control-private", "comsol-server-home",
-            "state", ".no-hooks", "comsol_mcp.egg-info", "hermes_isolated",
-            "project_c",
-        }
-        exclude_files = {".DS_Store", "server.port", "mphserver.log"}
-
+        # 4. Export exact tracked repository tree using git archive HEAD
+        print("[*] Exporting tracked repository files using git archive HEAD...")
         repo_stage = pkg_root / "repository"
         repo_stage.mkdir(parents=True, exist_ok=True)
+        subprocess.check_call(
+            f"git archive HEAD | tar -x -C {repo_stage}",
+            shell=True,
+            cwd=repo_dir,
+        )
 
-        redaction_file = repo_dir / "evidence" / "DELIVERY_REDACTION_MANIFEST.json"
-        redacted_paths: set[str] = set()
-        if redaction_file.is_file():
-            try:
-                rdata = json.loads(redaction_file.read_text(encoding="utf-8"))
-                for item in rdata.get("redacted_artifacts", []):
-                    redacted_paths.add(item.get("path", ""))
-            except Exception:
-                pass
+        # Automated check: verify delivery repository tree == release commit tree
+        print("[*] Validating delivery repository tree matches release commit tree 100%...")
+        tracked_files_raw = subprocess.check_output(
+            ["git", "ls-tree", "-r", "--full-tree", "HEAD"],
+            cwd=repo_dir,
+            text=True,
+        ).splitlines()
 
         file_inventory: list[dict[str, Any]] = []
+        for line in tracked_files_raw:
+            parts = line.strip().split(None, 3)
+            if len(parts) < 4:
+                continue
+            mode, ftype, sha, rel_path = parts
+            if ftype != "blob":
+                continue
+            dest_file = repo_stage / rel_path
+            assert dest_file.exists(), f"Tracked file missing in repo_stage: {rel_path}"
+            f_size = dest_file.stat().st_size
+            f_sha = sha256_file(dest_file)
+            file_inventory.append({
+                "path": f"repository/{rel_path}",
+                "size_bytes": f_size,
+                "sha256": f_sha,
+            })
 
-        for root, dirs, files in os.walk(repo_dir):
-            rel_root = Path(root).relative_to(repo_dir)
-            # Filter directories
-            dirs[:] = [
-                d for d in dirs
-                if d not in exclude_dirs
-                and not any(part in rel_root.parts for part in exclude_dirs)
-            ]
-            for file in files:
-                if (
-                    file in exclude_files
-                    or file.startswith(".lock")
-                    or file.endswith(".lock")
-                    or file.endswith(".pid")
-                    or file.endswith(".log")
-                    or file.endswith(".sqlite3")
-                    or file.endswith(".sqlite3-shm")
-                    or file.endswith(".sqlite3-wal")
-                    or file.endswith(".sqlite")
-                    or file.endswith(".db")
-                    or file.endswith(".java")
-                    or ".token" in file
-                    or file.endswith(".token")
-                    or ("token" in file.lower() and file.endswith((".json", ".ini", ".txt", ".key")))
-                    or file in ("credentials.ini", "tokens.json", "symlink_escape")
-                ):
-                    continue
-                src_path = Path(root) / file
-                rel_path = src_path.relative_to(repo_dir)
+        # Ensure no untracked files leaked into repo_stage
+        all_stage_files = [str(p.relative_to(repo_stage)) for p in repo_stage.rglob("*") if p.is_file()]
+        tracked_rel_set = {p["path"][len("repository/"):] for p in file_inventory}
+        extra_files = set(all_stage_files) - tracked_rel_set
+        if extra_files:
+            raise RuntimeError(f"Unexpected extra files in delivery repo_stage: {extra_files}")
 
-                # Skip other intermediate run folders in evidence/ that are not the authoritative run_id
-                if len(rel_path.parts) >= 2 and rel_path.parts[0] == "evidence":
-                    sub_part = rel_path.parts[1]
-                    if sub_part.startswith("g3_5_acceptance_") and sub_part != active_run_id:
-                        continue
-
-                # Skip any explicitly redacted runtime artifact
-                if str(rel_path) in redacted_paths:
-                    continue
-
-                # Skip transient / project_c test files
-                if any(p in rel_path.parts for p in exclude_dirs):
-                    continue
-
-                dest_path = repo_stage / rel_path
-                dest_path.parent.mkdir(parents=True, exist_ok=True)
-                if src_path.is_symlink():
-                    link_target = os.readlink(src_path)
-                    os.symlink(link_target, dest_path)
-                    sha = "symlink"
-                    size = 0
-                else:
-                    shutil.copy2(src_path, dest_path)
-                    sha = sha256_file(dest_path)
-                    size = dest_path.stat().st_size
-
-                file_inventory.append({
-                    "path": f"repository/{rel_path}",
-                    "size_bytes": size,
-                    "sha256": sha,
-                })
-
-        print(f"[*] Packaged {len(file_inventory)} clean repository files")
+        print(f"[*] Validated {len(file_inventory)} tracked repository files (100% tree match with release commit)")
 
         # Copy DELIVERY_REDACTION_MANIFEST.json to package root if present
         redaction_sha = "none"
@@ -493,7 +449,10 @@ def verify_package(archive_path: Path, repo_ref_dir: Path | None = None) -> bool
             assert "comsol-server-home" not in p.parts, f"comsol-server-home leak: {p}"
             assert "hermes_isolated" not in p.parts, f"hermes_isolated leak: {p}"
             assert "project_c" not in p.parts, f"project_c leak: {p}"
-            assert not p.name.endswith(".java"), f"Java scratch builder leak: {p}"
+
+        # Verify production Java worker and restore script exist
+        assert (extracted_repo / "comsol_mcp" / "worker_java" / "PersistentComsolWorker.java").is_file(), "Production Java worker must be delivered"
+        assert (extracted_repo / "tools" / "restore_g3_5_delivery.py").is_file(), "Restore script must be delivered"
 
         # Check delivery redaction manifest
         redaction_manifest_file = deliverable_dir / "DELIVERY_REDACTION_MANIFEST.json"
@@ -524,7 +483,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     repo_default = Path(__file__).resolve().parent.parent
     parser.add_argument("--repo", type=Path, default=repo_default)
-    parser.add_argument("--output", type=Path, default=repo_default.parent / "COMSOL_MCP_G3_5_DELIVERABLE.tar.gz")
+    parser.add_argument("--output", type=Path, default=repo_default.parent / "COMSOL_MCP_G3_5_1_DELIVERABLE.tar.gz")
     args = parser.parse_args()
 
     repo = args.repo.resolve()

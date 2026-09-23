@@ -380,7 +380,14 @@ class ControlDaemon:
                     },
                 }
 
-        force_stop = bool(arguments.get("force_stop", False))
+        if "force_stop" in arguments:
+            raw_fs = arguments["force_stop"]
+            if type(raw_fs) is not bool:
+                return self._error("INVALID_REQUEST", f"force_stop must be a boolean, got {type(raw_fs).__name__}", safe_retry=False)
+            force_stop = raw_fs
+        else:
+            force_stop = False
+
         if force_stop:
             server_scope = arguments.get("server_scope")
             return self._scoped_force_stop(job, reason=reason, server_scope=server_scope)
@@ -411,7 +418,15 @@ class ControlDaemon:
 
     def _scoped_force_stop(self, job: dict[str, Any], *, reason: str, server_scope: Any) -> dict[str, Any]:
         job_id = job["job_id"]
-        if not isinstance(server_scope, dict) or not server_scope.get("authorized"):
+        if not isinstance(server_scope, dict):
+            return self._error(
+                "UNAUTHORIZED_FORCE_STOP",
+                "force_stop requires explicit server_scope authorization with verified ownership",
+                data={"job_id": job_id, "cancel_accepted": False, "engine_stopped": False, "mode": "FORCE_STOP_REJECTED"},
+            )
+        if "authorized" not in server_scope or type(server_scope["authorized"]) is not bool:
+            return self._error("INVALID_REQUEST", "server_scope.authorized must be a boolean", safe_retry=False)
+        if not server_scope["authorized"]:
             return self._error(
                 "UNAUTHORIZED_FORCE_STOP",
                 "force_stop requires explicit server_scope authorization with verified ownership",

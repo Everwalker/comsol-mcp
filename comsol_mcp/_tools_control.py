@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from comsol_mcp._control_client import dispatch
+from comsol_mcp._execution_contract import ExecutionContractError
 
 
 def session_health() -> dict:
@@ -51,6 +52,13 @@ def job_wait(job_id: str, timeout_s: float | None = 30.0, poll_interval_s: float
 
 def job_cancel(job_id: str, reason: str = "cancelled by user", force_stop: bool = False, server_scope: dict | None = None) -> dict:
     """Request cancellation of a queued or running job."""
+    if type(force_stop) is not bool:
+        raise ExecutionContractError("INVALID_REQUEST", f"force_stop must be a boolean, got {type(force_stop).__name__}")
+    if server_scope is not None:
+        if not isinstance(server_scope, dict):
+            raise ExecutionContractError("INVALID_REQUEST", "server_scope must be a dictionary")
+        if "authorized" in server_scope and type(server_scope["authorized"]) is not bool:
+            raise ExecutionContractError("INVALID_REQUEST", "server_scope.authorized must be a boolean")
     payload: dict = {"job_id": job_id, "reason": reason, "force_stop": force_stop}
     if server_scope is not None:
         payload["server_scope"] = server_scope
