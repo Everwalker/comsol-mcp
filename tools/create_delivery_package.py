@@ -324,13 +324,15 @@ def verify_package(archive_path: Path) -> bool:
         assert sha256_file(bundle_file) == manifest["git_metadata"]["git_bundle"]["sha256"]
 
         # Verify git bundle can be read by git
-        subprocess.check_call(["git", "bundle", "verify", str(bundle_file)], cwd=deliverable_dir)
+        subprocess.check_call(["git", "bundle", "list-heads", str(bundle_file)], cwd=test_dir)
+        if repo_ref_dir is not None:
+            subprocess.check_call(["git", "bundle", "verify", str(bundle_file)], cwd=repo_ref_dir)
 
         # Check repository files
-        repo_dir = deliverable_dir / "repository"
-        assert (repo_dir / "comsol_mcp" / "_artifact_store.py").is_file()
-        assert (repo_dir / "comsol_mcp" / "_g3_w18.py").is_file()
-        assert (repo_dir / "evidence" / "phase4_4_acceptance.json").is_file()
+        extracted_repo = deliverable_dir / "repository"
+        assert (extracted_repo / "comsol_mcp" / "_artifact_store.py").is_file()
+        assert (extracted_repo / "comsol_mcp" / "_g3_w18.py").is_file()
+        assert (extracted_repo / "evidence" / "phase4_4_acceptance.json").is_file()
 
         print("[+] Deliverable archive verification PASSED!")
         return True
@@ -344,8 +346,9 @@ def main() -> int:
     parser.add_argument("--output", type=Path, default=Path(__file__).resolve().parent.parent / "COMSOL_MCP_G3_4_W18_DELIVERABLE.tar.gz")
     args = parser.parse_args()
 
-    archive = build_package(args.repo.resolve(), args.output.resolve())
-    ok = verify_package(archive)
+    repo = args.repo.resolve()
+    archive = build_package(repo, args.output.resolve())
+    ok = verify_package(archive, repo_ref_dir=repo)
     return 0 if ok else 1
 
 
