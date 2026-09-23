@@ -3,7 +3,7 @@
 - **验收日期**: 2026-09-23
 - **验收目标**: `NEXT_GOAL.md` (Gate A 定向修补 G01–G12 → W19 持久作业、取消、恢复与并发控制 J01–J10)
 - **权威结论**: **PASS** (`status: G3_5_MAC_W19_VERIFIED_SCOPED`, `host_status: HOST_DELIVERY_UNVERIFIED`, `native_cancel_status: UNSUPPORTED_NATIVE_CANCEL`)
-- **运行 ID**: `g3_5_acceptance_20260923T080141Z` (耗时 17.42s)
+- **运行 ID**: `g3_5_acceptance_20260923T084906Z` (耗时 16.89s)
 - **停止边界**: 严格停止于 W19，未进入 W20–W26
 - **提交版本**: 基线 `20839628aa6f93272a463f4d88eb48704b971f87` (tree: `2e72a4fa6eae809bbce92e4620592e6906d3e87b`)
 - **全量测试**:

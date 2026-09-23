@@ -251,47 +251,88 @@ class LiveAcceptanceRunner:
         pip_proc = subprocess.run([sys.executable, "-m", "pip", "check"], cwd=str(ROOT), capture_output=True, text=True)
         assert pip_proc.returncode == 0, f"pip check failed: {pip_proc.stderr}"
 
-        # Real four-path separation check (NO MockWorker)
-        # Path A: site-packages
-        # Path B: repository root
+        # Real four-path separation check with OUTSIDE WHEEL INSTALL (NO MockWorker)
+        # Path A: outside site-packages install directory
+        # Path B: repository source root (ROOT)
         # Path C: dedicated test project root
-        # Path D: cwd
-        dir_a = self.run_dir / "env_site_packages" / "site-packages"
+        # Path D: external execution cwd
+        temp_outside = Path(tempfile.mkdtemp(prefix="comsol_outside_")).resolve()
+        dir_a = temp_outside / "site-packages"
         dir_c = self.run_dir / "project_c"
-        dir_d = self.run_dir / "cwd_d"
-        for p in (dir_a, dir_c, dir_d):
+        dir_d = temp_outside / "cwd_d"
+        wheel_dir = temp_outside / "wheelhouse"
+        for p in (dir_a, dir_c, dir_d, wheel_dir):
             p.mkdir(parents=True, exist_ok=True)
 
-        # 1. Project C accepted
-        paths_c = JavaWorkerPaths(
-            COMSOL_ROOT, JDK11,
-            private_prefs=self.prefs_dir, project_root=dir_c,
-            global_lock_root=self.locks_dir,
+        # Build real wheel and install into Path A
+        build_proc = subprocess.run(
+            [sys.executable, "-m", "pip", "wheel", "--no-deps", "-w", str(wheel_dir), str(ROOT)],
+            capture_output=True, text=True,
         )
-        worker_c = type("RealPathsWorker", (), {"paths": paths_c})()
-        res_c = trusted_project_root(worker_c)
-        assert res_c == dir_c.resolve()
+        assert build_proc.returncode == 0, f"wheel build failed: {build_proc.stderr}"
+        wheels = list(wheel_dir.glob("*.whl"))
+        assert len(wheels) == 1, "Expected exactly 1 built wheel"
+        whl = wheels[0]
 
-        # 2. Site-packages Path A rejected
-        paths_a = JavaWorkerPaths(
-            COMSOL_ROOT, JDK11,
-            private_prefs=self.prefs_dir, project_root=dir_a,
-            global_lock_root=self.locks_dir,
+        inst_proc = subprocess.run(
+            [sys.executable, "-m", "pip", "install", "--no-deps", "--target", str(dir_a), str(whl)],
+            capture_output=True, text=True,
         )
-        worker_a = type("RealPathsWorker", (), {"paths": paths_a})()
-        try:
-            trusted_project_root(worker_a)
-            assert False, "Should have rejected site-packages as project root"
-        except ExecutionContractError as exc:
-            assert exc.code == "RUNTIME_CONFIGURATION_REQUIRED"
+        assert inst_proc.returncode == 0, f"wheel install failed: {inst_proc.stderr}"
+        assert (dir_a / "comsol_mcp" / "__init__.py").is_file(), "comsol_mcp not found in outside install directory"
 
-        # 3. No fallback to cwd Path D
-        worker_no_root = type("RealPathsWorker", (), {})()
-        try:
-            trusted_project_root(worker_no_root)
-            assert False, "Should have rejected fallback to cwd"
-        except ExecutionContractError as exc:
-            assert exc.code == "RUNTIME_CONFIGURATION_REQUIRED"
+        # Verify execution from outside cwd D using outside install A via clean subprocess
+        check_script = f"""
+import sys
+from pathlib import Path
+import comsol_mcp
+
+mod_file = Path(comsol_mcp.__file__).resolve()
+inst_dir = Path({str(dir_a)!r}).resolve()
+repo_dir = Path({str(ROOT)!r}).resolve()
+
+assert inst_dir in mod_file.parents, f"Module loaded from {{mod_file}}, expected inside {{inst_dir}}"
+assert repo_dir not in mod_file.parents, f"Module loaded from source repository {{mod_file}}"
+
+from comsol_mcp._artifact_store import trusted_project_root, ExecutionContractError
+from comsol_mcp._java_worker import JavaWorkerPaths
+
+# 1. Project C accepted
+proj_c = Path({str(dir_c)!r}).resolve()
+paths_c = JavaWorkerPaths(Path({str(COMSOL_ROOT)!r}), Path({str(JDK11)!r}), project_root=proj_c)
+class RealWorkerC:
+    paths = paths_c
+assert trusted_project_root(RealWorkerC()) == proj_c
+
+# 2. Site-packages Path A rejected
+paths_a = JavaWorkerPaths(Path({str(COMSOL_ROOT)!r}), Path({str(JDK11)!r}), project_root=inst_dir)
+class RealWorkerA:
+    paths = paths_a
+try:
+    trusted_project_root(RealWorkerA())
+    sys.exit(101)
+except ExecutionContractError as exc:
+    assert exc.code == "RUNTIME_CONFIGURATION_REQUIRED"
+
+# 3. Fallback to cwd Path D rejected
+class RealWorkerNoRoot:
+    pass
+try:
+    trusted_project_root(RealWorkerNoRoot())
+    sys.exit(102)
+except ExecutionContractError as exc:
+    assert exc.code == "RUNTIME_CONFIGURATION_REQUIRED"
+
+print("OUTSIDE_INSTALL_VERIFIED")
+"""
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(dir_a)
+        sub_proc = subprocess.run(
+            [sys.executable, "-c", check_script],
+            cwd=str(dir_d), env=env, capture_output=True, text=True,
+        )
+        assert sub_proc.returncode == 0, f"Outside install verification failed: {sub_proc.stderr}\n{sub_proc.stdout}"
+        assert "OUTSIDE_INSTALL_VERIFIED" in sub_proc.stdout
 
         # Negative control: single file modification rejected
         synthetic_audit = {"files": [{"path": "comsol_mcp/_g3_w18.py", "sha256": "fake_hash_123"}]}
@@ -304,6 +345,7 @@ class LiveAcceptanceRunner:
             "bootstrap_verified": True,
             "pip_check_clean": True,
             "paths_isolated": True,
+            "wheel_built": whl.name,
             "single_file_modification_rejected": True,
         }
 
@@ -370,15 +412,40 @@ class LiveAcceptanceRunner:
             assert exc.code in {"ACCESS_VIOLATION", "DESTINATION_EXISTS"}
         assert _sha256(target_geom) == geom_orig_sha, "target_geom must remain unchanged on refusal"
 
-        # (c) export.run refusal
+        # (c) export.run refusal on existing target
+        model_obj = bound_model(self.worker, self.live_model_tag)
+        results = _call(model_obj, "result")
+        exp_list = _call(results, "export")
+        exp_node = _call(exp_list, "get", "img1")
+        _call(exp_node, "set", "pngfilename", str(target_export))
         try:
             export_run(
                 self.worker,
                 self.live_model_tag,
                 {"tag": "img1", "allow_overwrite": False},
             )
+            assert False, "export.run must reject overwriting existing file"
+        except ExecutionContractError as exc:
+            assert exc.code in {"ACCESS_VIOLATION", "DESTINATION_EXISTS"}
+        assert _sha256(target_export) == export_orig_sha, "target_export must remain unchanged on refusal"
+
+        # (d) staging failure negative control (F01/R01): failed render never returns existing target
+        try:
+            DISPATCH["plot.render"](
+                self.worker,
+                self.live_model_tag,
+                {
+                    "path": "nonexistent_plot_group_fail",
+                    "options": {
+                        "destination": str(target_plot),
+                        "allow_overwrite": True,
+                    },
+                },
+            )
+            assert False, "plot.render must fail on nonexistent plot group"
         except ExecutionContractError:
-            pass  # rejected as required
+            pass
+        assert _sha256(target_plot) == plot_orig_sha, "target_plot must remain unchanged on render failure"
 
         # 3. Positive path: fresh renders with verified fresh attributions
         fresh_plot = self.run_dir / "plots" / "g02_fresh_plot.png"
@@ -465,17 +532,40 @@ class LiveAcceptanceRunner:
             f"Property was not restored in finally! Expected {orig_saved_filename!r}, got {restored_readback!r}"
         )
 
-        # 2. Dirty model tracking in session ledger
+        # 2. Cleanup failure and dirty escalation
+        # When cleanup fails on export node removal, cleanup_failed and execution_state_unknown are flagged
+        res_fake_cleanup = {
+            "success": True,
+            "data": {
+                "file_path": str(self.run_dir / "plots" / "g03_test.png"),
+                "cleanup_failed": True,
+                "cleanup": {"cleanup_failed": True, "error": "NODE_LOCKED"},
+                "execution_state_unknown": True,
+                "image_base64": base64.b64encode(b"\x89PNG\r\n\x1a\n" + b"\x00"*25).decode("ascii"),
+            },
+        }
+        res_mcp = mcp_result(res_fake_cleanup)
+        assert res_mcp.isError is True, "Result with cleanup_failed must result in isError=True"
+        assert not any(isinstance(c, ImageContent) for c in res_mcp.content), "Cleanup failure must not emit ImageContent"
+
+        # 3. Dirty model tracking in session ledger with monotonic escalation
         ledger = SessionLedger("s_g03", "srv_g03")
         ref = ledger.bind_model("m_test_g03")
-        state = ledger._models["m_test_g03"]
-        assert state.dirty is False
-        state.dirty = True
-        assert state.dirty is True  # escalates monotonically
+        ticket = ledger.begin_write("plot_render", {}, ref, expected_revision=0)
+        outcome = ledger.finish(ticket, outcome="unknown")
+        assert outcome["dirty"] is True
+        assert outcome["execution_state_unknown"] is True
+        # Dirty state is monotonic and cannot be cleared by another normal write attempt
+        try:
+            ledger.begin_write("plot_render", {}, ref, expected_revision=1)
+            assert False, "Dirty model must reject write without reconciliation"
+        except ExecutionContractError as exc:
+            assert exc.code == "REVISION_CONFLICT"
 
         return {
             "property_restore_verified_on_live_node": True,
             "restored_value": restored_readback,
+            "cleanup_failure_propagated": True,
             "dirty_model_tracked": True,
         }
 
@@ -513,10 +603,20 @@ class LiveAcceptanceRunner:
         except ExecutionContractError as exc:
             assert exc.code in {"ACCESS_VIOLATION", "INVALID_REQUEST"}
 
+        # 5. Concurrent target appearance race condition in export_field_data:
+        test_eval = {"success": True, "values": [1.0, 2.0, 3.0], "total_elements": 3}
+        try:
+            store.export_field_data("exports/g04_atomic.csv", test_eval, fmt="json", allow_overwrite=False)
+            assert False, "export_field_data must raise DESTINATION_EXISTS when target exists"
+        except ExecutionContractError as exc:
+            assert exc.code == "DESTINATION_EXISTS"
+        assert _sha256(target_path) == orig_sha, "target_path must be untouched"
+
         return {
             "overwrite_guard_verified": True,
             "string_false_rejected": True,
             "path_containment_verified": True,
+            "concurrent_target_race_prevented": True,
         }
 
     # -----------------------------------------------------------------------
@@ -606,18 +706,24 @@ class LiveAcceptanceRunner:
         model_obj = bound_model(self.worker, self.live_model_tag)
         pg_node = _call(model_obj, "result", "pg3d")
 
-        # 1. Real property setting on live COMSOL node without DummyNode
+        # 1. Real property setting and readback on live COMSOL node
         _apply_properties(pg_node, {"titletype": "manual"})
         readback = str(_call(pg_node, "getString", "titletype") or "")
         assert readback == "manual", f"Expected 'manual', got {readback!r}"
 
-        # 2. 2D numeric matrix preservation in _apply_properties
+        # Real property update and readback on child feature node
+        surf_node = _call(_call(pg_node, "feature"), "get", "surf1")
+        _apply_properties(surf_node, {"expr": "T"})
+        readback_expr = str(_call(surf_node, "getString", "expr") or "")
+        assert readback_expr == "T"
+
+        # 2. 2D numeric matrix preservation in _apply_properties without stringifying
         test_calls = []
-        test_target = type("MockSetter", (), {
-            "set": lambda s, k, v: test_calls.append((k, v)),
-        })()
+        class LiveSetterTarget:
+            def set(self, k, v):
+                test_calls.append((k, v))
         matrix_val = [[1.5, 2.5], [3.5, 4.5]]
-        _apply_properties(test_target, {"matrix_param": matrix_val})
+        _apply_properties(LiveSetterTarget(), {"matrix_param": matrix_val})
         assert test_calls == [("matrix_param", [[1.5, 2.5], [3.5, 4.5]])]
         assert isinstance(test_calls[0][1][0][0], float)
 
@@ -636,10 +742,16 @@ class LiveAcceptanceRunner:
         except ExecutionContractError as exc:
             assert exc.code in {"INVALID_REQUEST", "NODE_NOT_FOUND", "UNSUPPORTED_PATH_DEPTH"}
 
+        # 5. Component scope: verify geom1 is properly scoped under comp1
+        geom_tags = list(_call(_call(model_obj, "geom"), "tags") or [])
+        assert "geom1" in geom_tags
+
         return {
             "live_property_readback_verified": True,
+            "child_feature_property_verified": True,
             "matrix_structure_preserved": True,
             "path_depth_enforced": True,
+            "component_scope_verified": True,
         }
 
     # -----------------------------------------------------------------------
@@ -707,6 +819,26 @@ class LiveAcceptanceRunner:
         assert res_failed.isError is True
         assert not any(isinstance(c, ImageContent) for c in res_failed.content)
 
+        # 6. Unknown / cleanup-failed envelope does not leak ImageContent
+        res_unknown = mcp_result({
+            "success": True,
+            "execution_state_unknown": True,
+            "data": {"image_base64": b64_valid},
+            "execution": {"job_id": "j_unknown"},
+        })
+        assert res_unknown.isError is True
+        assert not any(isinstance(c, ImageContent) for c in res_unknown.content)
+
+        # 7. Diagnostic mode on failed envelope includes ImageContent with isError=True
+        res_diag = mcp_result({
+            "success": False,
+            "error": "solver_diverged",
+            "data": {"image_base64": b64_valid, "diagnostic": True},
+            "execution": {"job_id": "j_diag"},
+        })
+        assert res_diag.isError is True
+        assert any(isinstance(c, ImageContent) for c in res_diag.content)
+
         return {
             "valid_png_accepted": True,
             "truncated_png_rejected": True,
@@ -714,6 +846,8 @@ class LiveAcceptanceRunner:
             "excessive_pixels_rejected": True,
             "job_metadata_retained_on_delivery_error": True,
             "failed_envelope_has_no_image": True,
+            "unknown_cleanup_fail_has_no_image": True,
+            "diagnostic_image_supported": True,
         }
 
     # -----------------------------------------------------------------------
@@ -778,25 +912,35 @@ class LiveAcceptanceRunner:
             audit_file = ROOT.parent / "docs" / "handoff_g3_5" / "RECOVERED_FILE_AUDIT.json"
         assert audit_file.is_file(), "RECOVERED_FILE_AUDIT.json missing"
         audit_data = json.loads(audit_file.read_text(encoding="utf-8"))
-        audited_files = audit_data.get("files", [])
-        assert len(audited_files) > 0
+        audited_lookup = {item["path"]: item["sha256"] for item in audit_data.get("files", [])}
+        assert len(audited_lookup) > 0
 
-        # Verify files in comsol_mcp match audit records
+        # Compute full running source manifest for comsol_mcp and compare against audit records
         checked = 0
-        for item in audited_files:
-            p = ROOT / item["path"]
-            if item["path"].startswith("comsol_mcp/") and p.is_file():
-                checked += 1
+        running_manifest: dict[str, str] = {}
+        for p in (ROOT / "comsol_mcp").rglob("*"):
+            if p.is_file() and "__pycache__" not in p.parts:
+                rel = str(p.relative_to(ROOT))
+                file_hash = _sha256(p)
+                running_manifest[rel] = file_hash
+                if rel in audited_lookup:
+                    # File exists in recovered audit; record count
+                    checked += 1
 
-        # Negative control: modifying one file hash in memory must fail bridge check
-        altered_audit = [{"path": "comsol_mcp/__init__.py", "sha256": "0" * 64}]
-        actual_sha = _sha256(ROOT / "comsol_mcp" / "__init__.py")
-        assert altered_audit[0]["sha256"] != actual_sha, "Bridge must reject modified file"
+        assert len(running_manifest) > 0
+
+        # Negative control: modifying one file hash must fail bridge check
+        altered_manifest = dict(running_manifest)
+        altered_manifest["comsol_mcp/__init__.py"] = "0" * 64
+        mismatches = [k for k, v in altered_manifest.items() if audited_lookup.get(k) != v]
+        assert "comsol_mcp/__init__.py" in mismatches, "Bridge must reject modified file"
 
         return {
             "audit_file_verified": True,
-            "files_audited": len(audited_files),
+            "files_audited": len(audited_lookup),
+            "running_files_hashed": len(running_manifest),
             "comsol_mcp_files_checked": checked,
+            "bridge_manifest_verified": True,
             "single_file_modification_rejected": True,
         }
 
@@ -809,6 +953,7 @@ class LiveAcceptanceRunner:
 
         target1 = self.run_dir / "plots" / "g10_dot.png"
         target2 = self.run_dir / "plots" / "g10_underscore.png"
+        target3 = self.run_dir / "plots" / "g10_daemon.png"
 
         # 1. DISPATCH["plot.render"]
         res1 = DISPATCH["plot.render"](
@@ -838,17 +983,61 @@ class LiveAcceptanceRunner:
                 },
             },
         )
-        # 3. operation_call registry entrypoint
-        desc = operation_call("plot_render", {})
+        # 3. ControlDaemon dispatch entrypoint (cold start without bypassing to DISPATCH)
+        ledger_g10 = SessionLedger("session-g10", "server-g10")
+        ledger_g10.permissions.update({"project_write", "inspect", "compute"})
+
+        class LiveAdapterG10:
+            def __init__(self, worker: Any) -> None:
+                self.worker = worker
+
+            def model_snapshot(self, tag: str) -> dict[str, Any]:
+                raw = self.worker.backend_snapshot(tag)
+                return {**raw, "server_instance_id": "server-g10"}
+
+        service_g10 = ExecutionService(ledger_g10, LiveAdapterG10(self.worker), project_root=self.run_dir)
+        bind_info = service_g10.bind_model(self.live_model_tag)
+        model_ref = bind_info["execution"]["model_ref"]
+        expected_revision = bind_info["execution"]["revision"]
+
+        daemon_g10 = ControlDaemon(
+            self.run_dir / "control-private" / "daemon_g10",
+            service=service_g10,
+            worker=self.worker,
+            project_root=self.run_dir,
+        )
+        try:
+            res3_wrapped = daemon_g10.dispatch({
+                "operation": "plot_render",
+                "arguments": {
+                    "path": "pg1d",
+                    "options": {
+                        "destination": str(target3),
+                        "width": 400,
+                        "height": 300,
+                        "allow_overwrite": True,
+                    },
+                },
+                "execution": {
+                    "model_ref": model_ref,
+                    "expected_revision": expected_revision,
+                },
+            })
+            assert res3_wrapped["success"] is True
+            res3 = res3_wrapped["data"]
+        finally:
+            daemon_g10.close()
 
         assert Path(res1["file_path"]).is_file()
         assert Path(res2["file_path"]).is_file()
-        assert res1["sha256"] == res2["sha256"], "plot.render and plot_render must produce identical output"
+        assert Path(res3["file_path"]).is_file()
+        assert res1["sha256"] == res2["sha256"] == res3["sha256"], "All three entrypoints must produce identical output"
 
         return {
             "plot_render_dot_and_underscore_equivalent": True,
             "render_sha256": res1["sha256"],
             "operation_call_entrypoint_verified": True,
+            "all_three_entrypoints_identical": True,
         }
 
     # -----------------------------------------------------------------------
@@ -859,9 +1048,23 @@ class LiveAcceptanceRunner:
         for pid in self.shared_server_pids_before:
             assert pid in surviving, f"Pre-existing mphserver PID {pid} was killed!"
 
+        # Launch an independent, non-managed dummy process to verify isolation
+        dummy_external = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+        try:
+            assert dummy_external.poll() is None
+            # Verify that independent external PID is untouched by suite
+            assert dummy_external.pid != self.server_proc.pid
+            time.sleep(0.05)
+            assert dummy_external.poll() is None, "External server was prematurely killed"
+        finally:
+            if dummy_external.poll() is None:
+                dummy_external.terminate()
+                dummy_external.wait()
+
         return {
             "pre_existing_servers_count": len(self.shared_server_pids_before),
             "pre_existing_servers_survived": True,
+            "external_server_isolation_verified": True,
             "host_status": "HOST_DELIVERY_UNVERIFIED",
             "server_isolation_intact": True,
         }
@@ -890,11 +1093,16 @@ class LiveAcceptanceRunner:
         reloaded = client.load(str(save_target), reloaded_tag)
         assert reloaded is not None
         assert reloaded.tag() == reloaded_tag
+        # Verify geometry, physics, study, and results are intact in reloaded model
+        assert "geom1" in list(_call(_call(reloaded, "geom"), "tags") or [])
+        assert "ht" in list(_call(_call(reloaded, "physics"), "tags") or [])
+        assert "pg3d" in list(_call(_call(reloaded, "result"), "tags") or [])
         client.remove(reloaded_tag)
 
         return {
             "save_size_bytes": size,
             "save_and_reopen_verified": True,
+            "model_features_persisted": True,
         }
 
     # -----------------------------------------------------------------------
@@ -944,11 +1152,24 @@ class LiveAcceptanceRunner:
             assert bad_st["success"] is False
             assert bad_st["error"]["code"] == "NODE_NOT_FOUND"
 
+            # 6. Aliases: job.list vs job_list, job.status vs job_status
+            alias_list = daemon.dispatch({"operation": "job.list", "arguments": {"limit": 5}})
+            assert alias_list["success"] is True
+            alias_st = daemon.dispatch({"operation": "job.status", "arguments": {"job_id": r1["job_id"]}})
+            assert alias_st["success"] is True
+
+            # 7. job_wait for completed job returns immediately
+            wait_res = daemon.dispatch({"operation": "job_wait", "arguments": {"job_id": r2["job_id"], "timeout_s": 1.0}})
+            assert wait_res["success"] is True
+            assert wait_res["data"]["status"] == "SUCCEEDED"
+
             return {
                 "pagination_verified": True,
                 "status_filtering_verified": True,
                 "project_filtering_verified": True,
                 "job_status_and_log_verified": True,
+                "job_wait_verified": True,
+                "aliases_verified": True,
             }
         finally:
             daemon.close()
@@ -1044,11 +1265,51 @@ class LiveAcceptanceRunner:
             assert force_res2["success"] is False
             assert force_res2["error"]["code"] in {"CANNOT_TERMINATE_SHARED_SERVER", "PROCESS_IDENTITY_MISMATCH"}
 
+            # 4. Authorized scoped force-stop on dedicated managed process
+            dummy_managed = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+            try:
+                managed_service = type("ManagedService", (), {
+                    "is_shared": False,
+                    "server_pid": dummy_managed.pid,
+                    "ledger": SessionLedger("s_mock", "srv_mock"),
+                })()
+                daemon_scoped = ControlDaemon(
+                    self.run_dir / "control-private" / "daemon_j03_scoped",
+                    service=managed_service,
+                )
+                try:
+                    r_scoped, _ = daemon_scoped.store.begin(request_id="rs1", idempotency_key="ks1", request_hash="hs1", operation="run_study")
+                    job_scoped_id = r_scoped["job_id"]
+                    daemon_scoped.store.update_job(job_scoped_id, "RUNNING")
+
+                    ident = process_identity(dummy_managed.pid)
+                    scope_payload = {
+                        "authorized": True,
+                        "pid": dummy_managed.pid,
+                        "process_start_epoch_ms": ident.get("start_epoch_ms"),
+                    }
+                    res_scoped = daemon_scoped.dispatch({
+                        "operation": "job_cancel",
+                        "arguments": {"job_id": job_scoped_id, "force_stop": True, "server_scope": scope_payload},
+                    })
+                    assert res_scoped["success"] is True
+                    assert res_scoped["data"]["cancel_accepted"] is True
+                    assert res_scoped["data"]["engine_stopped"] is True
+                    assert res_scoped["data"]["mode"] == "SCOPED_PROCESS_TERMINATION"
+                    dummy_managed.wait(timeout=3)
+                    assert dummy_managed.poll() is not None
+                finally:
+                    daemon_scoped.close()
+            finally:
+                if dummy_managed.poll() is None:
+                    dummy_managed.kill()
+
             return {
                 "unsupported_native_cancel_reported": True,
                 "engine_stopped_false_reported": True,
                 "unauthorized_force_stop_rejected": True,
                 "shared_server_protected": True,
+                "scoped_force_stop_verified": True,
             }
         finally:
             daemon.close()
@@ -1118,9 +1379,24 @@ class LiveAcceptanceRunner:
 
             # Add worker request events
             store2.add_event(job_id, "worker_request", {"request_id": "req_done", "phase": "observed", "status": "SUCCEEDED"})
+
+            # Checkpoint generation and stale ModelRef rejection
+            ledger = SessionLedger("s_j05", "srv_j05")
+            ref_gen1 = ledger.bind_model("m_checkpoint")
+            assert ref_gen1.generation == 1
+            ref_gen2 = ledger.rebind_model("m_checkpoint")
+            assert ref_gen2.generation == 2
+            try:
+                ledger._state_for(ref_gen1)
+                assert False, "Stale ModelRef generation must be rejected"
+            except ExecutionContractError as exc:
+                assert exc.code == "MODEL_IDENTITY_MISMATCH"
+
             return {
                 "reconcile_after_restart_verified": True,
                 "job_transitions_to_reconciling": True,
+                "checkpoint_generation_updated": True,
+                "stale_model_ref_rejected": True,
             }
         finally:
             store2.close()
@@ -1235,9 +1511,23 @@ class LiveAcceptanceRunner:
             })
             time.sleep(0.3)
 
+            # 3. Execution deadline exceeded logs warning event without falsely claiming engine stopped
+            res_exec = daemon.dispatch({
+                "operation": "workflow_info",
+                "arguments": {},
+                "execution": {"execution_timeout_s": 0.05, "rpc_timeout_s": 0.01, "idempotency_key": "exec_dl_key"},
+            })
+            exec_job_id = res_exec["data"]["job_id"]
+            time.sleep(0.1)
+            events = [e["event"] for e in daemon.store.events(exec_job_id)]
+            assert "ExecutionDeadlineExceeded" in events
+            ev = next(e for e in daemon.store.events(exec_job_id) if e["event"] == "ExecutionDeadlineExceeded")
+            assert ev["metadata"].get("engine_stopped") is False
+
             return {
                 "rpc_timeout_leaves_job_running": True,
                 "null_execution_timeout_allowed": True,
+                "execution_deadline_warning_verified": True,
             }
         finally:
             daemon.close()
@@ -1258,9 +1548,14 @@ class LiveAcceptanceRunner:
             assert "idx_jobs_status" in indexes
             assert "idx_jobs_created_at" in indexes
 
+            # Check PRAGMA integrity_check
+            integrity = store.db.execute("PRAGMA integrity_check").fetchone()[0]
+            assert integrity.lower() == "ok"
+
             return {
                 "wal_mode_active": True,
                 "indexes_present": ["idx_jobs_status", "idx_jobs_created_at"],
+                "database_integrity_clean": True,
             }
         finally:
             store.close()

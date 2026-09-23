@@ -63,6 +63,12 @@ def mcp_result(value: str | dict[str, Any]) -> CallToolResult:
     else:
         text_payload = payload
 
+    has_unknown_or_cleanup_fail = bool(
+        payload.get("execution_state_unknown")
+        or payload.get("cleanup_failed")
+        or (isinstance(data, dict) and (data.get("execution_state_unknown") or data.get("cleanup_failed")))
+    )
+
     if image_b64 is not None:
         if mime_type != "image/png":
             return _delivery_error("UNSUPPORTED_IMAGE_FORMAT", f"Only PNG is supported, got {mime_type}")
@@ -104,10 +110,10 @@ def mcp_result(value: str | dict[str, Any]) -> CallToolResult:
         if w * h > 16 * 1024 * 1024 or w == 0 or h == 0:
             return _delivery_error("EXCESSIVE_PIXELS", f"Image dimensions {w}x{h} ({w*h} px) exceed limit or are zero")
 
-        # Only return ImageContent for successful results (or explicit diagnostic mode)
-        is_success = bool(payload.get("success"))
+        # Only return ImageContent for clean successful results (or explicit diagnostic mode)
+        is_clean_success = bool(payload.get("success")) and not has_unknown_or_cleanup_fail
         is_diagnostic = bool(isinstance(data, dict) and data.get("diagnostic"))
-        if is_success or is_diagnostic:
+        if is_clean_success or is_diagnostic:
             contents.append(ImageContent(type="image", data=image_b64, mimeType="image/png"))
 
     contents.append(TextContent(type="text", text=json.dumps(text_payload, ensure_ascii=False, default=str)))
@@ -115,7 +121,7 @@ def mcp_result(value: str | dict[str, Any]) -> CallToolResult:
     return CallToolResult(
         content=contents,
         structuredContent=text_payload,
-        isError=not payload["success"],
+        isError=not payload["success"] or has_unknown_or_cleanup_fail,
     )
 
 
