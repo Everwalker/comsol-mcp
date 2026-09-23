@@ -16,7 +16,7 @@ from typing import Any
 from uuid import uuid4
 
 from ._execution_contract import ExecutionContractError, canonical_request_hash
-from ._managed_backend import ManagedBackend, ProcessLock, collect_legacy_registry
+from ._managed_backend import ManagedBackend, ProcessLock, collect_legacy_registry, _g3_operations
 from ._operation_store import IdempotencyConflict, OperationStore
 from ._platform_process import process_identity
 
@@ -72,8 +72,14 @@ class ControlDaemon:
                 return self._control_read(operation, arguments)
             if operation == "runtime_poc_v64":
                 raise ExecutionContractError("UNSUPPORTED_OPERATION", "historical one-shot probe is disabled in the managed backend")
-            if operation not in self.backend.registry and operation not in {"model_adopt", "model_inspect"}:
-                raise ExecutionContractError("UNSUPPORTED_OPERATION", "operation is not registered")
+            if operation == "plot_render":
+                operation = "plot.render"
+            if (
+                operation not in self.backend.registry
+                and operation not in {"model_adopt", "model_inspect"}
+                and operation not in _g3_operations()
+            ):
+                raise ExecutionContractError("UNSUPPORTED_OPERATION", f"operation is not registered: {operation}")
             if operation == "server_connect" and self.service is None and not (os.environ.get("COMSOL_ROOT") and (os.environ.get("COMSOL_JAVA_HOME") or os.environ.get("JAVA_HOME"))):
                 raise ExecutionContractError("RUNTIME_CONFIGURATION_REQUIRED", "COMSOL_ROOT and COMSOL_JAVA_HOME must be configured")
             request_id = execution.get("request_id") or str(uuid4())

@@ -71,23 +71,28 @@ def _resolve_plot_path(path: Any) -> tuple[str, str | None]:
 
 def _apply_properties(node: Any, props: Mapping[str, Any]) -> None:
     for key, value in props.items():
-        if isinstance(value, bool):
-            _call(node, "set", key, value)
-        elif isinstance(value, int):
-            _call(node, "set", key, value)
-        elif isinstance(value, float):
-            _call(node, "set", key, value)
-        elif isinstance(value, str):
-            _call(node, "set", key, value)
-        elif isinstance(value, (list, tuple)):
-            str_list = [str(x) for x in value]
-            _call(node, "set", key, str_list)
-        elif isinstance(value, Mapping):
-            for subkey, subval in value.items():
-                try:
+        try:
+            if isinstance(value, bool):
+                _call(node, "set", key, value)
+            elif isinstance(value, int):
+                _call(node, "set", key, value)
+            elif isinstance(value, float):
+                _call(node, "set", key, value)
+            elif isinstance(value, str):
+                _call(node, "set", key, value)
+            elif isinstance(value, (list, tuple)):
+                str_list = [str(x) for x in value]
+                _call(node, "set", key, str_list)
+            elif isinstance(value, Mapping):
+                for subkey, subval in value.items():
                     _call(node, "setEntry", key, str(subkey), str(subval))
-                except Exception:
-                    pass
+            else:
+                _call(node, "set", key, value)
+        except Exception as exc:
+            raise ExecutionContractError(
+                "PROPERTY_SET_FAILED",
+                f"Failed to set property {key!r}={value!r} on node: {exc}",
+            ) from exc
 
 
 def _read_properties(node: Any) -> dict[str, Any]:
@@ -212,8 +217,11 @@ def plot_group_create(worker: Any, model_tag: str, arguments: Mapping[str, Any])
     if dataset_tag:
         try:
             _call(pg, "set", "data", dataset_tag)
-        except Exception:
-            pass
+        except Exception as exc:
+            raise ExecutionContractError(
+                "SCIENTIFIC_BINDING_FAILED",
+                f"Failed to bind dataset {dataset_tag!r} to plot group {tag!r}: {exc}",
+            ) from exc
 
     if properties:
         _apply_properties(pg, properties)
@@ -336,8 +344,8 @@ def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
     width = int(options.get("width") or 800)
     height = int(options.get("height") or 600)
     fmt = str(options.get("format") or "png").lower()
-    if fmt not in ("png", "jpg", "jpeg", "bmp", "gif"):
-        raise ExecutionContractError("INVALID_REQUEST", f"Unsupported image format: {fmt}")
+    if fmt != "png":
+        raise ExecutionContractError("INVALID_REQUEST", f"Unsupported image format {fmt!r}: only 'png' is supported")
     dest = options.get("destination")
     allow_overwrite = bool(options.get("allow_overwrite", True))
 
@@ -364,22 +372,16 @@ def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
     except Exception as exc:
         raise node_not_found(f"plot group {pg_tag!r} not found: {exc}") from exc
 
-    # Apply solution / time / parameter options if specified
-    if "solnum" in options:
-        try:
-            _call(pg, "set", "solnum", str(options["solnum"]))
-        except Exception:
-            pass
-    if "t" in options:
-        try:
-            _call(pg, "set", "t", str(options["t"]))
-        except Exception:
-            pass
-    if "looplevel" in options:
-        try:
-            _call(pg, "set", "looplevel", str(options["looplevel"]))
-        except Exception:
-            pass
+    # Apply solution / time / parameter options fail-closed
+    for opt_key in ("solnum", "t", "looplevel", "innerinput", "outerinput"):
+        if opt_key in options:
+            try:
+                _call(pg, "set", opt_key, str(options[opt_key]))
+            except Exception as exc:
+                raise ExecutionContractError(
+                    "SCIENTIFIC_BINDING_FAILED",
+                    f"Failed to set scientific option {opt_key}={options[opt_key]!r} on plot group {pg_tag!r}: {exc}",
+                ) from exc
 
     try:
         _call(pg, "run")
@@ -397,8 +399,11 @@ def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
         except Exception:
             try:
                 _call(exp, "set", "plotgroup", pg_tag)
-            except Exception:
-                pass
+            except Exception as exc:
+                raise ExecutionContractError(
+                    "SCIENTIFIC_BINDING_FAILED",
+                    f"Failed to bind plot group {pg_tag!r} to export node {exp_tag!r}: {exc}",
+                ) from exc
 
     try:
         try:
@@ -436,13 +441,10 @@ def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
     raw_bytes = staging_path.read_bytes()
     if len(raw_bytes) == 0:
         raise ExecutionContractError("RENDER_FAILED", f"Rendered image is empty (0 bytes): {staging_path}")
-    if fmt == "png":
-        if len(raw_bytes) < 8 or raw_bytes[:8] != b"\x89PNG\r\n\x1a\n":
-            raise ExecutionContractError("IMAGE_DECODE_ERROR", "Rendered file does not have valid PNG header")
-        import struct
-        actual_w, actual_h = struct.unpack(">II", raw_bytes[16:24])
-    else:
-        actual_w, actual_h = width, height
+    if len(raw_bytes) < 8 or raw_bytes[:8] != b"\x89PNG\r\n\x1a\n":
+        raise ExecutionContractError("IMAGE_DECODE_ERROR", "Rendered file does not have valid PNG header")
+    import struct
+    actual_w, actual_h = struct.unpack(">II", raw_bytes[16:24])
 
     # Atomic publish
     if staging_path != target_path:
@@ -464,6 +466,80 @@ def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
     except Exception:
         pass
 
+    time_val = ""
+    try:
+        time_val = str(_call(pg, "getString", "t") or "")
+    except Exception:
+        pass
+
+    looplevel_val = ""
+    try:
+        looplevel_val = str(_call(pg, "getString", "looplevel") or "")
+    except Exception:
+        pass
+
+    solution_tag = ""
+    if dataset_tag:
+        try:
+            dset = _call(results, "dataset", dataset_tag)
+            solution_tag = str(_call(dset, "getString", "data") or "")
+        except Exception:
+            pass
+
+    expressions: list[str] = []
+    units: list[str] = []
+    child_features: list[dict[str, Any]] = []
+    try:
+        feat_container = _call(pg, "feature")
+        feat_tags = list(_call(feat_container, "tags") or [])
+        for ftag in feat_tags:
+            try:
+                feat = _call(feat_container, "get", ftag)
+                f_type = str(_call(feat, "getType") or "")
+                f_expr = ""
+                try:
+                    f_expr = str(_call(feat, "getString", "expr") or "")
+                except Exception:
+                    pass
+                f_unit = ""
+                try:
+                    f_unit = str(_call(feat, "getString", "unit") or "")
+                except Exception:
+                    pass
+                if f_expr:
+                    expressions.append(f_expr)
+                if f_unit:
+                    units.append(f_unit)
+                child_features.append({
+                    "tag": ftag,
+                    "type_id": f_type,
+                    "expression": f_expr,
+                    "unit": f_unit,
+                })
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    primary_expr = expressions[0] if expressions else ""
+    primary_unit = units[0] if units else ""
+
+    provenance = {
+        "model_tag": model_tag,
+        "plot_group": pg_tag,
+        "dataset": dataset_tag,
+        "solution": solution_tag or dataset_tag,
+        "solnum": solnum_val,
+        "time": time_val,
+        "looplevel": looplevel_val,
+        "expression": primary_expr,
+        "unit": primary_unit,
+        "expressions": expressions,
+        "units": units,
+        "features": child_features,
+        "options": dict(options),
+    }
+
     return {
         "plot_group": pg_tag,
         "file_path": str(target_path),
@@ -473,7 +549,12 @@ def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
         "width": actual_w,
         "height": actual_h,
         "dataset": dataset_tag,
+        "solution": solution_tag or dataset_tag,
         "solnum": solnum_val,
+        "time": time_val,
+        "expression": primary_expr,
+        "unit": primary_unit,
+        "provenance": provenance,
         "image_base64": b64_str,
         "image_mime_type": f"image/{fmt}",
         "artifact_ref": str(target_path),
@@ -492,8 +573,8 @@ def plot_geometry_render(worker: Any, model_tag: str, arguments: Mapping[str, An
     width = int(options.get("width") or 800)
     height = int(options.get("height") or 600)
     fmt = str(options.get("format") or "png").lower()
-    if fmt not in ("png", "jpg", "jpeg", "bmp", "gif"):
-        raise ExecutionContractError("INVALID_REQUEST", f"Unsupported image format: {fmt}")
+    if fmt != "png":
+        raise ExecutionContractError("INVALID_REQUEST", f"Unsupported image format {fmt!r}: only 'png' is supported")
     dest = options.get("destination")
     allow_overwrite = bool(options.get("allow_overwrite", True))
 
@@ -557,13 +638,10 @@ def plot_geometry_render(worker: Any, model_tag: str, arguments: Mapping[str, An
     raw_bytes = staging_path.read_bytes()
     if len(raw_bytes) == 0:
         raise ExecutionContractError("RENDER_FAILED", f"Rendered image is empty (0 bytes): {staging_path}")
-    if fmt == "png":
-        if len(raw_bytes) < 8 or raw_bytes[:8] != b"\x89PNG\r\n\x1a\n":
-            raise ExecutionContractError("IMAGE_DECODE_ERROR", "Rendered file does not have valid PNG header")
-        import struct
-        actual_w, actual_h = struct.unpack(">II", raw_bytes[16:24])
-    else:
-        actual_w, actual_h = width, height
+    if len(raw_bytes) < 8 or raw_bytes[:8] != b"\x89PNG\r\n\x1a\n":
+        raise ExecutionContractError("IMAGE_DECODE_ERROR", "Rendered file does not have valid PNG header")
+    import struct
+    actual_w, actual_h = struct.unpack(">II", raw_bytes[16:24])
 
     # Atomic publish
     if staging_path != target_path:
@@ -572,6 +650,17 @@ def plot_geometry_render(worker: Any, model_tag: str, arguments: Mapping[str, An
     sha256 = hashlib.sha256(raw_bytes).hexdigest()
     store.register_artifact(target_path)
     b64_str = base64.b64encode(raw_bytes).decode("ascii")
+
+    provenance = {
+        "model_tag": model_tag,
+        "geometry": geom_tag,
+        "mode": mode,
+        "width": actual_w,
+        "height": actual_h,
+        "format": fmt,
+        "sha256": sha256,
+        "options": dict(options),
+    }
 
     return {
         "geometry": geom_tag,
@@ -582,6 +671,7 @@ def plot_geometry_render(worker: Any, model_tag: str, arguments: Mapping[str, An
         "sha256": sha256,
         "width": actual_w,
         "height": actual_h,
+        "provenance": provenance,
         "image_base64": b64_str,
         "image_mime_type": f"image/{fmt}",
         "artifact_ref": str(target_path),
@@ -785,37 +875,44 @@ def export_run(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dic
 
     if filename:
         target_path = store.resolve_safe_path(filename, allow_overwrite=True)
-        target_path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            _call(exp, "set", "filename", str(target_path))
-        except Exception:
-            pass
-        try:
-            _call(exp, "set", "pngfilename", str(target_path))
-        except Exception:
-            pass
     else:
         target_path = store.resolve_safe_path(
             f"g2_artifacts/exports/{tag}_{uuid.uuid4().hex[:8]}.out",
             allow_overwrite=True,
         )
-        target_path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            _call(exp, "set", "filename", str(target_path))
-        except Exception:
-            pass
-        try:
-            _call(exp, "set", "pngfilename", str(target_path))
-        except Exception:
-            pass
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    staging_path = target_path.with_name(f".staging_{uuid.uuid4().hex[:8]}_{target_path.name}")
+
+    try:
+        _call(exp, "set", "filename", str(staging_path))
+    except Exception:
+        pass
+    try:
+        _call(exp, "set", "pngfilename", str(staging_path))
+    except Exception:
+        pass
 
     _call(exp, "run")
 
-    if not target_path.is_file():
-        raise ExecutionContractError("EXPORT_FAILED", f"Export run failed to produce output file at {target_path}")
+    if not staging_path.is_file() and target_path.is_file():
+        staging_path = target_path
 
-    data_bytes = target_path.read_bytes()
-    sha256 = hashlib.sha256(data_bytes).hexdigest()
+    if not staging_path.is_file():
+        raise ExecutionContractError("EXPORT_FAILED", f"Export run failed to produce output file at {staging_path}")
+
+    # Stream hash and byte count
+    hasher = hashlib.sha256()
+    file_size = 0
+    with staging_path.open("rb") as f:
+        while chunk := f.read(64 * 1024):
+            hasher.update(chunk)
+            file_size += len(chunk)
+    sha256 = hasher.hexdigest()
+
+    # Atomic publish
+    if staging_path != target_path:
+        os.replace(staging_path, target_path)
+
     store.register_artifact(target_path)
 
     result_payload: dict[str, Any] = {
@@ -823,17 +920,16 @@ def export_run(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dic
         "tag": tag,
         "ran": True,
         "file_path": str(target_path),
-        "byte_size": len(data_bytes),
+        "byte_size": file_size,
         "sha256": sha256,
         "artifact_ref": str(target_path),
     }
 
-    # If image, return base64 payload
     suffix = target_path.suffix.lower()
-    if suffix in (".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"):
-        fmt = suffix.lstrip(".")
-        result_payload["image_base64"] = base64.b64encode(data_bytes).decode("ascii")
-        result_payload["image_mime_type"] = f"image/{fmt}"
+    if suffix == ".png":
+        raw_image_bytes = target_path.read_bytes()
+        result_payload["image_base64"] = base64.b64encode(raw_image_bytes).decode("ascii")
+        result_payload["image_mime_type"] = "image/png"
 
     return result_payload
 

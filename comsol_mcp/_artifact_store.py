@@ -957,6 +957,15 @@ def artifact_read(
     if not resolved.is_file():
         raise _contract_error("ARTIFACT_NOT_FOUND", f"Artifact file not found: {resolved}")
 
+    # R02: artifact.read is restricted to registered published artifacts by default
+    require_registered = bool(arguments.get("require_registered", True))
+    if require_registered and not store.is_registered_artifact(resolved):
+        raise _contract_error(
+            "ACCESS_VIOLATION",
+            f"Artifact {resolved} is not a registered published artifact; reading arbitrary project files is prohibited",
+            stage="validation",
+        )
+
     _assert_no_symlink_components(resolved, field="artifact")
     pinned = _read_pinned_chunk(resolved, offset=offset, length=length)
     file_size = pinned["file_size"]

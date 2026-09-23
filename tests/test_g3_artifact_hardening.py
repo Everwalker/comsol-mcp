@@ -233,6 +233,7 @@ def test_json_retains_complete_field_array_metadata(tmp_path: Path) -> None:
 def test_artifact_read_binds_worker_root_and_returns_whole_hash(tmp_path: Path) -> None:
     target = tmp_path / "payload.json"
     target.write_text(json.dumps({"x": list(range(20))}), encoding="utf-8")
+    ArtifactStore.register_artifact(target)
     worker = _Worker(tmp_path)
     out = artifact_read(worker, None, {"path": str(target), "offset": 0, "length": 8})
     assert out["whole_file_sha256"] == hashlib.sha256(target.read_bytes()).hexdigest()
@@ -250,6 +251,7 @@ def test_artifact_read_rejects_same_size_path_replacement_during_pinned_read(
     new_bytes = b"new-content-0000"
     assert len(old_bytes) == len(new_bytes)
     target.write_bytes(old_bytes)
+    ArtifactStore.register_artifact(target)
     old_hash = hashlib.sha256(old_bytes).hexdigest()
     original_fstat = artifact_store_module.os.fstat
     calls = 0
@@ -283,6 +285,7 @@ def test_artifact_read_rejects_same_size_in_place_mutation_during_pinned_read(
     new_bytes = b"new-content-0000"
     assert len(old_bytes) == len(new_bytes)
     target.write_bytes(old_bytes)
+    ArtifactStore.register_artifact(target)
     original_fstat = artifact_store_module.os.fstat
     calls = 0
 

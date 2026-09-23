@@ -45,6 +45,12 @@ def mcp_result(value: str | dict[str, Any]) -> CallToolResult:
         text_payload = payload
 
     if image_b64 is not None:
+        if mime_type != "image/png":
+            return CallToolResult(
+                content=[TextContent(type="text", text=f"UNSUPPORTED_IMAGE_FORMAT: Only PNG is supported, got {mime_type}")],
+                structuredContent={"success": False, "error": "UNSUPPORTED_IMAGE_FORMAT"},
+                isError=True,
+            )
         if len(image_b64) > 10 * 1024 * 1024:
             return CallToolResult(
                 content=[TextContent(type="text", text="IMAGE_TOO_LARGE: Base64 payload exceeds 10MB limit")],
@@ -59,23 +65,22 @@ def mcp_result(value: str | dict[str, Any]) -> CallToolResult:
                 structuredContent={"success": False, "error": "IMAGE_CORRUPTED"},
                 isError=True,
             )
-        if not (raw_bytes.startswith(b"\x89PNG\r\n\x1a\n") or raw_bytes.startswith(b"\xff\xd8\xff") or raw_bytes.startswith(b"GIF8")):
+        if not raw_bytes.startswith(b"\x89PNG\r\n\x1a\n") or len(raw_bytes) < 24:
             return CallToolResult(
-                content=[TextContent(type="text", text="IMAGE_CORRUPTED: Invalid image header signature")],
+                content=[TextContent(type="text", text="IMAGE_CORRUPTED: Invalid PNG header signature")],
                 structuredContent={"success": False, "error": "IMAGE_CORRUPTED"},
                 isError=True,
             )
-        if raw_bytes.startswith(b"\x89PNG\r\n\x1a\n") and len(raw_bytes) >= 24:
-            import struct
-            w, h = struct.unpack(">II", raw_bytes[16:24])
-            if w * h > 16 * 1024 * 1024:
-                return CallToolResult(
-                    content=[TextContent(type="text", text=f"EXCESSIVE_PIXELS: Image dimensions {w}x{h} ({w*h} px) exceed 16M pixel limit")],
-                    structuredContent={"success": False, "error": "EXCESSIVE_PIXELS"},
-                    isError=True,
-                )
+        import struct
+        w, h = struct.unpack(">II", raw_bytes[16:24])
+        if w * h > 16 * 1024 * 1024:
+            return CallToolResult(
+                content=[TextContent(type="text", text=f"EXCESSIVE_PIXELS: Image dimensions {w}x{h} ({w*h} px) exceed 16M pixel limit")],
+                structuredContent={"success": False, "error": "EXCESSIVE_PIXELS"},
+                isError=True,
+            )
 
-        contents.append(ImageContent(type="image", data=image_b64, mimeType=mime_type))
+        contents.append(ImageContent(type="image", data=image_b64, mimeType="image/png"))
 
     contents.append(TextContent(type="text", text=json.dumps(text_payload, ensure_ascii=False, default=str)))
 

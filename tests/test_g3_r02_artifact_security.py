@@ -76,3 +76,21 @@ def test_resolve_safe_path_rejects_control_prefs_runtime_db_and_source(tmp_path:
             store.resolve_safe_path(p, allow_overwrite=True)
         assert exc.value.code == "ACCESS_VIOLATION"
 
+
+def test_artifact_read_rejects_unregistered_file(tmp_path: Path) -> None:
+    import base64
+    worker = _Worker(tmp_path)
+    # File exists in safe path within project_root, but is not registered
+    unregistered = tmp_path / "manual_user_file.txt"
+    unregistered.write_text("user content", encoding="utf-8")
+    with pytest.raises(ExecutionContractError) as exc:
+        artifact_read(worker, None, {"path": "manual_user_file.txt", "offset": 0, "length": 12})
+    assert exc.value.code == "ACCESS_VIOLATION"
+
+    # But once registered, it can be read
+    ArtifactStore.register_artifact(unregistered)
+    res = artifact_read(worker, None, {"path": "manual_user_file.txt", "offset": 0, "length": 12})
+    assert base64.b64decode(res["data_base64"]).decode("utf-8") == "user content"
+
+
+

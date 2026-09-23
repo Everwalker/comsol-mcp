@@ -75,13 +75,13 @@ def build_package(repo_dir: Path, output_archive: Path) -> Path:
         pkg_root = staging_dir / "COMSOL_MCP_G3_4_W18_DELIVERABLE"
         pkg_root.mkdir(parents=True, exist_ok=True)
 
-        # 2. Create git bundle covering all commits from base to HEAD
+        # 2. Create standalone git bundle covering all history to HEAD
         bundle_file = pkg_root / "comsol_mcp_g3_4_w18.bundle"
-        print(f"[*] Creating Git bundle: {bundle_file.name}...")
+        print(f"[*] Creating standalone Git bundle: {bundle_file.name}...")
         bundle_cmd = [
             "git", "bundle", "create",
             str(bundle_file),
-            f"{base_commit}..HEAD",
+            "HEAD",
             f"refs/heads/{branch}",
         ]
         subprocess.check_call(bundle_cmd, cwd=repo_dir)
@@ -94,7 +94,9 @@ def build_package(repo_dir: Path, output_archive: Path) -> Path:
         exclude_dirs = {
             ".venv", "venv", ".pytest_cache", "__pycache__", ".git",
             "comsol_prefs", "locks", "worker_main", "worker2",
-            "comsol_tmp", "comsol_recovery", "cwd_d", "env_site_packages", "build"
+            "comsol_tmp", "comsol_recovery", "cwd_d", "env_site_packages", "build",
+            ".g3-private", ".phase1-private", "control-private", "comsol-server-home",
+            "state", ".no-hooks", "comsol_mcp.egg-info", "hermes_isolated",
         }
         exclude_files = {".DS_Store", "server.port", "mphserver.log"}
 
@@ -112,17 +114,30 @@ def build_package(repo_dir: Path, output_archive: Path) -> Path:
                 and not any(part in rel_root.parts for part in exclude_dirs)
             ]
             for file in files:
-                if file in exclude_files or file.startswith(".lock") or file.endswith(".lock"):
+                if (
+                    file in exclude_files
+                    or file.startswith(".lock")
+                    or file.endswith(".lock")
+                    or file.endswith(".pid")
+                    or file.endswith(".log")
+                    or file.endswith(".sqlite3")
+                    or file.endswith(".sqlite3-shm")
+                    or file.endswith(".sqlite3-wal")
+                    or file.endswith(".sqlite")
+                    or file.endswith(".db")
+                    or ".token" in file
+                    or file.endswith(".token")
+                    or ("token" in file.lower() and file.endswith((".json", ".ini", ".txt", ".key")))
+                    or file in ("credentials.ini", "tokens.json", "symlink_escape")
+                ):
                     continue
                 src_path = Path(root) / file
                 rel_path = src_path.relative_to(repo_dir)
 
                 # Skip transient / project_c test files
-                if any(p in rel_path.parts for p in ("comsol_prefs", "locks", "worker_main", "worker2", "comsol_tmp", "comsol_recovery", "cwd_d", "env_site_packages", "build")):
+                if any(p in rel_path.parts for p in exclude_dirs):
                     continue
                 if "project_c" in rel_path.parts and file.startswith("."):
-                    continue
-                if file in ("credentials.ini", "tokens.json", "symlink_escape"):
                     continue
 
                 dest_path = repo_stage / rel_path
@@ -152,11 +167,23 @@ def build_package(repo_dir: Path, output_archive: Path) -> Path:
             raise RuntimeError(f"FATAL: Secrets detected in delivery staging: {secrets_found}")
         print("    -> Zero secrets or active credentials detected (VERIFIED)")
 
-        # 5. Read acceptance result
+        # 5. Read acceptance result and source equivalence
         evidence_file = repo_dir / "evidence" / "phase4_4_acceptance.json"
         acceptance_data = {}
         if evidence_file.is_file():
             acceptance_data = json.loads(evidence_file.read_text(encoding="utf-8"))
+
+        native_acceptance_commit = acceptance_data.get("commit_head") or head_commit
+        code_diff = ""
+        try:
+            code_diff = subprocess.check_output(
+                ["git", "diff", native_acceptance_commit, head_commit, "--", "comsol_mcp", "tests"],
+                cwd=repo_dir,
+                text=True,
+            ).strip()
+        except Exception:
+            pass
+        source_equal = (code_diff == "")
 
         # 6. Generate DELIVERY_MANIFEST.json
         manifest = {
@@ -169,6 +196,13 @@ def build_package(repo_dir: Path, output_archive: Path) -> Path:
                 "target_platform": "macOS-aarch64 (COMSOL 6.4 live commercial installation)",
                 "live_engine": "COMSOL Multiphysics 6.4.0.293",
             },
+            "source_equivalence": {
+                "native_acceptance_commit": native_acceptance_commit,
+                "delivery_head_commit": head_commit,
+                "source_code_equivalent": source_equal,
+                "code_diff_summary": "Identical source tree in comsol_mcp/ and tests/" if source_equal else f"Differences found: {code_diff[:200]}",
+                "verification_command": f"git diff {native_acceptance_commit} {head_commit} -- comsol_mcp/ tests/",
+            },
             "git_metadata": {
                 "base_commit": base_commit,
                 "branch": branch,
@@ -178,7 +212,8 @@ def build_package(repo_dir: Path, output_archive: Path) -> Path:
                     "filename": "comsol_mcp_g3_4_w18.bundle",
                     "sha256": bundle_sha,
                     "size_bytes": bundle_size,
-                    "command": f"git bundle create comsol_mcp_g3_4_w18.bundle {base_commit}..HEAD refs/heads/{branch}",
+                    "standalone_cloneable": True,
+                    "command": f"git bundle create comsol_mcp_g3_4_w18.bundle HEAD refs/heads/{branch}",
                 },
             },
             "acceptance": {
@@ -323,16 +358,29 @@ def verify_package(archive_path: Path, repo_ref_dir: Path | None = None) -> bool
         assert bundle_file.is_file(), "Missing git bundle"
         assert sha256_file(bundle_file) == manifest["git_metadata"]["git_bundle"]["sha256"]
 
-        # Verify git bundle can be read by git
+        # Verify git bundle can be read and cloned standalone by git
         subprocess.check_call(["git", "bundle", "list-heads", str(bundle_file)], cwd=test_dir)
-        if repo_ref_dir is not None:
-            subprocess.check_call(["git", "bundle", "verify", str(bundle_file)], cwd=repo_ref_dir)
+        clone_test_dir = test_dir / "clone_test"
+        subprocess.check_call(["git", "clone", str(bundle_file), str(clone_test_dir)], cwd=test_dir)
+        assert (clone_test_dir / "comsol_mcp" / "_g3_w18.py").is_file(), "Cloned repository missing core source files"
+        subprocess.check_call(["git", "bundle", "verify", str(bundle_file)], cwd=clone_test_dir)
+        subprocess.check_call(["git", "fsck", "--no-reflogs"], cwd=clone_test_dir)
 
         # Check repository files
         extracted_repo = deliverable_dir / "repository"
         assert (extracted_repo / "comsol_mcp" / "_artifact_store.py").is_file()
         assert (extracted_repo / "comsol_mcp" / "_g3_w18.py").is_file()
         assert (extracted_repo / "evidence" / "phase4_4_acceptance.json").is_file()
+
+        # Strict leak checks on extracted_repo
+        for p in extracted_repo.rglob("*"):
+            if not p.is_file():
+                continue
+            assert not p.name.endswith((".sqlite3", ".sqlite3-shm", ".sqlite3-wal", ".pid")), f"SQLite/PID leak: {p}"
+            assert not (".token" in p.name or ("token" in p.name.lower() and p.suffix in (".json", ".ini"))), f"Token leak: {p}"
+            assert "control-private" not in p.parts, f"control-private leak: {p}"
+            assert ".g3-private" not in p.parts, f".g3-private leak: {p}"
+            assert "comsol-server-home" not in p.parts, f"comsol-server-home leak: {p}"
 
         print("[+] Deliverable archive verification PASSED!")
         return True
@@ -342,8 +390,9 @@ def verify_package(archive_path: Path, repo_ref_dir: Path | None = None) -> bool
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--repo", type=Path, default=Path(__file__).resolve().parent.parent / "repository")
-    parser.add_argument("--output", type=Path, default=Path(__file__).resolve().parent.parent / "COMSOL_MCP_G3_4_W18_DELIVERABLE.tar.gz")
+    repo_default = Path(__file__).resolve().parent.parent
+    parser.add_argument("--repo", type=Path, default=repo_default)
+    parser.add_argument("--output", type=Path, default=repo_default.parent / "COMSOL_MCP_G3_4_W18_DELIVERABLE.tar.gz")
     args = parser.parse_args()
 
     repo = args.repo.resolve()

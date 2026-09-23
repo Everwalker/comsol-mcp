@@ -902,7 +902,11 @@ class ManagedBackend:
         effect = _G3_EFFECT_MAP.get(str(EFFECTS.get(operation, "")).upper())
         if effect is None:
             raise ExecutionContractError("PERMISSION_DENIED", f"unclassified G3 effect for operation {operation}")
-        isolation = self._require_g2_isolation() if operation in REQUIRES_ISOLATION else None
+        isolation = (
+            self._require_g2_isolation()
+            if (operation in REQUIRES_ISOLATION and operation not in {"plot.render", "plot.geometry_render", "plot_render", "plot_geometry_render"})
+            else None
+        )
         alias = self._g2_alias(operation)
 
         def callback(_args: dict[str, Any]) -> dict[str, Any]:
