@@ -1,0 +1,110 @@
+{
+  "source_commit": "3835ab858a4e7a54fd3b1fb901dca04c9ee9ac19",
+  "reviewed_sources": [
+    {
+      "id": "SRC01",
+      "path": "PROGRESS.md",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/3835ab858a4e7a54fd3b1fb901dca04c9ee9ac19/PROGRESS.md",
+      "purpose": "当前摘要及其历史运行ID"
+    },
+    {
+      "id": "SRC02",
+      "path": "evidence/g3_5_acceptance.json",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/3835ab858a4e7a54fd3b1fb901dca04c9ee9ac19/evidence/g3_5_acceptance.json",
+      "purpose": "最新Mac限定验收与级别"
+    },
+    {
+      "id": "SRC03",
+      "path": "comsol_mcp/_g2_isolation.py",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/3835ab858a4e7a54fd3b1fb901dca04c9ee9ac19/comsol_mcp/_g2_isolation.py",
+      "purpose": "Mac-only隔离及硬编码配置"
+    },
+    {
+      "id": "SRC04",
+      "path": "comsol_mcp/_control_daemon.py",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/3835ab858a4e7a54fd3b1fb901dca04c9ee9ac19/comsol_mcp/_control_daemon.py",
+      "purpose": "取消、force-stop、状态查询"
+    },
+    {
+      "id": "SRC05",
+      "path": "comsol_mcp/_operation_store.py",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/3835ab858a4e7a54fd3b1fb901dca04c9ee9ac19/comsol_mcp/_operation_store.py",
+      "purpose": "事务/终态/结果一致性"
+    },
+    {
+      "id": "SRC06",
+      "path": "comsol_mcp/_execution_service.py",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/3835ab858a4e7a54fd3b1fb901dca04c9ee9ac19/comsol_mcp/_execution_service.py",
+      "purpose": "实际service身份与权限接口"
+    },
+    {
+      "id": "SRC07",
+      "path": "comsol_mcp/_java_worker.py",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/3835ab858a4e7a54fd3b1fb901dca04c9ee9ac19/comsol_mcp/_java_worker.py",
+      "purpose": "平台exe/classpath与编译缓存"
+    },
+    {
+      "id": "SRC08",
+      "path": "comsol_mcp/_platform_process.py",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/3835ab858a4e7a54fd3b1fb901dca04c9ee9ac19/comsol_mcp/_platform_process.py",
+      "purpose": "Windows进程观测"
+    },
+    {
+      "id": "SRC09",
+      "path": "tests/run_g3_5_acceptance.py",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/3835ab858a4e7a54fd3b1fb901dca04c9ee9ac19/tests/run_g3_5_acceptance.py",
+      "purpose": "实际控制/原生用例范围"
+    },
+    {
+      "id": "SRC10",
+      "path": "evidence/windows_control_lifecycle/20260919/software_evidence.json",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/3835ab858a4e7a54fd3b1fb901dca04c9ee9ac19/evidence/windows_control_lifecycle/20260919/software_evidence.json",
+      "purpose": "历史Windows软件证据及限制"
+    },
+    {
+      "id": "SRC11",
+      "path": "comsol_mcp/_tools_control.py",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/3835ab858a4e7a54fd3b1fb901dca04c9ee9ac19/comsol_mcp/_tools_control.py",
+      "purpose": "已发布W19工具"
+    },
+    {
+      "id": "SRC12",
+      "path": "docs/comsol_mcp_design_v1/04_IMPLEMENTATION_PLAN.md",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/3835ab858a4e7a54fd3b1fb901dca04c9ee9ac19/docs/comsol_mcp_design_v1/04_IMPLEMENTATION_PLAN.md",
+      "purpose": "既有工作包边界"
+    }
+  ],
+  "official_external_sources": [
+    {
+      "id": "WEB01",
+      "url": "https://www.comsol.com/system-requirements/63/general",
+      "purpose": "COMSOL6.3系统/外部API要求"
+    },
+    {
+      "id": "WEB02",
+      "url": "https://www.comsol.com/system-requirements/64/general",
+      "purpose": "COMSOL6.4原版系统要求"
+    },
+    {
+      "id": "WEB03",
+      "url": "https://www.comsol.com/system-requirements",
+      "purpose": "当前6.4更新版外部API/JDK要求，具体安装build仍需本机核验"
+    },
+    {
+      "id": "WEB04",
+      "url": "https://doc.comsol.com/6.3/doc/com.comsol.help.comsol/comsol_ref_running.38.31.html",
+      "purpose": "Windows6.3启动及安全"
+    },
+    {
+      "id": "WEB05",
+      "url": "https://doc.comsol.com/6.4/doc/com.comsol.help.comsol/comsol_ref_running.38.31.html",
+      "purpose": "Windows6.4启动、Server、batch、graphics"
+    },
+    {
+      "id": "WEB06",
+      "url": "https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects",
+      "purpose": "Windows Job Objects 生命周期边界"
+    }
+  ],
+  "methodology": "Selected-source review; no claim all files semantically read. External facts kept distinct from repository claims."
+}

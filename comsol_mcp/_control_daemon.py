@@ -18,7 +18,7 @@ from uuid import uuid4
 from ._execution_contract import ExecutionContractError, canonical_request_hash
 from ._managed_backend import ManagedBackend, ProcessLock, collect_legacy_registry, _g3_operations
 from ._operation_store import IdempotencyConflict, OperationStore
-from ._platform_process import process_identity
+from ._platform_process import process_identity, terminate_process_tree
 
 TERMINAL = {"SUCCEEDED", "FAILED", "EXPIRED", "LOST", "CANCELLED"}
 CONTROL_READS = {
@@ -257,7 +257,12 @@ class ControlDaemon:
                 active = list(self.running)
             return {"success": True, "data": {"status": "READY", "control_pid": os.getpid(),
                 "worker_connected": self.backend.cached.get("connected", False),
-                "worker": dict(self.worker_health), "session": dict(self.backend.cached), "active_jobs": active},
+                "worker": dict(self.worker_health), "session": dict(self.backend.cached), "active_jobs": active,
+                "cancellation_capabilities": {
+                    "native_cooperative_cancel": "UNSUPPORTED",
+                    "queued_cancel": "VERIFIED",
+                    "owned_process_termination": "VERIFIED",
+                }},
                 "execution": {"session_id": self.backend.cached.get("session_id")}}
         if operation in {"job_list", "job.list"}:
             offset = arguments.get("offset", 0)
@@ -338,6 +343,32 @@ class ControlDaemon:
         reason = str(arguments.get("reason", "cancelled by user"))
         status = job["status"]
 
+        # D02: Parameter and authorization validation MUST happen BEFORE changing any state
+        if "force_stop" in arguments:
+            raw_fs = arguments["force_stop"]
+            if type(raw_fs) is not bool:
+                return self._error("INVALID_REQUEST", f"force_stop must be a boolean, got {type(raw_fs).__name__}", safe_retry=False)
+            force_stop = raw_fs
+        else:
+            force_stop = False
+
+        if force_stop:
+            server_scope = arguments.get("server_scope")
+            if not isinstance(server_scope, dict):
+                return self._error(
+                    "UNAUTHORIZED_FORCE_STOP",
+                    "force_stop requires explicit server_scope authorization with verified ownership",
+                    data={"job_id": job_id, "cancel_accepted": False, "engine_stopped": False, "mode": "FORCE_STOP_REJECTED"},
+                )
+            if "authorized" not in server_scope or type(server_scope["authorized"]) is not bool:
+                return self._error("INVALID_REQUEST", "server_scope.authorized must be a boolean", safe_retry=False)
+            if not server_scope["authorized"]:
+                return self._error(
+                    "UNAUTHORIZED_FORCE_STOP",
+                    "force_stop requires explicit server_scope authorization with verified ownership",
+                    data={"job_id": job_id, "cancel_accepted": False, "engine_stopped": False, "mode": "FORCE_STOP_REJECTED"},
+                )
+
         if status in TERMINAL:
             return {
                 "success": True,
@@ -380,18 +411,11 @@ class ControlDaemon:
                     },
                 }
 
-        if "force_stop" in arguments:
-            raw_fs = arguments["force_stop"]
-            if type(raw_fs) is not bool:
-                return self._error("INVALID_REQUEST", f"force_stop must be a boolean, got {type(raw_fs).__name__}", safe_retry=False)
-            force_stop = raw_fs
-        else:
-            force_stop = False
-
         if force_stop:
             server_scope = arguments.get("server_scope")
             return self._scoped_force_stop(job, reason=reason, server_scope=server_scope)
 
+        # D02 FIX: For non-force_stop cancellation, record cancel intent
         self.store.add_event(job_id, "CancelRequested", {
             "reason": reason,
             "mode": "UNSUPPORTED_NATIVE_CANCEL",
@@ -399,7 +423,10 @@ class ControlDaemon:
             "engine_stopped": False,
             "at": time.time(),
         })
-        self.store.update_job(job_id, "RUNNING", {
+
+        # D02: If status is UNKNOWN or RECONCILING, keep observed status! Never write back RUNNING!
+        target_status = status
+        self.store.update_job(job_id, target_status, {
             "cancel_requested": True,
             "cancel_reason": reason,
         })
@@ -407,12 +434,17 @@ class ControlDaemon:
             "success": True,
             "data": {
                 "job_id": job_id,
-                "status": "RUNNING",
+                "status": target_status,
                 "cancel_accepted": True,
                 "engine_stopped": False,
                 "cancel_requested": True,
                 "mode": "UNSUPPORTED_NATIVE_CANCEL",
-                "message": "native COMSOL solver cancel is not supported by COMSOL 6.4 API; cancel request recorded",
+                "message": f"native cooperative solver cancel is unsupported by current live solver adapter; cancel request recorded (status={target_status})",
+                "cancellation_routes": {
+                    "native_cooperative_cancel": "UNSUPPORTED",
+                    "queued_cancel": "VERIFIED",
+                    "owned_process_termination": "VERIFIED",
+                },
             },
         }
 
@@ -441,9 +473,21 @@ class ControlDaemon:
                 data={"job_id": job_id, "cancel_accepted": False, "engine_stopped": False, "mode": "FORCE_STOP_REJECTED"},
             )
 
+        # D04: Validate backend ServerLease / RuntimeOwnership if present
+        backend_lease = getattr(service, "lease", None) or getattr(service, "server_lease", None) or getattr(service, "runtime_ownership", None)
+        if backend_lease is not None:
+            req_lease_id = server_scope.get("lease_id")
+            expected_lease_id = getattr(backend_lease, "lease_id", None) or (backend_lease.get("lease_id") if isinstance(backend_lease, dict) else None)
+            if expected_lease_id and req_lease_id != expected_lease_id:
+                return self._error(
+                    "UNAUTHORIZED_FORCE_STOP",
+                    f"server_scope lease_id {req_lease_id} does not match backend authorized lease {expected_lease_id}",
+                    data={"job_id": job_id, "cancel_accepted": False, "engine_stopped": False, "mode": "FORCE_STOP_REJECTED"},
+                )
+
         managed_pid = getattr(service, "server_pid", None) or getattr(service, "pid", None)
         target_pid = server_scope.get("pid")
-        if not managed_pid or target_pid != managed_pid:
+        if not managed_pid or (target_pid is not None and target_pid != managed_pid):
             return self._error(
                 "PROCESS_IDENTITY_MISMATCH",
                 f"server_scope pid {target_pid} does not match active managed server pid {managed_pid}",
@@ -459,15 +503,58 @@ class ControlDaemon:
                 data={"job_id": job_id, "cancel_accepted": False, "engine_stopped": False, "mode": "IDENTITY_REJECTED"},
             )
 
-        try:
-            os.kill(managed_pid, 9)
-        except ProcessLookupError:
-            pass
-        except Exception as exc:
-            return self._error("TERMINATION_FAILED", f"failed to stop managed server: {exc}", safe_retry=False)
+        # D04: Replace raw os.kill(pid, 9) with platform terminate_process_tree and wait for exit
+        stopped = terminate_process_tree(managed_pid, timeout_s=5.0)
+        if not stopped:
+            self.store.update_job(job_id, "UNKNOWN", {
+                "cancel_requested": True,
+                "engine_stopped": False,
+                "mode": "TERMINATION_UNCONFIRMED",
+                "reason": reason,
+            })
+            return self._error(
+                "TERMINATION_FAILED",
+                f"process {managed_pid} could not be confirmed dead within timeout; retaining UNKNOWN status",
+                safe_retry=False,
+                data={"job_id": job_id, "cancel_accepted": True, "engine_stopped": False, "status": "UNKNOWN"},
+            )
 
-        self.store.update_job(job_id, "CANCELLED", {"engine_stopped": True, "mode": "SCOPED_PROCESS_TERMINATION", "reason": reason})
-        self.store.add_event(job_id, "CANCELLED", {"engine_stopped": True, "mode": "SCOPED_PROCESS_TERMINATION", "reason": reason})
+        # Invalidate runtime / worker handles if service supports it
+        if hasattr(service, "invalidate_runtime"):
+            try: service.invalidate_runtime()
+            except Exception: pass
+        elif hasattr(service, "worker") and hasattr(service.worker, "close"):
+            try: service.worker.close()
+            except Exception: pass
+
+        # D03 & D04: Update job and operations with synchronized CANCELLED result
+        cancel_result = {
+            "success": False,
+            "data": {
+                "status": "CANCELLED",
+                "job_id": job_id,
+                "engine_stopped": True,
+                "mode": "SCOPED_PROCESS_TERMINATION",
+            },
+            "error": {
+                "code": "OPERATION_CANCELLED",
+                "message": f"job was force-stopped: {reason}",
+                "safe_retry": False,
+                "engine_stopped": True,
+            },
+            "execution": {"job_id": job_id, "operation_id": job.get("operation_id")},
+        }
+        self.store.update_job(
+            job_id,
+            "CANCELLED",
+            {"engine_stopped": True, "mode": "SCOPED_PROCESS_TERMINATION", "reason": reason},
+            result=cancel_result,
+        )
+        self.store.add_event(job_id, "CANCELLED", {
+            "engine_stopped": True,
+            "mode": "SCOPED_PROCESS_TERMINATION",
+            "reason": reason,
+        })
         return {
             "success": True,
             "data": {

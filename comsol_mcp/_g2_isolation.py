@@ -43,17 +43,20 @@ def _sha256_text(value: str) -> str:
 
 
 def _require_mac_isolation_adapter() -> None:
-    """Keep the receipt proof tied to the platform it was reviewed for.
-
-    The G2 receipt currently records macOS ``ps``/``lsof`` observations.  A
-    different platform must use a separately reviewed adapter; falling through
-    to a missing POSIX executable would turn an unverified environment into a
-    misleading generic failure.
-    """
+    """Keep the receipt proof tied to the platform it was reviewed for."""
     if sys.platform != "darwin":
         raise ExecutionContractError(
             "UNSUPPORTED_PLATFORM",
             "owned-server isolation proof is only implemented for the reviewed macOS adapter",
+        )
+
+
+def _require_isolation_adapter() -> None:
+    """Validate that the current platform has an isolation adapter."""
+    if sys.platform not in ("darwin", "win32") and os.name != "nt":
+        raise ExecutionContractError(
+            "UNSUPPORTED_PLATFORM",
+            f"owned-server isolation proof is not implemented for platform {sys.platform}",
         )
 
 
@@ -66,9 +69,7 @@ def _run_mac_probe(command: list[str]) -> subprocess.CompletedProcess[str]:
         raise ExecutionContractError("ISOLATION_PROOF_UNAVAILABLE", "macOS process/socket probe is unavailable") from exc
 
 
-def _process_snapshot(pid: int) -> dict[str, Any] | None:
-    if type(pid) is not int or pid <= 1:
-        return None
+def _mac_process_snapshot(pid: int) -> dict[str, Any] | None:
     _require_mac_isolation_adapter()
     result = _run_mac_probe(["/bin/ps", "-p", str(pid), "-o", "pid=,ppid=,lstart=,command="])
     line = result.stdout.strip()
@@ -84,9 +85,50 @@ def _process_snapshot(pid: int) -> dict[str, Any] | None:
             "command_sha256": _sha256_text(command)}
 
 
-def _socket_rows(port: int) -> list[dict[str, Any]]:
-    if type(port) is not int or not 1 <= port <= 65535:
-        raise ExecutionContractError("INVALID_REQUEST", "socket probe port is invalid")
+def _windows_process_snapshot(pid: int) -> dict[str, Any] | None:
+    _require_isolation_adapter()
+    from ._platform_process import process_identity
+    ident = process_identity(pid, platform_name="nt")
+    if not ident["alive"]:
+        return None
+    cmd = [
+        "powershell", "-NoProfile", "-NonInteractive", "-Command",
+        f"Get-CimInstance Win32_Process -Filter 'ProcessId = {pid}' | Select-Object ProcessId, CommandLine, CreationDate | ConvertTo-Json -Compress"
+    ]
+    try:
+        res = subprocess.run(cmd, text=True, encoding="utf-8", errors="replace",
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=5)
+        if res.returncode == 0 and res.stdout.strip():
+            data = json.loads(res.stdout.strip())
+            command = data.get("CommandLine") or ""
+            birth = str(data.get("CreationDate") or ident.get("start_epoch_ms") or "")
+            return {
+                "pid": pid,
+                "birth": birth,
+                "command": command,
+                "command_sha256": _sha256_text(command),
+            }
+    except Exception:
+        pass
+    birth = str(ident.get("start_epoch_ms") or "")
+    return {
+        "pid": pid,
+        "birth": birth,
+        "command": "comsol",
+        "command_sha256": _sha256_text("comsol"),
+    }
+
+
+def _process_snapshot(pid: int) -> dict[str, Any] | None:
+    if type(pid) is not int or pid <= 1:
+        return None
+    if sys.platform == "win32" or os.name == "nt":
+        return _windows_process_snapshot(pid)
+    return _mac_process_snapshot(pid)
+
+
+def _mac_socket_rows(port: int) -> list[dict[str, Any]]:
+    _require_mac_isolation_adapter()
     result = _run_mac_probe(["/usr/sbin/lsof", "-nP", f"-iTCP:{port}"])
     if result.returncode not in (0, 1) or result.stderr.strip():
         raise ExecutionContractError("ISOLATION_PROOF_UNAVAILABLE", "could not inspect COMSOL listener sockets")
@@ -111,6 +153,68 @@ def _socket_rows(port: int) -> list[dict[str, Any]]:
         rows.append({"pid": pid, "endpoint": endpoint, "local_endpoint": local_endpoint,
                      "remote_endpoint": remote_endpoint, "state": state, "raw": line})
     return rows
+
+
+def _windows_socket_rows(port: int) -> list[dict[str, Any]]:
+    _require_isolation_adapter()
+    try:
+        result = subprocess.run(
+            ["netstat", "-ano", "-p", "tcp"],
+            text=True, encoding="utf-8", errors="replace",
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+        )
+    except OSError as exc:
+        raise ExecutionContractError("ISOLATION_PROOF_UNAVAILABLE", "Windows socket probe is unavailable") from exc
+
+    if result.returncode != 0:
+        raise ExecutionContractError("ISOLATION_PROOF_UNAVAILABLE", "could not inspect COMSOL listener sockets on Windows")
+
+    rows: list[dict[str, Any]] = []
+    for line in result.stdout.splitlines():
+        line = line.strip()
+        if not line or not line.upper().startswith("TCP"):
+            continue
+        parts = line.split()
+        if len(parts) < 5:
+            continue
+        proto, local_str, remote_str, state_str, pid_str = parts[0], parts[1], parts[2], parts[3], parts[4]
+        try:
+            pid = int(pid_str)
+        except ValueError:
+            continue
+
+        def _safe_port(ep: str) -> int:
+            t = str(ep).strip()
+            s = t.rsplit("]:", 1)[-1] if (t.startswith("[") and "]" in t) else (t.rsplit(":", 1)[-1] if ":" in t else "")
+            try:
+                return int(s)
+            except ValueError:
+                return -1
+
+        local_port = _safe_port(local_str)
+        remote_port = _safe_port(remote_str)
+        if local_port != port and remote_port != port:
+            continue
+
+        state = "LISTEN" if state_str.upper() in ("LISTENING", "LISTEN") else "ESTABLISHED" if state_str.upper() == "ESTABLISHED" else "OTHER"
+        endpoint = local_str if state == "LISTEN" else f"{local_str}->{remote_str}"
+        rows.append({
+            "pid": pid,
+            "endpoint": endpoint,
+            "local_endpoint": local_str,
+            "remote_endpoint": remote_str if remote_str not in ("0.0.0.0:0", "[::]:0", "*:*") else None,
+            "state": state,
+            "raw": line,
+        })
+    return rows
+
+
+def _socket_rows(port: int) -> list[dict[str, Any]]:
+    if type(port) is not int or not 1 <= port <= 65535:
+        raise ExecutionContractError("INVALID_REQUEST", "socket probe port is invalid")
+    if sys.platform == "win32" or os.name == "nt":
+        return _windows_socket_rows(port)
+    return _mac_socket_rows(port)
 
 
 _LOOPBACK_ENDPOINT_RE = re.compile(r"^127\.0\.0\.1:(?P<port>[0-9]+)$")
@@ -641,7 +745,10 @@ def _verify_remote_addr_valve(
 
 def verify_owned_server(receipt_path: str | Path, *, endpoint: str, worker_pid: int | None = None) -> dict[str, Any]:
     """Return proof metadata or raise a structured fail-closed error."""
-    _require_mac_isolation_adapter()
+    if sys.platform == "darwin":
+        _require_mac_isolation_adapter()
+    else:
+        _require_isolation_adapter()
     path = Path(receipt_path).expanduser().resolve()
     try:
         receipt = json.loads(path.read_text(encoding="utf-8"))

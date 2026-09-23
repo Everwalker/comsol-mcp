@@ -72,3 +72,134 @@ def process_identity(pid: int, *, platform_name: str | None = None) -> ProcessId
     except PermissionError:
         return {"alive": True, "start_epoch_ms": None}
     return {"alive": True, "start_epoch_ms": None}
+
+
+def terminate_process_tree(pid: int, *, timeout_s: float = 5.0, platform_name: str | None = None) -> bool:
+    """Safely terminate a specific process and its descendants; verify exit within timeout.
+
+    Returns True if the target process is confirmed dead; False if termination timed out.
+    Does not kill unrelated processes or match by process name.
+    """
+    import time
+    if type(pid) is not int or pid <= 1:
+        return True
+
+    is_win = (platform_name or os.name) == "nt"
+
+    if is_win:
+        import ctypes
+        from ctypes import wintypes
+        import subprocess
+
+        # Use taskkill /PID <pid> /T /F to kill the specific process tree on Windows
+        try:
+            subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"],
+                           capture_output=True, timeout=timeout_s, check=False)
+        except Exception:
+            # Fallback to direct TerminateProcess
+            process_terminate = 0x0001
+            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            handle = kernel32.OpenProcess(process_terminate, False, pid)
+            if handle:
+                try:
+                    kernel32.TerminateProcess(handle, 1)
+                finally:
+                    kernel32.CloseHandle(handle)
+
+        # Wait and verify actual exit
+        deadline = time.monotonic() + timeout_s
+        while time.monotonic() < deadline:
+            ident = _windows_process_identity(pid)
+            if not ident["alive"]:
+                return True
+            time.sleep(0.05)
+        return not _windows_process_identity(pid)["alive"]
+
+    # POSIX (macOS / Linux)
+    import signal
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except ProcessLookupError:
+        return True
+    except OSError:
+        pass
+
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        ident = process_identity(pid, platform_name="posix")
+        if not ident["alive"]:
+            return True
+        # After 0.5s of SIGTERM, escalate to SIGKILL
+        if time.monotonic() > (deadline - timeout_s + 0.5):
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except (ProcessLookupError, OSError):
+                pass
+        time.sleep(0.05)
+
+    return not process_identity(pid, platform_name="posix")["alive"]
+
+
+# Windows Process Creation Flags
+CREATE_BREAKAWAY_FROM_JOB = 0x01000000
+CREATE_NEW_PROCESS_GROUP = 0x00000200
+DETACHED_PROCESS = 0x00000008
+
+
+def is_process_in_job(pid: int | None = None) -> bool:
+    """Check if the current process (or specified pid on Windows) is assigned to a Job Object."""
+    if os.name != "nt":
+        return False
+    import ctypes
+    from ctypes import wintypes
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.IsProcessInJob.argtypes = (wintypes.HANDLE, wintypes.HANDLE, ctypes.POINTER(wintypes.BOOL))
+    kernel32.IsProcessInJob.restype = wintypes.BOOL
+    kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+
+    in_job = wintypes.BOOL()
+    if kernel32.IsProcessInJob(kernel32.GetCurrentProcess(), None, ctypes.byref(in_job)):
+        return bool(in_job.value)
+    return False
+
+
+def validate_windows_path_security(path_str: str) -> None:
+    """Enforce strict Windows filesystem boundaries (D06).
+
+    Rejects:
+    - Alternate Data Streams (ADS): path segments containing ':' (except standard drive letters like 'C:')
+    - Reserved DOS device names: CON, PRN, AUX, NUL, COM1-9, LPT1-9
+    - Trailing dots or spaces on path components
+    - UNC network shares unless explicitly handled
+    """
+    import re
+    from pathlib import PureWindowsPath
+
+    # Check for UNC path
+    if path_str.startswith(("\\\\", "//")):
+        raise ValueError(f"UNC network paths are rejected: {path_str}")
+
+    p = PureWindowsPath(path_str)
+    parts = list(p.parts)
+    if not parts:
+        return
+
+    # Check drive letter if present
+    start_idx = 0
+    if len(parts[0]) == 2 and parts[0][1] == ":" and parts[0][0].isalpha():
+        start_idx = 1
+    elif len(parts[0]) == 3 and parts[0][1:3] in (":\\", ":/"):
+        start_idx = 1
+
+    for part in parts[start_idx:]:
+        # Alternate Data Stream check
+        if ":" in part:
+            raise ValueError(f"Alternate Data Stream (ADS) is rejected: {path_str}")
+        # Trailing dots and spaces
+        if part.endswith((".", " ")):
+            raise ValueError(f"Trailing dot or space in path component is rejected: {path_str}")
+        # Reserved DOS device names
+        stem = part.split(".", 1)[0].upper()
+        if stem in {"CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$"} or re.fullmatch(r"(?:COM|LPT)[1-9¹²³]", stem):
+            raise ValueError(f"Windows reserved device name is rejected: {path_str}")
+

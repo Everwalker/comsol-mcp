@@ -187,6 +187,33 @@ class OperationStore:
         with self.lock:
             self.db.execute("BEGIN IMMEDIATE")
             try:
+                op_row = self.db.execute(
+                    "SELECT status, result FROM operations WHERE operation_id=?", (operation_id,)
+                ).fetchone()
+                job_row = self.db.execute(
+                    "SELECT job_id, status FROM jobs WHERE operation_id=?", (operation_id,)
+                ).fetchone()
+                if not op_row or not job_row:
+                    raise KeyError(f"operation/job pair missing for {operation_id}")
+
+                current_status = op_row["status"]
+                job_id = job_row["job_id"]
+
+                # D03: Terminal State Immunity:
+                # If already in a terminal state, DO NOT overwrite with another terminal state
+                # or nonterminal state! Record as a LateResultRecorded event instead.
+                if current_status in TERMINAL:
+                    self.db.execute(
+                        "INSERT INTO job_events(job_id, event, metadata) VALUES(?, 'LateResultRecorded', ?)",
+                        (job_id, _dumps_canonical({
+                            "prior_status": current_status,
+                            "ignored_status": status,
+                            "late_result": result,
+                        }))
+                    )
+                    self.db.execute("COMMIT")
+                    return
+
                 operation = self.db.execute(
                     "UPDATE operations SET status=?,result=?,finished_at="
                     "CASE WHEN ? IN ('SUCCEEDED','FAILED','CANCELLED','EXPIRED','LOST') "
@@ -223,16 +250,39 @@ class OperationStore:
             row = self.db.execute("SELECT * FROM jobs WHERE job_id=?", (job_id,)).fetchone()
             return self._job(row) if row else None
 
-    def update_job(self, job_id: str, status: str, metadata: dict[str, Any] | None = None) -> None:
+    def update_job(
+        self,
+        job_id: str,
+        status: str,
+        metadata: dict[str, Any] | None = None,
+        *,
+        result: dict[str, Any] | None = None,
+    ) -> None:
         with self.lock:
             self.db.execute("BEGIN IMMEDIATE")
             try:
-                row = self.db.execute("SELECT status, metadata FROM jobs WHERE job_id=?", (job_id,)).fetchone()
+                row = self.db.execute("SELECT status, metadata, operation_id FROM jobs WHERE job_id=?", (job_id,)).fetchone()
                 if row:
                     current_status = row["status"]
-                    if current_status in {"SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED", "LOST"} and status not in {"SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED", "LOST"}:
+                    operation_id = row["operation_id"]
+                    # D03: Terminal state cannot be overwritten by any state (even another terminal state)
+                    if current_status in TERMINAL:
+                        if status != current_status:
+                            self.db.execute(
+                                "INSERT INTO job_events(job_id, event, metadata) VALUES(?, 'LateTransitionRejected', ?)",
+                                (job_id, _dumps_canonical({
+                                    "current_status": current_status,
+                                    "rejected_status": status,
+                                    "metadata": metadata,
+                                }))
+                            )
+                            self.db.execute("COMMIT")
+                            return
+                        merged = {**json.loads(row["metadata"] or "{}"), **(metadata or {})}
+                        self.db.execute("UPDATE jobs SET metadata=? WHERE job_id=?", (_dumps_canonical(merged), job_id))
                         self.db.execute("COMMIT")
                         return
+
                     merged = {**json.loads(row["metadata"] or "{}"), **(metadata or {})}
                     self.db.execute(
                         "UPDATE jobs SET status=?,metadata=?,"
@@ -241,14 +291,89 @@ class OperationStore:
                         "THEN COALESCE(finished_at,CURRENT_TIMESTAMP) ELSE finished_at END WHERE job_id=?",
                         (status, _dumps_canonical(merged), status, status, job_id),
                     )
+                    if result is not None:
+                        self.db.execute(
+                            "UPDATE operations SET status=?,result=?,"
+                            "started_at=(SELECT started_at FROM jobs WHERE job_id=?),"
+                            "finished_at=(SELECT finished_at FROM jobs WHERE job_id=?) "
+                            "WHERE operation_id=?",
+                            (status, _dumps_canonical(result), job_id, job_id, operation_id),
+                        )
+                    else:
+                        self.db.execute(
+                            "UPDATE operations SET status=?,"
+                            "started_at=(SELECT started_at FROM jobs WHERE job_id=?),"
+                            "finished_at=(SELECT finished_at FROM jobs WHERE job_id=?) "
+                            "WHERE operation_id=?",
+                            (status, job_id, job_id, operation_id),
+                        )
+                self.db.execute("COMMIT")
+            except Exception:
+                self.db.execute("ROLLBACK")
+                raise
+
+    def transition_status(
+        self,
+        job_id: str,
+        expected_statuses: tuple[str, ...] | list[str] | set[str] | str,
+        new_status: str,
+        *,
+        metadata: dict[str, Any] | None = None,
+        result: dict[str, Any] | None = None,
+        event_name: str | None = None,
+        event_meta: dict[str, Any] | None = None,
+    ) -> tuple[bool, str, dict[str, Any] | None]:
+        """Atomically transition job status from expected_statuses to new_status with CAS."""
+        if isinstance(expected_statuses, str):
+            expected = {expected_statuses}
+        else:
+            expected = set(expected_statuses)
+
+        with self.lock:
+            self.db.execute("BEGIN IMMEDIATE")
+            try:
+                row = self.db.execute("SELECT * FROM jobs WHERE job_id=?", (job_id,)).fetchone()
+                if not row:
+                    self.db.execute("ROLLBACK")
+                    return False, "NOT_FOUND", None
+                current = row["status"]
+                operation_id = row["operation_id"]
+                if current not in expected:
+                    self.db.execute("COMMIT")
+                    return False, current, self._job(row)
+
+                merged_meta = {**json.loads(row["metadata"] or "{}"), **(metadata or {})}
+                self.db.execute(
+                    "UPDATE jobs SET status=?,metadata=?,"
+                    "started_at=CASE WHEN ? IN ('STARTING','RUNNING') THEN COALESCE(started_at,CURRENT_TIMESTAMP) ELSE started_at END,"
+                    "finished_at=CASE WHEN ? IN ('SUCCEEDED','FAILED','CANCELLED','EXPIRED','LOST') "
+                    "THEN COALESCE(finished_at,CURRENT_TIMESTAMP) ELSE finished_at END WHERE job_id=?",
+                    (new_status, _dumps_canonical(merged_meta), new_status, new_status, job_id),
+                )
+                if result is not None:
+                    self.db.execute(
+                        "UPDATE operations SET status=?,result=?,"
+                        "started_at=(SELECT started_at FROM jobs WHERE job_id=?),"
+                        "finished_at=(SELECT finished_at FROM jobs WHERE job_id=?) "
+                        "WHERE operation_id=?",
+                        (new_status, _dumps_canonical(result), job_id, job_id, operation_id),
+                    )
+                else:
                     self.db.execute(
                         "UPDATE operations SET status=?,"
                         "started_at=(SELECT started_at FROM jobs WHERE job_id=?),"
                         "finished_at=(SELECT finished_at FROM jobs WHERE job_id=?) "
-                        "WHERE operation_id=(SELECT operation_id FROM jobs WHERE job_id=?)",
-                        (status, job_id, job_id, job_id),
+                        "WHERE operation_id=?",
+                        (new_status, job_id, job_id, operation_id),
+                    )
+                if event_name:
+                    self.db.execute(
+                        "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
+                        (job_id, event_name, _dumps_canonical(event_meta or {})),
                     )
                 self.db.execute("COMMIT")
+                updated = self.job(job_id)
+                return True, new_status, updated
             except Exception:
                 self.db.execute("ROLLBACK")
                 raise

@@ -150,6 +150,60 @@ class JavaWorkerPaths:
         return None, relative
 
 
+    def jdk_version_info(self) -> dict[str, str]:
+        release_file = self.jdk_home / "release"
+        if release_file.is_file():
+            meta = {}
+            for line in release_file.read_text(encoding="utf-8", errors="replace").splitlines():
+                if "=" in line:
+                    k, v = line.split("=", 1)
+                    meta[k.strip()] = v.strip().strip('"')
+            return {
+                "version": meta.get("JAVA_VERSION", "unknown"),
+                "vendor": meta.get("IMPLEMENTOR", "unknown"),
+                "arch": meta.get("OS_ARCH", "unknown"),
+            }
+        try:
+            res = subprocess.run([str(self.executable("javac")), "-version"],
+                                 capture_output=True, text=True, check=False)
+            out = (res.stdout + " " + res.stderr).strip()
+            return {"version": out, "vendor": "unknown", "arch": "unknown"}
+        except Exception:
+            return {"version": "unknown", "vendor": "unknown", "arch": "unknown"}
+
+    def comsol_version_info(self) -> dict[str, str]:
+        for cand in [
+            self.comsol_root / "doc" / "version.txt",
+            self.comsol_root / "version.txt",
+            self.comsol_root / "build.txt",
+        ]:
+            if cand.is_file():
+                return {"version_text": cand.read_text(encoding="utf-8", errors="replace").strip()[:100]}
+        name = self.comsol_root.as_posix()
+        detected = "6.4" if "64" in name or "6.4" in name else ("6.3" if "63" in name or "6.3" in name else "unknown")
+        return {"version_text": detected, "root_name": self.comsol_root.name}
+
+    def compilation_cache_fingerprint(self, source_bytes: bytes, classpath_hash: str) -> tuple[str, dict[str, Any]]:
+        source_hash = hashlib.sha256(source_bytes).hexdigest()
+        jdk_info = self.jdk_version_info()
+        comsol_info = self.comsol_version_info()
+        javac_flags = ["-encoding", "UTF-8"]
+        import sys
+        platform_id = f"{sys.platform}-{self.is_windows}"
+
+        fingerprint_data = {
+            "source_sha256": source_hash,
+            "classpath_manifest_sha256": classpath_hash,
+            "comsol_info": comsol_info,
+            "jdk_info": jdk_info,
+            "javac_flags": javac_flags,
+            "platform": platform_id,
+        }
+        serialized = json.dumps(fingerprint_data, sort_keys=True)
+        cache_key = hashlib.sha256(serialized.encode("utf-8")).hexdigest()[:24]
+        return cache_key, fingerprint_data
+
+
 class PersistentJavaWorker:
     """One persistent worker process.  A timeout never terminates the child."""
 
@@ -190,18 +244,21 @@ class PersistentJavaWorker:
             try: os.chmod(self.state_dir, 0o700)
             except OSError: pass
             source = Path(__file__).with_name("worker_java") / "PersistentComsolWorker.java"
-            source_hash = hashlib.sha256(source.read_bytes()).hexdigest()[:20]
-            classes = self.state_dir / "classes" / source_hash
+            source_bytes = source.read_bytes()
+            cache_key, cache_receipt = self.paths.compilation_cache_fingerprint(source_bytes, classpath_hash)
+            classes = self.state_dir / "classes" / cache_key
             marker = classes / ".compiled"
-            if not marker.is_file():
+            receipt_file = classes / "cache_receipt.json"
+            if not marker.is_file() or not receipt_file.is_file():
                 classes.mkdir(parents=True, exist_ok=True)
                 compile_result = subprocess.run(
-                    [str(self.paths.executable("javac")), "-cp", classpath, "-d", str(classes), str(source)],
+                    [str(self.paths.executable("javac")), "-cp", classpath, "-encoding", "UTF-8", "-d", str(classes), str(source)],
                     text=True, encoding="utf-8", errors="replace", stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
                 )
                 if compile_result.returncode:
                     raise JavaWorkerError(f"worker compilation failed: {compile_result.stderr[-2000:]}")
-                marker.write_text(source_hash + "\n", encoding="ascii")
+                receipt_file.write_text(json.dumps(cache_receipt, indent=2, sort_keys=True), encoding="utf-8")
+                marker.write_text(cache_key + "\n", encoding="ascii")
             self._classes_dir = classes
             endpoint = self.state_dir / "worker_endpoint.json"
             existing = self._attach_existing(endpoint)

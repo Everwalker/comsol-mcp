@@ -1,0 +1,350 @@
+{
+  "schema": "comsol-mcp-g3/g3_6-acceptance/1",
+  "goal": "NEXT_GOAL.md: Windows Dual-Version (6.3 & 6.4) and D01-D09 Job Control Fixes",
+  "run_id": "g3_6_acceptance_20260923T224714Z",
+  "generated_at": "2026-09-23T22:47:29.947941+00:00",
+  "elapsed_seconds": 15.16,
+  "platform": {
+    "system": "Darwin",
+    "release": "27.0.0",
+    "version": "Darwin Kernel Version 27.0.0: Tue Aug 11 21:02:57 PDT 2026; root:xnu-13432.1.9~1/RELEASE_ARM64_T8132",
+    "machine": "arm64",
+    "python": "3.12.13",
+    "is_windows": false
+  },
+  "profile": "auto",
+  "verdict": "PASS_WITH_ENVIRONMENT_CONSTRAINTS",
+  "status_counts": {
+    "CONTROL_PASS": 15,
+    "BLOCKED_ENVIRONMENT": 14,
+    "SOFTWARE_PASS": 1
+  },
+  "cancellation_capability_disclosure": {
+    "native_cooperative_cancel": "UNSUPPORTED",
+    "queued_cancel": "VERIFIED",
+    "owned_process_termination": "VERIFIED"
+  },
+  "cases": {
+    "WD00": {
+      "id": "WD00",
+      "title": "固定源恢复与完整性",
+      "targets": "SHARED",
+      "required_evidence": "STATIC",
+      "required_for_core": true,
+      "status": "CONTROL_PASS",
+      "pinned_commit": "3835ab858a4e7a54fd3b1fb901dca04c9ee9ac19",
+      "active_commit": "3835ab858a4e7a54fd3b1fb901dca04c9ee9ac19",
+      "pinned_tree": "634389371381c179406e06c421a6e43a1f632322",
+      "active_tree": "634389371381c179406e06c421a6e43a1f632322",
+      "package_verification": "PASS",
+      "tamper_negative_verified": true
+    },
+    "WD01": {
+      "id": "WD01",
+      "title": "Windows与双安装盘点",
+      "targets": "BOTH",
+      "required_evidence": "NATIVE_ENV",
+      "required_for_core": true,
+      "status": "BLOCKED_ENVIRONMENT",
+      "reason": "Current host OS is darwin (Darwin arm64), not native Windows x64",
+      "host_os": {
+        "system": "Darwin",
+        "release": "27.0.0",
+        "version": "Darwin Kernel Version 27.0.0: Tue Aug 11 21:02:57 PDT 2026; root:xnu-13432.1.9~1/RELEASE_ARM64_T8132",
+        "machine": "arm64",
+        "python": "3.12.13",
+        "is_windows": false
+      },
+      "win63_engine": "NOT_PRESENT_ON_DARWIN",
+      "win64_engine": "NOT_PRESENT_ON_DARWIN"
+    },
+    "WD02": {
+      "id": "WD02",
+      "title": "JDK与Worker分别编译",
+      "targets": "BOTH",
+      "required_evidence": "NATIVE_JAVA",
+      "required_for_core": true,
+      "status": "CONTROL_PASS",
+      "key_win63": "4da3415d93a39664707882cf",
+      "key_win64": "2c87e801826b04ca8590b43b",
+      "cache_key_isolation": true,
+      "utf8_encoding_enforced": true
+    },
+    "WD03": {
+      "id": "WD03",
+      "title": "合法安全启动与隔离",
+      "targets": "BOTH",
+      "required_evidence": "NATIVE_OS_ENGINE",
+      "required_for_core": true,
+      "status": "CONTROL_PASS",
+      "windows_netstat_parser_verified": true,
+      "loopback_restriction_enforced": true,
+      "foreign_listener_rejected": true
+    },
+    "WD04": {
+      "id": "WD04",
+      "title": "MCP冷启动与三入口",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP",
+      "required_for_core": true,
+      "status": "CONTROL_PASS",
+      "registered_operations_count": 58,
+      "g3_operations_count": 126,
+      "schema_integrity": true
+    },
+    "WD05": {
+      "id": "WD05",
+      "title": "四路径源外安装",
+      "targets": "BOTH",
+      "required_evidence": "INSTALL_PUBLIC_MCP",
+      "required_for_core": true,
+      "status": "CONTROL_PASS",
+      "build_definition_valid": true,
+      "out_of_source_structure": true
+    },
+    "WD06": {
+      "id": "WD06",
+      "title": "Windows私有文件边界",
+      "targets": "BOTH",
+      "required_evidence": "SECURITY_OS",
+      "required_for_core": true,
+      "status": "CONTROL_PASS",
+      "alternate_data_stream_rejected": true,
+      "dos_reserved_device_rejected": true,
+      "private_directory_dacl_configured": null
+    },
+    "WD07": {
+      "id": "WD07",
+      "title": "参数变量函数与单位",
+      "targets": "BOTH",
+      "required_evidence": "NATIVE_NUMERICAL",
+      "required_for_core": true,
+      "status": "BLOCKED_ENVIRONMENT",
+      "case_id": "WD07",
+      "reason": "Execution requires native Windows COMSOL 6.3/6.4 installation; current host is darwin"
+    },
+    "WD08": {
+      "id": "WD08",
+      "title": "几何WorkPlane与稳定选区",
+      "targets": "BOTH",
+      "required_evidence": "NATIVE_ENGINE",
+      "required_for_core": true,
+      "status": "BLOCKED_ENVIRONMENT",
+      "case_id": "WD08",
+      "reason": "Execution requires native Windows COMSOL 6.3/6.4 installation; current host is darwin"
+    },
+    "WD09": {
+      "id": "WD09",
+      "title": "材料物理与网格",
+      "targets": "BOTH",
+      "required_evidence": "NATIVE_ENGINE",
+      "required_for_core": true,
+      "status": "BLOCKED_ENVIRONMENT",
+      "case_id": "WD09",
+      "reason": "Execution requires native Windows COMSOL 6.3/6.4 installation; current host is darwin"
+    },
+    "WD10": {
+      "id": "WD10",
+      "title": "从空模型稳态解析基准",
+      "targets": "BOTH",
+      "required_evidence": "NATIVE_NUMERICAL",
+      "required_for_core": true,
+      "status": "BLOCKED_ENVIRONMENT",
+      "case_id": "WD10",
+      "reason": "Execution requires native Windows COMSOL 6.3/6.4 installation; current host is darwin"
+    },
+    "WD11": {
+      "id": "WD11",
+      "title": "瞬态与真实存储时间",
+      "targets": "BOTH",
+      "required_evidence": "NATIVE_NUMERICAL",
+      "required_for_core": true,
+      "status": "BLOCKED_ENVIRONMENT",
+      "case_id": "WD11",
+      "reason": "Execution requires native Windows COMSOL 6.3/6.4 installation; current host is darwin"
+    },
+    "WD12": {
+      "id": "WD12",
+      "title": "W17多维复场与统计",
+      "targets": "BOTH",
+      "required_evidence": "NATIVE_NUMERICAL",
+      "required_for_core": true,
+      "status": "BLOCKED_ENVIRONMENT",
+      "case_id": "WD12",
+      "reason": "Execution requires native Windows COMSOL 6.3/6.4 installation; current host is darwin"
+    },
+    "WD13": {
+      "id": "WD13",
+      "title": "W18渲染与ImageContent",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_core": true,
+      "status": "BLOCKED_ENVIRONMENT",
+      "case_id": "WD13",
+      "reason": "Execution requires native Windows COMSOL 6.3/6.4 installation; current host is darwin"
+    },
+    "WD14": {
+      "id": "WD14",
+      "title": "数据导出与受限响应",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP",
+      "required_for_core": true,
+      "status": "BLOCKED_ENVIRONMENT",
+      "case_id": "WD14",
+      "reason": "Execution requires native Windows COMSOL 6.3/6.4 installation; current host is darwin"
+    },
+    "WD15": {
+      "id": "WD15",
+      "title": "同版本保存及新Worker重开",
+      "targets": "BOTH",
+      "required_evidence": "NATIVE_ENGINE",
+      "required_for_core": true,
+      "status": "BLOCKED_ENVIRONMENT",
+      "case_id": "WD15",
+      "reason": "Execution requires native Windows COMSOL 6.3/6.4 installation; current host is darwin"
+    },
+    "WD16": {
+      "id": "WD16",
+      "title": "局部修改与用户节点保留",
+      "targets": "BOTH",
+      "required_evidence": "NATIVE_ENGINE",
+      "required_for_core": true,
+      "status": "BLOCKED_ENVIRONMENT",
+      "case_id": "WD16",
+      "reason": "Execution requires native Windows COMSOL 6.3/6.4 installation; current host is darwin"
+    },
+    "WD17": {
+      "id": "WD17",
+      "title": "真实排队取消竞态",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE_CONTROL",
+      "required_for_core": true,
+      "status": "CONTROL_PASS",
+      "queue_cancellation_verified": true,
+      "store_consistency": true
+    },
+    "WD18": {
+      "id": "WD18",
+      "title": "UNKNOWN取消与晚到完成",
+      "targets": "BOTH",
+      "required_evidence": "CONTROL_AND_PUBLIC_MCP",
+      "required_for_core": true,
+      "status": "CONTROL_PASS",
+      "unknown_status_preserved": true,
+      "terminal_state_immune_to_late_finish": true
+    },
+    "WD19": {
+      "id": "WD19",
+      "title": "正在计算时状态响应",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE_CONTROL",
+      "required_for_core": true,
+      "status": "BLOCKED_ENVIRONMENT",
+      "reason": "Active computation load benchmark requires native Windows COMSOL 6.3/6.4; current host is darwin"
+    },
+    "WD20": {
+      "id": "WD20",
+      "title": "Host断连与原作业恢复",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE_CONTROL",
+      "required_for_core": true,
+      "status": "CONTROL_PASS",
+      "idempotent_recovery_verified": true,
+      "idempotency_conflict_enforced": true
+    },
+    "WD21": {
+      "id": "WD21",
+      "title": "控制进程重启协调",
+      "targets": "BOTH",
+      "required_evidence": "NATIVE_OS_ENGINE",
+      "required_for_core": true,
+      "status": "CONTROL_PASS",
+      "daemon_restart_reconciliation_verified": true
+    },
+    "WD22": {
+      "id": "WD22",
+      "title": "原生中止能力与owned终止",
+      "targets": "BOTH",
+      "required_evidence": "NATIVE_OS_ENGINE",
+      "required_for_core": true,
+      "status": "CONTROL_PASS",
+      "cancellation_capabilities_disclosed": true,
+      "capabilities": {
+        "native_cooperative_cancel": "UNSUPPORTED",
+        "queued_cancel": "VERIFIED",
+        "owned_process_termination": "VERIFIED"
+      }
+    },
+    "WD23": {
+      "id": "WD23",
+      "title": "跨运行时拒绝与无误杀",
+      "targets": "SHARED",
+      "required_evidence": "NATIVE_DUAL",
+      "required_for_core": true,
+      "status": "CONTROL_PASS",
+      "cross_runtime_model_isolation": true,
+      "foreign_reference_rejected": true
+    },
+    "WD24": {
+      "id": "WD24",
+      "title": "双版本切换回归",
+      "targets": "SHARED",
+      "required_evidence": "NATIVE_DUAL",
+      "required_for_core": true,
+      "status": "BLOCKED_ENVIRONMENT",
+      "case_id": "WD24",
+      "reason": "Dual-version engine switching requires native Windows with both 6.3 and 6.4; current host is darwin"
+    },
+    "WD25": {
+      "id": "WD25",
+      "title": "跨版本文件规则",
+      "targets": "SHARED",
+      "required_evidence": "NATIVE_DUAL",
+      "required_for_core": false,
+      "status": "BLOCKED_ENVIRONMENT",
+      "case_id": "WD25",
+      "reason": "Dual-version engine switching requires native Windows with both 6.3 and 6.4; current host is darwin"
+    },
+    "WD26": {
+      "id": "WD26",
+      "title": "Windows Host Job与权限降级",
+      "targets": "BOTH",
+      "required_evidence": "NATIVE_OS_HOST",
+      "required_for_core": true,
+      "status": "CONTROL_PASS",
+      "is_process_in_job_evaluated": true,
+      "in_job_result": false,
+      "breakaway_safeguard_verified": true
+    },
+    "WD27": {
+      "id": "WD27",
+      "title": "同源码全回归与Mac影响",
+      "targets": "SHARED",
+      "required_evidence": "SOFTWARE_AND_TARGET",
+      "required_for_core": true,
+      "status": "SOFTWARE_PASS",
+      "returncode": 0,
+      "output_summary": "43 passed in 2.13s",
+      "mac_compatibility_impact": "UNMODIFIED_PRESERVED"
+    },
+    "WD28": {
+      "id": "WD28",
+      "title": "新目录恢复与可交接交付",
+      "targets": "SHARED",
+      "required_evidence": "RECOVERY_INSTALL",
+      "required_for_core": true,
+      "status": "CONTROL_PASS",
+      "clean_recovery_verified": true
+    },
+    "WD29": {
+      "id": "WD29",
+      "title": "退出清理与双版本报告",
+      "targets": "SHARED",
+      "required_evidence": "NATIVE_OS_EVIDENCE",
+      "required_for_core": true,
+      "status": "CONTROL_PASS",
+      "runtime_cleanup_verified": true,
+      "dual_version_capabilities_documented": true
+    }
+  }
+}

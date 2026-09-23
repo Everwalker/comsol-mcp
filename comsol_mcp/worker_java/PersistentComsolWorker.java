@@ -437,7 +437,7 @@ public final class PersistentComsolWorker {
     boolean success;
     try (StandardJavaFileManager manager = compiler.getStandardFileManager(diagnostics, Locale.ROOT, StandardCharsets.UTF_8)) {
       Iterable<? extends JavaFileObject> files = manager.getJavaFileObjectsFromFiles(Collections.singletonList(source.path.toFile()));
-      List<String> options = Arrays.asList("-classpath", System.getProperty("java.class.path", ""), "-d", classes.toString());
+      List<String> options = Arrays.asList("-encoding", "UTF-8", "-classpath", System.getProperty("java.class.path", ""), "-d", classes.toString());
       JavaCompiler.CompilationTask task = compiler.getTask(null, manager, diagnostics, options, null, files);
       success = Boolean.TRUE.equals(task.call());
     }
