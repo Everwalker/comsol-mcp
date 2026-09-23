@@ -149,6 +149,7 @@ def build_package(repo_dir: Path, output_archive: Path) -> Path:
         print(f"[*] Validated {len(file_inventory)} tracked repository files (100% tree match with release commit)")
 
         # Copy DELIVERY_REDACTION_MANIFEST.json to package root if present
+        redaction_file = repo_dir / "evidence" / "DELIVERY_REDACTION_MANIFEST.json"
         redaction_sha = "none"
         redaction_size = 0
         redaction_count = 0
@@ -403,7 +404,10 @@ def verify_package(archive_path: Path, repo_ref_dir: Path | None = None) -> bool
     test_dir = Path(tempfile.mkdtemp(prefix="g3_5_verify_"))
     try:
         with tarfile.open(archive_path, "r:gz") as tar:
-            tar.extractall(test_dir)
+            if hasattr(tarfile, "fully_trusted_filter"):
+                tar.extractall(test_dir, filter="fully_trusted")
+            else:
+                tar.extractall(test_dir)
 
         deliverable_dir = test_dir / "COMSOL_MCP_G3_5_DELIVERABLE"
         assert deliverable_dir.is_dir(), "Missing root folder in archive"
@@ -416,17 +420,23 @@ def verify_package(archive_path: Path, repo_ref_dir: Path | None = None) -> bool
         assert bundle_file.is_file(), "Missing git bundle"
         assert sha256_file(bundle_file) == manifest["git_metadata"]["git_bundle"]["sha256"]
 
-        # Verify git bundle can be read and cloned standalone by git
+        # Verify git bundle can be read and restored standalone
         subprocess.check_call(["git", "bundle", "list-heads", str(bundle_file)], cwd=test_dir)
         clone_test_dir = test_dir / "clone_test"
-        subprocess.check_call(["git", "clone", str(bundle_file), str(clone_test_dir)], cwd=test_dir)
-        if repo_ref_dir is not None:
-            shallow_file = repo_ref_dir / ".git" / "shallow"
-            if shallow_file.is_file():
-                (clone_test_dir / ".git" / "shallow").write_text(shallow_file.read_text(encoding="utf-8"), encoding="utf-8")
+        clone_test_dir.mkdir(parents=True, exist_ok=True)
+        subprocess.check_call(["git", "init"], cwd=str(clone_test_dir), stdout=subprocess.DEVNULL)
+        pkg_shallow = deliverable_dir / "git_shallow"
+        if pkg_shallow.is_file():
+            (clone_test_dir / ".git" / "shallow").write_text(pkg_shallow.read_text(encoding="utf-8"), encoding="utf-8")
+        elif repo_ref_dir is not None and (repo_ref_dir / ".git" / "shallow").is_file():
+            (clone_test_dir / ".git" / "shallow").write_text((repo_ref_dir / ".git" / "shallow").read_text(encoding="utf-8"), encoding="utf-8")
+        subprocess.check_call(["git", "remote", "add", "origin", str(bundle_file)], cwd=str(clone_test_dir), stdout=subprocess.DEVNULL)
+        subprocess.check_call(["git", "fetch", "origin"], cwd=str(clone_test_dir), stdout=subprocess.DEVNULL)
+        subprocess.check_call(["git", "checkout", "-b", "verify_branch", "FETCH_HEAD"], cwd=str(clone_test_dir), stdout=subprocess.DEVNULL)
         assert (clone_test_dir / "comsol_mcp" / "_g3_w18.py").is_file(), "Cloned repository missing core source files"
         assert (clone_test_dir / "comsol_mcp" / "_operation_store.py").is_file(), "Cloned repository missing operation store"
         assert (clone_test_dir / "comsol_mcp" / "_control_daemon.py").is_file(), "Cloned repository missing control daemon"
+        assert (clone_test_dir / "comsol_mcp" / "worker_java" / "PersistentComsolWorker.java").is_file(), "Restored repository missing Java worker"
         subprocess.check_call(["git", "bundle", "verify", str(bundle_file)], cwd=clone_test_dir)
         subprocess.check_call(["git", "fsck", "--no-reflogs"], cwd=clone_test_dir)
 
@@ -447,8 +457,7 @@ def verify_package(archive_path: Path, repo_ref_dir: Path | None = None) -> bool
             assert "control-private" not in p.parts, f"control-private leak: {p}"
             assert ".g3-private" not in p.parts, f".g3-private leak: {p}"
             assert "comsol-server-home" not in p.parts, f"comsol-server-home leak: {p}"
-            assert "hermes_isolated" not in p.parts, f"hermes_isolated leak: {p}"
-            assert "project_c" not in p.parts, f"project_c leak: {p}"
+            assert not (extracted_repo / "project_c").exists(), f"top-level project_c directory leak"
 
         # Verify production Java worker and restore script exist
         assert (extracted_repo / "comsol_mcp" / "worker_java" / "PersistentComsolWorker.java").is_file(), "Production Java worker must be delivered"

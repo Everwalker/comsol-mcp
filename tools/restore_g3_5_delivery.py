@@ -75,27 +75,59 @@ def restore_delivery(
     if not head_commit and bundle_heads:
         head_commit = list(bundle_heads.values())[0]
 
-    # 3. Clone bundle into target_dir
-    print(f"[*] Step 2: Cloning bundle into {target_dir}...")
+    # 3. Initialize target git repo and restore shallow boundary before fetching
+    print(f"[*] Step 2: Initializing repository in {target_dir}...")
+    subprocess.check_call(["git", "init", str(target_dir)], stdout=subprocess.DEVNULL)
+
+    shallow_target = target_dir / ".git" / "shallow"
+    shallow_candidates = [
+        shallow_source,
+        bundle_path.parent / "git_shallow",
+        bundle_path.parent / "shallow",
+    ]
+    for cand in shallow_candidates:
+        if cand and cand.is_file():
+            print(f"[*] Step 3: Restoring shallow metadata from {cand}...")
+            shallow_target.write_text(cand.read_text(encoding="utf-8"), encoding="utf-8")
+            break
+
+    # 4. Fetch bundle objects
+    print(f"[*] Step 4: Fetching bundle objects from {bundle_path}...")
     subprocess.check_call(
-        ["git", "clone", str(bundle_path), str(target_dir)],
+        ["git", "remote", "add", "origin", str(bundle_path)],
+        cwd=str(target_dir),
+        stdout=subprocess.DEVNULL,
+    )
+    subprocess.check_call(
+        ["git", "fetch", "origin"],
+        cwd=str(target_dir),
         stdout=subprocess.DEVNULL,
     )
 
-    # 4. Restore shallow metadata if shallow_source exists
-    shallow_target = target_dir / ".git" / "shallow"
-    if shallow_source and shallow_source.is_file():
-        print(f"[*] Step 3: Restoring shallow metadata from {shallow_source}...")
-        shallow_target.write_text(shallow_source.read_text(encoding="utf-8"), encoding="utf-8")
-    else:
-        # Check if bundle parent or sibling has shallow file
-        possible_shallow = bundle_path.parent / "shallow"
-        if possible_shallow.is_file():
-            print(f"[*] Step 3: Restoring shallow metadata from {possible_shallow}...")
-            shallow_target.write_text(possible_shallow.read_text(encoding="utf-8"), encoding="utf-8")
+    # 5. Check out continuation branch
+    target_ref = "FETCH_HEAD"
+    for cand_ref in ("origin/handoff/g3_5_w19", "origin/main", "origin/master"):
+        try:
+            subprocess.check_output(
+                ["git", "rev-parse", "--verify", cand_ref],
+                cwd=str(target_dir),
+                text=True,
+                stderr=subprocess.DEVNULL,
+            )
+            target_ref = cand_ref
+            break
+        except Exception:
+            pass
 
-    # 5. git fsck --full
-    print("[*] Step 4: Running git fsck --full...")
+    print(f"[*] Step 5: Checking out {create_branch} from {target_ref}...")
+    subprocess.check_call(
+        ["git", "checkout", "-B", create_branch, target_ref],
+        cwd=str(target_dir),
+        stdout=subprocess.DEVNULL,
+    )
+
+    # 6. git fsck --full
+    print("[*] Step 6: Running git fsck --full...")
     fsck_proc = subprocess.run(
         ["git", "fsck", "--full", "--no-reflogs"],
         cwd=str(target_dir),
