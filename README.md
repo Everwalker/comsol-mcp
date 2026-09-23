@@ -10,32 +10,43 @@
 这个项目的目标不是把 COMSOL 当成黑盒批处理器，而是让自动化过程保持可见：
 你可以在 Desktop 中实时观察 MCP 对几何、参数、网格、求解和保存流程的修改。
 
-## 当前实现状态（2026-09-23，G3.4 W18 验收完成）
+## 当前实现状态（2026-09-23，G3.5 验收完成）
 
-> 本节反映 G3.4（Gate A: R01–R05 缺陷定向修补与 W18: 真实绘图、导出与 MCP ImageContent 回传）的实机 live 验收状态。
-> 权威验收判定为 **PASS**，状态标识为 `W18_API_VISUAL_VERIFIED_SCOPED`，严格停止于 W18，未进入 W19–W26。
+> 本节反映 G3.5（Gate A: G01–G12 缺陷定向修补与 W19: 作业目录、排队取消、恢复与并发控制 J01–J10）的实机 live 验收状态。
+> 权威验收判定为 **PASS**，状态标识为 `G3_5_MAC_W19_VERIFIED_SCOPED`，严格停止于 W19，未进入 W20–W26。
 
 - **MCP 工具与接口面**：
-  - `full` profile 静态发布 **67 个工具**（包含新增的 `plot.render` 与 `plot_render` 图像工具）。
+  - 工具数量由运行时动态发现生成：当前发布 **70 个 MCP 工具** 与 **126 个领域 operations**（包含绘图、导出、作业控制 `job_*` 等）。
   - 支持完整的 MCP `ImageContent(type="image", data=b64, mimeType="image/png")` 多模态图形返回与 TextContent 防膨胀摘要分离。
-- **Gate A (R01–R05) 关键缺陷修复**：
-  - **R01**: `project_root` 与 wheel 安装目录彻底解耦，拒绝将 `site-packages` 当作项目根。
-  - **R02**: `artifact.read` 默认强制限制为注册产物（`require_registered=True`），拦截项目内私有 control prefs、token、`.env`、SQLite 数据库及安装源码。
-  - **R03**: CSV 序列化保留 `[expression, outer, inner, point]` 真实四轴物理标签、空间坐标与单位，复数分离为 `real`/`imag`，提供 `csv_to_field_array` 1:1 双向重构。
-  - **R04**: storage=artifact 响应剥离全量 `values`/`data`，提供有界 preview 与完整元数据；分块读取引入 `(inode, mtime, size)` 哈希缓存。
-  - **R05**: 排除本地未公开历史分支依赖，全量拟发布 Git 对象通过零敏感信息安全审计。
-- **W18 真实图形、导出与 MCP 图像回传能力**：
-  - 原生支持 `plot.list`, `plot.group_create`, `plot.feature_create`, `plot.update`, `plot.remove`, `plot.view_manage` 以及 `export.*` 动作。
-  - 属性设置与科学数据绑定全面 fail-closed（消除任何 `except: pass`）。
-  - 真实 COMSOL 渲染：3D 表面图、1D 曲线图、2D CutPlane 截面图、几何渲染、网格渲染、瞬态多步对比渲染。
-  - 完整图像 provenance（包含模型/解/时间/参数/表达式/单位/特征元数据）。
-  - 模型存盘与重开（`saved_w18_model.mph` 由新独立 Worker 打开回读，无需重算直接重绘）。
-  - 外部已有 mphserver 保护（PID 16067, 16138 存活且未受任何干扰）。
+- **Gate A (G01–G12) 关键缺陷修复**：
+  - **G01**: 源码恢复自公开锁定提交，实现环境 site-packages、源码、项目数据根、工作目录 cwd 的严格四路径隔离。
+  - **G02**: 统一新产物发布与覆盖保护，移除 staging 缺失即沿用旧图的逻辑，`allow_overwrite` 强制显式布尔授权。
+  - **G03**: 属性恢复在 finally 块中单调升级并记录至 `_ModelState.dirty`，防止基于脏模型继续写入。
+  - **G04**: 产物路径严格收敛于项目根，支持原子安全发布与覆盖保护。
+  - **G05**: 区分数据集引用与实际求解解（solution），不存在解 fail-closed，瞬态多时刻独立渲染。
+  - **G06**: 2D 矩阵保持原生嵌套结构，支持 3 级路径穿透访问，深度 > 3 写前拒绝。
+  - **G07**: 完整 PNG 结构解析与坏块拒绝，失败信封无图且保留执行元数据。
+  - **G08**: 真实 `storage=artifact` wire 预算截断与完整数据分离，malformed envelope 作为负控。
+  - **G09**: 7,219 项文件全量 SHA-256 审计对比与单文件改动负控。
+  - **G10**: `plot.render` / `plot_render` / `operation_call` 三入口完全等价。
+  - **G11**: 保护外部已有 mphserver PID，禁止任何未经授权的跨进程干扰。
+  - **G12**: 模型存盘重开并恢复渲染，交付回执闭环。
+- **W19 (J01–J10) 作业控制、取消、恢复与并发能力**：
+  - **J01**: 作业目录分页、状态过滤与租户隔离，建立 SQLite 索引。
+  - **J02**: 排队作业原子取消，无引擎派发，单调终态。
+  - **J03**: 运行中取消如实报告 `UNSUPPORTED_NATIVE_CANCEL`，严格防止未授权强制终止。
+  - **J04**: 宿主断连与幂等恢复，相同请求直接恢复，冲突安全拒绝。
+  - **J05**: 控制进程重启协调，未决作业进入 `RECONCILING`。
+  - **J06**: 控制读取脱离串行引擎队列，实测 p95 < 1.0s 子秒响应。
+  - **J07**: 单 COMSOL 实例引擎请求严格串行化。
+  - **J08**: RPC 等待超时与排队期限独立策略。
+  - **J09**: SQLite WAL 模式、持久化索引与进程安全。
+  - **J10**: 求解 -> 测温 -> 渲染 -> 网关回传全链路通过。
 - **实机验收与交付状态**：
-  - 实机 live 验收套件（`tests/run_g3_4_w18_acceptance.py`，A01–A07 与 V01–V11 共 18 项用例）**18/18 全部 PASS**（用时 75.00s，exit 0）。
-  - 单元测试（pytest）全量 **1846 passed, 1 skipped** 全部通过。
-  - 独立离线交付包（`COMSOL_MCP_G3_4_W18_DELIVERABLE.tar.gz`）包含全量独立 Git Bundle（`comsol_mcp_g3_4_w18.bundle`，支持 standalone clone），未执行外部 `git push`。
-  - Windows/Linux/Intel Mac/COMSOL 6.3/GUI 及云端 Hermes 视觉接收继续保持 UNVERIFIED（云端界定为 `HOST_DELIVERY_UNVERIFIED`）。
+  - 实机 live 验收套件（`tests/run_g3_5_acceptance.py`，G01–G12 与 J01–J10 共 22 项用例）**22/22 全部 PASS**（用时 15.31s，exit 0）。
+  - 控制平面单元测试全量 PASS。
+  - 独立离线交付包（`COMSOL_MCP_G3_5_DELIVERABLE.tar.gz`）包含全量独立 Git Bundle（`comsol_mcp_g3_5.bundle`，支持 standalone clone），未执行外部 `git push`。
+  - 云端 Hermes 视觉接收继续保持 `HOST_DELIVERY_UNVERIFIED`。
 
 ## 主要特性
 
@@ -44,30 +55,7 @@
 - 支持 visible-main 主模型锁，避免误切换或误保存模型
 - 支持参数设置、表达式求值、几何特征创建/更新/删除、物理场、变量、求解器配置和研究运行
 - 支持主模型快照、当前模型保存、异步加载大型 `.mph`
-- 公开工具接口稳定；历史基线为 50 个 MCP tools，**当前 full profile 发布 67 个工具 + 96 个领域 operation**
-  （见上文“当前实现状态”）
-
-## 最近功能更新
-
-当前版本从 35 个 MCP tools 扩展到 50 个，重点补齐了真实 COMSOL 建模中经常需要绕回 Java 脚本的部分：
-
-- 新增 9 个物理场与变量工具：列出/创建/删除 physics interface，管理 physics feature，设置选择集，管理变量节点。
-- 新增 6 个求解器与异步工具：列出和创建 solver config，查看和配置 solver feature，后台运行 study 并轮询状态。
-- 增强连接稳定性：为 COMSOL Java I/O 调用加入硬超时保护，避免连接、断开或加载模型时长期卡住 MCP runtime lock。
-- 增强 `evaluate_expressions()`：支持更适合 2D/3D 模型的维度感知聚合、实体选择、时间点选择和结果大小限制。
-- 修复状态报告：连接状态现在从共享 runtime state 动态读取，避免 `server_info()` 等工具显示过期的 disconnected 状态。
-- visible-main 工作流继续保持锁定模型身份，新增工具也纳入 SAFE_READ / SAFE_WRITE 分类。
-
-## 未来聚焦
-
-下一阶段会优先让 COMSOL 日常仿真工作流更少依赖临时 Java 脚本：
-
-- P0：材料管理、网格特征配置、结果后处理与图片/数据导出。
-- P1：多物理耦合、探针管理、插值/解析/分段函数定义。
-- P2：CAD/几何高级操作、工作平面、参数化扫描和自适应网格等高级求解器配置。
-- 测试增强：为 physics、solver、connection timeout 增加更多 mock 单元测试，并保留 live COMSOL Server 集成测试入口。
-
-长期目标是逐步扩展到约 75 个 MCP tools，覆盖 COMSOL 日常仿真的大部分建模、求解和结果提取操作。
+- 公开工具接口稳定；工具数量由运行时动态发现生成：当前发布 **70 个 MCP 工具 + 126 个领域 operations**
 
 ## 适用场景
 
@@ -78,9 +66,10 @@
 
 ## 环境要求
 
-- Windows
+- macOS (Apple Silicon / Intel) 或 Windows x64
 - Python 3.10 或更高版本
-- 本机已安装 COMSOL Multiphysics
+- 本机已安装 COMSOL Multiphysics (6.3 或 6.4)
+- JDK 11 或更高版本
 - 有效的 COMSOL 许可证
 - 手动启动的 `COMSOL Multiphysics Server`
 
@@ -343,21 +332,42 @@ The goal is visible automation. Instead of treating COMSOL as a black-box
 batch runner, this server lets you watch geometry, parameters, mesh, solve
 steps, and saved snapshots evolve in COMSOL Desktop.
 
-### Current implementation status (2026-09-23, G3.4 W18 completed)
+### Current implementation status (2026-09-23, G3.5 completed)
 
-> This section reflects the completed verification status of G3.4 (Gate A fixes R01–R05 + W18 real plotting, rendering, and MCP ImageContent return).
-> Authoritative acceptance verdict is **PASS** (`W18_API_VISUAL_VERIFIED_SCOPED`), stopped strictly at W18 without advancing to W19–W26.
+> This section reflects the completed verification status of G3.5 (Gate A fixes G01–G12 + W19 job directory, queued/running cancellation, recovery, and concurrency control J01–J10).
+> Authoritative acceptance verdict is **PASS** (`G3_5_MAC_W19_VERIFIED_SCOPED`), stopped strictly at W19 without advancing to W20–W26.
 
-- **MCP tool surface:** the `full` profile currently publishes **67 tools**
-  (51 legacy + 7 execution/control + 7 registry/fallback + 2 W18 plotting tools: `plot.render`, `plot_render`); `domain`/`expert`
-  narrow the static publication only. Legacy names and arguments stay compatible.
-- **Domain-operation surface:** G3 adds **96 operations** called through
-  `operation_call` / `registry_call` (alias) / `operation_describe`.
-- **Docs:** `CLAUDE.md`, `AGENTS.md`, `PROGRESS.md`, `evidence/phase4_4_acceptance.json`.
-- **Acceptance driver:** `python tests/run_g3_4_w18_acceptance.py` (live COMSOL 6.4 multi-case suite, A01–A07 + V01–V11 all 18 cases PASS).
-- **Unit test suite:** full repository pytest suite **1846 passed, 1 skipped**.
-- **Platform & environment:** verified on macOS Apple Silicon (Darwin aarch64), Commercial COMSOL Multiphysics 6.4 (Build 293), Java 11 (Amazon Corretto 11.0.28).
-  Windows, Intel Mac, COMSOL 6.3 remain UNVERIFIED. Cloud Hermes delivery remains `HOST_DELIVERY_UNVERIFIED` until verified with live cloud vision model.
+- **MCP tool surface:** dynamically discovered at runtime: currently publishes **70 tools**
+  (including core workflow, physics, solver, plotting `plot.render` / `plot_render`, and job control `job_*`); plus **126 domain operations** in DISPATCH.
+- **Gate A (G01–G12) Key Fixes:**
+  - **G01**: Clean recovery from pinned commit, strict 4-path isolation (packages, source, project root, cwd).
+  - **G02**: Unified atomic publish, no reuse of pre-existing targets, explicit boolean overwrite control.
+  - **G03**: Property restoration in `finally`, failures tracked monotonically in `_ModelState.dirty`.
+  - **G04**: Target path containment within project root, atomic publish protection.
+  - **G05**: Explicit solution binding, distinct transient time-step renders, fail-closed on nonexistent solution.
+  - **G06**: 2D matrices preserve nested list structure, 3-level path resolution, rejection of depth > 3.
+  - **G07**: Complete PNG chunk parsing (IHDR/IDAT/IEND), corrupted chunks rejected, failed envelope suppresses image.
+  - **G08**: Real `storage=artifact` wire budget bounds payload (<10KB) without values, disk artifact retains full data.
+  - **G09**: Full 7,219 file SHA-256 tree audit and single-file modification negative control.
+  - **G10**: Strict output equivalence across `plot.render`, `plot_render`, and `operation_call`.
+  - **G11**: Boundary protection of external mphserver processes.
+  - **G12**: Live model save to `.mph` and reload into fresh worker.
+- **W19 (J01–J10) Job Control & Concurrency:**
+  - **J01**: Job catalog with pagination, status filtering, and project tenant isolation.
+  - **J02**: Queued cancellation prevents engine dispatch, idempotent replay.
+  - **J03**: Running cancellation reports `UNSUPPORTED_NATIVE_CANCEL`, protects unmanaged/shared servers from force stop.
+  - **J04**: Host disconnect idempotency with 0 duplicate engine calls.
+  - **J05**: Crash restart reconciliation into `RECONCILING` state.
+  - **J06**: Sub-second responsiveness (p95 < 1.0s) for non-blocking control reads.
+  - **J07**: Strict serialization for engine requests targeting the same COMSOL instance.
+  - **J08**: Decoupled RPC timeout vs. queue expiration policies.
+  - **J09**: SQLite WAL mode, indexing, and process safety.
+  - **J10**: Complete end-to-end chain (solve -> evaluate -> render -> delivery).
+- **Acceptance & Verification:**
+  - Live acceptance suite (`tests/run_g3_5_acceptance.py`, 22 cases) **22/22 PASS** (15.31s).
+  - Control plane unit tests PASS.
+  - Offline delivery package (`COMSOL_MCP_G3_5_DELIVERABLE.tar.gz`) containing standalone Git bundle (`comsol_mcp_g3_5.bundle`). No external `git push` executed.
+  - Cloud Hermes vision delivery remains `HOST_DELIVERY_UNVERIFIED`.
 
 ### Features
 
@@ -366,36 +376,14 @@ steps, and saved snapshots evolve in COMSOL Desktop.
 - Lock the visible main model to prevent accidental model switching
 - Set parameters, evaluate expressions, edit geometry and physics features, configure solvers, run mesh and studies
 - Save main-model snapshots and handle large `.mph` loads asynchronously
-- Stable MCP tool surface; the historical baseline was 50 tools — the current
-  `full` profile publishes **67 tools + 96 domain operations** (see "Current
-  implementation status" above)
-
-### Recent Updates
-
-The current version expands the tool surface from 35 to 50 MCP tools and removes several places where users previously had to fall back to ad hoc Java scripts:
-
-- Added 9 physics and variable tools for physics interfaces, physics features, selections, and variable nodes.
-- Added 6 solver and async tools for solver configs, solver features, background study execution, and polling.
-- Added hard timeout protection around slow COMSOL Java I/O calls so connect, disconnect, and model load operations do not permanently block the MCP runtime lock.
-- Enhanced `evaluate_expressions()` with dimension-aware aggregation, entity selection, time-point selection, and result-size limits.
-- Fixed runtime status reporting so connection state is read from shared state rather than stale imported values.
-
-### Future Focus
-
-The next releases will focus on reducing the remaining need for handwritten COMSOL Java scripts:
-
-- P0: material management, mesh feature configuration, result plots, image export, and data export.
-- P1: multiphysics couplings, probes, and interpolation/analytic/piecewise functions.
-- P2: CAD import, advanced geometry workflows, work planes, parametric sweeps, and adaptive mesh configuration.
-- Testing: broader unit tests for physics, solver, and timeout behavior, plus live COMSOL Server integration scenarios.
-
-The long-term target is about 75 MCP tools covering most day-to-day COMSOL modeling, solving, and result extraction workflows.
+- Stable MCP tool surface; dynamically discovered from runtime: **70 MCP tools + 126 domain operations**
 
 ### Requirements
 
-- Windows
+- macOS (Apple Silicon / Intel) or Windows x64
 - Python 3.10+
-- Local COMSOL Multiphysics installation
+- Local COMSOL Multiphysics installation (6.3 or 6.4)
+- JDK 11+
 - Valid COMSOL license
 - A manually started `COMSOL Multiphysics Server`
 

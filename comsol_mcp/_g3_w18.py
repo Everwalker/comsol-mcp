@@ -388,6 +388,8 @@ def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
     options = arguments.get("options") or {}
     width = int(options.get("width") or 800)
     height = int(options.get("height") or 600)
+    if width <= 0 or height <= 0 or width * height > 16 * 1024 * 1024:
+        raise ExecutionContractError("INVALID_REQUEST", f"Image dimensions {width}x{height} are invalid or exceed 16M pixel limit")
     fmt = str(options.get("format") or "png").lower()
     if fmt != "png":
         raise ExecutionContractError("INVALID_REQUEST", f"Unsupported image format {fmt!r}: only 'png' is supported")
@@ -699,6 +701,8 @@ def plot_geometry_render(worker: Any, model_tag: str, arguments: Mapping[str, An
     options = arguments.get("options") or {}
     width = int(options.get("width") or 800)
     height = int(options.get("height") or 600)
+    if width <= 0 or height <= 0 or width * height > 16 * 1024 * 1024:
+        raise ExecutionContractError("INVALID_REQUEST", f"Image dimensions {width}x{height} are invalid or exceed 16M pixel limit")
     fmt = str(options.get("format") or "png").lower()
     if fmt != "png":
         raise ExecutionContractError("INVALID_REQUEST", f"Unsupported image format {fmt!r}: only 'png' is supported")

@@ -5,7 +5,7 @@
 - **权威判定**: **22/22 PASS**
 - **原生取消能力状态**: `UNSUPPORTED_NATIVE_CANCEL`（真实 COMSOL 6.4 API 无原生求解取消接口，如实报告取消已接受但引擎未停，严格拒绝未授权强制终止）
 - **云端宿主状态**: `HOST_DELIVERY_UNVERIFIED`（本地 Stdio 经由 MCP Gateway 验证，云端 Hermes 凭据未配置保持未验证）
-- **最新运行 ID**: `g3_5_acceptance_20260923T070835Z` (全量实机耗时 14.90s)
+- **最新运行 ID**: `g3_5_acceptance_20260923T075818Z` (全量实机耗时 15.31s)
 - **基线提交**: `20839628aa6f93272a463f4d88eb48704b971f87`
 - **停止边界**: 严格收工于 W19，不进入 W20–W26，不扩展任何主机特权
 - **交付包**: `COMSOL_MCP_G3_5_DELIVERABLE.tar.gz`（不推送至 GitHub，打包全部交付产物后停止）
