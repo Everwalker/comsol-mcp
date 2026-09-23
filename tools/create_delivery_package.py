@@ -116,7 +116,7 @@ def build_package(repo_dir: Path, output_archive: Path) -> Path:
         # Automated check: verify delivery repository tree == release commit tree
         print("[*] Validating delivery repository tree matches release commit tree 100%...")
         tracked_files_raw = subprocess.check_output(
-            ["git", "ls-tree", "-r", "--full-tree", "HEAD"],
+            ["git", "-c", "core.quotepath=off", "ls-tree", "-r", "--full-tree", "HEAD"],
             cwd=repo_dir,
             text=True,
         ).splitlines()
