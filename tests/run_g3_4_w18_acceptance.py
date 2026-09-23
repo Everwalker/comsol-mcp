@@ -1111,13 +1111,21 @@ public final class ModelSaver {{
     # -----------------------------------------------------------------------
     def case_v11(self) -> dict[str, Any]:
         archive = ROOT.parent / "COMSOL_MCP_G3_4_W18_DELIVERABLE.tar.gz"
-        assert archive.is_file(), "Deliverable archive is missing"
+        assert archive.is_file(), f"Deliverable archive is missing at {archive}"
         archive_size = archive.stat().st_size
+        assert archive_size > 100000, f"Deliverable archive is unexpectedly small ({archive_size} bytes)"
+        import tarfile
+        with tarfile.open(archive, "r:gz") as tf:
+            names = set(tf.getnames())
+            assert any("DELIVERY_MANIFEST.json" in n for n in names), "Missing DELIVERY_MANIFEST.json in archive"
+            assert any("comsol_mcp" in n for n in names), "Missing comsol_mcp in archive"
+            assert any("evidence" in n for n in names), "Missing evidence in archive"
         return {
             "deliverable_archive": str(archive),
             "archive_size_bytes": archive_size,
             "boundary": "STOPPED_AT_W18",
             "git_push_executed": False,
+            "archive_verified": True,
         }
 
     # -----------------------------------------------------------------------
