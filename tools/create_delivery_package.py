@@ -304,7 +304,7 @@ def build_package(repo_dir: Path, output_archive: Path) -> Path:
         shutil.rmtree(staging_dir, ignore_errors=True)
 
 
-def verify_package(archive_path: Path) -> bool:
+def verify_package(archive_path: Path, repo_ref_dir: Path | None = None) -> bool:
     print(f"[*] Verifying delivery package: {archive_path}")
     assert archive_path.is_file(), "Archive missing"
     test_dir = Path(tempfile.mkdtemp(prefix="w18_verify_"))
