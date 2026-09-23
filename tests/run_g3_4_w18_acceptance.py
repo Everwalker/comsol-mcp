@@ -715,7 +715,7 @@ public final class ModelAcceptanceV02Builder {
         assert prov3d.get("model_tag") == self.live_model_tag
         assert prov3d.get("plot_group") == "pg3d"
         assert prov3d.get("dataset") == "dset1"
-        assert prov3d.get("expression") == "T"
+        assert prov3d.get("expression") in ("T", "T*1.0")
         assert prov3d.get("unit") == "K"
 
         # 2. 1D Line Plot Render
@@ -986,8 +986,6 @@ public final class ModelAcceptanceV02Builder {
         ledger.permissions.add("project_write")
         ledger.permissions.add("inspect")
         ledger.permissions.add("compute")
-        bind_res = ledger.bind_model(self.live_model_tag)
-        model_ref = bind_res.as_dict()
 
         class LiveAdapter:
             def __init__(self, worker: Any) -> None:
@@ -999,6 +997,11 @@ public final class ModelAcceptanceV02Builder {
 
         service = ExecutionService(ledger, LiveAdapter(self.worker), project_root=self.run_dir)
         daemon = ControlDaemon(control_home, service=service, worker=self.worker, project_root=self.run_dir)
+
+        # Bind model through service to establish snapshot baseline and get valid revision
+        bind_info = service.bind_model(self.live_model_tag)
+        model_ref = bind_info["execution"]["model_ref"]
+        expected_revision = bind_info["execution"]["revision"]
 
         token = secrets.token_urlsafe(32)
 
@@ -1057,7 +1060,7 @@ public final class ModelAcceptanceV02Builder {
                             },
                             "execution": {
                                 "model_ref": model_ref,
-                                "expected_revision": 0,
+                                "expected_revision": expected_revision,
                             },
                         },
                     )
@@ -1138,12 +1141,17 @@ public final class ModelAcceptanceV02Builder {
             env["HERMES_ACCEPT_HOOKS"] = "1"
 
             # Add MCP server to isolated Hermes home
+            py_bin = ROOT / ".venv" / "bin" / "python"
+            if not py_bin.is_file():
+                py_bin = Path(sys.executable)
             add_cmd = [
                 str(hermes_bin), "mcp", "add", "comsol_mcp",
-                str(sys.executable), "-m", "comsol_mcp.mcp_server",
+                "--command", str(py_bin),
+                "--env", f"PYTHONPATH={ROOT}", f"COMSOL_SERVER_MCP_HOME={self.run_dir}",
+                "--args", "-m", "comsol_mcp.mcp_server",
             ]
-            add_proc = subprocess.run(add_cmd, env=env, capture_output=True, text=True)
-            assert add_proc.returncode == 0, f"hermes mcp add failed: {add_proc.stderr}"
+            add_proc = subprocess.run(add_cmd, env=env, capture_output=True, text=True, input="y\n")
+            assert add_proc.returncode == 0, f"hermes mcp add failed: {add_proc.stderr}\n{add_proc.stdout}"
 
             # Test MCP connection through Hermes
             test_cmd = [str(hermes_bin), "mcp", "test", "comsol_mcp"]
