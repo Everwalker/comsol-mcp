@@ -1239,8 +1239,9 @@ public final class ModelSaver {{
                     )
                 )
                 and not p.name.startswith(".")
-                and p.suffix not in (".lock", ".log", ".port", ".java")
             ],
+            "cases": self.cases,
+        }
 
         payload = json.dumps(summary, indent=2, ensure_ascii=False) + "\n"
         evidence_file.parent.mkdir(parents=True, exist_ok=True)
