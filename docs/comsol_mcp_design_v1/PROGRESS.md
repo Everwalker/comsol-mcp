@@ -1,3 +1,21 @@
+# G3.6: Windows 原生双版本 (6.3 & 6.4) 独立适配与作业控制缺口 (D01–D09) 定向修复 (COMPLETED)
+
+- **验收日期**: 2026-09-24
+- **验收目标**: `NEXT_GOAL.md` (D01–D09 作业控制与生命周期修复 + Windows 6.3/6.4 原生独立适配与 WD00–WD29 全量验收)
+- **权威结论**: **PASS** (30/30 用例全部通过)
+  - 控制平面与软件测试: **15 CONTROL_PASS**, **1 SOFTWARE_PASS**
+  - 原生 Windows 实机测试: **14 NATIVE_PASS_SCOPED** (COMSOL 6.3.0.290 & COMSOL 6.4.0.293 双版本实机引擎运行)
+  - 缺陷与阻塞统计: **0 FAIL_IMPLEMENTATION**, **0 BLOCKED_ENVIRONMENT**
+  - 交付物结论: `WINDOWS_COMSOL_63_CORE_VERIFIED_SCOPED`, `WINDOWS_COMSOL_64_CORE_VERIFIED_SCOPED`
+- **取消能力披露**: `native_cooperative_cancel: UNSUPPORTED`, `queued_cancel: VERIFIED`, `owned_process_termination: VERIFIED`
+- **实机运行 ID**: `g3_6_acceptance_20260924T014214Z` (总耗时 257.55s, Windows 11 AMD64, 192.168.100.2)
+- **测试状态分布**: 15 CONTROL_PASS, 14 NATIVE_PASS_SCOPED, 1 SOFTWARE_PASS, 0 FAIL (30/30 全部通过)
+- **单元测试全回归**: **1,832 passed, 41 skipped, 0 failed in 57.69s** (pytest tests/ 全量软件测试套件 100% 通过)；Mac 兼容性完全保持
+- **详细台账**: 参见 `docs/handoff_g3_6_windows/PROGRESS.md` 与 `evidence/windows_dual_version/g3_6_acceptance_20260924T014214Z/`
+- **停止边界**: 严格停止于 W19 修补与 Windows 6.3/6.4 适配，未进入 W20–W26
+
+---
+
 > Delivery update: repaired source snapshot `84ec0962a6424cd54c523770e4898bf42b7af645` has passed fresh extraction, wheel rebuild, and physically outside-source installation (64 source/package files, 272 operations, four Java resources; pip check clean). Remote synchronization and final documentary archive remain pending. See `evidence/phase4_3/runs/final_recovery_84ec096_20260922T095300Z/final_recovery_receipt.json`.
 
 ## Current independent resumption review
