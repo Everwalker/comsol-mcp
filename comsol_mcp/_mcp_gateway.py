@@ -177,20 +177,48 @@ class GatewayRegistry:
         self.functions[operation] = function
         original = inspect.signature(function)
         hints = get_type_hints(function)
-        parameters = [p.replace(annotation=hints.get(p.name, p.annotation)) for p in original.parameters.values()]
+        parameters = [
+            p.replace(annotation=hints.get(p.name, p.annotation))
+            for p in original.parameters.values()
+            if p.kind != inspect.Parameter.VAR_KEYWORD
+        ]
         if "execution" in original.parameters:
             raise ValueError("Legacy function conflicts with execution contract")
-        parameters.append(inspect.Parameter(
+        exec_param = inspect.Parameter(
             "execution", inspect.Parameter.KEYWORD_ONLY,
             default=None, annotation=dict[str, Any] | None,
-        ))
+        )
+        parameters.append(exec_param)
 
         async def routed(**kwargs: Any) -> CallToolResult:
             execution = kwargs.pop("execution", None) or {}
-            bound = original.bind(**kwargs)
+            has_var_kw = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in original.parameters.values())
+            if has_var_kw:
+                bound = original.bind(**kwargs)
+            else:
+                accepted = {k: v for k, v in kwargs.items() if k in original.parameters}
+                bound = original.bind(**accepted)
             bound.apply_defaults()
+            call_args = dict(bound.arguments)
+            for k, v in kwargs.items():
+                call_args.setdefault(k, v)
+            if "arguments" in call_args and isinstance(call_args["arguments"], dict):
+                inner_args = call_args.pop("arguments")
+                for k, v in inner_args.items():
+                    if k in call_args and call_args[k] is not None and call_args[k] != v:
+                        err_res = {
+                            "success": False,
+                            "error": {
+                                "code": "INVALID_REQUEST",
+                                "message": f"Conflicting values for parameter '{k}' in arguments wrapper",
+                                "safe_retry": False,
+                            },
+                            "data": {},
+                        }
+                        return mcp_result(err_res)
+                    call_args.setdefault(k, v)
             try:
-                result = await asyncio.to_thread(self.dispatcher, operation, dict(bound.arguments), execution)
+                result = await asyncio.to_thread(self.dispatcher, operation, call_args, execution)
             except Exception as exc:
                 # Do not echo connection secrets, backend configuration or raw
                 # transport exceptions. Details belong in protected service logs.

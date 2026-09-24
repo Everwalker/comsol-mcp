@@ -284,11 +284,21 @@ class ConvergenceStudy:
         improvements = [errors[i] <= errors[i - 1] for i in range(1, len(errors))]
         monotonic = all(improvements)
 
-        max_allowed = self.criteria.get("absolute_error_max") or self.criteria.get("target_error")
+        max_allowed = self.criteria.get("absolute_error_max")
+        if max_allowed is None:
+            max_allowed = self.criteria.get("target_error", self.criteria.get("threshold"))
         finest_error = errors[-1]
         target_met = True
         if max_allowed is not None:
-            if finest_error > float(max_allowed):
+            max_allowed_val = float(max_allowed)
+            if max_allowed_val < 0:
+                return {
+                    "status": STATUS_FAIL,
+                    "trend": "invalid_criteria",
+                    "errors": errors,
+                    "message": f"Negative error threshold {max_allowed} is invalid",
+                }
+            if finest_error > max_allowed_val:
                 target_met = False
 
         if not target_met:
@@ -371,13 +381,23 @@ def check_expression_syntax(expr_str: str) -> tuple[bool, str]:
         return False, "Dangling operator before closing bracket"
     if re.search(r'[+\-*/^]\s*$', s):
         return False, "Dangling operator at end of expression"
-    if re.search(r'(?:[+\-*/^]\s*){2,}', s):
+    if re.search(r'[+\-*/^]\s*[*/^]', s) or re.search(r'[+\-*/^]\s*[+\-]\s*[+\-*/^]', s) or re.search(r'[+\-]\s*[+\-]', s):
         return False, "Consecutive operators"
     return True, "Valid syntax"
 
 
 def validate_structure(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     """validate.structure: inspect model structure for components, geometries, selections, physics, mesh, study."""
+    args = dict(arguments)
+    if "arguments" in args and isinstance(args["arguments"], Mapping):
+        inner = dict(args.pop("arguments"))
+        conflicts = [k for k in inner if k in args and args[k] is not None and args[k] != inner[k]]
+        if conflicts:
+            raise ValueError(f"Conflicting parameter values in wrapped arguments: {conflicts}")
+        for k, v in inner.items():
+            args.setdefault(k, v)
+    arguments = args
+
     findings: list[dict[str, Any]] = []
     rules_evaluated: list[str] = []
     unsupported_reasons: list[str] = []
@@ -468,15 +488,24 @@ def validate_structure(worker: Any, model_tag: str, arguments: Mapping[str, Any]
             sel_node = _call(model, "selection")
             sel_tags = _call(sel_node, "tags") if hasattr(sel_node, "tags") else []
             selections = list(sel_tags) if sel_tags else []
-        except Exception:
-            pass
+            rules_evaluated.append("selection.existence")
+            findings.append({"rule": "selection.existence", "status": STATUS_PASS, "selections": selections})
+        except Exception as exc:
+            rules_evaluated.append("selection.existence")
+            findings.append({"rule": "selection.existence", "status": STATUS_UNVERIFIED, "message": f"Could not inspect selections: {exc}"})
 
         try:
             mat_node = _call(model, "material")
             mat_tags = _call(mat_node, "tags") if hasattr(mat_node, "tags") else []
             materials = list(mat_tags) if mat_tags else []
-        except Exception:
-            pass
+            rules_evaluated.append("material.existence")
+            if not materials:
+                findings.append({"rule": "material.existence", "status": STATUS_FAIL, "message": "No materials defined in model"})
+            else:
+                findings.append({"rule": "material.existence", "status": STATUS_PASS, "materials": materials})
+        except Exception as exc:
+            rules_evaluated.append("material.existence")
+            findings.append({"rule": "material.existence", "status": STATUS_UNVERIFIED, "message": f"Could not inspect materials: {exc}"})
     else:
         mock_data = arguments.get("model_data") or arguments.get("scope") or {}
         if isinstance(mock_data, dict) and mock_data:
@@ -528,6 +557,16 @@ def validate_structure(worker: Any, model_tag: str, arguments: Mapping[str, Any]
 
 def validate_preflight(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     """validate.preflight: pre-solve check for structural completeness, materials, mesh, study."""
+    args = dict(arguments)
+    if "arguments" in args and isinstance(args["arguments"], Mapping):
+        inner = dict(args.pop("arguments"))
+        conflicts = [k for k in inner if k in args and args[k] is not None and args[k] != inner[k]]
+        if conflicts:
+            raise ValueError(f"Conflicting parameter values in wrapped arguments: {conflicts}")
+        for k, v in inner.items():
+            args.setdefault(k, v)
+    arguments = args
+
     struct_res = validate_structure(worker, model_tag, arguments)
     findings = list(struct_res.get("findings", []))
     inventory = struct_res.get("inventory", {})
@@ -536,8 +575,12 @@ def validate_preflight(worker: Any, model_tag: str, arguments: Mapping[str, Any]
     ready_to_solve = False
     if struct_res["status"] == STATUS_PASS:
         if inventory.get("components") and inventory.get("studies") and (inventory.get("physics") or inventory.get("meshes")):
-            ready_to_solve = True
-            findings.append({"check": "preflight.ready", "status": STATUS_PASS, "message": "Model ready for solve"})
+            mat_failed = any(f.get("rule") == "material.existence" and f.get("status") == STATUS_FAIL for f in findings)
+            if not mat_failed:
+                ready_to_solve = True
+                findings.append({"check": "preflight.ready", "status": STATUS_PASS, "message": "Model ready for solve"})
+            else:
+                findings.append({"check": "preflight.ready", "status": STATUS_FAIL, "message": "Missing required materials"})
         else:
             findings.append({"check": "preflight.ready", "status": STATUS_FAIL, "message": "Missing required physics, components, or studies"})
     elif struct_res["status"] == STATUS_UNVERIFIED or unsupported:
@@ -553,7 +596,7 @@ def validate_preflight(worker: Any, model_tag: str, arguments: Mapping[str, Any]
         "numerical_verification_status": STATUS_NOT_APPLICABLE,
         "physical_validation_status": STATUS_UNVERIFIED,
         "ready_to_solve": ready_to_solve,
-        "checks_evaluated": ["structure", "materials", "selections", "mesh", "study"],
+        "checks_evaluated": list(struct_res.get("rules_evaluated", [])),
         "findings": findings,
         "inventory": inventory,
         "unsupported_reasons": unsupported,
@@ -562,6 +605,16 @@ def validate_preflight(worker: Any, model_tag: str, arguments: Mapping[str, Any]
 
 def validate_expressions(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     """validate.expressions: syntax, finite check, and known unit consistency."""
+    args = dict(arguments)
+    if "arguments" in args and isinstance(args["arguments"], Mapping):
+        inner = dict(args.pop("arguments"))
+        conflicts = [k for k in inner if k in args and args[k] is not None and args[k] != inner[k]]
+        if conflicts:
+            raise ValueError(f"Conflicting parameter values in wrapped arguments: {conflicts}")
+        for k, v in inner.items():
+            args.setdefault(k, v)
+    arguments = args
+
     raw_expressions = arguments.get("expressions", [])
     if not raw_expressions:
         return {
@@ -622,8 +675,9 @@ def validate_expressions(worker: Any, model_tag: str, arguments: Mapping[str, An
                 if eval_val is not None and isinstance(eval_val, (int, float)) and not math.isfinite(eval_val):
                     findings.append({"name": name, "expr": expr, "status": STATUS_FAIL, "reason": "Engine evaluated to NaN/Inf"})
                     continue
-            except Exception:
-                pass
+            except Exception as exc:
+                findings.append({"name": name, "expr": expr, "status": STATUS_FAIL, "reason": f"Engine evaluate failed: {exc}"})
+                continue
 
         findings.append({"name": name, "expr": expr, "status": STATUS_PASS})
 
@@ -648,6 +702,16 @@ def validate_expressions(worker: Any, model_tag: str, arguments: Mapping[str, An
 
 def validate_boundary_conditions(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     """validate.boundary_conditions: diagnose missing, conflicting, or unassigned boundary conditions."""
+    args = dict(arguments)
+    if "arguments" in args and isinstance(args["arguments"], Mapping):
+        inner = dict(args.pop("arguments"))
+        conflicts = [k for k in inner if k in args and args[k] is not None and args[k] != inner[k]]
+        if conflicts:
+            raise ValueError(f"Conflicting parameter values in wrapped arguments: {conflicts}")
+        for k, v in inner.items():
+            args.setdefault(k, v)
+    arguments = args
+
     rules = arguments.get("rules", [])
     if not rules:
         return {
@@ -663,8 +727,93 @@ def validate_boundary_conditions(worker: Any, model_tag: str, arguments: Mapping
     findings: list[dict[str, Any]] = []
     boundary_data = arguments.get("boundary_data") or arguments.get("model_data")
 
-    # If caller explicitly provided boundary_data / model_data, prioritize inspecting that directly
-    if boundary_data and isinstance(boundary_data, dict):
+    # Priority 1: inspect live model if worker is provided
+    model = None
+    try:
+        client = getattr(worker, "client", lambda: worker)()
+        if client is not None:
+            model = _call(client, "model", model_tag)
+    except Exception:
+        pass
+
+    if model is not None:
+        try:
+            phys_node = _call(model, "physics")
+            phys_tags = list(_call(phys_node, "tags") or []) if hasattr(phys_node, "tags") else []
+            features_by_phys: dict[str, list[dict[str, Any]]] = {}
+            for ptag in phys_tags:
+                p_node = _call(model, "physics", ptag)
+                ftags: list[str] = []
+                try:
+                    feat_container = _call(p_node, "feature")
+                    if feat_container is not None:
+                        ftags = list(_call(feat_container, "tags") or [])
+                except Exception:
+                    pass
+                if not ftags:
+                    try:
+                        ftags = list(_call(p_node, "tags") or [])
+                    except Exception:
+                        pass
+                feat_list = []
+                for ftag in ftags:
+                    try:
+                        f = _call(p_node, "feature", ftag)
+                        ftype = _call(f, "getType") if hasattr(f, "getType") else ftag
+                        sel = []
+                        read_error = None
+                        try:
+                            sel_node = _call(f, "selection")
+                            # Pure read-only inspection; NEVER call selection.all() or any setter!
+                            read_fns = [
+                                lambda: _call(sel_node, "entities", 2),
+                                lambda: _call(sel_node, "entities", 1),
+                                lambda: _call(sel_node, "entities", 0),
+                                lambda: _call(sel_node, "entities"),
+                                lambda: _call(sel_node, "getIntArray", "entities"),
+                                lambda: _call(sel_node, "getIntArray"),
+                                lambda: _call(sel_node, "get"),
+                            ]
+                            for extract_fn in read_fns:
+                                try:
+                                    res = extract_fn()
+                                    if res is not None:
+                                        sel = list(res)
+                                        if sel:
+                                            break
+                                except Exception as e:
+                                    read_error = e
+                                    continue
+                        except Exception as e:
+                            read_error = e
+                        feat_list.append({"tag": ftag, "type": ftype, "entities": sel, "read_error": read_error})
+                    except Exception:
+                        pass
+                features_by_phys[ptag] = feat_list
+
+            for r in rules:
+                r_str = str(r)
+                if r_str in ("conflicting_temperature_boundaries", "bc.temperature_inflow", "bc.thermal_insulation", "bc.temperature"):
+                    all_ht_feats = [f for feats in features_by_phys.values() for f in feats if "temp" in f["tag"].lower() or "temp" in str(f["type"]).lower()]
+                    unreadable = [f["tag"] for f in all_ht_feats if f.get("read_error") is not None and not f["entities"]]
+                    if unreadable:
+                        findings.append({"rule": r_str, "status": STATUS_UNVERIFIED, "message": f"Selection getter unavailable for features: {unreadable}"})
+                        continue
+                    entity_map = {}
+                    for f in all_ht_feats:
+                        for ent in f["entities"]:
+                            entity_map.setdefault(ent, []).append(f["tag"])
+                    conflicts = {ent: tags for ent, tags in entity_map.items() if len(tags) > 1}
+                    if conflicts:
+                        findings.append({"rule": r_str, "status": STATUS_FAIL, "message": f"Conflicting boundary conditions on entities: {conflicts}"})
+                    else:
+                        findings.append({"rule": r_str, "status": STATUS_PASS, "features_checked": [f["tag"] for f in all_ht_feats]})
+                else:
+                    findings.append({"rule": r_str, "status": STATUS_UNVERIFIED, "message": f"Rule '{r_str}' not implemented in boundary inspector"})
+        except Exception as exc:
+            for r in rules:
+                findings.append({"rule": str(r), "status": STATUS_UNVERIFIED, "message": f"Engine inspection error: {exc}"})
+    elif boundary_data and isinstance(boundary_data, dict):
         bc_list = boundary_data.get("boundaries", [])
         entity_map: dict[Any, list[str]] = {}
         for b in bc_list:
@@ -674,94 +823,18 @@ def validate_boundary_conditions(worker: Any, model_tag: str, arguments: Mapping
         conflicts = {ent: tags for ent, tags in entity_map.items() if len(tags) > 1}
         for r in rules:
             r_str = str(r)
-            if conflicts and "conflict" in r_str.lower():
-                findings.append({"rule": r_str, "status": STATUS_FAIL, "conflicts": conflicts})
-            elif conflicts:
-                findings.append({"rule": r_str, "status": STATUS_FAIL, "message": f"Conflicting boundary conditions: {conflicts}"})
+            if r_str in ("conflicting_temperature_boundaries", "bc.temperature_inflow", "bc.thermal_insulation", "bc.temperature"):
+                if conflicts and "conflict" in r_str.lower():
+                    findings.append({"rule": r_str, "status": STATUS_FAIL, "conflicts": conflicts})
+                elif conflicts:
+                    findings.append({"rule": r_str, "status": STATUS_FAIL, "message": f"Conflicting boundary conditions: {conflicts}"})
+                else:
+                    findings.append({"rule": r_str, "status": STATUS_PASS, "boundaries": bc_list})
             else:
-                findings.append({"rule": r_str, "status": STATUS_PASS, "boundaries": bc_list})
+                findings.append({"rule": r_str, "status": STATUS_UNVERIFIED, "message": f"Rule '{r_str}' not implemented in offline boundary inspector"})
     else:
-        model = None
-        try:
-            client = getattr(worker, "client", lambda: worker)()
-            if client is not None:
-                model = _call(client, "model", model_tag)
-        except Exception:
-            pass
-
-        if model is not None:
-            try:
-                phys_node = _call(model, "physics")
-                phys_tags = list(_call(phys_node, "tags") or []) if hasattr(phys_node, "tags") else []
-                features_by_phys: dict[str, list[dict[str, Any]]] = {}
-                for ptag in phys_tags:
-                    p_node = _call(model, "physics", ptag)
-                    ftags: list[str] = []
-                    try:
-                        feat_container = _call(p_node, "feature")
-                        if feat_container is not None:
-                            ftags = list(_call(feat_container, "tags") or [])
-                    except Exception:
-                        pass
-                    if not ftags:
-                        try:
-                            ftags = list(_call(p_node, "tags") or [])
-                        except Exception:
-                            pass
-                    feat_list = []
-                    for ftag in ftags:
-                        try:
-                            f = _call(p_node, "feature", ftag)
-                            ftype = _call(f, "getType") if hasattr(f, "getType") else ftag
-                            sel = []
-                            try:
-                                sel_node = _call(f, "selection")
-                                for extract_fn in [
-                                    lambda: _call(sel_node, "entities", 2),
-                                    lambda: _call(sel_node, "entities", 1),
-                                    lambda: _call(sel_node, "entities", 0),
-                                    lambda: _call(sel_node, "entities"),
-                                    lambda: _call(sel_node, "getIntArray", "entities"),
-                                    lambda: _call(sel_node, "getIntArray"),
-                                    lambda: _call(sel_node, "get"),
-                                    lambda: _call(sel_node, "all"),
-                                ]:
-                                    try:
-                                        res = extract_fn()
-                                        if res is not None:
-                                            sel = list(res)
-                                            if sel:
-                                                break
-                                    except Exception:
-                                        continue
-                            except Exception:
-                                pass
-                            feat_list.append({"tag": ftag, "type": ftype, "entities": sel})
-                        except Exception:
-                            pass
-                    features_by_phys[ptag] = feat_list
-
-                for r in rules:
-                    r_str = str(r)
-                    if r_str in ("conflicting_temperature_boundaries", "bc.temperature_inflow", "bc.thermal_insulation", "bc.temperature"):
-                        all_ht_feats = [f for feats in features_by_phys.values() for f in feats if "temp" in f["tag"].lower() or "temp" in str(f["type"]).lower()]
-                        entity_map = {}
-                        for f in all_ht_feats:
-                            for ent in f["entities"]:
-                                entity_map.setdefault(ent, []).append(f["tag"])
-                        conflicts = {ent: tags for ent, tags in entity_map.items() if len(tags) > 1}
-                        if conflicts:
-                            findings.append({"rule": r_str, "status": STATUS_FAIL, "message": f"Conflicting boundary conditions on entities: {conflicts}"})
-                        else:
-                            findings.append({"rule": r_str, "status": STATUS_PASS, "features_checked": [f["tag"] for f in all_ht_feats]})
-                    else:
-                        findings.append({"rule": r_str, "status": STATUS_UNVERIFIED, "message": f"Rule '{r_str}' not implemented in boundary inspector"})
-            except Exception as exc:
-                for r in rules:
-                    findings.append({"rule": str(r), "status": STATUS_UNVERIFIED, "message": f"Engine inspection error: {exc}"})
-        else:
-            for r in rules:
-                findings.append({"rule": str(r), "status": STATUS_UNVERIFIED, "reason": "No engine or boundary data available for inspection"})
+        for r in rules:
+            findings.append({"rule": str(r), "status": STATUS_UNVERIFIED, "reason": "No engine or boundary data available for inspection"})
 
     has_fail = any(f.get("status") == STATUS_FAIL for f in findings)
     has_unverified = any(f.get("status") == STATUS_UNVERIFIED for f in findings)
@@ -784,6 +857,16 @@ def validate_boundary_conditions(worker: Any, model_tag: str, arguments: Mapping
 
 def validate_solution(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     """validate.solution: verify solution existence, finite check, range, benchmark error."""
+    args = dict(arguments)
+    if "arguments" in args and isinstance(args["arguments"], Mapping):
+        inner = dict(args.pop("arguments"))
+        conflicts = [k for k in inner if k in args and args[k] is not None and args[k] != inner[k]]
+        if conflicts:
+            raise ValueError(f"Conflicting parameter values in wrapped arguments: {conflicts}")
+        for k, v in inner.items():
+            args.setdefault(k, v)
+    arguments = args
+
     solution = dict(arguments.get("solution") or {})
     if not solution and ("dataset" in arguments or "tag" in arguments):
         solution = {"dataset": arguments.get("dataset") or arguments.get("tag")}
@@ -842,21 +925,22 @@ def validate_solution(worker: Any, model_tag: str, arguments: Mapping[str, Any])
                         dsets = list(_call(res_node, "tags") or [])
                 except Exception:
                     pass
-            if dsets and dataset_name and dataset_name not in dsets:
-                return {
-                    "status": STATUS_FAIL,
-                    "execution_status": STATUS_PASS,
-                    "numerical_verification_status": STATUS_FAIL,
-                    "physical_validation_status": STATUS_UNVERIFIED,
-                    "solution": solution,
-                    "checks": {"dataset_exists": False},
-                    "metrics": {},
-                    "oracle_results": {},
-                    "message": f"Dataset '{dataset_name}' does not exist in model. Available: {dsets}",
-                }
+
             if dataset_name:
+                if dataset_name not in dsets:
+                    return {
+                        "status": STATUS_FAIL,
+                        "execution_status": STATUS_PASS,
+                        "numerical_verification_status": STATUS_FAIL,
+                        "physical_validation_status": STATUS_UNVERIFIED,
+                        "observation_origin": "CALLER_SUPPLIED",
+                        "solution": solution,
+                        "checks": {"dataset_exists": False},
+                        "metrics": {},
+                        "oracle_results": {},
+                        "message": f"Dataset '{dataset_name}' does not exist in model. Available: {dsets}",
+                    }
                 checks["dataset_exists"] = True
-            observation_origin = "ENGINE_EVALUATION"
         except Exception:
             pass
 
@@ -947,11 +1031,22 @@ def validate_solution(worker: Any, model_tag: str, arguments: Mapping[str, Any])
 
 def validate_conservation(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     """validate.conservation: energy, mass, or flux conservation residual validation."""
+    args = dict(arguments)
+    if "arguments" in args and isinstance(args["arguments"], Mapping):
+        inner = dict(args.pop("arguments"))
+        conflicts = [k for k in inner if k in args and args[k] is not None and args[k] != inner[k]]
+        if conflicts:
+            raise ValueError(f"Conflicting parameter values in wrapped arguments: {conflicts}")
+        for k, v in inner.items():
+            args.setdefault(k, v)
+    arguments = args
+
     definition = dict(arguments.get("definition") or {})
     if not definition:
         definition = {k: v for k, v in arguments.items() if k != "definition"}
 
-    if not definition or ("inflow" not in definition and "outflow" not in definition and "power" not in definition and "storage_rate" not in definition):
+    has_terms = any(k in definition for k in ("inflow", "outflow", "power", "source_term", "source_rate", "storage_rate"))
+    if not definition or not has_terms:
         return {
             "status": STATUS_FAIL,
             "execution_status": STATUS_PASS,
@@ -965,9 +1060,22 @@ def validate_conservation(worker: Any, model_tag: str, arguments: Mapping[str, A
     inflow = float(definition.get("inflow", 0.0))
     outflow = float(definition.get("outflow", 0.0))
     storage_rate = float(definition.get("storage_rate", 0.0))
-    source_term = float(definition.get("source_term", definition.get("source_rate", 0.0)))
-    normalization = float(definition.get("normalization", inflow or outflow or 1.0))
+
+    if "source_term" in definition or "source_rate" in definition:
+        source_term = float(definition.get("source_term", definition.get("source_rate", 0.0)))
+    elif "power" in definition:
+        source_term = float(definition["power"])
+    else:
+        source_term = 0.0
+
     tolerance = float(definition.get("tolerance", 0.01))
+
+    norm_candidate = definition.get("normalization")
+    if norm_candidate is not None:
+        normalization = float(norm_candidate)
+    else:
+        flux_sum = abs(inflow) + abs(outflow) + abs(source_term) + abs(storage_rate)
+        normalization = flux_sum if flux_sum > 0 else 1.0
 
     if abs(normalization) < 1e-12:
         return {
@@ -1011,9 +1119,9 @@ def validate_convergence(worker: Any, model_tag: str, arguments: Mapping[str, An
         if isinstance(c, dict):
             step = ConvergenceStep(
                 level=int(c.get("level", 1)),
-                mesh_size_metric=float(c.get("mesh_size_metric", 1.0)),
+                mesh_size_metric=float(c.get("mesh_size_metric", c.get("mesh_size", 1.0))),
                 tolerance=float(c.get("tolerance", 1e-3)),
-                time_step=float(c.get("time_step", 0.01)),
+                time_step=float(c.get("time_step", c.get("dt", 0.01))),
                 error=float(c.get("error", 0.1)),
                 resources=c.get("resources", {}),
             )
@@ -1035,8 +1143,23 @@ def validate_convergence(worker: Any, model_tag: str, arguments: Mapping[str, An
 
 def validate_report(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     """validate.report: aggregate validation results and generate JSON and Markdown reports."""
+    args = dict(arguments)
+    if "arguments" in args and isinstance(args["arguments"], Mapping):
+        inner = dict(args.pop("arguments"))
+        conflicts = [k for k in inner if k in args and args[k] is not None and args[k] != inner[k]]
+        if conflicts:
+            raise ValueError(f"Conflicting parameter values in wrapped arguments: {conflicts}")
+        for k, v in inner.items():
+            args.setdefault(k, v)
+    arguments = args
+
     destination = arguments.get("destination")
+    overwrite = bool(arguments.get("overwrite", False))
     data = arguments.get("data") or {}
+    if not isinstance(data, dict) and isinstance(data, Mapping):
+        data = dict(data)
+    elif not isinstance(data, dict):
+        data = {}
 
     source_id = data.get("source_identity", "g3_8_pinned")
     runtime_ver = data.get("runtime_version", "UNKNOWN")
@@ -1047,6 +1170,11 @@ def validate_report(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
     evidence_hash = hashlib.sha256(evidence_content.encode("utf-8")).hexdigest()
 
     child_statuses = []
+    if "status" in data:
+        child_statuses.append(data["status"])
+    if "numerical_verification_status" in data:
+        child_statuses.append(data["numerical_verification_status"])
+
     err_tol = data.get("error_tolerance_data") or {}
     if isinstance(err_tol, dict):
         if "numerical_verification_status" in err_tol:
@@ -1064,11 +1192,25 @@ def validate_report(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
     write_ok = True
     write_error = None
     dest_path = None
+    sibling_path = None
     if destination:
         dest_path = Path(destination)
         if dest_path.is_dir():
             write_ok = False
             write_error = f"Destination path '{destination}' is an existing directory, not a file"
+        else:
+            if dest_path.suffix.lower() == ".json":
+                sibling_path = dest_path.with_suffix(".md")
+            elif dest_path.suffix.lower() == ".md":
+                sibling_path = dest_path.with_suffix(".json")
+
+            if not overwrite:
+                if dest_path.exists():
+                    write_ok = False
+                    write_error = f"Destination file '{dest_path}' already exists and overwrite is False"
+                elif sibling_path and sibling_path.exists():
+                    write_ok = False
+                    write_error = f"Sibling report file '{sibling_path}' already exists and overwrite is False"
 
     if not write_ok:
         overall_status = STATUS_FAIL
@@ -1078,6 +1220,18 @@ def validate_report(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
         overall_status = STATUS_FAIL
         exec_status = STATUS_PASS
         num_status = STATUS_FAIL
+    elif any(s == STATUS_ERROR for s in child_statuses):
+        overall_status = STATUS_ERROR
+        exec_status = STATUS_ERROR
+        num_status = STATUS_ERROR
+    elif any(s == STATUS_BLOCKED for s in child_statuses):
+        overall_status = STATUS_BLOCKED
+        exec_status = STATUS_BLOCKED
+        num_status = STATUS_BLOCKED
+    elif any(s == STATUS_UNSUPPORTED for s in child_statuses):
+        overall_status = STATUS_UNSUPPORTED
+        exec_status = STATUS_PASS
+        num_status = STATUS_UNSUPPORTED
     elif any(s == STATUS_UNVERIFIED for s in child_statuses) or not child_statuses:
         overall_status = STATUS_UNVERIFIED
         exec_status = STATUS_PASS
@@ -1110,10 +1264,12 @@ def validate_report(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
             dest_path.parent.mkdir(parents=True, exist_ok=True)
             if dest_path.suffix.lower() == ".json":
                 dest_path.write_text(report_json, encoding="utf-8")
-                dest_path.with_suffix(".md").write_text(report_md, encoding="utf-8")
+                if sibling_path:
+                    sibling_path.write_text(report_md, encoding="utf-8")
             elif dest_path.suffix.lower() == ".md":
                 dest_path.write_text(report_md, encoding="utf-8")
-                dest_path.with_suffix(".json").write_text(report_json, encoding="utf-8")
+                if sibling_path:
+                    sibling_path.write_text(report_json, encoding="utf-8")
             else:
                 dest_path.write_text(report_md, encoding="utf-8")
         except Exception as exc:

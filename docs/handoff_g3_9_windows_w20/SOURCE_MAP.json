@@ -1,0 +1,65 @@
+{
+  "schema": "g39/source-map/1",
+  "commit": "886affadc83477e940238c723edd569d00559985",
+  "tree": "b9861e5dc407f2aff934d9438fa33ef631df06a1",
+  "files": [
+    {
+      "path": "comsol_mcp/_g3_w20_validation.py",
+      "git_blob": "db099038abc587f617015bd01979113b3caaab12",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/886affadc83477e940238c723edd569d00559985/comsol_mcp/_g3_w20_validation.py",
+      "review_scope": "完整公开处理函数、统计/报告/只读路径；连接实现通过引用核对"
+    },
+    {
+      "path": "comsol_mcp/_tools_w20.py",
+      "git_blob": "d774382a41918ec264827f6d2423d3a7249b8f46",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/886affadc83477e940238c723edd569d00559985/comsol_mcp/_tools_w20.py",
+      "review_scope": "全部工具签名与注册"
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "git_blob": "7d9160ff8b98157c0a09cfae638e46561b070195",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/886affadc83477e940238c723edd569d00559985/comsol_mcp/_managed_backend.py",
+      "review_scope": "560–925：参数处理/生产分派/隔离"
+    },
+    {
+      "path": "comsol_mcp/_mcp_gateway.py",
+      "git_blob": "e25ac1a37cbcd240234386ca5eb75bf817161f53",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/886affadc83477e940238c723edd569d00559985/comsol_mcp/_mcp_gateway.py",
+      "review_scope": "190–213：signature绑定、控制分派"
+    },
+    {
+      "path": "PROGRESS.md",
+      "git_blob": "333661117ed57d960106ff66da3242eaa3518726",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/886affadc83477e940238c723edd569d00559985/PROGRESS.md",
+      "review_scope": "完成声明与证据边界"
+    },
+    {
+      "path": "tools/run_g3_8_acceptance.py",
+      "git_blob": "54a6ef9ff55ef454b1b13c29dc6a79f032b5be42",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/886affadc83477e940238c723edd569d00559985/tools/run_g3_8_acceptance.py",
+      "review_scope": "1–250,275–480,555–950,990–1320：主要执行和记录路径，未声称逐行全文件"
+    },
+    {
+      "path": "evidence/g3_8_windows_w20/win64/mcp_transcript_V10.json",
+      "git_blob": "39d2afd1f92fd3336f91c237952fc0aa808d3530",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/886affadc83477e940238c723edd569d00559985/evidence/g3_8_windows_w20/win64/mcp_transcript_V10.json",
+      "review_scope": "已提交收敛请求/回应，与常量列表核对"
+    },
+    {
+      "path": "evidence/g3_8_windows_w20/win64/observations_V08.json",
+      "git_blob": "9e34e7c880c020d2247d02a286207552daf0c2bd",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/886affadc83477e940238c723edd569d00559985/evidence/g3_8_windows_w20/win64/observations_V08.json",
+      "review_scope": "已提交9个瞬态温度观测与参考误差"
+    }
+  ],
+  "official_references": [
+    {
+      "url": "https://doc.comsol.com/6.3/doc/com.comsol.help.comsol/api/com/comsol/model/Selection.html",
+      "point": "Selection.all modifies the selection; entities reads it"
+    },
+    {
+      "url": "https://doc.comsol.com/6.4/doc/com.comsol.help.comsol/application_programming_guide.15.22.html",
+      "point": "COMSOL expression unary and binary operators"
+    }
+  ]
+}

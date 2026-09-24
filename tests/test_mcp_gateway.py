@@ -48,3 +48,49 @@ def test_transport_failure_does_not_leak_exception_secrets():
     assert result.isError
     assert "private-secret" not in result.model_dump_json()
     assert result.structuredContent["error"]["safe_retry"] is False
+
+
+def test_w20_tool_schema_no_kwargs():
+    from comsol_mcp._tools_w20 import validate_expressions, validate_solution, validate_report
+    server = FastMCP("gateway-test")
+    registry = GatewayRegistry(server, lambda op, args, exec: {"success": True, "data": {}})
+    for name, fn in [
+        ("validate.expressions", validate_expressions),
+        ("validate.solution", validate_solution),
+        ("validate.report", validate_report),
+    ]:
+        registry.add_tool(fn, name=name)
+        tool = server._tool_manager._tools[name]
+        assert "kwargs" not in tool.parameters.get("properties", {}), f"'kwargs' found in {name} properties"
+        assert "kwargs" not in tool.parameters.get("required", []), f"'kwargs' found in {name} required"
+
+
+def test_real_stdio_call_validate_expressions(tmp_path):
+    import sys
+    from mcp import ClientSession, StdioServerParameters
+    from mcp.client.stdio import stdio_client
+
+    async def _stdio_test():
+        server_params = StdioServerParameters(
+            command=sys.executable,
+            args=["-m", "comsol_mcp.mcp_server"],
+            env={"PYTHONPATH": "repository", "COMSOL_SERVER_MCP_HOME": str(tmp_path)},
+        )
+        async with stdio_client(server_params) as (read, write):
+            async with ClientSession(read, write) as session:
+                init_result = await session.initialize()
+                assert init_result is not None
+                tools = await session.list_tools()
+                expr_tool = next((t for t in tools.tools if t.name == "validate.expressions"), None)
+                assert expr_tool is not None
+                assert "kwargs" not in expr_tool.inputSchema.get("properties", {})
+                assert "kwargs" not in expr_tool.inputSchema.get("required", [])
+
+                call_res = await session.call_tool("validate.expressions", arguments={"expressions": ["1+1"]})
+                # Transport and JSON-RPC dispatch succeed; structuredContent contains execution envelope
+                assert call_res is not None
+                assert isinstance(call_res.structuredContent, dict)
+                assert "execution" in call_res.structuredContent
+
+    asyncio.run(_stdio_test())
+

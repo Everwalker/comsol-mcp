@@ -1,0 +1,304 @@
+{
+  "capture_origin": "CAPTURED_STDIN_STDOUT",
+  "run_id": "g3_9_acceptance_20260924T151059Z",
+  "target": "win64",
+  "case_id": "C10",
+  "events": [
+    {
+      "direction": "request",
+      "method": "tools/call",
+      "request_id": "12",
+      "timestamp": "2026-09-24T15:13:09.837330+00:00",
+      "payload": {
+        "name": "validate.solution",
+        "arguments": {
+          "solution": {
+            "dataset": "dset1"
+          },
+          "oracle": "transient_sine_diffusion",
+          "observations": {
+            "T_0.25_0.01": 306.4181981222561,
+            "T_0.5_0.01": 309.07669443598576,
+            "T_0.75_0.01": 306.41819639068166,
+            "T_0.25_0.03": 305.3061930050617,
+            "T_0.5_0.03": 307.50408355223055,
+            "T_0.75_0.03": 305.30619125214804,
+            "T_0.25_0.1": 302.6713174024731,
+            "T_0.5_0.1": 303.77781014930935,
+            "T_0.75_0.1": 302.6713164623091
+          }
+        }
+      },
+      "raw_jsonrpc": {
+        "method": "tools/call",
+        "params": {
+          "name": "validate.solution",
+          "arguments": {
+            "solution": {
+              "dataset": "dset1"
+            },
+            "oracle": "transient_sine_diffusion",
+            "observations": {
+              "T_0.25_0.01": 306.4181981222561,
+              "T_0.5_0.01": 309.07669443598576,
+              "T_0.75_0.01": 306.41819639068166,
+              "T_0.25_0.03": 305.3061930050617,
+              "T_0.5_0.03": 307.50408355223055,
+              "T_0.75_0.03": 305.30619125214804,
+              "T_0.25_0.1": 302.6713174024731,
+              "T_0.5_0.1": 303.77781014930935,
+              "T_0.75_0.1": 302.6713164623091
+            }
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 12
+      }
+    },
+    {
+      "direction": "response",
+      "request_id": "12",
+      "timestamp": "2026-09-24T15:13:09.933627+00:00",
+      "payload": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\": false, \"data\": {\"status\": \"FAIL\", \"execution_status\": \"PASS\", \"numerical_verification_status\": \"FAIL\", \"physical_validation_status\": \"UNVERIFIED\", \"solution\": {\"dataset\": \"dset1\"}, \"checks\": {\"dataset_exists\": true, \"oracle_registered\": false}, \"metrics\": {}, \"oracle_results\": {}, \"message\": \"Unknown or unregistered oracle 'transient_sine_diffusion'\", \"domain_state\": \"failed\", \"verification_status\": \"NOT_RUN\", \"execution_state_unknown\": false, \"partial_change\": false, \"cleanup_failed\": false, \"dispatch_stage\": \"post_dispatch\", \"domain_outcome\": {\"operation\": \"validate.solution\", \"state\": \"failed\", \"verification_status\": \"NOT_RUN\", \"cleanup_failed\": false, \"execution_state_unknown\": false, \"dispatch_stage\": \"post_dispatch\", \"status_token\": \"FAIL\", \"execution_status\": \"PASS\", \"failure\": {\"code\": \"OPERATION_FAILED\", \"message\": \"the operation reported a failed domain status\", \"safe_retry\": false}, \"verification\": {\"declared_by\": [\"checks\"], \"reason\": \"the operation declared a verification axis but published no verdict\"}, \"witness\": {\"engine_calls\": 3, \"mutation_method\": null, \"methods\": [\"dataset\", \"result\", \"tags\"], \"dispatches\": [{\"command\": \"call\", \"method\": \"result\", \"args_count\": 0, \"receiver\": \"h-82536cfd-8b0e-417c-af82-7af42236e1d8\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"dataset\", \"args_count\": 0, \"receiver\": \"h-75267eaf-60bd-4248-80f8-432041d66c1b\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-f9fb979a-4c2d-438d-869f-2c01c3d3a52f\", \"is_mutation\": false}], \"mutation_issued\": false}, \"details\": {\"status_token\": \"FAIL\"}}, \"effect\": \"evaluate\", \"verified_outcome\": \"failed\"}, \"error\": {\"code\": \"OPERATION_FAILED\", \"message\": \"the operation reported a failed domain status\", \"safe_retry\": false}, \"execution\": {\"session_id\": \"session-0f88ed0d3070c1f24e0520c6\", \"model_ref\": {\"schema_version\": 1, \"session_id\": \"session-0f88ed0d3070c1f24e0520c6\", \"server_instance_id\": \"edafe659491967297600005952e2033dcb7d3f3e73039ef14bd1a3c13dbfb54d\", \"model_tag\": \"mcp2\", \"generation\": 1}, \"revision\": 0, \"dirty\": false, \"server_ownership\": \"shared\", \"model_ownership\": \"user_owned\", \"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"request_id\": \"6327349a-b8e9-4417-9021-ef75bbbd799a\", \"operation_id\": \"f368bbaf-4be8-4253-bb3b-6dfef30ecd9a\", \"request_hash\": \"5244e06d1d859318fe90d89a71134b714aff77ff2e07d7c647b0812399873dca\", \"idempotency_key\": \"b3f0a0f0-569c-45f9-8ea4-58e630b8415b\", \"job_id\": \"766e10e8-e625-4aa1-a488-9cf21837e5e7\"}}"
+          }
+        ],
+        "structuredContent": {
+          "success": false,
+          "data": {
+            "status": "FAIL",
+            "execution_status": "PASS",
+            "numerical_verification_status": "FAIL",
+            "physical_validation_status": "UNVERIFIED",
+            "solution": {
+              "dataset": "dset1"
+            },
+            "checks": {
+              "dataset_exists": true,
+              "oracle_registered": false
+            },
+            "metrics": {},
+            "oracle_results": {},
+            "message": "Unknown or unregistered oracle 'transient_sine_diffusion'",
+            "domain_state": "failed",
+            "verification_status": "NOT_RUN",
+            "execution_state_unknown": false,
+            "partial_change": false,
+            "cleanup_failed": false,
+            "dispatch_stage": "post_dispatch",
+            "domain_outcome": {
+              "operation": "validate.solution",
+              "state": "failed",
+              "verification_status": "NOT_RUN",
+              "cleanup_failed": false,
+              "execution_state_unknown": false,
+              "dispatch_stage": "post_dispatch",
+              "status_token": "FAIL",
+              "execution_status": "PASS",
+              "failure": {
+                "code": "OPERATION_FAILED",
+                "message": "the operation reported a failed domain status",
+                "safe_retry": false
+              },
+              "verification": {
+                "declared_by": [
+                  "checks"
+                ],
+                "reason": "the operation declared a verification axis but published no verdict"
+              },
+              "witness": {
+                "engine_calls": 3,
+                "mutation_method": null,
+                "methods": [
+                  "dataset",
+                  "result",
+                  "tags"
+                ],
+                "dispatches": [
+                  {
+                    "command": "call",
+                    "method": "result",
+                    "args_count": 0,
+                    "receiver": "h-82536cfd-8b0e-417c-af82-7af42236e1d8",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "dataset",
+                    "args_count": 0,
+                    "receiver": "h-75267eaf-60bd-4248-80f8-432041d66c1b",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "tags",
+                    "args_count": 0,
+                    "receiver": "h-f9fb979a-4c2d-438d-869f-2c01c3d3a52f",
+                    "is_mutation": false
+                  }
+                ],
+                "mutation_issued": false
+              },
+              "details": {
+                "status_token": "FAIL"
+              }
+            },
+            "effect": "evaluate",
+            "verified_outcome": "failed"
+          },
+          "error": {
+            "code": "OPERATION_FAILED",
+            "message": "the operation reported a failed domain status",
+            "safe_retry": false
+          },
+          "execution": {
+            "session_id": "session-0f88ed0d3070c1f24e0520c6",
+            "model_ref": {
+              "schema_version": 1,
+              "session_id": "session-0f88ed0d3070c1f24e0520c6",
+              "server_instance_id": "edafe659491967297600005952e2033dcb7d3f3e73039ef14bd1a3c13dbfb54d",
+              "model_tag": "mcp2",
+              "generation": 1
+            },
+            "revision": 0,
+            "dirty": false,
+            "server_ownership": "shared",
+            "model_ownership": "user_owned",
+            "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+            "request_id": "6327349a-b8e9-4417-9021-ef75bbbd799a",
+            "operation_id": "f368bbaf-4be8-4253-bb3b-6dfef30ecd9a",
+            "request_hash": "5244e06d1d859318fe90d89a71134b714aff77ff2e07d7c647b0812399873dca",
+            "idempotency_key": "b3f0a0f0-569c-45f9-8ea4-58e630b8415b",
+            "job_id": "766e10e8-e625-4aa1-a488-9cf21837e5e7"
+          }
+        },
+        "isError": true
+      },
+      "raw_jsonrpc": {
+        "jsonrpc": "2.0",
+        "id": 12,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"success\": false, \"data\": {\"status\": \"FAIL\", \"execution_status\": \"PASS\", \"numerical_verification_status\": \"FAIL\", \"physical_validation_status\": \"UNVERIFIED\", \"solution\": {\"dataset\": \"dset1\"}, \"checks\": {\"dataset_exists\": true, \"oracle_registered\": false}, \"metrics\": {}, \"oracle_results\": {}, \"message\": \"Unknown or unregistered oracle 'transient_sine_diffusion'\", \"domain_state\": \"failed\", \"verification_status\": \"NOT_RUN\", \"execution_state_unknown\": false, \"partial_change\": false, \"cleanup_failed\": false, \"dispatch_stage\": \"post_dispatch\", \"domain_outcome\": {\"operation\": \"validate.solution\", \"state\": \"failed\", \"verification_status\": \"NOT_RUN\", \"cleanup_failed\": false, \"execution_state_unknown\": false, \"dispatch_stage\": \"post_dispatch\", \"status_token\": \"FAIL\", \"execution_status\": \"PASS\", \"failure\": {\"code\": \"OPERATION_FAILED\", \"message\": \"the operation reported a failed domain status\", \"safe_retry\": false}, \"verification\": {\"declared_by\": [\"checks\"], \"reason\": \"the operation declared a verification axis but published no verdict\"}, \"witness\": {\"engine_calls\": 3, \"mutation_method\": null, \"methods\": [\"dataset\", \"result\", \"tags\"], \"dispatches\": [{\"command\": \"call\", \"method\": \"result\", \"args_count\": 0, \"receiver\": \"h-82536cfd-8b0e-417c-af82-7af42236e1d8\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"dataset\", \"args_count\": 0, \"receiver\": \"h-75267eaf-60bd-4248-80f8-432041d66c1b\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-f9fb979a-4c2d-438d-869f-2c01c3d3a52f\", \"is_mutation\": false}], \"mutation_issued\": false}, \"details\": {\"status_token\": \"FAIL\"}}, \"effect\": \"evaluate\", \"verified_outcome\": \"failed\"}, \"error\": {\"code\": \"OPERATION_FAILED\", \"message\": \"the operation reported a failed domain status\", \"safe_retry\": false}, \"execution\": {\"session_id\": \"session-0f88ed0d3070c1f24e0520c6\", \"model_ref\": {\"schema_version\": 1, \"session_id\": \"session-0f88ed0d3070c1f24e0520c6\", \"server_instance_id\": \"edafe659491967297600005952e2033dcb7d3f3e73039ef14bd1a3c13dbfb54d\", \"model_tag\": \"mcp2\", \"generation\": 1}, \"revision\": 0, \"dirty\": false, \"server_ownership\": \"shared\", \"model_ownership\": \"user_owned\", \"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"request_id\": \"6327349a-b8e9-4417-9021-ef75bbbd799a\", \"operation_id\": \"f368bbaf-4be8-4253-bb3b-6dfef30ecd9a\", \"request_hash\": \"5244e06d1d859318fe90d89a71134b714aff77ff2e07d7c647b0812399873dca\", \"idempotency_key\": \"b3f0a0f0-569c-45f9-8ea4-58e630b8415b\", \"job_id\": \"766e10e8-e625-4aa1-a488-9cf21837e5e7\"}}"
+            }
+          ],
+          "structuredContent": {
+            "success": false,
+            "data": {
+              "status": "FAIL",
+              "execution_status": "PASS",
+              "numerical_verification_status": "FAIL",
+              "physical_validation_status": "UNVERIFIED",
+              "solution": {
+                "dataset": "dset1"
+              },
+              "checks": {
+                "dataset_exists": true,
+                "oracle_registered": false
+              },
+              "metrics": {},
+              "oracle_results": {},
+              "message": "Unknown or unregistered oracle 'transient_sine_diffusion'",
+              "domain_state": "failed",
+              "verification_status": "NOT_RUN",
+              "execution_state_unknown": false,
+              "partial_change": false,
+              "cleanup_failed": false,
+              "dispatch_stage": "post_dispatch",
+              "domain_outcome": {
+                "operation": "validate.solution",
+                "state": "failed",
+                "verification_status": "NOT_RUN",
+                "cleanup_failed": false,
+                "execution_state_unknown": false,
+                "dispatch_stage": "post_dispatch",
+                "status_token": "FAIL",
+                "execution_status": "PASS",
+                "failure": {
+                  "code": "OPERATION_FAILED",
+                  "message": "the operation reported a failed domain status",
+                  "safe_retry": false
+                },
+                "verification": {
+                  "declared_by": [
+                    "checks"
+                  ],
+                  "reason": "the operation declared a verification axis but published no verdict"
+                },
+                "witness": {
+                  "engine_calls": 3,
+                  "mutation_method": null,
+                  "methods": [
+                    "dataset",
+                    "result",
+                    "tags"
+                  ],
+                  "dispatches": [
+                    {
+                      "command": "call",
+                      "method": "result",
+                      "args_count": 0,
+                      "receiver": "h-82536cfd-8b0e-417c-af82-7af42236e1d8",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "dataset",
+                      "args_count": 0,
+                      "receiver": "h-75267eaf-60bd-4248-80f8-432041d66c1b",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "tags",
+                      "args_count": 0,
+                      "receiver": "h-f9fb979a-4c2d-438d-869f-2c01c3d3a52f",
+                      "is_mutation": false
+                    }
+                  ],
+                  "mutation_issued": false
+                },
+                "details": {
+                  "status_token": "FAIL"
+                }
+              },
+              "effect": "evaluate",
+              "verified_outcome": "failed"
+            },
+            "error": {
+              "code": "OPERATION_FAILED",
+              "message": "the operation reported a failed domain status",
+              "safe_retry": false
+            },
+            "execution": {
+              "session_id": "session-0f88ed0d3070c1f24e0520c6",
+              "model_ref": {
+                "schema_version": 1,
+                "session_id": "session-0f88ed0d3070c1f24e0520c6",
+                "server_instance_id": "edafe659491967297600005952e2033dcb7d3f3e73039ef14bd1a3c13dbfb54d",
+                "model_tag": "mcp2",
+                "generation": 1
+              },
+              "revision": 0,
+              "dirty": false,
+              "server_ownership": "shared",
+              "model_ownership": "user_owned",
+              "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+              "request_id": "6327349a-b8e9-4417-9021-ef75bbbd799a",
+              "operation_id": "f368bbaf-4be8-4253-bb3b-6dfef30ecd9a",
+              "request_hash": "5244e06d1d859318fe90d89a71134b714aff77ff2e07d7c647b0812399873dca",
+              "idempotency_key": "b3f0a0f0-569c-45f9-8ea4-58e630b8415b",
+              "job_id": "766e10e8-e625-4aa1-a488-9cf21837e5e7"
+            }
+          },
+          "isError": true
+        }
+      }
+    }
+  ]
+}

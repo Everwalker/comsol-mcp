@@ -529,3 +529,199 @@ class TestG3ValidationOperations:
         })
         assert fail_up["status"] == STATUS_FAIL
 
+
+class TestW20RemediationRegressions:
+    """Explicit regression tests for findings F01-F07 (P01-P10)."""
+
+    def test_p01_getter_failure_does_not_pass(self):
+        from comsol_mcp._g3_w20_validation import validate_expressions
+        class FailingParams:
+            def evaluate(self, _):
+                raise RuntimeError("engine evaluate failed")
+        class MockModel:
+            def param(self):
+                return FailingParams()
+        class MockWorker:
+            def client(self):
+                return self
+            def model(self, _):
+                return MockModel()
+
+        res = validate_expressions(MockWorker(), "m", {"expressions": ["unknown_var"]})
+        assert res["status"] == STATUS_FAIL
+        assert res["findings"][0]["status"] == STATUS_FAIL
+
+    def test_p02_unary_minus_syntax_accepted(self):
+        from comsol_mcp._g3_w20_validation import check_expression_syntax
+        valid, _ = check_expression_syntax("2*-3")
+        assert valid is True
+        valid2, _ = check_expression_syntax("2^-3")
+        assert valid2 is True
+        bad, _ = check_expression_syntax("2++3")
+        assert bad is False
+
+    def test_p03_boundary_inspection_does_not_mutate_selection(self):
+        from comsol_mcp._g3_w20_validation import validate_boundary_conditions
+        class MockSelection:
+            def __init__(self):
+                self.selected = [1]
+                self.all_called = False
+            def all(self):
+                self.all_called = True
+                self.selected = [1, 2, 3, 4]
+                return self
+        class MockFeature:
+            def __init__(self, sel):
+                self._sel = sel
+            def getType(self):
+                return "TemperatureBoundary"
+            def selection(self):
+                return self._sel
+        class MockPhysics:
+            def __init__(self, sel):
+                self._sel = sel
+            def feature(self, *args):
+                return MockFeature(self._sel) if args else type("Tags", (), {"tags": lambda self: ["temp1"]})()
+        class MockModel:
+            def __init__(self, sel):
+                self._sel = sel
+            def physics(self, *args):
+                return MockPhysics(self._sel) if args else type("Tags", (), {"tags": lambda self: ["ht"]})()
+        class MockWorker:
+            def __init__(self, sel):
+                self._sel = sel
+            def client(self):
+                return self
+            def model(self, _):
+                return MockModel(self._sel)
+
+        sel = MockSelection()
+        worker = MockWorker(sel)
+        res = validate_boundary_conditions(worker, "m", {"rules": ["conflicting_temperature_boundaries"]})
+        assert not sel.all_called
+        assert sel.selected == [1]
+        assert res["status"] == STATUS_UNVERIFIED
+
+    def test_p04_boundary_live_read_priority_and_unknown_rule_unverified(self):
+        from comsol_mcp._g3_w20_validation import validate_boundary_conditions
+        class MockPhysics:
+            def feature(self, *args):
+                return type("Tags", (), {"tags": lambda self: []})()
+        class MockModel:
+            def __init__(self):
+                self.model_calls = 0
+            def physics(self, *args):
+                return MockPhysics() if args else type("Tags", (), {"tags": lambda self: ["ht"]})()
+        class MockWorker:
+            def __init__(self):
+                self.m = MockModel()
+            def client(self):
+                return self
+            def model(self, _):
+                self.m.model_calls += 1
+                return self.m
+
+        w = MockWorker()
+        res = validate_boundary_conditions(w, "m", {
+            "rules": ["unknown_boundary_rule"],
+            "boundary_data": {"boundaries": []}
+        })
+        assert w.m.model_calls > 0
+        assert res["status"] == STATUS_UNVERIFIED
+
+    def test_p05_solution_caller_values_origin(self):
+        from comsol_mcp._g3_w20_validation import validate_solution
+        class MockResults:
+            def dataset(self):
+                return type("Tags", (), {"tags": lambda self: ["dset1"]})()
+        class MockModel:
+            def result(self):
+                return MockResults()
+        class MockWorker:
+            def client(self):
+                return self
+            def model(self, _):
+                return MockModel()
+
+        res = validate_solution(MockWorker(), "m", {
+            "solution": {"dataset": "dset1"},
+            "criteria": {"values": [325.0], "range": [300, 350]}
+        })
+        assert res["observation_origin"] == "CALLER_SUPPLIED"
+        assert res["status"] == STATUS_PASS
+
+    def test_p06_empty_dataset_fails_closed(self):
+        from comsol_mcp._g3_w20_validation import validate_solution
+        class MockResults:
+            def dataset(self):
+                return type("Tags", (), {"tags": lambda self: []})()
+        class MockModel:
+            def result(self):
+                return MockResults()
+        class MockWorker:
+            def client(self):
+                return self
+            def model(self, _):
+                return MockModel()
+
+        res = validate_solution(MockWorker(), "m", {
+            "solution": {"dataset": "missing"},
+            "criteria": {"values": [325.0]}
+        })
+        assert res["status"] == STATUS_FAIL
+        assert res["checks"]["dataset_exists"] is False
+
+    def test_p07_conservation_power_field_used_in_balance(self):
+        from comsol_mcp._g3_w20_validation import validate_conservation
+        res = validate_conservation(None, "m", {"definition": {"power": 100.0}})
+        assert res["status"] == STATUS_FAIL
+        assert res["source_term"] == 100.0
+        assert res["residual"] > 0
+
+    def test_p08_report_state_lattice_preservation(self):
+        from comsol_mcp._g3_w20_validation import validate_report
+        for st in ("ERROR", "BLOCKED", "UNSUPPORTED"):
+            r = validate_report(None, "m", {"data": {"child": {"status": st}}})
+            assert r["status"] == st
+            assert r["numerical_verification_status"] == st
+
+    def test_p09_report_sibling_file_protection(self, tmp_path):
+        from comsol_mcp._g3_w20_validation import validate_report
+        sentinel = tmp_path / "report.md"
+        sentinel.write_text("preserve-sibling", encoding="utf-8")
+        r = validate_report(None, "m", {
+            "destination": str(tmp_path / "report.json"),
+            "data": {"child": {"status": "PASS"}},
+            "overwrite": False,
+        })
+        assert sentinel.read_text(encoding="utf-8") == "preserve-sibling"
+        assert r["status"] == STATUS_FAIL
+
+    def test_p10_arguments_unwrapping_and_conflict_detection(self):
+        from comsol_mcp._g3_w20_validation import validate_solution
+        class MockResults:
+            def dataset(self):
+                return type("Tags", (), {"tags": lambda self: ["dset1"]})()
+        class MockModel:
+            def result(self):
+                return MockResults()
+        class MockWorker:
+            def client(self):
+                return self
+            def model(self, _):
+                return MockModel()
+
+        # Wrapped arguments unwrap cleanly
+        raw = {"solution": {"dataset": "dset1"}, "criteria": {"values": [325.0]}}
+        res = validate_solution(MockWorker(), "m", {"arguments": raw})
+        assert res["status"] == STATUS_PASS
+
+        # Conflicting arguments raise ValueError
+        import pytest
+        with pytest.raises(ValueError, match="Conflicting"):
+            validate_solution(MockWorker(), "m", {
+                "solution": {"dataset": "dset1"},
+                "arguments": {"solution": {"dataset": "dset2"}}
+            })
+
+

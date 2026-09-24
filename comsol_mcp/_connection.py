@@ -57,7 +57,10 @@ def _ensure_client_shell() -> Any:
         mph = _get_mph()
         if mph is None:
             raise RuntimeError("MPh is not available; cannot create client shell.")
-        _srv._client = mph.Client(host=None)
+        client_kwargs: dict[str, Any] = {"host": None}
+        if _srv.DEFAULT_VERSION:
+            client_kwargs["version"] = _srv.DEFAULT_VERSION
+        _srv._client = mph.Client(**client_kwargs)
     return _srv._client
 
 

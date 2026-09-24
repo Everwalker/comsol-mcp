@@ -938,7 +938,7 @@ def _validate_engine_path(value: Any, *, label: str = "artifact_id") -> str:
     path = require_string(value, label, max_length=4096)
     if "\x00" in path or any(ord(char) < 32 for char in path):
         raise ExecutionContractError("INVALID_REQUEST", f"{label} contains a control character")
-    if not os.path.isabs(path):
+    if not (os.path.isabs(path) or path.startswith(("/", "\\"))):
         raise ExecutionContractError(
             "INVALID_REQUEST",
             f"{label} must be an absolute path on the machine that runs the COMSOL engine; relative paths are "

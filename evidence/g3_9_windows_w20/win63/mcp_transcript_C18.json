@@ -1,0 +1,172 @@
+{
+  "capture_origin": "CAPTURED_STDIN_STDOUT",
+  "run_id": "g3_9_acceptance_20260924T151059Z",
+  "target": "win63",
+  "case_id": "C18",
+  "events": [
+    {
+      "direction": "request",
+      "method": "tools/call",
+      "request_id": "17",
+      "timestamp": "2026-09-24T15:12:35.748738+00:00",
+      "payload": {
+        "name": "session_health",
+        "arguments": {}
+      },
+      "raw_jsonrpc": {
+        "method": "tools/call",
+        "params": {
+          "name": "session_health",
+          "arguments": {}
+        },
+        "jsonrpc": "2.0",
+        "id": 17
+      }
+    },
+    {
+      "direction": "response",
+      "request_id": "17",
+      "timestamp": "2026-09-24T15:12:35.792051+00:00",
+      "payload": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\": true, \"data\": {\"status\": \"READY\", \"control_pid\": 16824, \"worker_connected\": true, \"worker\": {\"ok\": true, \"status\": \"HEALTHY\", \"generation\": 2, \"instance_id\": \"c112db5e-0c5f-45af-a43c-1d96547413a5\", \"connected\": true, \"server\": \"127.0.0.1:52207\", \"changed_count\": 0, \"queued_or_running\": 1, \"observed_at\": 1790262755.3139334}, \"session\": {\"connected\": true, \"server_ownership\": \"shared\", \"endpoint\": \"127.0.0.1:52207\", \"session_id\": \"session-ddb81c75e3141d178513a2f5\", \"server_instance_id\": \"8f464ea614f657a2db0a0933427bb399053c8cefcc1f9089038477fd7eed5aa6\", \"external_change_detection\": {\"coverage\": \"parameters+shallow_tree_identity\", \"status\": \"SCOPED_EVIDENCE_ONLY\", \"event_notifications\": \"UNVERIFIED\", \"full_model_property_coverage\": \"UNVERIFIED\", \"cas_guarantee\": \"NONE\", \"evidence_source\": \"evidence/phase2/followup/20260918T142300Z-external-api\", \"evidence_environment\": \"macOS arm64; COMSOL 6.4.0.293\", \"other_platforms_or_versions\": \"UNVERIFIED\"}, \"trusted_code\": {\"enabled\": false, \"os_sandbox\": false, \"config\": \"COMSOL_MCP_TRUSTED_CODE\"}, \"worker\": {\"host\": \"127.0.0.1\", \"port\": 52966, \"pid\": 23420, \"generation\": 2, \"instance_id\": \"c112db5e-0c5f-45af-a43c-1d96547413a5\", \"connected\": true, \"server\": \"127.0.0.1:52207\"}}, \"active_jobs\": [], \"cancellation_capabilities\": {\"native_cooperative_cancel\": \"UNSUPPORTED\", \"queued_cancel\": \"VERIFIED\", \"owned_process_termination\": \"VERIFIED\"}}, \"execution\": {\"session_id\": \"session-ddb81c75e3141d178513a2f5\"}}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "data": {
+            "status": "READY",
+            "control_pid": 16824,
+            "worker_connected": true,
+            "worker": {
+              "ok": true,
+              "status": "HEALTHY",
+              "generation": 2,
+              "instance_id": "c112db5e-0c5f-45af-a43c-1d96547413a5",
+              "connected": true,
+              "server": "127.0.0.1:52207",
+              "changed_count": 0,
+              "queued_or_running": 1,
+              "observed_at": 1790262755.3139334
+            },
+            "session": {
+              "connected": true,
+              "server_ownership": "shared",
+              "endpoint": "127.0.0.1:52207",
+              "session_id": "session-ddb81c75e3141d178513a2f5",
+              "server_instance_id": "8f464ea614f657a2db0a0933427bb399053c8cefcc1f9089038477fd7eed5aa6",
+              "external_change_detection": {
+                "coverage": "parameters+shallow_tree_identity",
+                "status": "SCOPED_EVIDENCE_ONLY",
+                "event_notifications": "UNVERIFIED",
+                "full_model_property_coverage": "UNVERIFIED",
+                "cas_guarantee": "NONE",
+                "evidence_source": "evidence/phase2/followup/20260918T142300Z-external-api",
+                "evidence_environment": "macOS arm64; COMSOL 6.4.0.293",
+                "other_platforms_or_versions": "UNVERIFIED"
+              },
+              "trusted_code": {
+                "enabled": false,
+                "os_sandbox": false,
+                "config": "COMSOL_MCP_TRUSTED_CODE"
+              },
+              "worker": {
+                "host": "127.0.0.1",
+                "port": 52966,
+                "pid": 23420,
+                "generation": 2,
+                "instance_id": "c112db5e-0c5f-45af-a43c-1d96547413a5",
+                "connected": true,
+                "server": "127.0.0.1:52207"
+              }
+            },
+            "active_jobs": [],
+            "cancellation_capabilities": {
+              "native_cooperative_cancel": "UNSUPPORTED",
+              "queued_cancel": "VERIFIED",
+              "owned_process_termination": "VERIFIED"
+            }
+          },
+          "execution": {
+            "session_id": "session-ddb81c75e3141d178513a2f5"
+          }
+        },
+        "isError": false
+      },
+      "raw_jsonrpc": {
+        "jsonrpc": "2.0",
+        "id": 17,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"success\": true, \"data\": {\"status\": \"READY\", \"control_pid\": 16824, \"worker_connected\": true, \"worker\": {\"ok\": true, \"status\": \"HEALTHY\", \"generation\": 2, \"instance_id\": \"c112db5e-0c5f-45af-a43c-1d96547413a5\", \"connected\": true, \"server\": \"127.0.0.1:52207\", \"changed_count\": 0, \"queued_or_running\": 1, \"observed_at\": 1790262755.3139334}, \"session\": {\"connected\": true, \"server_ownership\": \"shared\", \"endpoint\": \"127.0.0.1:52207\", \"session_id\": \"session-ddb81c75e3141d178513a2f5\", \"server_instance_id\": \"8f464ea614f657a2db0a0933427bb399053c8cefcc1f9089038477fd7eed5aa6\", \"external_change_detection\": {\"coverage\": \"parameters+shallow_tree_identity\", \"status\": \"SCOPED_EVIDENCE_ONLY\", \"event_notifications\": \"UNVERIFIED\", \"full_model_property_coverage\": \"UNVERIFIED\", \"cas_guarantee\": \"NONE\", \"evidence_source\": \"evidence/phase2/followup/20260918T142300Z-external-api\", \"evidence_environment\": \"macOS arm64; COMSOL 6.4.0.293\", \"other_platforms_or_versions\": \"UNVERIFIED\"}, \"trusted_code\": {\"enabled\": false, \"os_sandbox\": false, \"config\": \"COMSOL_MCP_TRUSTED_CODE\"}, \"worker\": {\"host\": \"127.0.0.1\", \"port\": 52966, \"pid\": 23420, \"generation\": 2, \"instance_id\": \"c112db5e-0c5f-45af-a43c-1d96547413a5\", \"connected\": true, \"server\": \"127.0.0.1:52207\"}}, \"active_jobs\": [], \"cancellation_capabilities\": {\"native_cooperative_cancel\": \"UNSUPPORTED\", \"queued_cancel\": \"VERIFIED\", \"owned_process_termination\": \"VERIFIED\"}}, \"execution\": {\"session_id\": \"session-ddb81c75e3141d178513a2f5\"}}"
+            }
+          ],
+          "structuredContent": {
+            "success": true,
+            "data": {
+              "status": "READY",
+              "control_pid": 16824,
+              "worker_connected": true,
+              "worker": {
+                "ok": true,
+                "status": "HEALTHY",
+                "generation": 2,
+                "instance_id": "c112db5e-0c5f-45af-a43c-1d96547413a5",
+                "connected": true,
+                "server": "127.0.0.1:52207",
+                "changed_count": 0,
+                "queued_or_running": 1,
+                "observed_at": 1790262755.3139334
+              },
+              "session": {
+                "connected": true,
+                "server_ownership": "shared",
+                "endpoint": "127.0.0.1:52207",
+                "session_id": "session-ddb81c75e3141d178513a2f5",
+                "server_instance_id": "8f464ea614f657a2db0a0933427bb399053c8cefcc1f9089038477fd7eed5aa6",
+                "external_change_detection": {
+                  "coverage": "parameters+shallow_tree_identity",
+                  "status": "SCOPED_EVIDENCE_ONLY",
+                  "event_notifications": "UNVERIFIED",
+                  "full_model_property_coverage": "UNVERIFIED",
+                  "cas_guarantee": "NONE",
+                  "evidence_source": "evidence/phase2/followup/20260918T142300Z-external-api",
+                  "evidence_environment": "macOS arm64; COMSOL 6.4.0.293",
+                  "other_platforms_or_versions": "UNVERIFIED"
+                },
+                "trusted_code": {
+                  "enabled": false,
+                  "os_sandbox": false,
+                  "config": "COMSOL_MCP_TRUSTED_CODE"
+                },
+                "worker": {
+                  "host": "127.0.0.1",
+                  "port": 52966,
+                  "pid": 23420,
+                  "generation": 2,
+                  "instance_id": "c112db5e-0c5f-45af-a43c-1d96547413a5",
+                  "connected": true,
+                  "server": "127.0.0.1:52207"
+                }
+              },
+              "active_jobs": [],
+              "cancellation_capabilities": {
+                "native_cooperative_cancel": "UNSUPPORTED",
+                "queued_cancel": "VERIFIED",
+                "owned_process_termination": "VERIFIED"
+              }
+            },
+            "execution": {
+              "session_id": "session-ddb81c75e3141d178513a2f5"
+            }
+          },
+          "isError": false
+        }
+      }
+    }
+  ]
+}

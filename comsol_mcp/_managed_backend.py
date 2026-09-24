@@ -557,7 +557,14 @@ class ManagedBackend:
 
     @staticmethod
     def _g2_body(arguments: dict[str, Any]) -> dict[str, Any]:
-        return {key: value for key, value in arguments.items() if key not in {"project_id", "session_id", "model_ref", "expected_revision", "idempotency_key", "request_id"}}
+        body = {key: value for key, value in arguments.items() if key not in {"project_id", "session_id", "model_ref", "expected_revision", "idempotency_key", "request_id"}}
+        if "arguments" in body and isinstance(body["arguments"], Mapping):
+            inner = dict(body.pop("arguments"))
+            for k, v in inner.items():
+                if k in body and body[k] is not None and body[k] != v:
+                    raise ExecutionContractError("INVALID_REQUEST", f"Conflicting values for argument '{k}'")
+                body.setdefault(k, v)
+        return body
 
     def _invoke_g2_control(self, operation, arguments, execution, operation_id):
         if operation in {"docs_index", "docs.index"}:
@@ -639,7 +646,9 @@ class ManagedBackend:
         java = os.environ.get("COMSOL_JAVA_HOME") or os.environ.get("JAVA_HOME")
         if not root or not java:
             raise ExecutionContractError("RUNTIME_CONFIGURATION_REQUIRED", "COMSOL_ROOT and COMSOL_JAVA_HOME must be configured for Java compilation")
-        self.worker = PersistentJavaWorker(JavaWorkerPaths(Path(root), Path(java), project_root=self.project_root),
+        prefs = os.environ.get("COMSOL_PREFS_DIR")
+        self.worker = PersistentJavaWorker(JavaWorkerPaths(Path(root), Path(java), Path(prefs) if prefs else None,
+                                                           project_root=self.project_root),
                                            state_dir=self.home / "worker")
         self.worker.start()
 
@@ -720,7 +729,22 @@ class ManagedBackend:
             raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "session mismatch")
         ref_mapping = execution.get("model_ref") or arguments.get("model_ref")
         if not isinstance(ref_mapping, dict):
-            raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "model_ref is required for this operation")
+            import comsol_mcp._server as srv
+            cur = getattr(srv, "_current_model", None)
+            cur_tag = getattr(cur, "tag", None)
+            if callable(cur_tag):
+                try:
+                    cur_tag = cur_tag()
+                except Exception:
+                    cur_tag = None
+            if isinstance(cur_tag, str):
+                if cur_tag not in self.service.ledger._models:
+                    self.service.ledger.bind_model(cur_tag)
+                ref_mapping = self.service.ledger._models[cur_tag].ref.as_dict()
+            elif self.service.ledger._models:
+                ref_mapping = next(iter(self.service.ledger._models.values())).ref.as_dict()
+            else:
+                raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "model_ref is required for this operation")
         ref = model_ref_from_mapping(ref_mapping)
         bound_revision = self.service.ledger._state_for(ref).revision
         body = self._g2_body(arguments)
@@ -911,7 +935,11 @@ class ManagedBackend:
             raise ExecutionContractError("PERMISSION_DENIED", f"unclassified G3 effect for operation {operation}")
         isolation = (
             self._require_g2_isolation()
-            if (operation in REQUIRES_ISOLATION and operation not in {"plot.render", "plot.geometry_render", "plot_render", "plot_geometry_render"})
+            if (
+                operation in REQUIRES_ISOLATION
+                and not operation.startswith("validate.")
+                and operation not in {"plot.render", "plot.geometry_render", "plot_render", "plot_geometry_render"}
+            )
             else None
         )
         alias = self._g2_alias(operation)
@@ -921,8 +949,11 @@ class ManagedBackend:
                 operation, lambda: function(self.worker, ref.model_tag, dict(body)), effect=effect,
             )
 
+        expected_rev = execution.get("expected_revision", body.get("expected_revision"))
+        if expected_rev is None and operation.startswith("validate."):
+            expected_rev = self.service.ledger._state_for(ref).revision
         result = self.service.execute_legacy(alias, callback, body, model_ref=ref,
-                expected_revision=execution.get("expected_revision", body.get("expected_revision")),
+                expected_revision=expected_rev,
                 request_id=execution.get("request_id"), session_id=session, effect=effect)
         if isolation is not None:
             result.setdefault("data", {})["isolation_proof"] = isolation

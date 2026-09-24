@@ -1,0 +1,88 @@
+{
+  "schema": "g39/findings/1",
+  "source_commit": "886affadc83477e940238c723edd569d00559985",
+  "native_tests_run_by_reviewer": false,
+  "items": [
+    {
+      "id": "F01",
+      "priority": "P0",
+      "title": "W20公开参数多嵌套一层",
+      "source": "_tools_w20.py; _mcp_gateway.py; _managed_backend.py",
+      "evidence_status": "SOURCE_ROUTE_ANALYSIS_AND_ISOLATED_SIGNATURE_REPLICA",
+      "finding": "工具签名arguments:dict，经Gateway dict(bound.arguments)与_g2_body后保留arguments包装，领域函数读取顶层expressions/criteria。stub的return不会被Gateway执行。",
+      "required_change": "统一显式schema或有边界的规范化；三入口实际调用，幂等身份与execution保留。"
+    },
+    {
+      "id": "F02",
+      "priority": "P0",
+      "title": "边界读取回退调用selection.all()",
+      "source": "_g3_w20_validation.py::validate_boundary_conditions",
+      "evidence_status": "SOURCE_CONFIRMED_ISOLATED_REPRO",
+      "finding": "entities/getter失败后尝试all，COMSOL此方法会选中所有实体；函数可吞掉异常后返回PASS。caller boundary_data还可优先覆盖真实模型检查。",
+      "required_change": "禁止任何写型getter回退；使用维数正确的读取；失败标UNVERIFIED/ERROR并验证模型不变。"
+    },
+    {
+      "id": "F03",
+      "priority": "P1",
+      "title": "表达式错误吞掉与预检过度声明",
+      "source": "_g3_w20_validation.py::validate_expressions/validate_structure/validate_preflight",
+      "evidence_status": "SOURCE_CONFIRMED_WITH_PARTIAL_ISOLATED_REPRO",
+      "finding": "evaluate失败被pass吞掉；2*-3和2^-3等合法组合被正则拒绝；材料选区读取异常不进入findings，有节点不等于就绪。",
+      "required_change": "COMSOL负责上下文语法/单位；regex仅lint；未知检查不列为已验证；逐个独立反例测试。"
+    },
+    {
+      "id": "F04",
+      "priority": "P0",
+      "title": "请求体数值被标成引擎观测",
+      "source": "_g3_w20_validation.py::validate_solution",
+      "evidence_status": "SOURCE_CONFIRMED_ISOLATED_REPRO",
+      "finding": "values/observations仍从criteria获取；仅成功读取result/dataset目录就改origin=ENGINE_EVALUATION；空数据集列表仍可dataset_exists=True。",
+      "required_change": "实际调用W17或引用后端登记ObservationRef；origin不能由请求或一次目录读取升级；严格模型/解/单位/时间/来源核对。"
+    },
+    {
+      "id": "F05",
+      "priority": "P1",
+      "title": "守恒参数没有真实积分与power被忽略",
+      "source": "_g3_w20_validation.py::validate_conservation; tools/run_g3_8_acceptance.py::V09",
+      "evidence_status": "SOURCE_CONFIRMED_ISOLATED_REPRO",
+      "finding": "函数仍只计算输入数字；power通过非空门禁但不进入平衡式；runner填入固定80/80或-0.05/-0.05。",
+      "required_change": "power定义清楚或拒绝；实际读取通量/源项/储能；严格有限数值、归一化单位与符号。"
+    },
+    {
+      "id": "F06",
+      "priority": "P0",
+      "title": "收敛仍为硬编码三级列表",
+      "source": "tools/run_g3_8_acceptance.py::V10/V11; _g3_w20_validation.py::ConvergenceStudy",
+      "evidence_status": "SOURCE_AND_COMMITTED_RECORD_CONFIRMED",
+      "finding": "mesh/time误差、DOF和耗时为常量；validate_convergence没有实际case refs；max_allowed使用or会忽略0。",
+      "required_change": "分别真正细化并求解，误差来自冻结参考和实际观测；消费验证过的case refs，不以严格单调为唯一判据。"
+    },
+    {
+      "id": "F07",
+      "priority": "P0",
+      "title": "报告错误升级与双文件覆盖",
+      "source": "_g3_w20_validation.py::validate_report",
+      "evidence_status": "SOURCE_CONFIRMED_ISOLATED_REPRO",
+      "finding": "ERROR/BLOCKED/UNSUPPORTED不会触发FAIL或UNVERIFIED分支，可能PASS；两份write_text无原子发布或覆盖检查；现有同名md会被覆盖。",
+      "required_change": "完整状态聚合与ArtifactStore事务式发布；错误保持身份、部分产物状态；副文件同样预检。"
+    },
+    {
+      "id": "F08",
+      "priority": "P0",
+      "title": "所谓原始MCP记录由调用后重建",
+      "source": "tools/run_g3_8_acceptance.py::make_v_record/execute_shared_cases",
+      "evidence_status": "SOURCE_AND_COMMITTED_RECORD_CONFIRMED",
+      "finding": "领域函数直接调用后拼tools/call request/response；固定production_entrypoint=True/PASS；V01生成server_info回应，R/D多项检查直接True或固定测试数。",
+      "required_change": "真实stdio调用时捕获原始消息；执行器与汇总器分离，汇总器不能补PASS或数值。"
+    },
+    {
+      "id": "F09",
+      "priority": "P1",
+      "title": "runtime和source身份不够真实",
+      "source": "tools/run_g3_8_acceptance.py::execute_live_engine_cases/_get_commit; evidence/.../observations_V08.json",
+      "evidence_status": "SOURCE_CONFIRMED_SCOPE_LIMITATION",
+      "finding": "runtime_build由版本字符串拼成.0.290；worker_id自造；原始记录source_commit=ce24f404...，需与公开源逐文件关联，不能用旧PIN掩盖。",
+      "required_change": "实际读取build/Worker实例与进程创建身份，记录工作树和发布源桥接；不推测源码等价。"
+    }
+  ]
+}

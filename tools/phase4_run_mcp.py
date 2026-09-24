@@ -1838,7 +1838,7 @@ def _legacy_arguments(operation: str, tool: str, arguments: Mapping[str, Any]) -
         destination = arguments.get("destination")
         if isinstance(destination, Mapping):
             source: Mapping[str, Any] | None = destination
-        elif isinstance(destination, str) and os.path.isabs(destination):
+        elif isinstance(destination, str) and (os.path.isabs(destination) or destination.startswith(("/", "\\"))):
             # The strict catalog types ``destination`` as a plain path string.  Only an
             # absolute path is forwarded, so a policy token can never become a filename.
             source = {"path": destination}
