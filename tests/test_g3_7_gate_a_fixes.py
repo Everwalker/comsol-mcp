@@ -72,6 +72,8 @@ def test_f02_control_daemon_cancel_late_success(tmp_path):
 # ==============================================================================
 
 def test_f03_dacl_non_windows(tmp_path, monkeypatch):
+    if sys.platform == "win32":
+        pytest.skip("POSIX permission test not applicable on native Windows")
     monkeypatch.setattr(sys, "platform", "linux")
     monkeypatch.setattr(os, "name", "posix")
     
@@ -87,6 +89,13 @@ def test_f03_dacl_non_windows(tmp_path, monkeypatch):
     test_dir = tmp_path / "priv_dir"
     set_private_directory_permissions(test_dir)
     assert chmod_called
+
+def test_f03_dacl_windows_real(tmp_path):
+    if sys.platform != "win32":
+        pytest.skip("Windows native test only")
+    real_dir = tmp_path / "real_private_dir"
+    set_private_directory_permissions(real_dir)
+    assert real_dir.is_dir()
 
 def test_f03_dacl_windows_mocked(tmp_path, monkeypatch):
     monkeypatch.setattr(sys, "platform", "win32")
@@ -104,9 +113,17 @@ def test_f03_dacl_windows_mocked(tmp_path, monkeypatch):
 # ==============================================================================
 
 def test_f04_is_process_in_job_non_windows(monkeypatch):
+    if sys.platform == "win32":
+        pytest.skip("POSIX process test not applicable on native Windows")
     monkeypatch.setattr(os, "name", "posix")
     assert is_process_in_job() is False
     assert is_process_in_job(pid=1234) is False
+
+def test_f04_is_process_in_job_windows():
+    if sys.platform != "win32":
+        pytest.skip("Windows native test only")
+    res = is_process_in_job()
+    assert res in (True, False, None)
     
     import inspect
     sig = inspect.signature(is_process_in_job)

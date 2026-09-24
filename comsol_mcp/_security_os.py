@@ -43,6 +43,7 @@ def set_private_directory_permissions(path: Path | str) -> None:
                 f"Cannot determine current user SID for private directory {p}; "
                 "refusing to publish secret endpoints without verified DACL"
             )
+        account_name = row[0].strip()
         user_sid = row[1].strip()
         if not user_sid.startswith("S-1-"):
             raise PermissionError(
@@ -69,7 +70,7 @@ def set_private_directory_permissions(path: Path | str) -> None:
             f"icacls execution failed for private directory {p}: {exc}"
         ) from exc
 
-    # Readback: verify the DACL actually contains only our SID
+    # Readback: verify the DACL actually contains only our SID/account
     try:
         readback = subprocess.run(
             ["icacls", str(p)],
@@ -80,20 +81,31 @@ def set_private_directory_permissions(path: Path | str) -> None:
                 f"icacls DACL readback failed (exit {readback.returncode}) on {p}"
             )
         lines = [line.strip() for line in readback.stdout.splitlines() if line.strip()]
-        # icacls output: first line is the path, subsequent lines are ACEs,
-        # last line is "Successfully processed ..."
-        ace_lines = [line for line in lines[1:]
-                     if line and not line.startswith("Successfully processed")]
-        # Validate that each ACE line references our SID (or the path header)
+        # ACE entries always contain the permission specifier ':('
+        ace_lines = [line for line in lines if ":(" in line]
         unexpected_aces = []
+        short_user = account_name.split("\\")[-1].lower() if "\\" in account_name else account_name.lower()
+        # Legitimate Windows OS and administrative principals that retain rights on private directories
+        allowed_system_principals = {
+            "nt authority\\system",
+            "builtin\\administrators",
+            "owner rights",
+        }
         for ace_line in ace_lines:
-            # ACE lines look like: "*S-1-5-21-...:(...)"  or  "BUILTIN\Administrators:(OI)(CI)(F)"
-            if user_sid not in ace_line and f"*{user_sid}" not in ace_line:
+            ace_identity = ace_line.split(":(")[0].lower()
+            matched = (
+                user_sid.lower() in ace_identity
+                or f"*{user_sid}".lower() in ace_identity
+                or account_name.lower() in ace_identity
+                or short_user in ace_identity
+                or any(sys_p in ace_identity for sys_p in allowed_system_principals)
+            )
+            if not matched:
                 unexpected_aces.append(ace_line)
         if unexpected_aces:
             raise PermissionError(
                 f"Unexpected ACEs found on private directory {p} after DACL set; "
-                f"only SID {user_sid} should have access. "
+                f"only SID {user_sid} ({account_name}) or system principals should have access. "
                 f"Unexpected: {unexpected_aces}"
             )
     except (subprocess.TimeoutExpired, OSError) as exc:

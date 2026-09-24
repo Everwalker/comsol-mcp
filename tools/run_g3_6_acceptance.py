@@ -217,7 +217,7 @@ class G36AcceptanceRunner:
         self.profile = profile
         self.repo_root = REPO_ROOT
         self.workpack_root = WORKPACK_ROOT
-        self.output_dir = output_dir or (self.repo_root / "evidence" / "windows_dual_version" / self.run_id)
+        self.output_dir = (Path(output_dir).resolve() if output_dir else (self.repo_root / "evidence" / "windows_dual_version" / self.run_id)).resolve()
         self.output_dir.mkdir(parents=True, exist_ok=True)
         (self.output_dir / "win63").mkdir(parents=True, exist_ok=True)
         (self.output_dir / "win64").mkdir(parents=True, exist_ok=True)
@@ -697,7 +697,7 @@ public final class TransientSolver {
             }
 
             # --- WD13: W18 Rendering & ImageContent ---
-            plot_png = suite_work_dir / f"render_{version}.png"
+            plot_png = (suite_work_dir / f"render_{version}.png").resolve()
             render_res = plot_render(worker, tag, {
                 "path": "pg3d",
                 "options": {
@@ -707,6 +707,7 @@ public final class TransientSolver {
                     "allow_overwrite": True,
                 },
             })
+            plot_png = Path(render_res.get("file_path") or plot_png)
             assert plot_png.is_file()
             raw_png = plot_png.read_bytes()
             assert raw_png.startswith(b"\x89PNG\r\n\x1a\n")
