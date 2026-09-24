@@ -46,6 +46,7 @@ _MODULES = (
     "_probe_manage",
     "_artifact_store",
     "_g3_w18",
+    "_g3_w20_validation",
 )
 
 #: Effects for operations the design catalogue does not (yet) describe.  Every

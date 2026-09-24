@@ -271,3 +271,161 @@ class TestValidationReport:
         assert "Validation Report" in md
         assert "Evidence Hash" in md
         assert "xyz789" in md
+
+
+# ──── B01-B09 Operations Dispatch via G3 Registry ────
+
+
+class TestG3ValidationOperations:
+    def test_g3_ops_registration(self):
+        from comsol_mcp import _g3_ops
+        for op in (
+            "validate.preflight",
+            "validate.structure",
+            "validate.expressions",
+            "validate.boundary_conditions",
+            "validate.solution",
+            "validate.conservation",
+            "validate.convergence",
+            "validate.report",
+        ):
+            assert _g3_ops.is_implemented(op), f"{op} must be implemented in G3 operations"
+
+    def test_dispatch_validate_structure(self):
+        from comsol_mcp import _g3_ops
+        mock_worker = type("MockWorker", (), {"client": lambda self: None})()
+        data = _g3_ops.dispatch("validate.structure", mock_worker, "model1", {
+            "model_data": {
+                "components": ["comp1"],
+                "geometries": ["geom1"],
+                "physics": ["ht"],
+                "meshes": ["mesh1"],
+                "studies": ["std1"],
+            }
+        })
+        assert data["execution_status"] == STATUS_PASS
+        assert data["numerical_verification_status"] == "NOT_APPLICABLE"
+        assert data["physical_validation_status"] == STATUS_UNVERIFIED
+        assert data["status"] == STATUS_PASS
+
+    def test_dispatch_validate_preflight(self):
+        from comsol_mcp import _g3_ops
+        mock_worker = type("MockWorker", (), {"client": lambda self: None})()
+        data = _g3_ops.dispatch("validate.preflight", mock_worker, "model1", {
+            "model_data": {
+                "components": ["comp1"],
+                "studies": ["std1"],
+            }
+        })
+        assert data["execution_status"] == STATUS_PASS
+        assert data["ready_to_solve"] is True
+
+    def test_dispatch_validate_expressions(self):
+        from comsol_mcp import _g3_ops
+        mock_worker = type("MockWorker", (), {"client": lambda self: None})()
+        data = _g3_ops.dispatch("validate.expressions", mock_worker, "model1", {
+            "expressions": [
+                {"name": "k_cu", "expr": "400[W/(m*K)]", "value": 400.0},
+                {"name": "T0", "expr": "300[K]", "value": 300.0},
+            ]
+        })
+        assert data["status"] == STATUS_PASS
+        assert data["numerical_verification_status"] == STATUS_PASS
+
+    def test_dispatch_validate_boundary_conditions(self):
+        from comsol_mcp import _g3_ops
+        mock_worker = type("MockWorker", (), {"client": lambda self: None})()
+        data = _g3_ops.dispatch("validate.boundary_conditions", mock_worker, "model1", {
+            "rules": ["bc.thermal_insulation", "bc.temperature_inflow"]
+        })
+        assert data["status"] == STATUS_PASS
+        assert data["execution_status"] == STATUS_PASS
+
+    def test_dispatch_validate_solution_with_copper_block_oracle(self):
+        from comsol_mcp import _g3_ops
+        mock_worker = type("MockWorker", (), {"client": lambda self: None})()
+        data = _g3_ops.dispatch("validate.solution", mock_worker, "model1", {
+            "solution": {"tag": "sol1"},
+            "criteria": {
+                "values": [312.5, 325.0, 337.5],
+                "range": [300.0, 350.0],
+                "oracle": "steady_state_copper_block",
+                "observations": {
+                    "T_0.0125": 312.505,
+                    "T_0.025": 325.01,
+                    "T_0.0375": 337.495,
+                    "HeatFlow": 80.2,
+                }
+            }
+        })
+        assert data["execution_status"] == STATUS_PASS
+        assert data["numerical_verification_status"] == STATUS_PASS
+        assert data["physical_validation_status"] == STATUS_UNVERIFIED
+        assert data["status"] == STATUS_PASS
+
+    def test_dispatch_validate_solution_negative_control(self):
+        from comsol_mcp import _g3_ops
+        mock_worker = type("MockWorker", (), {"client": lambda self: None})()
+        data = _g3_ops.dispatch("validate.solution", mock_worker, "model1", {
+            "solution": {"tag": "sol1"},
+            "criteria": {
+                "oracle": "steady_state_copper_block",
+                "observations": {
+                    "T_0.0125": 320.0,  # 7.5K error >> 0.1K tolerance
+                }
+            }
+        })
+        assert data["execution_status"] == STATUS_PASS
+        assert data["numerical_verification_status"] == STATUS_FAIL
+        assert data["status"] == STATUS_FAIL
+
+    def test_dispatch_validate_conservation(self):
+        from comsol_mcp import _g3_ops
+        mock_worker = type("MockWorker", (), {"client": lambda self: None})()
+        data = _g3_ops.dispatch("validate.conservation", mock_worker, "model1", {
+            "definition": {
+                "inflow": 80.0,
+                "outflow": 79.9,
+                "normalization": 80.0,
+                "tolerance": 0.01,
+            }
+        })
+        assert data["execution_status"] == STATUS_PASS
+        assert data["passed"] is True
+        assert data["status"] == STATUS_PASS
+
+    def test_dispatch_validate_convergence(self):
+        from comsol_mcp import _g3_ops
+        mock_worker = type("MockWorker", (), {"client": lambda self: None})()
+        data = _g3_ops.dispatch("validate.convergence", mock_worker, "model1", {
+            "cases": [
+                {"level": 1, "mesh_size_metric": 0.02, "error": 0.25},
+                {"level": 2, "mesh_size_metric": 0.01, "error": 0.08},
+                {"level": 3, "mesh_size_metric": 0.005, "error": 0.015},
+            ],
+            "metrics": ["T_error"],
+        })
+        assert data["execution_status"] == STATUS_PASS
+        assert data["status"] == STATUS_PASS
+        assert data["analysis"]["trend"] == "monotonic"
+
+    def test_dispatch_validate_report(self, tmp_path):
+        from comsol_mcp import _g3_ops
+        mock_worker = type("MockWorker", (), {"client": lambda self: None})()
+        dest = str(tmp_path / "report.md")
+        data = _g3_ops.dispatch("validate.report", mock_worker, "model1", {
+            "destination": dest,
+            "data": {
+                "source_identity": "be5bfc8",
+                "runtime_version": "6.4.0.293",
+                "frozen_expectations": {"T_mid": 325.0},
+                "raw_observations": {"T_mid": 325.002},
+            }
+        })
+        assert data["status"] == STATUS_PASS
+        assert "evidence_hash" in data["report_summary"]
+        report_file = tmp_path / "report.md"
+        assert report_file.is_file()
+        content = report_file.read_text(encoding="utf-8")
+        assert "Validation Report: be5bfc8" in content
+

@@ -1,13 +1,13 @@
 {
   "schema": "source_bridge/1",
-  "created_at": "2026-09-24T04:13:57.498972+00:00",
+  "created_at": "2026-09-24T04:40:05.117863+00:00",
   "pinned_commit": "be5bfc8847d98e0aa3972050661a3beb8ee4cfc5",
   "pinned_tree": "dbc871285c9e5465a2e2d9740e908289284304cb",
   "baseline_file_count": 8326,
-  "identical_count": 8317,
-  "modified_count": 9,
+  "identical_count": 8316,
+  "modified_count": 10,
   "missing_count": 0,
-  "new_file_count": 50,
+  "new_file_count": 56,
   "is_clean": false,
   "modified_files": [
     {
@@ -20,6 +20,12 @@
       "path": "comsol_mcp/_g2_isolation.py",
       "baseline_sha256": "ddc8db68233bfed3f2c71b358088e3648f7ba554150e4d61c7b990e9a1abeaa7",
       "runtime_sha256": "dd2da52140d191bea3cd036fe5ab06782d9ff30c119686c13bde99c32d64580b",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "comsol_mcp/_g3_ops.py",
+      "baseline_sha256": "63491a28b265a669861358418e12f5e99d16d868f2f2022f4630bf69b93ea24f",
+      "runtime_sha256": "cb084f78f8c3f451a1bd9f4766f1b1418211d345e102f4c799abdf0eec01b27b",
       "status": "MODIFIED"
     },
     {
@@ -68,13 +74,43 @@
   "missing_files": [],
   "new_files": [
     {
+      "path": "tools/generate_g3_7_report.py",
+      "sha256": "6334c4f82be537f53cffa468117125e7c0f108693768e3fd5f02a50b08a7f515",
+      "status": "NEW_IN_G3_7"
+    },
+    {
       "path": "tools/source_bridge.py",
       "sha256": "6d7fed7adcbd83491e3f2a9271931d8dcb0c77e79aeb9608a9376a2105bb4b55",
       "status": "NEW_IN_G3_7"
     },
     {
+      "path": "evidence/g3_7_windows_w20/acceptance_report.json",
+      "sha256": "cbe027a7663360dece6fb4f206b7f4f226f420c4a970d745a9daaa5befe77c6c",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_w20/source_bridge.json",
+      "sha256": "3e2edf166a91df6ec562ce92b6b821ee16357ff20ba62fedeaec22ca43839af4",
+      "status": "NEW_IN_G3_7"
+    },
+    {
       "path": "g2_artifacts/checkpoints/nested-code-trial.mph",
       "sha256": "ef61c53c6e9f3ec048453adfbe43e889f76591a2e9e4a7a915f33fe02c2f23c1",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "comsol_mcp/_g3_w20_validation.py",
+      "sha256": "0e95bf33a4e588affb35913b2f433b7b0627e8078e73c0f3e05b9cee38541eb3",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "tests/test_g3_7_w20_validation.py",
+      "sha256": "2d1dc5c0a20664ccf984d0b2bfffc99c4bbad18e2f18926d3ce2c8c86575d1af",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "tests/test_g3_7_gate_a_fixes.py",
+      "sha256": "35573638766ecba422d64a73f82f3114a49bc061dc75d955c1354202a4391300",
       "status": "NEW_IN_G3_7"
     },
     {
@@ -104,7 +140,7 @@
     },
     {
       "path": "docs/handoff_g3_7_windows_w20/PROGRESS.md",
-      "sha256": "1563e57d3a94928b3c814a504f999bebb8f21299815fb58cce64d2682d0f767d",
+      "sha256": "fcd9af0eead3061577a9cbafeec39a2c5da92c7784d9467d102ef2acabe70a51",
       "status": "NEW_IN_G3_7"
     },
     {
@@ -154,7 +190,7 @@
     },
     {
       "path": ".g3-private/phase4-acceptance/m1-offline/primary/mcp-home/status.json",
-      "sha256": "96c04bf519340f0e85b7539d79ef5f56dd7dd7bacdb7876a4ede44d750a4d217",
+      "sha256": "a723a5e0ddf7c93bcfcfcac8a4c1fe5d62caeeb227f7172ff2eb0b8e855ae93d",
       "status": "NEW_IN_G3_7"
     },
     {
@@ -214,7 +250,7 @@
     },
     {
       "path": ".g3-private/phase4-acceptance/offline/primary/mcp-home/status.json",
-      "sha256": "6976aff7657b973ab46dc377ebcb7611b268d1a02e00453178e2c7a8c31661a1",
+      "sha256": "3fe482ab108e9ee79b3798a38c7908332de812c6aa709009c26aa85ee181fcf7",
       "status": "NEW_IN_G3_7"
     },
     {
@@ -299,17 +335,17 @@
     },
     {
       "path": "comsol-server-home/workflow_state.json",
-      "sha256": "3cba51d0ec2facaa94a45b147b56cbf2e6b0d09571e26b1973b83b6df92c0ac5",
+      "sha256": "963d681c86dc4fb13ac6e1297265bd7e2094540a0ed64a6475fe7b125d1e48e0",
       "status": "NEW_IN_G3_7"
     },
     {
       "path": "comsol-server-home/status.json",
-      "sha256": "18e91fb385155047613b57fe78fa87c4b7c68cac97f8958ac84183aeb4dbd556",
+      "sha256": "e60225adff85e65c363fd1246268fa594daea2c80ee16226256ee253c8f84375",
       "status": "NEW_IN_G3_7"
     },
     {
       "path": "comsol-server-home/logs/operations.jsonl",
-      "sha256": "7f2410171142dcf5911db42b759a1a7fa7d411cafafdc414cc1641b4a11b5f58",
+      "sha256": "bbd9c169913d3e3611143aa851d789d29ccac05ae6cada84c9d06615257c3fad",
       "status": "NEW_IN_G3_7"
     },
     {

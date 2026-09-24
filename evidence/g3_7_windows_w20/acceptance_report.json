@@ -1,0 +1,853 @@
+{
+  "schema": "handoff/g3_7-report/1",
+  "source_identity": {
+    "commit": "be5bfc8847d98e0aa3972050661a3beb8ee4cfc5",
+    "tree": "dbc871285c9e5465a2e2d9740e908289284304cb",
+    "dirty": false
+  },
+  "records": [
+    {
+      "id": "A00",
+      "target": "shared",
+      "status": "PASS",
+      "evidence_level": "SOURCE",
+      "production_entrypoint": false,
+      "assertions_passed": true,
+      "expected": {
+        "source_files_count": 8326,
+        "hash_mismatches": 0
+      },
+      "observed": {
+        "source_files_count": 8326,
+        "hash_mismatches": 0,
+        "status": "SOURCE_HASH_VERIFIED"
+      },
+      "artifacts": [
+        {
+          "path": "docs/handoff_g3_7_windows_w20/SOURCE_AUDIT.json",
+          "sha256": "3ec921b5e5bf408b51feaec782662d77535576f019e00ac943fdbd06f61406dd"
+        }
+      ]
+    },
+    {
+      "id": "A01",
+      "target": "win63",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "NATIVE_ENGINE",
+      "production_entrypoint": false,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "A01",
+      "target": "win64",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "NATIVE_ENGINE",
+      "production_entrypoint": false,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "A02",
+      "target": "shared",
+      "status": "PASS",
+      "evidence_level": "NATIVE_OS",
+      "production_entrypoint": false,
+      "assertions_passed": true,
+      "expected": {
+        "dacl_enforced": true,
+        "trusted_sid_verified": true
+      },
+      "observed": {
+        "dacl_enforced": true,
+        "trusted_sid_verified": true,
+        "tests": "test_f03_* PASS"
+      },
+      "artifacts": [
+        {
+          "path": "tests/test_g3_7_gate_a_fixes.py",
+          "sha256": "35573638766ecba422d64a73f82f3114a49bc061dc75d955c1354202a4391300"
+        }
+      ]
+    },
+    {
+      "id": "A03",
+      "target": "win63",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "A03",
+      "target": "win64",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "A04",
+      "target": "win63",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "A04",
+      "target": "win64",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "A05",
+      "target": "shared",
+      "status": "PASS",
+      "evidence_level": "CONTROL",
+      "production_entrypoint": false,
+      "assertions_passed": true,
+      "expected": {
+        "terminal_immunity": true,
+        "rpc_sqlite_consistent": true
+      },
+      "observed": {
+        "terminal_immunity": true,
+        "rpc_sqlite_consistent": true,
+        "tests": "test_f02_* PASS"
+      },
+      "artifacts": [
+        {
+          "path": "tests/test_g3_7_gate_a_fixes.py",
+          "sha256": "35573638766ecba422d64a73f82f3114a49bc061dc75d955c1354202a4391300"
+        }
+      ]
+    },
+    {
+      "id": "A06",
+      "target": "win63",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "A06",
+      "target": "win64",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "A07",
+      "target": "win63",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "A07",
+      "target": "win64",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "A08",
+      "target": "win63",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "A08",
+      "target": "win64",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "A09",
+      "target": "win63",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "A09",
+      "target": "win64",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "A10",
+      "target": "win63",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "A10",
+      "target": "win64",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "A11",
+      "target": "win63",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "A11",
+      "target": "win64",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "A12",
+      "target": "win63",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "A12",
+      "target": "win64",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "A13",
+      "target": "win63",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "A13",
+      "target": "win64",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "A14",
+      "target": "shared",
+      "status": "PASS",
+      "evidence_level": "SOURCE",
+      "production_entrypoint": false,
+      "assertions_passed": true,
+      "expected": {
+        "baseline_files": 8326,
+        "missing_files": 0
+      },
+      "observed": {
+        "baseline_files": 8326,
+        "identical": 8316,
+        "modified": 10,
+        "missing": 0
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_w20/source_bridge.json",
+          "sha256": "2493c3d9d9fe45505d8442a167be27b67c9bfd89244e8357809a99d99a0c8f06"
+        }
+      ]
+    },
+    {
+      "id": "A15",
+      "target": "win63",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "A15",
+      "target": "win64",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "B01",
+      "target": "win63",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "B01",
+      "target": "win64",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "B02",
+      "target": "win63",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "B02",
+      "target": "win64",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "B03",
+      "target": "win63",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "B03",
+      "target": "win64",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "B04",
+      "target": "win63",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "B04",
+      "target": "win64",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "B05",
+      "target": "win63",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "B05",
+      "target": "win64",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "B06",
+      "target": "shared",
+      "status": "PASS",
+      "evidence_level": "CONTROL",
+      "production_entrypoint": false,
+      "assertions_passed": true,
+      "expected": {
+        "three_axes_independent": true,
+        "unverified_without_experiment": true
+      },
+      "observed": {
+        "three_axes_independent": true,
+        "unverified_without_experiment": true,
+        "tests": "TestValidationStatus PASS"
+      },
+      "artifacts": [
+        {
+          "path": "tests/test_g3_7_w20_validation.py",
+          "sha256": "2d1dc5c0a20664ccf984d0b2bfffc99c4bbad18e2f18926d3ce2c8c86575d1af"
+        }
+      ]
+    },
+    {
+      "id": "B07",
+      "target": "win63",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "B07",
+      "target": "win64",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "B08",
+      "target": "win63",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "B08",
+      "target": "win64",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "B09",
+      "target": "win63",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "B09",
+      "target": "win64",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "B10",
+      "target": "win63",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "B10",
+      "target": "win64",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "assertions_passed": false,
+      "expected": {
+        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+      },
+      "observed": {
+        "host_platform": "darwin",
+        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+      },
+      "artifacts": []
+    },
+    {
+      "id": "C01",
+      "target": "shared",
+      "status": "PASS",
+      "evidence_level": "SOFTWARE",
+      "production_entrypoint": false,
+      "assertions_passed": true,
+      "expected": {
+        "regression_pass": true,
+        "new_failures": 0
+      },
+      "observed": {
+        "passed": 1882,
+        "skipped": 1,
+        "failed": 0,
+        "new_tests_passed": 50
+      },
+      "artifacts": [
+        {
+          "path": "docs/handoff_g3_7_windows_w20/PROGRESS.md",
+          "sha256": "fcd9af0eead3061577a9cbafeec39a2c5da92c7784d9467d102ef2acabe70a51"
+        }
+      ]
+    },
+    {
+      "id": "C02",
+      "target": "shared",
+      "status": "PASS",
+      "evidence_level": "SOURCE",
+      "production_entrypoint": false,
+      "assertions_passed": true,
+      "expected": {
+        "w20_completed": true,
+        "w21_entered": false,
+        "git_clean": true
+      },
+      "observed": {
+        "w20_completed": true,
+        "w21_entered": false,
+        "git_clean": true
+      },
+      "artifacts": [
+        {
+          "path": "docs/handoff_g3_7_windows_w20/PROGRESS.md",
+          "sha256": "fcd9af0eead3061577a9cbafeec39a2c5da92c7784d9467d102ef2acabe70a51"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_records": 49,
+    "pass_count": 7,
+    "blocked_count": 42,
+    "stop_boundary": "W20_COMPLETE_STOP_AT_W20"
+  },
+  "notice": "G3.7 evaluation report: Gate A fixes + W20 framework complete. Native engine cases blocked on Windows environment."
+}
