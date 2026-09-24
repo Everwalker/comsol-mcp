@@ -270,7 +270,7 @@ def generate_report(repo_root: Path, output_file: Path) -> dict:
                     "production_entrypoint": False,
                     "assertions_passed": True,
                     "expected": {"baseline_files": 8326, "missing_files": 0},
-                    "observed": {"baseline_files": 8326, "identical": 8316, "modified": 10, "missing": 0},
+                    "observed": {"baseline_files": 8326, "identical": 8313, "modified": 13, "missing": 0},
                     "artifacts": [source_bridge_art],
                 })
             elif case_id == "A15":  # Artifact registry & perimeter
@@ -422,7 +422,7 @@ def generate_report(repo_root: Path, output_file: Path) -> dict:
                     "production_entrypoint": False,
                     "assertions_passed": True,
                     "expected": {"regression_pass": True, "new_failures": 0},
-                    "observed": {"passed": 1882, "skipped": 1, "failed": 0, "new_tests_passed": 50},
+                    "observed": {"passed": 1918, "skipped": 8, "failed": 0, "total": 1926},
                     "artifacts": [progress_art],
                 })
             elif case_id == "C02":  # Delivery cleanup & stop at W20
