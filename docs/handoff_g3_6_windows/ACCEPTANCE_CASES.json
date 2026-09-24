@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "scope": "Windows COMSOL 6.3 AND 6.4; proposed acceptance, not executed",
+  "scope": "Windows COMSOL 6.3 AND 6.4; executed on Windows 11 AMD64 (192.168.100.2)",
   "cases": [
     {
       "id": "WD00",
@@ -9,8 +9,9 @@
       "required_evidence": "STATIC",
       "criterion": "从空目录恢复PIN全部文件；核对tree与逐文件哈希；单文件篡改负控必须失败。",
       "artifacts": "RESTORE_RECEIPT、source inventory、tamper negative",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "CONTROL_PASS",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD01",
@@ -19,8 +20,9 @@
       "required_evidence": "NATIVE_ENV",
       "criterion": "实际OS/build/架构、解释器位数、两个安装路径及引擎build可对应；文件夹名不充当版本证据。",
       "artifacts": "环境JSON、CLI及引擎版本回读",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "CONTROL_PASS",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD02",
@@ -29,8 +31,9 @@
       "required_evidence": "NATIVE_JAVA",
       "criterion": "按各自官方client manifest编译运行，缓存key含COMSOL/JAR/JDK/arch/源码/参数；故意交换classpath或旧缓存必须拒绝/重编译。",
       "artifacts": "编译输出、classpath/JAR哈希、cache receipt",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "CONTROL_PASS",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD03",
@@ -39,8 +42,9 @@
       "required_evidence": "NATIVE_OS_ENGINE",
       "criterion": "新建任务Server验证PID创建身份、映像/端口/用户/私有配置；Windows证明成功才能广义写入；错PID/过期回执/未知listener拒绝。",
       "artifacts": "私有值脱敏后的ownership与socket/ACL回执",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "CONTROL_PASS",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD04",
@@ -49,8 +53,9 @@
       "required_evidence": "PUBLIC_MCP",
       "criterion": "从正常安装和配置启动，不注入Fake Service；工具目录、规范名/alias/operation fallback同等遵循身份和权限。",
       "artifacts": "原始stdio请求响应、安装来源",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "CONTROL_PASS",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD05",
@@ -59,8 +64,9 @@
       "required_evidence": "INSTALL_PUBLIC_MCP",
       "criterion": "A安装/B源码/C模型/Dcwd分离，实际运行参数修改/保存/绘图只写C；site-packages/private目录写入拒绝。",
       "artifacts": "wheel来源、路径清单、实际产物",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "CONTROL_PASS",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD06",
@@ -69,8 +75,9 @@
       "required_evidence": "SECURITY_OS",
       "criterion": "DACL、注册产物、junction/reparse/ADS、私有sentinel与占用文件测试；拒绝越权且旧文件字节不变。",
       "artifacts": "合成sentinel请求、ACL检查、哈希",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "CONTROL_PASS",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD07",
@@ -79,8 +86,9 @@
       "required_evidence": "NATIVE_NUMERICAL",
       "criterion": "全局/组件变量依赖可求值；带单位参数和2D插值函数正确，类型/作用域/单位错误有准确拒绝。",
       "artifacts": "MCP请求、回读、独立预期值",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "NATIVE_PASS_SCOPED",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD08",
@@ -89,8 +97,9 @@
       "required_evidence": "NATIVE_ENGINE",
       "criterion": "工作平面内嵌套修改/阵列和命名选区重建；兄弟节点保留、实体位置/测度有验证。",
       "artifacts": "节点快照、选区回读、几何测度",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "NATIVE_PASS_SCOPED",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD09",
@@ -99,8 +108,9 @@
       "required_evidence": "NATIVE_ENGINE",
       "criterion": "材料属性/张量、初边值、物理选择和局部网格真实建立；空选区/缺材料/错误网格负控拒绝。",
       "artifacts": "源配置与引擎回读、mesh统计",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "NATIVE_PASS_SCOPED",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD10",
@@ -109,8 +119,9 @@
       "required_evidence": "NATIVE_NUMERICAL",
       "criterion": "固定非单位尺寸导热基准，内部至少3点及热流符合预注册解析解，材料/边界失败不可SKIP。",
       "artifacts": "完整建模请求、求解日志、误差表",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "NATIVE_PASS_SCOPED",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD11",
@@ -119,8 +130,9 @@
       "required_evidence": "NATIVE_NUMERICAL",
       "criterion": "由同一BenchmarkSpec生成材料和参考；至少3空间点×3非初始时间，解轴来自引擎存储解，不从请求tlist假定。",
       "artifacts": "参数回读、stored axes、数值误差",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "NATIVE_PASS_SCOPED",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD12",
@@ -129,8 +141,9 @@
       "required_evidence": "NATIVE_NUMERICAL",
       "criterion": "多表达式×outer/inner×point正确；非单位测度平均/std/rms、2D轴对称样例、复数实虚部与维数保持。",
       "artifacts": "轴元数据、复数恒等式、独立积分预期",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "NATIVE_PASS_SCOPED",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD13",
@@ -139,8 +152,9 @@
       "required_evidence": "PUBLIC_MCP_NATIVE",
       "criterion": "几何/1D/2D切面/3D表面真实PNG，对应正确数据集/solution/时刻；坏图、旧target复用、清理失败负测不能成功。",
       "artifacts": "PNG、MCP ImageContent字节匹配、provenance",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "NATIVE_PASS_SCOPED",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD14",
@@ -149,8 +163,9 @@
       "required_evidence": "PUBLIC_MCP",
       "criterion": "CSV往返四轴/单位/复数与JSON一致；artifact-only无全量副本；分页完整性和旧文件保护正确。",
       "artifacts": "产物/分页/预算和负测",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "NATIVE_PASS_SCOPED",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD15",
@@ -159,8 +174,9 @@
       "required_evidence": "NATIVE_ENGINE",
       "criterion": "记录真实MPH哈希；新Worker打开同文件不先求解，读内部场值/时间轴/手动节点；错SHA/清空解由同一检查器拒绝。",
       "artifacts": "保存回执、worker代际、原字段比较/负控",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "NATIVE_PASS_SCOPED",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD16",
@@ -169,8 +185,9 @@
       "required_evidence": "NATIVE_ENGINE",
       "criterion": "已完成求解的可重建模型仅修改目标参数/几何，保留非目标Study/Results/manual solver；再次求解比较。",
       "artifacts": "前后树/数值、目标范围与保存证据",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "NATIVE_PASS_SCOPED",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD17",
@@ -179,8 +196,9 @@
       "required_evidence": "PUBLIC_MCP_NATIVE_CONTROL",
       "criterion": "真实任务A占用引擎，B经公开入口排队；取消/启动竞态多次注入，取消获胜的B零Worker派发，终态与原操作结果一致。",
       "artifacts": "时间线、request_id、状态表及Worker请求计数",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "CONTROL_PASS",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD18",
@@ -189,8 +207,9 @@
       "required_evidence": "CONTROL_AND_PUBLIC_MCP",
       "criterion": "UNKNOWN/RECONCILING收到取消不得无证据变RUNNING；晚到finish/异常不能覆盖确定终态；原job_result一致。",
       "artifacts": "状态迁移/数据库/信封断言",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "CONTROL_PASS",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD19",
@@ -199,8 +218,9 @@
       "required_evidence": "PUBLIC_MCP_NATIVE_CONTROL",
       "criterion": "足够长但预算受控的真实求解期间测50次状态/日志；预设p95目标1秒并报告实际值、负载，不能空daemon计时替代。",
       "artifacts": "原始延迟样本、实际运行区间",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "NATIVE_PASS_SCOPED",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD20",
@@ -209,8 +229,9 @@
       "required_evidence": "PUBLIC_MCP_NATIVE_CONTROL",
       "criterion": "关闭stdio/Host连接后独立daemon继续任务；重连原job取结果，相同key不重算；变更body同key冲突。",
       "artifacts": "Host退出时间、process身份、dispatch计数",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "CONTROL_PASS",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD21",
@@ -219,8 +240,9 @@
       "required_evidence": "NATIVE_OS_ENGINE",
       "criterion": "真正重启控制进程而非只重新打开SQLite；关联仍在运行Worker/请求，保持未知边界，不重发未确定变更。",
       "artifacts": "进程前后身份、原job状态与回读",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "CONTROL_PASS",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD22",
@@ -229,8 +251,9 @@
       "required_evidence": "NATIVE_OS_ENGINE",
       "criterion": "各runtime分别验证取消路线；native不支持须如实声明。明确授权的任务实例进程级停止需确认真实退出并恢复，不能仅杀sleep或launcher。",
       "artifacts": "capability、授权lease、wait/exit/socket和checkpoint回执",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "CONTROL_PASS",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD23",
@@ -239,8 +262,9 @@
       "required_evidence": "NATIVE_DUAL",
       "criterion": "两个版本的错ModelRef/job/receipt/cache必须拒绝；终止A不触碰B/用户Desktop；资源不足时并存项单列BLOCKED。",
       "artifacts": "隔离矩阵、目标与非目标身份、负测",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "CONTROL_PASS",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD24",
@@ -249,8 +273,9 @@
       "required_evidence": "NATIVE_DUAL",
       "criterion": "按6.4->6.3->6.4切换，同一冻结源码，分别读本版本存储模型和出图；DB/prefs/缓存/解无串用。",
       "artifacts": "三次runtime receipts及结果比对",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "NATIVE_PASS_SCOPED",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD25",
@@ -259,8 +284,9 @@
       "required_evidence": "NATIVE_DUAL",
       "criterion": "6.3产生的模型被6.4只读加载另存可测；反向不默认为兼容，需要时按构建定义在6.3重放；原始文件哈希不变。",
       "artifacts": "原/另存哈希、实际打开结果、限制说明",
-      "status": "NOT_RUN",
-      "required_for_core": false
+      "status": "NATIVE_PASS_SCOPED",
+      "required_for_core": false,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD26",
@@ -269,8 +295,9 @@
       "required_evidence": "NATIVE_OS_HOST",
       "criterion": "真实Host Job下验证daemon生命周期；breakaway被拒绝时不降低保护，外部预启动模式成功或准确BLOCKED。",
       "artifacts": "Job/创建flags/独立daemon和退出回执",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "CONTROL_PASS",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD27",
@@ -279,8 +306,9 @@
       "required_evidence": "SOFTWARE_AND_TARGET",
       "criterion": "最终共享代码修改后两版本受影响回归；完整软件测试和安装资源检查；Mac无实机则保持新源回归UNVERIFIED。",
       "artifacts": "源码前后manifest、pytest原始输出、影响矩阵",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "SOFTWARE_PASS",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD28",
@@ -289,8 +317,9 @@
       "required_evidence": "RECOVERY_INSTALL",
       "criterion": "从新路径恢复修复源/安装/跑小链路；不依赖旧绝对目录、token或私有分支，公开产物清单无悬空引用。",
       "artifacts": "交付SHA、恢复回执、冷启动结果",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "CONTROL_PASS",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     },
     {
       "id": "WD29",
@@ -299,8 +328,20 @@
       "required_evidence": "NATIVE_OS_EVIDENCE",
       "criterion": "确认本任务进程/句柄/端口按模式正确释放，未清用户模型和服务；分别给6.3/6.4核心状态及限制，不以一者代替另一者。",
       "artifacts": "cleanup inventory、dual-version capability、状态台账",
-      "status": "NOT_RUN",
-      "required_for_core": true
+      "status": "NATIVE_PASS_SCOPED",
+      "required_for_core": true,
+      "evidence_run_id": "g3_6_live_acceptance_20260924T082700Z"
     }
+  ],
+  "run_id": "g3_6_live_acceptance_20260924T082700Z",
+  "overall_verdict": "PASS",
+  "status_counts": {
+    "CONTROL_PASS": 15,
+    "NATIVE_PASS_SCOPED": 14,
+    "SOFTWARE_PASS": 1
+  },
+  "deliverable_conclusions": [
+    "WINDOWS_COMSOL_63_CORE_VERIFIED_SCOPED",
+    "WINDOWS_COMSOL_64_CORE_VERIFIED_SCOPED"
   ]
 }
