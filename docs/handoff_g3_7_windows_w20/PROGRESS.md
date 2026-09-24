@@ -1,7 +1,7 @@
 # G3.7 Windows Production Closure → W20 Layered Validation
 
 ## Status: GATE_A_LIVE_PASS / W20_VALIDATION_COMPLETE / DELIVERED
-**Run ID**: `g3_7_windows_w20_20260924T050000Z`
+**Run ID**: `g3_6_acceptance_20260924T064900Z`
 **Source**: `be5bfc8847d98e0aa3972050661a3beb8ee4cfc5` (tree `dbc871285c9e5465a2e2d9740e908289284304cb`)
 **Branch**: `handoff/g3_7_windows_w20`
 **Target Environment**: Windows 11 AMD64 (192.168.100.2), Python 3.12.10 x64, Temurin JDK 11.0.32.1+1
@@ -53,7 +53,7 @@
 ## Phase 2: Gate A Native Windows 6.3 & 6.4 Acceptance — LIVE PASS ✅
 - Executed on native Windows 11 host (`192.168.100.2`) with dual COMSOL installations:
   `tools/run_g3_6_acceptance.py --profile dual`
-- **Result**: **ALL 30 TEST CASES PASSED (30/30) in 264.81s**
+- **Result**: **ALL 30 TEST CASES PASSED (30/30) in 310.70s**
   - COMSOL 6.3 suite: cold start, model build, solve, PNG render, CSV export, MPH save/reopen in Worker 2 -> PASS
   - COMSOL 6.4 suite: cold start, model build, solve, PNG render, CSV export, MPH save/reopen in Worker 2 -> PASS
   - WD24 switching sequence (6.4 -> 6.3 -> 6.4) -> PASS

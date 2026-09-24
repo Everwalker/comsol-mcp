@@ -1,9 +1,9 @@
 {
   "schema": "comsol-mcp-g3/g3_6-acceptance/1",
   "goal": "NEXT_GOAL.md: Windows Dual-Version (6.3 & 6.4) and D01-D09 Job Control Fixes",
-  "run_id": "g3_6_acceptance_20260924T045552Z",
-  "generated_at": "2026-09-24T05:00:16.926929+00:00",
-  "elapsed_seconds": 264.813,
+  "run_id": "g3_6_acceptance_20260924T064900Z",
+  "generated_at": "2026-09-24T06:54:10.827282+00:00",
+  "elapsed_seconds": 310.704,
   "platform": {
     "system": "Windows",
     "release": "11",
@@ -33,9 +33,9 @@
       "id": "WD00",
       "status": "CONTROL_PASS",
       "pinned_commit": "be5bfc8847d98e0aa3972050661a3beb8ee4cfc5",
-      "active_commit": "9139d09fcc310499d54f5bcaecea9ff83f17a1c3",
+      "active_commit": "59a3333ce7e3d536cc22c766d1583d7642997492",
       "pinned_tree": "dbc871285c9e5465a2e2d9740e908289284304cb",
-      "active_tree": "f4c18586c2a773f25fde0eb63fac002b056d4464",
+      "active_tree": "686498ac1962c550a41529058dec997a0c3ded12",
       "package_verification": "PASS",
       "tamper_negative_verified": true
     },
@@ -48,12 +48,12 @@
       "has_win64_candidate": true,
       "inventory": {
         "schema_version": 1,
-        "observed_at": "2026-09-24T04:55:52.393437+00:00",
+        "observed_at": "2026-09-24T06:49:00.642001+00:00",
         "scope": "READ_ONLY_FILE_AND_INSTALL_REGISTRY_INVENTORY",
         "windows_host": true,
         "os": "Windows-11-10.0.26200-SP0",
         "machine": "AMD64",
-        "python": "C:\\Users\\Everwalker\\COMSOL_MCP_G3_7_WINDOWS_W20_WORKPACK\\repository\\.venv\\Scripts\\python.exe",
+        "python": "C:\\Users\\everwalker\\COMSOL_MCP_G3_7_WINDOWS_W20_WORKPACK\\repository\\.venv\\Scripts\\python.exe",
         "python_version": "3.12.10",
         "python_bits": 64,
         "git_found": true,
@@ -151,7 +151,7 @@
       "status": "CONTROL_PASS",
       "windows_netstat_parser_verified": true,
       "windows_live_socket_verified": true,
-      "live_inspected_port": 27822,
+      "live_inspected_port": 44879,
       "loopback_restriction_enforced": true,
       "foreign_listener_rejected": true
     },
@@ -268,9 +268,9 @@
           },
           {
             "x": 0.025,
-            "T": 325.0000000000003,
+            "T": 325.00000000000017,
             "expected": 325.0,
-            "error": 2.8421709430404007e-13
+            "error": 1.7053025658242404e-13
           },
           {
             "x": 0.0375,
@@ -372,7 +372,7 @@
       "win63": {
         "status": "NATIVE_PASS_SCOPED",
         "exported_csv": "C:\\Users\\Everwalker\\COMSOL_MCP_G3_7_WINDOWS_W20_WORKPACK\\repository\\evidence\\g3_7_windows_live\\win63\\export_6.3.csv",
-        "csv_sha256": "275886b514c50d178de0fec537c544c33edf4e999a51bc06ef13d58f39c1c08f",
+        "csv_sha256": "31c49cb063228c422d73f2e412020827c33117cc21074b1ef2e623a111f6b6a1",
         "roundtrip_verified": true
       },
       "win64": {
@@ -388,16 +388,16 @@
       "win63": {
         "status": "NATIVE_PASS_SCOPED",
         "mph_file": "C:\\Users\\Everwalker\\COMSOL_MCP_G3_7_WINDOWS_W20_WORKPACK\\repository\\evidence\\g3_7_windows_live\\win63\\saved_6.3.mph",
-        "size_bytes": 4515706,
-        "sha256": "6b6133f02e7d37bafd4815ce7ffec8d94cc225ea16d38861d55eb1f817aceb2f",
-        "reopened_field_without_solve": 325.0000000000003,
+        "size_bytes": 4511580,
+        "sha256": "ad551d18fbe1201edf74049bfa9e903923f74a2a75b24c0bd37d4bbc849d1591",
+        "reopened_field_without_solve": 325.00000000000017,
         "cold_reopen_verified": true
       },
       "win64": {
         "status": "NATIVE_PASS_SCOPED",
         "mph_file": "C:\\Users\\Everwalker\\COMSOL_MCP_G3_7_WINDOWS_W20_WORKPACK\\repository\\evidence\\g3_7_windows_live\\win64\\saved_6.4.mph",
-        "size_bytes": 4596502,
-        "sha256": "66ee8013b2d2dbca56a8263528490f859bb8242f4c69cead59291c0a5f8a476e",
+        "size_bytes": 4593154,
+        "sha256": "b908d3578c7c0f5e633b10e8887ee6bccb2f5dc1b6818eb29f6232a1a28cdc97",
         "reopened_field_without_solve": 324.9999999999999,
         "cold_reopen_verified": true
       }
@@ -428,16 +428,16 @@
         "samples_count": 50,
         "min_ms": 0.04,
         "median_ms": 0.05,
-        "p95_ms": 0.06,
+        "p95_ms": 0.07,
         "target_p95_ms": 1000.0,
         "responsive_under_load": true
       },
       "win64": {
         "status": "NATIVE_PASS_SCOPED",
         "samples_count": 50,
-        "min_ms": 0.03,
-        "median_ms": 0.05,
-        "p95_ms": 0.13,
+        "min_ms": 0.04,
+        "median_ms": 0.04,
+        "p95_ms": 0.14,
         "target_p95_ms": 1000.0,
         "responsive_under_load": true
       }
@@ -501,7 +501,7 @@
       "status": "NATIVE_PASS_SCOPED",
       "forward_compatibility": {
         "model_63_loaded_in_64": true,
-        "readback_temperature": 325.0000000000003,
+        "readback_temperature": 325.00000000000017,
         "original_63_sha256_unmodified": true
       },
       "backward_compatibility": {
@@ -520,14 +520,14 @@
       "id": "WD27",
       "status": "SOFTWARE_PASS",
       "returncode": 0,
-      "output_summary": "1882 passed, 43 skipped, 2 warnings in 57.81s",
+      "output_summary": "1883 passed, 43 skipped, 2 warnings in 55.08s",
       "mac_compatibility_impact": "UNMODIFIED_PRESERVED"
     },
     "WD28": {
       "id": "WD28",
       "status": "CONTROL_PASS",
       "clean_recovery_verified": true,
-      "bootstrap_output": "{\n  \"status\": \"SOURCE_RECOVERED_HASH_VERIFIED\",\n  \"directory\": \"C:\\\\Users\\\\Everwalker\\\\AppData\\\\Local\\\\Temp\\\\tmpntjs34q2\\\\test_recovery_repo\",\n  \"files\": 8326,\n  \"commit\": \"be5bfc8847d98e0aa3972050661a3beb8ee4cfc5\",\n  \"tree\": \"dbc871285c9e5465a2e2d9740e908289284304cb\",\n  \"git_history_ready\": true,\n  \"next\": \"Read docs/handoff_g3_7_windows_w20/NEXT_GOAL.md; provision a NEW environment; no COMSOL has been started.\"\n}\n"
+      "bootstrap_output": "{\n  \"status\": \"SOURCE_RECOVERED_HASH_VERIFIED\",\n  \"directory\": \"C:\\\\Users\\\\Everwalker\\\\AppData\\\\Local\\\\Temp\\\\tmp5mog0yol\\\\test_recovery_repo\",\n  \"files\": 8326,\n  \"commit\": \"be5bfc8847d98e0aa3972050661a3beb8ee4cfc5\",\n  \"tree\": \"dbc871285c9e5465a2e2d9740e908289284304cb\",\n  \"git_history_ready\": true,\n  \"next\": \"Read docs/handoff_g3_7_windows_w20/NEXT_GOAL.md; provision a NEW environment; no COMSOL has been started.\"\n}\n"
     },
     "WD29": {
       "id": "WD29",
