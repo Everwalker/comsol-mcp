@@ -134,7 +134,23 @@ class JavaWorkerPaths:
                            if not any((root / relative).is_file() for root in self._classpath_roots())]
                 detail = f"; missing from every candidate root: {', '.join(missing[:3])}" if missing else ""
                 raise JavaWorkerError(f"no complete official COMSOL classpath root contains every manifest entry: {roots}{detail}")
-        return self.classpath_separator.join(map(str, jars)), hashlib.sha256(manifest.read_bytes()).hexdigest(), len(jars)
+        # F06: Hash actual JAR file contents for cache binding, not just the
+        # static manifest text.  Reading full JARs would be expensive (hundreds
+        # of MB), so we hash (path, size, first-8K, last-8K) per JAR — enough
+        # to detect any replacement including same-size overwrites.
+        jar_hasher = hashlib.sha256()
+        for jar in jars:
+            st = jar.stat()
+            jar_hasher.update(jar.name.encode("utf-8"))
+            jar_hasher.update(str(st.st_size).encode("utf-8"))
+            with jar.open("rb") as f:
+                head = f.read(8192)
+                jar_hasher.update(head)
+                if st.st_size > 16384:
+                    f.seek(-8192, 2)
+                    jar_hasher.update(f.read(8192))
+        jar_content_hash = jar_hasher.hexdigest()
+        return self.classpath_separator.join(map(str, jars)), hashlib.sha256(manifest.read_bytes()).hexdigest(), len(jars), jar_content_hash
 
     def _classpath_roots(self) -> tuple[Path, ...]:
         return (self.comsol_root / "apiplugins", self.comsol_root / "plugins")
@@ -183,7 +199,7 @@ class JavaWorkerPaths:
         detected = "6.4" if "64" in name or "6.4" in name else ("6.3" if "63" in name or "6.3" in name else "unknown")
         return {"version_text": detected, "root_name": self.comsol_root.name}
 
-    def compilation_cache_fingerprint(self, source_bytes: bytes, classpath_hash: str) -> tuple[str, dict[str, Any]]:
+    def compilation_cache_fingerprint(self, source_bytes: bytes, classpath_hash: str, jar_content_hash: str = "") -> tuple[str, dict[str, Any]]:
         source_hash = hashlib.sha256(source_bytes).hexdigest()
         jdk_info = self.jdk_version_info()
         comsol_info = self.comsol_version_info()
@@ -194,6 +210,7 @@ class JavaWorkerPaths:
         fingerprint_data = {
             "source_sha256": source_hash,
             "classpath_manifest_sha256": classpath_hash,
+            "jar_content_sha256": jar_content_hash,
             "comsol_info": comsol_info,
             "jdk_info": jdk_info,
             "javac_flags": javac_flags,
@@ -239,13 +256,13 @@ class PersistentJavaWorker:
             if self._process is not None and self._process.poll() is None:
                 return self.health(timeout_s=1.0)
             self.paths.validate()
-            classpath, classpath_hash, jar_count = self.paths.classpath()
+            classpath, classpath_hash, jar_count, jar_content_hash = self.paths.classpath()
             self.state_dir.mkdir(parents=True, exist_ok=True)
             try: os.chmod(self.state_dir, 0o700)
             except OSError: pass
             source = Path(__file__).with_name("worker_java") / "PersistentComsolWorker.java"
             source_bytes = source.read_bytes()
-            cache_key, cache_receipt = self.paths.compilation_cache_fingerprint(source_bytes, classpath_hash)
+            cache_key, cache_receipt = self.paths.compilation_cache_fingerprint(source_bytes, classpath_hash, jar_content_hash)
             classes = self.state_dir / "classes" / cache_key
             marker = classes / ".compiled"
             receipt_file = classes / "cache_receipt.json"

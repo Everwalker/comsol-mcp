@@ -1,0 +1,70 @@
+{
+  "repository": "Everwalker/comsol-mcp",
+  "commit": "be5bfc8847d98e0aa3972050661a3beb8ee4cfc5",
+  "tree": "dbc871285c9e5465a2e2d9740e908289284304cb",
+  "review_basis": "GitHub fetched source and evidence; no native execution by reviewer",
+  "files": [
+    {
+      "path": "PROGRESS.md",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/be5bfc8847d98e0aa3972050661a3beb8ee4cfc5/PROGRESS.md"
+    },
+    {
+      "path": "docs/handoff_g3_6_windows/PROGRESS.md",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/be5bfc8847d98e0aa3972050661a3beb8ee4cfc5/docs/handoff_g3_6_windows/PROGRESS.md"
+    },
+    {
+      "path": "tools/run_g3_6_acceptance.py",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/be5bfc8847d98e0aa3972050661a3beb8ee4cfc5/tools/run_g3_6_acceptance.py"
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/be5bfc8847d98e0aa3972050661a3beb8ee4cfc5/comsol_mcp/_control_daemon.py"
+    },
+    {
+      "path": "comsol_mcp/_operation_store.py",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/be5bfc8847d98e0aa3972050661a3beb8ee4cfc5/comsol_mcp/_operation_store.py"
+    },
+    {
+      "path": "comsol_mcp/_security_os.py",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/be5bfc8847d98e0aa3972050661a3beb8ee4cfc5/comsol_mcp/_security_os.py"
+    },
+    {
+      "path": "comsol_mcp/_platform_process.py",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/be5bfc8847d98e0aa3972050661a3beb8ee4cfc5/comsol_mcp/_platform_process.py"
+    },
+    {
+      "path": "comsol_mcp/_g2_isolation.py",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/be5bfc8847d98e0aa3972050661a3beb8ee4cfc5/comsol_mcp/_g2_isolation.py"
+    },
+    {
+      "path": "comsol_mcp/_java_worker.py",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/be5bfc8847d98e0aa3972050661a3beb8ee4cfc5/comsol_mcp/_java_worker.py"
+    },
+    {
+      "path": "evidence/windows_dual_version/g3_6_acceptance_20260924T014214Z/acceptance_result.json",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/be5bfc8847d98e0aa3972050661a3beb8ee4cfc5/evidence/windows_dual_version/g3_6_acceptance_20260924T014214Z/acceptance_result.json"
+    },
+    {
+      "path": "docs/comsol_mcp_design_v1/04_IMPLEMENTATION_PLAN.md",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/be5bfc8847d98e0aa3972050661a3beb8ee4cfc5/docs/comsol_mcp_design_v1/04_IMPLEMENTATION_PLAN.md"
+    }
+  ],
+  "primary_reference_endpoints_for_agent_verification": [
+    "https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/icacls",
+    "https://learn.microsoft.com/en-us/windows/win32/api/jobapi/nf-jobapi-isprocessinjob",
+    "https://www.comsol.com/system-requirements/63/general",
+    "https://www.comsol.com/system-requirements/64/general"
+  ],
+  "verified_external_notes": [
+    {
+      "url": "https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/icacls",
+      "checked_on": "2026-09-24",
+      "note": "Inheritance removal only removes inherited ACEs; grant replacement is scoped to the specified SID."
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/jobapi/nf-jobapi-isprocessinjob",
+      "checked_on": "2026-09-24",
+      "note": "ProcessHandle identifies the tested process; API failure is distinguishable from successful Result=False."
+    }
+  ]
+}

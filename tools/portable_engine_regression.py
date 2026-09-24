@@ -231,7 +231,7 @@ def _prepare_fixture(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]:
     tmp_dir.mkdir(mode=0o700)
     paths = JavaWorkerPaths(comsol_root, jdk_home, prefs, project_root=ROOT)
     paths.validate()
-    classpath, classpath_sha256, jar_count = paths.classpath()
+    classpath, classpath_sha256, jar_count, _ = paths.classpath()
     java_version = subprocess.run(
         [str(paths.executable("java")), "-version"],
         capture_output=True,

@@ -345,8 +345,8 @@ class G36AcceptanceRunner:
         paths64 = java_worker.JavaWorkerPaths(self.root_64, self.jdk11, project_root=self.workpack_root)
 
         source = (self.repo_root / "comsol_mcp" / "worker_java" / "PersistentComsolWorker.java").read_bytes()
-        _, hash63, count63 = paths63.classpath()
-        _, hash64, count64 = paths64.classpath()
+        _, hash63, count63, _ = paths63.classpath()
+        _, hash64, count64, _ = paths64.classpath()
 
         key1, receipt1 = paths63.compilation_cache_fingerprint(source, hash63)
         key2, receipt2 = paths64.compilation_cache_fingerprint(source, hash64)
@@ -1031,8 +1031,8 @@ public final class ParamModifier {
             source = (self.repo_root / "comsol_mcp" / "worker_java" / "PersistentComsolWorker.java").read_bytes()
             paths63 = JavaWorkerPaths(self.root_63, self.jdk11)
             paths64 = JavaWorkerPaths(self.root_64, self.jdk11)
-            _, hash63, _ = paths63.classpath()
-            _, hash64, _ = paths64.classpath()
+            _, hash63, _, _ = paths63.classpath()
+            _, hash64, _, _ = paths64.classpath()
             key_63, _ = paths63.compilation_cache_fingerprint(source, hash63)
             key_64, _ = paths64.compilation_cache_fingerprint(source, hash64)
             assert key_63 != key_64, f"Cache keys must be distinct between 6.3 and 6.4: {key_63} == {key_64}"

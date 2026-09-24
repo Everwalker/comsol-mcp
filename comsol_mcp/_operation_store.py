@@ -176,8 +176,11 @@ class OperationStore:
             )
             return job_id
 
-    def finish(self, operation_id: str, *, status: str, result: dict[str, Any]) -> None:
+    def finish(self, operation_id: str, *, status: str, result: dict[str, Any]) -> tuple[bool, str]:
         """Atomically record a result observation and synchronize its job status.
+
+        Returns ``(accepted, authoritative_status)`` so the caller can use the
+        actual persistent state for RPC responses and event emission.
 
         ``UNKNOWN`` and ``RECONCILING`` are durable nonterminal observations:
         they retain the result envelope (including ``safe_retry=False``) but
@@ -212,7 +215,7 @@ class OperationStore:
                         }))
                     )
                     self.db.execute("COMMIT")
-                    return
+                    return False, current_status
 
                 operation = self.db.execute(
                     "UPDATE operations SET status=?,result=?,finished_at="
@@ -231,6 +234,7 @@ class OperationStore:
                 if operation.rowcount != 1 or job.rowcount != 1:
                     raise KeyError(f"operation/job pair missing for {operation_id}")
                 self.db.execute("COMMIT")
+                return True, status
             except Exception:
                 self.db.execute("ROLLBACK")
                 raise

@@ -1,0 +1,72 @@
+{
+  "reviewed_commit": "be5bfc8847d98e0aa3972050661a3beb8ee4cfc5",
+  "tree": "dbc871285c9e5465a2e2d9740e908289284304cb",
+  "scope": "targeted source/evidence review, not exhaustive file audit",
+  "native_execution_by_reviewer": false,
+  "findings": [
+    {
+      "id": "F01",
+      "priority": "P0",
+      "title": "验收等级与真实生产路径不一致",
+      "paths": "tools/run_g3_6_acceptance.py",
+      "observed": "WD04仅统计注册数；WD05硬编码四路径True；WD14手写CSV；WD19空ControlDaemon假RUNNING；WD22读固定能力。",
+      "required_action": "保留direct-API数值成果；补普通安装和生产MCP冷启动、同job负载、真实导出/图像、逐项断言。"
+    },
+    {
+      "id": "F02",
+      "priority": "P0",
+      "title": "SQLite终态与RPC返回不一致",
+      "paths": "comsol_mcp/_control_daemon.py; comsol_mcp/_operation_store.py",
+      "observed": "store.finish可能拒绝晚到结果，但ControlDaemon._finish仍返回原success并添加对应终态事件；transition_status未共用终态守卫。",
+      "required_action": "让原子仲裁返回权威结果，RPC/job/events都用该结果；统一transition/update/finish，竞态负测。"
+    },
+    {
+      "id": "F03",
+      "priority": "P0",
+      "title": "私有DACL失败未阻止继续",
+      "paths": "comsol_mcp/_security_os.py",
+      "observed": "icacls忽略退出码/异常，不回读；username缺失直接返回；WD06报告private_directory_dacl_configured=null仍PASS。",
+      "required_action": "可信SID与最小ACL，读回并验证不保留非授权显式ACE；失败不发布token或继续高权限动作。"
+    },
+    {
+      "id": "F04",
+      "priority": "P0",
+      "title": "强停的后端归属仍为可选",
+      "paths": "comsol_mcp/_control_daemon.py; comsol_mcp/_platform_process.py",
+      "observed": "lease仅if present，birth校验可省略；进程函数仅等待父PID；is_process_in_job(pid)忽略pid；能力未按运行环境证据生成。",
+      "required_action": "强制mandatory lease/job/runtime匹配；进程句柄与创建身份、子树与监听者退出验证；查询失败UNKNOWN；无证明拒绝。"
+    },
+    {
+      "id": "F05",
+      "priority": "P1",
+      "title": "Windows隔离观测与生产校验未闭合",
+      "paths": "comsol_mcp/_g2_isolation.py",
+      "observed": "进程查询失败用command=comsol补值；最终验证仍精确IPv4loopback；WD03只测试解析器与Python监听。",
+      "required_action": "未知信息保持不可用；实际COMSOL监听/PID/peer/认证/配置证据进入原生产verify_owned_server；不要删检查或扩大监听。"
+    },
+    {
+      "id": "F06",
+      "priority": "P1",
+      "title": "编译缓存未绑定实际JAR字节",
+      "paths": "comsol_mcp/_java_worker.py",
+      "observed": "fingerprint包含manifest和推断版本，但无各JAR内容；路径数字可被当版本；JDK11需实时核对。",
+      "required_action": "引擎/启动器真实build、JDK版本架构、JAR哈希及worker源码共同缓存键；同名JAR替换负控。"
+    },
+    {
+      "id": "F07",
+      "priority": "P1",
+      "title": "运行源码与发布源码缺少当前对应证明",
+      "paths": "evidence/windows_dual_version/g3_6_acceptance_20260924T014214Z/acceptance_result.json",
+      "observed": "active_commit=197049c...不同于公开be5bfc...；root宣称Mac完全保持缺少对应新Mac实机证据。",
+      "required_action": "以可恢复公开SHA新运行或建立文件哈希等价桥；skip逐项解释；历史证据追加修正不重写。"
+    },
+    {
+      "id": "F08",
+      "priority": "P1",
+      "title": "下一能力为W20而非继续接口计数",
+      "paths": "docs/comsol_mcp_design_v1/04_IMPLEMENTATION_PLAN.md",
+      "observed": "W20要求结构/数值/物理三层验证与有边界规则；W21是下一阶段扫描优化。",
+      "required_action": "Gate A后实现实际模型验证服务、独立指标与收敛、可下载报告，严格停止W21之前。"
+    }
+  ]
+}

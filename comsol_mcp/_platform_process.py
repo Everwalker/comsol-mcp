@@ -146,8 +146,13 @@ CREATE_NEW_PROCESS_GROUP = 0x00000200
 DETACHED_PROCESS = 0x00000008
 
 
-def is_process_in_job(pid: int | None = None) -> bool:
-    """Check if the current process (or specified pid on Windows) is assigned to a Job Object."""
+def is_process_in_job(pid: int | None = None) -> bool | None:
+    """Check if the specified process (or current process) is assigned to a Job Object.
+
+    Returns True if in a job, False if not, None if the query could not be
+    completed (API failure / access denied).  Callers must treat None as UNKNOWN
+    and must not assume the process is not in a job.
+    """
     if os.name != "nt":
         return False
     import ctypes
@@ -156,11 +161,33 @@ def is_process_in_job(pid: int | None = None) -> bool:
     kernel32.IsProcessInJob.argtypes = (wintypes.HANDLE, wintypes.HANDLE, ctypes.POINTER(wintypes.BOOL))
     kernel32.IsProcessInJob.restype = wintypes.BOOL
     kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+    kernel32.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
+    kernel32.CloseHandle.restype = wintypes.BOOL
 
-    in_job = wintypes.BOOL()
-    if kernel32.IsProcessInJob(kernel32.GetCurrentProcess(), None, ctypes.byref(in_job)):
-        return bool(in_job.value)
-    return False
+    query_limited_information = 0x1000
+    handle = None
+    need_close = False
+    try:
+        if pid is not None:
+            # F04: Open a handle to the TARGET process, not self.
+            handle = kernel32.OpenProcess(query_limited_information, False, pid)
+            if not handle:
+                # Cannot open the process — access denied or invalid PID.
+                return None  # UNKNOWN, not False
+            need_close = True
+        else:
+            handle = kernel32.GetCurrentProcess()
+
+        in_job = wintypes.BOOL()
+        if kernel32.IsProcessInJob(handle, None, ctypes.byref(in_job)):
+            return bool(in_job.value)
+        # API call failed
+        return None
+    finally:
+        if need_close and handle:
+            kernel32.CloseHandle(handle)
 
 
 def validate_windows_path_security(path_str: str) -> None:

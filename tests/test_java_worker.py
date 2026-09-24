@@ -276,7 +276,7 @@ def test_windows_classpath_prefers_complete_apiplugins_without_scanning_plugins(
     (root / "plugins" / "unlisted.jar").write_bytes(b"must-not-be-scanned")
     (root / "plugins" / "com.comsol.api_1.0.0.jar").write_bytes(b"alternate-complete-single-entry")
     paths = JavaWorkerPaths(root, tmp_path / "JDK", project_root=tmp_path, platform_name="nt")
-    classpath, _, count = paths.classpath()
+    classpath, _, count, _ = paths.classpath()
     assert classpath == str(expected)
     assert count == 1
 
@@ -289,7 +289,7 @@ def test_windows_classpath_uses_complete_plugins_only_when_apiplugins_is_incompl
     first, second = root / "plugins" / "first.jar", root / "plugins" / "second.jar"
     first.write_bytes(b"first"); second.write_bytes(b"second")
     paths = JavaWorkerPaths(root, tmp_path / "JDK", project_root=tmp_path, platform_name="nt")
-    classpath, _, count = paths.classpath()
+    classpath, _, count, _ = paths.classpath()
     assert classpath == ";".join((str(first), str(second)))
     assert count == 2
 

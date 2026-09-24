@@ -1,0 +1,235 @@
+{
+  "schema": "handoff/g3_7-acceptance-definitions/1",
+  "all_cases_are_planned_not_executed": true,
+  "targets": {
+    "win63": "Windows COMSOL 6.3",
+    "win64": "Windows COMSOL 6.4",
+    "shared": "shared/control/source"
+  },
+  "cases": [
+    {
+      "id": "A00",
+      "title": "干净路径固定公开源恢复",
+      "targets": "SHARED",
+      "required_evidence": "SOURCE",
+      "required_for_stage": true,
+      "criteria": "固定commit/tree、全部tracked文件hash、恢复回执；修改1字节/错误tree/越界归档均被拒绝；不读取旧目录。"
+    },
+    {
+      "id": "A01",
+      "title": "实际引擎/JDK/缓存身份",
+      "targets": "BOTH",
+      "required_evidence": "NATIVE_ENGINE",
+      "required_for_stage": true,
+      "criteria": "分别读取java/javac与引擎完整build，JAR集合哈希；6.3/6.4独立编译；同名JAR变更导致缓存失效。"
+    },
+    {
+      "id": "A02",
+      "title": "实际私有ACL与失败拒绝",
+      "targets": "SHARED",
+      "required_evidence": "NATIVE_OS",
+      "required_for_stage": true,
+      "criteria": "以可信SID验证DACL；含意外显式ACE与icacls失败/缺身份负测。权限失败时未发布secret端点。"
+    },
+    {
+      "id": "A03",
+      "title": "真实COMSOL隔离门禁",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "criteria": "生产verify_owned_server观察实际COMSOL PID/birth/命令/监听和peer，错误端口/进程/非允许监听拒绝；解析器测试不替代。"
+    },
+    {
+      "id": "A04",
+      "title": "强停归属与真实退出",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "criteria": "缺lease/错job或runtime/过期birth拒绝；显式启用owned stop须真实任务引擎父子进程/监听退出、另一个任务无影响；未支持不得VERIFIED。"
+    },
+    {
+      "id": "A05",
+      "title": "终态与RPC/事件一致",
+      "targets": "SHARED",
+      "required_evidence": "CONTROL",
+      "required_for_stage": true,
+      "criteria": "取消赢与完成赢、timeout、late result、CAS路径；SQLite操作和job、原RPC、重取结果、事件权威终态一致。"
+    },
+    {
+      "id": "A06",
+      "title": "真实生产队列与活动观测",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "criteria": "生产job在Worker已开始未结束区间测50次响应；排队取消真实竞态且零派发；禁止手动插RUNNING。"
+    },
+    {
+      "id": "A07",
+      "title": "普通配置冷启动与调用入口",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "criteria": "真正stdio initialize/list/call和registry fallback，正常ControlDaemon/Worker，不注入测试service；版本和model_ref回读。"
+    },
+    {
+      "id": "A08",
+      "title": "四路径wheel安装",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "criteria": "新venv实际wheel安装于A，源码B，科学项目C，cwdD；禁editable/PYTHONPATH，核对import路径；MCP写只到获准C。"
+    },
+    {
+      "id": "A09",
+      "title": "W17解轴/复数/统计回归",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "criteria": "多个表达式/outer/inner/点；实际时间元数据；复数、非单位测度、mean/std/rms独立期望，错轴/虚部丢失失败。"
+    },
+    {
+      "id": "A10",
+      "title": "实际CSV/产物/图像交付",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "criteria": "product export与artifact.read，CSV往返轴/单位/坐标/复数一致；真ImageContent解码；artifact-only有界且完整文件可取。"
+    },
+    {
+      "id": "A11",
+      "title": "host与control中断恢复",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "criteria": "在原请求运行时断开host、另案重启control，原Worker/job可协调，幂等不重执行；无证据不标SUCCEEDED。"
+    },
+    {
+      "id": "A12",
+      "title": "版本切换与错引用拒绝",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "criteria": "6.4→6.3→6.4，跨runtime ModelRef写前拒绝；资源许可并存时不误停另一个引擎；并存限制单列。"
+    },
+    {
+      "id": "A13",
+      "title": "同版本保存新Worker重开",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "criteria": "冻结MPH哈希，新Worker读取同一文件不先重算，核对内部多点/时间、配置、用户节点保留；错误文件/解负控。"
+    },
+    {
+      "id": "A14",
+      "title": "源/运行/发布证据对应",
+      "targets": "SHARED",
+      "required_evidence": "SOURCE",
+      "required_for_stage": true,
+      "criteria": "本轮公开可恢复源、运行前后manifest、dirty说明、发布等价桥；旧197049...不作为必需下载；skip逐项解释。"
+    },
+    {
+      "id": "A15",
+      "title": "产物注册与私有边界",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "criteria": "合成private sentinel经公开入口拒绝；ADS/junction/路径别名/覆盖和正在被占用文件负测；不读真实秘密。"
+    },
+    {
+      "id": "B01",
+      "title": "结构预检规则与覆盖",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "criteria": "模型/几何/选区/材料/物理/网格/Study/Solver初始规则，已知好坏模型有回读；不支持规则不自动PASS。"
+    },
+    {
+      "id": "B02",
+      "title": "数值指标与单位",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "criteria": "实际finite/范围/加权统计/积分/守恒；绑定解和测度，空域/单位错/过期解/NaN失败；副作用明示。"
+    },
+    {
+      "id": "B03",
+      "title": "独立稳态解析基准",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "criteria": "冻结铜块参数与公式；312.5/325/337.5K、80W按任务阈值核验；错误k/边界/单位负控同一checker拒绝。"
+    },
+    {
+      "id": "B04",
+      "title": "独立瞬态解析基准",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "criteria": "冻结正弦衰减解和参数，3点×3个非初始真实存储时间；不能echo tlist或使用观测生成期望。"
+    },
+    {
+      "id": "B05",
+      "title": "三精度级别收敛",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "criteria": "隔离副本至少3个网格/时间精度级别，实际误差与资源记录；不篡改容差，主模型未损坏。"
+    },
+    {
+      "id": "B06",
+      "title": "三层状态及缺证据",
+      "targets": "SHARED",
+      "required_evidence": "CONTROL",
+      "required_for_stage": true,
+      "criteria": "execution/numerical/physical三轴独立；求解成功但数值失败、数值正确但物理依据缺失均正确标注。"
+    },
+    {
+      "id": "B07",
+      "title": "验证权限/副作用/恢复",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "criteria": "READ不隐式求解；EVALUATE/COMPUTE走生产队列/权限；临时节点cleanup失败/中断可追溯原job。"
+    },
+    {
+      "id": "B08",
+      "title": "冻结oracle与负控",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "criteria": "同一checker处理正确结果与错模型/解/单位/规则/期望哈希；负控不可只比较两个常量字符串。"
+    },
+    {
+      "id": "B09",
+      "title": "报告与原始证据可读",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "criteria": "JSON/Markdown报告注册与分块回取，规则版本/观测/期望/误差/覆盖/来源完整；缺实验physical=UNVERIFIED。"
+    },
+    {
+      "id": "B10",
+      "title": "同代码双版本一致性",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "criteria": "两个独立build结果各自对解析基准，不只两版本互比；相同修复源码、独立运行目录；Mac影响明确。"
+    },
+    {
+      "id": "C01",
+      "title": "全量软件/安装/再次恢复",
+      "targets": "SHARED",
+      "required_evidence": "SOFTWARE",
+      "required_for_stage": true,
+      "criteria": "真实命令与原始输出、skip列表、pip check、wheel资源、中文/空格新路径恢复；不可重用旧环境。"
+    },
+    {
+      "id": "C02",
+      "title": "交付清理与同步",
+      "targets": "SHARED",
+      "required_evidence": "SOURCE",
+      "required_for_stage": true,
+      "criteria": "任务进程退出/外部进程不受影响、secret扫描、最终manifest、普通分支同步或BLOCKED_SYNC，停止W20。"
+    }
+  ]
+}

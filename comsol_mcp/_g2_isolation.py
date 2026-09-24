@@ -110,13 +110,10 @@ def _windows_process_snapshot(pid: int) -> dict[str, Any] | None:
             }
     except Exception:
         pass
-    birth = str(ident.get("start_epoch_ms") or "")
-    return {
-        "pid": pid,
-        "birth": birth,
-        "command": "comsol",
-        "command_sha256": _sha256_text("comsol"),
-    }
+    # F05: Fail closed — if CIM query fails or returns no output, the process
+    # snapshot is UNAVAILABLE.  Unknown information must not be fabricated as
+    # "comsol" since that would bypass the isolation gate.
+    return None
 
 
 def _process_snapshot(pid: int) -> dict[str, Any] | None:

@@ -189,9 +189,23 @@ class ControlDaemon:
     def _finish(self, record, result, status):
         execution = result.setdefault("execution", {})
         execution.update({key: record[key] for key in ("request_id", "operation_id", "request_hash", "idempotency_key", "job_id")})
-        self.store.finish(record["operation_id"], status=status, result=result)
-        self.store.update_job(record["job_id"], status, {"finished_observed_at": time.time()})
-        self.store.add_event(record["job_id"], status, {"operation_id": record["operation_id"], "at": time.time()})
+        accepted, authoritative_status = self.store.finish(record["operation_id"], status=status, result=result)
+        if not accepted:
+            # F02: The store rejected this write because the job is already in a
+            # terminal state.  Return the authoritative persistent result instead
+            # of the candidate that was just rejected, and emit the authoritative
+            # status event so RPC/SQLite/events are all consistent.
+            job = self.store.job(record["job_id"])
+            authoritative_result = (job.get("result") if job else None) or result
+            self.store.add_event(record["job_id"], "LateResultRecorded", {
+                "operation_id": record["operation_id"],
+                "rejected_status": status,
+                "authoritative_status": authoritative_status,
+                "at": time.time(),
+            })
+            return authoritative_result
+        self.store.update_job(record["job_id"], authoritative_status, {"finished_observed_at": time.time()})
+        self.store.add_event(record["job_id"], authoritative_status, {"operation_id": record["operation_id"], "at": time.time()})
         return result
 
     def _pending(self, record, **extra):
