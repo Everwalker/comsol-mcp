@@ -1,0 +1,368 @@
+{
+  "schema": "g38/acceptance-cases/1",
+  "stop_before": "W21",
+  "cases": [
+    {
+      "id": "R00",
+      "title": "固定源恢复和新目录边界",
+      "targets": "SHARED",
+      "required_evidence": "STATIC",
+      "required_for_stage": true,
+      "assertions": [
+        "固定commit/tree和逐文件hash正确",
+        "无旧目录/私有提交依赖",
+        "失败不自动切main"
+      ]
+    },
+    {
+      "id": "R01",
+      "title": "历史证据纠正与合成样例隔离",
+      "targets": "SHARED",
+      "required_evidence": "STATIC",
+      "required_for_stage": true,
+      "assertions": [
+        "旧合成数据逐项标明SYNTHETIC_FIXTURE且不篡改原字节",
+        "新台账不得从报告模板产生PASS",
+        "删除一个原始证据文件/造假的生产标志导致汇总拒绝或NOT_RUN"
+      ]
+    },
+    {
+      "id": "R02",
+      "title": "空验证和未知规则回归",
+      "targets": "SHARED",
+      "required_evidence": "CONTROL",
+      "required_for_stage": true,
+      "assertions": [
+        "空数据、坏语法、未知oracle、缺required observation不可数值PASS",
+        "getter不可用不使ready_to_solve=true",
+        "至少一个旧缺陷测试先失败再通过"
+      ]
+    },
+    {
+      "id": "R03",
+      "title": "Windows真实SID/ACE权限检查",
+      "targets": "SHARED",
+      "required_evidence": "WINDOWS_NATIVE_SECURITY",
+      "required_for_stage": true,
+      "assertions": [
+        "用户名在路径中不匹配Everyone",
+        "同名前缀主体被拒绝；零ACE解析/NULL DACL不可误报配置成功",
+        "Windows结构化DACL回读，策略精确SID/mask，失败先于私有端点发布",
+        "仅改变测试目录"
+      ]
+    },
+    {
+      "id": "R04",
+      "title": "三层状态与报告非升级",
+      "targets": "SHARED",
+      "required_evidence": "CONTROL",
+      "required_for_stage": true,
+      "assertions": [
+        "执行/数值/物理状态独立",
+        "数值FAIL或UNVERIFIED输入不能被report改PASS",
+        "负控测试PASS不等于坏模型数值PASS",
+        "导出失败保留job/artifact身份且不重算"
+      ]
+    },
+    {
+      "id": "R05",
+      "title": "冻结基准和输入数学约束",
+      "targets": "SHARED",
+      "required_evidence": "CONTROL",
+      "required_for_stage": true,
+      "assertions": [
+        "直接改expectations或外部dict不能改变冻结内容",
+        "digest含完整required-set/单位/测点/阈值",
+        "NaN/Inf/无效容差/缺项按契约拒绝",
+        "趋零归一化走明确绝对误差定义而非默认1"
+      ]
+    },
+    {
+      "id": "R06",
+      "title": "操作契约与共享基础层",
+      "targets": "SHARED",
+      "required_evidence": "CONTROL",
+      "required_for_stage": true,
+      "assertions": [
+        "8个validate.*的schema/effect/权限/来源一致",
+        "默认验证不solve或改材料/边界",
+        "caller数据模式显式不认证模型",
+        "真实source版本维持已有基础层而非测试专用旁路"
+      ]
+    },
+    {
+      "id": "V01",
+      "title": "两版本公开MCP冷启动与源外wheel",
+      "targets": "BOTH",
+      "required_evidence": "INSTALL_PUBLIC_MCP",
+      "required_for_stage": true,
+      "assertions": [
+        "实际新venv wheel、无源码PYTHONPATH、四目录",
+        "initialize/list/call真实发生",
+        "运行build、JDK、COMSOL类路径真实回读",
+        "无注入FakeService"
+      ]
+    },
+    {
+      "id": "V02",
+      "title": "真实结构预检与未知读取",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "assertions": [
+        "正常热模型支持规则读取",
+        "无材料/空选区/未build网格或缺study时不ready",
+        "getters拒绝返回覆盖限制非PASS",
+        "原模型无隐式修改"
+      ]
+    },
+    {
+      "id": "V03",
+      "title": "边界关系正负控",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "assertions": [
+        "正常热边界通过已支持规则",
+        "预设不合法边界/不正确sel确实检出",
+        "优先级/覆盖合法的BC不误报冲突",
+        "每个结果关联实际feature和实体"
+      ]
+    },
+    {
+      "id": "V04",
+      "title": "真实表达式及单位",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "assertions": [
+        "有效表达式和单位实际求值",
+        "非法语法/未定义/单位不匹配/非有限响应正确定性",
+        "字符串和字典格式不能漏查",
+        "清理自己的临时节点"
+      ]
+    },
+    {
+      "id": "V05",
+      "title": "解存在性、轴与观测完整性",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "assertions": [
+        "不存在dataset/solution或未solve不能验证PASS",
+        "只给一个通过点不能满足完整oracle",
+        "错误runtime/model/outer/inner拒绝",
+        "callers给完美观察不能覆盖引擎坏结果"
+      ]
+    },
+    {
+      "id": "V06",
+      "title": "统计/复数/测度与非单位区域",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "assertions": [
+        "复用FieldArray和MeasureSpec实际读取",
+        "非单位体积常量/非均匀场核对积分平均std/rms",
+        "单位和坐标、表达式/解轴完整",
+        "不支持规则明确UNVERIFIED"
+      ]
+    },
+    {
+      "id": "V07",
+      "title": "稳态独立解析基准与功率",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "assertions": [
+        "从空模型构建后回读设置",
+        "三点312.5/325/337.5K误差≤0.1K",
+        "两端功率80W及相对误差≤1%",
+        "产品validator读取真实结果；预先冻结期望"
+      ]
+    },
+    {
+      "id": "V08",
+      "title": "瞬态正弦独立解析基准",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "assertions": [
+        "L=1m/alpha=1和初始/边界实际回读",
+        "读取实际存储时间和9个观测点",
+        "全部9点最大绝对误差≤0.1K",
+        "不能将解析值加扰动作为观察"
+      ]
+    },
+    {
+      "id": "V09",
+      "title": "储能与源项守恒",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "assertions": [
+        "稳态/瞬态分别定义边界功率、体源、储能与单位",
+        "至少一个遗漏储能或符号反转负控不通过",
+        "归一化和趋零情形可解释",
+        "实际积分来自指定解和选区"
+      ]
+    },
+    {
+      "id": "V10",
+      "title": "实际三网格精度研究",
+      "targets": "BOTH",
+      "required_evidence": "NATIVE_CONVERGENCE",
+      "required_for_stage": true,
+      "assertions": [
+        "每级真实mesh度量/元素数或DOF不同且计算",
+        "固定dt/tolerance以隔离网格影响",
+        "从独立基准计算误差并执行冻结目标",
+        "相同网格和大误差递减不能PASS",
+        "舍入平台有准确说明"
+      ]
+    },
+    {
+      "id": "V11",
+      "title": "实际三时间精度研究",
+      "targets": "BOTH",
+      "required_evidence": "NATIVE_CONVERGENCE",
+      "required_for_stage": true,
+      "assertions": [
+        "固定足够细网格，至少3级真实步长上限或solver精度",
+        "不把tlist密度当内部步长",
+        "实际设置与采样时刻回读",
+        "没有求解或资源测量的记录不能手填"
+      ]
+    },
+    {
+      "id": "V12",
+      "title": "可追溯报告与原子产物",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "assertions": [
+        "JSON/MD都有3层状态、coverage/exclusions/warnings、真实版本身份",
+        "从已登记验证run聚合",
+        "hash绑定实际证据和冻结期望",
+        "目标目录/权限/覆盖/磁盘负控不报输出成功"
+      ]
+    },
+    {
+      "id": "V13",
+      "title": "权限和无破坏验证",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "assertions": [
+        "缺compute不得隐式solve",
+        "验证前后参数/材料/边界/用户结果节点保持",
+        "临时节点清理失败传播dirty/UNKNOWN",
+        "项目外/私有文件/符号或重解析路径拒绝"
+      ]
+    },
+    {
+      "id": "V14",
+      "title": "图像/数值/同版本重开回归",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "assertions": [
+        "公开MCP读数和ImageContent来自同一指定存储解",
+        "同版本保存，fresh Worker重开不先solve",
+        "复查内部场而不是边界常量",
+        "真实图像未丢来源、job状态一致"
+      ]
+    },
+    {
+      "id": "V15",
+      "title": "证据/来源/观测篡改负控",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE",
+      "required_for_stage": true,
+      "assertions": [
+        "改观察文件、SHA、版本或oracle导致报告不可验证",
+        "source_identity不是恢复baseline常量",
+        "旧响应不能当新run观察",
+        "合成origin不能通过原生门槛"
+      ]
+    },
+    {
+      "id": "V16",
+      "title": "真实job关联和故障恢复小链",
+      "targets": "BOTH",
+      "required_evidence": "PUBLIC_MCP_NATIVE_CONTROL",
+      "required_for_stage": true,
+      "assertions": [
+        "观察正在执行的那个job/worker request而非另造RUNNING记录",
+        "响应丢失取回原job不重复计算",
+        "晚到结果与持久状态/事件/RPC一致",
+        "当前未验证中止路线不得假报已停止"
+      ]
+    },
+    {
+      "id": "D01",
+      "title": "全软件回归与测试变更审计",
+      "targets": "SHARED",
+      "required_evidence": "SOFTWARE",
+      "required_for_stage": true,
+      "assertions": [
+        "新env完整pytest输出和skip理由",
+        "不通过删除/弱化失败测试收口",
+        "数值helper和public集成测试分级",
+        "Windows与可访问Mac结果分别记录"
+      ]
+    },
+    {
+      "id": "D02",
+      "title": "运行源与发布源关联",
+      "targets": "SHARED",
+      "required_evidence": "STATIC",
+      "required_for_stage": true,
+      "assertions": [
+        "运行前后source manifest含实际修改/新文件",
+        "运行snapshot与提交对应，非仅固定数量",
+        "每条required结果指向测试版本与原始响应",
+        "无token/password端点泄露"
+      ]
+    },
+    {
+      "id": "D03",
+      "title": "清理旧目录后的独立恢复",
+      "targets": "SHARED",
+      "required_evidence": "DELIVERY_RESTORE",
+      "required_for_stage": true,
+      "assertions": [
+        "新中文空格路径恢复固定或最终发布快照",
+        "从新env运行可重复入口",
+        "无旧数据依赖，不复制许可证",
+        "恢复失败保留原因不降级完整性"
+      ]
+    },
+    {
+      "id": "D04",
+      "title": "能力/历史/阶段索引一致",
+      "targets": "SHARED",
+      "required_evidence": "STATIC",
+      "required_for_stage": true,
+      "assertions": [
+        "旧合成报告标为历史不再认证",
+        "root/design/handoff状态同口径",
+        "本轮不做W21，future工作明确",
+        "Host/GUI/原生取消/商业模块范围真实披露"
+      ]
+    },
+    {
+      "id": "D05",
+      "title": "Mac兼容边界",
+      "targets": "SHARED",
+      "required_evidence": "SOFTWARE",
+      "required_for_stage": true,
+      "assertions": [
+        "公共代码不写死Windows",
+        "能运行Mac实机则受影响回归，否则明确NOT_RUN",
+        "保留以前真实证据范围，不声称新native验证",
+        "平台适配与业务逻辑隔离"
+      ]
+    }
+  ]
+}

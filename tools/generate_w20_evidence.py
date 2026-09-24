@@ -190,6 +190,25 @@ def generate_w20_artifacts(evidence_dir: Path) -> dict[str, Path]:
 
 
 if __name__ == "__main__":
+    import argparse
+    import sys
+    parser = argparse.ArgumentParser(description="W20 Synthetic Test Fixture Generator (FIXTURE ONLY per F01)")
+    parser.add_argument(
+        "--fixture-only",
+        action="store_true",
+        help="Acknowledge this generates synthetic test fixtures only, not native proof",
+    )
+    args = parser.parse_args()
+    if not args.fixture_only:
+        print(
+            "NOTICE: tools/generate_w20_evidence.py generates SYNTHETIC_FIXTURE artifacts only.\n"
+            "Per F01, these artifacts cannot serve as native acceptance evidence.\n"
+            "Pass --fixture-only to generate local test fixtures.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     repo = Path(__file__).resolve().parents[1]
     ev_dir = repo / "evidence" / "g3_7_windows_w20"
     generate_w20_artifacts(ev_dir)
+

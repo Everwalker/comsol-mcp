@@ -1,0 +1,33 @@
+{
+  "run_id": "g3_8_acceptance_20260924T094856Z",
+  "target": "win63",
+  "case_id": "V02",
+  "events": [
+    {
+      "direction": "request",
+      "method": "tools/call",
+      "request_id": "req-V02-3494dff3",
+      "timestamp": "2026-09-24T09:49:19.399938+00:00",
+      "payload": {
+        "name": "validate_preflight",
+        "arguments": {
+          "model_tag": "mcp1"
+        }
+      }
+    },
+    {
+      "direction": "response",
+      "request_id": "req-V02-3494dff3",
+      "timestamp": "2026-09-24T09:49:19.399938+00:00",
+      "payload": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\": \"PASS\", \"execution_status\": \"PASS\", \"numerical_verification_status\": \"NOT_APPLICABLE\", \"physical_validation_status\": \"UNVERIFIED\", \"ready_to_solve\": true, \"checks_evaluated\": [\"structure\", \"materials\", \"selections\", \"mesh\", \"study\"], \"findings\": [{\"rule\": \"component.existence\", \"status\": \"PASS\", \"components\": [\"comp1\"]}, {\"rule\": \"geometry.existence\", \"status\": \"PASS\", \"geometries\": [\"geom1\"]}, {\"rule\": \"physics.activation\", \"status\": \"PASS\", \"physics\": [\"ht\"]}, {\"rule\": \"mesh.existence\", \"status\": \"PASS\", \"meshes\": [\"mesh1\"]}, {\"rule\": \"study.connection\", \"status\": \"PASS\", \"studies\": [\"std1\"]}, {\"check\": \"preflight.ready\", \"status\": \"PASS\", \"message\": \"Model ready for solve\"}], \"inventory\": {\"components\": [\"comp1\"], \"geometries\": [\"geom1\"], \"physics\": [\"ht\"], \"meshes\": [\"mesh1\"], \"studies\": [\"std1\"], \"selections\": [\"sel1\"], \"materials\": [\"mat1\"]}, \"unsupported_reasons\": []}"
+          }
+        ],
+        "isError": false
+      }
+    }
+  ]
+}

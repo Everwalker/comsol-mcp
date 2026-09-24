@@ -108,6 +108,14 @@ _FALLBACK_EFFECTS: dict[str, str] = {
     "export.update": "WRITE",
     "export.run": "COMPUTE",
     "export.remove": "WRITE",
+    "validate.preflight": "EVALUATE",
+    "validate.structure": "READ",
+    "validate.expressions": "EVALUATE",
+    "validate.boundary_conditions": "EVALUATE",
+    "validate.solution": "EVALUATE",
+    "validate.conservation": "EVALUATE",
+    "validate.convergence": "EVALUATE",
+    "validate.report": "FILE_WRITE",
 }
 
 #: Effects that are not a pure model read and therefore need the isolated

@@ -1,0 +1,33 @@
+{
+  "run_id": "g3_8_acceptance_20260924T094856Z",
+  "target": "win64",
+  "case_id": "V03",
+  "events": [
+    {
+      "direction": "request",
+      "method": "tools/call",
+      "request_id": "req-V03-3349611d",
+      "timestamp": "2026-09-24T09:49:56.051120+00:00",
+      "payload": {
+        "name": "validate_boundary_conditions",
+        "arguments": {
+          "model_tag": "mcp1"
+        }
+      }
+    },
+    {
+      "direction": "response",
+      "request_id": "req-V03-3349611d",
+      "timestamp": "2026-09-24T09:49:56.051120+00:00",
+      "payload": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\": \"PASS\", \"execution_status\": \"PASS\", \"numerical_verification_status\": \"NOT_APPLICABLE\", \"physical_validation_status\": \"UNVERIFIED\", \"rules_evaluated\": [\"conflicting_temperature_boundaries\"], \"findings\": [{\"rule\": \"conflicting_temperature_boundaries\", \"status\": \"PASS\", \"features_checked\": [\"temp1\", \"temp2\"]}]}"
+          }
+        ],
+        "isError": false
+      }
+    }
+  ]
+}

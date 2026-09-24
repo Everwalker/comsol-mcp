@@ -1,0 +1,81 @@
+{
+  "schema": "comsol-mcp-g3/evidence-correction/1",
+  "generated_at": "2026-09-24T09:00:00.000000+00:00",
+  "source_baseline": {
+    "commit": "59d741d6e2514925fcabe3eb8fa7a1661e309779",
+    "tree": "1d60b1fc4d7d5a016dac1bf6a1bff2bb882384f0",
+    "status": "CORRECTED_SYNTHETIC_EVIDENCE_DEMOTED"
+  },
+  "historical_acceptance_report": {
+    "path": "evidence/g3_7_windows_w20/acceptance_report.json",
+    "sha256": "4a041adbcab89f6755da0452d253d276c5e6259dbf604569a5e4516a9a57f8fe",
+    "historical_status": "PASS",
+    "corrected_status": "DEFECTIVE_SYNTHETIC_AGGREGATION",
+    "justification": "The G3.7 acceptance report packaged synthetic outputs from tools/generate_w20_evidence.py into a template without live COMSOL engine evaluation, falsely certifying W20 numerical and convergence benchmarks with production_entrypoint=true."
+  },
+  "demoted_artifacts": [
+    {
+      "path": "evidence/g3_7_windows_w20/w20_copper_block_oracle.json",
+      "sha256": "a71c801a6f133f72b9e8a6afcc1a9e38306059db4e269ef8e624d8ae7083363b",
+      "classification": "SYNTHETIC_FIXTURE",
+      "reason": "Hardcoded observations (312.502, 325.001, 337.498, 80.05) generated locally without COMSOL engine execution."
+    },
+    {
+      "path": "evidence/g3_7_windows_w20/w20_transient_diffusion_oracle.json",
+      "sha256": "094ab30d6eb814ad4b40ef0c8e4759e6982b18ec8d87c1661859f4d8fa3cb07e",
+      "classification": "SYNTHETIC_FIXTURE",
+      "reason": "Analytic sine diffusion values with synthetic artificial noise added, not evaluated on a live COMSOL dataset."
+    },
+    {
+      "path": "evidence/g3_7_windows_w20/w20_convergence_study.json",
+      "sha256": "1c1ac44d88710a968d4147b44d3971d4eae57e854aff945c47f9b91be3af41de",
+      "classification": "SYNTHETIC_FIXTURE",
+      "reason": "Synthetic mesh convergence steps and resource numbers hand-coded without actual solver runs."
+    },
+    {
+      "path": "evidence/g3_7_windows_w20/w20_validation_report_win63.json",
+      "sha256": "a0896f75debf6d13b7c05d3db8ce06755df0069c724bf074b552bfd196c83161",
+      "classification": "SYNTHETIC_FIXTURE",
+      "reason": "Aggregated synthetic fixture checks under a simulated win63 runtime header."
+    },
+    {
+      "path": "evidence/g3_7_windows_w20/w20_validation_report_win63.md",
+      "sha256": "07a0e3e7e1bf75d047729328755c0fd9546d6f35f471acefe2e944bf8e4ff15b",
+      "classification": "SYNTHETIC_FIXTURE",
+      "reason": "Markdown rendering of synthetic fixture report."
+    },
+    {
+      "path": "evidence/g3_7_windows_w20/w20_validation_report_win64.json",
+      "sha256": "8cbd89b294ad6dacc199eef936bb694dffa5bcb5f14f881fda6ee3461883498e",
+      "classification": "SYNTHETIC_FIXTURE",
+      "reason": "Aggregated synthetic fixture checks under a simulated win64 runtime header."
+    },
+    {
+      "path": "evidence/g3_7_windows_w20/w20_validation_report_win64.md",
+      "sha256": "1a356f959691faa2a6240162ccb67f18f4fba3187af4132e5a96931f27f3aed6",
+      "classification": "SYNTHETIC_FIXTURE",
+      "reason": "Markdown rendering of synthetic fixture report."
+    }
+  ],
+  "preserved_authentic_evidence": [
+    {
+      "scope": "Gate A Live Dual-Version Execution",
+      "directory": "evidence/g3_7_windows_live/",
+      "description": "Authentic live execution records from Windows host running COMSOL 6.3 and 6.4, including steady heat transfer model solve, 3D temperature slice rendering, CSV export, and model save/reopen verification."
+    }
+  ],
+  "tooling_corrections": {
+    "tools/generate_w20_evidence.py": "RETIRED_FROM_ACCEPTANCE. Retained as test fixture generator only; prohibited from production evidence generation.",
+    "tools/generate_g3_7_report.py": "RETIRED_DEPRECATED. Replaced by authentic multi-case live runner tools/run_g3_8_acceptance.py calculating results from actual execution events."
+  },
+  "remediation_status": {
+    "F01": "RESOLVED: Synthetic evidence formally demoted and documented in EVIDENCE_CORRECTION.json.",
+    "F02": "RESOLVED: Real model structure inspection with component/geom/selection/mesh/study hierarchy; fail-closed ready_to_solve.",
+    "F03": "RESOLVED: Expression syntax/unit checking with engine-backed evaluation; real boundary condition conflict detection.",
+    "F04": "RESOLVED: Required observations check, finite numerical verification, frozen oracle matching, dataset freshness check.",
+    "F05": "RESOLVED: FrozenOracle immutable snapshots and mapping proxy; energy conservation residual with storage and source terms.",
+    "F06": "RESOLVED: Multi-level convergence validation on distinct parameter levels with tolerance and error criteria.",
+    "F07": "RESOLVED: validate.report content-bound evidence hashing, atomic file write, directory error handling, fail-closed status propagation.",
+    "F08": "RESOLVED: Exact trustee matching in _security_os.py, stripping path prefix, rejecting empty/null DACL and unexpected principals."
+  }
+}

@@ -118,6 +118,117 @@ def test_f03_dacl_windows_mocked(tmp_path, monkeypatch):
     with pytest.raises(PermissionError, match="Cannot query current user SID"):
         set_private_directory_permissions(tmp_path / "win_mock")
 
+def test_f08_dacl_windows_mocked_exact_user_success(tmp_path, monkeypatch):
+    monkeypatch.setattr(sys, "platform", "win32")
+    test_dir = tmp_path / "win_exact"
+    test_dir.mkdir()
+    
+    class Completed:
+        def __init__(self, returncode=0, stdout="", stderr=""):
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = stderr
+
+    def mock_run(cmd, *args, **kwargs):
+        cmd_str = " ".join(cmd) if isinstance(cmd, list) else str(cmd)
+        if "whoami" in cmd_str:
+            return Completed(0, '"DOMAIN\\alice","S-1-5-21-123456789-123456789-123456789-1001"\n')
+        elif "/grant" in cmd_str:
+            return Completed(0, "processed")
+        else: # readback
+            out = (
+                f"{test_dir} S-1-5-21-123456789-123456789-123456789-1001:(OI)(CI)(F)\n"
+                f"             NT AUTHORITY\\SYSTEM:(I)(OI)(CI)(F)\n"
+                f"Successfully processed 1 files; Failed processing 0 files\n"
+            )
+            return Completed(0, out)
+
+    monkeypatch.setattr(subprocess, "run", mock_run)
+    set_private_directory_permissions(test_dir)
+
+def test_f08_dacl_windows_mocked_rejects_empty_dacl(tmp_path, monkeypatch):
+    monkeypatch.setattr(sys, "platform", "win32")
+    test_dir = tmp_path / "win_empty"
+    test_dir.mkdir()
+
+    class Completed:
+        def __init__(self, returncode=0, stdout=""):
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = ""
+
+    def mock_run(cmd, *args, **kwargs):
+        cmd_str = " ".join(cmd) if isinstance(cmd, list) else str(cmd)
+        if "whoami" in cmd_str:
+            return Completed(0, '"DOMAIN\\alice","S-1-5-21-123456789-123456789-123456789-1001"\n')
+        elif "/grant" in cmd_str:
+            return Completed(0, "processed")
+        else:
+            return Completed(0, "Successfully processed 1 files\n")
+
+    monkeypatch.setattr(subprocess, "run", mock_run)
+    with pytest.raises(PermissionError, match="No ACEs could be parsed"):
+        set_private_directory_permissions(test_dir)
+
+def test_f08_dacl_windows_mocked_rejects_substring_spoofing(tmp_path, monkeypatch):
+    monkeypatch.setattr(sys, "platform", "win32")
+    test_dir = tmp_path / "win_spoof"
+    test_dir.mkdir()
+
+    class Completed:
+        def __init__(self, returncode=0, stdout=""):
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = ""
+
+    def mock_run(cmd, *args, **kwargs):
+        cmd_str = " ".join(cmd) if isinstance(cmd, list) else str(cmd)
+        if "whoami" in cmd_str:
+            return Completed(0, '"DOMAIN\\alice","S-1-5-21-123456789-123456789-123456789-1001"\n')
+        elif "/grant" in cmd_str:
+            return Completed(0, "processed")
+        else:
+            # Contains alice_guests instead of alice!
+            out = (
+                f"{test_dir} DOMAIN\\alice_guests:(OI)(CI)(F)\n"
+                f"             NT AUTHORITY\\SYSTEM:(I)(OI)(CI)(F)\n"
+            )
+            return Completed(0, out)
+
+    monkeypatch.setattr(subprocess, "run", mock_run)
+    with pytest.raises(PermissionError, match="Required user ACE granting Full Control"):
+        set_private_directory_permissions(test_dir)
+
+def test_f08_dacl_windows_mocked_rejects_unexpected_aces(tmp_path, monkeypatch):
+    monkeypatch.setattr(sys, "platform", "win32")
+    test_dir = tmp_path / "win_unexpected"
+    test_dir.mkdir()
+
+    class Completed:
+        def __init__(self, returncode=0, stdout=""):
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = ""
+
+    def mock_run(cmd, *args, **kwargs):
+        cmd_str = " ".join(cmd) if isinstance(cmd, list) else str(cmd)
+        if "whoami" in cmd_str:
+            return Completed(0, '"DOMAIN\\alice","S-1-5-21-123456789-123456789-123456789-1001"\n')
+        elif "/grant" in cmd_str:
+            return Completed(0, "processed")
+        else:
+            out = (
+                f"{test_dir} S-1-5-21-123456789-123456789-123456789-1001:(OI)(CI)(F)\n"
+                f"             NT AUTHORITY\\SYSTEM:(I)(OI)(CI)(F)\n"
+                f"             Everyone:(OI)(CI)(R)\n"
+            )
+            return Completed(0, out)
+
+    monkeypatch.setattr(subprocess, "run", mock_run)
+    with pytest.raises(PermissionError, match="(?i)unexpected ACEs"):
+        set_private_directory_permissions(test_dir)
+
+
 # ==============================================================================
 # F04: is_process_in_job
 # ==============================================================================

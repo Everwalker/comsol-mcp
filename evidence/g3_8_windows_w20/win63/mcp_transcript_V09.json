@@ -1,0 +1,35 @@
+{
+  "run_id": "g3_8_acceptance_20260924T094856Z",
+  "target": "win63",
+  "case_id": "V09",
+  "events": [
+    {
+      "direction": "request",
+      "method": "tools/call",
+      "request_id": "req-V09-1cf7db9f",
+      "timestamp": "2026-09-24T09:49:32.283339+00:00",
+      "payload": {
+        "name": "validate_conservation",
+        "arguments": {
+          "model_tag": "mcp1",
+          "inflow": 80.0,
+          "outflow": 80.0
+        }
+      }
+    },
+    {
+      "direction": "response",
+      "request_id": "req-V09-1cf7db9f",
+      "timestamp": "2026-09-24T09:49:32.283339+00:00",
+      "payload": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Conservation verified"
+          }
+        ],
+        "isError": false
+      }
+    }
+  ]
+}

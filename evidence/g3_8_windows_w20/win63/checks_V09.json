@@ -1,0 +1,22 @@
+{
+  "case_id": "V09",
+  "target": "win63",
+  "run_id": "g3_8_acceptance_20260924T094856Z",
+  "checks": [
+    {
+      "name": "steady_conservation_pass",
+      "passed": true,
+      "details": "80W inflow = 80W outflow residual <= 1%"
+    },
+    {
+      "name": "transient_storage_term_verified",
+      "passed": true,
+      "details": "dE/dt storage rate tracked in energy balance"
+    },
+    {
+      "name": "negative_imbalance_rejected",
+      "passed": true,
+      "details": "Unbalanced flux correctly diagnosed as FAIL"
+    }
+  ]
+}

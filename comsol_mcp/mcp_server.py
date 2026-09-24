@@ -20,6 +20,7 @@ from comsol_mcp._tools_phase1 import register as _reg_phase1
 from comsol_mcp._tools_control import register as _reg_control
 from comsol_mcp._g2_tools import register as _reg_g2
 from comsol_mcp._tools_w18 import register as _reg_w18
+from comsol_mcp._tools_w20 import register as _reg_w20
 from comsol_mcp._mcp_gateway import GatewayRegistry
 
 # Register all tools on the shared FastMCP instance at import time.
@@ -36,6 +37,8 @@ _reg_phase1(_gateway)
 _reg_control(_gateway)
 _reg_g2(_gateway)
 _reg_w18(_gateway)
+_reg_w20(_gateway)
+
 
 
 def main() -> None:

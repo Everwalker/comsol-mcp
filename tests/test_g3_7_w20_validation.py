@@ -311,9 +311,22 @@ class TestG3ValidationOperations:
     def test_dispatch_validate_preflight(self):
         from comsol_mcp import _g3_ops
         mock_worker = type("MockWorker", (), {"client": lambda self: None})()
+        # Incomplete structure cannot be ready to solve (F02)
+        incomplete_data = _g3_ops.dispatch("validate.preflight", mock_worker, "model1", {
+            "model_data": {
+                "components": ["comp1"],
+                "studies": ["std1"],
+            }
+        })
+        assert incomplete_data["ready_to_solve"] is False
+
+        # Complete structure with components, studies, physics, mesh is ready
         data = _g3_ops.dispatch("validate.preflight", mock_worker, "model1", {
             "model_data": {
                 "components": ["comp1"],
+                "geometries": ["geom1"],
+                "physics": ["ht"],
+                "meshes": ["mesh1"],
                 "studies": ["std1"],
             }
         })
@@ -332,14 +345,46 @@ class TestG3ValidationOperations:
         assert data["status"] == STATUS_PASS
         assert data["numerical_verification_status"] == STATUS_PASS
 
+        # Negative control: syntax error and string expression handling
+        bad_data = _g3_ops.dispatch("validate.expressions", mock_worker, "model1", {
+            "expressions": ["undefined_variable", "T + )"]
+        })
+        assert bad_data["status"] == STATUS_FAIL
+        assert bad_data["numerical_verification_status"] == STATUS_FAIL
+
     def test_dispatch_validate_boundary_conditions(self):
         from comsol_mcp import _g3_ops
         mock_worker = type("MockWorker", (), {"client": lambda self: None})()
-        data = _g3_ops.dispatch("validate.boundary_conditions", mock_worker, "model1", {
+        # Uninspected boundaries without engine or data are UNVERIFIED
+        unverified_data = _g3_ops.dispatch("validate.boundary_conditions", mock_worker, "model1", {
             "rules": ["bc.thermal_insulation", "bc.temperature_inflow"]
+        })
+        assert unverified_data["status"] == STATUS_UNVERIFIED
+
+        # Provided boundary data with distinct entities passes
+        data = _g3_ops.dispatch("validate.boundary_conditions", mock_worker, "model1", {
+            "rules": ["bc.thermal_insulation", "bc.temperature_inflow"],
+            "boundary_data": {
+                "boundaries": [
+                    {"tag": "temp1", "entities": [1]},
+                    {"tag": "temp2", "entities": [6]},
+                ]
+            }
         })
         assert data["status"] == STATUS_PASS
         assert data["execution_status"] == STATUS_PASS
+
+        # Negative control: conflicting temperature boundaries on entity 1
+        conflict_data = _g3_ops.dispatch("validate.boundary_conditions", mock_worker, "model1", {
+            "rules": ["conflicting_temperature_boundaries"],
+            "boundary_data": {
+                "boundaries": [
+                    {"tag": "temp1", "entities": [1]},
+                    {"tag": "temp2", "entities": [1]},
+                ]
+            }
+        })
+        assert conflict_data["status"] == STATUS_FAIL
 
     def test_dispatch_validate_solution_with_copper_block_oracle(self):
         from comsol_mcp import _g3_ops
@@ -366,12 +411,30 @@ class TestG3ValidationOperations:
     def test_dispatch_validate_solution_negative_control(self):
         from comsol_mcp import _g3_ops
         mock_worker = type("MockWorker", (), {"client": lambda self: None})()
+        # Empty solution / criteria cannot pass
+        empty_res = _g3_ops.dispatch("validate.solution", mock_worker, "model1", {})
+        assert empty_res["status"] == STATUS_FAIL
+
+        # Missing required observations for oracle cannot pass
+        missing_res = _g3_ops.dispatch("validate.solution", mock_worker, "model1", {
+            "solution": {"tag": "sol1"},
+            "criteria": {
+                "oracle": "steady_state_copper_block",
+                "observations": {"T_0.025": 325.0}  # missing other 3
+            }
+        })
+        assert missing_res["status"] == STATUS_FAIL
+
+        # Value out of tolerance fails
         data = _g3_ops.dispatch("validate.solution", mock_worker, "model1", {
             "solution": {"tag": "sol1"},
             "criteria": {
                 "oracle": "steady_state_copper_block",
                 "observations": {
                     "T_0.0125": 320.0,  # 7.5K error >> 0.1K tolerance
+                    "T_0.025": 325.0,
+                    "T_0.0375": 337.5,
+                    "HeatFlow": 80.0,
                 }
             }
         })
@@ -382,6 +445,9 @@ class TestG3ValidationOperations:
     def test_dispatch_validate_conservation(self):
         from comsol_mcp import _g3_ops
         mock_worker = type("MockWorker", (), {"client": lambda self: None})()
+        # Empty conservation fails
+        assert _g3_ops.dispatch("validate.conservation", mock_worker, "model1", {})["status"] == STATUS_FAIL
+
         data = _g3_ops.dispatch("validate.conservation", mock_worker, "model1", {
             "definition": {
                 "inflow": 80.0,
@@ -397,6 +463,18 @@ class TestG3ValidationOperations:
     def test_dispatch_validate_convergence(self):
         from comsol_mcp import _g3_ops
         mock_worker = type("MockWorker", (), {"client": lambda self: None})()
+        # Identical mesh size fails
+        bad_conv = _g3_ops.dispatch("validate.convergence", mock_worker, "model1", {
+            "cases": [
+                {"level": 1, "mesh_size_metric": 1.0, "error": 100.0},
+                {"level": 2, "mesh_size_metric": 1.0, "error": 90.0},
+                {"level": 3, "mesh_size_metric": 1.0, "error": 80.0},
+            ],
+            "criteria": {"absolute_error_max": 0.001}
+        })
+        assert bad_conv["status"] == STATUS_FAIL
+
+        # Valid monotonic convergence meeting target
         data = _g3_ops.dispatch("validate.convergence", mock_worker, "model1", {
             "cases": [
                 {"level": 1, "mesh_size_metric": 0.02, "error": 0.25},
@@ -404,6 +482,7 @@ class TestG3ValidationOperations:
                 {"level": 3, "mesh_size_metric": 0.005, "error": 0.015},
             ],
             "metrics": ["T_error"],
+            "criteria": {"absolute_error_max": 0.05}
         })
         assert data["execution_status"] == STATUS_PASS
         assert data["status"] == STATUS_PASS
@@ -420,6 +499,10 @@ class TestG3ValidationOperations:
                 "runtime_version": "6.4.0.293",
                 "frozen_expectations": {"T_mid": 325.0},
                 "raw_observations": {"T_mid": 325.002},
+                "error_tolerance_data": {
+                    "status": "PASS",
+                    "numerical_verification_status": "PASS"
+                }
             }
         })
         assert data["status"] == STATUS_PASS
@@ -428,4 +511,21 @@ class TestG3ValidationOperations:
         assert report_file.is_file()
         content = report_file.read_text(encoding="utf-8")
         assert "Validation Report: be5bfc8" in content
+
+        # Negative control: destination is a directory fails
+        dir_dest = tmp_path / "somedir"
+        dir_dest.mkdir()
+        fail_dir = _g3_ops.dispatch("validate.report", mock_worker, "model1", {
+            "destination": str(dir_dest),
+            "data": {"status": "PASS"}
+        })
+        assert fail_dir["status"] == STATUS_FAIL
+
+        # Negative control: child verification FAIL does not get upgraded to PASS
+        fail_up = _g3_ops.dispatch("validate.report", mock_worker, "model1", {
+            "data": {
+                "error_tolerance_data": {"numerical_verification_status": "FAIL"}
+            }
+        })
+        assert fail_up["status"] == STATUS_FAIL
 

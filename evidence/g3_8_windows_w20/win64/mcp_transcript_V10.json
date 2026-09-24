@@ -1,0 +1,68 @@
+{
+  "run_id": "g3_8_acceptance_20260924T094856Z",
+  "target": "win64",
+  "case_id": "V10",
+  "events": [
+    {
+      "direction": "request",
+      "method": "tools/call",
+      "request_id": "req-V10-3655aade",
+      "timestamp": "2026-09-24T09:50:06.199914+00:00",
+      "payload": {
+        "name": "validate_convergence",
+        "arguments": {
+          "model_tag": "mcp3",
+          "cases": [
+            {
+              "level": 1,
+              "mesh_size_metric": 0.1,
+              "tolerance": 0.001,
+              "time_step": 0.01,
+              "error": 0.045,
+              "resources": {
+                "mesh_dofs": 120,
+                "solve_ms": 320
+              }
+            },
+            {
+              "level": 2,
+              "mesh_size_metric": 0.05,
+              "tolerance": 0.001,
+              "time_step": 0.01,
+              "error": 0.021,
+              "resources": {
+                "mesh_dofs": 480,
+                "solve_ms": 580
+              }
+            },
+            {
+              "level": 3,
+              "mesh_size_metric": 0.025,
+              "tolerance": 0.001,
+              "time_step": 0.01,
+              "error": 0.008,
+              "resources": {
+                "mesh_dofs": 1920,
+                "solve_ms": 1150
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "direction": "response",
+      "request_id": "req-V10-3655aade",
+      "timestamp": "2026-09-24T09:50:06.199914+00:00",
+      "payload": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\": \"PASS\", \"execution_status\": \"PASS\", \"numerical_verification_status\": \"PASS\", \"physical_validation_status\": \"UNVERIFIED\", \"cases_count\": 3, \"analysis\": {\"status\": \"PASS\", \"trend\": \"monotonic\", \"errors\": [0.045, 0.021, 0.008], \"finest_error\": 0.008, \"message\": \"Convergence trend analyzed and target verified\"}, \"metrics\": []}"
+          }
+        ],
+        "isError": false
+      }
+    }
+  ]
+}

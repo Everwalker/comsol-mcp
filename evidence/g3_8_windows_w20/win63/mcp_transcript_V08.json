@@ -1,0 +1,34 @@
+{
+  "run_id": "g3_8_acceptance_20260924T094856Z",
+  "target": "win63",
+  "case_id": "V08",
+  "events": [
+    {
+      "direction": "request",
+      "method": "tools/call",
+      "request_id": "req-V08-62c4523b",
+      "timestamp": "2026-09-24T09:49:32.266581+00:00",
+      "payload": {
+        "name": "validate_solution",
+        "arguments": {
+          "model_tag": "mcp3",
+          "oracle": "transient_diffusion"
+        }
+      }
+    },
+    {
+      "direction": "response",
+      "request_id": "req-V08-62c4523b",
+      "timestamp": "2026-09-24T09:49:32.266581+00:00",
+      "payload": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Transient benchmark PASS: all 9 points error <= 0.0669K <= 0.1K"
+          }
+        ],
+        "isError": false
+      }
+    }
+  ]
+}

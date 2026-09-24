@@ -80,6 +80,8 @@ class ControlDaemon:
                 raise ExecutionContractError("UNSUPPORTED_OPERATION", "historical one-shot probe is disabled in the managed backend")
             if operation == "plot_render":
                 operation = "plot.render"
+            if operation.startswith("validate_"):
+                operation = operation.replace("validate_", "validate.", 1)
             if (
                 operation not in self.backend.registry
                 and operation not in {"model_adopt", "model_inspect"}

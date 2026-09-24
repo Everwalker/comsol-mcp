@@ -81,27 +81,62 @@ def set_private_directory_permissions(path: Path | str) -> None:
                 f"icacls DACL readback failed (exit {readback.returncode}) on {p}"
             )
         lines = [line.strip() for line in readback.stdout.splitlines() if line.strip()]
-        # ACE entries always contain the permission specifier ':('
-        ace_lines = [line for line in lines if ":(" in line]
+        ace_lines = []
         unexpected_aces = []
-        short_user = account_name.split("\\")[-1].lower() if "\\" in account_name else account_name.lower()
+        found_user_ace = False
+
         # Legitimate Windows OS and administrative principals that retain rights on private directories
         allowed_system_principals = {
             "nt authority\\system",
             "builtin\\administrators",
             "owner rights",
+            "s-1-5-18",
+            "s-1-5-32-544",
+            "s-1-3-4",
         }
-        for ace_line in ace_lines:
-            ace_identity = ace_line.split(":(")[0].lower()
-            matched = (
-                user_sid.lower() in ace_identity
-                or f"*{user_sid}".lower() in ace_identity
-                or account_name.lower() in ace_identity
-                or short_user in ace_identity
-                or any(sys_p in ace_identity for sys_p in allowed_system_principals)
+        user_identities = {
+            user_sid.lower(),
+            f"*{user_sid}".lower(),
+            account_name.lower(),
+        }
+
+        p_str = str(p).lower()
+        p_res = str(p.resolve()).lower()
+        p_name = p.name.lower()
+
+        for raw_line in lines:
+            if ":(" not in raw_line:
+                continue
+            line = raw_line.strip()
+            # Strip path prefix if icacls prepended it on the first line
+            for prefix in (p_res, p_str, p_name):
+                if line.lower().startswith(prefix):
+                    line = line[len(prefix):].strip()
+                    break
+            if ":(" not in line:
+                continue
+
+            ace_lines.append(raw_line)
+            ace_identity = line.split(":(")[0].strip().lower()
+            perms = line[len(ace_identity):].upper()
+
+            # Exact trustee matching only (no substring matching, preventing spoofing or directory name match)
+            if ace_identity in user_identities:
+                if "(F)" in perms or ":F" in perms:
+                    found_user_ace = True
+            elif ace_identity in allowed_system_principals:
+                pass
+            else:
+                unexpected_aces.append(raw_line)
+
+        if not ace_lines:
+            raise PermissionError(
+                f"No ACEs could be parsed from icacls output for {p}; possible NULL DACL or empty permissions"
             )
-            if not matched:
-                unexpected_aces.append(ace_line)
+        if not found_user_ace:
+            raise PermissionError(
+                f"Required user ACE granting Full Control for SID {user_sid} ({account_name}) not found on {p}"
+            )
         if unexpected_aces:
             raise PermissionError(
                 f"Unexpected ACEs found on private directory {p} after DACL set; "

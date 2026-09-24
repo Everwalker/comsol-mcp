@@ -463,6 +463,24 @@ def generate_report(repo_root: Path, output_file: Path) -> dict:
 
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Legacy G3.7 Report Generator (RETIRED per F01)")
+    parser.add_argument(
+        "--allow-deprecated-synthetic",
+        action="store_true",
+        help="Explicitly permit generating historical synthetic template report",
+    )
+    args = parser.parse_args()
+    if not args.allow_deprecated_synthetic:
+        print(
+            "ERROR: tools/generate_g3_7_report.py is RETIRED per F01.\n"
+            "This script packaged synthetic fixture data into acceptance_report.json.\n"
+            "Native acceptance reports must be produced by authentic engine execution via tools/run_g3_8_acceptance.py.\n"
+            "To run anyway for historical regression inspection, pass --allow-deprecated-synthetic.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     repo = Path(__file__).resolve().parents[1]
     out = repo / "evidence" / "g3_7_windows_w20" / "acceptance_report.json"
     rep = generate_report(repo, out)

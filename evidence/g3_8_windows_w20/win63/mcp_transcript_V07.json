@@ -1,0 +1,34 @@
+{
+  "run_id": "g3_8_acceptance_20260924T094856Z",
+  "target": "win63",
+  "case_id": "V07",
+  "events": [
+    {
+      "direction": "request",
+      "method": "tools/call",
+      "request_id": "req-V07-c370b91d",
+      "timestamp": "2026-09-24T09:49:21.633377+00:00",
+      "payload": {
+        "name": "validate_solution",
+        "arguments": {
+          "model_tag": "mcp1",
+          "oracle": "steady_state_copper_block"
+        }
+      }
+    },
+    {
+      "direction": "response",
+      "request_id": "req-V07-c370b91d",
+      "timestamp": "2026-09-24T09:49:21.633377+00:00",
+      "payload": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Steady-state benchmark PASS: all 4 observations within tolerance"
+          }
+        ],
+        "isError": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,167 @@
+{
+  "schema": "g38/findings/1",
+  "source_commit": "59d741d6e2514925fcabe3eb8fa7a1661e309779",
+  "scope": "targeted systemic review, not every file line-by-line",
+  "findings": [
+    {
+      "id": "F01",
+      "priority": "P0",
+      "title": "合成观察和硬编码结论被升级为实机证据",
+      "paths": [
+        "tools/generate_w20_evidence.py",
+        "tools/generate_g3_7_report.py"
+      ],
+      "observed": "稳态观察固定312.502等；瞬态为解析解加人为扰动；收敛误差和资源手填。报告生成器复制required_evidence并将production_entrypoint设为true。",
+      "recommended_change": "保留历史并追加纠正；纯样例移到明确SYNTHETIC范围；新报告从原始执行事件计算，不由模板创造事实。",
+      "evidence_level": "RETRIEVED_SOURCE_CONFIRMED",
+      "sources": [
+        "https://github.com/Everwalker/comsol-mcp/blob/59d741d6e2514925fcabe3eb8fa7a1661e309779/tools/generate_w20_evidence.py",
+        "https://github.com/Everwalker/comsol-mcp/blob/59d741d6e2514925fcabe3eb8fa7a1661e309779/tools/generate_g3_7_report.py"
+      ],
+      "native_verified_by_reviewer": false
+    },
+    {
+      "id": "F02",
+      "priority": "P0",
+      "title": "结构读取失败和未知检查可能返回PASS",
+      "paths": [
+        "comsol_mcp/_g3_w20_validation.py"
+      ],
+      "observed": "validate.structure在读取失败时把unsupported_inspection计入rules_evaluated，但总判定未使用unsupported_reasons；preflight忽略UNVERIFIED，且未检查材料/选择/网格却列为checks_evaluated。",
+      "recommended_change": "真实绑定+必需规则覆盖；未知阻止ready_to_solve，存在/激活/构建/绑定分开。",
+      "evidence_level": "RETRIEVED_SOURCE_CONFIRMED",
+      "sources": [
+        "https://github.com/Everwalker/comsol-mcp/blob/59d741d6e2514925fcabe3eb8fa7a1661e309779/comsol_mcp/_g3_w20_validation.py"
+      ],
+      "native_verified_by_reviewer": false
+    },
+    {
+      "id": "F03",
+      "priority": "P0",
+      "title": "表达式与边界条件验证主要为占位逻辑",
+      "paths": [
+        "comsol_mcp/_g3_w20_validation.py"
+      ],
+      "observed": "字符串表达式被忽略、非空坏表达式通过；boundary规则名直接生成PASS，无实际边界读取。",
+      "recommended_change": "复用W17求值/单位/选区与物理自省；已支持规则实际读取，其他明确UNVERIFIED。",
+      "evidence_level": "SOURCE_EXCERPT_PROBES_P04_P06",
+      "sources": [
+        "https://github.com/Everwalker/comsol-mcp/blob/59d741d6e2514925fcabe3eb8fa7a1661e309779/comsol_mcp/_g3_w20_validation.py"
+      ],
+      "native_verified_by_reviewer": false
+    },
+    {
+      "id": "F04",
+      "priority": "P0",
+      "title": "无解、空观察、不完整基准可通过",
+      "paths": [
+        "comsol_mcp/_g3_w20_validation.py"
+      ],
+      "observed": "validate.solution不读取worker/model；passed默认true，未知oracle无分支，检查仅遍历调用者提供观察。",
+      "recommended_change": "引擎/产物来源约束与解身份；required-set完整检查；provided-data模式不能认证模型。",
+      "evidence_level": "SOURCE_EXCERPT_PROBES_P01_P03",
+      "sources": [
+        "https://github.com/Everwalker/comsol-mcp/blob/59d741d6e2514925fcabe3eb8fa7a1661e309779/comsol_mcp/_g3_w20_validation.py"
+      ],
+      "native_verified_by_reviewer": false
+    },
+    {
+      "id": "F05",
+      "priority": "P1",
+      "title": "守恒默认值与冻结基准/数值输入不足",
+      "paths": [
+        "comsol_mcp/_g3_w20_validation.py"
+      ],
+      "observed": "空守恒输入默认0/0并用1归一化；FrozenOracle.expectations仍可直接赋值；统计与规则单位/样本来源不足。",
+      "recommended_change": "缺测非零数据；物理守恒含源和储能，有限值/单位/测度验证；冻结内容不可变与digest。",
+      "evidence_level": "SOURCE_EXCERPT_PROBES_P07_P09",
+      "sources": [
+        "https://github.com/Everwalker/comsol-mcp/blob/59d741d6e2514925fcabe3eb8fa7a1661e309779/comsol_mcp/_g3_w20_validation.py"
+      ],
+      "native_verified_by_reviewer": false
+    },
+    {
+      "id": "F06",
+      "priority": "P1",
+      "title": "收敛只看误差严格递减",
+      "paths": [
+        "comsol_mcp/_g3_w20_validation.py"
+      ],
+      "observed": "criteria未被使用；相同h与巨大误差也能PASS；输入error/resources缺真实运行关联。",
+      "recommended_change": "真实3级、冻结误差与阈值、变化变量和求解记录；区分趋势与足够精度。",
+      "evidence_level": "SOURCE_EXCERPT_PROBE_P08",
+      "sources": [
+        "https://github.com/Everwalker/comsol-mcp/blob/59d741d6e2514925fcabe3eb8fa7a1661e309779/comsol_mcp/_g3_w20_validation.py"
+      ],
+      "native_verified_by_reviewer": false
+    },
+    {
+      "id": "F07",
+      "priority": "P0",
+      "title": "报告改变结论并隐藏写失败",
+      "paths": [
+        "comsol_mcp/_g3_w20_validation.py"
+      ],
+      "observed": "validate.report默认6.4/dset1，使用时间+输入数据hash，文件写异常pass，固定numerical PASS；Markdown未完整展示范围和状态。",
+      "recommended_change": "聚合已登记run；共享产物路径与原子提交；任何缺测和失败不得被报告升级。",
+      "evidence_level": "SOURCE_EXCERPT_PROBE_P10",
+      "sources": [
+        "https://github.com/Everwalker/comsol-mcp/blob/59d741d6e2514925fcabe3eb8fa7a1661e309779/comsol_mcp/_g3_w20_validation.py"
+      ],
+      "native_verified_by_reviewer": false
+    },
+    {
+      "id": "F08",
+      "priority": "P0",
+      "title": "ACL读回的子串匹配仍可误判",
+      "paths": [
+        "comsol_mcp/_security_os.py"
+      ],
+      "observed": "ace_identity包含首行路径；short_user子串可匹配路径/其他主体；零解析ACE未被拒绝。",
+      "recommended_change": "精确SID/ACE/mask；拒绝不可解析和无必需访问；用安全描述符API而非本地化文本猜测。",
+      "evidence_level": "SOURCE_EXCERPT_PROBES_P11_P13",
+      "sources": [
+        "https://github.com/Everwalker/comsol-mcp/blob/59d741d6e2514925fcabe3eb8fa7a1661e309779/comsol_mcp/_security_os.py"
+      ],
+      "native_verified_by_reviewer": false
+    },
+    {
+      "id": "F09",
+      "priority": "P1",
+      "title": "新汇总没有补齐旧生产调用路径缺口",
+      "paths": [
+        "tools/run_g3_6_acceptance.py",
+        "tools/generate_g3_7_report.py"
+      ],
+      "observed": "G3.7运行沿用G3.6套件；报告再将多项生产入口设为true；工况实际运行与公开MCP生产验收不是同一层。",
+      "recommended_change": "冷启动/受限输出/真实job观察和验证操作保留原始公开响应；不以registry计数或直接helper调用替代。",
+      "evidence_level": "SOURCE_AUDIT_LIMITED_TO_RETRIEVED_PATHS",
+      "sources": [
+        "https://github.com/Everwalker/comsol-mcp/blob/59d741d6e2514925fcabe3eb8fa7a1661e309779/tools/run_g3_6_acceptance.py",
+        "https://github.com/Everwalker/comsol-mcp/blob/59d741d6e2514925fcabe3eb8fa7a1661e309779/tools/generate_g3_7_report.py"
+      ],
+      "native_verified_by_reviewer": false
+    },
+    {
+      "id": "F10",
+      "priority": "P1",
+      "title": "来源与进度索引不一致",
+      "paths": [
+        "PROGRESS.md",
+        "README.md",
+        "docs/handoff_g3_7_windows_w20/PROGRESS.md",
+        "tools/generate_g3_7_report.py"
+      ],
+      "observed": "根进度仍G3.6；handoff称G3.7完成；报告源身份固定旧基线，而运行实际commit可不同。",
+      "recommended_change": "保留恢复基线/开发源/运行源/发布源独立身份；新台账明确证据等级，逐文件桥接而非填条目数。",
+      "evidence_level": "RETRIEVED_SOURCE_CONFIRMED",
+      "sources": [
+        "https://github.com/Everwalker/comsol-mcp/blob/59d741d6e2514925fcabe3eb8fa7a1661e309779/PROGRESS.md",
+        "https://github.com/Everwalker/comsol-mcp/blob/59d741d6e2514925fcabe3eb8fa7a1661e309779/README.md",
+        "https://github.com/Everwalker/comsol-mcp/blob/59d741d6e2514925fcabe3eb8fa7a1661e309779/docs/handoff_g3_7_windows_w20/PROGRESS.md",
+        "https://github.com/Everwalker/comsol-mcp/blob/59d741d6e2514925fcabe3eb8fa7a1661e309779/tools/generate_g3_7_report.py"
+      ],
+      "native_verified_by_reviewer": false
+    }
+  ]
+}

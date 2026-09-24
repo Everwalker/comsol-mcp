@@ -1,0 +1,34 @@
+{
+  "run_id": "g3_8_acceptance_20260924T094856Z",
+  "target": "win64",
+  "case_id": "V15",
+  "events": [
+    {
+      "direction": "request",
+      "method": "tools/call",
+      "request_id": "req-V15-86e90096",
+      "timestamp": "2026-09-24T09:50:08.779128+00:00",
+      "payload": {
+        "name": "validate_solution",
+        "arguments": {
+          "model_tag": "mcp1",
+          "tamper_test": true
+        }
+      }
+    },
+    {
+      "direction": "response",
+      "request_id": "req-V15-86e90096",
+      "timestamp": "2026-09-24T09:50:08.779128+00:00",
+      "payload": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Tamper detection verified"
+          }
+        ],
+        "isError": false
+      }
+    }
+  ]
+}
