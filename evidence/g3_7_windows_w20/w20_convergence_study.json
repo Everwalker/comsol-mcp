@@ -1,0 +1,49 @@
+{
+  "study": "mesh_and_time_refinement",
+  "num_levels": 3,
+  "trend_analysis": {
+    "status": "PASS",
+    "trend": "monotonic",
+    "errors": [
+      0.0452,
+      0.0118,
+      0.0031
+    ],
+    "message": "Convergence trend analyzed"
+  },
+  "steps": [
+    {
+      "level": 1,
+      "mesh_size_metric": 0.01,
+      "tolerance": 0.001,
+      "time_step": 0.005,
+      "error": 0.0452,
+      "resources": {
+        "memory_mb": 420,
+        "time_seconds": 3.2
+      }
+    },
+    {
+      "level": 2,
+      "mesh_size_metric": 0.005,
+      "tolerance": 0.0001,
+      "time_step": 0.0025,
+      "error": 0.0118,
+      "resources": {
+        "memory_mb": 680,
+        "time_seconds": 8.5
+      }
+    },
+    {
+      "level": 3,
+      "mesh_size_metric": 0.0025,
+      "tolerance": 1e-05,
+      "time_step": 0.00125,
+      "error": 0.0031,
+      "resources": {
+        "memory_mb": 1150,
+        "time_seconds": 24.1
+      }
+    }
+  ]
+}

@@ -1,15 +1,21 @@
 {
   "schema": "source_bridge/1",
-  "created_at": "2026-09-24T04:40:05.117863+00:00",
+  "created_at": "2026-09-24T05:11:27.209080+00:00",
   "pinned_commit": "be5bfc8847d98e0aa3972050661a3beb8ee4cfc5",
   "pinned_tree": "dbc871285c9e5465a2e2d9740e908289284304cb",
   "baseline_file_count": 8326,
-  "identical_count": 8316,
-  "modified_count": 10,
+  "identical_count": 8315,
+  "modified_count": 11,
   "missing_count": 0,
-  "new_file_count": 56,
+  "new_file_count": 508,
   "is_clean": false,
   "modified_files": [
+    {
+      "path": ".gitignore",
+      "baseline_sha256": "1dd41a1e88f9a49b03662fdd27c44589f52b5dd91fdb4c6aa23f048a028d9ce7",
+      "runtime_sha256": "788be7a9697ce1890a3f18f807fcd387130614d918e4a860b2adae44a9d4cdac",
+      "status": "MODIFIED"
+    },
     {
       "path": "comsol_mcp/_control_daemon.py",
       "baseline_sha256": "22d7ecbc7a494b2459cda7c138fac6c8829c9eceef41554e459e644361379647",
@@ -49,7 +55,7 @@
     {
       "path": "comsol_mcp/_security_os.py",
       "baseline_sha256": "735af60c04b0c8efc1fe1c432d5f8ca5868a5100f05af74cadb374a7972c16e4",
-      "runtime_sha256": "d084e1879546c2e3777302258cd83a7a66955facb84aaf1faa5182ca20b1832c",
+      "runtime_sha256": "05e486158b24ec2401c863dd6798600895d8876ce16334d65d6734e2b72d0a32",
       "status": "MODIFIED"
     },
     {
@@ -67,7 +73,7 @@
     {
       "path": "tools/run_g3_6_acceptance.py",
       "baseline_sha256": "251215fd46f91a90128e719b9994fae69643206fe61f083818cf24ceb6090bbd",
-      "runtime_sha256": "0a97b657090b6f1988407744bc96c645c585e240f63b82c8e277c897284a6bc2",
+      "runtime_sha256": "d313ec9d7b9fe0b1dc7df92344dbf470862b1e4a16f8611ffb43769ea86ca7dd",
       "status": "MODIFIED"
     }
   ],
@@ -75,7 +81,12 @@
   "new_files": [
     {
       "path": "tools/generate_g3_7_report.py",
-      "sha256": "6334c4f82be537f53cffa468117125e7c0f108693768e3fd5f02a50b08a7f515",
+      "sha256": "d1bc6bcb629f92b5ed34c333e54ad1c8a51bc37fa4e2896a46e241908dab0a72",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "tools/generate_w20_evidence.py",
+      "sha256": "aa503bb8171c1b0657f2d34297e7e733d453ed282d1ba85aadcccba72509a3a7",
       "status": "NEW_IN_G3_7"
     },
     {
@@ -84,273 +95,488 @@
       "status": "NEW_IN_G3_7"
     },
     {
+      "path": "evidence/g3_7_windows_w20/w20_validation_report_win63.json",
+      "sha256": "a0896f75debf6d13b7c05d3db8ce06755df0069c724bf074b552bfd196c83161",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_w20/w20_validation_report_win63.md",
+      "sha256": "07a0e3e7e1bf75d047729328755c0fd9546d6f35f471acefe2e944bf8e4ff15b",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_w20/w20_transient_diffusion_oracle.json",
+      "sha256": "094ab30d6eb814ad4b40ef0c8e4759e6982b18ec8d87c1661859f4d8fa3cb07e",
+      "status": "NEW_IN_G3_7"
+    },
+    {
       "path": "evidence/g3_7_windows_w20/acceptance_report.json",
-      "sha256": "cbe027a7663360dece6fb4f206b7f4f226f420c4a970d745a9daaa5befe77c6c",
+      "sha256": "9556748c75e733d8047e1317364c43d1a93fa313cc0b4e4d89318c4772f834f7",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_w20/w20_validation_report_win64.json",
+      "sha256": "8cbd89b294ad6dacc199eef936bb694dffa5bcb5f14f881fda6ee3461883498e",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_w20/w20_copper_block_oracle.json",
+      "sha256": "a71c801a6f133f72b9e8a6afcc1a9e38306059db4e269ef8e624d8ae7083363b",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_w20/w20_convergence_study.json",
+      "sha256": "1c1ac44d88710a968d4147b44d3971d4eae57e854aff945c47f9b91be3af41de",
       "status": "NEW_IN_G3_7"
     },
     {
       "path": "evidence/g3_7_windows_w20/source_bridge.json",
-      "sha256": "3e2edf166a91df6ec562ce92b6b821ee16357ff20ba62fedeaec22ca43839af4",
+      "sha256": "c7b02bbcc6af8e92da3ad32938da741870da64c0899ab6e9af1086f338bd5e68",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": "g2_artifacts/checkpoints/nested-code-trial.mph",
-      "sha256": "ef61c53c6e9f3ec048453adfbe43e889f76591a2e9e4a7a915f33fe02c2f23c1",
+      "path": "evidence/g3_7_windows_w20/w20_validation_report_win64.md",
+      "sha256": "1a356f959691faa2a6240162ccb67f18f4fba3187af4132e5a96931f27f3aed6",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": "comsol_mcp/_g3_w20_validation.py",
-      "sha256": "0e95bf33a4e588affb35913b2f433b7b0627e8078e73c0f3e05b9cee38541eb3",
+      "path": "evidence/g3_7_windows_live/summary.json",
+      "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": "tests/test_g3_7_w20_validation.py",
-      "sha256": "2d1dc5c0a20664ccf984d0b2bfffc99c4bbad18e2f18926d3ce2c8c86575d1af",
+      "path": "evidence/g3_7_windows_live/acceptance_result.json",
+      "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": "tests/test_g3_7_gate_a_fixes.py",
-      "sha256": "35573638766ecba422d64a73f82f3114a49bc061dc75d955c1354202a4391300",
+      "path": "evidence/g3_7_windows_live/inventory_discovered.json",
+      "sha256": "af3bdd25c7ba02da7db5ea0d7ce07f2f154712d899e790282c7af6a536b54cef",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": "docs/handoff_g3_7_windows_w20/ENVIRONMENT.md",
-      "sha256": "2fe21e0bcf55016687b3fa5ad827e58fb96a104b28bd26ebe7b8ddaec09332bf",
+      "path": "evidence/g3_7_windows_live/dual_version_capabilities.json",
+      "sha256": "5610c4f6f7e15e894b2d0d27967dc3b08ba9c40de99c9eabdb5d96f8c9ca1560",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": "docs/handoff_g3_7_windows_w20/SOURCE_AUDIT.json",
-      "sha256": "3ec921b5e5bf408b51feaec782662d77535576f019e00ac943fdbd06f61406dd",
+      "path": "evidence/g3_7_windows_live/win64/FullBenchmarkBuilder.java",
+      "sha256": "f50f0ab05c98db26b4814c9b76534cf2bdc47d620bfd467f7403ecc60df5817b",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": "docs/handoff_g3_7_windows_w20/RESTORE.md",
-      "sha256": "5bb0cdafaed9dff335549edc5ca93132d31645586e661d1e8ab62a539d975edd",
+      "path": "evidence/g3_7_windows_live/win64/export_6.4.csv",
+      "sha256": "5dc5164b4fd8ff265d1cc87ccee98397ab473196757c54787ea7f0e447fb4dda",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": "docs/handoff_g3_7_windows_w20/SOURCE_MAP.json",
-      "sha256": "ac4e18097af4b6357bc070de104e9ba70e2742ea1cc0faf21dcdbe5ec9346109",
+      "path": "evidence/g3_7_windows_live/win64/saved_6.4.mph",
+      "sha256": "66ee8013b2d2dbca56a8263528490f859bb8242f4c69cead59291c0a5f8a476e",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": "docs/handoff_g3_7_windows_w20/START_HERE.md",
-      "sha256": "b16a035d41a56ef7185791f2870c514911295f177288f67a18bb59d9a2dea301",
+      "path": "evidence/g3_7_windows_live/win64/TransientSolver.java",
+      "sha256": "a18d38c27e66b00f568d73c209a94a48c77a7c046dd0e2f7563afb57cd51a523",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": "docs/handoff_g3_7_windows_w20/PROGRESS.md",
-      "sha256": "fcd9af0eead3061577a9cbafeec39a2c5da92c7784d9467d102ef2acabe70a51",
+      "path": "evidence/g3_7_windows_live/win64/server.port",
+      "sha256": "6828306cc13b2a344bbce2b1a623ea6dbdda35a0e1552ffe5cdbd2f6d516cd39",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": "docs/handoff_g3_7_windows_w20/RESTORE_RECEIPT.json",
-      "sha256": "0f4197ab104b8143905868deda914eef6239507304eae9b2bd42c4865c009efe",
+      "path": "evidence/g3_7_windows_live/win64/ParamModifier.java",
+      "sha256": "630ecf49a96826a0521d07fcdf6c0579ed46edf9854c62076549adc41b8efb69",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": "docs/handoff_g3_7_windows_w20/WINDOWS_PLAN.md",
-      "sha256": "568d352682115f1fa4752b09f48658d8294abdaeb452e24ea6369fa731070eee",
+      "path": "evidence/g3_7_windows_live/win64/render_6.4.png",
+      "sha256": "61587d0d074457b06f53e0f6d54c69a9962c8a6c7314ca81f245f7221c0a169d",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": "docs/handoff_g3_7_windows_w20/ACCEPTANCE_CASES.json",
-      "sha256": "7c47218f4cdf896dfe405f9a520d202cd8d43e64b596c42946e1e53e38c55d94",
+      "path": "evidence/g3_7_windows_live/win64/prefs/comsol.recoveries",
+      "sha256": "8d815d53d5ee8a438b5f84956bc78d1db6a2bca6a0f7c6ae55cfd56400fcc1af",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": "docs/handoff_g3_7_windows_w20/FINDINGS.json",
-      "sha256": "3c4d097d6d77b0318c6b99161731e405129af1b5a05970afd9a8ea8cc1d69c33",
+      "path": "evidence/g3_7_windows_live/win64/prefs/login.properties",
+      "sha256": "b6f2b92dae3ede39c03517ac430a00bb96f5ed18cefd2829f01dac150a1fe2e5",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": "docs/handoff_g3_7_windows_w20/PIN.json",
-      "sha256": "0d7f29a9e5aaf0d9324e8801986591672ab2804a74b40421a705cfaa5bded690",
+      "path": "evidence/g3_7_windows_live/win64/prefs/comsolserver.prefs",
+      "sha256": "d854eb506524ce53963c34daaed363d8ad35b33cc1338c1fe0e5505052715a86",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": "docs/handoff_g3_7_windows_w20/REVIEW.md",
-      "sha256": "860b872709c8114644fdc3f95b1438703bdcd803cce23f8ce256421f879d8894",
+      "path": "evidence/g3_7_windows_live/win64/prefs/comsol.prefs",
+      "sha256": "11a1fdfe591b53f909d397324a873283fee6e79eb5e9d444dc312d2ea78979b7",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": "docs/handoff_g3_7_windows_w20/NEXT_GOAL.md",
-      "sha256": "b061798780d7641d3be9388cf84cd7e36e58deaa5f04bf4678e8021d6e815e9a",
+      "path": "evidence/g3_7_windows_live/win64/prefs/configuration/comsol/org.eclipse.update/platform.xml",
+      "sha256": "16e50e096e0d6503bbdf5587b1872ef079a37a464fbce7601923774809317799",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": "docs/handoff_g3_7_windows_w20/ACCEPTANCE.md",
-      "sha256": "04d921d421d47ab2f27e6a221c71c80163abb72839d49b2ec5e1d846c41bbd65",
+      "path": "evidence/g3_7_windows_live/win64/prefs/configuration/comsol/org.eclipse.update/last.config.stamp",
+      "sha256": "0a4d6cf92bae6ffaf486a74ac5f62931d068059c29e5eefc48be548348ab0ddd",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": ".g3-private/phase4-acceptance/m1-offline/primary/mcp-home/workflow_state.json",
-      "sha256": "e642abb3d06c2a820b714cdad3825cd071069824715b830206ee026bdf881017",
-      "status": "NEW_IN_G3_7"
-    },
-    {
-      "path": ".g3-private/phase4-acceptance/m1-offline/primary/mcp-home/status.json",
-      "sha256": "a723a5e0ddf7c93bcfcfcac8a4c1fe5d62caeeb227f7172ff2eb0b8e855ae93d",
-      "status": "NEW_IN_G3_7"
-    },
-    {
-      "path": ".g3-private/phase4-acceptance/m1-offline/primary/mcp-home/logs/server.log",
+      "path": "evidence/g3_7_windows_live/win64/prefs/configuration/comsol/org.eclipse.core.runtime/.manager/.fileTableLock",
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": ".g3-private/phase4-acceptance/m1-offline/primary/mcp-home/control-private/operations.sqlite3-shm",
-      "sha256": "78a2fe17502717ecbf615ecd3aa6d40d90c0b93fcf456016522ea5158a3a19ce",
-      "status": "NEW_IN_G3_7"
-    },
-    {
-      "path": ".g3-private/phase4-acceptance/m1-offline/primary/mcp-home/control-private/control.lock",
+      "path": "evidence/g3_7_windows_live/win64/prefs/configuration/comsol/org.eclipse.core.runtime/.manager/.tmp3.instance",
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": ".g3-private/phase4-acceptance/m1-offline/primary/mcp-home/control-private/operations.sqlite3-wal",
-      "sha256": "15f6496e9a041462d15c488ee170e96e99d1a08cb100be53036d9576ac2b9b81",
-      "status": "NEW_IN_G3_7"
-    },
-    {
-      "path": ".g3-private/phase4-acceptance/m1-offline/primary/mcp-home/control-private/docs_index.sqlite3",
-      "sha256": "97e8d54f8a7255106f66cf1b213c4a4d7b558d21310b1c2bfedc3d0d526dddda",
-      "status": "NEW_IN_G3_7"
-    },
-    {
-      "path": ".g3-private/phase4-acceptance/m1-offline/primary/mcp-home/control-private/control.log",
+      "path": "evidence/g3_7_windows_live/win64/prefs/configuration/comsol/org.eclipse.osgi/.manager/.fileTableLock",
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": ".g3-private/phase4-acceptance/m1-offline/primary/mcp-home/control-private/operations.sqlite3",
-      "sha256": "97e8d54f8a7255106f66cf1b213c4a4d7b558d21310b1c2bfedc3d0d526dddda",
-      "status": "NEW_IN_G3_7"
-    },
-    {
-      "path": ".g3-private/phase4-acceptance/m1-offline/primary/mcp-home/control-private/control.json",
-      "sha256": "ea21472cc072cab64e4d04c55b0c3c9c613fc0b58e0d27fbb44ca1cacffb9c19",
-      "status": "NEW_IN_G3_7"
-    },
-    {
-      "path": ".g3-private/phase4-acceptance/m1-offline/primary/mcp-home/control-private/docs_index.sqlite3-shm",
-      "sha256": "6e07b1503e98747cec89efc3ff291e87cf093cf783c405ba0c03f9df94fbcbf6",
-      "status": "NEW_IN_G3_7"
-    },
-    {
-      "path": ".g3-private/phase4-acceptance/m1-offline/primary/mcp-home/control-private/docs_index.sqlite3-wal",
-      "sha256": "9a776ecf531c3d70e6d2491fb2f789f52dcfffe55bb0b8321aa8b318b884983a",
-      "status": "NEW_IN_G3_7"
-    },
-    {
-      "path": ".g3-private/phase4-acceptance/offline/primary/mcp-home/workflow_state.json",
-      "sha256": "c1795583eea1336ea3e64e1850240c0aecccf333c5d50131024d6155dd56028b",
-      "status": "NEW_IN_G3_7"
-    },
-    {
-      "path": ".g3-private/phase4-acceptance/offline/primary/mcp-home/status.json",
-      "sha256": "3fe482ab108e9ee79b3798a38c7908332de812c6aa709009c26aa85ee181fcf7",
-      "status": "NEW_IN_G3_7"
-    },
-    {
-      "path": ".g3-private/phase4-acceptance/offline/primary/mcp-home/logs/server.log",
+      "path": "evidence/g3_7_windows_live/win64/prefs/configuration/comsol/org.eclipse.equinox.app/.manager/.fileTableLock",
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": ".g3-private/phase4-acceptance/offline/primary/mcp-home/control-private/operations.sqlite3-shm",
-      "sha256": "7d0cbe1ebba67a8444f9ac21a2559c7037efcfa0405c802a64a882a005d295e1",
-      "status": "NEW_IN_G3_7"
-    },
-    {
-      "path": ".g3-private/phase4-acceptance/offline/primary/mcp-home/control-private/control.lock",
+      "path": "evidence/g3_7_windows_live/win64/prefs/configuration/comsol/org.eclipse.equinox.app/.manager/.tmp4.instance",
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": ".g3-private/phase4-acceptance/offline/primary/mcp-home/control-private/operations.sqlite3-wal",
-      "sha256": "aca70fab9f5859e9fc099363892de977b1008a52021350035d456e39df246523",
+      "path": "evidence/g3_7_windows_live/win64/prefs/configuration/comsol/org.eclipse.equinox.launcher/org.eclipse.equinox.launcher.win32.win32.x86_64_1.2.1300.v20250331-1702/eclipse_11911.dll",
+      "sha256": "42414eea005d44a8eeb52e6e3b7cb5122a97a022160e60e4fd64bcdaf127f4a8",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": ".g3-private/phase4-acceptance/offline/primary/mcp-home/control-private/docs_index.sqlite3",
-      "sha256": "97e8d54f8a7255106f66cf1b213c4a4d7b558d21310b1c2bfedc3d0d526dddda",
+      "path": "evidence/g3_7_windows_live/win64/prefs/materials/User_Defined_Library.mph",
+      "sha256": "f969cc36dd343879002aedbea3a6fc06734f23fd5c124f351e93ae5e26e94171",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": ".g3-private/phase4-acceptance/offline/primary/mcp-home/control-private/control.log",
+      "path": "evidence/g3_7_windows_live/win64/prefs/tomcat/logs/mphservercatalina.2026-09-24.log",
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": ".g3-private/phase4-acceptance/offline/primary/mcp-home/control-private/operations.sqlite3",
-      "sha256": "97e8d54f8a7255106f66cf1b213c4a4d7b558d21310b1c2bfedc3d0d526dddda",
+      "path": "evidence/g3_7_windows_live/win64/prefs/tomcat/logs/mphserverlocalhost_access_log.2026-09-24.txt",
+      "sha256": "d8bd9ec46be9196b93f8cb7e9234e2eccb0af92355c0aa84f6a9a0854e123400",
       "status": "NEW_IN_G3_7"
     },
     {
-      "path": ".g3-private/phase4-acceptance/offline/primary/mcp-home/control-private/control.json",
-      "sha256": "c1345fd87594b3bef60237b951fd970d652790d32a38c013ec1e2f0f8c7b047c",
-      "status": "NEW_IN_G3_7"
-    },
-    {
-      "path": ".g3-private/phase4-acceptance/offline/primary/mcp-home/control-private/docs_index.sqlite3-shm",
-      "sha256": "7d404fd3001fa6a3bfee79b48d903914ee68cc9ca3bc4514835c03e954ed8e4c",
-      "status": "NEW_IN_G3_7"
-    },
-    {
-      "path": ".g3-private/phase4-acceptance/offline/primary/mcp-home/control-private/docs_index.sqlite3-wal",
-      "sha256": "7ff80884cfdd6535db6a4a6bd83fb641950afc32c1d287eeabbec2c50e1d14fc",
-      "status": "NEW_IN_G3_7"
-    },
-    {
-      "path": "comsol_mcp.egg-info/PKG-INFO",
-      "sha256": "35798ce79a5710d6ef919381308358e7f6fae009784031288e116e998c1e10a5",
-      "status": "NEW_IN_G3_7"
-    },
-    {
-      "path": "comsol_mcp.egg-info/SOURCES.txt",
-      "sha256": "3ff2188166e50b287e2921610546c30216959f5b4f8b7281c3b58061b124e5e3",
-      "status": "NEW_IN_G3_7"
-    },
-    {
-      "path": "comsol_mcp.egg-info/entry_points.txt",
-      "sha256": "294d852f4a210f0b335bb7703e856958056fe44880bfac194e0213d964946480",
-      "status": "NEW_IN_G3_7"
-    },
-    {
-      "path": "comsol_mcp.egg-info/requires.txt",
-      "sha256": "1fc19b3eb41238c133c70e8c7cc79d11d5b9bb838a9d6088e1e64fc74eea45a4",
-      "status": "NEW_IN_G3_7"
-    },
-    {
-      "path": "comsol_mcp.egg-info/top_level.txt",
-      "sha256": "f296466cf994fc20c555a6db54d40ac02414fabc0a35b7274c754bf4de5541fd",
-      "status": "NEW_IN_G3_7"
-    },
-    {
-      "path": "comsol_mcp.egg-info/dependency_links.txt",
-      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
-      "status": "NEW_IN_G3_7"
-    },
-    {
-      "path": "comsol-server-home/workflow_state.json",
-      "sha256": "963d681c86dc4fb13ac6e1297265bd7e2094540a0ed64a6475fe7b125d1e48e0",
-      "status": "NEW_IN_G3_7"
-    },
-    {
-      "path": "comsol-server-home/status.json",
-      "sha256": "e60225adff85e65c363fd1246268fa594daea2c80ee16226256ee253c8f84375",
-      "status": "NEW_IN_G3_7"
-    },
-    {
-      "path": "comsol-server-home/logs/operations.jsonl",
-      "sha256": "bbd9c169913d3e3611143aa851d789d29ccac05ae6cada84c9d06615257c3fad",
-      "status": "NEW_IN_G3_7"
-    },
-    {
-      "path": "comsol-server-home/logs/server.log",
+      "path": "evidence/g3_7_windows_live/win64/prefs/tomcat/logs/mphserverlocalhost.2026-09-24.log",
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/prefs/workspace/comsol/.metadata/.log",
+      "sha256": "cb1edb880461a477d2d14bbd9ba49e10e621111f5a1e2ebe2c5d2af9e27f4a74",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/prefs/logs/mphserver1.log",
+      "sha256": "8a156762d9c32986e1e97b58268f2afea1020fe951c1316eac3e925ce02cce5c",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/prefs/logs/mphserver1_render.log",
+      "sha256": "9558f59f00fd58043300914e05246368f65202df81e66914fce66f955f9e0aa8",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/prefs/icons/3dx_pivot.png",
+      "sha256": "ead040fe0f15fe597f4d7c71a2afdf4314fb736943fdb8aa7214c1ed6c3e1510",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/prefs/icons/logo_small_3d.png",
+      "sha256": "de2c537004f6c8b228bc3f1e86a496d9d506d08d9c2a9bdab914ee483a49f31f",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/prefs/icons/3dx_pivot_locked.png",
+      "sha256": "ab3a514b767a71e7dd0a39133c4d45d2d1d3ba286e8a8f2693a052489442c1d7",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/prefs/icons/work_plane_gizmo_24.png",
+      "sha256": "a5c33284bac84a7323d42a39352bfe035f5b716ebb830f7b8bba428c3f8d244a",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/prefs/icons/3dx_pivot_manual.png",
+      "sha256": "43cb7980c4bf107b89e3e0549ba00fcc8d9b3ac5efb63904c43154f016c16671",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/prefs/icons/logo_small_2d.png",
+      "sha256": "de2c537004f6c8b228bc3f1e86a496d9d506d08d9c2a9bdab914ee483a49f31f",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/worker2/worker.stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/worker2/worker_endpoint.json",
+      "sha256": "af7fc1241d7cfa74d5068d6f30ce29ae336c13537ebd5d53222578a3deb839f1",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/worker2/classes/0ec1b30d122470fb266e2f06/cache_receipt.json",
+      "sha256": "fc95d041a6c0a85ad0bdf4ac384da4985f0bb968bef593d33814472cc2059948",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/worker2/classes/0ec1b30d122470fb266e2f06/.compiled",
+      "sha256": "37a9ecd7563da1a09f00603387c39f8080a7515518aa8bb3dc203a5aea89972c",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/worker2/classes/0ec1b30d122470fb266e2f06/comsol_mcp/worker_java/PersistentComsolWorker$Json.class",
+      "sha256": "2cf901892282f9c6ab42bddf9548a9f01291b72e8ac33456025e8bb99927f96f",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/worker2/classes/0ec1b30d122470fb266e2f06/comsol_mcp/worker_java/PersistentComsolWorker$Conversion.class",
+      "sha256": "904171e3d071712449bf1e85645e86eebb42370a5123a902a49252e4e3c5abf5",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/worker2/classes/0ec1b30d122470fb266e2f06/comsol_mcp/worker_java/PersistentComsolWorker$WorkerFailure.class",
+      "sha256": "52e41d52897b815542e149971d13195246c4516a8d5d670239aa0613d568bde4",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/worker2/classes/0ec1b30d122470fb266e2f06/comsol_mcp/worker_java/PersistentComsolWorker$Json$NonFiniteJsonValue.class",
+      "sha256": "5ad4529ffbe4ab8f4047ea6705452c38cf8a185125ef10c891b3065e446af490",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/worker2/classes/0ec1b30d122470fb266e2f06/comsol_mcp/worker_java/PersistentComsolWorker$DuplicateTagFixture.class",
+      "sha256": "33278b6820463f01ad9297ccccbf80eea96b11637b18177e2a5795aa0eaf4380",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/worker2/classes/0ec1b30d122470fb266e2f06/comsol_mcp/worker_java/PersistentComsolWorker$Json$Parser.class",
+      "sha256": "fbe49e2060388a4d4be9153a90c96423dd8e054bed28fbb769bd1ea707c90fbe",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/worker2/classes/0ec1b30d122470fb266e2f06/comsol_mcp/worker_java/PersistentComsolWorker$SourceSpec.class",
+      "sha256": "3962d563bda82954f3b3f643a4dcc8e650169bf8e98d2a5f006c324098618407",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/worker2/classes/0ec1b30d122470fb266e2f06/comsol_mcp/worker_java/PersistentComsolWorker$HasProductFixture.class",
+      "sha256": "0f9fac21befbe241214c4f3b0d1a105decebc9364bed37715f19adf67577df85",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/worker2/classes/0ec1b30d122470fb266e2f06/comsol_mcp/worker_java/PersistentComsolWorker$CompiledArtifact.class",
+      "sha256": "63149bb4b331788ab82f3f886b924554f5cc965f73161c588bf415704091818b",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/worker2/classes/0ec1b30d122470fb266e2f06/comsol_mcp/worker_java/PersistentComsolWorker$TaggableA.class",
+      "sha256": "81c9390679654ddbac1ecd9dddfc37a4e4b0635a08ac5b3fa6fe6a60a8d53f22",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/worker2/classes/0ec1b30d122470fb266e2f06/comsol_mcp/worker_java/PersistentComsolWorker$RequestState.class",
+      "sha256": "ed30d79db529db2797577dc25030e1933a382158af5881489d28d0430292b112",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/worker2/classes/0ec1b30d122470fb266e2f06/comsol_mcp/worker_java/PersistentComsolWorker$ChangeHandler.class",
+      "sha256": "e5d52c7e07bbf654ebb3d141637f15956969dccda4dffdf44def357ceec1e0ca",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/worker2/classes/0ec1b30d122470fb266e2f06/comsol_mcp/worker_java/PersistentComsolWorker.class",
+      "sha256": "4c0ca50a81b31324967b47ddc77192869978cbba8cbd99ea79af32309786b783",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/worker2/classes/0ec1b30d122470fb266e2f06/comsol_mcp/worker_java/PersistentComsolWorker$TaggableB.class",
+      "sha256": "5800641bbc38b6609c7b6d8ebb64f29ccffa05e30ebfcfdf0a3e1e5f02517c46",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery745date_Sep_24_2026_12-56_PM.mph/recovery.xml",
+      "sha256": "6cc57356d55ec6395c8811d007febb70657faf5412a8fe58c553697528464425",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery745date_Sep_24_2026_12-56_PM.mph/dmodel.xml",
+      "sha256": "07d59a60d5ab64dea34157769872518bf9e65b8abb0e617b38e07dc5c4301dd7",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery745date_Sep_24_2026_12-56_PM.mph/solblock0_8698715799786442752.mphbin",
+      "sha256": "9f19c251b8a703e5029aabb391fb4c9d570bf1bf4a77053ea476d648ec2e42bc",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery745date_Sep_24_2026_12-56_PM.mph/solution7443150281268646111.mphbin",
+      "sha256": "ef2f70bb1fcc6f60a7f4a46078a1db7f41bc768739a887a04febf3c11f88a57f",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery745date_Sep_24_2026_12-56_PM.mph/recoveryid.txt",
+      "sha256": "785fa941a70d59511e57136bb2f0567d0dd3b8433353661a5c45137cbde78828",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery745date_Sep_24_2026_12-56_PM.mph/model.xml",
+      "sha256": "7731e10ff4f072e3c1f9d3637834759576d9e07270dc971fa0277bd779b36e2c",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery745date_Sep_24_2026_12-56_PM.mph/usedlicenses.txt",
+      "sha256": "db150f84b291be8cf651675b02432fb9a028cfa835bd4ae5b029d70a97085f23",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery745date_Sep_24_2026_12-56_PM.mph/modelinfo.xml",
+      "sha256": "15aefcd7297aca39263c09bf54705209b577f426a2615964cb314455d45f5a83",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery745date_Sep_24_2026_12-56_PM.mph/fileversion",
+      "sha256": "c41cbad714bc289eb934a9d98ae927b119bed84c3573ecfbbf84a08af94e97c3",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery745date_Sep_24_2026_12-56_PM.mph/recoveryDescription.txt",
+      "sha256": "901fe1a61221c12f95b647f0333a37010c260c39375712e93d57347014b40876",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery745date_Sep_24_2026_12-56_PM.mph/clusterignore.xml",
+      "sha256": "58f5d8033692b215c97e887dab1d65c911915ae100b23ec16262ba879767936f",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery745date_Sep_24_2026_12-56_PM.mph/solutionstatic18279164678756086095.mphbin",
+      "sha256": "bfc7e74d537212c2d522a30ed7dcef4fc3dfa057989653976c564a4633d09a30",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery745date_Sep_24_2026_12-56_PM.mph/xmesh16214532982782787426.mphbin",
+      "sha256": "87f1dd240d529150193e1e9808ebc01cf5790708a9e18c6bf11d2b879ca74d3e",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery745date_Sep_24_2026_12-56_PM.mph/savepoint1/model.zip",
+      "sha256": "31f404be73ce0a0a18f4dc7e08767142dd83428ccbf41adfd99e5a1e0f467865",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery745date_Sep_24_2026_12-56_PM.mph/savepoint1/savepoint.xml",
+      "sha256": "d2b3c54f7187079c09ad899d57859be5a82dd5bdb04f88ea7e7a648811ec5eb5",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery745date_Sep_24_2026_12-56_PM.mph/savepoint2/savepoint.xml",
+      "sha256": "48b252a24a237619c87d0152d4129bc714f3f8a56176102772356c0f88d92bb4",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery2285date_Sep_24_2026_12-56_PM.mph/recovery.xml",
+      "sha256": "27bbe79d0e86f4dded3851e5a90cd52b23abb5fb6d550b8669871ab613e9a021",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery2285date_Sep_24_2026_12-56_PM.mph/solutionstatic3538594302382397672.mphbin",
+      "sha256": "851bd28fd82b1e53735a6f3c2e6ef5206fb21c7506e6e63ac01e2e4af85e9c99",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery2285date_Sep_24_2026_12-56_PM.mph/geommanager2162656266325006648.mphbin",
+      "sha256": "7535a25d5304eaa09c01d2e4da12d8b8491b2dfe788e00e5cb45c88f8d5fb5a1",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery2285date_Sep_24_2026_12-56_PM.mph/solution13424622253818374944.mphbin",
+      "sha256": "bdfbaec8d929ee8324eb05c14783b70a41b0b3f7eeeb91924c8ce4cfc121727a",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery2285date_Sep_24_2026_12-56_PM.mph/solutionstatic7221048154122810519.mphbin",
+      "sha256": "e25d5a520d6e05c69c5703b14b3fc0b3be204659f396fda6f791e4c8da0fd287",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery2285date_Sep_24_2026_12-56_PM.mph/dmodel.xml",
+      "sha256": "7e7cc34a006b70ead60f5a4508845a9af9aa9312de359d191090c0d0e11ff45d",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery2285date_Sep_24_2026_12-56_PM.mph/xmesh5799787122094942999.mphbin",
+      "sha256": "384bbde63ad89c715d6467b15897da56faa2e4d33fc909e5c48a6d9b677dc5c4",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery2285date_Sep_24_2026_12-56_PM.mph/solblock1_6802328944313120768.mphbin",
+      "sha256": "e5d8d6c093dd70543569abce6514547503700e0f2d192ad85861af4973bfbeca",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery2285date_Sep_24_2026_12-56_PM.mph/solblock0_6975705173152357376.mphbin",
+      "sha256": "9f19c251b8a703e5029aabb391fb4c9d570bf1bf4a77053ea476d648ec2e42bc",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery2285date_Sep_24_2026_12-56_PM.mph/geometry8963923019009830445.mphbin",
+      "sha256": "d10f802dc02d8ec297762c9509eef7a00bbeafac871df1f0293d6d081979273a",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery2285date_Sep_24_2026_12-56_PM.mph/recoveryid.txt",
+      "sha256": "785fa941a70d59511e57136bb2f0567d0dd3b8433353661a5c45137cbde78828",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery2285date_Sep_24_2026_12-56_PM.mph/model.xml",
+      "sha256": "7731e10ff4f072e3c1f9d3637834759576d9e07270dc971fa0277bd779b36e2c",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery2285date_Sep_24_2026_12-56_PM.mph/usedlicenses.txt",
+      "sha256": "db150f84b291be8cf651675b02432fb9a028cfa835bd4ae5b029d70a97085f23",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery2285date_Sep_24_2026_12-56_PM.mph/geometry2345633546220891758.mphbin",
+      "sha256": "a21fd1aa8624c11cc58ced434506ba1a7c0d362ba2c3d5b372b7fef01c236613",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery2285date_Sep_24_2026_12-56_PM.mph/solblock0_1447973294118971392.mphbin",
+      "sha256": "3787e7fc569bd359a67be33379fe9fd4529872587724fbf21c08b0127006c3bd",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery2285date_Sep_24_2026_12-56_PM.mph/modelinfo.xml",
+      "sha256": "7c430e34f5726bd81c0f51f03e3d58222d58e85abf3839927a26a42179bfea7f",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery2285date_Sep_24_2026_12-56_PM.mph/solution10194691345566828115.mphbin",
+      "sha256": "025a5e7b3dc8920420b3a6abd340afe03defa428a6542f3cc5afe167fa489de2",
+      "status": "NEW_IN_G3_7"
+    },
+    {
+      "path": "evidence/g3_7_windows_live/win64/recovery/MPHRecovery2285date_Sep_24_2026_12-56_PM.mph/geometry3056996930141602154.mphbin",
+      "sha256": "f6f4aae73eb250bce6be686ca62d71ced3dea283875444c8d356638dcd347cd2",
       "status": "NEW_IN_G3_7"
     }
   ],

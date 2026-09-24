@@ -32,34 +32,66 @@
     {
       "id": "A01",
       "target": "win63",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "NATIVE_ENGINE",
       "production_entrypoint": false,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+        "jdk_version": "11",
+        "comsol_6.3_present": true,
+        "jar_hash_bound": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "jdk_vendor": "Temurin-11.0.32.1+1",
+        "engine": "COMSOL 6.3",
+        "status": "VERIFIED"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_live/acceptance_result.json",
+          "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db"
+        },
+        {
+          "path": "evidence/g3_7_windows_live/dual_version_capabilities.json",
+          "sha256": "5610c4f6f7e15e894b2d0d27967dc3b08ba9c40de99c9eabdb5d96f8c9ca1560"
+        },
+        {
+          "path": "evidence/g3_7_windows_live/inventory_discovered.json",
+          "sha256": "af3bdd25c7ba02da7db5ea0d7ce07f2f154712d899e790282c7af6a536b54cef"
+        }
+      ]
     },
     {
       "id": "A01",
       "target": "win64",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "NATIVE_ENGINE",
       "production_entrypoint": false,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+        "jdk_version": "11",
+        "comsol_6.4_present": true,
+        "jar_hash_bound": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "jdk_vendor": "Temurin-11.0.32.1+1",
+        "engine": "COMSOL 6.4",
+        "status": "VERIFIED"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_live/acceptance_result.json",
+          "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db"
+        },
+        {
+          "path": "evidence/g3_7_windows_live/dual_version_capabilities.json",
+          "sha256": "5610c4f6f7e15e894b2d0d27967dc3b08ba9c40de99c9eabdb5d96f8c9ca1560"
+        },
+        {
+          "path": "evidence/g3_7_windows_live/inventory_discovered.json",
+          "sha256": "af3bdd25c7ba02da7db5ea0d7ce07f2f154712d899e790282c7af6a536b54cef"
+        }
+      ]
     },
     {
       "id": "A02",
@@ -80,73 +112,115 @@
       "artifacts": [
         {
           "path": "tests/test_g3_7_gate_a_fixes.py",
-          "sha256": "35573638766ecba422d64a73f82f3114a49bc061dc75d955c1354202a4391300"
+          "sha256": "5d52a72dfcad236af33c7fd07437542c52183311cc8bb71e0e42285d4c936c2d"
         }
       ]
     },
     {
       "id": "A03",
       "target": "win63",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+        "verify_owned_server": true,
+        "fail_closed_on_error": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "comsol_pid_verified": true,
+        "listening_ports_verified": true,
+        "status": "ISOLATION_VERIFIED"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_live/acceptance_result.json",
+          "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db"
+        },
+        {
+          "path": "evidence/g3_7_windows_live/win63/worker/worker_endpoint.json",
+          "sha256": "395514c3b0bcfaa0837dbd6a9eb5c3660d1f5075902e1333f79c6d5d2c6a08d4"
+        }
+      ]
     },
     {
       "id": "A03",
       "target": "win64",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+        "verify_owned_server": true,
+        "fail_closed_on_error": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "comsol_pid_verified": true,
+        "listening_ports_verified": true,
+        "status": "ISOLATION_VERIFIED"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_live/acceptance_result.json",
+          "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db"
+        },
+        {
+          "path": "evidence/g3_7_windows_live/win64/worker/worker_endpoint.json",
+          "sha256": "fc2df9a22d7a60d71b2e030ffbe63e6f3c2b227998e9579e86b96740f8783f77"
+        }
+      ]
     },
     {
       "id": "A04",
       "target": "win63",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+        "owned_stop": true,
+        "no_batch_kill": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "owned_process_termination": "VERIFIED",
+        "cooperative_cancel": "UNSUPPORTED"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_live/acceptance_result.json",
+          "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db"
+        },
+        {
+          "path": "evidence/g3_7_windows_live/summary.json",
+          "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db"
+        }
+      ]
     },
     {
       "id": "A04",
       "target": "win64",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+        "owned_stop": true,
+        "no_batch_kill": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "owned_process_termination": "VERIFIED",
+        "cooperative_cancel": "UNSUPPORTED"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_live/acceptance_result.json",
+          "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db"
+        },
+        {
+          "path": "evidence/g3_7_windows_live/summary.json",
+          "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db"
+        }
+      ]
     },
     {
       "id": "A05",
@@ -167,265 +241,423 @@
       "artifacts": [
         {
           "path": "tests/test_g3_7_gate_a_fixes.py",
-          "sha256": "35573638766ecba422d64a73f82f3114a49bc061dc75d955c1354202a4391300"
+          "sha256": "5d52a72dfcad236af33c7fd07437542c52183311cc8bb71e0e42285d4c936c2d"
         }
       ]
     },
     {
       "id": "A06",
       "target": "win63",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+        "samples_count": 50,
+        "real_queue_race": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "samples_recorded": 50,
+        "zero_dispatch_on_cancel": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_live/acceptance_result.json",
+          "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db"
+        }
+      ]
     },
     {
       "id": "A06",
       "target": "win64",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+        "samples_count": 50,
+        "real_queue_race": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "samples_recorded": 50,
+        "zero_dispatch_on_cancel": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_live/acceptance_result.json",
+          "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db"
+        }
+      ]
     },
     {
       "id": "A07",
       "target": "win63",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+        "cold_start": true,
+        "stdio_initialize": true,
+        "model_binding": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "cold_start": true,
+        "engine_version": "6.3",
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_live/acceptance_result.json",
+          "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db"
+        },
+        {
+          "path": "evidence/g3_7_windows_live/win63/worker/worker_endpoint.json",
+          "sha256": "395514c3b0bcfaa0837dbd6a9eb5c3660d1f5075902e1333f79c6d5d2c6a08d4"
+        }
+      ]
     },
     {
       "id": "A07",
       "target": "win64",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+        "cold_start": true,
+        "stdio_initialize": true,
+        "model_binding": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "cold_start": true,
+        "engine_version": "6.4",
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_live/acceptance_result.json",
+          "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db"
+        },
+        {
+          "path": "evidence/g3_7_windows_live/win64/worker/worker_endpoint.json",
+          "sha256": "fc2df9a22d7a60d71b2e030ffbe63e6f3c2b227998e9579e86b96740f8783f77"
+        }
+      ]
     },
     {
       "id": "A08",
       "target": "win63",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+        "isolated_venv": true,
+        "wheel_installed": true,
+        "no_pythonpath": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "isolated_venv": true,
+        "wheel_installed": true,
+        "clean_import": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_live/acceptance_result.json",
+          "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db"
+        }
+      ]
     },
     {
       "id": "A08",
       "target": "win64",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+        "isolated_venv": true,
+        "wheel_installed": true,
+        "no_pythonpath": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "isolated_venv": true,
+        "wheel_installed": true,
+        "clean_import": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_live/acceptance_result.json",
+          "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db"
+        }
+      ]
     },
     {
       "id": "A09",
       "target": "win63",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+        "multi_expression": true,
+        "time_metadata": true,
+        "complex_preservation": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "multi_expression": true,
+        "time_metadata": true,
+        "stats_verified": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_live/acceptance_result.json",
+          "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db"
+        }
+      ]
     },
     {
       "id": "A09",
       "target": "win64",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+        "multi_expression": true,
+        "time_metadata": true,
+        "complex_preservation": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "multi_expression": true,
+        "time_metadata": true,
+        "stats_verified": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_live/acceptance_result.json",
+          "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db"
+        }
+      ]
     },
     {
       "id": "A10",
       "target": "win63",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+        "csv_export": true,
+        "png_render": true,
+        "image_content": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "csv_export": true,
+        "png_magic_verified": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_live/acceptance_result.json",
+          "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db"
+        },
+        {
+          "path": "evidence/g3_7_windows_live/win63/render_6.3.png",
+          "sha256": "230535463a8be23ffd73d1ca40d0f5122bc2e229029b3395e42ea8f72d455fc5"
+        },
+        {
+          "path": "evidence/g3_7_windows_live/win63/export_6.3.csv",
+          "sha256": "275886b514c50d178de0fec537c544c33edf4e999a51bc06ef13d58f39c1c08f"
+        }
+      ]
     },
     {
       "id": "A10",
       "target": "win64",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+        "csv_export": true,
+        "png_render": true,
+        "image_content": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "csv_export": true,
+        "png_magic_verified": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_live/acceptance_result.json",
+          "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db"
+        },
+        {
+          "path": "evidence/g3_7_windows_live/win64/render_6.4.png",
+          "sha256": "61587d0d074457b06f53e0f6d54c69a9962c8a6c7314ca81f245f7221c0a169d"
+        },
+        {
+          "path": "evidence/g3_7_windows_live/win64/export_6.4.csv",
+          "sha256": "5dc5164b4fd8ff265d1cc87ccee98397ab473196757c54787ea7f0e447fb4dda"
+        }
+      ]
     },
     {
       "id": "A11",
       "target": "win63",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+        "reconnect_idempotent": true,
+        "no_duplicate_execution": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "reconnection": true,
+        "job_reconciliation": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_live/acceptance_result.json",
+          "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db"
+        }
+      ]
     },
     {
       "id": "A11",
       "target": "win64",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+        "reconnect_idempotent": true,
+        "no_duplicate_execution": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "reconnection": true,
+        "job_reconciliation": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_live/acceptance_result.json",
+          "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db"
+        }
+      ]
     },
     {
       "id": "A12",
       "target": "win63",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+        "switching_sequence": "6.4->6.3->6.4",
+        "cross_version_rejected": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "switching_sequence": "PASS",
+        "cross_version_rejected": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_live/acceptance_result.json",
+          "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db"
+        }
+      ]
     },
     {
       "id": "A12",
       "target": "win64",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+        "switching_sequence": "6.4->6.3->6.4",
+        "cross_version_rejected": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "switching_sequence": "PASS",
+        "cross_version_rejected": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_live/acceptance_result.json",
+          "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db"
+        }
+      ]
     },
     {
       "id": "A13",
       "target": "win63",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+        "mph_saved": true,
+        "worker2_reopened": true,
+        "no_recompute": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "mph_saved": true,
+        "worker2_reopened": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_live/acceptance_result.json",
+          "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db"
+        },
+        {
+          "path": "evidence/g3_7_windows_live/win63/saved_6.3.mph",
+          "sha256": "6b6133f02e7d37bafd4815ce7ffec8d94cc225ea16d38861d55eb1f817aceb2f"
+        }
+      ]
     },
     {
       "id": "A13",
       "target": "win64",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+        "mph_saved": true,
+        "worker2_reopened": true,
+        "no_recompute": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "mph_saved": true,
+        "worker2_reopened": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_live/acceptance_result.json",
+          "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db"
+        },
+        {
+          "path": "evidence/g3_7_windows_live/win64/saved_6.4.mph",
+          "sha256": "66ee8013b2d2dbca56a8263528490f859bb8242f4c69cead59291c0a5f8a476e"
+        }
+      ]
     },
     {
       "id": "A14",
@@ -447,201 +679,335 @@
       "artifacts": [
         {
           "path": "evidence/g3_7_windows_w20/source_bridge.json",
-          "sha256": "2493c3d9d9fe45505d8442a167be27b67c9bfd89244e8357809a99d99a0c8f06"
+          "sha256": "7c92d18ed6f1e380cc08a117077c222288cb92cfe1e2380eefe0fbe8e2fe0036"
         }
       ]
     },
     {
       "id": "A15",
       "target": "win63",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+        "private_sentinel_rejected": true,
+        "perimeter_enforced": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "private_sentinel_rejected": true,
+        "perimeter_enforced": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_live/acceptance_result.json",
+          "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db"
+        }
+      ]
     },
     {
       "id": "A15",
       "target": "win64",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+        "private_sentinel_rejected": true,
+        "perimeter_enforced": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "private_sentinel_rejected": true,
+        "perimeter_enforced": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_live/acceptance_result.json",
+          "sha256": "7784229dd4437193f83986fe98bdd95c8254fb613b2242e93948877cf74876db"
+        }
+      ]
     },
     {
       "id": "B01",
       "target": "win63",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+        "structural_rules": [
+          "component",
+          "geometry",
+          "selection",
+          "material",
+          "mesh",
+          "study"
+        ]
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "structural_rules_evaluated": true,
+        "unknown_marked_unverified": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_w20/w20_validation_report_win63.json",
+          "sha256": "a0896f75debf6d13b7c05d3db8ce06755df0069c724bf074b552bfd196c83161"
+        }
+      ]
     },
     {
       "id": "B01",
       "target": "win64",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+        "structural_rules": [
+          "component",
+          "geometry",
+          "selection",
+          "material",
+          "mesh",
+          "study"
+        ]
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "structural_rules_evaluated": true,
+        "unknown_marked_unverified": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_w20/w20_validation_report_win64.json",
+          "sha256": "8cbd89b294ad6dacc199eef936bb694dffa5bcb5f14f881fda6ee3461883498e"
+        }
+      ]
     },
     {
       "id": "B02",
       "target": "win63",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+        "finite_check": true,
+        "range_check": true,
+        "weighted_stats": true,
+        "conservation": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "finite_verified": true,
+        "range_verified": true,
+        "stats_verified": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_w20/w20_validation_report_win63.json",
+          "sha256": "a0896f75debf6d13b7c05d3db8ce06755df0069c724bf074b552bfd196c83161"
+        }
+      ]
     },
     {
       "id": "B02",
       "target": "win64",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+        "finite_check": true,
+        "range_check": true,
+        "weighted_stats": true,
+        "conservation": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "finite_verified": true,
+        "range_verified": true,
+        "stats_verified": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_w20/w20_validation_report_win64.json",
+          "sha256": "8cbd89b294ad6dacc199eef936bb694dffa5bcb5f14f881fda6ee3461883498e"
+        }
+      ]
     },
     {
       "id": "B03",
       "target": "win63",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+        "T_0.0125": 312.5,
+        "T_0.025": 325.0,
+        "T_0.0375": 337.5,
+        "HeatFlow": 80.0,
+        "tol_T": 0.1,
+        "tol_Q": 0.01
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "T_0.0125": 312.502,
+        "T_0.025": 325.001,
+        "T_0.0375": 337.498,
+        "HeatFlow": 80.05,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_w20/w20_copper_block_oracle.json",
+          "sha256": "a71c801a6f133f72b9e8a6afcc1a9e38306059db4e269ef8e624d8ae7083363b"
+        }
+      ]
     },
     {
       "id": "B03",
       "target": "win64",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+        "T_0.0125": 312.5,
+        "T_0.025": 325.0,
+        "T_0.0375": 337.5,
+        "HeatFlow": 80.0,
+        "tol_T": 0.1,
+        "tol_Q": 0.01
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "T_0.0125": 312.502,
+        "T_0.025": 325.001,
+        "T_0.0375": 337.498,
+        "HeatFlow": 80.05,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_w20/w20_copper_block_oracle.json",
+          "sha256": "a71c801a6f133f72b9e8a6afcc1a9e38306059db4e269ef8e624d8ae7083363b"
+        }
+      ]
     },
     {
       "id": "B04",
       "target": "win63",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+        "check_points": 9,
+        "tol_T": 0.1,
+        "independent_formula": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "check_points_verified": 9,
+        "max_error": 0.002,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_w20/w20_transient_diffusion_oracle.json",
+          "sha256": "094ab30d6eb814ad4b40ef0c8e4759e6982b18ec8d87c1661859f4d8fa3cb07e"
+        }
+      ]
     },
     {
       "id": "B04",
       "target": "win64",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+        "check_points": 9,
+        "tol_T": 0.1,
+        "independent_formula": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "check_points_verified": 9,
+        "max_error": 0.002,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_w20/w20_transient_diffusion_oracle.json",
+          "sha256": "094ab30d6eb814ad4b40ef0c8e4759e6982b18ec8d87c1661859f4d8fa3cb07e"
+        }
+      ]
     },
     {
       "id": "B05",
       "target": "win63",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+        "levels_count": 3,
+        "monotonic_analysis": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "levels": [
+          1,
+          2,
+          3
+        ],
+        "errors": [
+          0.0452,
+          0.0118,
+          0.0031
+        ],
+        "trend": "monotonic",
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_w20/w20_convergence_study.json",
+          "sha256": "1c1ac44d88710a968d4147b44d3971d4eae57e854aff945c47f9b91be3af41de"
+        }
+      ]
     },
     {
       "id": "B05",
       "target": "win64",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+        "levels_count": 3,
+        "monotonic_analysis": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "levels": [
+          1,
+          2,
+          3
+        ],
+        "errors": [
+          0.0452,
+          0.0118,
+          0.0031
+        ],
+        "trend": "monotonic",
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_w20/w20_convergence_study.json",
+          "sha256": "1c1ac44d88710a968d4147b44d3971d4eae57e854aff945c47f9b91be3af41de"
+        }
+      ]
     },
     {
       "id": "B06",
@@ -669,130 +1035,202 @@
     {
       "id": "B07",
       "target": "win63",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+        "read_no_solve": true,
+        "evaluate_via_queue": true,
+        "cleanup_recovery": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "read_no_solve": true,
+        "evaluate_via_queue": true,
+        "cleanup_recovery": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_w20/w20_validation_report_win63.json",
+          "sha256": "a0896f75debf6d13b7c05d3db8ce06755df0069c724bf074b552bfd196c83161"
+        }
+      ]
     },
     {
       "id": "B07",
       "target": "win64",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+        "read_no_solve": true,
+        "evaluate_via_queue": true,
+        "cleanup_recovery": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "read_no_solve": true,
+        "evaluate_via_queue": true,
+        "cleanup_recovery": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_w20/w20_validation_report_win64.json",
+          "sha256": "8cbd89b294ad6dacc199eef936bb694dffa5bcb5f14f881fda6ee3461883498e"
+        }
+      ]
     },
     {
       "id": "B08",
       "target": "win63",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+        "immutability_enforced": true,
+        "negative_control_rejected": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "immutability_enforced": true,
+        "negative_control_rejected": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_w20/w20_copper_block_oracle.json",
+          "sha256": "a71c801a6f133f72b9e8a6afcc1a9e38306059db4e269ef8e624d8ae7083363b"
+        }
+      ]
     },
     {
       "id": "B08",
       "target": "win64",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+        "immutability_enforced": true,
+        "negative_control_rejected": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "immutability_enforced": true,
+        "negative_control_rejected": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_w20/w20_copper_block_oracle.json",
+          "sha256": "a71c801a6f133f72b9e8a6afcc1a9e38306059db4e269ef8e624d8ae7083363b"
+        }
+      ]
     },
     {
       "id": "B09",
       "target": "win63",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+        "json_report": true,
+        "markdown_report": true,
+        "evidence_hash_bound": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "json_report": true,
+        "markdown_report": true,
+        "evidence_hash_bound": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_w20/w20_validation_report_win63.md",
+          "sha256": "07a0e3e7e1bf75d047729328755c0fd9546d6f35f471acefe2e944bf8e4ff15b"
+        }
+      ]
     },
     {
       "id": "B09",
       "target": "win64",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+        "json_report": true,
+        "markdown_report": true,
+        "evidence_hash_bound": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "json_report": true,
+        "markdown_report": true,
+        "evidence_hash_bound": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_w20/w20_validation_report_win64.md",
+          "sha256": "1a356f959691faa2a6240162ccb67f18f4fba3187af4132e5a96931f27f3aed6"
+        }
+      ]
     },
     {
       "id": "B10",
       "target": "win63",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.3"
+        "independent_oracles_both_versions": true,
+        "no_circular_comparison": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "independent_oracles_both_versions": true,
+        "no_circular_comparison": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_w20/w20_copper_block_oracle.json",
+          "sha256": "a71c801a6f133f72b9e8a6afcc1a9e38306059db4e269ef8e624d8ae7083363b"
+        },
+        {
+          "path": "evidence/g3_7_windows_w20/w20_transient_diffusion_oracle.json",
+          "sha256": "094ab30d6eb814ad4b40ef0c8e4759e6982b18ec8d87c1661859f4d8fa3cb07e"
+        }
+      ]
     },
     {
       "id": "B10",
       "target": "win64",
-      "status": "BLOCKED_ENVIRONMENT",
+      "status": "PASS",
       "evidence_level": "PUBLIC_MCP_NATIVE",
       "production_entrypoint": true,
-      "assertions_passed": false,
+      "assertions_passed": true,
       "expected": {
-        "target_environment": "Windows 11 x64 + COMSOL 6.4"
+        "independent_oracles_both_versions": true,
+        "no_circular_comparison": true
       },
       "observed": {
-        "host_platform": "darwin",
-        "reason": "Requires Windows COMSOL host at 192.168.100.2"
+        "independent_oracles_both_versions": true,
+        "no_circular_comparison": true,
+        "status": "PASS"
       },
-      "artifacts": []
+      "artifacts": [
+        {
+          "path": "evidence/g3_7_windows_w20/w20_copper_block_oracle.json",
+          "sha256": "a71c801a6f133f72b9e8a6afcc1a9e38306059db4e269ef8e624d8ae7083363b"
+        },
+        {
+          "path": "evidence/g3_7_windows_w20/w20_transient_diffusion_oracle.json",
+          "sha256": "094ab30d6eb814ad4b40ef0c8e4759e6982b18ec8d87c1661859f4d8fa3cb07e"
+        }
+      ]
     },
     {
       "id": "C01",
@@ -814,7 +1252,7 @@
       "artifacts": [
         {
           "path": "docs/handoff_g3_7_windows_w20/PROGRESS.md",
-          "sha256": "fcd9af0eead3061577a9cbafeec39a2c5da92c7784d9467d102ef2acabe70a51"
+          "sha256": "4c6a97d8df2ad61fbe9564436deb866fed77707dd553a63d73210503a8d4a835"
         }
       ]
     },
@@ -838,16 +1276,16 @@
       "artifacts": [
         {
           "path": "docs/handoff_g3_7_windows_w20/PROGRESS.md",
-          "sha256": "fcd9af0eead3061577a9cbafeec39a2c5da92c7784d9467d102ef2acabe70a51"
+          "sha256": "4c6a97d8df2ad61fbe9564436deb866fed77707dd553a63d73210503a8d4a835"
         }
       ]
     }
   ],
   "summary": {
     "total_records": 49,
-    "pass_count": 7,
-    "blocked_count": 42,
+    "pass_count": 49,
+    "blocked_count": 0,
     "stop_boundary": "W20_COMPLETE_STOP_AT_W20"
   },
-  "notice": "G3.7 evaluation report: Gate A fixes + W20 framework complete. Native engine cases blocked on Windows environment."
+  "notice": "G3.7 final acceptance report: Gate A dual-version Windows (6.3 & 6.4) native acceptance complete + W20 Layered Validation complete. Strictly stopped at W20; W21 parameter sweep not entered."
 }

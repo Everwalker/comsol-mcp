@@ -1,0 +1,540 @@
+{
+  "schema": "comsol-mcp-g3/g3_6-acceptance/1",
+  "goal": "NEXT_GOAL.md: Windows Dual-Version (6.3 & 6.4) and D01-D09 Job Control Fixes",
+  "run_id": "g3_6_acceptance_20260924T045552Z",
+  "generated_at": "2026-09-24T05:00:16.926929+00:00",
+  "elapsed_seconds": 264.813,
+  "platform": {
+    "system": "Windows",
+    "release": "11",
+    "version": "10.0.26200",
+    "machine": "AMD64",
+    "python": "3.12.10",
+    "is_windows": true
+  },
+  "profile": "dual",
+  "verdict": "PASS",
+  "status_counts": {
+    "CONTROL_PASS": 15,
+    "NATIVE_PASS_SCOPED": 14,
+    "SOFTWARE_PASS": 1
+  },
+  "deliverable_conclusions": [
+    "WINDOWS_COMSOL_63_CORE_VERIFIED_SCOPED",
+    "WINDOWS_COMSOL_64_CORE_VERIFIED_SCOPED"
+  ],
+  "cancellation_capability_disclosure": {
+    "native_cooperative_cancel": "UNSUPPORTED",
+    "queued_cancel": "VERIFIED",
+    "owned_process_termination": "VERIFIED"
+  },
+  "cases": {
+    "WD00": {
+      "id": "WD00",
+      "status": "CONTROL_PASS",
+      "pinned_commit": "be5bfc8847d98e0aa3972050661a3beb8ee4cfc5",
+      "active_commit": "9139d09fcc310499d54f5bcaecea9ff83f17a1c3",
+      "pinned_tree": "dbc871285c9e5465a2e2d9740e908289284304cb",
+      "active_tree": "f4c18586c2a773f25fde0eb63fac002b056d4464",
+      "package_verification": "PASS",
+      "tamper_negative_verified": true
+    },
+    "WD01": {
+      "id": "WD01",
+      "status": "CONTROL_PASS",
+      "inventory_file": "C:\\Users\\Everwalker\\COMSOL_MCP_G3_7_WINDOWS_W20_WORKPACK\\repository\\evidence\\g3_7_windows_live\\inventory_discovered.json",
+      "python_bits": 64,
+      "has_win63_candidate": true,
+      "has_win64_candidate": true,
+      "inventory": {
+        "schema_version": 1,
+        "observed_at": "2026-09-24T04:55:52.393437+00:00",
+        "scope": "READ_ONLY_FILE_AND_INSTALL_REGISTRY_INVENTORY",
+        "windows_host": true,
+        "os": "Windows-11-10.0.26200-SP0",
+        "machine": "AMD64",
+        "python": "C:\\Users\\Everwalker\\COMSOL_MCP_G3_7_WINDOWS_W20_WORKPACK\\repository\\.venv\\Scripts\\python.exe",
+        "python_version": "3.12.10",
+        "python_bits": 64,
+        "git_found": true,
+        "registry_candidates": [
+          {
+            "display_name": "COMSOL Multiphysics 6.3",
+            "install_location": "",
+            "source": "HKLM/Uninstall"
+          },
+          {
+            "display_name": "COMSOL Multiphysics 6.4",
+            "install_location": "",
+            "source": "HKLM/Uninstall"
+          }
+        ],
+        "installations": {
+          "6.3": [
+            {
+              "requested_version": "6.3",
+              "root": "C:\\Program Files\\COMSOL\\COMSOL63\\Multiphysics",
+              "server_launcher": "C:\\Program Files\\COMSOL\\COMSOL63\\Multiphysics\\bin\\win64\\comsolmphserver.exe",
+              "client_manifest": "C:\\Program Files\\COMSOL\\COMSOL63\\Multiphysics\\bin\\comsolclientpath.txt",
+              "documentation_present": true,
+              "status": "CANDIDATE_FILES_PRESENT",
+              "engine_version": null,
+              "engine_started": false,
+              "engine_verified": false
+            },
+            {
+              "requested_version": "6.3",
+              "root": "C:\\Program Files\\COMSOL\\COMSOL63\\Multiphysics",
+              "server_launcher": "C:\\Program Files\\COMSOL\\COMSOL63\\Multiphysics\\bin\\win64\\comsolmphserver.exe",
+              "client_manifest": "C:\\Program Files\\COMSOL\\COMSOL63\\Multiphysics\\bin\\comsolclientpath.txt",
+              "documentation_present": true,
+              "status": "CANDIDATE_FILES_PRESENT",
+              "engine_version": null,
+              "engine_started": false,
+              "engine_verified": false
+            }
+          ],
+          "6.4": [
+            {
+              "requested_version": "6.4",
+              "root": "C:\\Program Files\\COMSOL\\COMSOL64\\Multiphysics",
+              "server_launcher": "C:\\Program Files\\COMSOL\\COMSOL64\\Multiphysics\\bin\\win64\\comsolmphserver.exe",
+              "client_manifest": "C:\\Program Files\\COMSOL\\COMSOL64\\Multiphysics\\bin\\comsolclientpath.txt",
+              "documentation_present": true,
+              "status": "CANDIDATE_FILES_PRESENT",
+              "engine_version": null,
+              "engine_started": false,
+              "engine_verified": false
+            },
+            {
+              "requested_version": "6.4",
+              "root": "C:\\Program Files\\COMSOL\\COMSOL64\\Multiphysics",
+              "server_launcher": "C:\\Program Files\\COMSOL\\COMSOL64\\Multiphysics\\bin\\win64\\comsolmphserver.exe",
+              "client_manifest": "C:\\Program Files\\COMSOL\\COMSOL64\\Multiphysics\\bin\\comsolclientpath.txt",
+              "documentation_present": true,
+              "status": "CANDIDATE_FILES_PRESENT",
+              "engine_version": null,
+              "engine_started": false,
+              "engine_verified": false
+            }
+          ]
+        },
+        "jdk_candidates": [
+          {
+            "home": "C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.11.10-hotspot",
+            "java_present": true,
+            "javac_present": true,
+            "javap_present": true,
+            "version_executed": false,
+            "architecture_verified": false
+          }
+        ],
+        "comsol_started": false,
+        "license_queried": false,
+        "credentials_read": false,
+        "status": "DISCOVERY_ONLY_NOT_ENGINE_VALIDATION",
+        "next": "Agent must validate selected launcher build, engine build, JDK/classpath, permissions and native MCP separately."
+      }
+    },
+    "WD02": {
+      "id": "WD02",
+      "status": "CONTROL_PASS",
+      "key_win63": "7a3875ee1a35b768d2662732",
+      "key_win64": "52ca93d82bc4d03321a31c15",
+      "cache_key_isolation": true,
+      "utf8_encoding_enforced": true,
+      "jars_63": 26,
+      "jars_64": 25
+    },
+    "WD03": {
+      "id": "WD03",
+      "status": "CONTROL_PASS",
+      "windows_netstat_parser_verified": true,
+      "windows_live_socket_verified": true,
+      "live_inspected_port": 27822,
+      "loopback_restriction_enforced": true,
+      "foreign_listener_rejected": true
+    },
+    "WD04": {
+      "id": "WD04",
+      "status": "CONTROL_PASS",
+      "registered_operations_count": 58,
+      "g3_operations_count": 134,
+      "schema_integrity": true
+    },
+    "WD05": {
+      "id": "WD05",
+      "status": "CONTROL_PASS",
+      "build_definition_valid": true,
+      "out_of_source_structure": true,
+      "wheel": null,
+      "four_path_separation": {
+        "A_site_packages_isolated": true,
+        "B_source_repository_readonly_for_jobs": true,
+        "C_project_artifacts_writable": true,
+        "D_cwd_independent": true
+      }
+    },
+    "WD06": {
+      "id": "WD06",
+      "status": "CONTROL_PASS",
+      "alternate_data_stream_rejected": true,
+      "dos_reserved_device_rejected": true,
+      "private_directory_dacl_configured": null
+    },
+    "WD07": {
+      "id": "WD07",
+      "status": "NATIVE_PASS_SCOPED",
+      "win63": {
+        "status": "NATIVE_PASS_SCOPED",
+        "parameters": {
+          "L": "0.05[m]",
+          "T_left": "300[K]",
+          "T_right": "350[K]",
+          "k_val": "400[W/(m*K)]"
+        },
+        "unit_consistency_verified": true
+      },
+      "win64": {
+        "status": "NATIVE_PASS_SCOPED",
+        "parameters": {
+          "L": "0.05[m]",
+          "T_left": "300[K]",
+          "T_right": "350[K]",
+          "k_val": "400[W/(m*K)]"
+        },
+        "unit_consistency_verified": true
+      }
+    },
+    "WD08": {
+      "id": "WD08",
+      "status": "NATIVE_PASS_SCOPED",
+      "win63": {
+        "status": "NATIVE_PASS_SCOPED",
+        "features": [
+          "blk1",
+          "wp1"
+        ],
+        "selection_tag": "sel1",
+        "selection_boundaries": [
+          1,
+          6
+        ],
+        "geometry_built": true
+      },
+      "win64": {
+        "status": "NATIVE_PASS_SCOPED",
+        "features": [
+          "blk1",
+          "wp1"
+        ],
+        "selection_tag": "sel1",
+        "selection_boundaries": [
+          1,
+          6
+        ],
+        "geometry_built": true
+      }
+    },
+    "WD09": {
+      "id": "WD09",
+      "status": "NATIVE_PASS_SCOPED",
+      "win63": {
+        "status": "NATIVE_PASS_SCOPED",
+        "physics": "HeatTransfer (ht)",
+        "material": "Common (mat1)",
+        "mesh": "mesh1",
+        "mesh_built": true
+      },
+      "win64": {
+        "status": "NATIVE_PASS_SCOPED",
+        "physics": "HeatTransfer (ht)",
+        "material": "Common (mat1)",
+        "mesh": "mesh1",
+        "mesh_built": true
+      }
+    },
+    "WD10": {
+      "id": "WD10",
+      "status": "NATIVE_PASS_SCOPED",
+      "win63": {
+        "status": "NATIVE_PASS_SCOPED",
+        "sampled_points": [
+          {
+            "x": 0.0125,
+            "T": 312.5000000000001,
+            "expected": 312.5,
+            "error": 1.1368683772161603e-13
+          },
+          {
+            "x": 0.025,
+            "T": 325.0000000000003,
+            "expected": 325.0,
+            "error": 2.8421709430404007e-13
+          },
+          {
+            "x": 0.0375,
+            "T": 337.50000000000006,
+            "expected": 337.5,
+            "error": 5.684341886080802e-14
+          }
+        ],
+        "analytic_tolerance": 0.1,
+        "benchmark_verified": true
+      },
+      "win64": {
+        "status": "NATIVE_PASS_SCOPED",
+        "sampled_points": [
+          {
+            "x": 0.0125,
+            "T": 312.49999999999994,
+            "expected": 312.5,
+            "error": 5.684341886080802e-14
+          },
+          {
+            "x": 0.025,
+            "T": 324.9999999999999,
+            "expected": 325.0,
+            "error": 1.1368683772161603e-13
+          },
+          {
+            "x": 0.0375,
+            "T": 337.49999999999994,
+            "expected": 337.5,
+            "error": 5.684341886080802e-14
+          }
+        ],
+        "analytic_tolerance": 0.1,
+        "benchmark_verified": true
+      }
+    },
+    "WD11": {
+      "id": "WD11",
+      "status": "NATIVE_PASS_SCOPED",
+      "win63": {
+        "status": "NATIVE_PASS_SCOPED",
+        "tlist": [
+          0.0,
+          0.5,
+          1.0
+        ],
+        "evaluated_samples": 1,
+        "stored_time_axes_verified": true
+      },
+      "win64": {
+        "status": "NATIVE_PASS_SCOPED",
+        "tlist": [
+          0.0,
+          0.5,
+          1.0
+        ],
+        "evaluated_samples": 1,
+        "stored_time_axes_verified": true
+      }
+    },
+    "WD12": {
+      "id": "WD12",
+      "status": "NATIVE_PASS_SCOPED",
+      "win63": {
+        "status": "NATIVE_PASS_SCOPED",
+        "domain_average_temperature": 325.00000000000335,
+        "measure_preservation": true,
+        "multi_dim_statistics_verified": true
+      },
+      "win64": {
+        "status": "NATIVE_PASS_SCOPED",
+        "domain_average_temperature": 325.0000000000021,
+        "measure_preservation": true,
+        "multi_dim_statistics_verified": true
+      }
+    },
+    "WD13": {
+      "id": "WD13",
+      "status": "NATIVE_PASS_SCOPED",
+      "win63": {
+        "status": "NATIVE_PASS_SCOPED",
+        "rendered_file": "C:\\Users\\Everwalker\\COMSOL_MCP_G3_7_WINDOWS_W20_WORKPACK\\repository\\evidence\\g3_7_windows_live\\win63\\render_6.3.png",
+        "size_bytes": 61095,
+        "sha256": "230535463a8be23ffd73d1ca40d0f5122bc2e229029b3395e42ea8f72d455fc5",
+        "image_content_valid": true
+      },
+      "win64": {
+        "status": "NATIVE_PASS_SCOPED",
+        "rendered_file": "C:\\Users\\Everwalker\\COMSOL_MCP_G3_7_WINDOWS_W20_WORKPACK\\repository\\evidence\\g3_7_windows_live\\win64\\render_6.4.png",
+        "size_bytes": 61085,
+        "sha256": "61587d0d074457b06f53e0f6d54c69a9962c8a6c7314ca81f245f7221c0a169d",
+        "image_content_valid": true
+      }
+    },
+    "WD14": {
+      "id": "WD14",
+      "status": "NATIVE_PASS_SCOPED",
+      "win63": {
+        "status": "NATIVE_PASS_SCOPED",
+        "exported_csv": "C:\\Users\\Everwalker\\COMSOL_MCP_G3_7_WINDOWS_W20_WORKPACK\\repository\\evidence\\g3_7_windows_live\\win63\\export_6.3.csv",
+        "csv_sha256": "275886b514c50d178de0fec537c544c33edf4e999a51bc06ef13d58f39c1c08f",
+        "roundtrip_verified": true
+      },
+      "win64": {
+        "status": "NATIVE_PASS_SCOPED",
+        "exported_csv": "C:\\Users\\Everwalker\\COMSOL_MCP_G3_7_WINDOWS_W20_WORKPACK\\repository\\evidence\\g3_7_windows_live\\win64\\export_6.4.csv",
+        "csv_sha256": "5dc5164b4fd8ff265d1cc87ccee98397ab473196757c54787ea7f0e447fb4dda",
+        "roundtrip_verified": true
+      }
+    },
+    "WD15": {
+      "id": "WD15",
+      "status": "NATIVE_PASS_SCOPED",
+      "win63": {
+        "status": "NATIVE_PASS_SCOPED",
+        "mph_file": "C:\\Users\\Everwalker\\COMSOL_MCP_G3_7_WINDOWS_W20_WORKPACK\\repository\\evidence\\g3_7_windows_live\\win63\\saved_6.3.mph",
+        "size_bytes": 4515706,
+        "sha256": "6b6133f02e7d37bafd4815ce7ffec8d94cc225ea16d38861d55eb1f817aceb2f",
+        "reopened_field_without_solve": 325.0000000000003,
+        "cold_reopen_verified": true
+      },
+      "win64": {
+        "status": "NATIVE_PASS_SCOPED",
+        "mph_file": "C:\\Users\\Everwalker\\COMSOL_MCP_G3_7_WINDOWS_W20_WORKPACK\\repository\\evidence\\g3_7_windows_live\\win64\\saved_6.4.mph",
+        "size_bytes": 4596502,
+        "sha256": "66ee8013b2d2dbca56a8263528490f859bb8242f4c69cead59291c0a5f8a476e",
+        "reopened_field_without_solve": 324.9999999999999,
+        "cold_reopen_verified": true
+      }
+    },
+    "WD16": {
+      "id": "WD16",
+      "status": "NATIVE_PASS_SCOPED",
+      "win63": {
+        "status": "NATIVE_PASS_SCOPED",
+        "updated_temperature": 340.00000000000017,
+        "expected_temperature": 340.0,
+        "user_nodes_preserved": true,
+        "local_rebuild_verified": true
+      },
+      "win64": {
+        "status": "NATIVE_PASS_SCOPED",
+        "updated_temperature": 339.99999999999994,
+        "expected_temperature": 340.0,
+        "user_nodes_preserved": true,
+        "local_rebuild_verified": true
+      }
+    },
+    "WD19": {
+      "id": "WD19",
+      "status": "NATIVE_PASS_SCOPED",
+      "win63": {
+        "status": "NATIVE_PASS_SCOPED",
+        "samples_count": 50,
+        "min_ms": 0.04,
+        "median_ms": 0.05,
+        "p95_ms": 0.06,
+        "target_p95_ms": 1000.0,
+        "responsive_under_load": true
+      },
+      "win64": {
+        "status": "NATIVE_PASS_SCOPED",
+        "samples_count": 50,
+        "min_ms": 0.03,
+        "median_ms": 0.05,
+        "p95_ms": 0.13,
+        "target_p95_ms": 1000.0,
+        "responsive_under_load": true
+      }
+    },
+    "WD17": {
+      "id": "WD17",
+      "status": "CONTROL_PASS",
+      "queue_cancellation_verified": true,
+      "store_consistency": true
+    },
+    "WD18": {
+      "id": "WD18",
+      "status": "CONTROL_PASS",
+      "unknown_status_preserved": true,
+      "terminal_state_immune_to_late_finish": true
+    },
+    "WD20": {
+      "id": "WD20",
+      "status": "CONTROL_PASS",
+      "idempotent_recovery_verified": true,
+      "idempotency_conflict_enforced": true
+    },
+    "WD21": {
+      "id": "WD21",
+      "status": "CONTROL_PASS",
+      "daemon_restart_reconciliation_verified": true
+    },
+    "WD22": {
+      "id": "WD22",
+      "status": "CONTROL_PASS",
+      "cancellation_capabilities_disclosed": true,
+      "capabilities": {
+        "native_cooperative_cancel": "UNSUPPORTED",
+        "queued_cancel": "VERIFIED",
+        "owned_process_termination": "VERIFIED"
+      }
+    },
+    "WD23": {
+      "id": "WD23",
+      "status": "CONTROL_PASS",
+      "cross_runtime_model_isolation": true,
+      "foreign_reference_rejected": true,
+      "termination_isolation_verified": true,
+      "cache_key_isolation_verified": true
+    },
+    "WD24": {
+      "id": "WD24",
+      "status": "NATIVE_PASS_SCOPED",
+      "switching_sequence": [
+        "6.4",
+        "6.3",
+        "6.4"
+      ],
+      "plot_64_a_sha256": "bde6a4aa9fa050b7c1485d2570eadf9dcad4b709da3f0dbbfb93b5062b30dcc2",
+      "plot_64_b_sha256": "bde6a4aa9fa050b7c1485d2570eadf9dcad4b709da3f0dbbfb93b5062b30dcc2",
+      "plots_match": true,
+      "switching_regression_verified": true
+    },
+    "WD25": {
+      "id": "WD25",
+      "status": "NATIVE_PASS_SCOPED",
+      "forward_compatibility": {
+        "model_63_loaded_in_64": true,
+        "readback_temperature": 325.0000000000003,
+        "original_63_sha256_unmodified": true
+      },
+      "backward_compatibility": {
+        "model_64_loaded_in_63_rejected": true
+      },
+      "cross_version_file_rules_verified": true
+    },
+    "WD26": {
+      "id": "WD26",
+      "status": "CONTROL_PASS",
+      "is_process_in_job_evaluated": true,
+      "in_job_result": true,
+      "breakaway_safeguard_verified": true
+    },
+    "WD27": {
+      "id": "WD27",
+      "status": "SOFTWARE_PASS",
+      "returncode": 0,
+      "output_summary": "1882 passed, 43 skipped, 2 warnings in 57.81s",
+      "mac_compatibility_impact": "UNMODIFIED_PRESERVED"
+    },
+    "WD28": {
+      "id": "WD28",
+      "status": "CONTROL_PASS",
+      "clean_recovery_verified": true,
+      "bootstrap_output": "{\n  \"status\": \"SOURCE_RECOVERED_HASH_VERIFIED\",\n  \"directory\": \"C:\\\\Users\\\\Everwalker\\\\AppData\\\\Local\\\\Temp\\\\tmpntjs34q2\\\\test_recovery_repo\",\n  \"files\": 8326,\n  \"commit\": \"be5bfc8847d98e0aa3972050661a3beb8ee4cfc5\",\n  \"tree\": \"dbc871285c9e5465a2e2d9740e908289284304cb\",\n  \"git_history_ready\": true,\n  \"next\": \"Read docs/handoff_g3_7_windows_w20/NEXT_GOAL.md; provision a NEW environment; no COMSOL has been started.\"\n}\n"
+    },
+    "WD29": {
+      "id": "WD29",
+      "status": "NATIVE_PASS_SCOPED",
+      "leftover_mphserver_pids": [],
+      "runtime_cleanup_verified": true,
+      "dual_version_capabilities_documented": true
+    }
+  }
+}
