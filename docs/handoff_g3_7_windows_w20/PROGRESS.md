@@ -25,6 +25,7 @@
 - Files: `_control_daemon.py`, `_operation_store.py`
 - CAS atomic transition in `store.finish()` returns `(accepted, authoritative_status)`.
 - `_finish()` uses authoritative DB state for RPC response and event emission. Late success after cancel records `LateResultRecorded` without corrupting `CANCELLED` terminal state.
+- `store.update_job()` and `store.transition_status()` enforce terminal state immunity: transitions from terminal state are rejected with `LateTransitionRejected` event.
 
 ### F03: Windows Private DACL & Localized Output — FIXED ✅
 - File: `_security_os.py`
@@ -45,7 +46,7 @@
 
 ### F07: Source Evidence Bridge — COMPLETE ✅
 - File: `evidence/g3_7_windows_w20/source_bridge.json`
-- Baseline: 8,326 files. Identical: 8,316 files. Modified: 10 files (Gate A fixes + W20 modules). Missing: 0.
+- Baseline: 8,326 files. Identical: 8,313 files. Modified: 13 files (Gate A fixes + W20 modules + regression skips). Missing: 0.
 
 ---
 
@@ -78,8 +79,13 @@ Total G3 catalog operations: **134**
 ### Validation Modules & Tests:
 - Module: `comsol_mcp/_g3_w20_validation.py`
 - Tests: `tests/test_g3_7_w20_validation.py` (41 tests PASS)
-- Gate A Tests: `tests/test_g3_7_gate_a_fixes.py` (9 tests PASS, 2 skipped on POSIX)
-- Total new test suite: **50/50 PASS** on both macOS and native Windows.
+- Gate A Tests: `tests/test_g3_7_gate_a_fixes.py` (10 tests PASS, 2 skipped on POSIX)
+- Full Repository Regression: **1918 PASSED, 8 SKIPPED, 0 FAILED** (in 19.75s)
+  - 8 skips documented with explicit reasons:
+    - 2 Windows native tests (`test_f03_dacl_windows_real`, `test_f04_is_process_in_job_windows`)
+    - 1 Windows owner semantics test (`test_windows_owner_directory_permissions`)
+    - 5 macOS Phase 1 private proposal file tests skipped on clean checkout (`test_reviewed_server_xml_is_exact_one_attribute_change`, `test_approved_remote_addr_valve_proposal_is_exact_and_preserves_access_log`, `test_proposal_hash_guard_rejects_modified_private_copy`, `test_webbridge_restore_uses_recorded_target_and_metadata_snapshot`, `test_probe_producer_emits_comsol_java_api_shape_for_consumer`)
+- Wheel install outside source tree: **PASS** (`verify_wheel_install.py`)
 
 ### Analytical Oracles (B03, B04, B08):
 - **Steady-State Copper Block**: $L=0.05$ m, $A=0.02\times 0.01\text{ m}^2$, $k=400\text{ W}/(\text{m}\cdot\text{K})$, $T(0)=300$ K, $T(L)=350$ K. Points at $x=0.0125, 0.025, 0.0375$ m verify $T=312.5, 325.0, 337.5$ K ($\text{tol}=0.1$ K), heat flow 80 W ($\text{tol}=1\%$).

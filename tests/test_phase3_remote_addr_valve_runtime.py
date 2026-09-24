@@ -45,6 +45,8 @@ def _socket_rows(server_pid: int = 123, worker_pid: int = 456) -> list[dict[str,
 
 
 def test_approved_remote_addr_valve_proposal_is_exact_and_preserves_access_log():
+    if not runtime.PROPOSAL_ORIGINAL.is_file() or not runtime.PROPOSAL_VALVE.is_file():
+        pytest.skip("Phase 1 private proposal files not present in clean checkout")
     original, proposed = runtime._proposal_bytes()
 
     assert hashlib.sha256(original).hexdigest() == runtime.EXPECTED_ORIGINAL_SHA256
@@ -57,6 +59,8 @@ def test_approved_remote_addr_valve_proposal_is_exact_and_preserves_access_log()
 
 
 def test_proposal_hash_guard_rejects_modified_private_copy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    if not runtime.PROPOSAL_ORIGINAL.is_file() or not runtime.PROPOSAL_VALVE.is_file():
+        pytest.skip("Phase 1 private proposal files not present in clean checkout")
     original, proposed = runtime._proposal_bytes()
     original_path = tmp_path / "server.original.xml"
     proposed_path = tmp_path / "server.remote_addr_valve.xml"
@@ -70,6 +74,8 @@ def test_proposal_hash_guard_rejects_modified_private_copy(tmp_path: Path, monke
 
 
 def test_webbridge_restore_uses_recorded_target_and_metadata_snapshot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    if not runtime.PROPOSAL_ORIGINAL.is_file() or not runtime.PROPOSAL_VALVE.is_file():
+        pytest.skip("Phase 1 private proposal files not present in clean checkout")
     original, proposed = runtime._proposal_bytes()
     target = tmp_path / "server.xml"
     target.write_bytes(proposed)
@@ -398,6 +404,8 @@ def test_probe_producer_emits_comsol_java_api_shape_for_consumer(monkeypatch: py
     assert [item.state_dir.name for item in FakeWorker.instances] == ["worker-loopback", "worker-nonloopback"]
 
     target = tmp_path / "server.xml"
+    if not runtime.PROPOSAL_VALVE.is_file():
+        pytest.skip("Phase 1 private proposal files not present in clean checkout")
     target.write_bytes(runtime.PROPOSAL_VALVE.read_bytes())
     monkeypatch.setattr(isolation, "_REMOTE_ADDR_VALVE_TARGET", target)
     monkeypatch.setattr(isolation, "_REMOTE_ADDR_VALVE_APPLIED_SHA256", runtime.EXPECTED_VALVE_SHA256)

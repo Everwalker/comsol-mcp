@@ -12,6 +12,8 @@ from tools import phase3_owned_runtime as runtime
 
 
 def test_reviewed_server_xml_is_exact_one_attribute_change():
+    if not runtime.PROPOSAL_ORIGINAL.is_file() or not runtime.PROPOSAL_LOOPBACK.is_file():
+        pytest.skip("Phase 1 private proposal files not present in clean checkout")
     original, proposed = runtime._proposal_bytes()
     assert proposed.replace(b'address="127.0.0.1" ', b"", 1) == original
     assert b'address="127.0.0.1"' in proposed

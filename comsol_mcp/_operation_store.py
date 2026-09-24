@@ -346,6 +346,19 @@ class OperationStore:
                     self.db.execute("COMMIT")
                     return False, current, self._job(row)
 
+                # D03: Terminal state cannot be transitioned to another state
+                if current in TERMINAL and new_status != current:
+                    self.db.execute(
+                        "INSERT INTO job_events(job_id, event, metadata) VALUES(?, 'LateTransitionRejected', ?)",
+                        (job_id, _dumps_canonical({
+                            "current_status": current,
+                            "rejected_status": new_status,
+                            "metadata": metadata,
+                        }))
+                    )
+                    self.db.execute("COMMIT")
+                    return False, current, self._job(row)
+
                 merged_meta = {**json.loads(row["metadata"] or "{}"), **(metadata or {})}
                 self.db.execute(
                     "UPDATE jobs SET status=?,metadata=?,"

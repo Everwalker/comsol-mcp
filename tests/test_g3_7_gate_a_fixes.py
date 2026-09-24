@@ -40,6 +40,16 @@ def test_f02_operation_store_finish_already_terminal(tmp_path):
     assert accepted is False
     assert status == "CANCELLED"
 
+def test_f02_operation_store_transition_status_already_terminal(tmp_path):
+    store = OperationStore(tmp_path / "f02_trans.sqlite")
+    record, _ = store.begin(request_id="r1", idempotency_key="k1", request_hash="h1", operation="op1")
+    store.cancel_queued(record["job_id"], "cancel_req")
+    # Try transitioning CANCELLED job to SUCCEEDED even if CANCELLED is in expected
+    ok, cur, job = store.transition_status(record["job_id"], ("CANCELLED", "RUNNING"), "SUCCEEDED")
+    assert ok is False
+    assert cur == "CANCELLED"
+    assert job["status"] == "CANCELLED"
+
 def test_f02_control_daemon_cancel_late_success(tmp_path):
     store = OperationStore(tmp_path / "f02_3.sqlite")
     record, _ = store.begin(request_id="r1", idempotency_key="k1", request_hash="h1", operation="op1")
