@@ -1,0 +1,2353 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Model tag="mcp1" name="Model63" created="1790214234104">
+  <entityComments T="0"></entityComments>
+  <entityAuthor T="0"></entityAuthor>
+  <fontsize T="5">-1</fontsize>
+  <fontfamily T="0">automatic</fontfamily>
+  <comsolVersion T="0">COMSOL Multiphysics 6.3 (&#x5f00;&#x53d1;&#x7248;&#x672c;: 290)</comsolVersion>
+  <baseSystem T="0">SI</baseSystem>
+  <srl T="0">6464550</srl>
+  <savePointTags T="0">savepoint1</savePointTags>
+  <savedInVersion T="5">1979</savedInVersion>
+  <savePointBinary T="52" class="GEOMETRY" resource="geometry1.mphbin" id="2853264ebd1d4bc" fileid="4cdc9b63bee68107"/>
+  <savePointBinary T="52" class="MESH" resource="mesh1.mphbin" id="c3be028eb363b820" fileid="f91b5cccff44b856"/>
+  <savePointIndex T="0">savepoint1</savePointIndex>
+  <savePointIndex T="0">savepoint1</savePointIndex>
+  <savePointSeqTag T="0">geom1</savePointSeqTag>
+  <savePointSeqTag T="0">mesh1</savePointSeqTag>
+  <savePointHasCadRep T="3">true</savePointHasCadRep>
+  <savePointHasCadRep T="3">false</savePointHasCadRep>
+  <savePointOldEdgeParVer T="3">false</savePointOldEdgeParVer>
+  <savePointOldEdgeParVer T="3">false</savePointOldEdgeParVer>
+  <ModelParam tag="param" name="&#x53c2;&#x6570;" created="1790214234171">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+    <expressions T="31" name="T_left" expr="300[K]"></expressions>
+    <expressions T="31" name="T_right" expr="350[K]"></expressions>
+    <expressions T="31" name="k_val" expr="400[W/(m*K)]"></expressions>
+    <expressions T="31" name="currentiter" expr="0"></expressions>
+    <visible T="3">true</visible>
+    <ModelParamGroupList tag="group" name="&#x53c2;&#x6570;" created="1790214234171">
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+      <ModelParamGroup tag="default" name="&#x53c2;&#x6570; 1" created="1790214234171">
+        <entityFlags T="51">NOREMOVE|NORETAG|NODEACTIVATE</entityFlags>
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <ModelParamGroupCaseList tag="paramCase" name="&#x5b9e;&#x4f8b;" created="1790214236526">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+        </ModelParamGroupCaseList>
+      </ModelParamGroup>
+    </ModelParamGroupList>
+  </ModelParam>
+  <PhysicsList tag="physics" name="&#x7269;&#x7406;&#x573a;" created="1790214234272">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+    <Physics op="HeatTransfer" tag="ht" name="&#x56fa;&#x4f53;&#x4f20;&#x70ed;" created="1790214237372">
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+      <selection T="32" selection="LocalSelection" flags="16" selType="GEOMDIM">
+        <explicit dim="3" hDim="3" geom="/geom/geom1"/>
+      </selection>
+      <geom T="50">/geom/geom1</geom>
+      <identifier T="0">ht</identifier>
+      <PhysicsFieldList tag="field" name="PhysicsFieldList" created="1790214237376">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <PhysicsField tag="temperature" created="1790214237692">
+          <entityFlags T="51">NOREMOVE|NORETAG|NODEACTIVATE</entityFlags>
+          <applfieldID T="0">temperature</applfieldID>
+          <components T="1">1,'T'</components>
+          <fieldname T="0">T</fieldname>
+        </PhysicsField>
+        <PhysicsField tag="discontinuousdamagedtissueindicator_disc" created="1790214237692">
+          <entityFlags T="51">NOREMOVE|NORETAG|NODEACTIVATE</entityFlags>
+          <applfieldID T="0">discontinuousdamagedtissueindicator_disc</applfieldID>
+          <components T="1">1,'discontinuousdamagedtissueindicator'</components>
+          <fieldname T="0">discontinuousdamagedtissueindicator</fieldname>
+        </PhysicsField>
+        <PhysicsField tag="continuousdamagedtissueindicator_disc" created="1790214237692">
+          <entityFlags T="51">NOREMOVE|NORETAG|NODEACTIVATE</entityFlags>
+          <applfieldID T="0">continuousdamagedtissueindicator_disc</applfieldID>
+          <components T="1">1,'continuousdamagedtissueindicator'</components>
+          <fieldname T="0">continuousdamagedtissueindicator</fieldname>
+        </PhysicsField>
+        <PhysicsField tag="thermaldamageindicator_disc" created="1790214237692">
+          <entityFlags T="51">NOREMOVE|NORETAG|NODEACTIVATE</entityFlags>
+          <applfieldID T="0">thermaldamageindicator_disc</applfieldID>
+          <components T="1">1,'thermaldamageindicator'</components>
+          <fieldname T="0">thermaldamageindicator</fieldname>
+        </PhysicsField>
+        <PhysicsField tag="radiativeintensity_disc" created="1790214237692">
+          <entityFlags T="51">NOREMOVE|NORETAG|NODEACTIVATE</entityFlags>
+          <applfieldID T="0">radiativeintensity_disc</applfieldID>
+          <components T="1">1,'radiativeintensity'</components>
+          <fieldname T="0">radiativeintensity</fieldname>
+        </PhysicsField>
+        <PhysicsField tag="incidentradiation_disc" created="1790214237692">
+          <entityFlags T="51">NOREMOVE|NORETAG|NODEACTIVATE</entityFlags>
+          <applfieldID T="0">incidentradiation_disc</applfieldID>
+          <components T="1">1,'incidentradiation'</components>
+          <fieldname T="0">incidentradiation</fieldname>
+        </PhysicsField>
+        <PhysicsField tag="surfaceradiosity_disc" created="1790214237692">
+          <entityFlags T="51">NOREMOVE|NORETAG|NODEACTIVATE</entityFlags>
+          <applfieldID T="0">surfaceradiosity_disc</applfieldID>
+          <components T="1">1,'surfaceradiosity'</components>
+          <fieldname T="0">surfaceradiosity</fieldname>
+        </PhysicsField>
+      </PhysicsFieldList>
+      <FeatureInfoList tag="featureInfo" name="FeatureInfoList" created="1790214237376">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <FeatureInfo tag="info" name="&#x65b9;&#x7a0b;&#x89c6;&#x56fe;" created="1790214239371">
+          <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <studyType T="0">/StudyList/std1/StudyFeatureList/stat</studyType>
+        </FeatureInfo>
+      </FeatureInfoList>
+      <PhysicsFeatureList tag="feature" name="PhysicsFeatureList" created="1790214237376">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <PhysicsFeature op="SolidHeatTransferModel" tag="solid1" name="&#x56fa;&#x4f53; 1" created="1790214239088">
+          <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <selection T="32" selection="XDLocalSelection" flags="17" selType="GEOMDIM">
+            <explicit dim="3" hDim="3" geom="/geom/geom1"/>
+          </selection>
+          <param T="33" param="hasPhaseChange" value="1|1,'0'"></param>
+          <param T="33" param="Solid_material" value="1|1,'dommat'"></param>
+          <param T="33" param="k_mat" value="1|1,'from_mat'"></param>
+          <param T="33" param="k" value="9|1,'0'|1,'0'|1,'0'|1,'0'|1,'0'|1,'0'|1,'0'|1,'0'|1,'0'"></param>
+          <param T="33" param="rho_mat" value="1|1,'from_mat'"></param>
+          <param T="33" param="rho" value="1|1,'0'"></param>
+          <param T="33" param="Cp_mat" value="1|1,'from_mat'"></param>
+          <param T="33" param="Cp" value="1|1,'0'"></param>
+          <param T="33" param="u_prime_src" value="1|1,'userdef'"></param>
+          <param T="33" param="u_prime" value="3|1,'0'|1,'0'|1,'0'"></param>
+          <param T="33" param="pref_src" value="1|1,'userdef'"></param>
+          <param T="33" param="pref" value="1|1,'1[atm]'"></param>
+          <param T="33" param="minput_strainreferencetemperature_src" value="1|1,'fromCommonDef'"></param>
+          <param T="33" param="minput_strainreferencetemperature" value="1|1,'293.15[K]'"></param>
+          <param T="33" param="editModelInputs" value="1|1,'0'"></param>
+          <param T="33" param="crosswind" value="1|1,'0'"></param>
+          <param T="33" param="streamline" value="1|1,'0'"></param>
+          <param T="33" param="dfltopaque" value="1|1,'1'"></param>
+          <param T="33" param="thermalConductivityModel" value="1|1,'Standard'"></param>
+          <param T="33" param="coordinateSystem" value="1|1,'GlobalSystem'"></param>
+          <param T="33" param="minput_temperature_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_temperature" value="1|1,'293.15[K]'"></param>
+          <param T="33" param="minput_velocity_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_velocity" value="3|1,'0'|1,'0'|1,'0'"></param>
+          <param T="33" param="minput_pressure_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_pressure" value="1|1,'1[atm]'"></param>
+          <param T="33" param="minput_relativehumidity_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_relativehumidity" value="1|1,'0'"></param>
+          <param T="33" param="minput_concentration_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_concentration" value="1|1,'0'"></param>
+          <param T="33" param="minput_electricfield_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_electricfield" value="3|1,'0'|1,'0'|1,'0'"></param>
+          <param T="33" param="minput_magneticfield_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_magneticfield" value="3|1,'0'|1,'0'|1,'0'"></param>
+          <param T="33" param="minput_magneticfluxdensity_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_magneticfluxdensity" value="3|1,'0'|1,'0'|1,'0'"></param>
+          <param T="33" param="minput_frequency_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_frequency" value="1|1,'root.freq'"></param>
+          <param T="33" param="minput_stress_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_stress" value="9|1,'0'|1,'0'|1,'0'|1,'0'|1,'0'|1,'0'|1,'0'|1,'0'|1,'0'"></param>
+          <param T="33" param="minput_effectiveplasticstrain_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_effectiveplasticstrain" value="1|1,'0'"></param>
+          <param T="33" param="minput_numberdensity_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_numberdensity" value="1|1,'0'"></param>
+          <param T="33" param="minput_currentdensity_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_currentdensity" value="3|1,'0'|1,'0'|1,'0'"></param>
+          <param T="33" param="minput_shiftedmagneticfield_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_shiftedmagneticfield" value="3|1,'0'|1,'0'|1,'0'"></param>
+          <param T="33" param="StudyStep" value="1|1,'std1/stat'"></param>
+          <param T="33" param="showPhysicsSymbols" value="1|1,'1'"></param>
+          <edim T="5">3</edim>
+          <default T="3">true</default>
+          <PhysicsFeatureList tag="feature" name="PhysicsFeatureList" created="1790214239154">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+            <PhysicsFeature op="Opacity" tag="opac1" name="&#x4e0d;&#x900f;&#x660e;&#x5ea6; 1" created="1790214239154">
+              <entityFlags T="51">DISABLED|NOREMOVE|NODEACTIVATE|AUTODEACTIVATE</entityFlags>
+              <entityComments T="0"></entityComments>
+              <entityAuthor T="0"></entityAuthor>
+              <selection T="32" selection="XDLocalSelection" flags="17" selType="GEOMDIM">
+                <explicit dim="3" hDim="3" geom="/geom/geom1"/>
+              </selection>
+              <param T="33" param="opaqueType" value="1|1,'1'"></param>
+              <param T="33" param="userDefinitionTypeSolAmb" value="1|1,'userDefinedForAllBands'"></param>
+              <param T="33" param="opaqueTypeSolAmbAllBands" value="1|1,'1'"></param>
+              <param T="33" param="opaqueTypeSolAmb" value="2|1,'1'|1,'1'"></param>
+              <param T="33" param="spectralBandNameSolAmb" value="2|1,'&#x592a;&#x9633;: [0\, 2.5[um]['|1,'&#x73af;&#x5883;: [2.5[um]\, +&#x221e;['"></param>
+              <param T="33" param="userDefinitionTypeMulti" value="1|1,'userDefinedForAllBands'"></param>
+              <param T="33" param="opaqueTypeMultiAllBands" value="1|1,'1'"></param>
+              <param T="33" param="opaqueTypeMulti" value="2|1,'1'|1,'1'"></param>
+              <param T="33" param="spectralBandNameMulti" value="2|1,'[0\, 2.5['|1,'[2.5\, +&#x221e;['"></param>
+              <param T="33" param="StudyStep" value="1|1,'std1/stat'"></param>
+              <param T="33" param="showPhysicsSymbols" value="1|1,'1'"></param>
+              <edim T="5">3</edim>
+              <default T="3">true</default>
+              <FeatureInfoList tag="featureInfo" name="FeatureInfoList" created="1790214239171">
+                <entityComments T="0"></entityComments>
+                <entityAuthor T="0"></entityAuthor>
+                <FeatureInfo tag="warning" name="&#x8b66;&#x544a;" created="1790214239171">
+                  <entityComments T="0"></entityComments>
+                  <entityAuthor T="0"></entityAuthor>
+                  <lock T="33" param="$message" value="1|1,'This_feature_is_obsolete_and_will_be_removed_in_future_versions._Consider_using_the_Surface-to-Surface_Radiation_physics_interface_coupled_with_the_Heat_Transfer_physics_interface_via_the_Heat_Transfer_with_Surface-to-Surface_Radiation_multiphysics_coupling_feature_for_modeling_radiation_effects'"></lock>
+                </FeatureInfo>
+                <FeatureInfo tag="info" name="&#x65b9;&#x7a0b;&#x89c6;&#x56fe;" created="1790214239171">
+                  <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+                  <entityComments T="0"></entityComments>
+                  <entityAuthor T="0"></entityAuthor>
+                </FeatureInfo>
+              </FeatureInfoList>
+              <ModelEntityTag tag="DomainType" created="1790214239188">
+                <values T="1">2,'ACTIVE','VOID'</values>
+              </ModelEntityTag>
+              <PhysicsFeatureList tag="feature" name="PhysicsFeatureList" created="1790214239188">
+                <entityComments T="0"></entityComments>
+                <entityAuthor T="0"></entityAuthor>
+              </PhysicsFeatureList>
+            </PhysicsFeature>
+          </PhysicsFeatureList>
+          <FeatureInfoList tag="featureInfo" name="FeatureInfoList" created="1790214239215">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+            <FeatureInfo tag="info" name="&#x65b9;&#x7a0b;&#x89c6;&#x56fe;" created="1790214239215">
+              <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+              <entityComments T="0"></entityComments>
+              <entityAuthor T="0"></entityAuthor>
+              <studyType T="0">/StudyList/std1/StudyFeatureList/stat</studyType>
+            </FeatureInfo>
+          </FeatureInfoList>
+          <ModelEntityTag tag="DomainType" created="1790214239238">
+            <values T="1">2,'VOID','GEOMETRY'</values>
+          </ModelEntityTag>
+        </PhysicsFeature>
+        <PhysicsFeature op="init" tag="init1" name="&#x521d;&#x59cb;&#x503c; 1" created="1790214239238">
+          <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <selection T="32" selection="XDLocalSelection" flags="17" selType="GEOMDIM">
+            <explicit dim="3" hDim="3" geom="/geom/geom1"/>
+          </selection>
+          <param T="33" param="Tinit_src" value="1|1,'userdef'"></param>
+          <param T="33" param="Tinit" value="1|1,'293.15[K]'"></param>
+          <param T="33" param="Tinit_resistive_src" value="1|1,'userdef'"></param>
+          <param T="33" param="Tinit_resistive" value="1|1,'293.15[K]'"></param>
+          <param T="33" param="StudyStep" value="1|1,'std1/stat'"></param>
+          <param T="33" param="showPhysicsSymbols" value="1|1,'1'"></param>
+          <param T="33" param="pairContrib" value="1|1,'fallback'"></param>
+          <edim T="5">3</edim>
+          <default T="3">true</default>
+          <FeatureInfoList tag="featureInfo" name="FeatureInfoList" created="1790214239254">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+            <FeatureInfo tag="info" name="&#x65b9;&#x7a0b;&#x89c6;&#x56fe;" created="1790214239254">
+              <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+              <entityComments T="0"></entityComments>
+              <entityAuthor T="0"></entityAuthor>
+              <studyType T="0">/StudyList/std1/StudyFeatureList/stat</studyType>
+            </FeatureInfo>
+          </FeatureInfoList>
+          <ModelEntityTag tag="DomainType" created="1790214239254">
+            <values T="1">1,'DOMAINTYPECONDITION'</values>
+          </ModelEntityTag>
+          <PhysicsFeatureList tag="feature" name="PhysicsFeatureList" created="1790214239254">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+          </PhysicsFeatureList>
+        </PhysicsFeature>
+        <PhysicsFeature op="ThermalInsulation" tag="ins1" name="&#x70ed;&#x7edd;&#x7f18; 1" created="1790214239254">
+          <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <selection T="32" selection="XDLocalSelection" flags="17" selType="GEOMDIM">
+            <explicit dim="2" hDim="2" geom="/geom/geom1"/>
+          </selection>
+          <param T="33" param="StudyStep" value="1|1,'std1/stat'"></param>
+          <param T="33" param="showPhysicsSymbols" value="1|1,'1'"></param>
+          <param T="33" param="pairContrib" value="1|1,'fallback'"></param>
+          <edim T="5">2</edim>
+          <default T="3">true</default>
+          <FeatureInfoList tag="featureInfo" name="FeatureInfoList" created="1790214239254">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+            <FeatureInfo tag="info" name="&#x65b9;&#x7a0b;&#x89c6;&#x56fe;" created="1790214239254">
+              <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+              <entityComments T="0"></entityComments>
+              <entityAuthor T="0"></entityAuthor>
+              <studyType T="0">/StudyList/std1/StudyFeatureList/stat</studyType>
+            </FeatureInfo>
+          </FeatureInfoList>
+          <ModelEntityTag tag="DomainType" created="1790214239254">
+            <values T="1">1,'EXTERIOR'</values>
+          </ModelEntityTag>
+          <PhysicsFeatureList tag="feature" name="PhysicsFeatureList" created="1790214239254">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+          </PhysicsFeatureList>
+        </PhysicsFeature>
+        <PhysicsFeature op="IsothermalDomainInterface" tag="idi1" name="&#x7b49;&#x6e29;&#x57df;&#x754c;&#x9762; 1" created="1790214239304">
+          <entityFlags T="51">DISABLED|NOREMOVE|NODEACTIVATE|AUTODEACTIVATE</entityFlags>
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <selection T="32" selection="XDLocalSelection" flags="17" selType="GEOMDIM">
+            <explicit dim="2" hDim="2" geom="/geom/geom1"/>
+          </selection>
+          <param T="33" param="InterfaceType" value="1|1,'ThermalInsulation'"></param>
+          <param T="33" param="FlowDirectionType" value="1|1,'FlowDirectionPlus'"></param>
+          <param T="33" param="VentilationPlusChoice" value="1|1,'MassFluxPlus'"></param>
+          <param T="33" param="VentilationMinusChoice" value="1|1,'MassFluxMinus'"></param>
+          <param T="33" param="VentilationBothChoice" value="1|1,'MassFluxBoth'"></param>
+          <param T="33" param="ConvectiveHeatFluxChoice" value="1|1,'HeatTransferCoefficient'"></param>
+          <param T="33" param="ThermalContactChoice" value="1|1,'surfaceThermalResistance'"></param>
+          <param T="33" param="hth" value="1|1,'0'"></param>
+          <param T="33" param="mfPlus" value="1|1,'0'"></param>
+          <param T="33" param="mrPlus" value="1|1,'0'"></param>
+          <param T="33" param="mfMinus" value="1|1,'0'"></param>
+          <param T="33" param="mrMinus" value="1|1,'0'"></param>
+          <param T="33" param="mfBothPlus" value="1|1,'0'"></param>
+          <param T="33" param="mrBothPlus" value="1|1,'0'"></param>
+          <param T="33" param="mfBothMinus" value="1|1,'0'"></param>
+          <param T="33" param="mrBothMinus" value="1|1,'0'"></param>
+          <param T="33" param="Rt_s" value="1|1,'0'"></param>
+          <param T="33" param="Rt" value="1|1,'0'"></param>
+          <param T="33" param="HeatTransferCoefficientType" value="1|1,'UserDef'"></param>
+          <param T="33" param="ExtNaturalConvectionType" value="1|1,'VerticalWall'"></param>
+          <param T="33" param="IntNaturalConvectionType" value="1|1,'NarrowChimneyParallelPlates'"></param>
+          <param T="33" param="ExtForcedConvectionType" value="1|1,'PlateAveragedTransferCoefficient'"></param>
+          <param T="33" param="IntForcedConvectionType" value="1|1,'IsothermalTube'"></param>
+          <param T="33" param="ExternalFluidType" value="1|1,'Air'"></param>
+          <param T="33" param="h" value="1|1,'0'"></param>
+          <param T="33" param="Lwall" value="1|1,'0'"></param>
+          <param T="33" param="Ldia" value="1|1,'0'"></param>
+          <param T="33" param="phi_tilt" value="1|1,'0'"></param>
+          <param T="33" param="Ldis" value="1|1,'0'"></param>
+          <param T="33" param="Hchimn" value="1|1,'0'"></param>
+          <param T="33" param="D" value="1|1,'0'"></param>
+          <param T="33" param="Dcyl" value="1|1,'0'"></param>
+          <param T="33" param="Dsph" value="1|1,'0'"></param>
+          <param T="33" param="Dvcyl" value="1|1,'0'"></param>
+          <param T="33" param="Hvcyl" value="1|1,'0'"></param>
+          <param T="33" param="Lpl" value="1|1,'0'"></param>
+          <param T="33" param="x_pl" value="1|1,'0'"></param>
+          <param T="33" param="matList" value="1|1,'dommat'"></param>
+          <param T="33" param="rhoMat_mat" value="1|1,'from_mat'"></param>
+          <param T="33" param="rhoMat" value="1|1,'0'"></param>
+          <param T="33" param="kMat_mat" value="1|1,'from_mat'"></param>
+          <param T="33" param="kMat" value="9|1,'0'|1,'0'|1,'0'|1,'0'|1,'0'|1,'0'|1,'0'|1,'0'|1,'0'"></param>
+          <param T="33" param="CpMat_mat" value="1|1,'from_mat'"></param>
+          <param T="33" param="CpMat" value="1|1,'0'"></param>
+          <param T="33" param="etaMat_mat" value="1|1,'from_mat'"></param>
+          <param T="33" param="etaMat" value="1|1,'0'"></param>
+          <param T="33" param="U_src" value="1|1,'userdef'"></param>
+          <param T="33" param="U" value="1|1,'0'"></param>
+          <param T="33" param="pA_src" value="1|1,'userdef'"></param>
+          <param T="33" param="pA" value="1|1,'1[atm]'"></param>
+          <param T="33" param="Text_src" value="1|1,'userdef'"></param>
+          <param T="33" param="Text" value="1|1,'293.15[K]'"></param>
+          <param T="33" param="phiext_src" value="1|1,'userdef'"></param>
+          <param T="33" param="phiext" value="1|1,'0.5'"></param>
+          <param T="33" param="phis_src" value="1|1,'userdef'"></param>
+          <param T="33" param="phis" value="1|1,'0.5'"></param>
+          <param T="33" param="BoilingFluidType" value="1|1,'Water'"></param>
+          <param T="33" param="WaterSurfaceType" value="1|1,'Copper (polished)'"></param>
+          <param T="33" param="BenzeneSurfaceType" value="1|1,'Chromium'"></param>
+          <param T="33" param="nPentaneSurfaceType" value="1|1,'Copper (emery polished)'"></param>
+          <param T="33" param="EthanolSurfaceType" value="1|1,'Copper (oxidized)'"></param>
+          <param T="33" param="Lv" value="1|1,'0'"></param>
+          <param T="33" param="Tsat" value="1|1,'293.15[K]'"></param>
+          <param T="33" param="sigma" value="1|1,'0'"></param>
+          <param T="33" param="s" value="1|1,'1'"></param>
+          <param T="33" param="Csf" value="1|1,'1'"></param>
+          <param T="33" param="pAmb_src" value="1|1,'userdef'"></param>
+          <param T="33" param="pAmb" value="1|1,'1[atm]'"></param>
+          <param T="33" param="liqmatList" value="1|1,'dommat'"></param>
+          <param T="33" param="vapmatList" value="1|1,'dommat'"></param>
+          <param T="33" param="mulMat_mat" value="1|1,'from_mat'"></param>
+          <param T="33" param="mulMat" value="1|1,'0'"></param>
+          <param T="33" param="rholMat_mat" value="1|1,'from_mat'"></param>
+          <param T="33" param="rholMat" value="1|1,'0'"></param>
+          <param T="33" param="CplMat_mat" value="1|1,'from_mat'"></param>
+          <param T="33" param="CplMat" value="1|1,'0'"></param>
+          <param T="33" param="klMat_mat" value="1|1,'from_mat'"></param>
+          <param T="33" param="klMat" value="1|1,'0'"></param>
+          <param T="33" param="rhovMat_mat" value="1|1,'from_mat'"></param>
+          <param T="33" param="rhovMat" value="1|1,'0'"></param>
+          <param T="33" param="constraintOptions" value="1|1,'pointwiseConstraints'"></param>
+          <param T="33" param="constraintType" value="1|1,'symmetricConstraint'"></param>
+          <param T="33" param="constraintMethod" value="1|1,'elemental'"></param>
+          <param T="33" param="coordinateSystem" value="1|1,'GlobalSystem'"></param>
+          <param T="33" param="minput_temperature_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_temperature" value="1|1,'293.15[K]'"></param>
+          <param T="33" param="minput_pressure_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_pressure" value="1|1,'1[atm]'"></param>
+          <param T="33" param="minput_electricfield_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_electricfield" value="3|1,'0'|1,'0'|1,'0'"></param>
+          <param T="33" param="minput_magneticfield_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_magneticfield" value="3|1,'0'|1,'0'|1,'0'"></param>
+          <param T="33" param="minput_magneticfluxdensity_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_magneticfluxdensity" value="3|1,'0'|1,'0'|1,'0'"></param>
+          <param T="33" param="minput_velocity_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_velocity" value="3|1,'0'|1,'0'|1,'0'"></param>
+          <param T="33" param="minput_frequency_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_frequency" value="1|1,'root.freq'"></param>
+          <param T="33" param="minput_stress_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_stress" value="9|1,'0'|1,'0'|1,'0'|1,'0'|1,'0'|1,'0'|1,'0'|1,'0'|1,'0'"></param>
+          <param T="33" param="minput_effectiveplasticstrain_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_effectiveplasticstrain" value="1|1,'0'"></param>
+          <param T="33" param="minput_strainreferencetemperature_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_strainreferencetemperature" value="1|1,'293.15[K]'"></param>
+          <param T="33" param="minput_concentration_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_concentration" value="1|1,'0'"></param>
+          <param T="33" param="minput_numberdensity_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_numberdensity" value="1|1,'0'"></param>
+          <param T="33" param="minput_relativehumidity_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_relativehumidity" value="1|1,'0'"></param>
+          <param T="33" param="minput_currentdensity_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_currentdensity" value="3|1,'0'|1,'0'|1,'0'"></param>
+          <param T="33" param="minput_shiftedmagneticfield_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_shiftedmagneticfield" value="3|1,'0'|1,'0'|1,'0'"></param>
+          <param T="33" param="editModelInputs" value="1|1,'0'"></param>
+          <param T="33" param="StudyStep" value="1|1,'std1/stat'"></param>
+          <param T="33" param="showPhysicsSymbols" value="1|1,'1'"></param>
+          <param T="33" param="pairContrib" value="1|1,'fallback'"></param>
+          <edim T="5">2</edim>
+          <default T="3">true</default>
+          <PhysicsFeatureList tag="feature" name="PhysicsFeatureList" created="1790214239326">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+            <PhysicsFeature op="LayerOpacity" tag="lopac1" name="&#x5c42;&#x4e0d;&#x900f;&#x660e;&#x5ea6; 1" created="1790214239329">
+              <entityFlags T="51">DISABLED|NOREMOVE|NODEACTIVATE|AUTODEACTIVATE</entityFlags>
+              <entityComments T="0"></entityComments>
+              <entityAuthor T="0"></entityAuthor>
+              <selection T="32" selection="XDLocalSelection" flags="17" selType="GEOMDIM">
+                <explicit dim="2" hDim="2" geom="/geom/geom1"/>
+              </selection>
+              <param T="33" param="opaqueType" value="1|1,'1'"></param>
+              <param T="33" param="userDefinitionTypeSolAmb" value="1|1,'userDefinedForAllBands'"></param>
+              <param T="33" param="opaqueTypeSolAmbAllBands" value="1|1,'1'"></param>
+              <param T="33" param="opaqueTypeSolAmb" value="2|1,'1'|1,'1'"></param>
+              <param T="33" param="spectralBandNameSolAmb" value="2|1,'&#x592a;&#x9633;: [0\, 2.5[um]['|1,'&#x73af;&#x5883;: [2.5[um]\, +&#x221e;['"></param>
+              <param T="33" param="userDefinitionTypeMulti" value="1|1,'userDefinedForAllBands'"></param>
+              <param T="33" param="opaqueTypeMultiAllBands" value="1|1,'1'"></param>
+              <param T="33" param="opaqueTypeMulti" value="2|1,'1'|1,'1'"></param>
+              <param T="33" param="spectralBandNameMulti" value="2|1,'[0\, 2.5['|1,'[2.5\, +&#x221e;['"></param>
+              <param T="33" param="StudyStep" value="1|1,'std1/stat'"></param>
+              <param T="33" param="showPhysicsSymbols" value="1|1,'1'"></param>
+              <param T="33" param="pairContrib" value="1|1,'fallback'"></param>
+              <edim T="5">2</edim>
+              <default T="3">true</default>
+              <FeatureInfoList tag="featureInfo" name="FeatureInfoList" created="1790214239337">
+                <entityComments T="0"></entityComments>
+                <entityAuthor T="0"></entityAuthor>
+                <FeatureInfo tag="warning" name="&#x8b66;&#x544a;" created="1790214239338">
+                  <entityComments T="0"></entityComments>
+                  <entityAuthor T="0"></entityAuthor>
+                  <lock T="33" param="$message" value="1|1,'This_feature_is_obsolete_and_will_be_removed_in_future_versions'"></lock>
+                </FeatureInfo>
+                <FeatureInfo tag="info" name="&#x65b9;&#x7a0b;&#x89c6;&#x56fe;" created="1790214239338">
+                  <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+                  <entityComments T="0"></entityComments>
+                  <entityAuthor T="0"></entityAuthor>
+                </FeatureInfo>
+              </FeatureInfoList>
+              <ModelEntityTag tag="DomainType" created="1790214239338">
+                <values T="1">2,'EXTERIOR','INTERIOR'</values>
+              </ModelEntityTag>
+              <PhysicsFeatureList tag="feature" name="PhysicsFeatureList" created="1790214239338">
+                <entityComments T="0"></entityComments>
+                <entityAuthor T="0"></entityAuthor>
+              </PhysicsFeatureList>
+            </PhysicsFeature>
+          </PhysicsFeatureList>
+          <FeatureInfoList tag="featureInfo" name="FeatureInfoList" created="1790214239338">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+            <FeatureInfo tag="info" name="&#x65b9;&#x7a0b;&#x89c6;&#x56fe;" created="1790214239338">
+              <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+              <entityComments T="0"></entityComments>
+              <entityAuthor T="0"></entityAuthor>
+            </FeatureInfo>
+          </FeatureInfoList>
+          <ModelEntityTag tag="DomainType" created="1790214239338">
+            <values T="1">1,'EXTERIOR'</values>
+          </ModelEntityTag>
+        </PhysicsFeature>
+        <PhysicsFeature op="LocalThermalNonequilibriumBoundary" tag="ltneb1" name="&#x5c40;&#x90e8;&#x70ed;&#x975e;&#x5e73;&#x8861;&#x8fb9;&#x754c; 1" created="1790214239338">
+          <entityFlags T="51">DISABLED|NOREMOVE|NODEACTIVATE|AUTODEACTIVATE</entityFlags>
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <selection T="32" selection="XDLocalSelection" flags="17" selType="GEOMDIM">
+            <explicit dim="2" hDim="2" geom="/geom/geom1"/>
+          </selection>
+          <param T="33" param="StudyStep" value="1|1,'std1/stat'"></param>
+          <param T="33" param="showPhysicsSymbols" value="1|1,'1'"></param>
+          <param T="33" param="pairContrib" value="1|1,'fallback'"></param>
+          <edim T="5">2</edim>
+          <default T="3">true</default>
+          <FeatureInfoList tag="featureInfo" name="FeatureInfoList" created="1790214239338">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+            <FeatureInfo tag="info" name="&#x65b9;&#x7a0b;&#x89c6;&#x56fe;" created="1790214239338">
+              <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+              <entityComments T="0"></entityComments>
+              <entityAuthor T="0"></entityAuthor>
+            </FeatureInfo>
+          </FeatureInfoList>
+          <ModelEntityTag tag="DomainType" created="1790214239338">
+            <values T="1">1,'DOMAINTYPECONDITION'</values>
+          </ModelEntityTag>
+          <PhysicsFeatureList tag="feature" name="PhysicsFeatureList" created="1790214239338">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+          </PhysicsFeatureList>
+        </PhysicsFeature>
+        <PhysicsFeature op="OpaqueSurface" tag="os1" name="&#x4e0d;&#x900f;&#x660e;&#x8868;&#x9762; 1" created="1790214239338">
+          <entityFlags T="51">DISABLED|NOREMOVE|NODEACTIVATE|AUTODEACTIVATE</entityFlags>
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <selection T="32" selection="XDLocalSelection" flags="16" selType="GEOMDIM">
+            <explicit dim="2" hDim="2" geom="/geom/geom1"/>
+          </selection>
+          <param T="33" param="WallType" value="1|1,'GrayWall'"></param>
+          <param T="33" param="epsilon_rad_mat" value="1|1,'from_mat'"></param>
+          <param T="33" param="epsilon_rad" value="1|1,'0'"></param>
+          <param T="33" param="minput_stress_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_stress" value="9|1,'0'|1,'0'|1,'0'|1,'0'|1,'0'|1,'0'|1,'0'|1,'0'|1,'0'"></param>
+          <param T="33" param="minput_electricfield_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_electricfield" value="3|1,'0'|1,'0'|1,'0'"></param>
+          <param T="33" param="minput_effectiveplasticstrain_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_effectiveplasticstrain" value="1|1,'0'"></param>
+          <param T="33" param="minput_shiftedmagneticfield_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_shiftedmagneticfield" value="3|1,'0'|1,'0'|1,'0'"></param>
+          <param T="33" param="minput_concentration_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_concentration" value="1|1,'0'"></param>
+          <param T="33" param="minput_pressure_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_pressure" value="1|1,'1[atm]'"></param>
+          <param T="33" param="minput_velocity_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_velocity" value="3|1,'0'|1,'0'|1,'0'"></param>
+          <param T="33" param="minput_magneticfluxdensity_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_magneticfluxdensity" value="3|1,'0'|1,'0'|1,'0'"></param>
+          <param T="33" param="minput_frequency_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_frequency" value="1|1,'root.freq'"></param>
+          <param T="33" param="minput_numberdensity_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_numberdensity" value="1|1,'0'"></param>
+          <param T="33" param="minput_relativehumidity_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_relativehumidity" value="1|1,'0'"></param>
+          <param T="33" param="minput_magneticfield_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_magneticfield" value="3|1,'0'|1,'0'|1,'0'"></param>
+          <param T="33" param="minput_temperature_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_temperature" value="1|1,'293.15[K]'"></param>
+          <param T="33" param="minput_strainreferencetemperature_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_strainreferencetemperature" value="1|1,'293.15[K]'"></param>
+          <param T="33" param="minput_currentdensity_src" value="1|1,'userdef'"></param>
+          <param T="33" param="minput_currentdensity" value="3|1,'0'|1,'0'|1,'0'"></param>
+          <param T="33" param="editModelInputs" value="1|1,'0'"></param>
+          <param T="33" param="StudyStep" value="1|1,'std1/stat'"></param>
+          <param T="33" param="showPhysicsSymbols" value="1|1,'1'"></param>
+          <param T="33" param="pairContrib" value="1|1,'fallback'"></param>
+          <edim T="5">2</edim>
+          <default T="3">true</default>
+          <FeatureInfoList tag="featureInfo" name="FeatureInfoList" created="1790214239338">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+            <FeatureInfo tag="warning" name="&#x8b66;&#x544a;" created="1790214239338">
+              <entityComments T="0"></entityComments>
+              <entityAuthor T="0"></entityAuthor>
+              <lock T="33" param="$message" value="1|1,'This_feature_is_obsolete_and_will_be_removed_in_future_versions._Consider_using_the_new_Opaque_Surface_feature_instead.'"></lock>
+            </FeatureInfo>
+            <FeatureInfo tag="info" name="&#x65b9;&#x7a0b;&#x89c6;&#x56fe;" created="1790214239338">
+              <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+              <entityComments T="0"></entityComments>
+              <entityAuthor T="0"></entityAuthor>
+            </FeatureInfo>
+          </FeatureInfoList>
+          <ModelEntityTag tag="DomainType" created="1790214239338">
+            <values T="1">2,'EXTGEOM','INTERIOR'</values>
+          </ModelEntityTag>
+          <PhysicsFeatureList tag="feature" name="PhysicsFeatureList" created="1790214239338">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+          </PhysicsFeatureList>
+        </PhysicsFeature>
+        <PhysicsFeature op="ContinuityOnInteriorBoundary" tag="cib1" name="&#x5185;&#x90e8;&#x8fb9;&#x754c;&#x7684;&#x8fde;&#x7eed;&#x6027; 1" created="1790214239338">
+          <entityFlags T="51">DISABLED|NOREMOVE|NODEACTIVATE|AUTODEACTIVATE</entityFlags>
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <selection T="32" selection="XDLocalSelection" flags="17" selType="GEOMDIM">
+            <explicit dim="2" hDim="2" geom="/geom/geom1"/>
+          </selection>
+          <param T="33" param="StudyStep" value="1|1,'std1/stat'"></param>
+          <param T="33" param="showPhysicsSymbols" value="1|1,'1'"></param>
+          <param T="33" param="pairContrib" value="1|1,'fallback'"></param>
+          <edim T="5">2</edim>
+          <default T="3">true</default>
+          <FeatureInfoList tag="featureInfo" name="FeatureInfoList" created="1790214239338">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+            <FeatureInfo tag="warning" name="&#x8b66;&#x544a;" created="1790214239338">
+              <entityComments T="0"></entityComments>
+              <entityAuthor T="0"></entityAuthor>
+              <lock T="33" param="$message" value="1|1,'This_feature_is_obsolete_and_will_be_removed_in_future_versions._Consider_transferring_features_related_to_radiation_in_participating_media_into_a_new_instance_of_the_Radiation_in_Participating_Media_physics_interface\,_coupled_with_the_Heat_Transfer_interface_via_the_Heat_Transfer_with_Radiation_in_Participating_Media_multiphysics_coupling_feature.'"></lock>
+            </FeatureInfo>
+            <FeatureInfo tag="info" name="&#x65b9;&#x7a0b;&#x89c6;&#x56fe;" created="1790214239338">
+              <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+              <entityComments T="0"></entityComments>
+              <entityAuthor T="0"></entityAuthor>
+            </FeatureInfo>
+          </FeatureInfoList>
+          <ModelEntityTag tag="DomainType" created="1790214239353">
+            <values T="1">1,'INTERIOR'</values>
+          </ModelEntityTag>
+          <PhysicsFeatureList tag="feature" name="PhysicsFeatureList" created="1790214239353">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+          </PhysicsFeatureList>
+        </PhysicsFeature>
+        <PhysicsFeature op="Continuity" tag="dcont1" name="&#x8fde;&#x7eed;&#x6027; 1" created="1790214239354">
+          <entityFlags T="51">DISABLED|NOREMOVE|NODEACTIVATE|AUTODEACTIVATE</entityFlags>
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <selection T="32" selection="XDLocalSelection" flags="17" selType="GEOMDIM">
+            <explicit dim="2" hDim="2" geom="/geom/geom1"/>
+          </selection>
+          <param T="33" param="constraintOptions" value="1|1,'nitscheConstraints'"></param>
+          <param T="33" param="constraintType" value="1|1,'symmetricConstraint'"></param>
+          <param T="33" param="constraintMethod" value="1|1,'elemental'"></param>
+          <param T="33" param="pairSelection" value="1|1,'all'"></param>
+          <param T="33" param="pairs" value="0"></param>
+          <param T="33" param="pairsList" value="1|1,'0'"></param>
+          <param T="33" param="pairDisconnect" value="1|1,'0'"></param>
+          <param T="33" param="StudyStep" value="1|1,'std1/stat'"></param>
+          <param T="33" param="showPhysicsSymbols" value="1|1,'1'"></param>
+          <edim T="5">2</edim>
+          <default T="3">true</default>
+          <FeatureInfoList tag="featureInfo" name="FeatureInfoList" created="1790214239371">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+            <FeatureInfo tag="info" name="&#x65b9;&#x7a0b;&#x89c6;&#x56fe;" created="1790214239371">
+              <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+              <entityComments T="0"></entityComments>
+              <entityAuthor T="0"></entityAuthor>
+            </FeatureInfo>
+          </FeatureInfoList>
+          <ModelEntityTag tag="DomainType" created="1790214239371">
+            <values T="1">1,'PAIR'</values>
+          </ModelEntityTag>
+          <PhysicsFeatureList tag="feature" name="PhysicsFeatureList" created="1790214239371">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+          </PhysicsFeatureList>
+        </PhysicsFeature>
+        <PhysicsFeature op="TemperatureBoundary" tag="temp1" name="&#x6e29;&#x5ea6; 1" created="1790214241401">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <selection T="32" selection="XDLocalSelection" selType="GEOMDIM">
+            <explicit dim="2" hDim="2" geom="/geom/geom1" entities="-6,-1,1"/>
+          </selection>
+          <param T="33" param="constraintOptions" value="1|1,'pointwiseConstraints'"></param>
+          <param T="33" param="constraintType" value="1|1,'symmetricConstraint'"></param>
+          <param T="33" param="constraintMethod" value="1|1,'elemental'"></param>
+          <param T="33" param="T0_src" value="1|1,'userdef'"></param>
+          <param T="33" param="T0" value="1|1,'T_left'"></param>
+          <param T="33" param="constraintGroup" value="1|1,'default'"></param>
+          <param T="33" param="StudyStep" value="1|1,'std1/stat'"></param>
+          <param T="33" param="showPhysicsSymbols" value="1|1,'1'"></param>
+          <param T="33" param="pairContrib" value="1|1,'fallback'"></param>
+          <edim T="5">2</edim>
+          <FeatureInfoList tag="featureInfo" name="FeatureInfoList" created="1790214241404">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+            <FeatureInfo tag="info" name="&#x65b9;&#x7a0b;&#x89c6;&#x56fe;" created="1790214241404">
+              <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+              <entityComments T="0"></entityComments>
+              <entityAuthor T="0"></entityAuthor>
+              <studyType T="0">/StudyList/std1/StudyFeatureList/stat</studyType>
+            </FeatureInfo>
+          </FeatureInfoList>
+          <ModelEntityTag tag="DomainType" created="1790214241404">
+            <values T="1">1,'DOMAINTYPECONDITION'</values>
+          </ModelEntityTag>
+          <PhysicsFeatureList tag="feature" name="PhysicsFeatureList" created="1790214241404">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+          </PhysicsFeatureList>
+        </PhysicsFeature>
+        <PhysicsFeature op="TemperatureBoundary" tag="temp2" name="&#x6e29;&#x5ea6; 2" created="1790214241554">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <selection T="32" selection="XDLocalSelection" selType="GEOMDIM">
+            <explicit dim="2" hDim="2" geom="/geom/geom1" entities="-6,-1,6"/>
+          </selection>
+          <param T="33" param="constraintOptions" value="1|1,'pointwiseConstraints'"></param>
+          <param T="33" param="constraintType" value="1|1,'symmetricConstraint'"></param>
+          <param T="33" param="constraintMethod" value="1|1,'elemental'"></param>
+          <param T="33" param="T0_src" value="1|1,'userdef'"></param>
+          <param T="33" param="T0" value="1|1,'T_right'"></param>
+          <param T="33" param="constraintGroup" value="1|1,'default'"></param>
+          <param T="33" param="StudyStep" value="1|1,'std1/stat'"></param>
+          <param T="33" param="showPhysicsSymbols" value="1|1,'1'"></param>
+          <param T="33" param="pairContrib" value="1|1,'fallback'"></param>
+          <edim T="5">2</edim>
+          <FeatureInfoList tag="featureInfo" name="FeatureInfoList" created="1790214241554">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+            <FeatureInfo tag="info" name="&#x65b9;&#x7a0b;&#x89c6;&#x56fe;" created="1790214241554">
+              <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+              <entityComments T="0"></entityComments>
+              <entityAuthor T="0"></entityAuthor>
+              <studyType T="0">/StudyList/std1/StudyFeatureList/stat</studyType>
+            </FeatureInfo>
+          </FeatureInfoList>
+          <ModelEntityTag tag="DomainType" created="1790214241554">
+            <values T="1">1,'DOMAINTYPECONDITION'</values>
+          </ModelEntityTag>
+          <PhysicsFeatureList tag="feature" name="PhysicsFeatureList" created="1790214241554">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+          </PhysicsFeatureList>
+        </PhysicsFeature>
+      </PhysicsFeatureList>
+      <PhysicsPropList tag="prop" name="PhysicsPropList" created="1790214237376">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <PhysicsProp tag="PhysicsSymbols" name="&#x542f;&#x7528;&#x7269;&#x7406;&#x7b26;&#x53f7;" created="1790214238055">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <param T="33" param="PhysicsSymbols" value="1|1,'0'"></param>
+          <param T="33" param="physicsSymbolButtons" value="1|1,'0'"></param>
+        </PhysicsProp>
+        <PhysicsProp tag="ShapeProperty" name="&#x5f62;&#x51fd;&#x6570;" created="1790214238071">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <param T="33" param="order_temperature" value="1|1,'2'"></param>
+          <param T="33" param="boundaryFlux_temperature" value="1|1,'1'"></param>
+          <param T="33" param="boundaryFluxSmooth_temperature" value="1|1,'1'"></param>
+          <param T="33" param="order_discontinuousdamagedtissueindicator_disc" value="1|1,'0'"></param>
+          <param T="33" param="boundaryFlux_discontinuousdamagedtissueindicator_disc" value="1|1,'0'"></param>
+          <param T="33" param="boundaryFluxSmooth_discontinuousdamagedtissueindicator_disc" value="1|1,'1'"></param>
+          <param T="33" param="order_continuousdamagedtissueindicator_disc" value="1|1,'1'"></param>
+          <param T="33" param="boundaryFlux_continuousdamagedtissueindicator_disc" value="1|1,'0'"></param>
+          <param T="33" param="boundaryFluxSmooth_continuousdamagedtissueindicator_disc" value="1|1,'1'"></param>
+          <param T="33" param="order_thermaldamageindicator_disc" value="1|1,'0'"></param>
+          <param T="33" param="boundaryFlux_thermaldamageindicator_disc" value="1|1,'0'"></param>
+          <param T="33" param="boundaryFluxSmooth_thermaldamageindicator_disc" value="1|1,'1'"></param>
+          <param T="33" param="order_radiativeintensity_disc" value="1|1,'1'"></param>
+          <param T="33" param="boundaryFlux_radiativeintensity_disc" value="1|1,'0'"></param>
+          <param T="33" param="boundaryFluxSmooth_radiativeintensity_disc" value="1|1,'1'"></param>
+          <param T="33" param="order_incidentradiation_disc" value="1|1,'1'"></param>
+          <param T="33" param="boundaryFlux_incidentradiation_disc" value="1|1,'0'"></param>
+          <param T="33" param="boundaryFluxSmooth_incidentradiation_disc" value="1|1,'1'"></param>
+          <param T="33" param="order_surfaceradiosity_disc" value="1|1,'1'"></param>
+          <param T="33" param="boundaryFlux_surfaceradiosity_disc" value="1|1,'0'"></param>
+          <param T="33" param="boundaryFluxSmooth_surfaceradiosity_disc" value="1|1,'1'"></param>
+          <param T="33" param="hiddenRowLabels" value="7|1,'&#x6e29;&#x5ea6;'|1,'&#x53d7;&#x635f;&#x7ec4;&#x7ec7;&#x6307;&#x793a;&#x5668;'|1,'&#x53d7;&#x635f;&#x7ec4;&#x7ec7;&#x6307;&#x793a;&#x5668;'|1,'&#x4e0d;&#x53ef;&#x9006;&#x8f6c;&#x53d8;&#x6307;&#x793a;&#x5668;'|1,'&#x8f90;&#x5c04;&#x5f3a;&#x5ea6;'|1,'&#x5165;&#x5c04;&#x8f90;&#x5c04;'|1,'&#x8868;&#x9762;&#x8f90;&#x5c04;&#x5ea6;'"></param>
+          <param T="33" param="valueType" value="7|1,'real'|1,'real'|1,'real'|1,'real'|1,'real'|1,'real'|1,'real'"></param>
+          <param T="33" param="frame" value="1|1,'spatial'"></param>
+        </PhysicsProp>
+        <PhysicsProp tag="EquationForm" name="&#x9ad8;&#x7ea7;&#x8bbe;&#x7f6e;" created="1790214238071">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <param T="33" param="form" value="1|1,'Automatic'"></param>
+          <param T="33" param="freq_src" value="1|1,'fromSolver'"></param>
+          <param T="33" param="freq" value="1|1,'1[kHz]'"></param>
+          <param T="33" param="showAllModelInputs" value="1|1,'0'"></param>
+        </PhysicsProp>
+        <PhysicsProp tag="PhysicalModelProperty" name="&#x7269;&#x7406;&#x6a21;&#x578b;" created="1790214238071">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <param T="33" param="outOfPlaneProperty" value="1|1,'1'"></param>
+          <param T="33" param="SurfaceToSurfaceRadiation" value="1|1,'0'"></param>
+          <param T="33" param="IsothermalDomain" value="1|1,'0'"></param>
+          <param T="33" param="HeatTransferInPorousMedia" value="1|1,'0'"></param>
+          <param T="33" param="PorousMatrixModelType" value="1|1,'Standard'"></param>
+          <param T="33" param="isStandalone" value="1|1,'0'"></param>
+          <param T="33" param="isLocalThermalNonEquilibrium" value="1|1,'0'"></param>
+          <param T="33" param="localThermalNonequilibrium" value="1|1,'0'"></param>
+          <param T="33" param="hasDG" value="1|1,'0'"></param>
+          <param T="33" param="BackCompStateT" value="1|1,'2'"></param>
+          <param T="33" param="hasIrreversibleTransformationFeature" value="1|1,'0'"></param>
+          <param T="33" param="hasThermalDamageFeature" value="1|1,'0'"></param>
+          <param T="33" param="Tref_src" value="1|1,'userdef'"></param>
+          <param T="33" param="Tref" value="1|1,'293.15[K]'"></param>
+        </PhysicsProp>
+        <PhysicsProp tag="ConsistentStabilization" name="&#x81ea;&#x6d3d;&#x7a33;&#x5b9a;&#x6027;" created="1790214238087">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <param T="33" param="heatStreamlineDiffusion" value="1|1,'1'"></param>
+          <param T="33" param="heatCrosswindDiffusion" value="1|1,'1'"></param>
+          <param T="33" param="glim" value="1|1,'0.01[K]/ht.helem'"></param>
+          <param T="33" param="CrosswindDiffusionOldFormS" value="1|1,'0'"></param>
+          <param T="33" param="StreamlineDiffusionOldForm" value="1|1,'0'"></param>
+          <param T="33" param="useDynamicSubgridTimescaleHT" value="1|1,'1'"></param>
+        </PhysicsProp>
+        <PhysicsProp tag="InconsistentStabilization" name="&#x975e;&#x81ea;&#x6d3d;&#x7a33;&#x5b9a;&#x6027;" created="1790214238087">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <param T="33" param="HeatIsotropicDiffusion" value="1|1,'0'"></param>
+          <param T="33" param="delidht" value="1|1,'0.25'"></param>
+        </PhysicsProp>
+        <PhysicsProp tag="CommonInterfaceLevelVariablesProperty" name="" created="1790214238087">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+        </PhysicsProp>
+        <PhysicsProp tag="LocalEdgeVariables" name=" 2" created="1790214238088">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+        </PhysicsProp>
+        <PhysicsProp tag="AmbientSettings" name="&#x73af;&#x5883;&#x8bbe;&#x7f6e;" created="1790214238088">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <param T="33" param="T_amb" value="1|1,'293.15[K]'"></param>
+          <param T="33" param="p_amb" value="1|1,'1[atm]'"></param>
+          <param T="33" param="phi_amb" value="1|1,'0'"></param>
+          <param T="33" param="v_amb" value="1|1,'0'"></param>
+          <param T="33" param="P0_amb" value="1|1,'0'"></param>
+          <param T="33" param="Isn_amb" value="1|1,'1000[W/m^2]'"></param>
+          <param T="33" param="Ish_amb" value="1|1,'0[W/m^2]'"></param>
+          <param T="33" param="ashrae2021WeatherStation" value="1|1,'FromList'"></param>
+          <param T="33" param="ashrae2021WmoReference" value="1|1,'010010'"></param>
+          <param T="33" param="ashrae2021LatitudeToNorth" value="1|1,'0'"></param>
+          <param T="33" param="ashrae2021LongitudeToEast" value="1|1,'0'"></param>
+          <param T="33" param="ashrae2021Station" value="1|1,'744860'"></param>
+          <param T="33" param="ashrae2021StationAroundLocation" value="1|1,'744860'"></param>
+          <param T="33" param="ashrae2021StationInfo" value="1|1,'&#x7ad9;&#xff1a;744860'"></param>
+          <param T="33" param="ashrae2021StationInfoFromReference" value="1|1,'&#x7ad9;&#xff1a;010010'"></param>
+          <param T="33" param="ashrae2021StationInfoAroundLocation" value="1|1,'&#x7ad9;&#xff1a;744860'"></param>
+          <param T="33" param="ashrae2021LocationInfo" value="1|1,'&#x4f4d;&#x7f6e;:'"></param>
+          <param T="33" param="ashrae2021LocationInfoFromReference" value="1|1,'&#x4f4d;&#x7f6e;:'"></param>
+          <param T="33" param="ashrae2021LocationInfoAroundLocation" value="1|1,'&#x4f4d;&#x7f6e;:'"></param>
+          <param T="33" param="ashrae2021CoordinatesInfo" value="1|1,'&#x5750;&#x6807;&#xff1a;0&#xb0;N 0&#xb0;W 0m'"></param>
+          <param T="33" param="ashrae2021CoordinatesInfoFromReference" value="1|1,'&#x5750;&#x6807;&#xff1a;0&#xb0;N 0&#xb0;W 0m'"></param>
+          <param T="33" param="ashrae2021CoordinatesInfoAroundLocation" value="1|1,'&#x5750;&#x6807;&#xff1a;0&#xb0;N 0&#xb0;W 0m'"></param>
+          <param T="33" param="ashrae2021Date" value="3|1,'01'|1,'06'|1,'2016'"></param>
+          <param T="33" param="ashrae2021ShortDate" value="2|1,'01'|1,'06'"></param>
+          <param T="33" param="ashrae2021LocalTime" value="3|1,'12'|1,'0'|1,'0'"></param>
+          <param T="33" param="ashrae2021SpecifyYear" value="1|1,'0'"></param>
+          <param T="33" param="ashrae2021UpdateTimeFromSolver" value="1|1,'1'"></param>
+          <param T="33" param="ashrae2021Temperature" value="1|1,'Average'"></param>
+          <param T="33" param="ashrae2021cSigma" value="1|1,'2'"></param>
+          <param T="33" param="ashrae2021DeltaT_amb" value="1|1,'0'"></param>
+          <param T="33" param="ashrae2021DewPointTemperature" value="1|1,'Average'"></param>
+          <param T="33" param="ashrae2021WindSpeed" value="1|1,'Average'"></param>
+          <param T="33" param="ashrae2021PrecipitationRate" value="1|1,'Average'"></param>
+          <param T="33" param="ashrae2017WeatherStation" value="1|1,'FromList'"></param>
+          <param T="33" param="ashrae2017WmoReference" value="1|1,'010010'"></param>
+          <param T="33" param="ashrae2017LatitudeToNorth" value="1|1,'0'"></param>
+          <param T="33" param="ashrae2017LongitudeToEast" value="1|1,'0'"></param>
+          <param T="33" param="ashrae2017Station" value="1|1,'744860'"></param>
+          <param T="33" param="ashrae2017StationAroundLocation" value="1|1,'744860'"></param>
+          <param T="33" param="ashrae2017StationInfo" value="1|1,'&#x7ad9;&#xff1a;744860'"></param>
+          <param T="33" param="ashrae2017StationInfoFromReference" value="1|1,'&#x7ad9;&#xff1a;010010'"></param>
+          <param T="33" param="ashrae2017StationInfoAroundLocation" value="1|1,'&#x7ad9;&#xff1a;744860'"></param>
+          <param T="33" param="ashrae2017LocationInfo" value="1|1,'&#x4f4d;&#x7f6e;:'"></param>
+          <param T="33" param="ashrae2017LocationInfoFromReference" value="1|1,'&#x4f4d;&#x7f6e;:'"></param>
+          <param T="33" param="ashrae2017LocationInfoAroundLocation" value="1|1,'&#x4f4d;&#x7f6e;:'"></param>
+          <param T="33" param="ashrae2017CoordinatesInfo" value="1|1,'&#x5750;&#x6807;&#xff1a;0&#xb0;N 0&#xb0;W 0m'"></param>
+          <param T="33" param="ashrae2017CoordinatesInfoFromReference" value="1|1,'&#x5750;&#x6807;&#xff1a;0&#xb0;N 0&#xb0;W 0m'"></param>
+          <param T="33" param="ashrae2017CoordinatesInfoAroundLocation" value="1|1,'&#x5750;&#x6807;&#xff1a;0&#xb0;N 0&#xb0;W 0m'"></param>
+          <param T="33" param="ashrae2017Date" value="3|1,'01'|1,'06'|1,'2016'"></param>
+          <param T="33" param="ashrae2017ShortDate" value="2|1,'01'|1,'06'"></param>
+          <param T="33" param="ashrae2017LocalTime" value="3|1,'12'|1,'0'|1,'0'"></param>
+          <param T="33" param="ashrae2017SpecifyYear" value="1|1,'0'"></param>
+          <param T="33" param="ashrae2017UpdateTimeFromSolver" value="1|1,'1'"></param>
+          <param T="33" param="ashrae2017Temperature" value="1|1,'Average'"></param>
+          <param T="33" param="ashrae2017cSigma" value="1|1,'2'"></param>
+          <param T="33" param="ashrae2017DeltaT_amb" value="1|1,'0'"></param>
+          <param T="33" param="ashrae2017DewPointTemperature" value="1|1,'Average'"></param>
+          <param T="33" param="ashrae2017WindSpeed" value="1|1,'Average'"></param>
+          <param T="33" param="ashrae2017PrecipitationRate" value="1|1,'Average'"></param>
+          <param T="33" param="WeatherStation" value="1|1,'FromList'"></param>
+          <param T="33" param="WmoReference" value="1|1,'010010'"></param>
+          <param T="33" param="LatitudeToNorth" value="1|1,'0'"></param>
+          <param T="33" param="LongitudeToEast" value="1|1,'0'"></param>
+          <param T="33" param="Station" value="1|1,'744860'"></param>
+          <param T="33" param="StationAroundLocation" value="1|1,'744860'"></param>
+          <param T="33" param="StationInfo" value="1|1,'&#x7ad9;&#xff1a;744860'"></param>
+          <param T="33" param="StationInfoFromReference" value="1|1,'&#x7ad9;&#xff1a;010010'"></param>
+          <param T="33" param="StationInfoAroundLocation" value="1|1,'&#x7ad9;&#xff1a;744860'"></param>
+          <param T="33" param="LocationInfo" value="1|1,'&#x4f4d;&#x7f6e;:'"></param>
+          <param T="33" param="LocationInfoFromReference" value="1|1,'&#x4f4d;&#x7f6e;:'"></param>
+          <param T="33" param="LocationInfoAroundLocation" value="1|1,'&#x4f4d;&#x7f6e;:'"></param>
+          <param T="33" param="CoordinatesInfo" value="1|1,'&#x5750;&#x6807;&#xff1a;0&#xb0;N 0&#xb0;W 0m'"></param>
+          <param T="33" param="CoordinatesInfoFromReference" value="1|1,'&#x5750;&#x6807;&#xff1a;0&#xb0;N 0&#xb0;W 0m'"></param>
+          <param T="33" param="CoordinatesInfoAroundLocation" value="1|1,'&#x5750;&#x6807;&#xff1a;0&#xb0;N 0&#xb0;W 0m'"></param>
+          <param T="33" param="Date" value="3|1,'01'|1,'06'|1,'2016'"></param>
+          <param T="33" param="ShortDate" value="2|1,'01'|1,'06'"></param>
+          <param T="33" param="LocalTime" value="3|1,'12'|1,'0'|1,'0'"></param>
+          <param T="33" param="SpecifyYear" value="1|1,'0'"></param>
+          <param T="33" param="UpdateTimeFromSolver" value="1|1,'1'"></param>
+          <param T="33" param="Temperature" value="1|1,'Average'"></param>
+          <param T="33" param="cSigma" value="1|1,'2'"></param>
+          <param T="33" param="DeltaT_amb" value="1|1,'0'"></param>
+          <param T="33" param="DewPointTemperature" value="1|1,'Average'"></param>
+          <param T="33" param="WindSpeed" value="1|1,'Average'"></param>
+          <param T="33" param="PrecipitationRate" value="1|1,'Average'"></param>
+          <param T="33" param="AmbientData" value="1|1,'UserDef'"></param>
+        </PhysicsProp>
+        <PhysicsProp tag="ParticipatingMediaSettingsProperty" name="&#x53c2;&#x4e0e;&#x4ecb;&#x8d28;&#x8bbe;&#x7f6e;" created="1790214238088">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <param T="33" param="RadiationDiscretizationMethod" value="1|1,'DiscreteOrdinateMethod'"></param>
+          <param T="33" param="nrad" value="1|1,'1'"></param>
+          <param T="33" param="PerfIndex" value="1|1,'0.4'"></param>
+          <param T="33" param="DiscreteOrdinatesMethod" value="1|1,'4'"></param>
+          <param T="33" param="DiscretizationLevelDOM" value="1|1,'1'"></param>
+          <param T="33" param="DiscretizationLevelP1" value="1|1,'1'"></param>
+        </PhysicsProp>
+        <PhysicsProp tag="ObsoleteProperty" name="ObsoleteProperty" created="1790214238093">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <param T="33" param="RadiationInParticipatingMedia" value="1|1,'0'"></param>
+        </PhysicsProp>
+        <PhysicsProp tag="RadiationSettings" name="&#x8f90;&#x5c04;&#x8bbe;&#x7f6e;" created="1790214238093">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <param T="33" param="useRadiationGroups" value="1|1,'0'"></param>
+          <param T="33" param="nS2S" value="1|1,'1'"></param>
+          <param T="33" param="radiationMethod" value="1|1,'hemicube'"></param>
+          <param T="33" param="radiationSectors" value="1|1,'128'"></param>
+          <param T="33" param="radiationIntegrationOrder" value="1|1,'4'"></param>
+          <param T="33" param="radiationResolution" value="1|1,'256'"></param>
+          <param T="33" param="useAdaption" value="1|1,'0'"></param>
+          <param T="33" param="radiationToleranceHemicube" value="1|1,'1e-3'"></param>
+          <param T="33" param="radiationResolutionRayShooting" value="1|1,'8'"></param>
+          <param T="33" param="radiationTolerance" value="1|1,'1e-3'"></param>
+          <param T="33" param="radiationAdaptiveDepth" value="1|1,'3'"></param>
+          <param T="33" param="maxBounce" value="1|1,'1000'"></param>
+          <param T="33" param="azimuthalDiscretization" value="1|1,'100'"></param>
+          <param T="33" param="angularDependentProperties" value="1|1,'full'"></param>
+          <param T="33" param="functionResolution" value="1|1,'100'"></param>
+          <param T="33" param="destgporder" value="1|1,'0'"></param>
+          <param T="33" param="useForwardRayShooting" value="1|1,'0'"></param>
+          <param T="33" param="numberOfForwardRays" value="1|1,'100000'"></param>
+          <param T="33" param="wavelengthDependenceOfSurfaceProperties" value="1|1,'Constant'"></param>
+          <param T="33" param="wavelengthunit" value="1|1,'um'"></param>
+          <param T="33" param="lambdacst" value="0"></param>
+          <param T="33" param="lambdasolamb" value="1|1,'2.5[um]'"></param>
+          <param T="33" param="useUserDefinedLambdaInf" value="1|1,'0'"></param>
+          <param T="33" param="lambdainf" value="1|1,'1[mm]'"></param>
+          <param T="33" param="lambda_l" value="1|1,'0'"></param>
+          <param T="33" param="lambda_r" value="1|1,'2.5'"></param>
+          <param T="33" param="opaque" value="1|1,'ht.dfltopaque'"></param>
+          <param T="33" param="failonbackside" value="1|1,'1'"></param>
+          <param T="33" param="storeViewFactors" value="1|1,'0'"></param>
+          <param T="33" param="viewFactorsUpdateExpression" value="1|1,'0'"></param>
+          <param T="33" param="viewFactorsUpdateTolerance" value="1|1,'-1'"></param>
+          <param T="33" param="viewFactorsUpdateTime" value="1|1,'0'"></param>
+          <param T="33" param="viewFactorUpdateThreshold" value="1|1,'everyIteration'"></param>
+          <param T="33" param="highOrderMeshElements" value="1|1,'0'"></param>
+          <param T="33" param="lumpedViewFactor" value="1|1,'0'"></param>
+        </PhysicsProp>
+        <PhysicsProp tag="equationDisplayHTSolids" name=" 3" created="1790214238104">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+        </PhysicsProp>
+        <PhysicsProp tag="DamageIntegralAnalysisDiscretization" name="&#x635f;&#x4f24;&#x79ef;&#x5206;&#x5206;&#x6790;&#x79bb;&#x6563;&#x5316;" created="1790214238104">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <param T="33" param="DamagedTissueShapeFunction" value="1|1,'DiscontinuousLagrange'"></param>
+        </PhysicsProp>
+        <PhysicsProp tag="PropertyLinks" name=" 4" created="1790214238104">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+        </PhysicsProp>
+        <PhysicsProp tag="StudyStep" name="&#x663e;&#x793a;&#x5047;&#x8bbe;&#x65b9;&#x7a0b;" created="1790214238109">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <param T="33" param="StudyStep" value="1|1,'std1/stat'"></param>
+        </PhysicsProp>
+      </PhysicsPropList>
+    </Physics>
+  </PhysicsList>
+  <GeomList tag="geom" name="&#x51e0;&#x4f55;&#x96f6;&#x4ef6;" created="1790214234503">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+    <GeomSequence tag="geom1" name="&#x51e0;&#x4f55; 1" created="1790214236827">
+      <entityFlags T="51">NODEACTIVATE</entityFlags>
+      <storedParent T="50">/modelNode/comp1</storedParent>
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+      <assocID T="6">1,0,-1701273036,-1646810484</assocID>
+      <angularUnit T="0">deg</angularUnit>
+      <assocMaps T="7">{0,0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0},{0,-1}</assocMaps>
+      <inverseAssocMaps T="7">{0},{0},{0},{0}</inverseAssocMaps>
+      <current T="50">/geom/geom1/feature/blk1</current>
+      <externallySet T="3">false</externallySet>
+      <geometryFrame T="50">/frame/material1</geometryFrame>
+      <geomInfo T="50">/geom/geom1/geomnative</geomInfo>
+      <geomrep T="0">cadps</geomrep>
+      <lastBuiltFeature T="50">/geom/geom1/feature/fin</lastBuiltFeature>
+      <lengthUnit T="0">m</lengthUnit>
+      <materialFrame T="50">/frame/material1</materialFrame>
+      <meshFrame T="50">/frame/material1</meshFrame>
+      <sdim T="5">3</sdim>
+      <spatialFrame T="50">/frame/material1</spatialFrame>
+      <xmeshIndex T="5">1</xmeshIndex>
+      <sequenceType T="103">STANDARD</sequenceType>
+      <designBooleans T="3">true</designBooleans>
+      <finGeomBuilt T="3">true</finGeomBuilt>
+      <autoAnalyze T="3">true</autoAnalyze>
+      <GeomNative tag="geomnative" created="1790214237309">
+        <spaceDim T="5">3</spaceDim>
+        <numEntities T="6">8,12,6,1</numEntities>
+        <numEntitiesMesh T="6">8,12,6,1</numEntitiesMesh>
+        <numFiniteVoids T="5">0</numFiniteVoids>
+        <existing T="3">true</existing>
+        <cad T="3">true</cad>
+        <voidsLabeled T="3">true</voidsLabeled>
+        <geomScale T="12">0.05</geomScale>
+        <geomTol T="12">1.0E-10</geomTol>
+        <boundingBox T="13">0.0,0.05,0.0,0.02,0.0,0.01</boundingBox>
+        <type T="0">solid</type>
+        <geom T="52" class="GEOMETRY" resource="geometry1.mphbin" id="2853264ebd1d4bc" fileid="4cdc9b63bee68107"/>
+        <hasCadRep T="3">true</hasCadRep>
+      </GeomNative>
+      <GeomFeatureList tag="feature" name="GeomFeatureList" created="1790214236938">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <GeomFeature op="Block" tag="blk1" name="&#x957f;&#x65b9;&#x4f53; 1" created="1790214237197">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <key T="0">true[deg]typesolidlx0.05ly0.02lz0.01size0.05|0.02|0.01|basecornerpos0.0|0.0|0.0|x0.0y0.0z0.0axis0.0|0.0|1.0|axistypezrot0.0workplanesrcthisthisworkplanexyplanexyplanelayergeomrepcadpslayerleftofflayerrightofflayerfrontofflayerbackofflayerbottomonlayertopofflayerimagelayers_image.pnggeomattrgeomattrlevel</key>
+          <id T="5">2</id>
+          <status T="101">BUILT</status>
+          <buildStatus T="101">BUILT</buildStatus>
+          <propertyValue T="30" value="0.05[m]" name="p:lx"></propertyValue>
+          <propertyValue T="30" value="0.02[m]" name="p:ly"></propertyValue>
+          <propertyValue T="30" value="0.01[m]" name="p:lz"></propertyValue>
+          <propertyValue T="30" valueMatrix="1|3,'0.05[m]','0.02[m]','0.01[m]'" name="p:size"></propertyValue>
+          <propertyValue T="30" value="0 0 0" valueMatrix="1|3,'0','0','0'" name="p:pos"></propertyValue>
+          <propertyValue T="30" value="0 0 1" valueMatrix="1|3,'0','0','1'" name="p:axis"></propertyValue>
+          <propertyValue T="30" value="0 0 1" valueMatrix="1|3,'0','0','1'" name="p:ax3"></propertyValue>
+          <propertyValue T="30" value="0 0" valueMatrix="1|2,'0','0'" name="p:ax2"></propertyValue>
+          <propertyValue T="30" value="this" name="p:workplanesrc" CompositeIndex="1"></propertyValue>
+          <propertyValue T="30" value="xyplane" name="p:workplane" CompositeIndex="1"></propertyValue>
+          <propertyValue T="30" value="1" name="p:buildcount"></propertyValue>
+          <propertyValue T="30" value="cadps" name="p:geomrep"></propertyValue>
+          <propertyValue T="30" value="none" name="p:contributeto" ReferenceContainerList="/geom/geom1/selection" CompositeIndex="1"></propertyValue>
+          <propertyValue T="30" value="50" name="p:buildtime"></propertyValue>
+          <propertyValue T="30" value="on" name="p:buildinfox"></propertyValue>
+          <propertyValue T="30" value="COMSOL 6.3.0.290 (win64)|2026-09-24T09:43:57.288781" name="p:buildinfo"></propertyValue>
+          <assocConfig T="9">[({0,2,4,6}),({1,3,5,7}),({0,1,2,3}),({4,5,6,7}),({0,1,4,5}),({2,3,6,7})],[({8,10}),({3,7}),({9,11}),({1,5}),({3,1}),({0,2}),({7,5}),({4,6}),({8,9}),({0,4}),({10,11}),({2,6})],[({1}),({4}),({0}),({3}),({2}),({5})],[(),(),(),(),(),(),({1})]</assocConfig>
+          <cacheTag T="11">6242498145089068141</cacheTag>
+          <consumers T="3">true</consumers>
+          <NodeDefaultValues>27,'p:type','p:base','p:x','p:y','p:z','p:axistype','p:rot','p:extrainputkey','p:layername','p:layer','p:layerold','p:layernameold','p:layerleft','p:layerright','p:layerfront','p:layerback','p:layerbottom','p:layertop','p:layerimage','p:selresult','p:selresultshow','p:color','p:customcolor','p:sellayer','p:sellayershow','p:geomattr','p:geomattrlevel'</NodeDefaultValues>
+          <GeomObjectList tag="geom" created="1790214237203">
+            <GeomObject tag="blk1(1)" name="Block" created="1790214237288">
+              <entityFlags T="51">NORETAG</entityFlags>
+              <entityComments T="0"></entityComments>
+              <entityAuthor T="0"></entityAuthor>
+              <assocID T="6">2,0,1453444861,1752576480</assocID>
+              <GeomNative tag="geomnative" created="1790214237288">
+                <spaceDim T="5">3</spaceDim>
+                <numEntities T="6">8,12,6,1</numEntities>
+                <numEntitiesMesh T="6">8,12,6,1</numEntitiesMesh>
+                <numFiniteVoids T="5">0</numFiniteVoids>
+                <existing T="3">true</existing>
+                <cad T="3">true</cad>
+                <voidsLabeled T="3">true</voidsLabeled>
+                <geomScale T="12">0.05</geomScale>
+                <geomTol T="12">1.0E-10</geomTol>
+                <boundingBox T="13">0.0,0.05,0.0,0.02,0.0,0.01</boundingBox>
+                <type T="0">solid</type>
+                <geom T="52" class="GEOMETRY" resource="geometry2.mphbin" id="e9a37089c0bc1899" fileid="6881d81185bd6af1"/>
+                <hasCadRep T="3">true</hasCadRep>
+              </GeomNative>
+            </GeomObject>
+          </GeomObjectList>
+          <GeomFeatureList tag="feature" name="GeomFeatureList" created="1790214237203">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+          </GeomFeatureList>
+        </GeomFeature>
+        <GeomFeature op="Finalize" tag="fin" name="&#x5f62;&#x6210;&#x8054;&#x5408;&#x4f53;" created="1790214236954">
+          <entityFlags T="51">NOREMOVE|NORETAG|NODEACTIVATE</entityFlags>
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <key T="0">true[deg]actionuniondesignboolonrepairtoltypeautogeomrepcadps</key>
+          <id T="5">1</id>
+          <status T="101">BUILT</status>
+          <buildStatus T="101">BUILT</buildStatus>
+          <propertyValue T="30" value="on" name="p:designbool"></propertyValue>
+          <propertyValue T="30" value="1.0E-10" name="p:repairtol"></propertyValue>
+          <propertyValue T="30" value="5.0E-12" name="p:absrepairtol"></propertyValue>
+          <propertyValue T="30" value="cadps" name="p:geomrep"></propertyValue>
+          <propertyValue T="30" valueMatrix="1|2,'&#x201c;1 &#x4e2a;&#x5b9e;&#x4f53;&#x5bf9;&#x8c61;&#x201d;&#x5f62;&#x6210;&#x7684;&#x8054;&#x5408;&#x4f53;&#x3002;','&#x8054;&#x5408;&#x4f53;&#x5305;&#x542b; 1 &#x4e2a;&#x57df;&#x3001;6 &#x4e2a;&#x8fb9;&#x754c;&#x3001;12 &#x6761;&#x8fb9;&#x548c; 8 &#x4e2a;&#x9876;&#x70b9;&#x3002;'" name="p:buildmessage"></propertyValue>
+          <propertyValue T="30" value="6" name="p:buildtime"></propertyValue>
+          <propertyValue T="30" value="on" name="p:buildinfox"></propertyValue>
+          <propertyValue T="30" value="COMSOL 6.3.0.290 (win64)|2026-09-24T09:43:57.307242300" name="p:buildinfo"></propertyValue>
+          <cacheTag T="11">-7306912049251908966</cacheTag>
+          <consumers T="3">true</consumers>
+          <NodeDefaultValues>7,'p:action','p:imprint','p:createpairs','p:splitpairs','p:pairtype','p:frame','p:repairtoltype'</NodeDefaultValues>
+          <GeomObjectList tag="geom" created="1790214236971">
+            <GeomObject tag="fin(1)" name="Form_union/assembly" created="1790214237304">
+              <entityFlags T="51">NORETAG</entityFlags>
+              <entityComments T="0"></entityComments>
+              <entityAuthor T="0"></entityAuthor>
+              <assocID T="6">1,0,-1701273036,-1646810484</assocID>
+              <GeomNative tag="geomnative" created="1790214237304">
+                <spaceDim T="5">3</spaceDim>
+                <numEntities T="6">8,12,6,1</numEntities>
+                <numEntitiesMesh T="6">8,12,6,1</numEntitiesMesh>
+                <numFiniteVoids T="5">0</numFiniteVoids>
+                <existing T="3">true</existing>
+                <cad T="3">true</cad>
+                <voidsLabeled T="3">true</voidsLabeled>
+                <geomScale T="12">0.05</geomScale>
+                <geomTol T="12">1.0E-10</geomTol>
+                <boundingBox T="13">0.0,0.05,0.0,0.02,0.0,0.01</boundingBox>
+                <type T="0">solid</type>
+                <geom T="52" class="GEOMETRY" resource="geometry1.mphbin" id="2853264ebd1d4bc" fileid="4cdc9b63bee68107"/>
+                <hasCadRep T="3">true</hasCadRep>
+              </GeomNative>
+            </GeomObject>
+          </GeomObjectList>
+          <GeomFeatureList tag="feature" name="GeomFeatureList" created="1790214236975">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+          </GeomFeatureList>
+        </GeomFeature>
+      </GeomFeatureList>
+      <GeomObjectSelectionFeatureList tag="selection" name="&#x7d2f;&#x79ef;&#x9009;&#x62e9;" created="1790214236975">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+      </GeomObjectSelectionFeatureList>
+      <NodeGroupList tag="nodeGroup" name="NodeGroupList" created="1790214236988">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+      </NodeGroupList>
+      <GeomAttributeList tag="attribute" name="&#x5c5e;&#x6027;" created="1790214237005">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <GeomAttribute op="Construction" tag="construction" name="Construction_geometry" created="1790214237021">
+          <entityFlags T="51">NOREMOVE|NORETAG|NODEACTIVATE|HIDDEN|AUTOGENERATED</entityFlags>
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+        </GeomAttribute>
+      </GeomAttributeList>
+      <GeometryAnalysisFeature op="Analysis" tag="cleanup" name="&#x6e05;&#x7406;&#x65e5;&#x5fd7;" created="1790214241921">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <NodeDefaultValues>1,'p:detailsize'</NodeDefaultValues>
+        <GeometryAnalysisFeature op="Size" tag="detail" name="&#x51e0;&#x4f55;&#x5206;&#x6790;&#xff0c;&#x7ec6;&#x8282;&#x5927;&#x5c0f;" created="1790214241921">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+        </GeometryAnalysisFeature>
+      </GeometryAnalysisFeature>
+    </GeomSequence>
+  </GeomList>
+  <FunctionFeatureList tag="func" name="&#x51fd;&#x6570;" created="1790214234755">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+  </FunctionFeatureList>
+  <ExprList tag="expr" name="&#x53d8;&#x91cf;" created="1790214234771">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+  </ExprList>
+  <CplList tag="cpl" name="CplList" created="1790214234771">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+  </CplList>
+  <FrameList tag="frame" name="FrameList" created="1790214234771">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+    <Frame tag="material1" created="1790214236886">
+      <geom T="50">/geom/geom1</geom>
+      <FeatureInfoList tag="featureInfo" name="FeatureInfoList" created="1790214236938">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <FeatureInfo tag="info" name="&#x65b9;&#x7a0b;&#x89c6;&#x56fe;" created="1790214236938">
+          <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <studyType T="0">/StudyList/std1/StudyFeatureList/stat</studyType>
+        </FeatureInfo>
+      </FeatureInfoList>
+      <FrameFeatureList tag="sshape" name="FrameFeatureList" created="1790214236938">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+      </FrameFeatureList>
+    </Frame>
+  </FrameList>
+  <SelectionList tag="selection" name="SelectionList" created="1790214234788">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+  </SelectionList>
+  <PairList tag="pair" name="PairList" created="1790214234788">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+  </PairList>
+  <ExtraDimList tag="extraDim" name="ExtraDimList" created="1790214234788">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+  </ExtraDimList>
+  <ViewList tag="view" name="&#x89c6;&#x56fe;" created="1790214234788">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+    <globalCurrent T="0">/view/view1</globalCurrent>
+    <View op="ModelView3D" tag="view1" name="&#x89c6;&#x56fe; 1" created="1790214237038">
+      <entityFlags T="51">NODEACTIVATE</entityFlags>
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+      <propertyValue T="30" valueMatrix="1|3,'1','0','0'" name="p:customclipintersectionhighlightcolor"></propertyValue>
+      <propertyValue T="30" valueMatrix="1|3,'1','0','0'" name="p:customclipcappedfaceshighlightoverlappingdomainscolor"></propertyValue>
+      <geom T="50">/geom/geom1</geom>
+      <sdim T="5">3</sdim>
+      <current T="3">true</current>
+      <isnew T="3">true</isnew>
+      <NodeDefaultValues>128,'p:renderwireframe','p:showlabels','p:showDirections','p:showgrid','p:rendermesh','p:showaxisorientation','p:showunits','p:plotgroupunits','p:locked','p:rotcenlocked','p:istemporary','p:scenelight','p:totlightintensity','p:usediffuse','p:usespecular','p:globalambient','p:totambient','p:ambientcolor','p:customambientcolor','p:ssao','p:ssaoradiustype','p:ssaoradiusrelative','p:ssaoradiusexplicit','p:ssaomagnitude','p:ssaosqueeze','p:ssaopreset','p:ssaonsamples','p:ssaoroughness','p:ssaokernelrotationstexturewidth','p:ssaosmooth','p:ssaonormalawaresmoothing','p:ssaoresolution','p:shadowmapping','p:shadowmappingsoftness','p:shadowmappingstrength','p:shadowmappingpreset','p:shadowmappingnumberofoccludersamples','p:shadowmappingnumberofsamples','p:shadowmappingresolution','p:shadowmappingmultisamplingeverywhere','p:shadowmappinglimitlightviewfrustums','p:shadowmappingaccuratedepthcomparison','p:shadowmappingnormalawaresmoothing','p:shadowmappingbiassettings','p:shadowmappingconstantdepthbias','p:shadowmappingslopedepthbias','p:shadowmappingnormaloffsetbias','p:flooreffect','p:flooreffectoriginsettings','p:flooreffectshoworigin','p:flooreffectorigin','p:flooreffectorigin_vector_method','p:flooreffectorigin_vector_start','p:flooreffectorigin_vector_stop','p:flooreffectorigin_vector_step','p:flooreffectorigin_vector_numvalues','p:flooreffectorigin_vector_function','p:flooreffectorigin_vector_interval','p:flooreffectorigin_vector_freqperdec','p:flooreffectoffset','p:flooreffectshownormalsettings','p:flooreffectnormalsettings','p:flooreffectshownormal','p:flooreffectnormalpreset','p:flooreffectnormal','p:flooreffectnormal_vector_method','p:flooreffectnormal_vector_start','p:flooreffectnormal_vector_stop','p:flooreffectnormal_vector_step','p:flooreffectnormal_vector_numvalues','p:flooreffectnormal_vector_function','p:flooreffectnormal_vector_interval','p:flooreffectnormal_vector_freqperdec','p:flooreffectshowangle','p:flooreffectangle','p:flooreffectambientocclusion','p:flooreffectshadow','p:flooreffectshadowblur','p:flooreffecttransparency','p:displayoutput','p:displayoutputpreset','p:displayoutputtonemap','p:displayoutputgamma','p:displayoutputexposure','p:displayoutputcontrast','p:displayoutputsaturation','p:displayoutputvibrance','p:displayoutputhue','p:displayoutputbrightness','p:environmentmap','p:skydirection','p:skyrotation','p:environmentreflections','p:skybox','p:skyboxblurriness','p:skyboxblend','p:skyboxprojection','p:skyboxfov','p:rotateenvironment','p:transparency','p:transparencylevel','p:uniformblending','p:uniformblendinglevel','p:showselection','p:showmaterial','p:clippingactive','p:clipfaces','p:clipedges','p:clippoints','p:clipprimaryhovereffect','p:clipsecondaryhovereffect','p:cliphighlightintersection','p:clipintersectionhighlightcolor','p:clipapplyclipping','p:clipshowframes','p:clipshowgizmos','p:clipshowcappedfaces','p:clipcappedfacescolorize','p:clipcappedfacescolorizeper','p:clipcappedfaceshighlightoverlappingdomains','p:clipcappedfaceshighlightoverlappingdomainscolor','p:clipcappedfacestransparencyenabled','p:clipcappedfacestransparency','p:hidestatus','p:isnew','p:postviewkey','p:workplaneclip','p:workplaneshowgizmo'</NodeDefaultValues>
+      <ViewFeatureList tag="feature" name="ViewFeatureList" created="1790214237071">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <ViewFeature op="DirectionalLight" tag="lgt1" name="&#x5b9a;&#x5411;&#x5149;&#x6e90; 1" created="1790214237071">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <propertyValue T="30" valueMatrix="1|3,'4','3.7','-5'" name="p:lightdirection"></propertyValue>
+          <propertyValue T="30" value="0.8" name="p:intensity"></propertyValue>
+          <propertyValue T="30" value="on" name="p:cameracoord"></propertyValue>
+          <NodeDefaultValues>7,'p:specular','p:color','p:customcolor','p:showmarker','p:castlight','p:castshadows','p:castshadowsonfloor'</NodeDefaultValues>
+          <ViewFeatureList tag="feature" name="ViewFeatureList" created="1790214237071">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+          </ViewFeatureList>
+        </ViewFeature>
+        <ViewFeature op="DirectionalLight" tag="lgt2" name="&#x5b9a;&#x5411;&#x5149;&#x6e90; 2" created="1790214237071">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <propertyValue T="30" valueMatrix="1|3,'-4','-2','-1'" name="p:lightdirection"></propertyValue>
+          <propertyValue T="30" value="0.4" name="p:intensity"></propertyValue>
+          <propertyValue T="30" value="on" name="p:cameracoord"></propertyValue>
+          <NodeDefaultValues>7,'p:specular','p:color','p:customcolor','p:showmarker','p:castlight','p:castshadows','p:castshadowsonfloor'</NodeDefaultValues>
+          <ViewFeatureList tag="feature" name="ViewFeatureList" created="1790214237071">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+          </ViewFeatureList>
+        </ViewFeature>
+        <ViewFeature op="DirectionalLight" tag="lgt3" name="&#x5b9a;&#x5411;&#x5149;&#x6e90; 3" created="1790214237071">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <propertyValue T="30" valueMatrix="1|3,'0.5','-5','4'" name="p:lightdirection"></propertyValue>
+          <propertyValue T="30" value="0.55" name="p:intensity"></propertyValue>
+          <propertyValue T="30" value="on" name="p:cameracoord"></propertyValue>
+          <propertyValue T="30" value="on" name="p:castshadowsonfloor"></propertyValue>
+          <NodeDefaultValues>6,'p:specular','p:color','p:customcolor','p:showmarker','p:castlight','p:castshadows'</NodeDefaultValues>
+          <ViewFeatureList tag="feature" name="ViewFeatureList" created="1790214237071">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+          </ViewFeatureList>
+        </ViewFeature>
+      </ViewFeatureList>
+      <ViewFeature op="Camera" tag="camera" name="&#x76f8;&#x673a;" created="1790214237071">
+        <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <propertyValue T="30" value="" valueMatrix="1|0" name="p:xextra"></propertyValue>
+        <propertyValue T="30" value="" valueMatrix="1|0" name="p:yextra"></propertyValue>
+        <propertyValue T="30" value="" valueMatrix="1|0" name="p:zextra"></propertyValue>
+        <NodeDefaultValues>47,'p:projection','p:orthoscale','p:zoomanglefull','p:viewscaletype','p:autocontext','p:autoupdate','p:xweight','p:yweight','p:zweight','p:xscale','p:yscale','p:zscale','p:position','p:target','p:up','p:rotationpoint','p:viewoffset','p:manualgrid','p:xspacing','p:yspacing','p:zspacing','p:xextra_vector_method','p:xextra_vector_start','p:xextra_vector_stop','p:xextra_vector_step','p:xextra_vector_numvalues','p:xextra_vector_function','p:xextra_vector_interval','p:xextra_vector_freqperdec','p:yextra_vector_method','p:yextra_vector_start','p:yextra_vector_stop','p:yextra_vector_step','p:yextra_vector_numvalues','p:yextra_vector_function','p:yextra_vector_interval','p:yextra_vector_freqperdec','p:zextra_vector_method','p:zextra_vector_start','p:zextra_vector_stop','p:zextra_vector_step','p:zextra_vector_numvalues','p:zextra_vector_function','p:zextra_vector_interval','p:zextra_vector_freqperdec','p:canvassizedip','p:renderareasizedip'</NodeDefaultValues>
+      </ViewFeature>
+      <ViewFeature op="Axis3D" tag="axis" name="&#x8f74;" created="1790214237071">
+        <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <propertyValue T="30" value="" valueMatrix="1|0" name="p:xextra"></propertyValue>
+        <propertyValue T="30" value="" valueMatrix="1|0" name="p:yextra"></propertyValue>
+        <propertyValue T="30" value="" valueMatrix="1|0" name="p:zextra"></propertyValue>
+        <NodeDefaultValues>45,'p:xmin','p:xmax','p:ymin','p:ymax','p:zmin','p:zmax','p:viewscaletype','p:autocontext','p:autoupdate','p:xweight','p:yweight','p:zweight','p:xscale','p:yscale','p:zscale','p:manualgrid','p:xspacing','p:yspacing','p:zspacing','p:xextra_vector_method','p:xextra_vector_start','p:xextra_vector_stop','p:xextra_vector_step','p:xextra_vector_numvalues','p:xextra_vector_function','p:xextra_vector_interval','p:xextra_vector_freqperdec','p:yextra_vector_method','p:yextra_vector_start','p:yextra_vector_stop','p:yextra_vector_step','p:yextra_vector_numvalues','p:yextra_vector_function','p:yextra_vector_interval','p:yextra_vector_freqperdec','p:zextra_vector_method','p:zextra_vector_start','p:zextra_vector_stop','p:zextra_vector_step','p:zextra_vector_numvalues','p:zextra_vector_function','p:zextra_vector_interval','p:zextra_vector_freqperdec','p:canvassizedip','p:renderareasizedip'</NodeDefaultValues>
+      </ViewFeature>
+      <ViewFeatureList tag="clip" name="ViewFeatureList" created="1790214237088">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+      </ViewFeatureList>
+      <HideDrawList tag="hideObjects" name="HideDrawList" created="1790214237088">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+      </HideDrawList>
+      <HideGeomList tag="hideEntities" name="HideGeomList" created="1790214237088">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+      </HideGeomList>
+      <HideMeshList tag="hideMesh" name="HideMeshList" created="1790214237088">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+      </HideMeshList>
+    </View>
+  </ViewList>
+  <CommonList tag="common" name="&#x5b9a;&#x4e49;" created="1790214234804">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+    <CommonFeature op="CommonInputDefault" tag="cminpt" name="&#x9ed8;&#x8ba4;&#x6a21;&#x578b;&#x8f93;&#x5165;" created="1790214234904">
+      <entityFlags T="51">NOREMOVE|NORETAG</entityFlags>
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+      <NodeDefaultValues>4,'p:quantity','p:showOnlyNeeded','p:minpVisibility','p:modified'</NodeDefaultValues>
+      <CommonList tag="feature" name="&#x5b9a;&#x4e49;" created="1790214234941">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+      </CommonList>
+    </CommonFeature>
+  </CommonList>
+  <MultiphysicsCouplingList tag="multiphysics" name="&#x591a;&#x7269;&#x7406;&#x573a;" created="1790214234929">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+  </MultiphysicsCouplingList>
+  <MaterialList tag="material" name="&#x6750;&#x6599;" created="1790214234929">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+    <Material op="Common" tag="mat1" name="&#x6750;&#x6599; 1" created="1790214241654">
+      <storedParent T="50">/modelNode/comp1</storedParent>
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+      <selection T="32" selection="XDLocalSelection" flags="16" selType="GEOMDIM">
+        <explicit dim="3" hDim="3" geom="/geom/geom1"/>
+      </selection>
+      <propertyValue T="30" name="p:sys" Reference="/coordsys/sys1"></propertyValue>
+      <propertyValue T="30" value="custom" name="p:specular"></propertyValue>
+      <propertyValue T="30" value="1" name="p:noisefreq"></propertyValue>
+      <propertyValue T="30" value="1" name="p:colornoisefrequency"></propertyValue>
+      <propertyValue T="30" value="custom" name="p:noisecolor"></propertyValue>
+      <propertyValue T="30" value="0" name="p:noisecolorblend"></propertyValue>
+      <propertyValue T="30" value="cooktorrance" name="p:lighting"></propertyValue>
+      <propertyValue T="30" value="0.2" name="p:fresnel"></propertyValue>
+      <propertyValue T="30" value="0.45" name="p:roughness"></propertyValue>
+      <propertyValue T="30" value="0.1" name="p:diffusewrap"></propertyValue>
+      <propertyValue T="30" value="0.4" name="p:reflectance"></propertyValue>
+      <identifier T="0">mat1</identifier>
+      <NodeDefaultValues>50,'p:bndType','p:thickness','p:middlePlane','p:offset','p:hiddenCardSwitcher','p:stack','p:stackAlign','p:orientLine','p:orientDist','p:widthRatio','p:showLabels','p:family','p:customize','p:color','p:customcolor','p:customspecular','p:diffuse','p:customdiffuse','p:ambient','p:customambient','p:basis','p:scale','p:origin','p:basisx','p:specifybasisy','p:basisy','p:noise','p:normalnoisetype','p:noisescale','p:normalnoisebrush','p:colornoise','p:colornoisetype','p:colornoisescale','p:colornoisebrush','p:customnoisecolor','p:colornoisenormalscale','p:transparency','p:uniformblending','p:anisotropy','p:flipanisotropy','p:anisotropyaxis','p:metallic','p:pearl','p:clearcoat','p:showambientscale','p:ambientscale','p:shininess','p:phase','p:orientation','p:info'</NodeDefaultValues>
+      <MaterialList tag="feature" name="&#x6750;&#x6599;" created="1790214241654">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+      </MaterialList>
+      <MaterialModelList tag="materialmodel" name="MaterialModelList" created="1790214241654">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <MaterialModel op="def" tag="def" name="&#x57fa;&#x672c;" created="1790214241788">
+          <entityFlags T="51">NOREMOVE|NORETAG</entityFlags>
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <selection T="32" selection="LocalSelection" selType="NONE">
+          </selection>
+          <param T="33" param="thermalconductivity" value="9|1,'k_val'|1,'0'|1,'0'|1,'0'|1,'k_val'|1,'0'|1,'0'|1,'0'|1,'k_val'"></param>
+          <param T="33" param="density" value="1|1,'8960[kg/m^3]'"></param>
+          <param T="33" param="heatcapacity" value="1|1,'385[J/(kg*K)]'"></param>
+          <identifier T="0">def</identifier>
+          <FeatureInfoList tag="featureInfo" name="FeatureInfoList" created="1790214241804">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+            <FeatureInfo tag="info" name="&#x65b9;&#x7a0b;&#x89c6;&#x56fe;" created="1790214244554">
+              <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+              <entityComments T="0"></entityComments>
+              <entityAuthor T="0"></entityAuthor>
+            </FeatureInfo>
+          </FeatureInfoList>
+          <InformationList tag="info" name="&#x4fe1;&#x606f;" created="1790214241804">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+          </InformationList>
+          <FunctionFeatureList tag="func" name="&#x51fd;&#x6570;" created="1790214241804">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+          </FunctionFeatureList>
+        </MaterialModel>
+      </MaterialModelList>
+    </Material>
+  </MaterialList>
+  <ModelNodeList tag="modelNode" name="&#x989d;&#x5916;&#x7ef4;&#x5ea6;" created="1790214234941">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+    <ModelNode tag="comp1" name="&#x7ec4;&#x4ef6; 1" created="1790214236595">
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+      <identifier T="0">comp1</identifier>
+      <defineLocalCoord T="3">true</defineLocalCoord>
+      <spatialCoord T="1">3,'x','y','z'</spatialCoord>
+      <materialCoord T="1">3,'X','Y','Z'</materialCoord>
+      <geometryCoord T="1">3,'Xg','Yg','Zg'</geometryCoord>
+      <meshCoord T="1">3,'Xm','Ym','Zm'</meshCoord>
+      <ComponentExprList tag="variable" name="&#x53d8;&#x91cf;" created="1790214236743">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <base T="50">/expr</base>
+      </ComponentExprList>
+      <ComponentGeomList tag="geom" name="&#x51e0;&#x4f55;&#x96f6;&#x4ef6;" created="1790214236748">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <base T="50">/geom</base>
+      </ComponentGeomList>
+      <ComponentMeshList tag="mesh" name="&#x7f51;&#x683c;&#x96f6;&#x4ef6;" created="1790214236748">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <base T="50">/mesh</base>
+      </ComponentMeshList>
+      <ComponentMultiphysicsCouplingList tag="multiphysics" name="&#x591a;&#x7269;&#x7406;&#x573a;" created="1790214236755">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <base T="50">/multiphysics</base>
+      </ComponentMultiphysicsCouplingList>
+      <ComponentPairList tag="pair" name="PairList" created="1790214236755">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <base T="50">/pair</base>
+      </ComponentPairList>
+      <ComponentPhysicsList tag="physics" name="&#x7269;&#x7406;&#x573a;" created="1790214236762">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <base T="50">/physics</base>
+      </ComponentPhysicsList>
+      <ComponentCommonList tag="common" name="&#x5b9a;&#x4e49;" created="1790214236762">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <base T="50">/common</base>
+      </ComponentCommonList>
+      <ComponentCoordsysList tag="coordSystem" name="CoordsysList" created="1790214236773">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <base T="50">/coordsys</base>
+      </ComponentCoordsysList>
+      <ComponentCplList tag="cpl" name="CplList" created="1790214236773">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <base T="50">/cpl</base>
+      </ComponentCplList>
+      <ComponentEmbGeomFeatureList tag="emb" name="EmbGeomFeatureList" created="1790214236788">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <base T="50">/emb</base>
+      </ComponentEmbGeomFeatureList>
+      <ComponentExtraDimList tag="extraDim" name="ExtraDimList" created="1790214236788">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <base T="50">/extraDim</base>
+      </ComponentExtraDimList>
+      <ComponentFunctionFeatureList tag="func" name="&#x51fd;&#x6570;" created="1790214236788">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <base T="50">/func</base>
+      </ComponentFunctionFeatureList>
+      <ComponentMaterialList tag="material" name="&#x6750;&#x6599;" created="1790214236788">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <base T="50">/material</base>
+      </ComponentMaterialList>
+      <ComponentProbeFeatureList tag="probe" name="ProbeFeatureList" created="1790214236799">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <base T="50">/probe</base>
+      </ComponentProbeFeatureList>
+      <ComponentProbeFeatureList tag="massProp" name="ProbeFeatureList" created="1790214236799">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <base T="50">/massProp</base>
+      </ComponentProbeFeatureList>
+      <ComponentSelectionList tag="selection" name="SelectionList" created="1790214236799">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <base T="50">/selection</base>
+      </ComponentSelectionList>
+      <ComponentViewList tag="view" name="&#x89c6;&#x56fe;" created="1790214236805">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <base T="50">/view</base>
+      </ComponentViewList>
+    </ModelNode>
+  </ModelNodeList>
+  <FieldList tag="field" name="FieldList" created="1790214235259">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+  </FieldList>
+  <OdeList tag="ode" name="OdeList" created="1790214235271">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+  </OdeList>
+  <Thermodynamics tag="tdp" name="&#x70ed;&#x529b;&#x5b66;" created="1790214235338">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+    <ThermodynamicsFeatureList tag="feature" name="&#x51fd;&#x6570;" created="1790214235350">
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+    </ThermodynamicsFeatureList>
+  </Thermodynamics>
+  <MeshList tag="mesh" name="&#x7f51;&#x683c;&#x96f6;&#x4ef6;" created="1790214235404">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+    <MeshSequence tag="mesh1" name="&#x7f51;&#x683c; 1" created="1790214241905">
+      <entityFlags T="51">NODEACTIVATE</entityFlags>
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+      <currentFeature T="50">/mesh/mesh1/feature/ftet1</currentFeature>
+      <lastBuiltFeature T="50">/mesh/mesh1/feature/ftet1</lastBuiltFeature>
+      <geom T="50">/geom/geom1</geom>
+      <type T="100">AUTOMATIC</type>
+      <constructionEntitiesToKeep T="7">{},{},{},{}</constructionEntitiesToKeep>
+      <cacheTagCurrent T="11">7734442465687270334</cacheTagCurrent>
+      <hashKey T="11">2950265877034131966</hashKey>
+      <contrib T="50">/physics/ht</contrib>
+      <statIgnoreAssocData T="3">true</statIgnoreAssocData>
+      <MeshFeatureList tag="feature" name="MeshFeatureList" created="1790214241921">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <sequence T="50">/mesh/mesh1</sequence>
+        <MeshFeature op="MeshSizeDefault" tag="size" name="&#x5927;&#x5c0f;" created="1790214242004">
+          <entityFlags T="51">NOREMOVE|NORETAG|NODEACTIVATE</entityFlags>
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <key T="0">true[deg]tabledefaulthmax0.005hmin9.0E-4hcurve0.6hnarrow0.5hgrad1.5extrHsh=0</key>
+          <status T="101">BUILT</status>
+          <buildStatus T="101">BUILT</buildStatus>
+          <propertyValue T="30" value="0.005" name="p:hmax"></propertyValue>
+          <propertyValue T="30" value="9.0E-4" name="p:hmin"></propertyValue>
+          <propertyValue T="30" value="0.6" name="p:hcurve"></propertyValue>
+          <propertyValue T="30" value="0.5" name="p:hnarrow"></propertyValue>
+          <propertyValue T="30" value="1.5" name="p:hgrad"></propertyValue>
+          <sequence T="50">/mesh/mesh1</sequence>
+          <hashKey T="11">3709648057400405526</hashKey>
+          <NodeDefaultValues>3,'p:table','p:hauto','p:custom'</NodeDefaultValues>
+          <MeshFeatureList tag="feature" name="MeshFeatureList" created="1790214242004">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+          </MeshFeatureList>
+        </MeshFeature>
+        <MeshFeature op="FreeTet" tag="ftet1" name="&#x81ea;&#x7531;&#x56db;&#x9762;&#x4f53;&#x7f51;&#x683c; 1" created="1790214242088">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <selection T="32" selection="MeshSelection" selType="MESHREMAINING">
+            <remaining>{1,2,3,4,5,6,7,8},{1,2,3,4,5,6,7,8,9,10,11,12},{1,2,3,4,5,6},{1}</remaining>
+          </selection>
+          <key T="0">true[deg]xscale1.0yscale1.0smoothcontrolonsmoothmaxiter4smoothmaxdepth4zscale1.0methodautonumlayermaxoptlevelbasicoptacceptgrouponoptlargeoffoptsmalloffoptcurvedonMESHREMAININGextrHsh=0</key>
+          <status T="101">BUILT</status>
+          <buildStatus T="101">BUILT</buildStatus>
+          <propertyValue T="30" value="on" name="p:optcurved"></propertyValue>
+          <propertyValue T="30" value="0" name="p:buildtime"></propertyValue>
+          <propertyValue T="30" value="on" name="p:buildinfox"></propertyValue>
+          <propertyValue T="30" value="COMSOL 6.3.0.290 (win64)|2026-09-24T09:44:02.221556100" name="p:buildinfo"></propertyValue>
+          <sequence T="50">/mesh/mesh1</sequence>
+          <hashKey T="11">8990902772479597636</hashKey>
+          <NodeDefaultValues>17,'p:xscale','p:yscale','p:smoothcontrol','p:smoothmaxiter','p:smoothmaxdepth','p:zscale','p:method','p:numlayer','p:optlevel','p:optacceptgroup','p:optlarge','p:optsmall','p:buildnotex','p:buildnote','p:builddetails','p:buildoutputx','p:buildoutput'</NodeDefaultValues>
+          <MeshSelectionFeatureList tag="selectionFeatures" name="MeshSelectionFeatureList" created="1790214242088">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+          </MeshSelectionFeatureList>
+          <MeshFeatureList tag="feature" name="MeshFeatureList" created="1790214242088">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+          </MeshFeatureList>
+        </MeshFeature>
+      </MeshFeatureList>
+      <MeshNative tag="meshnative" created="1790214242221">
+        <spaceDim T="5">3</spaceDim>
+        <numEntities T="6">8,12,6,1</numEntities>
+        <numEntitiesMesh T="6">8,12,6,1</numEntitiesMesh>
+        <numFiniteVoids T="5">0</numFiniteVoids>
+        <existing T="3">true</existing>
+        <geomScale T="12">0.05</geomScale>
+        <geomTol T="12">1.0E-10</geomTol>
+        <boundingBox T="13">0.0,0.05,0.0,0.02,0.0,0.01</boundingBox>
+        <type T="0">solid</type>
+        <mesh T="52" class="MESH" resource="mesh1.mphbin" id="c3be028eb363b820" fileid="f91b5cccff44b856"/>
+      </MeshNative>
+    </MeshSequence>
+  </MeshList>
+  <BatchList tag="batch" name="&#x6279;&#x5904;&#x7406;" created="1790214235421">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+    <BatchFeatureList tag="feature" name="BatchFeatureList" created="1790214243421">
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+      <batchList T="50">/batch</batchList>
+    </BatchFeatureList>
+  </BatchList>
+  <OptSequence tag="optsequence" created="1790214235421">
+    <OptFeatureList op="objective" tag="objective" name="OptFeatureList" created="1790214235430">
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+      <optListType T="114">OBJECTIVE</optListType>
+      <sequence T="50">/optsequence</sequence>
+    </OptFeatureList>
+    <ConstrList op="constr" tag="constr" name="ConstrList" created="1790214246688">
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+    </ConstrList>
+  </OptSequence>
+  <StudyList tag="study" name="&#x7814;&#x7a76;" created="1790214235438">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+    <Study tag="std1" name="&#x7814;&#x7a76; 1" created="1790214242221">
+      <entityFlags T="51">NODEACTIVATE</entityFlags>
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+      <ModelEntityTag tag="Analysis" created="1790214242236">
+        <values T="1">1,'std1'</values>
+      </ModelEntityTag>
+      <StudyFeatureList tag="feature" name="StudyFeatureList" created="1790214242236">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <StudyFeature op="Stationary" tag="stat" name="&#x7a33;&#x6001;" created="1790214242338">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <key T="0">true[]usestoloffgeometricNonlinearityoffgeometricNonlinearityActiveoffupdateOptimizationSettingsoffftplistmethodignoreoutputhideoffplotoffprobeselallprobefreqpoutactivateht|on|frame:material1|on|useadvanceddisableoffdisabledvariables[]disabledcoordinatesystems[]disabledcommondisabledpair[]disabledphysicsdisableFrameControldisabledcouplingdisabledreduceddisabledcomponentdiscretizationht|physics|frame:material1|physics|equationformht|physics|frame:material1|physics|shapeOrdercomp1|component|equationform_freqht|1[kHz]|frame:material1|0|activateCouplingactivateromactivateimagereconstructreconstructorsuseinitsoloffusesoloffoutputmapht|physics|frame:material1|physics|outputselectionmapht||frame:material1||meshgeom1|mesh1|errestandadapnoneaccerrestaccrespairsaccerrpairsaccvarerrpairsauxsweepmethodignoreshowuseparamonuseparamoffuseloadcaseoffshowpreusesoloffoptimizationoffkeepnotsolstaticoffpdistribofftreeSelectionKeyequationFormCouplingColumn</key>
+          <propertyValue T="30" value="off" name="p:geometricNonlinearityActive"></propertyValue>
+          <propertyValue T="30" value="Default" name="p:plotgroup" ReferenceContainerList="/result/feature" CompositeIndex="0"></propertyValue>
+          <propertyValue T="30" name="p:probes" ReferenceArray="0" ReferenceContainerList="/probe"></propertyValue>
+          <propertyValue T="30" valueMatrix="1|4,'ht','on','frame:material1','on'" name="p:activate"></propertyValue>
+          <propertyValue T="30" name="p:disabledvariables" ReferenceArray="0" ReferenceContainerList="/expr"></propertyValue>
+          <propertyValue T="30" name="p:disabledcoordinatesystems" ReferenceArray="0" ReferenceContainerList="/coordsys"></propertyValue>
+          <propertyValue T="30" name="p:disabledpair" ReferenceArray="0" ReferenceContainerList="/pair"></propertyValue>
+          <propertyValue T="30" valueMatrix="1|4,'ht','physics','frame:material1','physics'" name="p:discretization"></propertyValue>
+          <propertyValue T="30" valueMatrix="1|4,'ht','physics','frame:material1','physics'" name="p:equationform"></propertyValue>
+          <propertyValue T="30" valueMatrix="1|2,'comp1','component'" name="p:shapeOrder"></propertyValue>
+          <propertyValue T="30" valueMatrix="1|4,'ht','1[kHz]','frame:material1','0'" name="p:equationform_freq"></propertyValue>
+          <propertyValue T="30" value="zero" name="p:initstudy" ReferenceContainerList="/study" CompositeIndex="0"></propertyValue>
+          <propertyValue T="30" value="current" name="p:initsol" ReferenceContainerList="/sol" CompositeIndex="0"></propertyValue>
+          <propertyValue T="30" value="current" name="p:initsoluse" ReferenceContainerList="/sol" CompositeIndex="0"></propertyValue>
+          <propertyValue T="30" value="auto" name="p:solnum" CompositeIndex="0"></propertyValue>
+          <propertyValue T="30" value="zero" name="p:notstudy" ReferenceContainerList="/study" CompositeIndex="0"></propertyValue>
+          <propertyValue T="30" value="current" name="p:notsol" ReferenceContainerList="/sol" CompositeIndex="0"></propertyValue>
+          <propertyValue T="30" value="current" name="p:notsoluse" ReferenceContainerList="/sol" CompositeIndex="0"></propertyValue>
+          <propertyValue T="30" value="auto" name="p:notsolnum" CompositeIndex="0"></propertyValue>
+          <propertyValue T="30" valueMatrix="1|4,'ht','physics','frame:material1','physics'" name="p:outputmap"></propertyValue>
+          <propertyValue T="30" valueMatrix="1|4,'ht','','frame:material1',''" name="p:outputselectionmap"></propertyValue>
+          <propertyValue T="30" valueMatrix="1|2,'geom1','mesh1'" name="p:mesh"></propertyValue>
+          <propertyValue T="30" name="p:adaptselection">
+            <Selection selection="LocalSelection" selType="GEOM">
+              <explicit geom="/geom/geom1"/>
+            </Selection>
+          </propertyValue>
+          <propertyValue T="30" name="p:adapgeom" Reference="/geom/geom1" ReferenceContainerList="/geom"></propertyValue>
+          <propertyValue T="30" value="new" name="p:goetableid" ReferenceContainerList="/result/table" CompositeIndex="0"></propertyValue>
+          <propertyValue T="30" value="" valueMatrix="1|0" name="p:plist"></propertyValue>
+          <propertyValue T="30" name="p:autoremeshgeom" Reference="/geom/geom1" ReferenceContainerList="/geom"></propertyValue>
+          <NodeDefaultValues>160,'p:usestol','p:stol','p:geometricNonlinearity','p:updateOptimizationSettings','p:ftplistmethod','p:outputhide','p:plot','p:probesel','p:probefreq','p:physselection','p:useadvanceddisable','p:disabledcommon','p:disabledphysics','p:disableFrameControl','p:disabledcoupling','p:disabledreduced','p:disabledcomponent','p:discretization_proxy','p:equationform_proxy','p:equationform_freq_proxy','p:reconstructors_proxy','p:shapeOrder_proxy','p:multiphysicsSelection','p:activateCoupling','p:romselection','p:activaterom','p:activateimagereconstruct','p:reconstructables','p:reconstructors','p:useinitsol','p:initmethod','p:initstudyhide','p:initsolhide','p:initsolusesolnumhide','p:initsolusesolnum','p:oldinitsoluse','p:initstudystep','p:solvertype','p:solnumhide','p:timeinterp','p:t','p:listsol','p:listsolnum','p:manualsol','p:manualsolnum','p:manualsolnum_vector_method','p:manualsolnum_vector_start','p:manualsolnum_vector_stop','p:manualsolnum_vector_step','p:manualsolnum_vector_numvalues','p:manualsolnum_vector_function','p:manualsolnum_vector_interval','p:manualsolnum_vector_freqperdec','p:usesol','p:notsolmethod','p:notstudyhide','p:notsolhide','p:notsolusesolnumhide','p:notsolusesolnum','p:oldnotsoluse','p:notstudystep','p:notsolvertype','p:notsolnumhide','p:nottimeinterp','p:nott','p:notlistsol','p:notlistsolnum','p:notmanualsol','p:notmanualsolnum','p:notmanualsolnum_vector_method','p:notmanualsolnum_vector_start','p:notmanualsolnum_vector_stop','p:notmanualsolnum_vector_step','p:notmanualsolnum_vector_numvalues','p:notmanualsolnum_vector_function','p:notmanualsolnum_vector_interval','p:notmanualsolnum_vector_freqperdec','p:outputSelectionProxy','p:geomselection','p:errestandadap','p:errestimerrest','p:goalfunctypeerrest','p:goalfuncpredeferrest','p:gfuncpderrest','p:gfintopserrest','p:gfuncerrest','p:errestim','p:goalfunctype','p:goalfuncpredef','p:gfuncpd','p:gfintops','p:gfunc','p:errorexpr','p:errexpractive','p:adderrestvars','p:savesolsref','p:adaptparamname','p:meshadaptmethod','p:goalorientedtermination','p:ngengroup','p:userngen','p:ngenAUX','p:ngen','p:goalngengroup','p:goaluserngen','p:goalngenAUX','p:goalngen','p:goalorientedterminationtolerance','p:goalorientedtolerancetype','p:goalorientedterminationactive','p:goalorientedterminationexpression','p:goeplot','p:plotgroupgoe','p:window','p:goeloglevel','p:windowtitle','p:windowtitleactive','p:accerrest','p:accrespairs','p:accerrpairs','p:accvarerrpairs','p:auxsweepmethod','p:showuseparam','p:useparam','p:sweeptype','p:pname','p:plistarrexcelfilename','p:plistarrexcelsheet','p:plistarrexcelrange','p:plistarrexcelincludeheaders','p:plistarrexcelseparateunits','p:plistarrexceloverwrite','p:plistarrexcelcalculatedvalues','p:plistarr','p:plistarr_vector_method','p:plistarr_vector_start','p:plistarr_vector_stop','p:plistarr_vector_step','p:plistarr_vector_numvalues','p:plistarr_vector_function','p:plistarr_vector_interval','p:plistarr_vector_freqperdec','p:punit','p:pcontinuationmode','p:pcontinuation','p:useloadcase','p:loadcase','p:loadgroup','p:loadgroupweight','p:constraintgroup','p:lsqcont','p:lsqpcontinuation','p:hideinitvalue','p:initvallsq','p:showpreusesol','p:preusesol','p:optimization','p:keepnotsolstatic','p:pdistrib','p:autoremesh'</NodeDefaultValues>
+          <ModelEntityTag tag="Analysis" created="1790214243412">
+            <values T="1">1,'std1/stat'</values>
+          </ModelEntityTag>
+          <StudyFeatureList tag="feature" name="StudyFeatureList" created="1790214243412">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+          </StudyFeatureList>
+          <MultigridLevelList tag="mglevel" name="MultigridLevelList" created="1790214243412">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+          </MultigridLevelList>
+        </StudyFeature>
+      </StudyFeatureList>
+      <InformationList tag="information" name="&#x4fe1;&#x606f;" created="1790214242238">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <Information tag="lastComputationTime" name="&#x4fe1;&#x606f;" created="1790214242238">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <title T="0">Last_computation_time</title>
+          <body T="0"></body>
+        </Information>
+        <Information tag="lastComputationDate" name="&#x4fe1;&#x606f; 2" created="1790214242238">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <title T="0">Last_computation_date</title>
+          <body T="0"></body>
+        </Information>
+        <Information tag="lastComputationVersion" name="&#x4fe1;&#x606f; 3" created="1790214242238">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <title T="0">Computed_in_version</title>
+          <body T="0"></body>
+        </Information>
+      </InformationList>
+    </Study>
+  </StudyList>
+  <SolverSequenceList tag="sol" name="&#x6c42;&#x89e3;&#x5668;" created="1790214235438">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+    <SolverSequence tag="sol1" name="&#x89e3; 1" created="1790214243421">
+      <entityFlags T="51">NODEACTIVATE</entityFlags>
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+      <solutionnative T="50">/soldata/sol5</solutionnative>
+      <currentFeature T="50">/sol/sol1/feature/v1</currentFeature>
+      <savePoint T="50">/soldata/savepoint1</savePoint>
+      <study T="50">/study/std1</study>
+      <paramNames T="1">0</paramNames>
+      <paramVals T="13"></paramVals>
+      <solType T="112">SEQUENCE</solType>
+      <attachedFlag T="3">true</attachedFlag>
+      <paramUnits T="1">0</paramUnits>
+      <childrenCount T="5">3</childrenCount>
+      <SolutionInfo tag="solutioninfo" name="SolutionInfo" created="1790214243522">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <pNames T="1">1,'t'</pNames>
+        <pUnits T="1">1, </pUnits>
+        <looplevel T="6">0</looplevel>
+        <pLists T="13">0.0</pLists>
+        <pNamesOuter T="1">0</pNamesOuter>
+        <pUnitsOuter T="1">0</pUnitsOuter>
+        <pDescsOuter T="2">1|0</pDescsOuter>
+        <oldAnalysisType T="113">NONE</oldAnalysisType>
+        <SolutionInfo tag="oldInfo" created="1790214245782">
+          <pNames T="1">0</pNames>
+          <pUnits T="1">0</pUnits>
+          <pNamesOuter T="1">0</pNamesOuter>
+          <pUnitsOuter T="1">0</pUnitsOuter>
+          <pDescsOuter T="2">0</pDescsOuter>
+          <oldAnalysisType T="113">NONE</oldAnalysisType>
+          <baseSystemCompute T="0"></baseSystemCompute>
+        </SolutionInfo>
+      </SolutionInfo>
+      <SolverFeatureList tag="feature" name="SolverFeatureList" created="1790214243538">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <SolverFeature op="StudyStep" tag="st1" name="" created="1790214244847">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <key T="0">&lt;StudyStep&gt;&lt;StudyStep_VALID&gt;&lt;![CDATA[true]]&gt;&lt;/StudyStep_VALID&gt;&lt;StudyStep_study&gt;&lt;![CDATA[studystd1]]&gt;&lt;/StudyStep_study&gt;&lt;StudyStep_studystep&gt;&lt;![CDATA[studystepstat]]&gt;&lt;/StudyStep_studystep&gt;&lt;StudyStep_useForModelReduction&gt;&lt;![CDATA[useForModelReductionon]]&gt;&lt;/StudyStep_useForModelReduction&gt;&lt;StudyStep_splitcomplex&gt;&lt;![CDATA[splitcomplexoff]]&gt;&lt;/StudyStep_splitcomplex&gt;&lt;StudyStep_partmethod&gt;&lt;![CDATA[partmethodparent]]&gt;&lt;/StudyStep_partmethod&gt;&lt;StudyStep_assempara&gt;&lt;![CDATA[assemparaon]]&gt;&lt;/StudyStep_assempara&gt;&lt;StudyStep_saveprevioussolution&gt;&lt;![CDATA[saveprevioussolutionoff]]&gt;&lt;/StudyStep_saveprevioussolution&gt;&lt;StudyStep_useent&gt;&lt;![CDATA[useentall]]&gt;&lt;/StudyStep_useent&gt;&lt;StudyStep_keeplog&gt;&lt;![CDATA[keeplogoff]]&gt;&lt;/StudyStep_keeplog&gt;&lt;StudyStep_const&gt;&lt;![CDATA[const{}]]&gt;&lt;/StudyStep_const&gt;&lt;StudyStep_SUBFEATURES&gt;&lt;/StudyStep_SUBFEATURES&gt;&lt;StudyStep_EDITED&gt;false&lt;/StudyStep_EDITED&gt;&lt;/StudyStep&gt;</key>
+          <status T="101">BUILT</status>
+          <resetStateKey T="3">true</resetStateKey>
+          <siblingOrder T="5">0</siblingOrder>
+          <childrenCount T="5">0</childrenCount>
+          <propertyValue T="30" name="p:study" Reference="/study/std1" ReferenceContainerList="/study"></propertyValue>
+          <propertyValue T="30" name="p:studystep" Reference="/study/std1/feature/stat"></propertyValue>
+          <propertyValue T="30" name="p:entsel" ReferenceArray="0" ReferenceContainerList="/selection"></propertyValue>
+          <propertyValue T="30" value="&lt;---- &#x7814;&#x7a76; 1/&#x89e3; 1 (sol1) &#x4e2d;&#x7684;&#x201c;&#x7f16;&#x8bd1;&#x65b9;&#x7a0b;: &#x7a33;&#x6001;&#x201d; ---------------------------------------------&#xa;&#x5f00;&#x59cb;&#x4e8e; 2026&#x5e74;9&#x6708;24&#x65e5; &#x4e0a;&#x5348;9:44:05&#x3002;&#xa;&#x51e0;&#x4f55;&#x5f62;&#x51fd;&#x6570;: &#x4e8c;&#x6b21;&#x62c9;&#x683c;&#x6717;&#x65e5;&#x5355;&#x5143;&#xa;&#x5728; 12th Gen Intel(R) Core(TM) i9-12900K &#x4e0a;&#x8fd0;&#x884c;&#x3002;&#xa;&#x5728;&#x4ee5;&#x4e0b;&#x4f4d;&#x7f6e;&#x4f7f;&#x7528; 1 &#x4e2a;&#x63d2;&#x69fd;&#xff1a; Everwalker &#x4e0a;&#xff08;&#x5171; 12 &#x4e2a;&#x5185;&#x6838;&#xff09;&#x3002;&#xa;&#x53ef;&#x7528;&#x5185;&#x5b58;&#xff1a;32.51 GB&#x3002;&#xa;&#x65f6;&#x95f4;&#xff1a;1&#x3002;&#xa;&#x7269;&#x7406;&#x5185;&#x5b58;: 790 MB&#xa;&#x865a;&#x62df;&#x5185;&#x5b58;: 835 MB&#xa;&#x7ed3;&#x675f;&#x65f6;&#x95f4;&#xff1a;2026&#x5e74;9&#x6708;24&#x65e5; &#x4e0a;&#x5348;9:44:07&#x3002;&#xa;----- &#x7814;&#x7a76; 1/&#x89e3; 1 (sol1) &#x4e2d;&#x7684;&#x201c;&#x7f16;&#x8bd1;&#x65b9;&#x7a0b;: &#x7a33;&#x6001;&#x201d; --------------------------------------------&gt;&#xa;" name="p:message"></propertyValue>
+          <NodeDefaultValues>12,'p:unredstudy','p:unredstep','p:useForModelReduction','p:splitcomplex','p:partmethod','p:assempara','p:saveprevioussolution','p:useent','p:keeplog','p:const','p:changedproperties','p:lastchangedproperty'</NodeDefaultValues>
+          <SolverFeatureList tag="feature" name="SolverFeatureList" created="1790214244871">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+          </SolverFeatureList>
+        </SolverFeature>
+        <SolverFeature op="Variables" tag="v1" name="&#x56e0;&#x53d8;&#x91cf; 1" created="1790214244888">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <key T="0">&lt;Variables&gt;&lt;Variables_VALID&gt;&lt;![CDATA[true]]&gt;&lt;/Variables_VALID&gt;&lt;Variables_initmethod&gt;&lt;![CDATA[initmethodinit]]&gt;&lt;/Variables_initmethod&gt;&lt;Variables_initsol&gt;&lt;![CDATA[initsolzero]]&gt;&lt;/Variables_initsol&gt;&lt;Variables_solvertype&gt;&lt;![CDATA[solvertypenone]]&gt;&lt;/Variables_solvertype&gt;&lt;Variables_timeinterp&gt;&lt;![CDATA[timeinterpoff]]&gt;&lt;/Variables_timeinterp&gt;&lt;Variables_manualsol&gt;&lt;![CDATA[manualsoloff]]&gt;&lt;/Variables_manualsol&gt;&lt;Variables_listsol&gt;&lt;![CDATA[listsoloff]]&gt;&lt;/Variables_listsol&gt;&lt;Variables_scalemethod&gt;&lt;![CDATA[scalemethodauto]]&gt;&lt;/Variables_scalemethod&gt;&lt;Variables_resscalemethod&gt;&lt;![CDATA[resscalemethodauto]]&gt;&lt;/Variables_resscalemethod&gt;&lt;Variables_resscalethresh&gt;&lt;![CDATA[resscalethresh100.0]]&gt;&lt;/Variables_resscalethresh&gt;&lt;Variables_notsolmethod&gt;&lt;![CDATA[notsolmethodinit]]&gt;&lt;/Variables_notsolmethod&gt;&lt;Variables_notsol&gt;&lt;![CDATA[notsolzero]]&gt;&lt;/Variables_notsol&gt;&lt;Variables_notsolvertype&gt;&lt;![CDATA[notsolvertypenone]]&gt;&lt;/Variables_notsolvertype&gt;&lt;Variables_nottimeinterp&gt;&lt;![CDATA[nottimeinterpoff]]&gt;&lt;/Variables_nottimeinterp&gt;&lt;Variables_notmanualsol&gt;&lt;![CDATA[notmanualsoloff]]&gt;&lt;/Variables_notmanualsol&gt;&lt;Variables_notlistsol&gt;&lt;![CDATA[notlistsoloff]]&gt;&lt;/Variables_notlistsol&gt;&lt;Variables_initparametersmethod&gt;&lt;![CDATA[initparametersmethodauto]]&gt;&lt;/Variables_initparametersmethod&gt;&lt;Variables_keeplog&gt;&lt;![CDATA[keeplogoff]]&gt;&lt;/Variables_keeplog&gt;&lt;Variables_const&gt;&lt;![CDATA[const{}]]&gt;&lt;/Variables_const&gt;&lt;Variables_storesol&gt;&lt;![CDATA[storesolinit]]&gt;&lt;/Variables_storesol&gt;&lt;Variables_SUBFEATURES&gt;&lt;Field&gt;&lt;Field_VALID&gt;&lt;![CDATA[true]]&gt;&lt;/Field_VALID&gt;&lt;Field_comp&gt;&lt;![CDATA[comp{comp1.T&#xa4;}]]&gt;&lt;/Field_comp&gt;&lt;Field_compintuse&gt;&lt;![CDATA[compintuseon]]&gt;&lt;/Field_compintuse&gt;&lt;Field_compint&gt;&lt;![CDATA[compint{comp1.uflux.T&#xa4;comp1.dflux.T&#xa4;}]]&gt;&lt;/Field_compint&gt;&lt;Field_compintstatuse&gt;&lt;![CDATA[compintstatuseoff]]&gt;&lt;/Field_compintstatuse&gt;&lt;Field_solvefor&gt;&lt;![CDATA[solveforon]]&gt;&lt;/Field_solvefor&gt;&lt;Field_reconstruct&gt;&lt;![CDATA[reconstructnone]]&gt;&lt;/Field_reconstruct&gt;&lt;Field_usestoresel&gt;&lt;![CDATA[usestoreselall]]&gt;&lt;/Field_usestoresel&gt;&lt;Field_valuetype&gt;&lt;![CDATA[valuetypereal]]&gt;&lt;/Field_valuetype&gt;&lt;Field_variables&gt;&lt;![CDATA[variablescomp1_T]]&gt;&lt;/Field_variables&gt;&lt;Field_scalemethod&gt;&lt;![CDATA[scalemethodparent]]&gt;&lt;/Field_scalemethod&gt;&lt;Field_resscalemethod&gt;&lt;![CDATA[resscalemethodparent]]&gt;&lt;/Field_resscalemethod&gt;&lt;Field_SUBFEATURES&gt;&lt;/Field_SUBFEATURES&gt;&lt;Field_EDITED&gt;false&lt;/Field_EDITED&gt;&lt;/Field&gt;&lt;/Variables_SUBFEATURES&gt;&lt;Variables_EDITED&gt;false&lt;/Variables_EDITED&gt;&lt;/Variables&gt;</key>
+          <status T="101">BUILT</status>
+          <resetStateKey T="3">true</resetStateKey>
+          <siblingOrder T="5">1</siblingOrder>
+          <childrenCount T="5">1</childrenCount>
+          <propertyValue T="30" value="user" name="p:control" Reference="/study/std1/feature/stat" ReferenceContainerList="/study/std1/feature" CompositeIndex="1"></propertyValue>
+          <propertyValue T="30" value="zero" name="p:initsol" ReferenceContainerList="/sol" CompositeIndex="0"></propertyValue>
+          <propertyValue T="30" value="current" name="p:initsoluse" ReferenceContainerList="/sol" CompositeIndex="0"></propertyValue>
+          <propertyValue T="30" value="auto" name="p:solnum" CompositeIndex="0"></propertyValue>
+          <propertyValue T="30" value="1" valueMatrix="1|1,'1'" name="p:manualsolnum"></propertyValue>
+          <propertyValue T="30" value="zero" name="p:notsol" ReferenceContainerList="/sol" CompositeIndex="0"></propertyValue>
+          <propertyValue T="30" value="current" name="p:notsoluse" ReferenceContainerList="/sol" CompositeIndex="0"></propertyValue>
+          <propertyValue T="30" value="auto" name="p:notsolnum" CompositeIndex="0"></propertyValue>
+          <propertyValue T="30" value="1" valueMatrix="1|1,'1'" name="p:notmanualsolnum"></propertyValue>
+          <propertyValue T="30" name="p:clist" ValueRows="0"></propertyValue>
+          <propertyValue T="30" value="&lt;---- &#x7814;&#x7a76; 1/&#x89e3; 1 (sol1) &#x4e2d;&#x7684;&#x201c;&#x56e0;&#x53d8;&#x91cf; 1&#x201d; ------------------------------------------------&#xa;&#x5f00;&#x59cb;&#x4e8e; 2026&#x5e74;9&#x6708;24&#x65e5; &#x4e0a;&#x5348;9:44:07&#x3002;&#xa;&#x6c42;&#x89e3;&#x65f6;&#x95f4;&#xff1a;0 s&#x3002;&#xa;&#x7269;&#x7406;&#x5185;&#x5b58;: 791 MB&#xa;&#x865a;&#x62df;&#x5185;&#x5b58;: 834 MB&#xa;&#x7ed3;&#x675f;&#x65f6;&#x95f4;&#xff1a;2026&#x5e74;9&#x6708;24&#x65e5; &#x4e0a;&#x5348;9:44:07&#x3002;&#xa;----- &#x7814;&#x7a76; 1/&#x89e3; 1 (sol1) &#x4e2d;&#x7684;&#x201c;&#x56e0;&#x53d8;&#x91cf; 1&#x201d; -----------------------------------------------&gt;&#xa;" name="p:message"></propertyValue>
+          <NodeDefaultValues>51,'p:initmethod','p:initsolhide','p:oldinitsoluse','p:initsolusesolnumhide','p:initsolusesolnum','p:solvertype','p:timeinterp','p:t','p:manualsol','p:manualsolnum_vector_method','p:manualsolnum_vector_start','p:manualsolnum_vector_stop','p:manualsolnum_vector_step','p:manualsolnum_vector_numvalues','p:manualsolnum_vector_function','p:manualsolnum_vector_interval','p:manualsolnum_vector_freqperdec','p:listsol','p:listsolnum','p:scalemethod','p:scaleval','p:resscalemethod','p:resscaleval','p:resscalethresh','p:notsolmethod','p:notsolhide','p:oldnotsoluse','p:notsolusesolnumhide','p:notsolusesolnum','p:notsolvertype','p:nottimeinterp','p:nott','p:notmanualsol','p:notmanualsolnum_vector_method','p:notmanualsolnum_vector_start','p:notmanualsolnum_vector_stop','p:notmanualsolnum_vector_step','p:notmanualsolnum_vector_numvalues','p:notmanualsolnum_vector_function','p:notmanualsolnum_vector_interval','p:notmanualsolnum_vector_freqperdec','p:notlistsol','p:notlistsolnum','p:initparametersmethod','p:clistctrl','p:cname','p:keeplog','p:const','p:storesol','p:changedproperties','p:lastchangedproperty'</NodeDefaultValues>
+          <SolverFeatureList tag="feature" name="SolverFeatureList" created="1790214244904">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+            <SolverFeature op="Field" tag="comp1_T" name="&#x6e29;&#x5ea6; (comp1.T)" created="1790214245654">
+              <entityFlags T="51">NOREMOVE|NORETAG|NODEACTIVATE</entityFlags>
+              <entityComments T="0"></entityComments>
+              <entityAuthor T="0"></entityAuthor>
+              <status T="101">BUILT</status>
+              <siblingOrder T="5">0</siblingOrder>
+              <childrenCount T="5">0</childrenCount>
+              <propertyValue T="30" valueMatrix="1|1,'comp1.T'" name="p:comp"></propertyValue>
+              <propertyValue T="30" value="on" name="p:compintuse"></propertyValue>
+              <propertyValue T="30" valueMatrix="1|2,'comp1.uflux.T','comp1.dflux.T'" name="p:compint"></propertyValue>
+              <propertyValue T="30" value="none" name="p:reconstruct" ReferenceContainerList="/reduced" CompositeIndex="0"></propertyValue>
+              <propertyValue T="30" name="p:storesel" ReferenceArray="0" ReferenceContainerList="/selection"></propertyValue>
+              <propertyValue T="30" value="real" name="p:valuetype"></propertyValue>
+              <propertyValue T="30" value="comp1_T" name="p:variables"></propertyValue>
+              <NodeDefaultValues>11,'p:compintstatuse','p:compintstat','p:solvefor','p:usestoresel','p:scalemethod','p:scaleval','p:resscalemethod','p:resscaleval','p:resscalethresh','p:changedproperties','p:lastchangedproperty'</NodeDefaultValues>
+              <SolverFeatureList tag="feature" name="SolverFeatureList" created="1790214245663">
+                <entityComments T="0"></entityComments>
+                <entityAuthor T="0"></entityAuthor>
+              </SolverFeatureList>
+            </SolverFeature>
+          </SolverFeatureList>
+        </SolverFeature>
+        <SolverFeature op="Stationary" tag="s1" name="&#x7a33;&#x6001;&#x6c42;&#x89e3;&#x5668; 1" created="1790214245671">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <key T="0">&lt;Stationary&gt;&lt;Stationary_VALID&gt;&lt;![CDATA[true]]&gt;&lt;/Stationary_VALID&gt;&lt;Stationary_stol&gt;&lt;![CDATA[stol0.001]]&gt;&lt;/Stationary_stol&gt;&lt;Stationary_nonlin&gt;&lt;![CDATA[nonlinauto]]&gt;&lt;/Stationary_nonlin&gt;&lt;Stationary_keepnotsolstatic&gt;&lt;![CDATA[keepnotsolstaticoff]]&gt;&lt;/Stationary_keepnotsolstatic&gt;&lt;Stationary_outsollinear&gt;&lt;![CDATA[outsollinearu]]&gt;&lt;/Stationary_outsollinear&gt;&lt;Stationary_outsollinearized&gt;&lt;![CDATA[outsollinearizeddu]]&gt;&lt;/Stationary_outsollinearized&gt;&lt;Stationary_reacf&gt;&lt;![CDATA[reacfon]]&gt;&lt;/Stationary_reacf&gt;&lt;Stationary_lumpedflux&gt;&lt;![CDATA[lumpedfluxoff]]&gt;&lt;/Stationary_lumpedflux&gt;&lt;Stationary_plot&gt;&lt;![CDATA[plotoff]]&gt;&lt;/Stationary_plot&gt;&lt;Stationary_probesel&gt;&lt;![CDATA[probeselall]]&gt;&lt;/Stationary_probesel&gt;&lt;Stationary_cname&gt;&lt;![CDATA[cname{}]]&gt;&lt;/Stationary_cname&gt;&lt;Stationary_keeplog&gt;&lt;![CDATA[keeplogoff]]&gt;&lt;/Stationary_keeplog&gt;&lt;Stationary_const&gt;&lt;![CDATA[const{}]]&gt;&lt;/Stationary_const&gt;&lt;Stationary_SUBFEATURES&gt;&lt;Direct&gt;&lt;![CDATA[[notactive]]]&gt;&lt;/Direct&gt;&lt;Advanced&gt;&lt;Advanced_VALID&gt;&lt;![CDATA[true]]&gt;&lt;/Advanced_VALID&gt;&lt;Advanced_symmetric&gt;&lt;![CDATA[symmetricauto]]&gt;&lt;/Advanced_symmetric&gt;&lt;Advanced_matrixformat&gt;&lt;![CDATA[matrixformatauto]]&gt;&lt;/Advanced_matrixformat&gt;&lt;Advanced_rowscale&gt;&lt;![CDATA[rowscaleon]]&gt;&lt;/Advanced_rowscale&gt;&lt;Advanced_nullfun&gt;&lt;![CDATA[nullfunauto]]&gt;&lt;/Advanced_nullfun&gt;&lt;Advanced_orthonormallimit&gt;&lt;![CDATA[orthonormallimit10000000]]&gt;&lt;/Advanced_orthonormallimit&gt;&lt;Advanced_storeresidual&gt;&lt;![CDATA[storeresidualoff]]&gt;&lt;/Advanced_storeresidual&gt;&lt;Advanced_convinfo&gt;&lt;![CDATA[convinfoon]]&gt;&lt;/Advanced_convinfo&gt;&lt;Advanced_recoverysavinginfo&gt;&lt;![CDATA[recoverysavinginfofrompreferences]]&gt;&lt;/Advanced_recoverysavinginfo&gt;&lt;Advanced_recoverysaveforce&gt;&lt;![CDATA[recoverysaveforcefrompreferences]]&gt;&lt;/Advanced_recoverysaveforce&gt;&lt;Advanced_autorescale&gt;&lt;![CDATA[autorescaleon]]&gt;&lt;/Advanced_autorescale&gt;&lt;Advanced_blocksize&gt;&lt;![CDATA[blocksize1000]]&gt;&lt;/Advanced_blocksize&gt;&lt;Advanced_blocksizeactive&gt;&lt;![CDATA[blocksizeactiveoff]]&gt;&lt;/Advanced_blocksizeactive&gt;&lt;Advanced_assemdistrsol&gt;&lt;![CDATA[assemdistrsolauto]]&gt;&lt;/Advanced_assemdistrsol&gt;&lt;Advanced_cachepattern&gt;&lt;![CDATA[cachepatternoff]]&gt;&lt;/Advanced_cachepattern&gt;&lt;Advanced_assemloc&gt;&lt;![CDATA[assemlocon]]&gt;&lt;/Advanced_assemloc&gt;&lt;Advanced_optthread&gt;&lt;![CDATA[optthreadoff]]&gt;&lt;/Advanced_optthread&gt;&lt;Advanced_statblockdistr&gt;&lt;![CDATA[statblockdistroff]]&gt;&lt;/Advanced_statblockdistr&gt;&lt;Advanced_complexfun&gt;&lt;![CDATA[complexfunoff]]&gt;&lt;/Advanced_complexfun&gt;&lt;Advanced_matherr&gt;&lt;![CDATA[matherron]]&gt;&lt;/Advanced_matherr&gt;&lt;Advanced_checkmatherr&gt;&lt;![CDATA[checkmatherroff]]&gt;&lt;/Advanced_checkmatherr&gt;&lt;Advanced_elemdatainit&gt;&lt;![CDATA[elemdatainiton]]&gt;&lt;/Advanced_elemdatainit&gt;&lt;Advanced_globalcache&gt;&lt;![CDATA[globalcacheon]]&gt;&lt;/Advanced_globalcache&gt;&lt;Advanced_assemtol&gt;&lt;![CDATA[assemtol1.0E-12]]&gt;&lt;/Advanced_assemtol&gt;&lt;Advanced_keep&gt;&lt;![CDATA[keepoff]]&gt;&lt;/Advanced_keep&gt;&lt;Advanced_SUBFEATURES&gt;&lt;/Advanced_SUBFEATURES&gt;&lt;Advanced_EDITED&gt;false&lt;/Advanced_EDITED&gt;&lt;/Advanced&gt;&lt;FullyCoupled&gt;&lt;FullyCoupled_VALID&gt;&lt;![CDATA[true]]&gt;&lt;/FullyCoupled_VALID&gt;&lt;FullyCoupled_linsolver&gt;&lt;![CDATA[linsolverd1]]&gt;&lt;/FullyCoupled_linsolver&gt;&lt;FullyCoupled_dtech&gt;&lt;![CDATA[dtechauto]]&gt;&lt;/FullyCoupled_dtech&gt;&lt;FullyCoupled_initstep&gt;&lt;![CDATA[initstep0.01]]&gt;&lt;/FullyCoupled_initstep&gt;&lt;FullyCoupled_minstep&gt;&lt;![CDATA[minstep1.0E-6]]&gt;&lt;/FullyCoupled_minstep&gt;&lt;FullyCoupled_rstep&gt;&lt;![CDATA[rstep10]]&gt;&lt;/FullyCoupled_rstep&gt;&lt;FullyCoupled_rstepabs&gt;&lt;![CDATA[rstepabs1]]&gt;&lt;/FullyCoupled_rstepabs&gt;&lt;FullyCoupled_useminsteprecovery&gt;&lt;![CDATA[useminsteprecoveryauto]]&gt;&lt;/FullyCoupled_useminsteprecovery&gt;&lt;FullyCoupled_minsteprecovery&gt;&lt;![CDATA[minsteprecovery0.75]]&gt;&lt;/FullyCoupled_minsteprecovery&gt;&lt;FullyCoupled_updweightsauto&gt;&lt;![CDATA[updweightsautoon]]&gt;&lt;/FullyCoupled_updweightsauto&gt;&lt;FullyCoupled_ntermauto&gt;&lt;![CDATA[ntermautotol]]&gt;&lt;/FullyCoupled_ntermauto&gt;&lt;FullyCoupled_maxiter&gt;&lt;![CDATA[maxiter50]]&gt;&lt;/FullyCoupled_maxiter&gt;&lt;FullyCoupled_ntolfact&gt;&lt;![CDATA[ntolfact1]]&gt;&lt;/FullyCoupled_ntolfact&gt;&lt;FullyCoupled_termonres&gt;&lt;![CDATA[termonresoff]]&gt;&lt;/FullyCoupled_termonres&gt;&lt;FullyCoupled_plot&gt;&lt;![CDATA[plotoff]]&gt;&lt;/FullyCoupled_plot&gt;&lt;FullyCoupled_probesel&gt;&lt;![CDATA[probeselnone]]&gt;&lt;/FullyCoupled_probesel&gt;&lt;FullyCoupled_SUBFEATURES&gt;&lt;/FullyCoupled_SUBFEATURES&gt;&lt;FullyCoupled_EDITED&gt;false&lt;/FullyCoupled_EDITED&gt;&lt;/FullyCoupled&gt;&lt;Direct&gt;&lt;Direct_VALID&gt;&lt;![CDATA[true]]&gt;&lt;/Direct_VALID&gt;&lt;Direct_linsolver&gt;&lt;![CDATA[linsolverpardiso]]&gt;&lt;/Direct_linsolver&gt;&lt;Direct_reusereorder&gt;&lt;![CDATA[reusereorderon]]&gt;&lt;/Direct_reusereorder&gt;&lt;Direct_pivotperturb&gt;&lt;![CDATA[pivotperturb1.0E-13]]&gt;&lt;/Direct_pivotperturb&gt;&lt;Direct_ooc&gt;&lt;![CDATA[oocauto]]&gt;&lt;/Direct_ooc&gt;&lt;Direct_memfracooc&gt;&lt;![CDATA[memfracooc0.99]]&gt;&lt;/Direct_memfracooc&gt;&lt;Direct_incore&gt;&lt;![CDATA[incoreauto]]&gt;&lt;/Direct_incore&gt;&lt;Direct_minicmemory&gt;&lt;![CDATA[minicmemory512]]&gt;&lt;/Direct_minicmemory&gt;&lt;Direct_usetotmemory&gt;&lt;![CDATA[usetotmemory0.8]]&gt;&lt;/Direct_usetotmemory&gt;&lt;Direct_internalmemusage&gt;&lt;![CDATA[internalmemusage3]]&gt;&lt;/Direct_internalmemusage&gt;&lt;Direct_pardreorder&gt;&lt;![CDATA[pardreorderauto]]&gt;&lt;/Direct_pardreorder&gt;&lt;Direct_pardschedule&gt;&lt;![CDATA[pardscheduleauto]]&gt;&lt;/Direct_pardschedule&gt;&lt;Direct_pardrreorder&gt;&lt;![CDATA[pardrreorderon]]&gt;&lt;/Direct_pardrreorder&gt;&lt;Direct_pivotstrategy&gt;&lt;![CDATA[pivotstrategyon]]&gt;&lt;/Direct_pivotstrategy&gt;&lt;Direct_pardmtsolve&gt;&lt;![CDATA[pardmtsolveon]]&gt;&lt;/Direct_pardmtsolve&gt;&lt;Direct_clusterpardiso&gt;&lt;![CDATA[clusterpardisoon]]&gt;&lt;/Direct_clusterpardiso&gt;&lt;Direct_pivotrefines&gt;&lt;![CDATA[pivotrefines0]]&gt;&lt;/Direct_pivotrefines&gt;&lt;Direct_errorchk&gt;&lt;![CDATA[errorchkauto]]&gt;&lt;/Direct_errorchk&gt;&lt;Direct_rhob&gt;&lt;![CDATA[rhob1]]&gt;&lt;/Direct_rhob&gt;&lt;Direct_iterrefine&gt;&lt;![CDATA[iterrefineon]]&gt;&lt;/Direct_iterrefine&gt;&lt;Direct_maxrefinesteps&gt;&lt;![CDATA[maxrefinesteps15]]&gt;&lt;/Direct_maxrefinesteps&gt;&lt;Direct_errorratiobound&gt;&lt;![CDATA[errorratiobound0.5]]&gt;&lt;/Direct_errorratiobound&gt;&lt;Direct_nliniterrefine&gt;&lt;![CDATA[nliniterrefineoff]]&gt;&lt;/Direct_nliniterrefine&gt;&lt;Direct_SUBFEATURES&gt;&lt;/Direct_SUBFEATURES&gt;&lt;Direct_EDITED&gt;false&lt;/Direct_EDITED&gt;&lt;/Direct&gt;&lt;Iterative&gt;&lt;![CDATA[[notactive]]]&gt;&lt;/Iterative&gt;&lt;/Stationary_SUBFEATURES&gt;&lt;Stationary_EDITED&gt;false&lt;/Stationary_EDITED&gt;&lt;/Stationary&gt;</key>
+          <status T="101">EDITED</status>
+          <resetStateKey T="3">true</resetStateKey>
+          <siblingOrder T="5">2</siblingOrder>
+          <childrenCount T="5">3</childrenCount>
+          <propertyValue T="30" value="user" name="p:control" Reference="/study/std1/feature/stat" ReferenceContainerList="/study/std1/feature" CompositeIndex="1"></propertyValue>
+          <propertyValue T="30" value="zero" name="p:linpsol" ReferenceContainerList="/sol" CompositeIndex="0"></propertyValue>
+          <propertyValue T="30" value="current" name="p:linpsoluse" ReferenceContainerList="/sol" CompositeIndex="0"></propertyValue>
+          <propertyValue T="30" value="1" name="p:linpsolnum" CompositeIndex="1"></propertyValue>
+          <propertyValue T="30" value="Default" name="p:plotgroup" ReferenceContainerList="/result/feature" CompositeIndex="0"></propertyValue>
+          <propertyValue T="30" name="p:plotfreq">null</propertyValue>
+          <propertyValue T="30" name="p:probes" ReferenceArray="0" ReferenceContainerList="/probe"></propertyValue>
+          <propertyValue T="30" name="p:probefreq">null</propertyValue>
+          <NodeDefaultValues>38,'p:stol','p:nonlin','p:linpmethod','p:linpsolhide','p:oldlinpsoluse','p:linpsolusesolnumhide','p:linpsolusesolnum','p:linpsolvertype','p:linptimeinterp','p:linpt','p:linpmanualsol','p:linpmanualsolnum','p:linpmanualsolnum_vector_method','p:linpmanualsolnum_vector_start','p:linpmanualsolnum_vector_stop','p:linpmanualsolnum_vector_step','p:linpmanualsolnum_vector_numvalues','p:linpmanualsolnum_vector_function','p:linpmanualsolnum_vector_interval','p:linpmanualsolnum_vector_freqperdec','p:linplistsol','p:linplistsolnum','p:storelinpoint','p:keepnotsolstatic','p:outsollinear','p:outsollinearized','p:reacf','p:lumpedflux','p:plot','p:probesel','p:clistctrl','p:cname','p:clist','p:keeplog','p:message','p:const','p:changedproperties','p:lastchangedproperty'</NodeDefaultValues>
+          <SolverFeatureList tag="feature" name="SolverFeatureList" created="1790214245671">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+            <SolverFeature op="Direct" tag="dDef" name="&#x76f4;&#x63a5;" created="1790214245688">
+              <entityFlags T="51">DISABLED</entityFlags>
+              <entityComments T="0"></entityComments>
+              <entityAuthor T="0"></entityAuthor>
+              <status T="101">BUILT</status>
+              <propertyValue T="30" name="p:itol">null</propertyValue>
+              <NodeDefaultValues>34,'p:linsolver','p:mumpsalloc','p:mumpsreorder','p:mumpsrreorder','p:reusereorder','p:pivotenable','p:thresh','p:pivotperturb','p:mumpsblr','p:mumpsblrtol','p:mumpsblrtype','p:ooc','p:memfracooc','p:incore','p:minicmemory','p:usetotmemory','p:internalmemusage','p:oocmemory','p:pardreorder','p:pardschedule','p:pardrreorder','p:pivotstrategy','p:pardmtsolve','p:clusterpardiso','p:preorder','p:pivotrefines','p:errorchk','p:rhob','p:iterrefine','p:maxrefinesteps','p:errorratiobound','p:nliniterrefine','p:changedproperties','p:lastchangedproperty'</NodeDefaultValues>
+              <SolverFeatureList tag="feature" name="SolverFeatureList" created="1790214245688">
+                <entityComments T="0"></entityComments>
+                <entityAuthor T="0"></entityAuthor>
+              </SolverFeatureList>
+            </SolverFeature>
+            <SolverFeature op="Advanced" tag="aDef" name="&#x9ad8;&#x7ea7;" created="1790214245688">
+              <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+              <entityComments T="0"></entityComments>
+              <entityAuthor T="0"></entityAuthor>
+              <status T="101">BUILT</status>
+              <siblingOrder T="5">0</siblingOrder>
+              <childrenCount T="5">0</childrenCount>
+              <propertyValue T="30" name="p:logsampling">null</propertyValue>
+              <NodeDefaultValues>36,'p:symmetric','p:matrixformat','p:rowscale','p:nullfun','p:orthonormallimit','p:storeresidual','p:convinfo','p:recoverysavinginfo','p:recoverysavingratio','p:recoverysaveforce','p:recoverysaveevery','p:autorescale','p:blocksize','p:blocksizeactive','p:assemdistrsol','p:cachepattern','p:cachepatternmethod','p:cachepatternexpr','p:assemloc','p:optthread','p:statblockdistr','p:complexfun','p:matherr','p:checkmatherr','p:elemdatainit','p:globalcache','p:assemtol','p:keep','p:L','p:K','p:D','p:E','p:M','p:N','p:changedproperties','p:lastchangedproperty'</NodeDefaultValues>
+              <SolverFeatureList tag="feature" name="SolverFeatureList" created="1790214245688">
+                <entityComments T="0"></entityComments>
+                <entityAuthor T="0"></entityAuthor>
+              </SolverFeatureList>
+            </SolverFeature>
+            <SolverFeature op="FullyCoupled" tag="fc1" name="&#x5168;&#x8026;&#x5408; 1" created="1790214245704">
+              <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+              <entityComments T="0"></entityComments>
+              <entityAuthor T="0"></entityAuthor>
+              <status T="101">BUILT</status>
+              <siblingOrder T="5">1</siblingOrder>
+              <childrenCount T="5">0</childrenCount>
+              <propertyValue T="30" name="p:linsolver" Reference="/sol/sol1/feature/s1/feature/d1" ReferenceContainerList="/sol/sol1/feature/s1/feature"></propertyValue>
+              <propertyValue T="30" value="0.01" name="p:initstep"></propertyValue>
+              <propertyValue T="30" value="1.0E-6" name="p:minstep"></propertyValue>
+              <propertyValue T="30" value="50" name="p:maxiter"></propertyValue>
+              <propertyValue T="30" value="off" name="p:termonres"></propertyValue>
+              <propertyValue T="30" name="p:ratelimit">null</propertyValue>
+              <propertyValue T="30" name="p:ratelimitactive">null</propertyValue>
+              <propertyValue T="30" value="onevery" name="p:jtech"></propertyValue>
+              <propertyValue T="30" name="p:useheuristicfact">null</propertyValue>
+              <propertyValue T="30" value="Default" name="p:plotgroup" ReferenceContainerList="/result/feature" CompositeIndex="0"></propertyValue>
+              <propertyValue T="30" name="p:plotfreq">null</propertyValue>
+              <propertyValue T="30" value="none" name="p:probesel"></propertyValue>
+              <propertyValue T="30" name="p:probes" ReferenceArray="0" ReferenceContainerList="/probe"></propertyValue>
+              <propertyValue T="30" name="p:probefreq">null</propertyValue>
+              <NodeDefaultValues>67,'p:dtech','p:rstep','p:rstepabs','p:useminsteprecovery','p:minsteprecovery','p:updweightsauto','p:updweightsdamp','p:updweightsdampval','p:updweightsdampvalconst','p:updweightsfac','p:ntermauto','p:ntolfact','p:niter','p:reserrfact','p:backmethod','p:backtrackonce','p:backdampstep','p:maxdamp','p:mindamp','p:updweights','p:ntermconst','p:adapttol','p:atolchoice','p:adapttolcflweight','p:adapttolerrweight','p:initiallintol','p:etamax','p:atolthreshold','p:dampexponent','p:dampfactor','p:usecflcmp','p:stabacc','p:cfltech','p:initcfl','p:mincfl','p:forcecfl','p:kppid','p:kipid','p:kdpid','p:cfltol','p:adaptcfltol','p:cflaa','p:cflaacfl','p:cflaaset','p:cflaadim','p:cflaamix','p:cflaadelay','p:cflaafact','p:cfljtech','p:jtechcfl','p:cfljtechval','p:ressmooth','p:relaxationressmooth','p:aaccdim','p:aaccmix','p:aaccdelay','p:aaccfact','p:damp','p:initsteph','p:minsteph','p:ddoginitdamp','p:resscale','p:ddogrestart','p:ddogrestartactive','p:plot','p:changedproperties','p:lastchangedproperty'</NodeDefaultValues>
+              <SolverFeatureList tag="feature" name="SolverFeatureList" created="1790214245721">
+                <entityComments T="0"></entityComments>
+                <entityAuthor T="0"></entityAuthor>
+              </SolverFeatureList>
+            </SolverFeature>
+            <SolverFeature op="Direct" tag="d1" name="&#x76f4;&#x63a5;&#xff0c;&#x4f20;&#x70ed;&#x53d8;&#x91cf; (ht)" created="1790214245721">
+              <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+              <entityComments T="0"></entityComments>
+              <entityAuthor T="0"></entityAuthor>
+              <status T="101">BUILT</status>
+              <siblingOrder T="5">2</siblingOrder>
+              <childrenCount T="5">0</childrenCount>
+              <propertyValue T="30" value="pardiso" name="p:linsolver"></propertyValue>
+              <propertyValue T="30" value="1.0E-13" name="p:pivotperturb"></propertyValue>
+              <propertyValue T="30" name="p:itol">null</propertyValue>
+              <NodeDefaultValues>32,'p:mumpsalloc','p:mumpsreorder','p:mumpsrreorder','p:reusereorder','p:pivotenable','p:thresh','p:mumpsblr','p:mumpsblrtol','p:mumpsblrtype','p:ooc','p:memfracooc','p:incore','p:minicmemory','p:usetotmemory','p:internalmemusage','p:oocmemory','p:pardreorder','p:pardschedule','p:pardrreorder','p:pivotstrategy','p:pardmtsolve','p:clusterpardiso','p:preorder','p:pivotrefines','p:errorchk','p:rhob','p:iterrefine','p:maxrefinesteps','p:errorratiobound','p:nliniterrefine','p:changedproperties','p:lastchangedproperty'</NodeDefaultValues>
+              <SolverFeatureList tag="feature" name="SolverFeatureList" created="1790214245721">
+                <entityComments T="0"></entityComments>
+                <entityAuthor T="0"></entityAuthor>
+              </SolverFeatureList>
+            </SolverFeature>
+            <SolverFeature op="Iterative" tag="i1" name="AMG&#xff0c;&#x4f20;&#x70ed;&#x53d8;&#x91cf; (ht)" created="1790214245721">
+              <entityFlags T="51">DISABLED</entityFlags>
+              <entityComments T="0"></entityComments>
+              <entityAuthor T="0"></entityAuthor>
+              <status T="101">BUILT</status>
+              <propertyValue T="30" value="on" name="p:nlinnormuse"></propertyValue>
+              <propertyValue T="30" value="0.1" name="p:nlinnormlevel"></propertyValue>
+              <propertyValue T="30" value="20" name="p:rhob"></propertyValue>
+              <NodeDefaultValues>18,'p:linsolver','p:itrestart','p:prefuntype','p:irestol','p:usenlweights','p:gcrodr','p:eigk','p:keepy','p:nrkeepss','p:gcrodrrel','p:eigkrel','p:maxlinit','p:iterm','p:iter','p:errorchk','p:maxilinit','p:changedproperties','p:lastchangedproperty'</NodeDefaultValues>
+              <SolverFeatureList tag="feature" name="SolverFeatureList" created="1790214245721">
+                <entityComments T="0"></entityComments>
+                <entityAuthor T="0"></entityAuthor>
+                <SolverFeature op="IncompleteLU" tag="ilDef" name="&#x4e0d;&#x5b8c;&#x5168; LU &#x5206;&#x89e3;" created="1790214245721">
+                  <entityFlags T="51">DISABLED</entityFlags>
+                  <entityComments T="0"></entityComments>
+                  <entityAuthor T="0"></entityAuthor>
+                  <propertyValue T="30" name="p:itol">null</propertyValue>
+                  <propertyValue T="30" name="p:maxlinit">null</propertyValue>
+                  <propertyValue T="30" value="1" name="p:iter"></propertyValue>
+                  <propertyValue T="30" name="p:hybridvar" ReferenceArray="1,'/sol/sol1/feature/v1/feature/comp1_T'" ReferenceContainerList="/sol/sol1/feature/v1/feature"></propertyValue>
+                  <propertyValue T="30" valueMatrix="1|1,'comp1.T'" name="p:hybridcomp"></propertyValue>
+                  <NodeDefaultValues>17,'p:prefun','p:droptype','p:droptol','p:fillratio','p:respectpattern','p:thresh','p:iterm','p:relax','p:ilutdroptol','p:ilutfillratio','p:preorder','p:rhob','p:hybridization','p:hybridvarspec','p:matrixformat','p:changedproperties','p:lastchangedproperty'</NodeDefaultValues>
+                  <SolverFeatureList tag="feature" name="SolverFeatureList" created="1790214245721">
+                    <entityComments T="0"></entityComments>
+                    <entityAuthor T="0"></entityAuthor>
+                  </SolverFeatureList>
+                </SolverFeature>
+                <SolverFeature op="Multigrid" tag="mg1" name="&#x591a;&#x91cd;&#x7f51;&#x683c; 1" created="1790214245739">
+                  <entityComments T="0"></entityComments>
+                  <entityAuthor T="0"></entityAuthor>
+                  <propertyValue T="30" value="saamg" name="p:prefun"></propertyValue>
+                  <propertyValue T="30" name="p:geomuse" ReferenceArray="1,'/geom/geom1'" ReferenceContainerList="/geom"></propertyValue>
+                  <propertyValue T="30" name="p:mcaseuse" ReferenceArray="0" ReferenceContainerList="/study/std1/feature/stat/mglevel"></propertyValue>
+                  <propertyValue T="30" name="p:mcaseassem" ReferenceArray="0" ReferenceContainerList="/study/std1/feature/stat/mglevel"></propertyValue>
+                  <propertyValue T="30" name="p:itol">null</propertyValue>
+                  <propertyValue T="30" name="p:maxlinit">null</propertyValue>
+                  <propertyValue T="30" value="2" name="p:iter"></propertyValue>
+                  <propertyValue T="30" value="50000" name="p:maxcoarsedof"></propertyValue>
+                  <propertyValue T="30" value="on" name="p:saamgcompwise"></propertyValue>
+                  <propertyValue T="30" value="off" name="p:usesmooth"></propertyValue>
+                  <propertyValue T="30" valueMatrix="1|2,'ht','auto'" name="p:addweakcontribslaplacemain"></propertyValue>
+                  <propertyValue T="30" valueMatrix="1|2,'ht',''" name="p:weakexprslaplacemain"></propertyValue>
+                  <propertyValue T="30" valueMatrix="1|2,'ht','1'" name="p:epsslaplacemain"></propertyValue>
+                  <propertyValue T="30" valueMatrix="1|2,'ht','off'" name="p:kwslaplacemain"></propertyValue>
+                  <propertyValue T="30" valueMatrix="1|2,'ht','auto'" name="p:addweakcontribslaplacemg"></propertyValue>
+                  <propertyValue T="30" valueMatrix="1|2,'ht',''" name="p:weakexprslaplacemg"></propertyValue>
+                  <propertyValue T="30" valueMatrix="1|2,'ht','1'" name="p:epsslaplacemg"></propertyValue>
+                  <propertyValue T="30" valueMatrix="1|2,'ht','1'" name="p:slaplaceminlevelmg"></propertyValue>
+                  <propertyValue T="30" valueMatrix="1|2,'ht','100'" name="p:slaplacemaxlevelmg"></propertyValue>
+                  <propertyValue T="30" valueMatrix="1|2,'ht','off'" name="p:slaplacemaxlevelmgactive"></propertyValue>
+                  <propertyValue T="30" valueMatrix="1|2,'ht','off'" name="p:kwslaplacemg"></propertyValue>
+                  <propertyValue T="30" name="p:hybridvar" ReferenceArray="1,'/sol/sol1/feature/v1/feature/comp1_T'" ReferenceContainerList="/sol/sol1/feature/v1/feature"></propertyValue>
+                  <propertyValue T="30" valueMatrix="1|1,'comp1.T'" name="p:hybridcomp"></propertyValue>
+                  <NodeDefaultValues>61,'p:mgcycle','p:mindofthread','p:mcasegen','p:gmglevels','p:scale','p:massem','p:mkeep','p:rmethod','p:prefermatfree','p:iterm','p:mglevels','p:coarseningmethod','p:strconnamgp','p:amgcompwise','p:prolongatoronlystrongconn','p:prolongatortruncation','p:amgauto','p:loweramg','p:assemall','p:strconn','p:useaggressive','p:nullspace','p:compactaggregation','p:reuseprolongators','p:aggmethod','p:agglevel','p:jacdamp','p:usefilter','p:rhob','p:negcoupl','p:negcouplactive','p:enrich','p:enrichactive','p:coarsening','p:coarseningactive','p:poscoupl','p:poscouplactive','p:interpolation','p:interpolationactive','p:jacinterp','p:jacinterpactive','p:truncinterp','p:truncinterpactive','p:slaplacemain','p:addweakcontribslaplacemainAUX','p:epsslaplacemainAUX','p:kwslaplacemainAUX','p:weakexprslaplacemainAUX','p:slaplacemg','p:addweakcontribslaplacemgAUX','p:epsslaplacemgAUX','p:slaplaceminlevelmgAUX','p:slaplacemaxlevelmgAUX','p:slaplacemaxlevelmgAUXactive','p:kwslaplacemgAUX','p:weakexprslaplacemgAUX','p:hybridization','p:hybridvarspec','p:matrixformat','p:changedproperties','p:lastchangedproperty'</NodeDefaultValues>
+                  <SolverFeatureList tag="feature" name="SolverFeatureList" created="1790214245739">
+                    <entityComments T="0"></entityComments>
+                    <entityAuthor T="0"></entityAuthor>
+                    <SolverFeature op="PreSmoother" tag="pr" name="&#x9884;&#x5e73;&#x6ed1;&#x5668;" created="1790214245739">
+                      <entityFlags T="51">NOREMOVE|NORETAG|NODEACTIVATE</entityFlags>
+                      <entityComments T="0"></entityComments>
+                      <entityAuthor T="0"></entityAuthor>
+                      <SolverFeatureList tag="feature" name="SolverFeatureList" created="1790214245739">
+                        <entityComments T="0"></entityComments>
+                        <entityAuthor T="0"></entityAuthor>
+                        <SolverFeature op="SOR" tag="soDef" name="SOR" created="1790214245739">
+                          <entityFlags T="51">DISABLED</entityFlags>
+                          <entityComments T="0"></entityComments>
+                          <entityAuthor T="0"></entityAuthor>
+                          <propertyValue T="30" value="sor" name="p:prefun"></propertyValue>
+                          <propertyValue T="30" name="p:itol">null</propertyValue>
+                          <propertyValue T="30" name="p:maxlinit">null</propertyValue>
+                          <propertyValue T="30" value="2" name="p:iter"></propertyValue>
+                          <propertyValue T="30" name="p:hybridvar" ReferenceArray="1,'/sol/sol1/feature/v1/feature/comp1_T'" ReferenceContainerList="/sol/sol1/feature/v1/feature"></propertyValue>
+                          <propertyValue T="30" valueMatrix="1|1,'comp1.T'" name="p:hybridcomp"></propertyValue>
+                          <NodeDefaultValues>11,'p:iterm','p:relax','p:sorblocked','p:reusedata','p:reusepattern','p:rhob','p:hybridization','p:hybridvarspec','p:matrixformat','p:changedproperties','p:lastchangedproperty'</NodeDefaultValues>
+                          <SolverFeatureList tag="feature" name="SolverFeatureList" created="1790214245739">
+                            <entityComments T="0"></entityComments>
+                            <entityAuthor T="0"></entityAuthor>
+                          </SolverFeatureList>
+                        </SolverFeature>
+                        <SolverFeature op="SOR" tag="so1" name="SOR 1" created="1790214245757">
+                          <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+                          <entityComments T="0"></entityComments>
+                          <entityAuthor T="0"></entityAuthor>
+                          <propertyValue T="30" value="sor" name="p:prefun"></propertyValue>
+                          <propertyValue T="30" name="p:itol">null</propertyValue>
+                          <propertyValue T="30" name="p:maxlinit">null</propertyValue>
+                          <propertyValue T="30" value="2" name="p:iter"></propertyValue>
+                          <propertyValue T="30" value="0.9" name="p:relax"></propertyValue>
+                          <propertyValue T="30" name="p:hybridvar" ReferenceArray="1,'/sol/sol1/feature/v1/feature/comp1_T'" ReferenceContainerList="/sol/sol1/feature/v1/feature"></propertyValue>
+                          <propertyValue T="30" valueMatrix="1|1,'comp1.T'" name="p:hybridcomp"></propertyValue>
+                          <NodeDefaultValues>10,'p:iterm','p:sorblocked','p:reusedata','p:reusepattern','p:rhob','p:hybridization','p:hybridvarspec','p:matrixformat','p:changedproperties','p:lastchangedproperty'</NodeDefaultValues>
+                          <SolverFeatureList tag="feature" name="SolverFeatureList" created="1790214245758">
+                            <entityComments T="0"></entityComments>
+                            <entityAuthor T="0"></entityAuthor>
+                          </SolverFeatureList>
+                        </SolverFeature>
+                      </SolverFeatureList>
+                    </SolverFeature>
+                    <SolverFeature op="PostSmoother" tag="po" name="&#x540e;&#x5e73;&#x6ed1;&#x5668;" created="1790214245739">
+                      <entityFlags T="51">NOREMOVE|NORETAG|NODEACTIVATE</entityFlags>
+                      <entityComments T="0"></entityComments>
+                      <entityAuthor T="0"></entityAuthor>
+                      <SolverFeatureList tag="feature" name="SolverFeatureList" created="1790214245739">
+                        <entityComments T="0"></entityComments>
+                        <entityAuthor T="0"></entityAuthor>
+                        <SolverFeature op="SOR" tag="soDef" name="SOR" created="1790214245739">
+                          <entityFlags T="51">DISABLED</entityFlags>
+                          <entityComments T="0"></entityComments>
+                          <entityAuthor T="0"></entityAuthor>
+                          <propertyValue T="30" value="soru" name="p:prefun"></propertyValue>
+                          <propertyValue T="30" name="p:itol">null</propertyValue>
+                          <propertyValue T="30" name="p:maxlinit">null</propertyValue>
+                          <propertyValue T="30" value="2" name="p:iter"></propertyValue>
+                          <propertyValue T="30" name="p:hybridvar" ReferenceArray="1,'/sol/sol1/feature/v1/feature/comp1_T'" ReferenceContainerList="/sol/sol1/feature/v1/feature"></propertyValue>
+                          <propertyValue T="30" valueMatrix="1|1,'comp1.T'" name="p:hybridcomp"></propertyValue>
+                          <NodeDefaultValues>11,'p:iterm','p:relax','p:sorblocked','p:reusedata','p:reusepattern','p:rhob','p:hybridization','p:hybridvarspec','p:matrixformat','p:changedproperties','p:lastchangedproperty'</NodeDefaultValues>
+                          <SolverFeatureList tag="feature" name="SolverFeatureList" created="1790214245754">
+                            <entityComments T="0"></entityComments>
+                            <entityAuthor T="0"></entityAuthor>
+                          </SolverFeatureList>
+                        </SolverFeature>
+                        <SolverFeature op="SOR" tag="so1" name="SOR 1" created="1790214245758">
+                          <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+                          <entityComments T="0"></entityComments>
+                          <entityAuthor T="0"></entityAuthor>
+                          <propertyValue T="30" value="soru" name="p:prefun"></propertyValue>
+                          <propertyValue T="30" name="p:itol">null</propertyValue>
+                          <propertyValue T="30" name="p:maxlinit">null</propertyValue>
+                          <propertyValue T="30" value="2" name="p:iter"></propertyValue>
+                          <propertyValue T="30" value="0.9" name="p:relax"></propertyValue>
+                          <propertyValue T="30" name="p:hybridvar" ReferenceArray="1,'/sol/sol1/feature/v1/feature/comp1_T'" ReferenceContainerList="/sol/sol1/feature/v1/feature"></propertyValue>
+                          <propertyValue T="30" valueMatrix="1|1,'comp1.T'" name="p:hybridcomp"></propertyValue>
+                          <NodeDefaultValues>10,'p:iterm','p:sorblocked','p:reusedata','p:reusepattern','p:rhob','p:hybridization','p:hybridvarspec','p:matrixformat','p:changedproperties','p:lastchangedproperty'</NodeDefaultValues>
+                          <SolverFeatureList tag="feature" name="SolverFeatureList" created="1790214245759">
+                            <entityComments T="0"></entityComments>
+                            <entityAuthor T="0"></entityAuthor>
+                          </SolverFeatureList>
+                        </SolverFeature>
+                      </SolverFeatureList>
+                    </SolverFeature>
+                    <SolverFeature op="CoarseSolver" tag="cs" name="&#x7c97;&#x5316;&#x6c42;&#x89e3;&#x5668;" created="1790214245755">
+                      <entityFlags T="51">NOREMOVE|NORETAG|NODEACTIVATE</entityFlags>
+                      <entityComments T="0"></entityComments>
+                      <entityAuthor T="0"></entityAuthor>
+                      <SolverFeatureList tag="feature" name="SolverFeatureList" created="1790214245755">
+                        <entityComments T="0"></entityComments>
+                        <entityAuthor T="0"></entityAuthor>
+                        <SolverFeature op="Direct" tag="dDef" name="&#x76f4;&#x63a5;" created="1790214245755">
+                          <entityFlags T="51">DISABLED</entityFlags>
+                          <entityComments T="0"></entityComments>
+                          <entityAuthor T="0"></entityAuthor>
+                          <propertyValue T="30" name="p:rhob">null</propertyValue>
+                          <propertyValue T="30" name="p:iterrefine">null</propertyValue>
+                          <propertyValue T="30" name="p:maxrefinesteps">null</propertyValue>
+                          <propertyValue T="30" name="p:errorratiobound">null</propertyValue>
+                          <propertyValue T="30" name="p:nliniterrefine">null</propertyValue>
+                          <NodeDefaultValues>30,'p:linsolver','p:mumpsalloc','p:mumpsreorder','p:mumpsrreorder','p:reusereorder','p:pivotenable','p:thresh','p:pivotperturb','p:mumpsblr','p:mumpsblrtol','p:mumpsblrtype','p:ooc','p:memfracooc','p:incore','p:minicmemory','p:usetotmemory','p:internalmemusage','p:oocmemory','p:pardreorder','p:pardschedule','p:pardrreorder','p:pivotstrategy','p:pardmtsolve','p:clusterpardiso','p:preorder','p:pivotrefines','p:errorchk','p:itol','p:changedproperties','p:lastchangedproperty'</NodeDefaultValues>
+                          <SolverFeatureList tag="feature" name="SolverFeatureList" created="1790214245756">
+                            <entityComments T="0"></entityComments>
+                            <entityAuthor T="0"></entityAuthor>
+                          </SolverFeatureList>
+                        </SolverFeature>
+                        <SolverFeature op="Direct" tag="d1" name="&#x76f4;&#x63a5; 1" created="1790214245759">
+                          <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+                          <entityComments T="0"></entityComments>
+                          <entityAuthor T="0"></entityAuthor>
+                          <propertyValue T="30" value="pardiso" name="p:linsolver"></propertyValue>
+                          <propertyValue T="30" value="1.0E-13" name="p:pivotperturb"></propertyValue>
+                          <propertyValue T="30" name="p:rhob">null</propertyValue>
+                          <propertyValue T="30" name="p:iterrefine">null</propertyValue>
+                          <propertyValue T="30" name="p:maxrefinesteps">null</propertyValue>
+                          <propertyValue T="30" name="p:errorratiobound">null</propertyValue>
+                          <propertyValue T="30" name="p:nliniterrefine">null</propertyValue>
+                          <NodeDefaultValues>28,'p:mumpsalloc','p:mumpsreorder','p:mumpsrreorder','p:reusereorder','p:pivotenable','p:thresh','p:mumpsblr','p:mumpsblrtol','p:mumpsblrtype','p:ooc','p:memfracooc','p:incore','p:minicmemory','p:usetotmemory','p:internalmemusage','p:oocmemory','p:pardreorder','p:pardschedule','p:pardrreorder','p:pivotstrategy','p:pardmtsolve','p:clusterpardiso','p:preorder','p:pivotrefines','p:errorchk','p:itol','p:changedproperties','p:lastchangedproperty'</NodeDefaultValues>
+                          <SolverFeatureList tag="feature" name="SolverFeatureList" created="1790214245760">
+                            <entityComments T="0"></entityComments>
+                            <entityAuthor T="0"></entityAuthor>
+                          </SolverFeatureList>
+                        </SolverFeature>
+                      </SolverFeatureList>
+                    </SolverFeature>
+                  </SolverFeatureList>
+                </SolverFeature>
+              </SolverFeatureList>
+            </SolverFeature>
+          </SolverFeatureList>
+        </SolverFeature>
+      </SolverFeatureList>
+    </SolverSequence>
+  </SolverSequenceList>
+  <ProbeFeatureList tag="probe" name="ProbeFeatureList" created="1790214235451">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+  </ProbeFeatureList>
+  <ProbeFeatureList tag="massProp" name="ProbeFeatureList" created="1790214235455">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+  </ProbeFeatureList>
+  <Results tag="result" name="&#x7ed3;&#x679c;" created="1790214235455">
+    <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+    <ConfigurationFeatureList tag="configuration" name="&#x914d;&#x7f6e;" created="1790214235459">
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+    </ConfigurationFeatureList>
+    <DatasetFeatureList tag="dataset" name="&#x6570;&#x636e;&#x96c6;" created="1790214235462">
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+      <DatasetFeature op="Solution" tag="dset1" name="" created="1790214243471">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <selection T="32" selection="LocalSelection" flags="32" selType="GEOM">
+          <explicit geom="/savePointData/savepoint1/geom/geom1"/>
+        </selection>
+        <propertyValue T="30" value="none" name="p:solution" Reference="/sol/sol1" ReferenceContainerList="/sol" CompositeIndex="1"></propertyValue>
+        <propertyValue T="30" value="comp1" name="p:comp"></propertyValue>
+        <propertyValue T="30" value="off" name="p:showgeom"></propertyValue>
+        <propertyValue T="30" name="p:geom" Reference="/savePointData/savepoint1/geom/geom1" ReferenceContainerList="/savePointData/savepoint1/geom"></propertyValue>
+        <propertyValue T="30" valueMatrix="1|2,'comp1','geom1'" name="p:compgeommap"></propertyValue>
+        <NodeDefaultValues>9,'p:hasbeenevaluated','p:defaultPlotIDs','p:phaseshift','p:scalingfactor','p:frametype','p:phase','p:scalefactor','p:probetag','p:evalcount'</NodeDefaultValues>
+        <DatasetFeatureList tag="feature" name="&#x6570;&#x636e;&#x96c6;" created="1790214243538">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+        </DatasetFeatureList>
+      </DatasetFeature>
+    </DatasetFeatureList>
+    <ExportFeatureList tag="export" name="&#x5bfc;&#x51fa;" created="1790214235462">
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+    </ExportFeatureList>
+    <NumericalFeatureList tag="numerical" name="&#x6d3e;&#x751f;&#x503c;" created="1790214235471">
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+    </NumericalFeatureList>
+    <TableFeatureList tag="table" name="&#x8868;&#x683c;" created="1790214235471">
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+    </TableFeatureList>
+    <EvaluationGroupFeatureList tag="evaluationgroup" name="&#x8ba1;&#x7b97;&#x7ec4;" created="1790214235487">
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+    </EvaluationGroupFeatureList>
+    <ResultFeatureList tag="feature" name="ResultFeatureList" created="1790214243303">
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+    </ResultFeatureList>
+    <ResultParam tag="param" name="&#x53c2;&#x6570;" created="1790214243488">
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+    </ResultParam>
+    <ColorTableFeatureList tag="colortable" name="&#x989c;&#x8272;&#x8868;" created="1790214246804">
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+    </ColorTableFeatureList>
+    <ReportFeatureList tag="report" name="&#x62a5;&#x544a;" created="1790214246804">
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+    </ReportFeatureList>
+  </Results>
+  <GeomManagerNative tag="geomManagerNative" created="1790214235488">
+    <lastID T="5">2</lastID>
+    <geomManager T="52" class="GEOMMANAGER" resource="geommanager1.mphbin" id="1" fileid="aa9f1ff3806a775b"/>
+  </GeomManagerNative>
+  <History tag="hist" created="1790214235488">
+    <HistoryBlock tag="hist1" created="1790214235904">
+      <actions T="0">t(s("/")) m(s("label")) s("Model63")</actions>
+      <actions T="0">t(s("/param")) m(s("set")) s("T_left") s("300[K]")</actions>
+      <actions T="0">t(s("/param")) m(s("set")) s("T_right") s("350[K]")</actions>
+      <actions T="0">t(s("/param")) m(s("set")) s("k_val") s("400[W/(m*K)]")</actions>
+      <actions T="0">t(s("/component")) m(s("create")) s("comp1")</actions>
+      <actions T="0">t(s("/component/comp1/geom")) m(s("create")) s("geom1") i(3)</actions>
+      <actions T="0">t(s("/component/comp1/geom/geom1")) m(s("create")) s("blk1") s("Block")</actions>
+      <actions T="0">t(s("/component/comp1/geom/geom1/feature/blk1")) m(s("set")) s("size") sa(s("0.05[m]"),s("0.02[m]"),s("0.01[m]"))</actions>
+      <actions T="0">t(s("/component/comp1/geom/geom1")) m(s("run"))</actions>
+      <actions T="0">t(s("/component/comp1/physics")) m(s("create")) s("ht") s("HeatTransfer") s("geom1")</actions>
+      <actions T="0">t(s("/component/comp1/physics/ht")) m(s("create")) s("temp1") s("TemperatureBoundary") i(2)</actions>
+      <actions T="0">t(s("/component/comp1/physics/ht/feature/temp1/selection[geom1]")) m(s("set")) va() ia(1)</actions>
+      <actions T="0">t(s("/component/comp1/physics/ht/feature/temp1")) m(s("set")) s("T0") s("T_left")</actions>
+      <actions T="0">t(s("/component/comp1/physics/ht")) m(s("create")) s("temp2") s("TemperatureBoundary") i(2)</actions>
+      <actions T="0">t(s("/component/comp1/physics/ht/feature/temp2/selection[geom1]")) m(s("set")) va() ia(6)</actions>
+      <actions T="0">t(s("/component/comp1/physics/ht/feature/temp2")) m(s("set")) s("T0") s("T_right")</actions>
+      <actions T="0">t(s("/component/comp1/material")) m(s("create")) s("mat1") s("Common")</actions>
+      <actions T="0">t(s("/component/comp1/material/mat1/selection[geom1]")) m(s("all"))</actions>
+      <actions T="0">t(s("/component/comp1/material/mat1/materialmodel/def")) m(s("set")) s("thermalconductivity") sa(s("k_val"))</actions>
+      <actions T="0">t(s("/component/comp1/material/mat1/materialmodel/def")) m(s("set")) s("density") s("8960[kg/m^3]")</actions>
+      <actions T="0">t(s("/component/comp1/material/mat1/materialmodel/def")) m(s("set")) s("heatcapacity") s("385[J/(kg*K)]")</actions>
+      <actions T="0">t(s("/component/comp1/mesh")) m(s("create")) s("mesh1") g(s("geom1"))</actions>
+      <actions T="0">t(s("/component/comp1/mesh/mesh1")) m(s("run"))</actions>
+      <actions T="0">t(s("/study")) m(s("create")) s("std1")</actions>
+      <actions T="0">t(s("/study/std1")) m(s("create")) s("stat") s("Stationary")</actions>
+    </HistoryBlock>
+  </History>
+  <InformationList tag="information" name="&#x4fe1;&#x606f;" created="1790214235488">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+    <Information tag="expectedComputationTime" name="&#x4fe1;&#x606f;" created="1790214235488">
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+      <title T="0">Expected_computation_time</title>
+      <body T="0"></body>
+    </Information>
+    <Information tag="lastComputationTime" name="&#x4fe1;&#x606f; 2" created="1790214235488">
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+      <title T="0">Last_computation_time</title>
+      <body T="0"></body>
+    </Information>
+    <Information tag="lastComputationDate" name="&#x4fe1;&#x606f; 3" created="1790214235488">
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+      <title T="0">Last_computation_date</title>
+      <body T="0"></body>
+    </Information>
+    <Information tag="lastComputationVersion" name="&#x4fe1;&#x606f; 4" created="1790214235488">
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+      <title T="0">Computed_in_version</title>
+      <body T="0"></body>
+    </Information>
+  </InformationList>
+  <ExternalInterfaceFeatureList tag="extint" name="&#x5916;&#x90e8;&#x63a5;&#x53e3;" created="1790214236530">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+  </ExternalInterfaceFeatureList>
+  <CoordsysList tag="coordsys" name="CoordsysList" created="1790214236773">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+    <Coordsys op="Boundary" tag="sys1" name="&#x8fb9;&#x754c;&#x5750;&#x6807;&#x7cfb; 1" created="1790214236905">
+      <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+      <geom T="50">/geom/geom1</geom>
+      <propertyValue T="30" value="sys1" name="p:name"></propertyValue>
+      <propertyValue T="30" valueMatrix="1|3,'root.t1x','root.t1y','root.t1z'" name="p:tangent"></propertyValue>
+      <NodeDefaultValues>5,'p:coord','p:frametype','p:reversenormal','p:mastercoordsystcomp','p:mastersystem'</NodeDefaultValues>
+      <FeatureInfoList tag="featureInfo" name="FeatureInfoList" created="1790214236905">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <FeatureInfo tag="info" name="&#x65b9;&#x7a0b;&#x89c6;&#x56fe;" created="1790214236905">
+          <entityFlags T="51">NOREMOVE|NODEACTIVATE</entityFlags>
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+        </FeatureInfo>
+      </FeatureInfoList>
+      <CoordsysList tag="feature" name="CoordsysList" created="1790214236921">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+      </CoordsysList>
+    </Coordsys>
+  </CoordsysList>
+  <EmbGeomFeatureList tag="emb" name="EmbGeomFeatureList" created="1790214236773">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+  </EmbGeomFeatureList>
+  <FormFeatureList tag="formInstance" name="&#x8bbe;&#x7f6e;&#x8868;&#x5355;" created="1790214237088">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+  </FormFeatureList>
+  <SavePointDataList tag="savePointData" name="SavePointDataList" created="1790214237088">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+    <SavePointData tag="savepoint1" name="Save Point 1" created="1790214247071">
+      <entityFlags T="51">NORETAG</entityFlags>
+      <entityComments T="0"></entityComments>
+      <entityAuthor T="0"></entityAuthor>
+      <SavePointGeomList tag="geom" name="SavePointGeomList" created="1790214247071">
+        <entityComments T="0"></entityComments>
+        <entityAuthor T="0"></entityAuthor>
+        <SavePointGeom tag="geom1" name="Save Point Geometry 1" created="1790214247071">
+          <entityComments T="0"></entityComments>
+          <entityAuthor T="0"></entityAuthor>
+          <geom T="50">/geom/geom1</geom>
+          <geomTagInSavePointModel T="0">geom1</geomTagInSavePointModel>
+          <assocMapFromCurrent T="7">{0,1,2,3,4,5,6,7,8},{0,1,2,3,4,5,6,7,8,9,10,11,12},{0,1,2,3,4,5,6},{0,1}</assocMapFromCurrent>
+          <SavePointSelectionList tag="selection" name="SavePointSelectionList" created="1790214247088">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+          </SavePointSelectionList>
+          <SavePointViewList tag="view" name="&#x89c6;&#x56fe;" created="1790214247104">
+            <entityComments T="0"></entityComments>
+            <entityAuthor T="0"></entityAuthor>
+            <SavePointView op="ModelView3D" tag="view1" name="&#x89c6;&#x56fe; 1" created="1790214247114">
+              <entityFlags T="51">NODEACTIVATE</entityFlags>
+              <entityComments T="0"></entityComments>
+              <entityAuthor T="0"></entityAuthor>
+              <propertyValue T="30" valueMatrix="1|3,'1','0','0'" name="p:customclipintersectionhighlightcolor"></propertyValue>
+              <propertyValue T="30" valueMatrix="1|3,'1','0','0'" name="p:customclipcappedfaceshighlightoverlappingdomainscolor"></propertyValue>
+              <geom T="50">/savePointData/savepoint1/geom/geom1</geom>
+              <sdim T="5">3</sdim>
+              <current T="3">true</current>
+              <NodeDefaultValues>128,'p:renderwireframe','p:showlabels','p:showDirections','p:showgrid','p:rendermesh','p:showaxisorientation','p:showunits','p:plotgroupunits','p:locked','p:rotcenlocked','p:istemporary','p:scenelight','p:totlightintensity','p:usediffuse','p:usespecular','p:globalambient','p:totambient','p:ambientcolor','p:customambientcolor','p:ssao','p:ssaoradiustype','p:ssaoradiusrelative','p:ssaoradiusexplicit','p:ssaomagnitude','p:ssaosqueeze','p:ssaopreset','p:ssaonsamples','p:ssaoroughness','p:ssaokernelrotationstexturewidth','p:ssaosmooth','p:ssaonormalawaresmoothing','p:ssaoresolution','p:shadowmapping','p:shadowmappingsoftness','p:shadowmappingstrength','p:shadowmappingpreset','p:shadowmappingnumberofoccludersamples','p:shadowmappingnumberofsamples','p:shadowmappingresolution','p:shadowmappingmultisamplingeverywhere','p:shadowmappinglimitlightviewfrustums','p:shadowmappingaccuratedepthcomparison','p:shadowmappingnormalawaresmoothing','p:shadowmappingbiassettings','p:shadowmappingconstantdepthbias','p:shadowmappingslopedepthbias','p:shadowmappingnormaloffsetbias','p:flooreffect','p:flooreffectoriginsettings','p:flooreffectshoworigin','p:flooreffectorigin','p:flooreffectorigin_vector_method','p:flooreffectorigin_vector_start','p:flooreffectorigin_vector_stop','p:flooreffectorigin_vector_step','p:flooreffectorigin_vector_numvalues','p:flooreffectorigin_vector_function','p:flooreffectorigin_vector_interval','p:flooreffectorigin_vector_freqperdec','p:flooreffectoffset','p:flooreffectshownormalsettings','p:flooreffectnormalsettings','p:flooreffectshownormal','p:flooreffectnormalpreset','p:flooreffectnormal','p:flooreffectnormal_vector_method','p:flooreffectnormal_vector_start','p:flooreffectnormal_vector_stop','p:flooreffectnormal_vector_step','p:flooreffectnormal_vector_numvalues','p:flooreffectnormal_vector_function','p:flooreffectnormal_vector_interval','p:flooreffectnormal_vector_freqperdec','p:flooreffectshowangle','p:flooreffectangle','p:flooreffectambientocclusion','p:flooreffectshadow','p:flooreffectshadowblur','p:flooreffecttransparency','p:displayoutput','p:displayoutputpreset','p:displayoutputtonemap','p:displayoutputgamma','p:displayoutputexposure','p:displayoutputcontrast','p:displayoutputsaturation','p:displayoutputvibrance','p:displayoutputhue','p:displayoutputbrightness','p:environmentmap','p:skydirection','p:skyrotation','p:environmentreflections','p:skybox','p:skyboxblurriness','p:skyboxblend','p:skyboxprojection','p:skyboxfov','p:rotateenvironment','p:transparency','p:transparencylevel','p:uniformblending','p:uniformblendinglevel','p:showselection','p:showmaterial','p:clippingactive','p:clipfaces','p:clipedges','p:clippoints','p:clipprimaryhovereffect','p:clipsecondaryhovereffect','p:cliphighlightintersection','p:clipintersectionhighlightcolor','p:clipapplyclipping','p:clipshowframes','p:clipshowgizmos','p:clipshowcappedfaces','p:clipcappedfacescolorize','p:clipcappedfacescolorizeper','p:clipcappedfaceshighlightoverlappingdomains','p:clipcappedfaceshighlightoverlappingdomainscolor','p:clipcappedfacestransparencyenabled','p:clipcappedfacestransparency','p:hidestatus','p:isnew','p:postviewkey','p:workplaneclip','p:workplaneshowgizmo'</NodeDefaultValues>
+              <ViewFeatureList tag="clip" name="ViewFeatureList" created="1790214247124">
+                <entityComments T="0"></entityComments>
+                <entityAuthor T="0"></entityAuthor>
+              </ViewFeatureList>
+              <SavePointHideGeomList tag="hideEntities" name="SavePointHideGeomList" created="1790214247124">
+                <entityComments T="0"></entityComments>
+                <entityAuthor T="0"></entityAuthor>
+              </SavePointHideGeomList>
+              <HideMeshList tag="hideMesh" name="HideMeshList" created="1790214247124">
+                <entityComments T="0"></entityComments>
+                <entityAuthor T="0"></entityAuthor>
+              </HideMeshList>
+            </SavePointView>
+          </SavePointViewList>
+        </SavePointGeom>
+      </SavePointGeomList>
+    </SavePointData>
+  </SavePointDataList>
+  <ElemList tag="elem" name="ElemList" created="1790214237104">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+  </ElemList>
+  <FileResourceList tag="file" name="FileResourceList" created="1790214240171">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+  </FileResourceList>
+  <ShapeList tag="shape" name="ShapeList" created="1790214240621">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+  </ShapeList>
+  <InitList tag="init" name="InitList" created="1790214241044">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+  </InitList>
+  <GroupList tag="group" name="&#x8f7d;&#x8377;&#x4e0e;&#x7ea6;&#x675f;&#x7ec4;" created="1790214241404">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+  </GroupList>
+  <ReducedModelList tag="reduced" name="&#x964d;&#x9636;&#x6a21;&#x578b;" created="1790214243304">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+    <sstags2remove T="1">0</sstags2remove>
+  </ReducedModelList>
+  <IntRuleList tag="intrule" name="IntRuleList" created="1790214244021">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+  </IntRuleList>
+  <ElementSetList tag="elementset" name="ElementSetList" created="1790214244121">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+  </ElementSetList>
+  <BEMFeatureList tag="bem" name="&#x8fb9;&#x754c;&#x5143;&#x504f;&#x5fae;&#x5206;&#x65b9;&#x7a0b;&#x5217;&#x8868;" created="1790214244504">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+  </BEMFeatureList>
+  <WeakList tag="weak" name="WeakList" created="1790214244755">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+  </WeakList>
+  <ConstrList tag="constr" name="ConstrList" created="1790214244755">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+  </ConstrList>
+  <SolutionData tag="soldata" created="1790214245776">
+    <SavePoint tag="savepoint1" created="1790214246803">
+      <study T="0">std1/stat</study>
+      <splitComplex T="3">false</splitComplex>
+      <counter T="5">1</counter>
+      <useent T="0">all</useent>
+      <entsel T="1">0</entsel>
+      <useForModelReduction T="3">true</useForModelReduction>
+      <partmethod T="0">off</partmethod>
+      <XMeshNative tag="xmesh1" created="1790214246521">
+        <xmesh T="52" class="XMESH" resource="xmesh1.mphbin" id="1" fileid="8746efc6f3046a5f"/>
+        <dofVersion T="5">4</dofVersion>
+        <geomsSolvedFor T="1">1,'geom1'</geomsSolvedFor>
+      </XMeshNative>
+    </SavePoint>
+    <SolutionNative tag="sol5" created="1790214247304">
+      <pName T="1">0</pName>
+      <solnumDescriptions T="1">0</solnumDescriptions>
+      <tListReal T="13"></tListReal>
+      <tListImag T="13"></tListImag>
+      <tDescr T="0">Time</tDescr>
+      <loadCases T="1">0</loadCases>
+      <counter T="5">1</counter>
+      <unit T="1">0</unit>
+      <solution T="52" class="SOLUTION" resource="solution1.mphbin" id="3" fileid="cd87ff9f7c79e78e"/>
+      <solutionStatic T="52" class="SOLUTIONSTATIC" resource="solutionstatic1.mphbin" id="3" fileid="11b2a6d0fcb754a8"/>
+      <totalSize T="11">0</totalSize>
+    </SolutionNative>
+  </SolutionData>
+  <EventList tag="event" name="EventList" created="1790214246563">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+  </EventList>
+  <AppBuilderFeatureList tag="applicationNodeList" name="AppBuilderFeatureList" created="1790214246804">
+    <entityComments T="0"></entityComments>
+    <entityAuthor T="0"></entityAuthor>
+  </AppBuilderFeatureList>
+</Model>
+

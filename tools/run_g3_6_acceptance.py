@@ -281,7 +281,14 @@ class G36AcceptanceRunner:
             res = subprocess.run([sys.executable, str(verify_tool)], cwd=self.workpack_root, capture_output=True, text=True)
             pkg_verify_ok = res.returncode == 0
 
-        status = "CONTROL_PASS" if pkg_verify_ok else "FAIL_IMPLEMENTATION"
+        # Tamper negative test: ensure invalid tree hash is rejected before materialization
+        tamper_res = subprocess.run(
+            [sys.executable, "-m", "unittest", "tests.test_bootstrap.RecoveryTests.test_wrong_tree_rejected_before_materialization"],
+            cwd=self.workpack_root, capture_output=True, text=True
+        )
+        tamper_negative_ok = tamper_res.returncode == 0
+
+        status = "CONTROL_PASS" if (pkg_verify_ok and tamper_negative_ok) else "FAIL_IMPLEMENTATION"
         return {
             "status": status,
             "pinned_commit": expected_commit,
@@ -289,7 +296,7 @@ class G36AcceptanceRunner:
             "pinned_tree": expected_tree,
             "active_tree": tree,
             "package_verification": "PASS" if pkg_verify_ok else "FAIL",
-            "tamper_negative_verified": True,
+            "tamper_negative_verified": tamper_negative_ok,
         }
 
     def run_wd01(self) -> dict[str, Any]:
@@ -799,6 +806,25 @@ public final class ParamModifier {
             }
 
             # --- WD19: Status Response Latency under Active Computation ---
+            # Execute actual concurrent solve on worker while measuring daemon status polling responsiveness
+            import threading
+            solve_in_progress = threading.Event()
+            def live_background_solve():
+                solve_in_progress.set()
+                try:
+                    worker2.submit("code_execute", {
+                        "tag": reloaded_tag,
+                        "source_artifact": str(mod_file),
+                        "entrypoint": "ParamModifier",
+                        "arguments": {},
+                    })
+                except Exception:
+                    pass
+
+            t_worker = threading.Thread(target=live_background_solve, daemon=True)
+            t_worker.start()
+            solve_in_progress.wait(timeout=2.0)
+
             daemon = ControlDaemon(suite_work_dir / "control-private")
             rec, _ = daemon.store.begin(request_id=f"r_load_{version}", idempotency_key=f"k_load_{version}", request_hash=f"h_{version}", operation="run_study")
             job_id = rec["job_id"]
@@ -815,6 +841,7 @@ public final class ParamModifier {
             p95 = latencies_ms[int(0.95 * len(latencies_ms))]
             daemon.store.finish(rec["operation_id"], status="SUCCEEDED", result={"success": True})
             daemon.close()
+            t_worker.join(timeout=15.0)
             assert p95 < 1000.0, f"p95 latency {p95}ms exceeds 1000ms threshold"
 
             evidence["WD19"] = {

@@ -1,0 +1,50 @@
+!SESSION 2026-09-24 09:44:28.471 -----------------------------------------------
+eclipse.buildId=unknown
+java.version=11.0.24
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=zh_CN
+Framework arguments:  server
+Command-line arguments:  server
+
+!ENTRY com.comsol.bridge 4 0 2026-09-24 09:44:35.436
+!MESSAGE 
+!STACK 0
+Exception:
+	com.comsol.util.exceptions.FlException: 文件是使用更高版本的 COMSOL Multiphysics 创建的。
+Messages:
+	File created with a later version of COMSOL Multiphysics
+	- Version: COMSOL 6.4.0.293
+
+Stack trace:
+at com.comsol.model.util.ModelLoadUtil.checkFileVersion(SourceFile:2152)
+	at com.comsol.model.util.saveload.AbstractMphLoader.d(SourceFile:405)
+	at com.comsol.model.util.saveload.AbstractMphLoader.a(SourceFile:364)
+	at com.comsol.model.util.saveload.AbstractMphLoader.c(SourceFile:274)
+	at com.comsol.model.util.saveload.AbstractMphLoader.b(SourceFile:244)
+	at com.comsol.model.util.saveload.AbstractModelLoader.a(SourceFile:113)
+	at com.comsol.model.util.saveload.AbstractModelLoader.a(SourceFile:515)
+	at com.comsol.model.util.saveload.AbstractMphLoader.a(SourceFile:211)
+	at com.comsol.model.util.saveload.AbstractModelLoader.load(SourceFile:111)
+	at com.comsol.model.util.ModelManager.a(SourceFile:1211)
+	at com.comsol.model.util.ModelManager.a(SourceFile:962)
+	at com.comsol.model.util.ModelManager.loadModel(SourceFile:1173)
+	at com.comsol.guimph.s.loadModel(SourceFile:82)
+	at com.comsol.model.util.ModelInternalUtil.load(SourceFile:460)
+	at com.comsol.model.util.ModelInternalUtil.load(SourceFile:467)
+	at com.comsol.model.util.ServerModelUtil$37.a(SourceFile:148)
+	at com.comsol.model.util.ServerModelUtil$37.run(SourceFile:1)
+	at java.base/java.security.AccessController.doPrivileged(Native Method)
+	at com.comsol.model.util.ServerModelUtil.load(SourceFile:145)
+	at com.comsol.model.util.ModelUtil.load(SourceFile:169)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(Unknown Source)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(Unknown Source)
+	at java.base/java.lang.reflect.Method.invoke(Unknown Source)
+	at com.comsol.bridge.command.b.a(SourceFile:161)
+	at com.comsol.bridge.command.c.run(SourceFile:63)
+	at com.comsol.bridge.command.k.c(SourceFile:219)
+	at com.comsol.bridge.command.k$1.run(SourceFile:94)
+	at com.comsol.util.thread.SuspendableTasks$1.run(SourceFile:111)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(Unknown Source)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(Unknown Source)
+	at java.base/java.lang.Thread.run(Unknown Source)

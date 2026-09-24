@@ -16,8 +16,8 @@
   - 交付物结论:
     - `WINDOWS_COMSOL_63_CORE_VERIFIED_SCOPED`
     - `WINDOWS_COMSOL_64_CORE_VERIFIED_SCOPED`
-- **实机验收运行 ID**: `g3_6_acceptance_20260924T011622Z` (总耗时 251.22s, 30/30 用例全部通过, 历史基线运行 ID: `g3_6_live_acceptance_20260924T082700Z`, `g3_6_acceptance_20260923T235632Z`)
-- **证据存储路径**: `evidence/windows_dual_version/g3_6_acceptance_20260924T011622Z/`
+- **实机验收运行 ID**: `g3_6_acceptance_20260924T014214Z` (总耗时 257.55s, 30/30 用例全部实机通过, 历史基线运行 ID: `g3_6_acceptance_20260924T011622Z`, `g3_6_live_acceptance_20260924T082700Z`, `g3_6_acceptance_20260923T235632Z`)
+- **证据存储路径**: `evidence/windows_dual_version/g3_6_acceptance_20260924T014214Z/`
 
 ---
 
@@ -37,7 +37,7 @@
 
 ---
 
-## 2. WD00–WD29 验收用例执行台账 (实机运行 ID: `g3_6_acceptance_20260923T235632Z`)
+## 2. WD00–WD29 验收用例执行台账 (实机运行 ID: `g3_6_acceptance_20260924T014214Z`)
 
 | 用例 ID | 标题 | 目标平台 | 证据级别 | 本轮执行结论 | 实际执行详情与依据 |
 |---|---|---|---|---|---|
