@@ -21,7 +21,7 @@
   - Windows 原生 DACL 精确 trustee 匹配与路径前缀剥离，防御子串与空 DACL 越权。
   - 冻结期望基准 `FrozenOracle`，严格比对稳态 3D 铜块与瞬态正弦热传导解析解。
   - 双版本实机执行：COMSOL 6.3 与 6.4 原生 Windows 11 Enterprise AMD64 全部 44 项用例 100% 通过。
-  - 工具数量由运行时动态发现生成：当前发布 **70 个 MCP 工具** 与 **126 个领域 operations**（包含绘图、导出、作业控制 `job_*` 等）。
+  - 工具数量由运行时动态发现生成：当前发布 **86 个 MCP 工具**（含 8 项 W20 validate 工具及其别名）与 **126 个领域 operations**（包含绘图、导出、作业控制 `job_*` 等）。
   - 支持完整的 MCP `ImageContent(type="image", data=b64, mimeType="image/png")` 多模态图形返回与 TextContent 防膨胀摘要分离。
 - **Gate A (G01–G12) 关键缺陷修复**：
   - **G01**: 源码恢复自公开锁定提交，实现环境 site-packages、源码、项目数据根、工作目录 cwd 的严格四路径隔离。
@@ -60,7 +60,7 @@
 - 支持 visible-main 主模型锁，避免误切换或误保存模型
 - 支持参数设置、表达式求值、几何特征创建/更新/删除、物理场、变量、求解器配置和研究运行
 - 支持主模型快照、当前模型保存、异步加载大型 `.mph`
-- 公开工具接口稳定；工具数量由运行时动态发现生成：当前发布 **70 个 MCP 工具 + 126 个领域 operations**
+- 公开工具接口稳定；工具数量由运行时动态发现生成：当前发布 **86 个 MCP 工具 + 126 个领域 operations**
 
 ## 适用场景
 
@@ -342,8 +342,8 @@ steps, and saved snapshots evolve in COMSOL Desktop.
 > This section reflects the completed verification status of G3.5 (Gate A fixes G01–G12 + W19 job directory, queued/running cancellation, recovery, and concurrency control J01–J10).
 > Authoritative acceptance verdict is **PASS** (`G3_5_MAC_W19_VERIFIED_SCOPED`), stopped strictly at W19 without advancing to W20–W26.
 
-- **MCP tool surface:** dynamically discovered at runtime: currently publishes **70 tools**
-  (including core workflow, physics, solver, plotting `plot.render` / `plot_render`, and job control `job_*`); plus **126 domain operations** in DISPATCH.
+- **MCP tool surface:** dynamically discovered at runtime: currently publishes **86 tools**
+  (including core workflow, physics, solver, plotting `plot.render` / `plot_render`, validation `validate.*`, and job control `job_*`); plus **126 domain operations** in DISPATCH.
 - **Gate A (G01–G12) Key Fixes:**
   - **G01**: Clean recovery from pinned commit, strict 4-path isolation (packages, source, project root, cwd).
   - **G02**: Unified atomic publish, no reuse of pre-existing targets, explicit boolean overwrite control.
@@ -381,7 +381,7 @@ steps, and saved snapshots evolve in COMSOL Desktop.
 - Lock the visible main model to prevent accidental model switching
 - Set parameters, evaluate expressions, edit geometry and physics features, configure solvers, run mesh and studies
 - Save main-model snapshots and handle large `.mph` loads asynchronously
-- Stable MCP tool surface; dynamically discovered from runtime: **70 MCP tools + 126 domain operations**
+- Stable MCP tool surface; dynamically discovered from runtime: **86 MCP tools + 126 domain operations**
 
 ### Requirements
 

@@ -71,6 +71,22 @@ EXPECTED_TOOLS = [
     "operation_call",
     "plot.render",
     "plot_render",
+    "validate.preflight",
+    "validate_preflight",
+    "validate.structure",
+    "validate_structure",
+    "validate.boundary_conditions",
+    "validate_boundary_conditions",
+    "validate.expressions",
+    "validate_expressions",
+    "validate.solution",
+    "validate_solution",
+    "validate.conservation",
+    "validate_conservation",
+    "validate.convergence",
+    "validate_convergence",
+    "validate.report",
+    "validate_report",
 ]
 
 

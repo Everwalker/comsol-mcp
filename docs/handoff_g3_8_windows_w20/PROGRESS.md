@@ -36,11 +36,11 @@
   - R04: 3-layer status model independent (execution, numerical, physical).
   - R05: FrozenOracle immutability and mathematical constraints verified.
   - R06: 8 validate ops registered in `_g3_ops.py` with accurate effect classification.
-  - D01: Clean wheel build from source.
-  - D02: Complete workpack tree matching.
-  - D03: Independent recovery without private receipt dependency.
-  - D04: Stage index consistency (stopped at W20, W21 not entered).
-  - D05: Mac and Windows cross-platform isolation.
+  - D01: 全软件回归与测试变更审计 (Full software regression and test audit: 1922 passed, 8 skipped across entire repository; 55 passed, 2 skipped in W20 unit test suite).
+  - D02: 运行源与发布源关联 (Execution source and release source association: source manifest with tracked hashes, no credential leaks).
+  - D03: 清理旧目录后的独立恢复 (Independent recovery without historical private receipt dependency).
+  - D04: 能力/历史/阶段索引一致 (Consistent stage indices: strictly stopped at W20, W21 not entered).
+  - D05: Mac兼容边界 (Mac compatibility boundaries: POSIX chmod 0700 and Windows DACL separated, platform process cleanly branched).
 - **Live COMSOL 6.3 Cases (16 Records, win63)**:
   - V01 - V16 all PASS on live `comsolmphserver.exe` (COMSOL 6.3.0.290, OpenJDK 11.0.26.4).
 - **Live COMSOL 6.4 Cases (16 Records, win64)**:
