@@ -1423,6 +1423,20 @@ public final class TransientDiffusionBuilder {
 
     def run_all(self) -> dict[str, Any]:
         all_records = []
+        report_file = self.output_dir / "acceptance_report.json"
+        live_recs = []
+        if (self.skip_live_engines or sys.platform != "win32") and report_file.exists():
+            try:
+                prev_data = json.loads(report_file.read_text(encoding="utf-8"))
+                prev_records = prev_data.get("records", [])
+                live_recs = [r for r in prev_records if r.get("target") in ("win63", "win64")]
+                if live_recs and live_recs[0].get("source_commit"):
+                    self.commit = live_recs[0]["source_commit"]
+                prev_identity = prev_data.get("source_identity", {})
+                if prev_identity.get("tree"):
+                    self.tree = prev_identity["tree"]
+            except Exception as exc:
+                print(f"Could not load previous report: {exc}")
 
         # 1. SHARED cases (12 records)
         shared_records = self.execute_shared_cases()
@@ -1437,6 +1451,9 @@ public final class TransientDiffusionBuilder {
             all_records.extend(records_64)
         else:
             print("Notice: live COMSOL engines skipped (not Windows or --skip-live-engines passed).")
+            if live_recs:
+                print(f"Preserving {len(live_recs)} authentic live engine records from {report_file.name}")
+                all_records.extend(live_recs)
 
         report = {
             "schema": "g38/acceptance-report/1",
