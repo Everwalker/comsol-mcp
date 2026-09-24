@@ -191,6 +191,13 @@ class ManagedBackend:
         if service is not None:
             self.cached.update(connected=True, session_id=service.ledger.session_id)
 
+    def close(self):
+        if hasattr(self, "docs_index") and hasattr(self.docs_index, "close"):
+            try:
+                self.docs_index.close()
+            except Exception:
+                pass
+
     def context(self, operation_id, callback):
         if self.worker is not None:
             return self.worker.operation_context(operation_id, on_request_event=callback)

@@ -652,6 +652,11 @@ class ControlDaemon:
         self.queue.shutdown(wait=True)
         self.monitor.join(timeout=2)
         self.store.close()
+        if hasattr(self, "backend") and hasattr(self.backend, "close"):
+            try:
+                self.backend.close()
+            except Exception:
+                pass
 
 
 def serve(home):

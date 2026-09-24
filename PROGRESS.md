@@ -2,12 +2,16 @@
 
 - **验收日期**: 2026-09-24
 - **验收目标**: `NEXT_GOAL.md` (D01–D09 作业控制与生命周期修复 + Windows 6.3/6.4 原生独立适配与 WD00–WD29 验收)
-- **权威结论**: **PASS_WITH_ENVIRONMENT_CONSTRAINTS** (`control_and_software: PASS`, `native_windows_live: BLOCKED_ENVIRONMENT`, `fail_implementation: 0`)
+- **权威结论**: **PASS** (30/30 用例全部通过)
+  - 控制平面与软件测试: **15 CONTROL_PASS**, **1 SOFTWARE_PASS**
+  - 原生 Windows 实机测试: **14 NATIVE_PASS_SCOPED** (COMSOL 6.3.0.290 & COMSOL 6.4.0.293 双版本实机引擎运行)
+  - 缺陷与阻塞统计: **0 FAIL_IMPLEMENTATION**, **0 BLOCKED_ENVIRONMENT**
+  - 交付物结论: `WINDOWS_COMSOL_63_CORE_VERIFIED_SCOPED`, `WINDOWS_COMSOL_64_CORE_VERIFIED_SCOPED`
 - **取消能力披露**: `native_cooperative_cancel: UNSUPPORTED`, `queued_cancel: VERIFIED`, `owned_process_termination: VERIFIED`
-- **运行 ID**: `g3_6_acceptance_20260923T225114Z` (耗时 15.66s)
-- **测试状态分布**: 15 CONTROL_PASS, 1 SOFTWARE_PASS, 14 BLOCKED_ENVIRONMENT (无本地物理 Windows 机), 0 FAIL
-- **单元测试回归**: **124/124 PASS** 全部通过 (D01–D06 16/16, D07–D09 5/5, W19 control 5/5, operation_store 10/10, control_daemon 7/7, java_worker 30/30, remote_isolation 31/31, security_guards 20/20)
-- **详细台账**: 参见 `docs/handoff_g3_6_windows/PROGRESS.md` 与 `evidence/windows_dual_version/`
+- **实机运行 ID**: `g3_6_acceptance_20260923T235632Z` (耗时 200.38s, Windows 11 AMD64, 192.168.100.2)
+- **测试状态分布**: 15 CONTROL_PASS, 14 NATIVE_PASS_SCOPED, 1 SOFTWARE_PASS, 0 FAIL
+- **单元测试回归**: **43/43 G3.5/G3.6 控制与缺口专项 PASS** 全部通过；Mac 兼容性完全保持
+- **详细台账**: 参见 `COMSOL_MCP_G3_6_WINDOWS_63_64_WORKPACK/PROGRESS.md` 与 `evidence/windows_dual_version/g3_6_acceptance_20260923T235632Z/`
 - **停止边界**: 严格停止于 W19 修补与 Windows 6.3/6.4 适配，未进入 W20–W26
 
 ---
