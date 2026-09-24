@@ -378,7 +378,14 @@ def _runtime_preflight(args: argparse.Namespace, environment: dict[str, str]) ->
         "command_shape": ["<selected-python>", "-m", "comsol_mcp.mcp_server"],
         "command_sha256": hashlib.sha256(command_bytes).hexdigest(),
         "environment_sha256": hashlib.sha256(environment_bytes).hexdigest(),
-        "java_home_match": environment.get("JAVA_HOME") == environment.get("COMSOL_JAVA_HOME") == str(Path(args.jdk11).resolve()),
+        "java_home_match": (
+            bool(environment.get("JAVA_HOME"))
+            and environment.get("JAVA_HOME") == environment.get("COMSOL_JAVA_HOME")
+            and (
+                environment.get("JAVA_HOME") == str(args.jdk11)
+                or Path(environment.get("JAVA_HOME", "")).resolve() == Path(args.jdk11).resolve()
+            )
+        ),
         "required_environment_keys_present": all(isinstance(selected[key], str) and bool(selected[key]) for key in selected),
     }
 

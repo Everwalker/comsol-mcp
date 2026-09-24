@@ -18,11 +18,15 @@ from comsol_mcp import _java_worker as java_worker
 from comsol_mcp._java_worker import JavaWorkerError, JavaWorkerPaths, PersistentJavaWorker, RemoteClient, RemoteModel
 
 
-COMSOL_ROOT = Path(os.environ.get("COMSOL_ROOT", "/Applications/COMSOL64/Multiphysics")).expanduser()
+DEFAULT_COMSOL = Path(r"C:\Program Files\COMSOL\COMSOL64\Multiphysics") if sys.platform == "win32" else Path("/Applications/COMSOL64/Multiphysics")
+if sys.platform == "win32" and not DEFAULT_COMSOL.exists():
+    DEFAULT_COMSOL = Path(r"C:\Program Files\COMSOL\COMSOL63\Multiphysics")
+COMSOL_ROOT = Path(os.environ.get("COMSOL_ROOT", str(DEFAULT_COMSOL))).expanduser()
+DEFAULT_JDK11 = Path(r"C:\Users\Everwalker\jdk11") if sys.platform == "win32" else Path("/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home")
 JDK11 = Path(
     os.environ.get("COMSOL_JAVA_HOME")
     or os.environ.get("JAVA_HOME")
-    or "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home"
+    or str(DEFAULT_JDK11)
 ).expanduser()
 JAVAC_NAME = "javac.exe" if sys.platform == "win32" else "javac"
 
@@ -540,7 +544,7 @@ WITHHELD_PENDING_TABLE_REPAIR = {
 
 
 def _allowlist_block(name: str) -> set[str]:
-    source = WORKER_SOURCE.read_text()
+    source = WORKER_SOURCE.read_text(encoding="utf-8")
     start = source.index(f"{name} = new HashSet")
     end = source.index("));", start)
     import re as _re
@@ -568,7 +572,7 @@ def _dispatched_engine_methods() -> dict[str, set[str]]:
     snapshot = _re.compile(r'_probe_snapshot\(\s*[\w\.\[\]]+\s*,\s*\(([^)]*)\)')
     found: dict[str, set[str]] = {}
     for path in sorted(package.glob("_g3_*.py")):
-        for index, line in enumerate(path.read_text().splitlines(), 1):
+        for index, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
             names: set[str] = set()
             for pattern in patterns:
                 names |= set(pattern.findall(line))
@@ -602,14 +606,14 @@ class TestWorkerAllowlist:
         methods = _allowlist_block("METHODS")
         assert "setColumnHeaders" in methods
         assert TABLE_API_JAVAP.is_file()
-        assert "public abstract void setColumnHeaders(java.lang.String[]);" in TABLE_API_JAVAP.read_text()
-        source = WORKER_SOURCE.read_text()
+        assert "public abstract void setColumnHeaders(java.lang.String[]);" in TABLE_API_JAVAP.read_text(encoding="utf-8")
+        source = WORKER_SOURCE.read_text(encoding="utf-8")
         assert "TableBaseFeature.setColumnHeaders(String[])" in source
 
     def test_the_c06_merge_entries_are_present_with_their_api_evidence(self):
         methods = _allowlist_block("METHODS")
         assert {"stat", "isGeometry"} <= methods
-        source = WORKER_SOURCE.read_text()
+        source = WORKER_SOURCE.read_text(encoding="utf-8")
         # The version boundary of the merge: the javap evidence and the jar hash
         # of the API the entries were verified against stay next to the entries.
         assert "MeshSequence.stat() -> com.comsol.model.MeshStatistics" in source

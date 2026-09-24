@@ -474,7 +474,7 @@ def test_probe_fixture_creates_its_targets_through_published_operations(driver):
     client = _FakeActionClient(driver)
     state: dict[str, Any] = {}
     fixture, calls = _fixture_calls(driver, client, state)
-    published = {row["operation_id"] for row in json.loads(CATALOGUE.read_text())["operations"]}
+    published = {row["operation_id"] for row in json.loads(CATALOGUE.read_text(encoding="utf-8"))["operations"]}
     used = {operation for operation, _ in calls}
     assert used, "the fixture must actually call the engine"
     assert used <= published, f"the fixture uses unpublished operations: {sorted(used - published)}"
@@ -749,9 +749,9 @@ def test_probe_fixture_payloads_validate_against_the_published_schemas(driver):
     from referencing.jsonschema import DRAFT202012
 
     envelope = {"project_id", "session_id", "model_ref", "expected_revision", "idempotency_key", "request_id"}
-    commons = json.loads((CATALOGUE.parent / "common.schema.json").read_text())
+    commons = json.loads((CATALOGUE.parent / "common.schema.json").read_text(encoding="utf-8"))
     registry = Registry().with_resource("common.schema.json", Resource.from_contents(commons, default_specification=DRAFT202012))
-    catalogue = {row["operation_id"]: row for row in json.loads(CATALOGUE.read_text())["operations"]}
+    catalogue = {row["operation_id"]: row for row in json.loads(CATALOGUE.read_text(encoding="utf-8"))["operations"]}
     client = _FakeActionClient(driver)
     _fixture, calls = _fixture_calls(driver, client, {})
     checked = 0

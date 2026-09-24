@@ -2,6 +2,7 @@
 import hashlib
 import json
 from pathlib import Path
+import sys
 
 import pytest
 
@@ -43,6 +44,8 @@ def test_corrupt_store_blocks_without_overwriting(tmp_path, payload):
 
 
 def test_unreadable_store_is_blocked(tmp_path):
+    if sys.platform == "win32":
+        pytest.skip("POSIX chmod(0) read-revocation not supported on Windows NTFS")
     path = tmp_path / 'transactions.json'
     payload = b'{"old": {"transaction_id": "old"}}'
     path.write_bytes(payload)

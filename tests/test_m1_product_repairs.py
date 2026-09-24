@@ -205,7 +205,7 @@ def test_every_node_not_found_raise_in_the_package_declares_the_stage():
     offenders: list[tuple[str, str, list[str]]] = []
     declaring = 0
     for path in sorted(root.glob("_g3_*.py")):
-        lines = path.read_text().splitlines()
+        lines = path.read_text(encoding="utf-8").splitlines()
         for index, line in enumerate(lines):
             if "node_not_found(" in line and "def node_not_found" not in line:
                 declaring += 1
@@ -340,7 +340,7 @@ def test_every_tag_conflict_raise_in_the_package_declares_the_stage():
     offenders: list[tuple[str, str, list[str]]] = []
     declaring = 0
     for path in sorted(root.glob("_g3_*.py")):
-        lines = path.read_text().splitlines()
+        lines = path.read_text(encoding="utf-8").splitlines()
         for index, line in enumerate(lines):
             if "tag_conflict(" in line and "def tag_conflict" not in line:
                 declaring += 1

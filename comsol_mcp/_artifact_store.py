@@ -23,6 +23,7 @@ import json
 import math
 import os
 import stat
+import sys
 import tempfile
 from pathlib import Path
 from typing import Any, Iterator, Mapping, Sequence
@@ -395,14 +396,23 @@ def _stream_file_hash(path: Path, *, block_size: int = 1024 * 1024) -> tuple[int
     return size, digest.hexdigest()
 
 
-def _file_identity(st: os.stat_result) -> tuple[int, int, int, int, int]:
+def _file_identity(st: os.stat_result) -> tuple[int, ...]:
     """Return the identity/version fields pinned for one artifact read.
 
     ``st_dev`` and ``st_ino`` bind the pathname to the opened inode while the
     size and nanosecond mtime/ctime fields detect replacement or in-place
     mutation during the bounded hash-and-read operation.  atime is omitted
     because reading a file may legitimately update it.
+    On Windows NTFS, creation/metadata time (ctime) fluctuates between stat
+    and fstat upon initial file descriptor open, so ctime is omitted on win32.
     """
+    if sys.platform == "win32":
+        return (
+            int(st.st_dev),
+            int(st.st_ino),
+            int(st.st_size),
+            int(st.st_mtime_ns),
+        )
     return (
         int(st.st_dev),
         int(st.st_ino),

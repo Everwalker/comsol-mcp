@@ -5,8 +5,11 @@ import hashlib
 import json
 from pathlib import Path
 import subprocess
+import sys
 
 import pytest
+
+pytestmark = pytest.mark.skipif(sys.platform != "darwin", reason="macOS-only RemoteAddrValve Phase 3 tests")
 
 from comsol_mcp import _g2_isolation as isolation
 from tools import phase3_remote_addr_valve_runtime as runtime

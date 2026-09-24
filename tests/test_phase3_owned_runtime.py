@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
+
+pytestmark = pytest.mark.skipif(sys.platform != "darwin", reason="macOS-only Phase 3 owned runtime lifecycle tests")
 
 from tools import phase3_owned_runtime as runtime
 

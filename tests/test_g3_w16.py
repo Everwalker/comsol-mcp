@@ -914,7 +914,7 @@ def test_operation_argument_surfaces_match_the_catalog() -> None:
     from pathlib import Path
 
     catalog_path = Path(w16.__file__).resolve().parent / "data" / "g2" / "02_ACTION_CATALOG.json"
-    catalog = json.loads(catalog_path.read_text())
+    catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
     by_id = {}
     for row in catalog["operations"]:
         by_id[row["operation_id"]] = row

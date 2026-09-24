@@ -317,7 +317,7 @@ def test_the_run_evidence_exposes_the_chain_for_the_summary(driver) -> None:
 @pytest.mark.skipif(not EVIDENCE_DIR.is_dir(), reason="the interrupted run's evidence is not present")
 def test_the_interrupted_runs_fixed_key_is_not_reproducible(driver) -> None:
     """Replay one real request of the interrupted run: its key was constant per operation."""
-    request = json.loads((EVIDENCE_DIR / "cases" / "GUARD_T033" / "requests.json").read_text())["requests"][0]
+    request = json.loads((EVIDENCE_DIR / "cases" / "GUARD_T033" / "requests.json").read_text(encoding="utf-8"))["requests"][0]
     sent = request["arguments"]["execution"]["idempotency_key"]
     assert sent == LEGACY_KEY
     # The run prefix was the *only* part that made it unique; the per-request part carried no

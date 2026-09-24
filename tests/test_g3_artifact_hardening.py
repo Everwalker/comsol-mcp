@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import time
 from types import SimpleNamespace
 
 import pytest
@@ -261,7 +262,11 @@ def test_artifact_read_rejects_same_size_path_replacement_during_pinned_read(
         result = original_fstat(fd)
         if calls == 0:
             replacement.write_bytes(new_bytes)
-            replacement.replace(target)
+            try:
+                replacement.replace(target)
+            except PermissionError:
+                # On Windows NTFS, an open file descriptor locks the target against replacement
+                pytest.skip("Windows NTFS file locking prevents replacing an open file")
         calls += 1
         return result
 
@@ -293,6 +298,7 @@ def test_artifact_read_rejects_same_size_in_place_mutation_during_pinned_read(
         nonlocal calls
         result = original_fstat(fd)
         if calls == 0:
+            time.sleep(0.02)
             target.write_bytes(new_bytes)
         calls += 1
         return result

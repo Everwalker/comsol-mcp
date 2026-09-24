@@ -9823,7 +9823,7 @@ def _leak_scan(run_dir: Path, *, exclude: set[str] | None = None,
             text = path.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
-        relative = str(path.relative_to(run_dir))
+        relative = path.relative_to(run_dir).as_posix()
         in_runtime_home = False
         if private_root is not None:
             try:

@@ -90,5 +90,5 @@ def test_registry_imports_from_isolated_package_tree_without_checkout(tmp_path):
     assert result.returncode == 0, result.stderr
     observed = json.loads(result.stdout)
     assert observed["entries"] == len(registry.ENTRIES)
-    assert observed["catalog"].endswith("comsol_mcp/data/g2/02_ACTION_CATALOG.json")
+    assert observed["catalog"].replace("\\", "/").endswith("comsol_mcp/data/g2/02_ACTION_CATALOG.json")
     assert observed["sha256"] == hashlib.sha256(_package_catalog().read_bytes()).hexdigest()

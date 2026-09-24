@@ -8,10 +8,10 @@
   - 缺陷与阻塞统计: **0 FAIL_IMPLEMENTATION**, **0 BLOCKED_ENVIRONMENT**
   - 交付物结论: `WINDOWS_COMSOL_63_CORE_VERIFIED_SCOPED`, `WINDOWS_COMSOL_64_CORE_VERIFIED_SCOPED`
 - **取消能力披露**: `native_cooperative_cancel: UNSUPPORTED`, `queued_cancel: VERIFIED`, `owned_process_termination: VERIFIED`
-- **实机运行 ID**: `g3_6_live_acceptance_20260924T082700Z` (耗时 201.16s, Windows 11 AMD64, 192.168.100.2; 历史基线运行 ID: `g3_6_acceptance_20260923T235632Z`)
-- **测试状态分布**: 15 CONTROL_PASS, 14 NATIVE_PASS_SCOPED, 1 SOFTWARE_PASS, 0 FAIL
-- **单元测试回归**: **43/43 G3.5/G3.6 控制与缺口专项 PASS** 全部通过；Mac 兼容性完全保持
-- **详细台账**: 参见 `COMSOL_MCP_G3_6_WINDOWS_63_64_WORKPACK/PROGRESS.md` 与 `evidence/windows_dual_version/g3_6_live_acceptance_20260924T082700Z/`
+- **实机运行 ID**: `g3_6_acceptance_20260924T011622Z` (耗时 251.22s, Windows 11 AMD64, 192.168.100.2; 历史基线运行 ID: `g3_6_live_acceptance_20260924T082700Z`, `g3_6_acceptance_20260923T235632Z`)
+- **测试状态分布**: 15 CONTROL_PASS, 14 NATIVE_PASS_SCOPED, 1 SOFTWARE_PASS, 0 FAIL (30/30 全部通过)
+- **单元测试全回归**: **1,832 passed, 41 skipped, 0 failed in 54.21s** (pytest tests/ 全量软件测试套件 100% 通过)；Mac 兼容性完全保持
+- **详细台账**: 参见 `docs/handoff_g3_6_windows/PROGRESS.md` 与 `evidence/windows_dual_version/g3_6_acceptance_20260924T011622Z/`
 - **停止边界**: 严格停止于 W19 修补与 Windows 6.3/6.4 适配，未进入 W20–W26
 
 ---

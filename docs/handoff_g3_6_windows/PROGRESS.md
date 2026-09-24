@@ -16,8 +16,8 @@
   - 交付物结论:
     - `WINDOWS_COMSOL_63_CORE_VERIFIED_SCOPED`
     - `WINDOWS_COMSOL_64_CORE_VERIFIED_SCOPED`
-- **实机验收运行 ID**: `g3_6_live_acceptance_20260924T082700Z` (总耗时 201.16s, 历史基线运行 ID: `g3_6_acceptance_20260923T235632Z`)
-- **证据存储路径**: `evidence/windows_dual_version/g3_6_live_acceptance_20260924T082700Z/`
+- **实机验收运行 ID**: `g3_6_acceptance_20260924T011622Z` (总耗时 251.22s, 30/30 用例全部通过, 历史基线运行 ID: `g3_6_live_acceptance_20260924T082700Z`, `g3_6_acceptance_20260923T235632Z`)
+- **证据存储路径**: `evidence/windows_dual_version/g3_6_acceptance_20260924T011622Z/`
 
 ---
 
@@ -68,7 +68,7 @@
 | **WD24** | 双版本切换回归 | SHARED | NATIVE_DUAL | **NATIVE_PASS_SCOPED** | 严格执行 $6.4 \to 6.3 \to 6.4$ 连续切换实机求解出图：两次 6.4 出图哈希完全一致 (`bde6a4aa...`)，无 prefs/缓存/数据污染。 |
 | **WD25** | 跨版本文件规则 | SHARED | NATIVE_DUAL | **NATIVE_PASS_SCOPED** | 实机验证正向兼容：6.3 生成的 `saved_6.3.mph` 在 6.4 中成功只读加载并读取解（$325.0\,\text{K}$）；反向 6.4 模型在 6.3 中合规拦截拒绝。 |
 | **WD26** | Windows Host Job与权限降级 | BOTH | NATIVE_OS_HOST | **CONTROL_PASS** | 验证 Windows Job Object 状态探测 (`is_process_in_job`) 与 breakaway 合规退出机制。 |
-| **WD27** | 同源码全回归与Mac影响 | SHARED | SOFTWARE_AND_TARGET | **SOFTWARE_PASS** | 运行全量控制与核心单元测试套件：43/43 tests 全部通过；Mac 兼容性完全保持。 |
+| **WD27** | 同源码全回归与Mac影响 | SHARED | SOFTWARE_AND_TARGET | **SOFTWARE_PASS** | 运行全量软件测试套件 (`pytest tests/ -q`)：1,832 passed, 41 skipped, 0 failed in 54.21s；Mac 兼容性完全保持。 |
 | **WD28** | 新目录恢复与可交接交付 | SHARED | RECOVERY_INSTALL | **CONTROL_PASS** | 从全新临时目录执行 `bootstrap.py --destination`，7,328 项源文件与哈希完整恢复。 |
 | **WD29** | 退出清理与双版本报告 | SHARED | NATIVE_OS_EVIDENCE | **NATIVE_PASS_SCOPED** | 验证退出时进程/端口安全清理（`leftover_mphserver_pids: []`）；生成双版本交付能力清单与台账。 |
 

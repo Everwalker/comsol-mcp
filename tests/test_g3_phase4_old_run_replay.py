@@ -54,8 +54,8 @@ def driver():
 
 @pytest.fixture(scope="module")
 def recorded() -> dict[str, Any]:
-    requests = json.loads((CASE_DIR / "requests.json").read_text())["requests"]
-    results = json.loads((CASE_DIR / "results.json").read_text())["results"]
+    requests = json.loads((CASE_DIR / "requests.json").read_text(encoding="utf-8"))["requests"]
+    results = json.loads((CASE_DIR / "results.json").read_text(encoding="utf-8"))["results"]
     return {"requests": requests, "results": results}
 
 
@@ -66,7 +66,7 @@ def _hash(path: Path) -> str:
 def test_the_recorded_failure_evidence_is_untouched_by_the_replay() -> None:
     """The old failure keeps its exact bytes: a replay never rewrites the evidence it reads."""
     sums = {}
-    for line in (RUN_DIR / "SHA256SUMS").read_text().splitlines():
+    for line in (RUN_DIR / "SHA256SUMS").read_text(encoding="utf-8").splitlines():
         digest, _, name = line.partition("  ")
         sums[name.strip()] = digest.strip()
     before = {}
@@ -75,8 +75,8 @@ def test_the_recorded_failure_evidence_is_untouched_by_the_replay() -> None:
         before[name] = _hash(path)
         assert sums[f"cases/GUARD_T033/{name}"] == before[name], f"{name} does not match the run's own SHA256SUMS"
     # Consume the pair the way the new chain does.
-    _ = json.loads((CASE_DIR / "requests.json").read_text())
-    _ = json.loads((CASE_DIR / "results.json").read_text())
+    _ = json.loads((CASE_DIR / "requests.json").read_text(encoding="utf-8"))
+    _ = json.loads((CASE_DIR / "results.json").read_text(encoding="utf-8"))
     for name in CASE_FILES:
         assert _hash(CASE_DIR / name) == before[name], "reading the evidence must not change it"
 
@@ -125,7 +125,7 @@ def test_the_recorded_refusal_classifies_as_an_unfinished_job_not_a_contract_fai
 
 def test_the_recorded_first_hand_unknown_names_the_job_that_blocks_the_gate(driver) -> None:
     """GUARD_T010's recorded UNKNOWN carries the job id: that job must be queried before anything new."""
-    results = json.loads((GATE_DIR / "results.json").read_text())["results"]
+    results = json.loads((GATE_DIR / "results.json").read_text(encoding="utf-8"))["results"]
     unknown = [row for row in results
                if ((row.get("structuredContent") or {}).get("error") or {}).get("code") == "EXECUTION_STATE_UNKNOWN"]
     assert unknown, "the recorded case must carry its first-hand UNKNOWN"
