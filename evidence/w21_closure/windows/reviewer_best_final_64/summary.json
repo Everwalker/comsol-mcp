@@ -1,0 +1,2539 @@
+{
+  "status": "SMOKE_COMPLETED",
+  "version_requested": "6.4",
+  "engine": "COMSOL Multiphysics 6.4 (\u5f00\u53d1\u7248\u672c: 293)",
+  "independent_best": {
+    "result": {
+      "success": true,
+      "data": {
+        "status": "COMPLETE",
+        "completion_status": "ALL_CASES_COMPLETED",
+        "cases": [
+          {
+            "case_id": "case-1",
+            "parameters": {
+              "k": 390.0,
+              "rhoCp": 3400000.0
+            },
+            "units": {
+              "k": "W/(m*K)",
+              "rhoCp": "J/(m^3*K)"
+            },
+            "producer": "bc0fda11-faaf-4f77-ac51-c7586dbda675",
+            "model_ref": {
+              "schema_version": 1,
+              "session_id": "session-d0bd43e3986550230187d65d",
+              "server_instance_id": "1068f59c17ff7ad69d7386ea8696711a52d622f45a23dc9841857b33946ad3db",
+              "model_tag": "mcp1",
+              "generation": 1
+            },
+            "cache_hit": false,
+            "engine": {
+              "comsol_version": "COMSOL Multiphysics 6.4 (\u5f00\u53d1\u7248\u672c: 293)",
+              "source": "ModelUtil.getComsolVersion()",
+              "channel": "modelutil command",
+              "worker_generation": 2
+            },
+            "cache_policy": "REUSE_VERIFIED_CONFIGURATION",
+            "parameter_readback": {
+              "scope": "model",
+              "parameters": [
+                {
+                  "name": "k",
+                  "group": null,
+                  "expression": "390.0[W/(m*K)]",
+                  "description": "",
+                  "description_error": null,
+                  "unit": "W/(m*K)",
+                  "unit_error": null,
+                  "evaluated": {
+                    "kind": "float64",
+                    "shape": [],
+                    "data": 390.0
+                  },
+                  "evaluate_errors": null
+                },
+                {
+                  "name": "rhoCp",
+                  "group": null,
+                  "expression": "3400000.0[J/(m^3*K)]",
+                  "description": "",
+                  "description_error": null,
+                  "unit": "J/(m^3*K)",
+                  "unit_error": null,
+                  "evaluated": {
+                    "kind": "float64",
+                    "shape": [],
+                    "data": 3400000.0
+                  },
+                  "evaluate_errors": null
+                }
+              ],
+              "count": 2,
+              "unit_policy": "units are reported verbatim from evaluateUnit(); this layer never converts"
+            },
+            "solve": {
+              "study": {
+                "segments": [
+                  {
+                    "collection": "study",
+                    "tag": "std1"
+                  }
+                ]
+              },
+              "study_tag": "std1",
+              "steps": [
+                "time"
+              ],
+              "duration_s": 6.094,
+              "requested_resources": null,
+              "requested_timeout_s": null,
+              "computation_before": {
+                "getLastComputationTime": -1,
+                "getLastComputationDate": -1,
+                "getLastComputationVersion": ""
+              },
+              "computation_after": {
+                "getLastComputationTime": 4663,
+                "getLastComputationDate": 1790344729006,
+                "getLastComputationVersion": "COMSOL 6.4.0.293"
+              },
+              "computation_timestamp_changed": true,
+              "solver_sequences": [
+                "sol1"
+              ],
+              "long_task_semantics": {
+                "owner": "control_plane",
+                "engine_call": "study(<tag>).run() is executed synchronously on the serial worker queue",
+                "caller_deadline": "timeout_s/rpc deadlines limit caller waiting only; an expired wait does not prove that COMSOL stopped computing, so the original job must be inspected rather than resubmitted",
+                "health": "the worker's health/status socket stays responsive during a solve"
+              },
+              "notes": [
+                "study.run() corresponds to Compute in the Desktop and regenerates the solver sequence for an unedited study",
+                "the timestamps are the study's own record of the last computation and are the only verified post-run evidence this layer can read back"
+              ],
+              "ok": true,
+              "status": "APPLIED",
+              "partial_change": true,
+              "execution_state_unknown": false,
+              "applied": [
+                {
+                  "step": "run",
+                  "method": "study.run",
+                  "duration_s": 6.094,
+                  "timestamp_changed": true
+                }
+              ],
+              "failed": [],
+              "not_executed": [],
+              "readback": {
+                "state": {
+                  "getLastComputationTime": 4663,
+                  "getLastComputationDate": 1790344729006,
+                  "getLastComputationVersion": "COMSOL 6.4.0.293"
+                },
+                "errors": {},
+                "allowlist_entry_required": [],
+                "readable": true
+              },
+              "applied_count": 1,
+              "failed_count": 0,
+              "not_executed_count": 0,
+              "engine_error": null
+            },
+            "sample": {
+              "values": [
+                [
+                  [
+                    [
+                      307.07105563548066,
+                      309.99998132827426,
+                      307.07108345837605
+                    ],
+                    [
+                      305.6385185957568,
+                      307.9740692766395,
+                      305.63854648092206
+                    ],
+                    [
+                      304.4954470484593,
+                      306.3575220535151,
+                      304.49546932771443
+                    ],
+                    [
+                      303.58410928190176,
+                      305.06869586288656,
+                      303.5841270632921
+                    ],
+                    [
+                      302.8575390926769,
+                      304.04117047120803,
+                      302.8575532769062
+                    ]
+                  ]
+                ]
+              ],
+              "points": [
+                [
+                  0.0125,
+                  0.005,
+                  0.005
+                ],
+                [
+                  0.025,
+                  0.005,
+                  0.005
+                ],
+                [
+                  0.0375,
+                  0.005,
+                  0.005
+                ]
+              ],
+              "point_count": 3,
+              "expressions": [
+                "T"
+              ],
+              "dataset": "dset1",
+              "solution": "sol1",
+              "binding_source": "resolve_dataset_binding(model, dataset_tag)",
+              "dataset_binding": {
+                "dataset": "dset1",
+                "dataset_type": "Solution",
+                "solution": "sol1",
+                "component": "comp1",
+                "geometry": "geom1",
+                "dataset_chain": [
+                  "dset1"
+                ],
+                "dataset_edges": [],
+                "binding_complete": true,
+                "sources": {
+                  "solution": "dataset.solution -> model.sol().tags()",
+                  "component": "dataset.comp -> modelNode.tags()/model.component()",
+                  "geometry": "dataset.geom -> component.geom.tags()/getter"
+                },
+                "properties": {
+                  "solution": "sol1",
+                  "comp": "comp1",
+                  "geom": "geom1"
+                },
+                "read_errors": [],
+                "error": null,
+                "requested_solution": null,
+                "provenance": {
+                  "dataset_tags": [
+                    "dset1"
+                  ],
+                  "solution_tags": [
+                    "sol1"
+                  ],
+                  "read_only": true,
+                  "mutation_methods_called": []
+                }
+              },
+              "feature_readback": {
+                "data": "dset1",
+                "data_status": "VERIFIED",
+                "source": "NumericalFeature.getString('data') after set('data')"
+              },
+              "coordinate_unit": "m",
+              "frame": "spatial",
+              "coordinate_readback": {
+                "status": "VERIFIED",
+                "coordinates": [
+                  [
+                    0.0125,
+                    0.025,
+                    0.0375
+                  ],
+                  [
+                    0.005,
+                    0.005,
+                    0.005
+                  ],
+                  [
+                    0.005,
+                    0.005,
+                    0.005
+                  ]
+                ],
+                "unit": "m"
+              },
+              "complex_mode": "real",
+              "is_complex": false,
+              "field_array": {
+                "values": [
+                  [
+                    [
+                      [
+                        307.07105563548066,
+                        309.99998132827426,
+                        307.07108345837605
+                      ],
+                      [
+                        305.6385185957568,
+                        307.9740692766395,
+                        305.63854648092206
+                      ],
+                      [
+                        304.4954470484593,
+                        306.3575220535151,
+                        304.49546932771443
+                      ],
+                      [
+                        303.58410928190176,
+                        305.06869586288656,
+                        303.5841270632921
+                      ],
+                      [
+                        302.8575390926769,
+                        304.04117047120803,
+                        302.8575532769062
+                      ]
+                    ]
+                  ]
+                ],
+                "data": [
+                  [
+                    [
+                      [
+                        307.07105563548066,
+                        309.99998132827426,
+                        307.07108345837605
+                      ],
+                      [
+                        305.6385185957568,
+                        307.9740692766395,
+                        305.63854648092206
+                      ],
+                      [
+                        304.4954470484593,
+                        306.3575220535151,
+                        304.49546932771443
+                      ],
+                      [
+                        303.58410928190176,
+                        305.06869586288656,
+                        303.5841270632921
+                      ],
+                      [
+                        302.8575390926769,
+                        304.04117047120803,
+                        302.8575532769062
+                      ]
+                    ]
+                  ]
+                ],
+                "axes": [
+                  "expression",
+                  "outer",
+                  "inner",
+                  "point"
+                ],
+                "shape": [
+                  1,
+                  1,
+                  5,
+                  3
+                ],
+                "coords": {
+                  "expression": [
+                    "T"
+                  ],
+                  "outer": [
+                    1
+                  ],
+                  "inner": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                  ],
+                  "point": [
+                    1,
+                    2,
+                    3
+                  ],
+                  "parameters": [
+                    {},
+                    {},
+                    {},
+                    {},
+                    {}
+                  ],
+                  "params": [
+                    {},
+                    {},
+                    {},
+                    {},
+                    {}
+                  ],
+                  "spatial": [
+                    [
+                      0.0125,
+                      0.005,
+                      0.005
+                    ],
+                    [
+                      0.025,
+                      0.005,
+                      0.005
+                    ],
+                    [
+                      0.0375,
+                      0.005,
+                      0.005
+                    ]
+                  ]
+                },
+                "units": {
+                  "expression": {
+                    "T": "K"
+                  },
+                  "outer": "index",
+                  "inner": "index",
+                  "point": "m",
+                  "parameters": {}
+                },
+                "metadata": {
+                  "binding_source": "SolutionInfo.getSolnum(outer, strict)",
+                  "pair_mapping_complete": true,
+                  "solution_pairs": [
+                    {
+                      "outer": 1,
+                      "inner": 1,
+                      "solnum": 1,
+                      "parameters": {},
+                      "parameter_units": {}
+                    },
+                    {
+                      "outer": 1,
+                      "inner": 2,
+                      "solnum": 2,
+                      "parameters": {},
+                      "parameter_units": {}
+                    },
+                    {
+                      "outer": 1,
+                      "inner": 3,
+                      "solnum": 3,
+                      "parameters": {},
+                      "parameter_units": {}
+                    },
+                    {
+                      "outer": 1,
+                      "inner": 4,
+                      "solnum": 4,
+                      "parameters": {},
+                      "parameter_units": {}
+                    },
+                    {
+                      "outer": 1,
+                      "inner": 5,
+                      "solnum": 5,
+                      "parameters": {},
+                      "parameter_units": {}
+                    }
+                  ],
+                  "parameter_names": [],
+                  "expression_units": {
+                    "T": "K"
+                  },
+                  "unit_readback_status": "VERIFIED",
+                  "point_coordinate_source": "request"
+                },
+                "is_complex": false
+              },
+              "result_budget": {
+                "status": "PASS",
+                "limits": {
+                  "max_elements": 1000000,
+                  "max_bytes": 67108864,
+                  "scope": "numeric_payload_only",
+                  "engine_internal_cache": "UNMEASURED"
+                },
+                "records": [
+                  {
+                    "status": "PASS",
+                    "allowed": true,
+                    "verification": "VERIFIED",
+                    "reason_code": "BUDGET_WITHIN_LIMIT",
+                    "reason": "verified pre-getData result allocation is within both configured limits",
+                    "operation": "result.at_points",
+                    "feature_kind": "Interp",
+                    "raw_getter": "getData",
+                    "raw_layout": "expression,solnum,vertex",
+                    "pre_getdata": true,
+                    "getdata_called": true,
+                    "publish_allowed": true,
+                    "requested": {
+                      "expression_count": 1,
+                      "point_count": 3,
+                      "outer_count": 1,
+                      "inner_count": 5,
+                      "inner_counts_by_outer": null,
+                      "complex_components": 1,
+                      "scalar_bytes": 8,
+                      "max_elements": 1000000,
+                      "max_bytes": 67108864,
+                      "reported_data_vector_count": null,
+                      "raw_point_upper_bound": 3,
+                      "raw_upper_bound_verified": true,
+                      "raw_upper_bound_source": "validated-Interp-request-coordinates;interp-coordinate-columns",
+                      "raw_point_upper_bounds_by_outer": [
+                        3
+                      ]
+                    },
+                    "computed": {
+                      "expression_count": 1,
+                      "outer_count": 1,
+                      "inner_count_total": 5,
+                      "inner_counts_by_outer": null,
+                      "requested_point_count": 3,
+                      "raw_point_upper_bound": 3,
+                      "raw_point_upper_bounds_by_outer": [
+                        3
+                      ],
+                      "complex_components": 1,
+                      "scalar_bytes": 8,
+                      "numeric_payload_scalar_bytes": 8,
+                      "elements": 15,
+                      "bytes": 120,
+                      "numeric_payload_bytes": 120,
+                      "numeric_payload_scope": "float64 scalar payload only; excludes JSON, wire, Python-list, and engine-cache overhead",
+                      "raw_upper_bound_source": "validated-Interp-request-coordinates;interp-coordinate-columns"
+                    },
+                    "limits": {
+                      "max_elements": 1000000,
+                      "max_bytes": 67108864,
+                      "max_numeric_payload_bytes": 67108864
+                    },
+                    "budget_scope": "numeric_payload_only",
+                    "data_vector_count": {
+                      "value": null,
+                      "used_for_point_bound": false,
+                      "interpretation": "observation only; never treated as coordinate count"
+                    },
+                    "metadata_sources": {
+                      "expression": "validated-request-expressions",
+                      "point_count": "validated-Interp-request-coordinates",
+                      "solution_axes": "validated-SolutionBinding.outer/inner-pairs",
+                      "raw_point_upper_bound": "validated-Interp-request-coordinates;interp-coordinate-columns"
+                    },
+                    "request_progress": {
+                      "consumed_numeric_payload_elements": 15,
+                      "consumed_numeric_payload_bytes": 120,
+                      "max_elements": 1000000,
+                      "max_bytes": 67108864
+                    }
+                  }
+                ],
+                "publish_allowed": true
+              },
+              "cleanup": {
+                "tag": "cmssp1",
+                "type_id": "Interp",
+                "created": true,
+                "removed": true,
+                "cleanup_failed": false,
+                "error": null,
+                "verified_removed": true
+              },
+              "status": {
+                "ok": true,
+                "engine_error": null,
+                "cleanup_failed": false,
+                "verification_status": "PASSED"
+              },
+              "verification_status": "PASSED"
+            },
+            "solution_indices": {
+              "dataset": "dset1",
+              "solution": "sol1",
+              "study": "std1",
+              "binding_complete": true,
+              "binding_source": "dataset property 'solution'/'data' resolved against model.sol().tags(); SolutionInfo.getSolnum(outer, strict)",
+              "axis_metadata_complete": true,
+              "pair_mapping_complete": true,
+              "axis_metadata_source": "SolutionInfo.getSolnum(outer, strict) + getPNames/getPvals/getUnits",
+              "time_values": [
+                0.0,
+                0.5,
+                1.0,
+                1.5,
+                2.0
+              ],
+              "time_axis_source": "stored output times from SolverSequence.getPVals()",
+              "inner_indices": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "outer_indices": [
+                1
+              ],
+              "level_names": [
+                "t"
+              ],
+              "parameters": {
+                "by_pair": {
+                  "1:1": {
+                    "names": [],
+                    "values": [],
+                    "units": [],
+                    "solnum": 1
+                  },
+                  "1:2": {
+                    "names": [],
+                    "values": [],
+                    "units": [],
+                    "solnum": 2
+                  },
+                  "1:3": {
+                    "names": [],
+                    "values": [],
+                    "units": [],
+                    "solnum": 3
+                  },
+                  "1:4": {
+                    "names": [],
+                    "values": [],
+                    "units": [],
+                    "solnum": 4
+                  },
+                  "1:5": {
+                    "names": [],
+                    "values": [],
+                    "units": [],
+                    "solnum": 5
+                  }
+                }
+              },
+              "parameters_complete": false,
+              "parameters_source": "SolutionInfo.getPNames(int[][])/getPvals(int[][])/getUnits(int[][])",
+              "solution_count": 5,
+              "solnum_pairs": [
+                {
+                  "outer": 1,
+                  "inner": 1,
+                  "solnum": 1
+                },
+                {
+                  "outer": 1,
+                  "inner": 2,
+                  "solnum": 2
+                },
+                {
+                  "outer": 1,
+                  "inner": 3,
+                  "solnum": 3
+                },
+                {
+                  "outer": 1,
+                  "inner": 4,
+                  "solnum": 4
+                },
+                {
+                  "outer": 1,
+                  "inner": 5,
+                  "solnum": 5
+                }
+              ],
+              "read_errors": [
+                {
+                  "method": "getPNames",
+                  "code": "SOLUTION_METADATA_ERROR",
+                  "message": "{\"completed_at_ms\": \"1790344730357\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\r\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1790344730343\", \"request_id\": \"wrk-3442c24f-b7dc-4067-aa9c-cb9077696a6d\", \"started_at_ms\": \"1790344730343\", \"status\": \"FAILED\", \"type\": \"call\"}"
+                },
+                {
+                  "method": "getPvals",
+                  "code": "SOLUTION_METADATA_ERROR",
+                  "message": "{\"completed_at_ms\": \"1790344730363\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\r\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1790344730363\", \"request_id\": \"wrk-a9cce940-7d9f-4ec0-98c5-0fe57c132943\", \"started_at_ms\": \"1790344730363\", \"status\": \"FAILED\", \"type\": \"call\"}"
+                },
+                {
+                  "method": "getUnits",
+                  "code": "SOLUTION_METADATA_ERROR",
+                  "message": "{\"completed_at_ms\": \"1790344730376\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\r\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1790344730371\", \"request_id\": \"wrk-e70bf724-a2ef-480c-9029-84037190cd36\", \"started_at_ms\": \"1790344730371\", \"status\": \"FAILED\", \"type\": \"call\"}"
+                }
+              ],
+              "dataset_binding": {
+                "dataset": "dset1",
+                "dataset_type": "Solution",
+                "solution": "sol1",
+                "component": "comp1",
+                "geometry": "geom1",
+                "dataset_chain": [
+                  "dset1"
+                ],
+                "dataset_edges": [],
+                "binding_complete": true,
+                "sources": {
+                  "solution": "dataset.solution -> model.sol().tags()",
+                  "component": "dataset.comp -> modelNode.tags()/model.component()",
+                  "geometry": "dataset.geom -> component.geom.tags()/getter"
+                },
+                "properties": {
+                  "solution": "sol1",
+                  "comp": "comp1",
+                  "geom": "geom1"
+                },
+                "read_errors": [],
+                "error": null,
+                "requested_solution": null,
+                "provenance": {
+                  "dataset_tags": [
+                    "dset1"
+                  ],
+                  "solution_tags": [
+                    "sol1"
+                  ],
+                  "read_only": true,
+                  "mutation_methods_called": []
+                }
+              }
+            },
+            "observation_ref": {
+              "observation_id": "obs_324fdadbd90143cfb722cd2f02199637",
+              "sha256": "b4983087e8f31eab56cdbf8af74b9d793b7feaed06b67340ff33d5e27d3d09c4"
+            },
+            "validation": {
+              "status": "PASS",
+              "execution_status": "PASS",
+              "numerical_verification_status": "PASS",
+              "physical_validation_status": "UNVERIFIED",
+              "observation_origin": "REGISTERED_W17",
+              "scope": "MODEL_VALIDATED",
+              "model_validated": true,
+              "solution": {
+                "dataset": "dset1"
+              },
+              "checks": {
+                "dataset_exists": true,
+                "finite": true,
+                "range": true
+              },
+              "metrics": {
+                "statistics": {
+                  "mean": 305.3823258836007,
+                  "std": 1.9580966006225773,
+                  "rms": 305.3886034290982
+                }
+              },
+              "oracle_results": {}
+            },
+            "T_mid": 304.04117047120803,
+            "objective": 0.04117047120803363,
+            "status": "COMPLETED",
+            "case_ordinal": 1
+          }
+        ],
+        "index_table": {
+          "cases": [
+            {
+              "case_id": "case-1",
+              "case_ordinal": 1,
+              "parameters": {
+                "k": 390.0,
+                "rhoCp": 3400000.0
+              },
+              "solution": "sol1",
+              "axes": {
+                "values": [
+                  [
+                    [
+                      [
+                        307.07105563548066,
+                        309.99998132827426,
+                        307.07108345837605
+                      ],
+                      [
+                        305.6385185957568,
+                        307.9740692766395,
+                        305.63854648092206
+                      ],
+                      [
+                        304.4954470484593,
+                        306.3575220535151,
+                        304.49546932771443
+                      ],
+                      [
+                        303.58410928190176,
+                        305.06869586288656,
+                        303.5841270632921
+                      ],
+                      [
+                        302.8575390926769,
+                        304.04117047120803,
+                        302.8575532769062
+                      ]
+                    ]
+                  ]
+                ],
+                "data": [
+                  [
+                    [
+                      [
+                        307.07105563548066,
+                        309.99998132827426,
+                        307.07108345837605
+                      ],
+                      [
+                        305.6385185957568,
+                        307.9740692766395,
+                        305.63854648092206
+                      ],
+                      [
+                        304.4954470484593,
+                        306.3575220535151,
+                        304.49546932771443
+                      ],
+                      [
+                        303.58410928190176,
+                        305.06869586288656,
+                        303.5841270632921
+                      ],
+                      [
+                        302.8575390926769,
+                        304.04117047120803,
+                        302.8575532769062
+                      ]
+                    ]
+                  ]
+                ],
+                "axes": [
+                  "expression",
+                  "outer",
+                  "inner",
+                  "point"
+                ],
+                "shape": [
+                  1,
+                  1,
+                  5,
+                  3
+                ],
+                "coords": {
+                  "expression": [
+                    "T"
+                  ],
+                  "outer": [
+                    1
+                  ],
+                  "inner": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                  ],
+                  "point": [
+                    1,
+                    2,
+                    3
+                  ],
+                  "parameters": [
+                    {},
+                    {},
+                    {},
+                    {},
+                    {}
+                  ],
+                  "params": [
+                    {},
+                    {},
+                    {},
+                    {},
+                    {}
+                  ],
+                  "spatial": [
+                    [
+                      0.0125,
+                      0.005,
+                      0.005
+                    ],
+                    [
+                      0.025,
+                      0.005,
+                      0.005
+                    ],
+                    [
+                      0.0375,
+                      0.005,
+                      0.005
+                    ]
+                  ]
+                },
+                "units": {
+                  "expression": {
+                    "T": "K"
+                  },
+                  "outer": "index",
+                  "inner": "index",
+                  "point": "m",
+                  "parameters": {}
+                },
+                "metadata": {
+                  "binding_source": "SolutionInfo.getSolnum(outer, strict)",
+                  "pair_mapping_complete": true,
+                  "solution_pairs": [
+                    {
+                      "outer": 1,
+                      "inner": 1,
+                      "solnum": 1,
+                      "parameters": {},
+                      "parameter_units": {}
+                    },
+                    {
+                      "outer": 1,
+                      "inner": 2,
+                      "solnum": 2,
+                      "parameters": {},
+                      "parameter_units": {}
+                    },
+                    {
+                      "outer": 1,
+                      "inner": 3,
+                      "solnum": 3,
+                      "parameters": {},
+                      "parameter_units": {}
+                    },
+                    {
+                      "outer": 1,
+                      "inner": 4,
+                      "solnum": 4,
+                      "parameters": {},
+                      "parameter_units": {}
+                    },
+                    {
+                      "outer": 1,
+                      "inner": 5,
+                      "solnum": 5,
+                      "parameters": {},
+                      "parameter_units": {}
+                    }
+                  ],
+                  "parameter_names": [],
+                  "expression_units": {
+                    "T": "K"
+                  },
+                  "unit_readback_status": "VERIFIED",
+                  "point_coordinate_source": "request"
+                },
+                "is_complex": false
+              }
+            }
+          ]
+        },
+        "budget": {
+          "cases_evaluated": 1,
+          "max_cases": 1,
+          "consecutive_failures": 0,
+          "total_failures": 0,
+          "elapsed_s": 14.333,
+          "max_wall_time_s": 300,
+          "exhausted": true,
+          "exhaustion_reason": "MAX_CASES_EXCEEDED"
+        },
+        "cache_hits": 0,
+        "domain_state": "succeeded",
+        "verification_status": "NOT_APPLICABLE",
+        "execution_state_unknown": false,
+        "partial_change": false,
+        "cleanup_failed": false,
+        "dispatch_stage": "post_dispatch",
+        "domain_outcome": {
+          "operation": "study.sweep_manage",
+          "state": "succeeded",
+          "verification_status": "NOT_APPLICABLE",
+          "cleanup_failed": false,
+          "execution_state_unknown": false,
+          "dispatch_stage": "post_dispatch",
+          "status_token": "COMPLETE",
+          "witness": {
+            "engine_calls": 199,
+            "mutation_method": "descr",
+            "methods": [
+              "component",
+              "create",
+              "dataset",
+              "descr",
+              "evaluate",
+              "evaluateUnit",
+              "feature",
+              "geom",
+              "get",
+              "getCoordinates",
+              "getData",
+              "getDoubleArray",
+              "getLastComputationDate",
+              "getLastComputationTime",
+              "getLastComputationVersion",
+              "getLevelNames",
+              "getOuterSolnum",
+              "getPNames",
+              "getPVals",
+              "getPvals",
+              "getSDim",
+              "getSolnum",
+              "getSolnums",
+              "getSolutioninfo",
+              "getString",
+              "getStringArray",
+              "getType",
+              "getUnits",
+              "group",
+              "isAxisymmetric",
+              "isComplex",
+              "label",
+              "lengthUnit",
+              "modelNode",
+              "numerical",
+              "param",
+              "properties",
+              "remove",
+              "resetHist",
+              "result",
+              "run",
+              "save",
+              "set",
+              "setInterpolationCoordinates",
+              "sol",
+              "study",
+              "tags"
+            ],
+            "dispatches": [
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 0,
+                "receiver": "h-b17ffa10-4a5e-42d4-9d58-2aa986b30838",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-bc077e08-de7c-4a84-92f2-7d7026524596",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "param",
+                "args_count": 0,
+                "receiver": "h-f2a4441e-beea-4b48-9336-98f70007aee6",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-ac2293cb-5fe7-4979-baf4-de9d2bbbafbd",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-ac2293cb-5fe7-4979-baf4-de9d2bbbafbd",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "descr",
+                "args_count": 1,
+                "receiver": "h-ac2293cb-5fe7-4979-baf4-de9d2bbbafbd",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "evaluateUnit",
+                "args_count": 1,
+                "receiver": "h-ac2293cb-5fe7-4979-baf4-de9d2bbbafbd",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "evaluate",
+                "args_count": 1,
+                "receiver": "h-ac2293cb-5fe7-4979-baf4-de9d2bbbafbd",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-ac2293cb-5fe7-4979-baf4-de9d2bbbafbd",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-ac2293cb-5fe7-4979-baf4-de9d2bbbafbd",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "descr",
+                "args_count": 1,
+                "receiver": "h-ac2293cb-5fe7-4979-baf4-de9d2bbbafbd",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "evaluateUnit",
+                "args_count": 1,
+                "receiver": "h-ac2293cb-5fe7-4979-baf4-de9d2bbbafbd",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "evaluate",
+                "args_count": 1,
+                "receiver": "h-ac2293cb-5fe7-4979-baf4-de9d2bbbafbd",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "resetHist",
+                "args_count": 0,
+                "receiver": "h-bbcc3479-c980-43d6-a0a7-b5e865777889",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "save",
+                "args_count": 2,
+                "receiver": "h-bbcc3479-c980-43d6-a0a7-b5e865777889",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 1,
+                "receiver": "h-bbcc3479-c980-43d6-a0a7-b5e865777889",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "feature",
+                "args_count": 0,
+                "receiver": "h-cfec501d-0e3d-4f92-b515-1a435a04a692",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-0f595f3f-3d19-4914-bcf1-553741e6d1b4",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "feature",
+                "args_count": 1,
+                "receiver": "h-cfec501d-0e3d-4f92-b515-1a435a04a692",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getString",
+                "args_count": 1,
+                "receiver": "h-4803d08c-c9a8-445e-bde9-0472dd398188",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "param",
+                "args_count": 0,
+                "receiver": "h-d7dcffca-1d36-4a42-8984-13660702cf67",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-57bdf2dd-d314-4da2-9dfc-c39b660545af",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-57bdf2dd-d314-4da2-9dfc-c39b660545af",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "descr",
+                "args_count": 1,
+                "receiver": "h-57bdf2dd-d314-4da2-9dfc-c39b660545af",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "evaluateUnit",
+                "args_count": 1,
+                "receiver": "h-57bdf2dd-d314-4da2-9dfc-c39b660545af",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "evaluate",
+                "args_count": 1,
+                "receiver": "h-57bdf2dd-d314-4da2-9dfc-c39b660545af",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-57bdf2dd-d314-4da2-9dfc-c39b660545af",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-57bdf2dd-d314-4da2-9dfc-c39b660545af",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "descr",
+                "args_count": 1,
+                "receiver": "h-57bdf2dd-d314-4da2-9dfc-c39b660545af",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "evaluateUnit",
+                "args_count": 1,
+                "receiver": "h-57bdf2dd-d314-4da2-9dfc-c39b660545af",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "evaluate",
+                "args_count": 1,
+                "receiver": "h-57bdf2dd-d314-4da2-9dfc-c39b660545af",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "param",
+                "args_count": 0,
+                "receiver": "h-6f29a677-a828-411c-b905-2c6252d75c8b",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "group",
+                "args_count": 0,
+                "receiver": "h-f49403de-c06c-4621-ad01-04f88af88d4e",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "evaluateUnit",
+                "args_count": 1,
+                "receiver": "h-f49403de-c06c-4621-ad01-04f88af88d4e",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "set",
+                "args_count": 2,
+                "receiver": "h-f49403de-c06c-4621-ad01-04f88af88d4e",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-f49403de-c06c-4621-ad01-04f88af88d4e",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "evaluateUnit",
+                "args_count": 1,
+                "receiver": "h-f49403de-c06c-4621-ad01-04f88af88d4e",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "evaluateUnit",
+                "args_count": 1,
+                "receiver": "h-f49403de-c06c-4621-ad01-04f88af88d4e",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "set",
+                "args_count": 2,
+                "receiver": "h-f49403de-c06c-4621-ad01-04f88af88d4e",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-f49403de-c06c-4621-ad01-04f88af88d4e",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "evaluateUnit",
+                "args_count": 1,
+                "receiver": "h-f49403de-c06c-4621-ad01-04f88af88d4e",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "param",
+                "args_count": 0,
+                "receiver": "h-456a604b-e4e4-410f-a3c5-741a4f470598",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-e0309a99-143b-4185-87b8-a6dd0ded300a",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-e0309a99-143b-4185-87b8-a6dd0ded300a",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "descr",
+                "args_count": 1,
+                "receiver": "h-e0309a99-143b-4185-87b8-a6dd0ded300a",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "evaluateUnit",
+                "args_count": 1,
+                "receiver": "h-e0309a99-143b-4185-87b8-a6dd0ded300a",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "evaluate",
+                "args_count": 1,
+                "receiver": "h-e0309a99-143b-4185-87b8-a6dd0ded300a",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-e0309a99-143b-4185-87b8-a6dd0ded300a",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-e0309a99-143b-4185-87b8-a6dd0ded300a",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "descr",
+                "args_count": 1,
+                "receiver": "h-e0309a99-143b-4185-87b8-a6dd0ded300a",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "evaluateUnit",
+                "args_count": 1,
+                "receiver": "h-e0309a99-143b-4185-87b8-a6dd0ded300a",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "evaluate",
+                "args_count": 1,
+                "receiver": "h-e0309a99-143b-4185-87b8-a6dd0ded300a",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 0,
+                "receiver": "h-62651b37-43bb-4c48-b9c0-417733aa7517",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-6d7be3d7-cd0d-460c-92f3-7727783fc38e",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 1,
+                "receiver": "h-04f3935b-1cae-474c-a2ad-78ddcdbc425f",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "feature",
+                "args_count": 0,
+                "receiver": "h-e3d7aa62-bbd0-4231-97ba-d2c4b8f6bf49",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-233f1143-8fc8-4c60-ab7f-46e5ae0b4f96",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-233f1143-8fc8-4c60-ab7f-46e5ae0b4f96",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getType",
+                "args_count": 0,
+                "receiver": "h-aee8f1ee-9092-45a1-ad86-f891eeb7b5e5",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "label",
+                "args_count": 0,
+                "receiver": "h-aee8f1ee-9092-45a1-ad86-f891eeb7b5e5",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "label",
+                "args_count": 0,
+                "receiver": "h-aee8f1ee-9092-45a1-ad86-f891eeb7b5e5",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getLastComputationTime",
+                "args_count": 0,
+                "receiver": "h-e3d7aa62-bbd0-4231-97ba-d2c4b8f6bf49",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getLastComputationDate",
+                "args_count": 0,
+                "receiver": "h-e3d7aa62-bbd0-4231-97ba-d2c4b8f6bf49",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getLastComputationVersion",
+                "args_count": 0,
+                "receiver": "h-e3d7aa62-bbd0-4231-97ba-d2c4b8f6bf49",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "run",
+                "args_count": 0,
+                "receiver": "h-e3d7aa62-bbd0-4231-97ba-d2c4b8f6bf49",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "getLastComputationTime",
+                "args_count": 0,
+                "receiver": "h-e3d7aa62-bbd0-4231-97ba-d2c4b8f6bf49",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getLastComputationDate",
+                "args_count": 0,
+                "receiver": "h-e3d7aa62-bbd0-4231-97ba-d2c4b8f6bf49",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getLastComputationVersion",
+                "args_count": 0,
+                "receiver": "h-e3d7aa62-bbd0-4231-97ba-d2c4b8f6bf49",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "sol",
+                "args_count": 0,
+                "receiver": "h-7c236847-cf80-4620-97f7-e07f9692789e",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-de267d34-1bae-4ad5-bfde-92bd0a80dfe5",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-de267d34-1bae-4ad5-bfde-92bd0a80dfe5",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 0,
+                "receiver": "h-29914183-f524-4042-a2de-746a49139ce9",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "result",
+                "args_count": 0,
+                "receiver": "h-642aaf4b-b735-4534-afc0-2526404ad9ec",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "numerical",
+                "args_count": 0,
+                "receiver": "h-3d39b4f3-de5a-488c-a283-201355792b2c",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "dataset",
+                "args_count": 0,
+                "receiver": "h-3d39b4f3-de5a-488c-a283-201355792b2c",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-ec7e01b4-e1c0-4839-924a-619da59d7d08",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-ec7e01b4-e1c0-4839-924a-619da59d7d08",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "result",
+                "args_count": 0,
+                "receiver": "h-642aaf4b-b735-4534-afc0-2526404ad9ec",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "dataset",
+                "args_count": 0,
+                "receiver": "h-ef92c815-60f7-498b-95e2-ff995adcfbde",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-9cd30083-fbeb-45af-86b5-eafef5bfb53b",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "sol",
+                "args_count": 0,
+                "receiver": "h-642aaf4b-b735-4534-afc0-2526404ad9ec",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-d55f6ddb-36b7-4095-b3fd-bca302b87e7f",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-9cd30083-fbeb-45af-86b5-eafef5bfb53b",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getType",
+                "args_count": 0,
+                "receiver": "h-a1bafc54-47ce-495b-b831-4e87668abc31",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "properties",
+                "args_count": 0,
+                "receiver": "h-a1bafc54-47ce-495b-b831-4e87668abc31",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getString",
+                "args_count": 1,
+                "receiver": "h-a1bafc54-47ce-495b-b831-4e87668abc31",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "properties",
+                "args_count": 0,
+                "receiver": "h-a1bafc54-47ce-495b-b831-4e87668abc31",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "properties",
+                "args_count": 0,
+                "receiver": "h-a1bafc54-47ce-495b-b831-4e87668abc31",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "properties",
+                "args_count": 0,
+                "receiver": "h-a1bafc54-47ce-495b-b831-4e87668abc31",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getString",
+                "args_count": 1,
+                "receiver": "h-a1bafc54-47ce-495b-b831-4e87668abc31",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "properties",
+                "args_count": 0,
+                "receiver": "h-a1bafc54-47ce-495b-b831-4e87668abc31",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getString",
+                "args_count": 1,
+                "receiver": "h-a1bafc54-47ce-495b-b831-4e87668abc31",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "modelNode",
+                "args_count": 0,
+                "receiver": "h-642aaf4b-b735-4534-afc0-2526404ad9ec",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-b138252a-fea3-4afb-9873-5922f8dd880d",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "component",
+                "args_count": 1,
+                "receiver": "h-642aaf4b-b735-4534-afc0-2526404ad9ec",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "geom",
+                "args_count": 0,
+                "receiver": "h-18e6ca0b-9db4-47ef-84ae-ada246753158",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-7e511cdd-5cce-4c54-b995-ddc41f41ea7d",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-7e511cdd-5cce-4c54-b995-ddc41f41ea7d",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "component",
+                "args_count": 1,
+                "receiver": "h-642aaf4b-b735-4534-afc0-2526404ad9ec",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "geom",
+                "args_count": 1,
+                "receiver": "h-50d1f3af-c66f-44ff-adf5-4d83939dd7cb",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "lengthUnit",
+                "args_count": 0,
+                "receiver": "h-d283b1fa-f757-43bc-bd13-1b6c1e821336",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getSDim",
+                "args_count": 0,
+                "receiver": "h-d283b1fa-f757-43bc-bd13-1b6c1e821336",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "isAxisymmetric",
+                "args_count": 0,
+                "receiver": "h-d283b1fa-f757-43bc-bd13-1b6c1e821336",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "sol",
+                "args_count": 0,
+                "receiver": "h-642aaf4b-b735-4534-afc0-2526404ad9ec",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-a2037c73-4f67-49a9-b633-66fd604c4d9e",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-a2037c73-4f67-49a9-b633-66fd604c4d9e",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getSolutioninfo",
+                "args_count": 0,
+                "receiver": "h-12d49859-a283-43ab-a28e-7fdff8c3e3c3",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getOuterSolnum",
+                "args_count": 0,
+                "receiver": "h-1486aa7d-7a74-462b-9c8d-0aa141403456",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getSolnums",
+                "args_count": 1,
+                "receiver": "h-1486aa7d-7a74-462b-9c8d-0aa141403456",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getSolnum",
+                "args_count": 2,
+                "receiver": "h-1486aa7d-7a74-462b-9c8d-0aa141403456",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getSolnum",
+                "args_count": 2,
+                "receiver": "h-1486aa7d-7a74-462b-9c8d-0aa141403456",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getPNames",
+                "args_count": 1,
+                "receiver": "h-1486aa7d-7a74-462b-9c8d-0aa141403456",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getPvals",
+                "args_count": 1,
+                "receiver": "h-1486aa7d-7a74-462b-9c8d-0aa141403456",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getUnits",
+                "args_count": 1,
+                "receiver": "h-1486aa7d-7a74-462b-9c8d-0aa141403456",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getLevelNames",
+                "args_count": 0,
+                "receiver": "h-1486aa7d-7a74-462b-9c8d-0aa141403456",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-669c2191-ca21-43fb-957c-47df92056561",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "create",
+                "args_count": 2,
+                "receiver": "h-669c2191-ca21-43fb-957c-47df92056561",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "set",
+                "args_count": 2,
+                "receiver": "h-fa5dbee1-694d-4f77-8fae-5bba88667fa2",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "getString",
+                "args_count": 1,
+                "receiver": "h-fa5dbee1-694d-4f77-8fae-5bba88667fa2",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "set",
+                "args_count": 2,
+                "receiver": "h-fa5dbee1-694d-4f77-8fae-5bba88667fa2",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "setInterpolationCoordinates",
+                "args_count": 1,
+                "receiver": "h-fa5dbee1-694d-4f77-8fae-5bba88667fa2",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "run",
+                "args_count": 0,
+                "receiver": "h-fa5dbee1-694d-4f77-8fae-5bba88667fa2",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "isComplex",
+                "args_count": 0,
+                "receiver": "h-fa5dbee1-694d-4f77-8fae-5bba88667fa2",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "isComplex",
+                "args_count": 0,
+                "receiver": "h-fa5dbee1-694d-4f77-8fae-5bba88667fa2",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getData",
+                "args_count": 0,
+                "receiver": "h-fa5dbee1-694d-4f77-8fae-5bba88667fa2",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getStringArray",
+                "args_count": 1,
+                "receiver": "h-fa5dbee1-694d-4f77-8fae-5bba88667fa2",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getCoordinates",
+                "args_count": 0,
+                "receiver": "h-fa5dbee1-694d-4f77-8fae-5bba88667fa2",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "remove",
+                "args_count": 1,
+                "receiver": "h-669c2191-ca21-43fb-957c-47df92056561",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-669c2191-ca21-43fb-957c-47df92056561",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "result",
+                "args_count": 0,
+                "receiver": "h-0c1e18fb-39d6-4ca9-9c31-c72d6cf05107",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "dataset",
+                "args_count": 0,
+                "receiver": "h-5d624b89-e84c-4ac7-ba3e-40ce954f6cf1",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-10a0de5d-a6b1-4688-9078-d0a8e10b223d",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-10a0de5d-a6b1-4688-9078-d0a8e10b223d",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "result",
+                "args_count": 0,
+                "receiver": "h-0c1e18fb-39d6-4ca9-9c31-c72d6cf05107",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "dataset",
+                "args_count": 0,
+                "receiver": "h-af2a93e7-30a4-429d-a177-c3d61cd21c14",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-2b6b9d82-f68e-4745-8c7b-6b6d31dde986",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "sol",
+                "args_count": 0,
+                "receiver": "h-0c1e18fb-39d6-4ca9-9c31-c72d6cf05107",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-8ed07bd0-a9b5-4850-a923-24be3dc6ecc5",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-2b6b9d82-f68e-4745-8c7b-6b6d31dde986",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getType",
+                "args_count": 0,
+                "receiver": "h-25c74926-9ef6-4fce-9ef4-c296e408877c",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "properties",
+                "args_count": 0,
+                "receiver": "h-25c74926-9ef6-4fce-9ef4-c296e408877c",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getString",
+                "args_count": 1,
+                "receiver": "h-25c74926-9ef6-4fce-9ef4-c296e408877c",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "properties",
+                "args_count": 0,
+                "receiver": "h-25c74926-9ef6-4fce-9ef4-c296e408877c",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "properties",
+                "args_count": 0,
+                "receiver": "h-25c74926-9ef6-4fce-9ef4-c296e408877c",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "properties",
+                "args_count": 0,
+                "receiver": "h-25c74926-9ef6-4fce-9ef4-c296e408877c",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getString",
+                "args_count": 1,
+                "receiver": "h-25c74926-9ef6-4fce-9ef4-c296e408877c",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "properties",
+                "args_count": 0,
+                "receiver": "h-25c74926-9ef6-4fce-9ef4-c296e408877c",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getString",
+                "args_count": 1,
+                "receiver": "h-25c74926-9ef6-4fce-9ef4-c296e408877c",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "modelNode",
+                "args_count": 0,
+                "receiver": "h-0c1e18fb-39d6-4ca9-9c31-c72d6cf05107",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-ef508eb9-d7e0-48fc-a3c1-51db06ca1810",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "component",
+                "args_count": 1,
+                "receiver": "h-0c1e18fb-39d6-4ca9-9c31-c72d6cf05107",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "geom",
+                "args_count": 0,
+                "receiver": "h-88195de4-fc89-42f8-878f-19faf8c94336",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-22eabc6c-a015-433a-be3f-8c4a796a6203",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-22eabc6c-a015-433a-be3f-8c4a796a6203",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "sol",
+                "args_count": 0,
+                "receiver": "h-0c1e18fb-39d6-4ca9-9c31-c72d6cf05107",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-9e2e5064-ad4d-4973-ae92-0eb7290823f9",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-9e2e5064-ad4d-4973-ae92-0eb7290823f9",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getPVals",
+                "args_count": 0,
+                "receiver": "h-c0343334-658e-4160-a551-783d8e5e2b27",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 0,
+                "receiver": "h-c0343334-658e-4160-a551-783d8e5e2b27",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 0,
+                "receiver": "h-0c1e18fb-39d6-4ca9-9c31-c72d6cf05107",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-fe9346ba-961b-42e7-aaec-b3af690d9abc",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 1,
+                "receiver": "h-0c1e18fb-39d6-4ca9-9c31-c72d6cf05107",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "feature",
+                "args_count": 0,
+                "receiver": "h-a9f35b17-34a8-4f07-b40d-14fe13fcce52",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-f4c5556f-6673-4884-84c2-979ceb342b80",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-f4c5556f-6673-4884-84c2-979ceb342b80",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getType",
+                "args_count": 0,
+                "receiver": "h-0dd07b98-3243-41ba-8017-ada96febf573",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getDoubleArray",
+                "args_count": 1,
+                "receiver": "h-0dd07b98-3243-41ba-8017-ada96febf573",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getString",
+                "args_count": 1,
+                "receiver": "h-0dd07b98-3243-41ba-8017-ada96febf573",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getSolutioninfo",
+                "args_count": 0,
+                "receiver": "h-c0343334-658e-4160-a551-783d8e5e2b27",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getOuterSolnum",
+                "args_count": 0,
+                "receiver": "h-bc6b0c06-f76b-428c-be81-4a5bbde62f43",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getSolnums",
+                "args_count": 1,
+                "receiver": "h-bc6b0c06-f76b-428c-be81-4a5bbde62f43",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getSolnum",
+                "args_count": 2,
+                "receiver": "h-bc6b0c06-f76b-428c-be81-4a5bbde62f43",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getSolnum",
+                "args_count": 2,
+                "receiver": "h-bc6b0c06-f76b-428c-be81-4a5bbde62f43",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getPNames",
+                "args_count": 1,
+                "receiver": "h-bc6b0c06-f76b-428c-be81-4a5bbde62f43",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getPvals",
+                "args_count": 1,
+                "receiver": "h-bc6b0c06-f76b-428c-be81-4a5bbde62f43",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getUnits",
+                "args_count": 1,
+                "receiver": "h-bc6b0c06-f76b-428c-be81-4a5bbde62f43",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getLevelNames",
+                "args_count": 0,
+                "receiver": "h-bc6b0c06-f76b-428c-be81-4a5bbde62f43",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "sol",
+                "args_count": 1,
+                "receiver": "h-bc4b0fe4-7ae5-4939-a11a-f4323088d21e",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 0,
+                "receiver": "h-daf6235f-5a1e-4f07-b152-123959d672de",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 1,
+                "receiver": "h-bc4b0fe4-7ae5-4939-a11a-f4323088d21e",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getLastComputationDate",
+                "args_count": 0,
+                "receiver": "h-3cc025f1-2de3-44b4-ae95-5ab7daaa97f2",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getLastComputationVersion",
+                "args_count": 0,
+                "receiver": "h-3cc025f1-2de3-44b4-ae95-5ab7daaa97f2",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getPVals",
+                "args_count": 0,
+                "receiver": "h-daf6235f-5a1e-4f07-b152-123959d672de",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "sol",
+                "args_count": 1,
+                "receiver": "h-0620c48d-fd80-42b0-ab28-f4ed6a35a828",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 0,
+                "receiver": "h-394987f8-0a7c-4001-9ab7-116aee9c815a",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 1,
+                "receiver": "h-0620c48d-fd80-42b0-ab28-f4ed6a35a828",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getLastComputationDate",
+                "args_count": 0,
+                "receiver": "h-ce575e20-c013-4b30-96f7-5d0807d8631c",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getLastComputationVersion",
+                "args_count": 0,
+                "receiver": "h-ce575e20-c013-4b30-96f7-5d0807d8631c",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getPVals",
+                "args_count": 0,
+                "receiver": "h-394987f8-0a7c-4001-9ab7-116aee9c815a",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "result",
+                "args_count": 0,
+                "receiver": "h-8c09fda0-38d1-487a-a960-6b82cde4380c",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "dataset",
+                "args_count": 0,
+                "receiver": "h-03f370a9-8489-4865-8580-22769653107a",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-6cb9371a-d903-4664-addd-0483da9734f1",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "resetHist",
+                "args_count": 0,
+                "receiver": "h-fdd1717b-cb96-4119-9d9e-2f2c3c23b5a6",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "save",
+                "args_count": 2,
+                "receiver": "h-fdd1717b-cb96-4119-9d9e-2f2c3c23b5a6",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 1,
+                "receiver": "h-fdd1717b-cb96-4119-9d9e-2f2c3c23b5a6",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "feature",
+                "args_count": 0,
+                "receiver": "h-4cd373e9-4f8d-461b-a3b0-d6b511cfdde8",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-9464c7ac-25d7-44d0-b09c-718fa5517de5",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "feature",
+                "args_count": 1,
+                "receiver": "h-4cd373e9-4f8d-461b-a3b0-d6b511cfdde8",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getString",
+                "args_count": 1,
+                "receiver": "h-f05e69e6-8e43-4e4e-a220-c4976ddad7bc",
+                "is_mutation": false
+              }
+            ],
+            "mutation_issued": true
+          },
+          "details": {
+            "status_token": "COMPLETE"
+          }
+        },
+        "effect": "compute",
+        "isolation_proof": {
+          "verified": true,
+          "receipt": "C:\\Temp\\w21closure_20260925\\reviewer_best_final_64\\runtime\\isolation_receipt.json",
+          "pid": 7484,
+          "birth": "/Date(1790344697582)/",
+          "endpoint": "127.0.0.1:55549",
+          "listener": {
+            "pid": 7484,
+            "endpoint": "127.0.0.1:55549",
+            "local_endpoint": "127.0.0.1:55549",
+            "remote_endpoint": null,
+            "state": "LISTEN",
+            "raw": "TCP    127.0.0.1:55549        0.0.0.0:0              LISTENING       7484"
+          },
+          "worker_pid": 16980,
+          "established_client_pids": [
+            7484,
+            16980
+          ],
+          "proof_scope": "owned process identity + exact IPv4 loopback listener + connected-client observation"
+        }
+      },
+      "error": null,
+      "execution": {
+        "session_id": "session-d0bd43e3986550230187d65d",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-d0bd43e3986550230187d65d",
+          "server_instance_id": "1068f59c17ff7ad69d7386ea8696711a52d622f45a23dc9841857b33946ad3db",
+          "model_tag": "mcp1",
+          "generation": 1
+        },
+        "revision": 2,
+        "dirty": false,
+        "server_ownership": "shared",
+        "model_ownership": "mcp_owned",
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "request_id": "d39cbc14-d1c8-4503-b7c1-3c71963cf530",
+        "operation_id": "bc0fda11-faaf-4f77-ac51-c7586dbda675",
+        "request_hash": "3dad95ddb144ad01261d26a6f5d0fdf7aad10e52c7d2de322943e073ccf8b54c",
+        "idempotency_key": "17823616-c04f-4eaf-9433-dd01f1a88bb8",
+        "job_id": "514600ba-064e-4dd6-a880-1b2dc00d817d"
+      }
+    },
+    "max_error_K": 0.0014929925399655986,
+    "T_mid_K": 304.04117047120803,
+    "objective_K": 0.04117047120803363,
+    "constraint_pass": true
+  },
+  "save": {
+    "success": true,
+    "data": {
+      "label": "ReviewerBestIndependent",
+      "saved_path": "C:\\Temp\\w21closure_20260925\\reviewer_best_final_64\\project\\reviewer_best.mph",
+      "tool": "save_model",
+      "timestamp": 1790344733.2648654,
+      "datetime": "2026-09-25 21:58:53",
+      "server": {
+        "version": "0.1.9",
+        "timestamp": 1790344733.2648654,
+        "datetime": "2026-09-25 21:58:53",
+        "status": "ready",
+        "server_running": false,
+        "server_started_by_mcp": false,
+        "attached_to_existing_server": true,
+        "server_host": "127.0.0.1",
+        "server_port": 55549,
+        "server_endpoint": "127.0.0.1:55549",
+        "desktop_client_role": "visual-client",
+        "comsol_root": "C:\\Program Files\\COMSOL\\COMSOL64\\Multiphysics",
+        "mcp_home": "C:\\Temp\\w21closure_20260925\\reviewer_best_final_64\\control",
+        "logs_dir": "C:\\Temp\\w21closure_20260925\\reviewer_best_final_64\\control\\logs",
+        "outputs_dir": "C:\\Temp\\w21closure_20260925\\reviewer_best_final_64\\control\\outputs",
+        "current_model_label": "ReviewerBestIndependent",
+        "current_model_path": "C:\\Temp\\w21closure_20260925\\reviewer_best_final_64\\project\\reviewer_best.mph",
+        "current_model_origin": "bound-request",
+        "last_command": "save_model",
+        "last_error": "",
+        "recommended_desktop_flow": "visible-main-first: manually start COMSOL Multiphysics Server, start a persistent MCP process, call start_visible_main_workflow(host, port, path); after that connect COMSOL Desktop to the same server and import the already loaded model.",
+        "desktop_should_connect": {
+          "host": "127.0.0.1",
+          "port": 55549
+        },
+        "workflow": {
+          "mode": "manual",
+          "current_main_model_path": "",
+          "snapshot_dir": "",
+          "snapshot_prefix": "",
+          "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+          "visible_main_locked": false,
+          "guard_level": "strict",
+          "snapshot_save_mode": "copy",
+          "main_model_tag": "",
+          "main_model_label": "",
+          "main_model_path": "",
+          "model_dimension": 0,
+          "workflow_stage": "awaiting_manual_server",
+          "mcp_client_lifecycle": "persistent-required",
+          "one_shot_client_allowed": false,
+          "notes": "",
+          "updated_at": "2026-09-25 21:58:27"
+        }
+      },
+      "log_path": "C:\\Temp\\w21closure_20260925\\reviewer_best_final_64\\control\\logs\\server.log",
+      "operations_path": "C:\\Temp\\w21closure_20260925\\reviewer_best_final_64\\control\\logs\\operations.jsonl"
+    },
+    "error": null,
+    "execution": {
+      "session_id": "session-d0bd43e3986550230187d65d",
+      "model_ref": {
+        "schema_version": 1,
+        "session_id": "session-d0bd43e3986550230187d65d",
+        "server_instance_id": "1068f59c17ff7ad69d7386ea8696711a52d622f45a23dc9841857b33946ad3db",
+        "model_tag": "mcp1",
+        "generation": 1
+      },
+      "revision": 3,
+      "dirty": false,
+      "server_ownership": "shared",
+      "model_ownership": "mcp_owned",
+      "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+      "request_id": "9ae80961-1941-4bd2-84cc-e46dd0f00f7e",
+      "operation_id": "5011485a-5af2-4e58-b175-6aa83058d803",
+      "request_hash": "6bd91e01a2f5b69bfc34352b9f87a750ad0fdda21e52359b5e04c66895c3754f",
+      "idempotency_key": "79e52544-2c14-40a4-bba3-9d498e471b5e",
+      "job_id": "5fdbc986-1279-45df-8263-6bde190d766c"
+    }
+  },
+  "saved_sha256": "321eb984afeebcab6831343fe6291e7e55fd60b40a3ec321a705b8d063a640a0"
+}

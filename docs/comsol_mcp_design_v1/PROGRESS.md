@@ -1427,3 +1427,16 @@ Implementation, tests and evidence published to `Everwalker/comsol-mcp:main` as 
 - **测试覆盖范围**：macOS aarch64 (Apple Silicon) / COMSOL 6.4 (Build 293) / Amazon Corretto 11.0.31 为当前唯一验证环境。
 - **未验证组合**：Windows x64、Linux、macOS Intel、COMSOL 6.3、GUI Desktop 交互保持 `UNVERIFIED`。
 - **严格停止边界**：本轮任务完成 W17 结果系统重构、历史证据纠正及真实 COMSOL 验收后，**明确停止在 W17，严禁自动推进至 W18–W26**。
+
+
+## 2026-09-25 — W21 native execution closure (current scoped result)
+
+**W21_SCOPED_APPROVED; completed and stopped at W21.** Independent final reviewer: `/root/reviewer_final`. Production commit `07a44329e96d922a0955e944a8a65ba732894278`; wheel SHA-256 `8511dbc550792fbe538646897c951649a49de668030e66bd9306868801b94e5d`.
+
+Windows COMSOL 6.3 build 290 and 6.4 build 293 each completed the normal public-MCP W21 flow using the same actual wheel: four two-parameter transient cases, exact result reuse (four hits/zero computations), pre-dispatch budget stops, finite native-objective optimization and real terminal-to-initial stage transfer. Actual maximum scan error was about .001532 K; stage continuation about .001985 K, within preregistered .03 K. Independent same-version fresh Worker reopen evidence is preserved with its exact inherited scope.
+
+The confirmed W20 observation/physical-status defects were corrected, and T11 now uses backend-registered measured errors/settings instead of caller arrays. Each version has three actual grids and three solver tolerances with fixed output times and nine-point results below the unchanged .1 K target. Final Reviewer independently executed both versions, 28 negative calls with clean recovery, independently recomputed twelve field-error sets and freshly solved the returned best candidate on each version. No A1/A2 remains.
+
+Software regression scope: selected affected Python modules 84 passed, Java Worker 30 passed/1 skipped; Reviewer independently ran 66 affected checks. This is not a claim that the full repository suite or every platform was re-certified. Physical validation remains UNVERIFIED; only generic T047 transfer is covered and its gel/UV/stress domain acceptance remains for W24.
+
+See `docs/handoff_w21_execution_closure/CLOSURE_RESULT.md`, `review/REVIEWER_FINAL_W21_SCOPED.md`, `W20_CORRECTION.md`, `RESTORE_CURRENT.md`, and `evidence/w21_closure/windows/`. Earlier failed runs and historical signoffs remain intact. Frozen 16-case/27-target bytes are unchanged. Nonblocking items are in DEFERRED_BACKLOG. **No W22 execution.**

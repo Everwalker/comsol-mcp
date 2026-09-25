@@ -1,0 +1,68 @@
+Processing request of type CallToolRequest
+Processing request of type ListToolsRequest
+server_connect True
+Processing request of type CallToolRequest
+model_create True
+Processing request of type CallToolRequest
+operation_call True
+Processing request of type CallToolRequest
+study.sweep_manage True
+Processing request of type CallToolRequest
+validate.solution False
+Processing request of type CallToolRequest
+validate.solution False
+Processing request of type CallToolRequest
+validate.solution False
+Processing request of type CallToolRequest
+study.sweep_manage True
+Processing request of type CallToolRequest
+stage.checkpoint_create True
+Processing request of type CallToolRequest
+stage.state_transfer False
+Processing request of type CallToolRequest
+stage.state_transfer True
+Processing request of type CallToolRequest
+optimization.bounded_run True
+Processing request of type CallToolRequest
+operation_call True
+Processing request of type CallToolRequest
+operation_call True
+Processing request of type CallToolRequest
+save_model True
+Processing request of type CallToolRequest
+study.sweep_manage False
+Processing request of type CallToolRequest
+study.sweep_manage False
+  + Exception Group Traceback (most recent call last):
+  |   File "C:\Temp\w21closure_20260925\reviewer_native_probe.py", line 36, in run
+  |     async with stdio_client(params) as (read,write):
+  |                ^^^^^^^^^^^^^^^^^^^^
+  |   File "C:\Users\Everwalker\AppData\Local\Programs\Python\Python312-comsol-mcp\Lib\contextlib.py", line 231, in __aexit__
+  |     await self.gen.athrow(value)
+  |   File "C:\Temp\w21closure_20260925\venv\Lib\site-packages\mcp\client\stdio\__init__.py", line 183, in stdio_client
+  |     anyio.create_task_group() as tg,
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "C:\Temp\w21closure_20260925\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 847, in __aexit__
+  |     raise BaseExceptionGroup(
+  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Exception Group Traceback (most recent call last):
+    |   File "C:\Temp\w21closure_20260925\venv\Lib\site-packages\mcp\client\stdio\__init__.py", line 189, in stdio_client
+    |     yield read_stream, write_stream
+    |   File "C:\Temp\w21closure_20260925\reviewer_native_probe.py", line 37, in run
+    |     async with ClientSession(read,write) as session:
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "C:\Temp\w21closure_20260925\venv\Lib\site-packages\mcp\shared\session.py", line 238, in __aexit__
+    |     return await self._task_group.__aexit__(exc_type, exc_val, exc_tb)
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "C:\Temp\w21closure_20260925\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 847, in __aexit__
+    |     raise BaseExceptionGroup(
+    | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+    +-+---------------- 1 ----------------
+      | Traceback (most recent call last):
+      |   File "C:\Temp\w21closure_20260925\reviewer_native_probe.py", line 121, in run
+      |     assert b['budget']['cases_evaluated']==1 and b['cache_hits']==0
+      |            ~^^^^^^^^^^
+      | KeyError: 'budget'
+      +------------------------------------
+

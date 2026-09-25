@@ -1,0 +1,411 @@
+{
+  "metadata": {
+    "binding_source": "resolve_dataset_binding(model, dataset_tag)",
+    "cleanup": {
+      "cleanup_failed": false,
+      "created": true,
+      "error": null,
+      "removed": true,
+      "tag": "cmssp1",
+      "type_id": "Interp",
+      "verified_removed": true
+    },
+    "complex_mode": "real",
+    "coordinate_readback": {
+      "coordinates": [
+        [
+          0.0125,
+          0.025,
+          0.0375
+        ],
+        [
+          0.005,
+          0.005,
+          0.005
+        ],
+        [
+          0.005,
+          0.005,
+          0.005
+        ]
+      ],
+      "status": "VERIFIED",
+      "unit": "m"
+    },
+    "coordinate_unit": "m",
+    "dataset": "dset1",
+    "dataset_binding": {
+      "binding_complete": true,
+      "component": "comp1",
+      "dataset": "dset1",
+      "dataset_chain": [
+        "dset1"
+      ],
+      "dataset_edges": [],
+      "dataset_type": "Solution",
+      "error": null,
+      "geometry": "geom1",
+      "properties": {
+        "comp": "comp1",
+        "geom": "geom1",
+        "solution": "sol1"
+      },
+      "provenance": {
+        "dataset_tags": [
+          "dset1"
+        ],
+        "mutation_methods_called": [],
+        "read_only": true,
+        "solution_tags": [
+          "sol1"
+        ]
+      },
+      "read_errors": [],
+      "requested_solution": null,
+      "solution": "sol1",
+      "sources": {
+        "component": "dataset.comp -> modelNode.tags()/model.component()",
+        "geometry": "dataset.geom -> component.geom.tags()/getter",
+        "solution": "dataset.solution -> model.sol().tags()"
+      }
+    },
+    "expressions": [
+      "T"
+    ],
+    "feature_readback": {
+      "data": "dset1",
+      "data_status": "VERIFIED",
+      "source": "NumericalFeature.getString('data') after set('data')"
+    },
+    "field_array": {
+      "axes": [
+        "expression",
+        "outer",
+        "inner",
+        "point"
+      ],
+      "coords": {
+        "expression": [
+          "T"
+        ],
+        "inner": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "outer": [
+          1
+        ],
+        "parameters": [
+          {},
+          {},
+          {},
+          {},
+          {}
+        ],
+        "params": [
+          {},
+          {},
+          {},
+          {},
+          {}
+        ],
+        "point": [
+          1,
+          2,
+          3
+        ],
+        "spatial": [
+          [
+            0.0125,
+            0.005,
+            0.005
+          ],
+          [
+            0.025,
+            0.005,
+            0.005
+          ],
+          [
+            0.0375,
+            0.005,
+            0.005
+          ]
+        ]
+      },
+      "data": [
+        [
+          [
+            [
+              307.07105781703314,
+              309.9999844202499,
+              307.07108563626326
+            ],
+            [
+              305.8046902090306,
+              308.2090714162387,
+              305.8047189043742
+            ],
+            [
+              304.76433995477686,
+              306.73779403492665,
+              304.7643635570173
+            ],
+            [
+              303.91043131549947,
+              305.5301848958783,
+              303.9104507095889
+            ],
+            [
+              303.20958454844333,
+              304.53903791836433,
+              303.2096004765592
+            ]
+          ]
+        ]
+      ],
+      "is_complex": false,
+      "metadata": {
+        "binding_source": "SolutionInfo.getSolnum(outer, strict)",
+        "expression_units": {
+          "T": "K"
+        },
+        "pair_mapping_complete": true,
+        "parameter_names": [],
+        "point_coordinate_source": "request",
+        "solution_pairs": [
+          {
+            "inner": 1,
+            "outer": 1,
+            "parameter_units": {},
+            "parameters": {},
+            "solnum": 1
+          },
+          {
+            "inner": 2,
+            "outer": 1,
+            "parameter_units": {},
+            "parameters": {},
+            "solnum": 2
+          },
+          {
+            "inner": 3,
+            "outer": 1,
+            "parameter_units": {},
+            "parameters": {},
+            "solnum": 3
+          },
+          {
+            "inner": 4,
+            "outer": 1,
+            "parameter_units": {},
+            "parameters": {},
+            "solnum": 4
+          },
+          {
+            "inner": 5,
+            "outer": 1,
+            "parameter_units": {},
+            "parameters": {},
+            "solnum": 5
+          }
+        ],
+        "unit_readback_status": "VERIFIED"
+      },
+      "shape": [
+        1,
+        1,
+        5,
+        3
+      ],
+      "units": {
+        "expression": {
+          "T": "K"
+        },
+        "inner": "index",
+        "outer": "index",
+        "parameters": {},
+        "point": "m"
+      },
+      "values": [
+        [
+          [
+            [
+              307.07105781703314,
+              309.9999844202499,
+              307.07108563626326
+            ],
+            [
+              305.8046902090306,
+              308.2090714162387,
+              305.8047189043742
+            ],
+            [
+              304.76433995477686,
+              306.73779403492665,
+              304.7643635570173
+            ],
+            [
+              303.91043131549947,
+              305.5301848958783,
+              303.9104507095889
+            ],
+            [
+              303.20958454844333,
+              304.53903791836433,
+              303.2096004765592
+            ]
+          ]
+        ]
+      ]
+    },
+    "frame": "spatial",
+    "is_complex": false,
+    "point_count": 3,
+    "points": [
+      [
+        0.0125,
+        0.005,
+        0.005
+      ],
+      [
+        0.025,
+        0.005,
+        0.005
+      ],
+      [
+        0.0375,
+        0.005,
+        0.005
+      ]
+    ],
+    "result_budget": {
+      "limits": {
+        "engine_internal_cache": "UNMEASURED",
+        "max_bytes": 67108864,
+        "max_elements": 1000000,
+        "scope": "numeric_payload_only"
+      },
+      "publish_allowed": true,
+      "records": [
+        {
+          "allowed": true,
+          "budget_scope": "numeric_payload_only",
+          "computed": {
+            "bytes": 120,
+            "complex_components": 1,
+            "elements": 15,
+            "expression_count": 1,
+            "inner_count_total": 5,
+            "inner_counts_by_outer": null,
+            "numeric_payload_bytes": 120,
+            "numeric_payload_scalar_bytes": 8,
+            "numeric_payload_scope": "float64 scalar payload only; excludes JSON, wire, Python-list, and engine-cache overhead",
+            "outer_count": 1,
+            "raw_point_upper_bound": 3,
+            "raw_point_upper_bounds_by_outer": [
+              3
+            ],
+            "raw_upper_bound_source": "validated-Interp-request-coordinates;interp-coordinate-columns",
+            "requested_point_count": 3,
+            "scalar_bytes": 8
+          },
+          "data_vector_count": {
+            "interpretation": "observation only; never treated as coordinate count",
+            "used_for_point_bound": false,
+            "value": null
+          },
+          "feature_kind": "Interp",
+          "getdata_called": true,
+          "limits": {
+            "max_bytes": 67108864,
+            "max_elements": 1000000,
+            "max_numeric_payload_bytes": 67108864
+          },
+          "metadata_sources": {
+            "expression": "validated-request-expressions",
+            "point_count": "validated-Interp-request-coordinates",
+            "raw_point_upper_bound": "validated-Interp-request-coordinates;interp-coordinate-columns",
+            "solution_axes": "validated-SolutionBinding.outer/inner-pairs"
+          },
+          "operation": "result.at_points",
+          "pre_getdata": true,
+          "publish_allowed": true,
+          "raw_getter": "getData",
+          "raw_layout": "expression,solnum,vertex",
+          "reason": "verified pre-getData result allocation is within both configured limits",
+          "reason_code": "BUDGET_WITHIN_LIMIT",
+          "request_progress": {
+            "consumed_numeric_payload_bytes": 120,
+            "consumed_numeric_payload_elements": 15,
+            "max_bytes": 67108864,
+            "max_elements": 1000000
+          },
+          "requested": {
+            "complex_components": 1,
+            "expression_count": 1,
+            "inner_count": 5,
+            "inner_counts_by_outer": null,
+            "max_bytes": 67108864,
+            "max_elements": 1000000,
+            "outer_count": 1,
+            "point_count": 3,
+            "raw_point_upper_bound": 3,
+            "raw_point_upper_bounds_by_outer": [
+              3
+            ],
+            "raw_upper_bound_source": "validated-Interp-request-coordinates;interp-coordinate-columns",
+            "raw_upper_bound_verified": true,
+            "reported_data_vector_count": null,
+            "scalar_bytes": 8
+          },
+          "status": "PASS",
+          "verification": "VERIFIED"
+        }
+      ],
+      "status": "PASS"
+    },
+    "solution": "sol1",
+    "status": {
+      "cleanup_failed": false,
+      "engine_error": null,
+      "ok": true,
+      "verification_status": "PASSED"
+    },
+    "verification_status": "PASSED"
+  },
+  "spec": {},
+  "values": [
+    [
+      [
+        [
+          307.07105781703314,
+          309.9999844202499,
+          307.07108563626326
+        ],
+        [
+          305.8046902090306,
+          308.2090714162387,
+          305.8047189043742
+        ],
+        [
+          304.76433995477686,
+          306.73779403492665,
+          304.7643635570173
+        ],
+        [
+          303.91043131549947,
+          305.5301848958783,
+          303.9104507095889
+        ],
+        [
+          303.20958454844333,
+          304.53903791836433,
+          303.2096004765592
+        ]
+      ]
+    ]
+  ]
+}

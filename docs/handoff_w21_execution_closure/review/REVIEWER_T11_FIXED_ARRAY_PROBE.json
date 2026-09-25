@@ -1,0 +1,40 @@
+{
+  "scope": "CONTROL_ONLY_PRODUCTION_FUNCTION",
+  "backend_worker": null,
+  "cases": [
+    {
+      "level": 1,
+      "mesh_size_metric": 0.1,
+      "error": 0.065
+    },
+    {
+      "level": 2,
+      "mesh_size_metric": 0.05,
+      "error": 0.028
+    },
+    {
+      "level": 3,
+      "mesh_size_metric": 0.025,
+      "error": 0.009
+    }
+  ],
+  "result": {
+    "status": "PASS",
+    "execution_status": "PASS",
+    "numerical_verification_status": "PASS",
+    "physical_validation_status": "UNVERIFIED",
+    "cases_count": 3,
+    "analysis": {
+      "status": "PASS",
+      "trend": "monotonic",
+      "errors": [
+        0.065,
+        0.028,
+        0.009
+      ],
+      "finest_error": 0.009,
+      "message": "Convergence trend analyzed and target verified"
+    },
+    "metrics": []
+  }
+}

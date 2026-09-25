@@ -1,0 +1,17 @@
+# W21 execution implementation
+
+The public W21 operations use the existing ManagedBackend, serialized Worker queue, W13 parameter API, W16 study execution, W17 sampling and W20 verification. There is no second task scheduler and no analytical production result path. Analytical formulas live only in the native acceptance runner as independent comparison values.
+
+Observation references are minted by backend-owned context and persisted through OperationStore/ArtifactStore. Validation checks producer existence/status, model generation, managed revision, dataset and artifact hash. Native study computation date/version and stored times identify the sampled solution, so an earlier case cannot validate the overwritten current sol1. Historical cache retrieval preserves the original producer/sample and is explicitly CACHED.
+
+Cache identity contains exact parameter values, units and requested output/metric specification; COMSOL-exported current configuration; actual engine build; and declared input file bytes. Model.resetHist is the documented command-history compaction API, used before configuration export. It does not reset the physical solution or stage history. Each export is retained. Configuration changes fail closed by missing the cache. Cache payload and envelope are hashed and persisted in the existing operation database.
+
+The computation budget is checked on the existing serial queue before solver dispatch. It bounds new computations, not elapsed completion time or cancellation. Exhaustion does not claim an in-flight solve was interrupted. Failed or unknown evaluations cannot become best feasible; output reports the finite search's best verified feasible candidate, without a global optimum claim.
+
+Generic stage transfer uses source stored solution initial conditions on a distinct target transient study, verifies settings readback, compares spatial source-terminal/target-initial fields and checks subsequent actual samples against the preregistered continuous analytical reference. It supports identical variables/mesh and one outer solution. W24 domain-level T047 remains NOT_RUN.
+
+Public examples and native requests are in tools/run_w21_native.py. Windows runs use a task-private wheel installation and normal comsol-mcp stdio entry. All raw tools/call envelopes are appended to transcript.jsonl. Fresh-process reopen starts a new server/Worker, loads exact-SHA saved bytes, samples stored results without solving and compares them with the producer samples.
+
+Scope: frozen W20 provenance/physical fixes and necessary T11/T14 correction; frozen W21 five deliveries. See DEFERRED_BACKLOG.md. Acceptance remains pending independent Reviewer and dual-version final evidence.
+
+T11 convergence records are also backend-owned artifacts. Registered B2 samples are checked for exact frozen coordinates, stored time axis, T/K layout and successful producer; the backend recomputes the nine analytical errors and reads actual mesh size, element/DOF counts and explicit solver tolerance. Convergence accepts only exact id/hash references, checks observation artifact hashes and refuses repeated native refinement settings, repeated references or caller overrides. Unregistered numeric arrays remain external diagnostic data with numerical UNVERIFIED. Historical snapshots may be compared after a model is no longer current; they do not claim to describe the active live solution.
