@@ -1,0 +1,99 @@
+{
+  "checkpoint": {
+    "checkpoint_id": "chk_stage_01_heating_03319b77368b",
+    "stage_id": "stage_01_heating",
+    "timestamp_s": 10.0,
+    "model_tag": "model_adhesion_curing",
+    "variables": {
+      "T_field": 345.2,
+      "thermal_gradient": 12.4,
+      "cure_degree": 0.35
+    },
+    "units": {
+      "T_field": "K",
+      "thermal_gradient": "K/m",
+      "cure_degree": "1"
+    },
+    "selection": "domain_curing_layer",
+    "metrics_summary": {
+      "T_field_val": 345.2,
+      "thermal_gradient_val": 12.4,
+      "cure_degree_val": 0.35
+    },
+    "sha256": "03319b77368bd9877a3ef7aaad05563d8d625417210555b756a9127d106b0a90"
+  },
+  "transfer": {
+    "transfer_id": "xfer_stage_01_heating_to_stage_02_relaxation_cure_1790318178",
+    "source_checkpoint_id": "chk_stage_01_heating_03319b77368b",
+    "source_stage_id": "stage_01_heating",
+    "target_stage_id": "stage_02_relaxation_cure",
+    "mapping": [
+      {
+        "source_variable": "T_field",
+        "target_variable": "T_init",
+        "unit": "K",
+        "source_timestamp": 10.0
+      },
+      {
+        "source_variable": "cure_degree",
+        "target_variable": "alpha_cure_0",
+        "unit": "1",
+        "source_timestamp": 10.0
+      }
+    ],
+    "target_initial_state": {
+      "T_init": 345.2,
+      "alpha_cure_0": 0.35
+    },
+    "target_units": {
+      "T_init": "K",
+      "alpha_cure_0": "1"
+    },
+    "history_preserved": true,
+    "t047_generic_subitem_status": "PASS",
+    "domain_physical_status": "DEFERRED_TO_W24",
+    "verification": {
+      "source_hash_verified": true,
+      "units_preserved": true,
+      "variables_mapped_count": 2
+    }
+  },
+  "transfers": [
+    {
+      "transfer_id": "xfer_stage_01_heating_to_stage_02_relaxation_cure_1790318178",
+      "source_checkpoint_id": "chk_stage_01_heating_03319b77368b",
+      "source_stage_id": "stage_01_heating",
+      "target_stage_id": "stage_02_relaxation_cure",
+      "mapping": [
+        {
+          "source_variable": "T_field",
+          "target_variable": "T_init",
+          "unit": "K",
+          "source_timestamp": 10.0
+        },
+        {
+          "source_variable": "cure_degree",
+          "target_variable": "alpha_cure_0",
+          "unit": "1",
+          "source_timestamp": 10.0
+        }
+      ],
+      "target_initial_state": {
+        "T_init": 345.2,
+        "alpha_cure_0": 0.35
+      },
+      "target_units": {
+        "T_init": "K",
+        "alpha_cure_0": "1"
+      },
+      "history_preserved": true,
+      "t047_generic_subitem_status": "PASS",
+      "domain_physical_status": "DEFERRED_TO_W24",
+      "verification": {
+        "source_hash_verified": true,
+        "units_preserved": true,
+        "variables_mapped_count": 2
+      }
+    }
+  ]
+}

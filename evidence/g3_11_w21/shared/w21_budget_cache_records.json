@@ -1,0 +1,72 @@
+{
+  "win63_budget": {
+    "cases_evaluated": 6,
+    "max_cases": 5,
+    "elapsed_s": 0.0001,
+    "max_wall_time_s": 300.0,
+    "exhausted": true,
+    "exhaustion_reason": "MAX_CASES_EXCEEDED"
+  },
+  "win64_budget": {
+    "cases_evaluated": 6,
+    "max_cases": 5,
+    "elapsed_s": 0.0,
+    "max_wall_time_s": 300.0,
+    "exhausted": true,
+    "exhaustion_reason": "MAX_CASES_EXCEEDED"
+  },
+  "win63_cache": {
+    "hits": 1,
+    "misses": 4,
+    "stores": 3,
+    "total_entries": 3
+  },
+  "win64_cache": {
+    "hits": 1,
+    "misses": 4,
+    "stores": 3,
+    "total_entries": 3
+  },
+  "trace_63": [
+    {
+      "case": "c_0",
+      "cache_lookup": "MISS"
+    },
+    {
+      "case": "c_1",
+      "cache_lookup": "MISS"
+    },
+    {
+      "case": "c_2",
+      "cache_lookup": "MISS"
+    },
+    {
+      "case": "c_0_dup",
+      "cache_lookup": "HIT",
+      "result": {
+        "T_avg": 310.0,
+        "status": "COMPLETED"
+      }
+    },
+    {
+      "case": "c_0_alt_ver",
+      "cache_lookup": "MISS"
+    },
+    {
+      "case": "c_fail",
+      "status": "FAILED",
+      "reason": "PHYSICAL_PARAM_NEGATIVE"
+    },
+    {
+      "can_evaluate": false,
+      "budget_status": {
+        "cases_evaluated": 6,
+        "max_cases": 5,
+        "elapsed_s": 0.0001,
+        "max_wall_time_s": 300.0,
+        "exhausted": true,
+        "exhaustion_reason": "MAX_CASES_EXCEEDED"
+      }
+    }
+  ]
+}

@@ -87,6 +87,16 @@ EXPECTED_TOOLS = [
     "validate_convergence",
     "validate.report",
     "validate_report",
+    "parameter.case_manage",
+    "parameter_case_manage",
+    "study.sweep_manage",
+    "study_sweep_manage",
+    "optimization.bounded_run",
+    "optimization_bounded_run",
+    "stage.checkpoint_create",
+    "stage_checkpoint_create",
+    "stage.state_transfer",
+    "stage_state_transfer",
 ]
 
 

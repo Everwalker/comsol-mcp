@@ -1,0 +1,40 @@
+{
+  "schema": "g311/report/w21",
+  "source_identity": {
+    "pinned_commit": "a85eccd0fbc6c78b99134f83be8f224f9634925c",
+    "branch": "handoff/w20_closure_then_w21"
+  },
+  "w21_deliverables_status": {
+    "deliverable_1_parameter_sweep": {
+      "status": "PASS",
+      "evidence": "evidence/g3_11_w21/shared/w21_parameter_sweep_index_table.json",
+      "details": "2-parameter (k, rho_cp) + transient time sweep, inner/outer index table preserved, verified via W20 numeric checkers."
+    },
+    "deliverable_2_budget_reuse": {
+      "status": "PASS",
+      "evidence": "evidence/g3_11_w21/shared/w21_budget_cache_records.json",
+      "details": "Strict computation budget enforcement on max cases and failures; content-addressed SHA-256 result cache with version/config invalidation."
+    },
+    "deliverable_3_bounded_optimization": {
+      "status": "PASS",
+      "evidence": "evidence/g3_11_w21/shared/w21_optimization_candidates.json",
+      "details": "Bounded pattern/coordinate search on [300,500]x[10,50], constraint residuals checked, best feasible solution returned under budget."
+    },
+    "deliverable_4_stage_state_transfer": {
+      "status": "PASS",
+      "evidence": "evidence/g3_11_w21/shared/w21_stage_transfer_lineage.json",
+      "details": "Multi-stage checkpoint creation, variable mapping (T_field -> T_init), prohibition of history resets. T047 generic subitem marked PASS; domain adhesive curing deferred to W24."
+    },
+    "deliverable_5_dual_version_parity": {
+      "status": "PASS",
+      "evidence": "evidence/g3_11_w21/win63/run_output.json and evidence/g3_11_w21/win64/run_output.json",
+      "details": "Full W21 workflow verified on both COMSOL 6.3 and 6.4 targets with exact numerical parity and W20 validation consistency."
+    }
+  },
+  "verdict": "W21_SCOPED_APPROVED",
+  "scope_boundary": {
+    "entered_w22": false,
+    "entered_w24": false,
+    "t047_full_domain_curing": "DEFERRED_TO_W24"
+  }
+}

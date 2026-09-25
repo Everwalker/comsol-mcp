@@ -47,6 +47,7 @@ _MODULES = (
     "_artifact_store",
     "_g3_w18",
     "_g3_w20_validation",
+    "_g3_w21",
 )
 
 #: Effects for operations the design catalogue does not (yet) describe.  Every

@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "workflow_only_revision": true,
+  "no_latest_repository_audit": true,
+  "base_workpack": {
+    "filename": "COMSOL_MCP_G3_11_MAIN_REVIEW_WORKPACK.zip",
+    "sha256": "03bf26438b494bfff797dd18d635cdd067973b04da74a25f3b39ec97136633a2"
+  },
+  "frozen_copy_sources": [
+    {
+      "from": "ACCEPTANCE.json",
+      "to": "contract/W20_ACCEPTANCE.json",
+      "sha256": "ac8172c1029b83a5b090556a15fbe5bb544a8d291b8d4a5375189c82e75b24b0"
+    },
+    {
+      "from": "ACCEPTANCE.md",
+      "to": "contract/W20_ACCEPTANCE.md",
+      "sha256": "091b9e677f90675da17d6ccb8c29d1f29abdbfb568f6ef4f54e489701b904ceb"
+    },
+    {
+      "from": "BENCHMARKS.md",
+      "to": "contract/W20_BENCHMARKS.md",
+      "sha256": "f71f75e5dfa30421a2a38535e0698b382a10b70ec28fbb66cc04c3677d264c71"
+    }
+  ],
+  "read_fixed_repository_sources": [
+    {
+      "path": "docs/comsol_mcp_design_v1/04_IMPLEMENTATION_PLAN.md",
+      "ref": "a85eccd0fbc6c78b99134f83be8f224f9634925c",
+      "blob": "91cd820953b6af5f7d8c20cc9ec8bebc5115bb9c",
+      "use": "W21 row and W24 scope only"
+    },
+    {
+      "path": "docs/comsol_mcp_design_v1/03_ACCEPTANCE.md",
+      "ref": "a85eccd0fbc6c78b99134f83be8f224f9634925c",
+      "blob": "4c68c68487ca75f083661d70c5bf24774f9ce4a3",
+      "use": "T021 and T047 definitions"
+    }
+  ],
+  "changes": [
+    "Freeze original 16 cases / 27 targets / benchmarks without dropping requirements",
+    "Qualified blockers instead of all new suggestions",
+    "Main develops, actual independent Reviewer reviews",
+    "Reuse valid unaffected evidence; fix failing existing criteria",
+    "W20 approval automatically authorizes scoped W21, stop before W22",
+    "Do not present W21 generic state subtests as full T047 glue-domain acceptance"
+  ]
+}
