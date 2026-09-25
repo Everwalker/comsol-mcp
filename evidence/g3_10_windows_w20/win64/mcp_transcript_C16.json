@@ -1,0 +1,206 @@
+{
+  "capture_origin": "CAPTURED_STDIN_STDOUT",
+  "run_id": "g3_10_w20_acceptance_live",
+  "target": "win64",
+  "case_id": "C16",
+  "events": [
+    {
+      "direction": "request",
+      "method": "tools/call",
+      "request_id": "16",
+      "timestamp": "2026-09-25T00:34:34.019556+00:00",
+      "payload": {
+        "name": "validate.report",
+        "arguments": {
+          "destination": "C:\\Users\\Everwalker\\COMSOL_G3_10\\repository\\evidence\\g3_10_windows_w20\\win64\\validation_report_win64.json",
+          "data": {
+            "source_identity": "886affa",
+            "runtime_version": "6.4",
+            "error_tolerance_data": {
+              "status": "PASS",
+              "numerical_verification_status": "PASS"
+            }
+          },
+          "overwrite": false
+        }
+      },
+      "raw_jsonrpc": {
+        "method": "tools/call",
+        "params": {
+          "name": "validate.report",
+          "arguments": {
+            "destination": "C:\\Users\\Everwalker\\COMSOL_G3_10\\repository\\evidence\\g3_10_windows_w20\\win64\\validation_report_win64.json",
+            "data": {
+              "source_identity": "886affa",
+              "runtime_version": "6.4",
+              "error_tolerance_data": {
+                "status": "PASS",
+                "numerical_verification_status": "PASS"
+              }
+            },
+            "overwrite": false
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 16
+      }
+    },
+    {
+      "direction": "response",
+      "request_id": "16",
+      "timestamp": "2026-09-25T00:34:34.120219+00:00",
+      "payload": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\": true, \"data\": {\"status\": \"PASS\", \"execution_status\": \"PASS\", \"numerical_verification_status\": \"PASS\", \"physical_validation_status\": \"UNVERIFIED\", \"report_summary\": {\"source_identity\": \"886affa\", \"runtime_version\": \"6.4\", \"rule_version\": \"W20.2\", \"evidence_hash\": \"724a1281e34f3051dd346d11f43f2a923d3b1260e59ce706529fd1f3c4f553b7\"}, \"report_markdown\": \"# Validation Report: 886affa\\n\\n**Runtime Version:** 6.4\\n**Dataset:** dset1\\n\\n## Frozen Expectations\\n```json\\n{}\\n```\\n\\n## Observations\\n```json\\n{}\\n```\\n\\n## Results\\n```json\\n{\\n  \\\"status\\\": \\\"PASS\\\",\\n  \\\"numerical_verification_status\\\": \\\"PASS\\\"\\n}\\n```\\n\\n**Evidence Hash:** `724a1281e34f3051dd346d11f43f2a923d3b1260e59ce706529fd1f3c4f553b7`\\n\", \"report_json\": \"{\\\"source_identity\\\": \\\"886affa\\\", \\\"runtime_version\\\": \\\"6.4\\\", \\\"model_ref\\\": \\\"mcp2\\\", \\\"dataset_ref\\\": \\\"dset1\\\", \\\"rule_version\\\": \\\"W20.2\\\", \\\"input_assumptions\\\": {}, \\\"frozen_expectations\\\": {}, \\\"raw_observations\\\": {}, \\\"error_tolerance_data\\\": {\\\"status\\\": \\\"PASS\\\", \\\"numerical_verification_status\\\": \\\"PASS\\\"}, \\\"coverage_exclusions\\\": {}, \\\"warnings\\\": [], \\\"evidence_hash\\\": \\\"724a1281e34f3051dd346d11f43f2a923d3b1260e59ce706529fd1f3c4f553b7\\\"}\", \"domain_state\": \"succeeded\", \"verification_status\": \"NOT_APPLICABLE\", \"execution_state_unknown\": false, \"partial_change\": false, \"cleanup_failed\": false, \"dispatch_stage\": \"post_dispatch\", \"domain_outcome\": {\"operation\": \"validate.report\", \"state\": \"succeeded\", \"verification_status\": \"NOT_APPLICABLE\", \"cleanup_failed\": false, \"execution_state_unknown\": false, \"dispatch_stage\": \"post_dispatch\", \"status_token\": \"PASS\", \"execution_status\": \"PASS\", \"witness\": {\"engine_calls\": 0, \"mutation_method\": null, \"methods\": [], \"dispatches\": [], \"mutation_issued\": false}, \"details\": {\"status_token\": \"PASS\"}}, \"effect\": \"file_write\"}, \"error\": null, \"execution\": {\"session_id\": \"session-77d9001ba07f2cbb69aa49c7\", \"model_ref\": {\"schema_version\": 1, \"session_id\": \"session-77d9001ba07f2cbb69aa49c7\", \"server_instance_id\": \"1a6691e8a852f9ef87c917add32dcd6f3f937e57a00ad1c6882ebfb024df0518\", \"model_tag\": \"mcp2\", \"generation\": 1}, \"revision\": 5, \"dirty\": false, \"server_ownership\": \"shared\", \"model_ownership\": \"user_owned\", \"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"request_id\": \"ee76a834-0e9f-41fe-943c-63319ef7b52b\", \"operation_id\": \"f672d0d5-9994-4e1b-b26f-e7b041981a46\", \"request_hash\": \"8a4619cb4ba0066dd020b512571fa48c0276164d5641164caa77fd68d2770797\", \"idempotency_key\": \"1efd1f40-c1eb-43a9-a0d0-07c2afe6bb7d\", \"job_id\": \"14b7a7b4-0e6b-4134-90f4-3f4818019678\"}}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "data": {
+            "status": "PASS",
+            "execution_status": "PASS",
+            "numerical_verification_status": "PASS",
+            "physical_validation_status": "UNVERIFIED",
+            "report_summary": {
+              "source_identity": "886affa",
+              "runtime_version": "6.4",
+              "rule_version": "W20.2",
+              "evidence_hash": "724a1281e34f3051dd346d11f43f2a923d3b1260e59ce706529fd1f3c4f553b7"
+            },
+            "report_markdown": "# Validation Report: 886affa\n\n**Runtime Version:** 6.4\n**Dataset:** dset1\n\n## Frozen Expectations\n```json\n{}\n```\n\n## Observations\n```json\n{}\n```\n\n## Results\n```json\n{\n  \"status\": \"PASS\",\n  \"numerical_verification_status\": \"PASS\"\n}\n```\n\n**Evidence Hash:** `724a1281e34f3051dd346d11f43f2a923d3b1260e59ce706529fd1f3c4f553b7`\n",
+            "report_json": "{\"source_identity\": \"886affa\", \"runtime_version\": \"6.4\", \"model_ref\": \"mcp2\", \"dataset_ref\": \"dset1\", \"rule_version\": \"W20.2\", \"input_assumptions\": {}, \"frozen_expectations\": {}, \"raw_observations\": {}, \"error_tolerance_data\": {\"status\": \"PASS\", \"numerical_verification_status\": \"PASS\"}, \"coverage_exclusions\": {}, \"warnings\": [], \"evidence_hash\": \"724a1281e34f3051dd346d11f43f2a923d3b1260e59ce706529fd1f3c4f553b7\"}",
+            "domain_state": "succeeded",
+            "verification_status": "NOT_APPLICABLE",
+            "execution_state_unknown": false,
+            "partial_change": false,
+            "cleanup_failed": false,
+            "dispatch_stage": "post_dispatch",
+            "domain_outcome": {
+              "operation": "validate.report",
+              "state": "succeeded",
+              "verification_status": "NOT_APPLICABLE",
+              "cleanup_failed": false,
+              "execution_state_unknown": false,
+              "dispatch_stage": "post_dispatch",
+              "status_token": "PASS",
+              "execution_status": "PASS",
+              "witness": {
+                "engine_calls": 0,
+                "mutation_method": null,
+                "methods": [],
+                "dispatches": [],
+                "mutation_issued": false
+              },
+              "details": {
+                "status_token": "PASS"
+              }
+            },
+            "effect": "file_write"
+          },
+          "error": null,
+          "execution": {
+            "session_id": "session-77d9001ba07f2cbb69aa49c7",
+            "model_ref": {
+              "schema_version": 1,
+              "session_id": "session-77d9001ba07f2cbb69aa49c7",
+              "server_instance_id": "1a6691e8a852f9ef87c917add32dcd6f3f937e57a00ad1c6882ebfb024df0518",
+              "model_tag": "mcp2",
+              "generation": 1
+            },
+            "revision": 5,
+            "dirty": false,
+            "server_ownership": "shared",
+            "model_ownership": "user_owned",
+            "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+            "request_id": "ee76a834-0e9f-41fe-943c-63319ef7b52b",
+            "operation_id": "f672d0d5-9994-4e1b-b26f-e7b041981a46",
+            "request_hash": "8a4619cb4ba0066dd020b512571fa48c0276164d5641164caa77fd68d2770797",
+            "idempotency_key": "1efd1f40-c1eb-43a9-a0d0-07c2afe6bb7d",
+            "job_id": "14b7a7b4-0e6b-4134-90f4-3f4818019678"
+          }
+        },
+        "isError": false
+      },
+      "raw_jsonrpc": {
+        "jsonrpc": "2.0",
+        "id": 16,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"success\": true, \"data\": {\"status\": \"PASS\", \"execution_status\": \"PASS\", \"numerical_verification_status\": \"PASS\", \"physical_validation_status\": \"UNVERIFIED\", \"report_summary\": {\"source_identity\": \"886affa\", \"runtime_version\": \"6.4\", \"rule_version\": \"W20.2\", \"evidence_hash\": \"724a1281e34f3051dd346d11f43f2a923d3b1260e59ce706529fd1f3c4f553b7\"}, \"report_markdown\": \"# Validation Report: 886affa\\n\\n**Runtime Version:** 6.4\\n**Dataset:** dset1\\n\\n## Frozen Expectations\\n```json\\n{}\\n```\\n\\n## Observations\\n```json\\n{}\\n```\\n\\n## Results\\n```json\\n{\\n  \\\"status\\\": \\\"PASS\\\",\\n  \\\"numerical_verification_status\\\": \\\"PASS\\\"\\n}\\n```\\n\\n**Evidence Hash:** `724a1281e34f3051dd346d11f43f2a923d3b1260e59ce706529fd1f3c4f553b7`\\n\", \"report_json\": \"{\\\"source_identity\\\": \\\"886affa\\\", \\\"runtime_version\\\": \\\"6.4\\\", \\\"model_ref\\\": \\\"mcp2\\\", \\\"dataset_ref\\\": \\\"dset1\\\", \\\"rule_version\\\": \\\"W20.2\\\", \\\"input_assumptions\\\": {}, \\\"frozen_expectations\\\": {}, \\\"raw_observations\\\": {}, \\\"error_tolerance_data\\\": {\\\"status\\\": \\\"PASS\\\", \\\"numerical_verification_status\\\": \\\"PASS\\\"}, \\\"coverage_exclusions\\\": {}, \\\"warnings\\\": [], \\\"evidence_hash\\\": \\\"724a1281e34f3051dd346d11f43f2a923d3b1260e59ce706529fd1f3c4f553b7\\\"}\", \"domain_state\": \"succeeded\", \"verification_status\": \"NOT_APPLICABLE\", \"execution_state_unknown\": false, \"partial_change\": false, \"cleanup_failed\": false, \"dispatch_stage\": \"post_dispatch\", \"domain_outcome\": {\"operation\": \"validate.report\", \"state\": \"succeeded\", \"verification_status\": \"NOT_APPLICABLE\", \"cleanup_failed\": false, \"execution_state_unknown\": false, \"dispatch_stage\": \"post_dispatch\", \"status_token\": \"PASS\", \"execution_status\": \"PASS\", \"witness\": {\"engine_calls\": 0, \"mutation_method\": null, \"methods\": [], \"dispatches\": [], \"mutation_issued\": false}, \"details\": {\"status_token\": \"PASS\"}}, \"effect\": \"file_write\"}, \"error\": null, \"execution\": {\"session_id\": \"session-77d9001ba07f2cbb69aa49c7\", \"model_ref\": {\"schema_version\": 1, \"session_id\": \"session-77d9001ba07f2cbb69aa49c7\", \"server_instance_id\": \"1a6691e8a852f9ef87c917add32dcd6f3f937e57a00ad1c6882ebfb024df0518\", \"model_tag\": \"mcp2\", \"generation\": 1}, \"revision\": 5, \"dirty\": false, \"server_ownership\": \"shared\", \"model_ownership\": \"user_owned\", \"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"request_id\": \"ee76a834-0e9f-41fe-943c-63319ef7b52b\", \"operation_id\": \"f672d0d5-9994-4e1b-b26f-e7b041981a46\", \"request_hash\": \"8a4619cb4ba0066dd020b512571fa48c0276164d5641164caa77fd68d2770797\", \"idempotency_key\": \"1efd1f40-c1eb-43a9-a0d0-07c2afe6bb7d\", \"job_id\": \"14b7a7b4-0e6b-4134-90f4-3f4818019678\"}}"
+            }
+          ],
+          "structuredContent": {
+            "success": true,
+            "data": {
+              "status": "PASS",
+              "execution_status": "PASS",
+              "numerical_verification_status": "PASS",
+              "physical_validation_status": "UNVERIFIED",
+              "report_summary": {
+                "source_identity": "886affa",
+                "runtime_version": "6.4",
+                "rule_version": "W20.2",
+                "evidence_hash": "724a1281e34f3051dd346d11f43f2a923d3b1260e59ce706529fd1f3c4f553b7"
+              },
+              "report_markdown": "# Validation Report: 886affa\n\n**Runtime Version:** 6.4\n**Dataset:** dset1\n\n## Frozen Expectations\n```json\n{}\n```\n\n## Observations\n```json\n{}\n```\n\n## Results\n```json\n{\n  \"status\": \"PASS\",\n  \"numerical_verification_status\": \"PASS\"\n}\n```\n\n**Evidence Hash:** `724a1281e34f3051dd346d11f43f2a923d3b1260e59ce706529fd1f3c4f553b7`\n",
+              "report_json": "{\"source_identity\": \"886affa\", \"runtime_version\": \"6.4\", \"model_ref\": \"mcp2\", \"dataset_ref\": \"dset1\", \"rule_version\": \"W20.2\", \"input_assumptions\": {}, \"frozen_expectations\": {}, \"raw_observations\": {}, \"error_tolerance_data\": {\"status\": \"PASS\", \"numerical_verification_status\": \"PASS\"}, \"coverage_exclusions\": {}, \"warnings\": [], \"evidence_hash\": \"724a1281e34f3051dd346d11f43f2a923d3b1260e59ce706529fd1f3c4f553b7\"}",
+              "domain_state": "succeeded",
+              "verification_status": "NOT_APPLICABLE",
+              "execution_state_unknown": false,
+              "partial_change": false,
+              "cleanup_failed": false,
+              "dispatch_stage": "post_dispatch",
+              "domain_outcome": {
+                "operation": "validate.report",
+                "state": "succeeded",
+                "verification_status": "NOT_APPLICABLE",
+                "cleanup_failed": false,
+                "execution_state_unknown": false,
+                "dispatch_stage": "post_dispatch",
+                "status_token": "PASS",
+                "execution_status": "PASS",
+                "witness": {
+                  "engine_calls": 0,
+                  "mutation_method": null,
+                  "methods": [],
+                  "dispatches": [],
+                  "mutation_issued": false
+                },
+                "details": {
+                  "status_token": "PASS"
+                }
+              },
+              "effect": "file_write"
+            },
+            "error": null,
+            "execution": {
+              "session_id": "session-77d9001ba07f2cbb69aa49c7",
+              "model_ref": {
+                "schema_version": 1,
+                "session_id": "session-77d9001ba07f2cbb69aa49c7",
+                "server_instance_id": "1a6691e8a852f9ef87c917add32dcd6f3f937e57a00ad1c6882ebfb024df0518",
+                "model_tag": "mcp2",
+                "generation": 1
+              },
+              "revision": 5,
+              "dirty": false,
+              "server_ownership": "shared",
+              "model_ownership": "user_owned",
+              "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+              "request_id": "ee76a834-0e9f-41fe-943c-63319ef7b52b",
+              "operation_id": "f672d0d5-9994-4e1b-b26f-e7b041981a46",
+              "request_hash": "8a4619cb4ba0066dd020b512571fa48c0276164d5641164caa77fd68d2770797",
+              "idempotency_key": "1efd1f40-c1eb-43a9-a0d0-07c2afe6bb7d",
+              "job_id": "14b7a7b4-0e6b-4134-90f4-3f4818019678"
+            }
+          },
+          "isError": false
+        }
+      }
+    }
+  ]
+}

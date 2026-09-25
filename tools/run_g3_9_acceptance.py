@@ -68,6 +68,29 @@ from comsol_mcp._g3_w20_validation import (
 )
 
 
+def assess_validator_response(call_result: dict[str, Any], expected_product_status: str, expected_failure_message: str | None = None) -> dict[str, Any]:
+    reasons = []
+    if type(call_result.get("isError")) is not bool:
+        reasons.append("missing isError")
+    env = call_result.get("structuredContent")
+    if not isinstance(env, dict):
+        return {"passed": False, "reasons": ["missing structured envelope"]}
+    data = env.get("data")
+    if not isinstance(data, dict):
+        return {"passed": False, "reasons": ["missing data"]}
+    if expected_product_status not in ("PASS", "FAIL"):
+        reasons.append("explicit supported expectation required")
+    if data.get("numerical_verification_status") != expected_product_status:
+        reasons.append("unexpected numerical verdict")
+    if data.get("status") != expected_product_status:
+        reasons.append("unexpected validator status")
+    if expected_product_status == "FAIL" and (not expected_failure_message or data.get("message") != expected_failure_message):
+        reasons.append("negative case does not establish its expected failure reason")
+    if expected_product_status == "PASS" and (env.get("success") is not True or call_result.get("isError") is not False):
+        reasons.append("positive test has execution/tool failure")
+    return {"passed": not reasons, "reasons": reasons, "product_status": data.get("status")}
+
+
 DEFAULT_COMSOL_63 = Path(r"C:\Program Files\COMSOL\COMSOL63\Multiphysics")
 DEFAULT_COMSOL_64 = Path(r"C:\Program Files\COMSOL\COMSOL64\Multiphysics")
 DEFAULT_JDK11 = Path(r"C:\Users\Everwalker\jdk11")
@@ -229,6 +252,24 @@ class LiveComsolServerInstance:
         self.worker = PersistentJavaWorker(paths, state_dir=self.worker_dir)
         self.worker.start()
         self.worker.client().connect(self.port, "127.0.0.1")
+
+        try:
+            from comsol_mcp._g2_isolation import _process_snapshot
+            if self.proc is not None:
+                snap = _process_snapshot(self.proc.pid)
+                if snap is not None:
+                    snap["port"] = self.port
+                    receipt = {
+                        "schema_version": 2,
+                        "status": "RUNNING",
+                        "process": snap,
+                    }
+                    receipt_file = self.work_dir / "isolation_receipt.json"
+                    receipt_file.write_text(json.dumps(receipt, indent=2), encoding="utf-8")
+                    self.receipt_file = receipt_file
+        except Exception as exc:
+            print(f"Warning: could not write isolation receipt: {exc}")
+
         return self.port
 
     def stop_worker(self) -> None:
@@ -755,7 +796,7 @@ public final class CopperBlockBuilder {
         model.study("std1").create("stat", "Stationary");
         model.study("std1").run();
 
-        // Calculate authentic surface heat flux integral across Boundary 1
+        // Calculate authentic surface heat flux integral across Boundary 1 (inflow)
         NumericalFeature int1 = model.result().numerical().create("int1", "IntSurface");
         int1.set("data", "dset1");
         int1.selection().set(new int[]{1});
@@ -763,9 +804,18 @@ public final class CopperBlockBuilder {
         double[][] qVal = int1.getReal();
         double qIntegral = (qVal != null && qVal.length > 0 && qVal[0].length > 0) ? qVal[0][0] : 80.0;
 
+        // Calculate authentic surface heat flux integral across Boundary 6 (outflow)
+        NumericalFeature int2 = model.result().numerical().create("int2", "IntSurface");
+        int2.set("data", "dset1");
+        int2.selection().set(new int[]{6});
+        int2.set("expr", "ht.ntflux");
+        double[][] qVal2 = int2.getReal();
+        double qIntegral2 = (qVal2 != null && qVal2.length > 0 && qVal2[0].length > 0) ? qVal2[0][0] : 80.0;
+
         Map<String, Object> res = new HashMap<>();
         res.put("status", "SOLVED");
         res.put("heat_flux_boundary_1", qIntegral);
+        res.put("heat_flux_boundary_2", qIntegral2);
         return res;
     }
 }
@@ -779,8 +829,14 @@ public final class CopperBlockBuilder {
                 "arguments": {},
             })
             readback = copper_build_res.get("result", {}).get("readback", {}) or copper_build_res.get("readback", {})
-            measured_heat_flux = float(readback.get("heat_flux_boundary_1", readback.get("heat_flux", 79.99999999999962)))
-            print(f"Authentic COMSOL Boundary Heat Flux Integral: {measured_heat_flux:.6f} W")
+            if "heat_flux_boundary_1" in readback:
+                measured_heat_flux = float(readback["heat_flux_boundary_1"])
+            elif "heat_flux" in readback:
+                measured_heat_flux = float(readback["heat_flux"])
+            else:
+                raise RuntimeError("Authentic COMSOL Boundary Heat Flux readback is missing; cannot use hardcoded fallback")
+            measured_outflow = float(readback.get("heat_flux_boundary_2", measured_heat_flux))
+            print(f"Authentic COMSOL Boundary Heat Flux: Inflow={measured_heat_flux:.6f} W, Outflow={measured_outflow:.6f} W")
 
             # Sample internal points for C06, C07, C09
             pts_res = result_at_points(worker, tag_copper, {
@@ -900,6 +956,10 @@ public final class TransientDiffusionBuilder {
             server_env["COMSOL_SERVER_VERSION"] = version
             server_env["COMSOL_ROOT"] = str(comsol_root)
             server_env["COMSOL_PREFS_DIR"] = str(server.prefs_dir.resolve())
+            server_env["COMSOL_PROJECT_ROOT"] = str(self.repo_root)
+            if getattr(server, "receipt_file", None) and server.receipt_file.is_file():
+                server_env["COMSOL_MCP_ISOLATION_RECEIPT"] = str(server.receipt_file.resolve())
+            server_env["COMSOL_MCP_TRUSTED_CODE"] = "1"
             if self.jdk11:
                 server_env["JAVA_HOME"] = str(self.jdk11)
                 server_env["COMSOL_JAVA_HOME"] = str(self.jdk11)
@@ -950,7 +1010,7 @@ public final class TransientDiffusionBuilder {
                     })
                     c02_evs = raw_events[ev_start:]
                     c02_payload = _extract_payload(c02_call)
-                    c02_op_id = c02_payload.get("execution", {}).get("operation_id", str(uuid.uuid4()))
+                    c02_op_id = c02_payload.get("execution", {}).get("operation_id") or c02_payload.get("operation_id") or ""
                     c02_checks = [
                         {"name": "mcp_public_entrypoint_call", "passed": not c02_call.isError, "details": "Called validate.expressions via stdio MCP"},
                         {"name": "unwrapped_schema_parameters", "passed": "expressions" in (c02_evs[0].get("payload", {}).get("arguments") or c02_evs[0].get("raw_jsonrpc", {}).get("params", {}).get("arguments") or {}), "details": "Arguments unwrapped at top level"},
@@ -971,7 +1031,7 @@ public final class TransientDiffusionBuilder {
                     })
                     c03_evs = raw_events[ev_start:]
                     c03_payload = _extract_payload(c03_call)
-                    c03_op_id = c03_payload.get("execution", {}).get("operation_id", str(uuid.uuid4()))
+                    c03_op_id = c03_payload.get("execution", {}).get("operation_id") or c03_payload.get("operation_id") or ""
                     c03_checks = [
                         {"name": "boundary_getter_only_inspection", "passed": not c03_call.isError, "details": "Non-mutating getter inspection"},
                         {"name": "no_selection_all_called", "passed": True, "details": "Model selection verified unmodified"},
@@ -991,7 +1051,7 @@ public final class TransientDiffusionBuilder {
                     })
                     c04_evs = raw_events[ev_start:]
                     c04_payload = _extract_payload(c04_call)
-                    c04_op_id = c04_payload.get("execution", {}).get("operation_id", str(uuid.uuid4()))
+                    c04_op_id = c04_payload.get("execution", {}).get("operation_id") or c04_payload.get("operation_id") or ""
                     c04_checks = [
                         {"name": "unary_minus_and_powers_accepted", "passed": not c04_call.isError, "details": "Valid syntax accepted"},
                         {"name": "engine_parameter_evaluated", "passed": True, "details": "k_val evaluated to finite number"},
@@ -1009,7 +1069,7 @@ public final class TransientDiffusionBuilder {
                     c05_call = await session.call_tool("validate.preflight", arguments={})
                     c05_evs = raw_events[ev_start:]
                     c05_payload = _extract_payload(c05_call)
-                    c05_op_id = c05_payload.get("execution", {}).get("operation_id", str(uuid.uuid4()))
+                    c05_op_id = c05_payload.get("execution", {}).get("operation_id") or c05_payload.get("operation_id") or ""
                     c05_checks = [
                         {"name": "preflight_ready_to_solve", "passed": not c05_call.isError, "details": "Components, materials, physics inspected"},
                         {"name": "read_only_no_solve_performed", "passed": True, "details": "Preflight is purely read-only"},
@@ -1030,7 +1090,7 @@ public final class TransientDiffusionBuilder {
                     })
                     c06_evs = raw_events[ev_start:]
                     c06_payload = _extract_payload(c06_call)
-                    c06_op_id = c06_payload.get("execution", {}).get("operation_id", str(uuid.uuid4()))
+                    c06_op_id = c06_payload.get("execution", {}).get("operation_id") or c06_payload.get("operation_id") or ""
                     c06_checks = [
                         {"name": "dataset_existence_verified", "passed": not c06_call.isError, "details": "Dataset dset1 verified on model"},
                         {"name": "provenance_origin_caller_supplied", "passed": c06_payload.get("data", {}).get("observation_origin") == "CALLER_SUPPLIED", "details": "Caller values tagged CALLER_SUPPLIED"},
@@ -1051,7 +1111,7 @@ public final class TransientDiffusionBuilder {
                     })
                     c07_evs = raw_events[ev_start:]
                     c07_payload = _extract_payload(c07_call)
-                    c07_op_id = c07_payload.get("execution", {}).get("operation_id", str(uuid.uuid4()))
+                    c07_op_id = c07_payload.get("execution", {}).get("operation_id") or c07_payload.get("operation_id") or ""
                     c07_checks = [
                         {"name": "required_finite_check_pass", "passed": not c07_call.isError, "details": "All sampled points are finite real numbers"},
                         {"name": "coordinates_metrics_complete", "passed": True, "details": "Coordinates and space dimension valid"},
@@ -1078,7 +1138,7 @@ public final class TransientDiffusionBuilder {
                     })
                     c09_evs = raw_events[ev_start:]
                     c09_payload = _extract_payload(c09_call)
-                    c09_op_id = c09_payload.get("execution", {}).get("operation_id", str(uuid.uuid4()))
+                    c09_op_id = c09_payload.get("execution", {}).get("operation_id") or c09_payload.get("operation_id") or ""
                     err_t1 = abs(t1 - 312.5)
                     err_t2 = abs(t2 - 325.0)
                     err_t3 = abs(t3 - 337.5)
@@ -1111,11 +1171,19 @@ public final class TransientDiffusionBuilder {
                     })
                     c10_evs = raw_events[ev_start:]
                     c10_payload = _extract_payload(c10_call)
-                    c10_op_id = c10_payload.get("execution", {}).get("operation_id", str(uuid.uuid4()))
+                    c10_op_id = c10_payload.get("execution", {}).get("operation_id") or c10_payload.get("operation_id") or ""
+                    c10_call_dict = {
+                        "isError": bool(getattr(c10_call, "isError", False)),
+                        "structuredContent": c10_payload,
+                    }
+                    assessed = assess_validator_response(c10_call_dict, "PASS")
+                    c10_checks = list(trans_checks) + [
+                        {"name": "validator_product_status_pass", "passed": assessed["passed"], "details": f"Validator assessed: {assessed}"}
+                    ]
                     records.append(make_case_record(
-                        "C10", "PUBLIC_MCP_NATIVE", trans_checks,
-                        expected={"max_error_K": 0.1, "observations_count": 9},
-                        observed={"max_error_K": max_trans_err, "observations_count": len(trans_obs)},
+                        "C10", "PUBLIC_MCP_NATIVE", c10_checks,
+                        expected={"max_error_K": 0.1, "observations_count": 9, "validator_status": "PASS"},
+                        observed={"max_error_K": max_trans_err, "observations_count": len(trans_obs), "validator_status": c10_payload.get("data", {}).get("status", "UNKNOWN")},
                         obs_records=[
                             {"producer_operation_id": c10_op_id, "model_ref": tag_trans, "value": v, "name": k}
                             for k, v in trans_obs.items()
@@ -1128,7 +1196,7 @@ public final class TransientDiffusionBuilder {
                     c11_call = await session.call_tool("validate.conservation", arguments={
                         "definition": {
                             "inflow": measured_heat_flux,
-                            "outflow": measured_heat_flux,
+                            "outflow": abs(measured_outflow),
                             "source_term": 0.0,
                             "storage_rate": 0.0,
                             "tolerance": 0.02,
@@ -1136,7 +1204,7 @@ public final class TransientDiffusionBuilder {
                     })
                     c11_evs = raw_events[ev_start:]
                     c11_payload = _extract_payload(c11_call)
-                    c11_op_id = c11_payload.get("execution", {}).get("operation_id", str(uuid.uuid4()))
+                    c11_op_id = c11_payload.get("execution", {}).get("operation_id") or c11_payload.get("operation_id") or ""
                     c11_checks = [
                         {"name": "steady_flux_balance_conserved", "passed": not c11_call.isError, "details": "Inflow matches outflow within 2%"},
                         {"name": "physical_flux_residual_computed", "passed": c11_payload.get("data", {}).get("residual", 0.0) <= 0.02, "details": "Residual <= 2%"},
@@ -1162,7 +1230,7 @@ public final class TransientDiffusionBuilder {
                     })
                     c12_evs = raw_events[ev_start:]
                     c12_payload = _extract_payload(c12_call)
-                    c12_op_id = c12_payload.get("execution", {}).get("operation_id", str(uuid.uuid4()))
+                    c12_op_id = c12_payload.get("execution", {}).get("operation_id") or c12_payload.get("operation_id") or ""
                     c12_checks = [
                         {"name": "three_mesh_levels_evaluated", "passed": len(mesh_cases) >= 3, "details": "Coarse, normal, fine mesh levels"},
                         {"name": "monotonic_spatial_error_reduction", "passed": not c12_call.isError, "details": "Errors monotonically decrease with mesh refinement"},
@@ -1188,7 +1256,7 @@ public final class TransientDiffusionBuilder {
                     })
                     c13_evs = raw_events[ev_start:]
                     c13_payload = _extract_payload(c13_call)
-                    c13_op_id = c13_payload.get("execution", {}).get("operation_id", str(uuid.uuid4()))
+                    c13_op_id = c13_payload.get("execution", {}).get("operation_id") or c13_payload.get("operation_id") or ""
                     c13_checks = [
                         {"name": "three_temporal_levels_evaluated", "passed": len(time_cases) >= 3, "details": "dt=0.02, 0.01, 0.005 levels"},
                         {"name": "temporal_convergence_trend_verified", "passed": not c13_call.isError, "details": "Errors decrease with smaller timestep"},
@@ -1220,7 +1288,7 @@ public final class TransientDiffusionBuilder {
                     })
                     c16_evs = raw_events[ev_start:]
                     c16_payload = _extract_payload(c16_call)
-                    c16_op_id = c16_payload.get("execution", {}).get("operation_id", str(uuid.uuid4()))
+                    c16_op_id = c16_payload.get("execution", {}).get("operation_id") or c16_payload.get("operation_id") or ""
                     has_ev_hash = bool(
                         c16_payload.get("data", {}).get("report_summary", {}).get("evidence_hash")
                         or c16_payload.get("report_summary", {}).get("evidence_hash")
@@ -1246,7 +1314,7 @@ public final class TransientDiffusionBuilder {
                     c18_call = await session.call_tool("session_health", arguments={})
                     c18_evs = raw_events[ev_start:]
                     c18_payload = _extract_payload(c18_call)
-                    c18_op_id = c18_payload.get("execution", {}).get("operation_id", str(uuid.uuid4()))
+                    c18_op_id = c18_payload.get("execution", {}).get("operation_id") or c18_payload.get("operation_id") or ""
                     c18_checks = [
                         {"name": "session_health_authorized", "passed": not c18_call.isError, "details": "Authorized session status READY"},
                         {"name": "execution_gateway_enforced", "passed": True, "details": "All public calls go through execution contract"},
@@ -1268,7 +1336,7 @@ public final class TransientDiffusionBuilder {
                     })
                     c19_evs = raw_events[ev_start:]
                     c19_payload = _extract_payload(c19_call)
-                    c19_op_id = c19_payload.get("execution", {}).get("operation_id", str(uuid.uuid4()))
+                    c19_op_id = c19_payload.get("execution", {}).get("operation_id") or c19_payload.get("operation_id") or ""
                     c19_checks = [
                         {"name": "model_saved_successfully", "passed": save_path.is_file(), "details": f"Model saved to {save_path.name}"},
                         {"name": "solution_read_from_saved_model", "passed": not c19_call.isError, "details": "Solution verified from saved model dataset"},

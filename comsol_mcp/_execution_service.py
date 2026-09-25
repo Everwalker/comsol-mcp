@@ -120,6 +120,7 @@ class ExecutionService:
                 # the session's runtime, so an unbound call is a valid request and
                 # must reach the probe instead of being refused for having no model.
                 "runtime_capabilities", "runtime_license_inspect",
+                "validate_report", "validate.report",
             }:
                 raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "a selected model_ref is required")
             if expected_revision is not None:
@@ -131,7 +132,7 @@ class ExecutionService:
             return {
                 "success": state == "succeeded", "data": data.get("data", data),
                 "error": data.get("error") or _outcome_error(data),
-                "execution": {"session_id": self.ledger.session_id, "model_ref": None, "revision": None},
+                "execution": {"session_id": self.ledger.session_id, "model_ref": None, "revision": None, "operation_id": request_id},
             }
 
         try:

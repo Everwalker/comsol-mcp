@@ -1,0 +1,564 @@
+{
+  "capture_origin": "CAPTURED_STDIN_STDOUT",
+  "run_id": "g3_10_w20_acceptance_live",
+  "target": "win64",
+  "case_id": "C05",
+  "events": [
+    {
+      "direction": "request",
+      "method": "tools/call",
+      "request_id": "7",
+      "timestamp": "2026-09-25T00:34:32.895895+00:00",
+      "payload": {
+        "name": "validate.preflight",
+        "arguments": {}
+      },
+      "raw_jsonrpc": {
+        "method": "tools/call",
+        "params": {
+          "name": "validate.preflight",
+          "arguments": {}
+        },
+        "jsonrpc": "2.0",
+        "id": 7
+      }
+    },
+    {
+      "direction": "response",
+      "request_id": "7",
+      "timestamp": "2026-09-25T00:34:33.074132+00:00",
+      "payload": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\": true, \"data\": {\"status\": \"PASS\", \"execution_status\": \"PASS\", \"numerical_verification_status\": \"NOT_APPLICABLE\", \"physical_validation_status\": \"UNVERIFIED\", \"ready_to_solve\": true, \"checks_evaluated\": [\"component.existence\", \"geometry.existence\", \"physics.activation\", \"mesh.existence\", \"study.connection\", \"selection.existence\", \"material.existence\"], \"findings\": [{\"rule\": \"component.existence\", \"status\": \"PASS\", \"components\": [\"comp1\"]}, {\"rule\": \"geometry.existence\", \"status\": \"PASS\", \"geometries\": [\"geom1\"]}, {\"rule\": \"physics.activation\", \"status\": \"PASS\", \"physics\": [\"ht\"]}, {\"rule\": \"mesh.existence\", \"status\": \"PASS\", \"meshes\": [\"mesh1\"]}, {\"rule\": \"study.connection\", \"status\": \"PASS\", \"studies\": [\"std1\"]}, {\"rule\": \"selection.existence\", \"status\": \"PASS\", \"selections\": [\"sel1\"]}, {\"rule\": \"material.existence\", \"status\": \"PASS\", \"materials\": [\"mat1\"]}, {\"check\": \"preflight.ready\", \"status\": \"PASS\", \"message\": \"Model ready for solve\"}], \"inventory\": {\"components\": [\"comp1\"], \"geometries\": [\"geom1\"], \"physics\": [\"ht\"], \"meshes\": [\"mesh1\"], \"studies\": [\"std1\"], \"selections\": [\"sel1\"], \"materials\": [\"mat1\"]}, \"unsupported_reasons\": [], \"domain_state\": \"succeeded\", \"verification_status\": \"NOT_APPLICABLE\", \"execution_state_unknown\": false, \"partial_change\": false, \"cleanup_failed\": false, \"dispatch_stage\": \"post_dispatch\", \"domain_outcome\": {\"operation\": \"validate.preflight\", \"state\": \"succeeded\", \"verification_status\": \"NOT_APPLICABLE\", \"cleanup_failed\": false, \"execution_state_unknown\": false, \"dispatch_stage\": \"post_dispatch\", \"status_token\": \"PASS\", \"execution_status\": \"PASS\", \"witness\": {\"engine_calls\": 14, \"mutation_method\": null, \"methods\": [\"component\", \"geom\", \"material\", \"mesh\", \"physics\", \"selection\", \"study\", \"tags\"], \"dispatches\": [{\"command\": \"call\", \"method\": \"component\", \"args_count\": 0, \"receiver\": \"h-e7e37b9c-606c-44d4-a6c0-427abd5d847b\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-b53819a5-4ff7-4834-9988-ba3e4e83888c\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"geom\", \"args_count\": 0, \"receiver\": \"h-e7e37b9c-606c-44d4-a6c0-427abd5d847b\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-2c69a37d-13a8-437a-8d2e-031a18cb740e\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"physics\", \"args_count\": 0, \"receiver\": \"h-e7e37b9c-606c-44d4-a6c0-427abd5d847b\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-6e3e3cca-c73f-43fa-899d-6bf5732ee890\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"mesh\", \"args_count\": 0, \"receiver\": \"h-e7e37b9c-606c-44d4-a6c0-427abd5d847b\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-8bdd6c2f-cac3-421c-960f-617384775337\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"study\", \"args_count\": 0, \"receiver\": \"h-e7e37b9c-606c-44d4-a6c0-427abd5d847b\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-a5b1eb56-5376-4557-90a6-a1c5f7c48041\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"selection\", \"args_count\": 0, \"receiver\": \"h-e7e37b9c-606c-44d4-a6c0-427abd5d847b\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-055fb6c5-0362-4d2e-8b02-026bebed1ca5\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"material\", \"args_count\": 0, \"receiver\": \"h-e7e37b9c-606c-44d4-a6c0-427abd5d847b\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-3bac8226-3069-416e-a3ff-87c4d86ead90\", \"is_mutation\": false}], \"mutation_issued\": false}, \"details\": {\"status_token\": \"PASS\"}}, \"effect\": \"evaluate\"}, \"error\": null, \"execution\": {\"session_id\": \"session-77d9001ba07f2cbb69aa49c7\", \"model_ref\": {\"schema_version\": 1, \"session_id\": \"session-77d9001ba07f2cbb69aa49c7\", \"server_instance_id\": \"1a6691e8a852f9ef87c917add32dcd6f3f937e57a00ad1c6882ebfb024df0518\", \"model_tag\": \"mcp1\", \"generation\": 1}, \"revision\": 4, \"dirty\": false, \"server_ownership\": \"shared\", \"model_ownership\": \"user_owned\", \"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"request_id\": \"551ed1bb-ce0a-44d2-a1d2-65150253652d\", \"operation_id\": \"c7762958-9c3b-4850-9b0e-7bdd8b3e72ea\", \"request_hash\": \"34ce8bfa37698855a1a486354f5ad36d4e845231903951313e8ed47efbd5051a\", \"idempotency_key\": \"49caaae5-c30f-4ebf-9ec9-b77e965fa6c5\", \"job_id\": \"be06f94d-6463-490a-bc18-14cfdb400777\"}}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "data": {
+            "status": "PASS",
+            "execution_status": "PASS",
+            "numerical_verification_status": "NOT_APPLICABLE",
+            "physical_validation_status": "UNVERIFIED",
+            "ready_to_solve": true,
+            "checks_evaluated": [
+              "component.existence",
+              "geometry.existence",
+              "physics.activation",
+              "mesh.existence",
+              "study.connection",
+              "selection.existence",
+              "material.existence"
+            ],
+            "findings": [
+              {
+                "rule": "component.existence",
+                "status": "PASS",
+                "components": [
+                  "comp1"
+                ]
+              },
+              {
+                "rule": "geometry.existence",
+                "status": "PASS",
+                "geometries": [
+                  "geom1"
+                ]
+              },
+              {
+                "rule": "physics.activation",
+                "status": "PASS",
+                "physics": [
+                  "ht"
+                ]
+              },
+              {
+                "rule": "mesh.existence",
+                "status": "PASS",
+                "meshes": [
+                  "mesh1"
+                ]
+              },
+              {
+                "rule": "study.connection",
+                "status": "PASS",
+                "studies": [
+                  "std1"
+                ]
+              },
+              {
+                "rule": "selection.existence",
+                "status": "PASS",
+                "selections": [
+                  "sel1"
+                ]
+              },
+              {
+                "rule": "material.existence",
+                "status": "PASS",
+                "materials": [
+                  "mat1"
+                ]
+              },
+              {
+                "check": "preflight.ready",
+                "status": "PASS",
+                "message": "Model ready for solve"
+              }
+            ],
+            "inventory": {
+              "components": [
+                "comp1"
+              ],
+              "geometries": [
+                "geom1"
+              ],
+              "physics": [
+                "ht"
+              ],
+              "meshes": [
+                "mesh1"
+              ],
+              "studies": [
+                "std1"
+              ],
+              "selections": [
+                "sel1"
+              ],
+              "materials": [
+                "mat1"
+              ]
+            },
+            "unsupported_reasons": [],
+            "domain_state": "succeeded",
+            "verification_status": "NOT_APPLICABLE",
+            "execution_state_unknown": false,
+            "partial_change": false,
+            "cleanup_failed": false,
+            "dispatch_stage": "post_dispatch",
+            "domain_outcome": {
+              "operation": "validate.preflight",
+              "state": "succeeded",
+              "verification_status": "NOT_APPLICABLE",
+              "cleanup_failed": false,
+              "execution_state_unknown": false,
+              "dispatch_stage": "post_dispatch",
+              "status_token": "PASS",
+              "execution_status": "PASS",
+              "witness": {
+                "engine_calls": 14,
+                "mutation_method": null,
+                "methods": [
+                  "component",
+                  "geom",
+                  "material",
+                  "mesh",
+                  "physics",
+                  "selection",
+                  "study",
+                  "tags"
+                ],
+                "dispatches": [
+                  {
+                    "command": "call",
+                    "method": "component",
+                    "args_count": 0,
+                    "receiver": "h-e7e37b9c-606c-44d4-a6c0-427abd5d847b",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "tags",
+                    "args_count": 0,
+                    "receiver": "h-b53819a5-4ff7-4834-9988-ba3e4e83888c",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "geom",
+                    "args_count": 0,
+                    "receiver": "h-e7e37b9c-606c-44d4-a6c0-427abd5d847b",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "tags",
+                    "args_count": 0,
+                    "receiver": "h-2c69a37d-13a8-437a-8d2e-031a18cb740e",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "physics",
+                    "args_count": 0,
+                    "receiver": "h-e7e37b9c-606c-44d4-a6c0-427abd5d847b",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "tags",
+                    "args_count": 0,
+                    "receiver": "h-6e3e3cca-c73f-43fa-899d-6bf5732ee890",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "mesh",
+                    "args_count": 0,
+                    "receiver": "h-e7e37b9c-606c-44d4-a6c0-427abd5d847b",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "tags",
+                    "args_count": 0,
+                    "receiver": "h-8bdd6c2f-cac3-421c-960f-617384775337",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "study",
+                    "args_count": 0,
+                    "receiver": "h-e7e37b9c-606c-44d4-a6c0-427abd5d847b",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "tags",
+                    "args_count": 0,
+                    "receiver": "h-a5b1eb56-5376-4557-90a6-a1c5f7c48041",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "selection",
+                    "args_count": 0,
+                    "receiver": "h-e7e37b9c-606c-44d4-a6c0-427abd5d847b",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "tags",
+                    "args_count": 0,
+                    "receiver": "h-055fb6c5-0362-4d2e-8b02-026bebed1ca5",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "material",
+                    "args_count": 0,
+                    "receiver": "h-e7e37b9c-606c-44d4-a6c0-427abd5d847b",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "tags",
+                    "args_count": 0,
+                    "receiver": "h-3bac8226-3069-416e-a3ff-87c4d86ead90",
+                    "is_mutation": false
+                  }
+                ],
+                "mutation_issued": false
+              },
+              "details": {
+                "status_token": "PASS"
+              }
+            },
+            "effect": "evaluate"
+          },
+          "error": null,
+          "execution": {
+            "session_id": "session-77d9001ba07f2cbb69aa49c7",
+            "model_ref": {
+              "schema_version": 1,
+              "session_id": "session-77d9001ba07f2cbb69aa49c7",
+              "server_instance_id": "1a6691e8a852f9ef87c917add32dcd6f3f937e57a00ad1c6882ebfb024df0518",
+              "model_tag": "mcp1",
+              "generation": 1
+            },
+            "revision": 4,
+            "dirty": false,
+            "server_ownership": "shared",
+            "model_ownership": "user_owned",
+            "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+            "request_id": "551ed1bb-ce0a-44d2-a1d2-65150253652d",
+            "operation_id": "c7762958-9c3b-4850-9b0e-7bdd8b3e72ea",
+            "request_hash": "34ce8bfa37698855a1a486354f5ad36d4e845231903951313e8ed47efbd5051a",
+            "idempotency_key": "49caaae5-c30f-4ebf-9ec9-b77e965fa6c5",
+            "job_id": "be06f94d-6463-490a-bc18-14cfdb400777"
+          }
+        },
+        "isError": false
+      },
+      "raw_jsonrpc": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"success\": true, \"data\": {\"status\": \"PASS\", \"execution_status\": \"PASS\", \"numerical_verification_status\": \"NOT_APPLICABLE\", \"physical_validation_status\": \"UNVERIFIED\", \"ready_to_solve\": true, \"checks_evaluated\": [\"component.existence\", \"geometry.existence\", \"physics.activation\", \"mesh.existence\", \"study.connection\", \"selection.existence\", \"material.existence\"], \"findings\": [{\"rule\": \"component.existence\", \"status\": \"PASS\", \"components\": [\"comp1\"]}, {\"rule\": \"geometry.existence\", \"status\": \"PASS\", \"geometries\": [\"geom1\"]}, {\"rule\": \"physics.activation\", \"status\": \"PASS\", \"physics\": [\"ht\"]}, {\"rule\": \"mesh.existence\", \"status\": \"PASS\", \"meshes\": [\"mesh1\"]}, {\"rule\": \"study.connection\", \"status\": \"PASS\", \"studies\": [\"std1\"]}, {\"rule\": \"selection.existence\", \"status\": \"PASS\", \"selections\": [\"sel1\"]}, {\"rule\": \"material.existence\", \"status\": \"PASS\", \"materials\": [\"mat1\"]}, {\"check\": \"preflight.ready\", \"status\": \"PASS\", \"message\": \"Model ready for solve\"}], \"inventory\": {\"components\": [\"comp1\"], \"geometries\": [\"geom1\"], \"physics\": [\"ht\"], \"meshes\": [\"mesh1\"], \"studies\": [\"std1\"], \"selections\": [\"sel1\"], \"materials\": [\"mat1\"]}, \"unsupported_reasons\": [], \"domain_state\": \"succeeded\", \"verification_status\": \"NOT_APPLICABLE\", \"execution_state_unknown\": false, \"partial_change\": false, \"cleanup_failed\": false, \"dispatch_stage\": \"post_dispatch\", \"domain_outcome\": {\"operation\": \"validate.preflight\", \"state\": \"succeeded\", \"verification_status\": \"NOT_APPLICABLE\", \"cleanup_failed\": false, \"execution_state_unknown\": false, \"dispatch_stage\": \"post_dispatch\", \"status_token\": \"PASS\", \"execution_status\": \"PASS\", \"witness\": {\"engine_calls\": 14, \"mutation_method\": null, \"methods\": [\"component\", \"geom\", \"material\", \"mesh\", \"physics\", \"selection\", \"study\", \"tags\"], \"dispatches\": [{\"command\": \"call\", \"method\": \"component\", \"args_count\": 0, \"receiver\": \"h-e7e37b9c-606c-44d4-a6c0-427abd5d847b\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-b53819a5-4ff7-4834-9988-ba3e4e83888c\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"geom\", \"args_count\": 0, \"receiver\": \"h-e7e37b9c-606c-44d4-a6c0-427abd5d847b\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-2c69a37d-13a8-437a-8d2e-031a18cb740e\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"physics\", \"args_count\": 0, \"receiver\": \"h-e7e37b9c-606c-44d4-a6c0-427abd5d847b\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-6e3e3cca-c73f-43fa-899d-6bf5732ee890\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"mesh\", \"args_count\": 0, \"receiver\": \"h-e7e37b9c-606c-44d4-a6c0-427abd5d847b\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-8bdd6c2f-cac3-421c-960f-617384775337\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"study\", \"args_count\": 0, \"receiver\": \"h-e7e37b9c-606c-44d4-a6c0-427abd5d847b\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-a5b1eb56-5376-4557-90a6-a1c5f7c48041\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"selection\", \"args_count\": 0, \"receiver\": \"h-e7e37b9c-606c-44d4-a6c0-427abd5d847b\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-055fb6c5-0362-4d2e-8b02-026bebed1ca5\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"material\", \"args_count\": 0, \"receiver\": \"h-e7e37b9c-606c-44d4-a6c0-427abd5d847b\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-3bac8226-3069-416e-a3ff-87c4d86ead90\", \"is_mutation\": false}], \"mutation_issued\": false}, \"details\": {\"status_token\": \"PASS\"}}, \"effect\": \"evaluate\"}, \"error\": null, \"execution\": {\"session_id\": \"session-77d9001ba07f2cbb69aa49c7\", \"model_ref\": {\"schema_version\": 1, \"session_id\": \"session-77d9001ba07f2cbb69aa49c7\", \"server_instance_id\": \"1a6691e8a852f9ef87c917add32dcd6f3f937e57a00ad1c6882ebfb024df0518\", \"model_tag\": \"mcp1\", \"generation\": 1}, \"revision\": 4, \"dirty\": false, \"server_ownership\": \"shared\", \"model_ownership\": \"user_owned\", \"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"request_id\": \"551ed1bb-ce0a-44d2-a1d2-65150253652d\", \"operation_id\": \"c7762958-9c3b-4850-9b0e-7bdd8b3e72ea\", \"request_hash\": \"34ce8bfa37698855a1a486354f5ad36d4e845231903951313e8ed47efbd5051a\", \"idempotency_key\": \"49caaae5-c30f-4ebf-9ec9-b77e965fa6c5\", \"job_id\": \"be06f94d-6463-490a-bc18-14cfdb400777\"}}"
+            }
+          ],
+          "structuredContent": {
+            "success": true,
+            "data": {
+              "status": "PASS",
+              "execution_status": "PASS",
+              "numerical_verification_status": "NOT_APPLICABLE",
+              "physical_validation_status": "UNVERIFIED",
+              "ready_to_solve": true,
+              "checks_evaluated": [
+                "component.existence",
+                "geometry.existence",
+                "physics.activation",
+                "mesh.existence",
+                "study.connection",
+                "selection.existence",
+                "material.existence"
+              ],
+              "findings": [
+                {
+                  "rule": "component.existence",
+                  "status": "PASS",
+                  "components": [
+                    "comp1"
+                  ]
+                },
+                {
+                  "rule": "geometry.existence",
+                  "status": "PASS",
+                  "geometries": [
+                    "geom1"
+                  ]
+                },
+                {
+                  "rule": "physics.activation",
+                  "status": "PASS",
+                  "physics": [
+                    "ht"
+                  ]
+                },
+                {
+                  "rule": "mesh.existence",
+                  "status": "PASS",
+                  "meshes": [
+                    "mesh1"
+                  ]
+                },
+                {
+                  "rule": "study.connection",
+                  "status": "PASS",
+                  "studies": [
+                    "std1"
+                  ]
+                },
+                {
+                  "rule": "selection.existence",
+                  "status": "PASS",
+                  "selections": [
+                    "sel1"
+                  ]
+                },
+                {
+                  "rule": "material.existence",
+                  "status": "PASS",
+                  "materials": [
+                    "mat1"
+                  ]
+                },
+                {
+                  "check": "preflight.ready",
+                  "status": "PASS",
+                  "message": "Model ready for solve"
+                }
+              ],
+              "inventory": {
+                "components": [
+                  "comp1"
+                ],
+                "geometries": [
+                  "geom1"
+                ],
+                "physics": [
+                  "ht"
+                ],
+                "meshes": [
+                  "mesh1"
+                ],
+                "studies": [
+                  "std1"
+                ],
+                "selections": [
+                  "sel1"
+                ],
+                "materials": [
+                  "mat1"
+                ]
+              },
+              "unsupported_reasons": [],
+              "domain_state": "succeeded",
+              "verification_status": "NOT_APPLICABLE",
+              "execution_state_unknown": false,
+              "partial_change": false,
+              "cleanup_failed": false,
+              "dispatch_stage": "post_dispatch",
+              "domain_outcome": {
+                "operation": "validate.preflight",
+                "state": "succeeded",
+                "verification_status": "NOT_APPLICABLE",
+                "cleanup_failed": false,
+                "execution_state_unknown": false,
+                "dispatch_stage": "post_dispatch",
+                "status_token": "PASS",
+                "execution_status": "PASS",
+                "witness": {
+                  "engine_calls": 14,
+                  "mutation_method": null,
+                  "methods": [
+                    "component",
+                    "geom",
+                    "material",
+                    "mesh",
+                    "physics",
+                    "selection",
+                    "study",
+                    "tags"
+                  ],
+                  "dispatches": [
+                    {
+                      "command": "call",
+                      "method": "component",
+                      "args_count": 0,
+                      "receiver": "h-e7e37b9c-606c-44d4-a6c0-427abd5d847b",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "tags",
+                      "args_count": 0,
+                      "receiver": "h-b53819a5-4ff7-4834-9988-ba3e4e83888c",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "geom",
+                      "args_count": 0,
+                      "receiver": "h-e7e37b9c-606c-44d4-a6c0-427abd5d847b",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "tags",
+                      "args_count": 0,
+                      "receiver": "h-2c69a37d-13a8-437a-8d2e-031a18cb740e",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "physics",
+                      "args_count": 0,
+                      "receiver": "h-e7e37b9c-606c-44d4-a6c0-427abd5d847b",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "tags",
+                      "args_count": 0,
+                      "receiver": "h-6e3e3cca-c73f-43fa-899d-6bf5732ee890",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "mesh",
+                      "args_count": 0,
+                      "receiver": "h-e7e37b9c-606c-44d4-a6c0-427abd5d847b",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "tags",
+                      "args_count": 0,
+                      "receiver": "h-8bdd6c2f-cac3-421c-960f-617384775337",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "study",
+                      "args_count": 0,
+                      "receiver": "h-e7e37b9c-606c-44d4-a6c0-427abd5d847b",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "tags",
+                      "args_count": 0,
+                      "receiver": "h-a5b1eb56-5376-4557-90a6-a1c5f7c48041",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "selection",
+                      "args_count": 0,
+                      "receiver": "h-e7e37b9c-606c-44d4-a6c0-427abd5d847b",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "tags",
+                      "args_count": 0,
+                      "receiver": "h-055fb6c5-0362-4d2e-8b02-026bebed1ca5",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "material",
+                      "args_count": 0,
+                      "receiver": "h-e7e37b9c-606c-44d4-a6c0-427abd5d847b",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "tags",
+                      "args_count": 0,
+                      "receiver": "h-3bac8226-3069-416e-a3ff-87c4d86ead90",
+                      "is_mutation": false
+                    }
+                  ],
+                  "mutation_issued": false
+                },
+                "details": {
+                  "status_token": "PASS"
+                }
+              },
+              "effect": "evaluate"
+            },
+            "error": null,
+            "execution": {
+              "session_id": "session-77d9001ba07f2cbb69aa49c7",
+              "model_ref": {
+                "schema_version": 1,
+                "session_id": "session-77d9001ba07f2cbb69aa49c7",
+                "server_instance_id": "1a6691e8a852f9ef87c917add32dcd6f3f937e57a00ad1c6882ebfb024df0518",
+                "model_tag": "mcp1",
+                "generation": 1
+              },
+              "revision": 4,
+              "dirty": false,
+              "server_ownership": "shared",
+              "model_ownership": "user_owned",
+              "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+              "request_id": "551ed1bb-ce0a-44d2-a1d2-65150253652d",
+              "operation_id": "c7762958-9c3b-4850-9b0e-7bdd8b3e72ea",
+              "request_hash": "34ce8bfa37698855a1a486354f5ad36d4e845231903951313e8ed47efbd5051a",
+              "idempotency_key": "49caaae5-c30f-4ebf-9ec9-b77e965fa6c5",
+              "job_id": "be06f94d-6463-490a-bc18-14cfdb400777"
+            }
+          },
+          "isError": false
+        }
+      }
+    }
+  ]
+}

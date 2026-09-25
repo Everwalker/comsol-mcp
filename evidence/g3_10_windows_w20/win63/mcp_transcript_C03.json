@@ -1,0 +1,1356 @@
+{
+  "capture_origin": "CAPTURED_STDIN_STDOUT",
+  "run_id": "g3_10_w20_acceptance_live",
+  "target": "win63",
+  "case_id": "C03",
+  "events": [
+    {
+      "direction": "request",
+      "method": "tools/call",
+      "request_id": "5",
+      "timestamp": "2026-09-25T00:33:55.919361+00:00",
+      "payload": {
+        "name": "validate.boundary_conditions",
+        "arguments": {
+          "rules": [
+            "conflicting_temperature_boundaries"
+          ]
+        }
+      },
+      "raw_jsonrpc": {
+        "method": "tools/call",
+        "params": {
+          "name": "validate.boundary_conditions",
+          "arguments": {
+            "rules": [
+              "conflicting_temperature_boundaries"
+            ]
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 5
+      }
+    },
+    {
+      "direction": "response",
+      "request_id": "5",
+      "timestamp": "2026-09-25T00:33:56.754400+00:00",
+      "payload": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\": true, \"data\": {\"status\": \"PASS\", \"execution_status\": \"PASS\", \"numerical_verification_status\": \"NOT_APPLICABLE\", \"physical_validation_status\": \"UNVERIFIED\", \"rules_evaluated\": [\"conflicting_temperature_boundaries\"], \"findings\": [{\"rule\": \"conflicting_temperature_boundaries\", \"status\": \"PASS\", \"features_checked\": [\"temp1\", \"temp2\"]}], \"domain_state\": \"succeeded\", \"verification_status\": \"NOT_APPLICABLE\", \"execution_state_unknown\": false, \"partial_change\": false, \"cleanup_failed\": false, \"dispatch_stage\": \"post_dispatch\", \"domain_outcome\": {\"operation\": \"validate.boundary_conditions\", \"state\": \"succeeded\", \"verification_status\": \"NOT_APPLICABLE\", \"cleanup_failed\": false, \"execution_state_unknown\": false, \"dispatch_stage\": \"post_dispatch\", \"status_token\": \"PASS\", \"execution_status\": \"PASS\", \"witness\": {\"engine_calls\": 81, \"mutation_method\": \"entities\", \"methods\": [\"entities\", \"feature\", \"get\", \"getIntArray\", \"getType\", \"physics\", \"selection\", \"tags\"], \"dispatches\": [{\"command\": \"call\", \"method\": \"physics\", \"args_count\": 0, \"receiver\": \"h-4e2a86eb-08f7-4eb5-8c3d-a0b55a670c77\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-d5405082-6be8-460c-98f9-589f7ee0a184\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"physics\", \"args_count\": 1, \"receiver\": \"h-4e2a86eb-08f7-4eb5-8c3d-a0b55a670c77\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"feature\", \"args_count\": 0, \"receiver\": \"h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-3308d18d-f604-467e-917f-b3f152643a6f\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"feature\", \"args_count\": 1, \"receiver\": \"h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-79e22a4b-b2e0-4228-8770-303443d99790\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"selection\", \"args_count\": 0, \"receiver\": \"h-79e22a4b-b2e0-4228-8770-303443d99790\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-652e1f1d-28d4-481b-aee6-c834beda3004\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-652e1f1d-28d4-481b-aee6-c834beda3004\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-652e1f1d-28d4-481b-aee6-c834beda3004\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 0, \"receiver\": \"h-652e1f1d-28d4-481b-aee6-c834beda3004\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"feature\", \"args_count\": 1, \"receiver\": \"h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-6edb8418-7885-482c-824e-3c7e39c73a96\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"selection\", \"args_count\": 0, \"receiver\": \"h-6edb8418-7885-482c-824e-3c7e39c73a96\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-b9635923-1783-41dc-aed7-662d49967fc0\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-b9635923-1783-41dc-aed7-662d49967fc0\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-b9635923-1783-41dc-aed7-662d49967fc0\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 0, \"receiver\": \"h-b9635923-1783-41dc-aed7-662d49967fc0\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"feature\", \"args_count\": 1, \"receiver\": \"h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-ca894787-d277-4f91-9de7-d155de945828\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"selection\", \"args_count\": 0, \"receiver\": \"h-ca894787-d277-4f91-9de7-d155de945828\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-2ec43ee3-27c3-4ca1-9b70-3db1b8c31495\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"feature\", \"args_count\": 1, \"receiver\": \"h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-fb07766e-3bc0-43a2-bc95-66225bee8682\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"selection\", \"args_count\": 0, \"receiver\": \"h-fb07766e-3bc0-43a2-bc95-66225bee8682\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-5877229c-6e11-484f-ad16-000546c46ea1\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-5877229c-6e11-484f-ad16-000546c46ea1\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-5877229c-6e11-484f-ad16-000546c46ea1\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 0, \"receiver\": \"h-5877229c-6e11-484f-ad16-000546c46ea1\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getIntArray\", \"args_count\": 1, \"receiver\": \"h-5877229c-6e11-484f-ad16-000546c46ea1\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getIntArray\", \"args_count\": 0, \"receiver\": \"h-5877229c-6e11-484f-ad16-000546c46ea1\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"get\", \"args_count\": 0, \"receiver\": \"h-5877229c-6e11-484f-ad16-000546c46ea1\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"feature\", \"args_count\": 1, \"receiver\": \"h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-64c4f408-8ee6-479c-b7ba-b7b4f7b86037\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"selection\", \"args_count\": 0, \"receiver\": \"h-64c4f408-8ee6-479c-b7ba-b7b4f7b86037\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-2072bf73-a3b9-428d-a2b6-462585a69bfd\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-2072bf73-a3b9-428d-a2b6-462585a69bfd\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-2072bf73-a3b9-428d-a2b6-462585a69bfd\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 0, \"receiver\": \"h-2072bf73-a3b9-428d-a2b6-462585a69bfd\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getIntArray\", \"args_count\": 1, \"receiver\": \"h-2072bf73-a3b9-428d-a2b6-462585a69bfd\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getIntArray\", \"args_count\": 0, \"receiver\": \"h-2072bf73-a3b9-428d-a2b6-462585a69bfd\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"get\", \"args_count\": 0, \"receiver\": \"h-2072bf73-a3b9-428d-a2b6-462585a69bfd\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"feature\", \"args_count\": 1, \"receiver\": \"h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-e871e353-23de-44e8-b136-4bac355c1c02\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"selection\", \"args_count\": 0, \"receiver\": \"h-e871e353-23de-44e8-b136-4bac355c1c02\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 0, \"receiver\": \"h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getIntArray\", \"args_count\": 1, \"receiver\": \"h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getIntArray\", \"args_count\": 0, \"receiver\": \"h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"get\", \"args_count\": 0, \"receiver\": \"h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"feature\", \"args_count\": 1, \"receiver\": \"h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-cd52d535-7546-4122-aefb-523a3b42dac9\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"selection\", \"args_count\": 0, \"receiver\": \"h-cd52d535-7546-4122-aefb-523a3b42dac9\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-2b11f225-3c43-48de-b4cc-366282674113\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-2b11f225-3c43-48de-b4cc-366282674113\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-2b11f225-3c43-48de-b4cc-366282674113\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 0, \"receiver\": \"h-2b11f225-3c43-48de-b4cc-366282674113\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getIntArray\", \"args_count\": 1, \"receiver\": \"h-2b11f225-3c43-48de-b4cc-366282674113\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getIntArray\", \"args_count\": 0, \"receiver\": \"h-2b11f225-3c43-48de-b4cc-366282674113\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"get\", \"args_count\": 0, \"receiver\": \"h-2b11f225-3c43-48de-b4cc-366282674113\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"feature\", \"args_count\": 1, \"receiver\": \"h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-211b5714-6967-445f-a90e-1601838b31b7\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"selection\", \"args_count\": 0, \"receiver\": \"h-211b5714-6967-445f-a90e-1601838b31b7\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 0, \"receiver\": \"h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getIntArray\", \"args_count\": 1, \"receiver\": \"h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getIntArray\", \"args_count\": 0, \"receiver\": \"h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"get\", \"args_count\": 0, \"receiver\": \"h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"feature\", \"args_count\": 1, \"receiver\": \"h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-2f86994e-4f33-45bf-9eb7-21bad1d871ee\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"selection\", \"args_count\": 0, \"receiver\": \"h-2f86994e-4f33-45bf-9eb7-21bad1d871ee\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-cdf58427-fbe6-46fb-8579-54fa69f12262\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"feature\", \"args_count\": 1, \"receiver\": \"h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-a93a94bb-dc00-40bd-b789-3ad592a43895\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"selection\", \"args_count\": 0, \"receiver\": \"h-a93a94bb-dc00-40bd-b789-3ad592a43895\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-a2a8b743-e893-49eb-bbd8-62e42dd3d4d3\", \"is_mutation\": true}], \"mutation_issued\": true}, \"details\": {\"status_token\": \"PASS\"}}, \"effect\": \"evaluate\"}, \"error\": null, \"execution\": {\"session_id\": \"session-624a84a597ea7ac329589b39\", \"model_ref\": {\"schema_version\": 1, \"session_id\": \"session-624a84a597ea7ac329589b39\", \"server_instance_id\": \"8dffc11b1001edf6191cdcfb7702b8d592dcb701a713571ef778fa48ef6f3adb\", \"model_tag\": \"mcp1\", \"generation\": 1}, \"revision\": 2, \"dirty\": false, \"server_ownership\": \"shared\", \"model_ownership\": \"user_owned\", \"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"request_id\": \"00b20b8c-8be9-404c-990c-c54112afd54d\", \"operation_id\": \"2c036baa-4736-4990-98e6-1b3cba7dcc8e\", \"request_hash\": \"7c1e93dad87f8cea4d9510c2ad2bbe635750b83c663e50d2f849ddc9d4a0fba0\", \"idempotency_key\": \"c824e482-5b8c-4c50-8616-27aff848a5ff\", \"job_id\": \"420935c1-8de0-4334-9761-858fc202fe29\"}}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "data": {
+            "status": "PASS",
+            "execution_status": "PASS",
+            "numerical_verification_status": "NOT_APPLICABLE",
+            "physical_validation_status": "UNVERIFIED",
+            "rules_evaluated": [
+              "conflicting_temperature_boundaries"
+            ],
+            "findings": [
+              {
+                "rule": "conflicting_temperature_boundaries",
+                "status": "PASS",
+                "features_checked": [
+                  "temp1",
+                  "temp2"
+                ]
+              }
+            ],
+            "domain_state": "succeeded",
+            "verification_status": "NOT_APPLICABLE",
+            "execution_state_unknown": false,
+            "partial_change": false,
+            "cleanup_failed": false,
+            "dispatch_stage": "post_dispatch",
+            "domain_outcome": {
+              "operation": "validate.boundary_conditions",
+              "state": "succeeded",
+              "verification_status": "NOT_APPLICABLE",
+              "cleanup_failed": false,
+              "execution_state_unknown": false,
+              "dispatch_stage": "post_dispatch",
+              "status_token": "PASS",
+              "execution_status": "PASS",
+              "witness": {
+                "engine_calls": 81,
+                "mutation_method": "entities",
+                "methods": [
+                  "entities",
+                  "feature",
+                  "get",
+                  "getIntArray",
+                  "getType",
+                  "physics",
+                  "selection",
+                  "tags"
+                ],
+                "dispatches": [
+                  {
+                    "command": "call",
+                    "method": "physics",
+                    "args_count": 0,
+                    "receiver": "h-4e2a86eb-08f7-4eb5-8c3d-a0b55a670c77",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "tags",
+                    "args_count": 0,
+                    "receiver": "h-d5405082-6be8-460c-98f9-589f7ee0a184",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "physics",
+                    "args_count": 1,
+                    "receiver": "h-4e2a86eb-08f7-4eb5-8c3d-a0b55a670c77",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "feature",
+                    "args_count": 0,
+                    "receiver": "h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "tags",
+                    "args_count": 0,
+                    "receiver": "h-3308d18d-f604-467e-917f-b3f152643a6f",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "feature",
+                    "args_count": 1,
+                    "receiver": "h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "getType",
+                    "args_count": 0,
+                    "receiver": "h-79e22a4b-b2e0-4228-8770-303443d99790",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "selection",
+                    "args_count": 0,
+                    "receiver": "h-79e22a4b-b2e0-4228-8770-303443d99790",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 1,
+                    "receiver": "h-652e1f1d-28d4-481b-aee6-c834beda3004",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 1,
+                    "receiver": "h-652e1f1d-28d4-481b-aee6-c834beda3004",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 1,
+                    "receiver": "h-652e1f1d-28d4-481b-aee6-c834beda3004",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 0,
+                    "receiver": "h-652e1f1d-28d4-481b-aee6-c834beda3004",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "feature",
+                    "args_count": 1,
+                    "receiver": "h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "getType",
+                    "args_count": 0,
+                    "receiver": "h-6edb8418-7885-482c-824e-3c7e39c73a96",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "selection",
+                    "args_count": 0,
+                    "receiver": "h-6edb8418-7885-482c-824e-3c7e39c73a96",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 1,
+                    "receiver": "h-b9635923-1783-41dc-aed7-662d49967fc0",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 1,
+                    "receiver": "h-b9635923-1783-41dc-aed7-662d49967fc0",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 1,
+                    "receiver": "h-b9635923-1783-41dc-aed7-662d49967fc0",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 0,
+                    "receiver": "h-b9635923-1783-41dc-aed7-662d49967fc0",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "feature",
+                    "args_count": 1,
+                    "receiver": "h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "getType",
+                    "args_count": 0,
+                    "receiver": "h-ca894787-d277-4f91-9de7-d155de945828",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "selection",
+                    "args_count": 0,
+                    "receiver": "h-ca894787-d277-4f91-9de7-d155de945828",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 1,
+                    "receiver": "h-2ec43ee3-27c3-4ca1-9b70-3db1b8c31495",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "feature",
+                    "args_count": 1,
+                    "receiver": "h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "getType",
+                    "args_count": 0,
+                    "receiver": "h-fb07766e-3bc0-43a2-bc95-66225bee8682",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "selection",
+                    "args_count": 0,
+                    "receiver": "h-fb07766e-3bc0-43a2-bc95-66225bee8682",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 1,
+                    "receiver": "h-5877229c-6e11-484f-ad16-000546c46ea1",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 1,
+                    "receiver": "h-5877229c-6e11-484f-ad16-000546c46ea1",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 1,
+                    "receiver": "h-5877229c-6e11-484f-ad16-000546c46ea1",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 0,
+                    "receiver": "h-5877229c-6e11-484f-ad16-000546c46ea1",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "getIntArray",
+                    "args_count": 1,
+                    "receiver": "h-5877229c-6e11-484f-ad16-000546c46ea1",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "getIntArray",
+                    "args_count": 0,
+                    "receiver": "h-5877229c-6e11-484f-ad16-000546c46ea1",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "get",
+                    "args_count": 0,
+                    "receiver": "h-5877229c-6e11-484f-ad16-000546c46ea1",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "feature",
+                    "args_count": 1,
+                    "receiver": "h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "getType",
+                    "args_count": 0,
+                    "receiver": "h-64c4f408-8ee6-479c-b7ba-b7b4f7b86037",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "selection",
+                    "args_count": 0,
+                    "receiver": "h-64c4f408-8ee6-479c-b7ba-b7b4f7b86037",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 1,
+                    "receiver": "h-2072bf73-a3b9-428d-a2b6-462585a69bfd",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 1,
+                    "receiver": "h-2072bf73-a3b9-428d-a2b6-462585a69bfd",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 1,
+                    "receiver": "h-2072bf73-a3b9-428d-a2b6-462585a69bfd",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 0,
+                    "receiver": "h-2072bf73-a3b9-428d-a2b6-462585a69bfd",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "getIntArray",
+                    "args_count": 1,
+                    "receiver": "h-2072bf73-a3b9-428d-a2b6-462585a69bfd",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "getIntArray",
+                    "args_count": 0,
+                    "receiver": "h-2072bf73-a3b9-428d-a2b6-462585a69bfd",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "get",
+                    "args_count": 0,
+                    "receiver": "h-2072bf73-a3b9-428d-a2b6-462585a69bfd",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "feature",
+                    "args_count": 1,
+                    "receiver": "h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "getType",
+                    "args_count": 0,
+                    "receiver": "h-e871e353-23de-44e8-b136-4bac355c1c02",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "selection",
+                    "args_count": 0,
+                    "receiver": "h-e871e353-23de-44e8-b136-4bac355c1c02",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 1,
+                    "receiver": "h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 1,
+                    "receiver": "h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 1,
+                    "receiver": "h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 0,
+                    "receiver": "h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "getIntArray",
+                    "args_count": 1,
+                    "receiver": "h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "getIntArray",
+                    "args_count": 0,
+                    "receiver": "h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "get",
+                    "args_count": 0,
+                    "receiver": "h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "feature",
+                    "args_count": 1,
+                    "receiver": "h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "getType",
+                    "args_count": 0,
+                    "receiver": "h-cd52d535-7546-4122-aefb-523a3b42dac9",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "selection",
+                    "args_count": 0,
+                    "receiver": "h-cd52d535-7546-4122-aefb-523a3b42dac9",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 1,
+                    "receiver": "h-2b11f225-3c43-48de-b4cc-366282674113",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 1,
+                    "receiver": "h-2b11f225-3c43-48de-b4cc-366282674113",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 1,
+                    "receiver": "h-2b11f225-3c43-48de-b4cc-366282674113",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 0,
+                    "receiver": "h-2b11f225-3c43-48de-b4cc-366282674113",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "getIntArray",
+                    "args_count": 1,
+                    "receiver": "h-2b11f225-3c43-48de-b4cc-366282674113",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "getIntArray",
+                    "args_count": 0,
+                    "receiver": "h-2b11f225-3c43-48de-b4cc-366282674113",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "get",
+                    "args_count": 0,
+                    "receiver": "h-2b11f225-3c43-48de-b4cc-366282674113",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "feature",
+                    "args_count": 1,
+                    "receiver": "h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "getType",
+                    "args_count": 0,
+                    "receiver": "h-211b5714-6967-445f-a90e-1601838b31b7",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "selection",
+                    "args_count": 0,
+                    "receiver": "h-211b5714-6967-445f-a90e-1601838b31b7",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 1,
+                    "receiver": "h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 1,
+                    "receiver": "h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 1,
+                    "receiver": "h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 0,
+                    "receiver": "h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "getIntArray",
+                    "args_count": 1,
+                    "receiver": "h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "getIntArray",
+                    "args_count": 0,
+                    "receiver": "h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "get",
+                    "args_count": 0,
+                    "receiver": "h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "feature",
+                    "args_count": 1,
+                    "receiver": "h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "getType",
+                    "args_count": 0,
+                    "receiver": "h-2f86994e-4f33-45bf-9eb7-21bad1d871ee",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "selection",
+                    "args_count": 0,
+                    "receiver": "h-2f86994e-4f33-45bf-9eb7-21bad1d871ee",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 1,
+                    "receiver": "h-cdf58427-fbe6-46fb-8579-54fa69f12262",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "feature",
+                    "args_count": 1,
+                    "receiver": "h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "getType",
+                    "args_count": 0,
+                    "receiver": "h-a93a94bb-dc00-40bd-b789-3ad592a43895",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "selection",
+                    "args_count": 0,
+                    "receiver": "h-a93a94bb-dc00-40bd-b789-3ad592a43895",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "entities",
+                    "args_count": 1,
+                    "receiver": "h-a2a8b743-e893-49eb-bbd8-62e42dd3d4d3",
+                    "is_mutation": true
+                  }
+                ],
+                "mutation_issued": true
+              },
+              "details": {
+                "status_token": "PASS"
+              }
+            },
+            "effect": "evaluate"
+          },
+          "error": null,
+          "execution": {
+            "session_id": "session-624a84a597ea7ac329589b39",
+            "model_ref": {
+              "schema_version": 1,
+              "session_id": "session-624a84a597ea7ac329589b39",
+              "server_instance_id": "8dffc11b1001edf6191cdcfb7702b8d592dcb701a713571ef778fa48ef6f3adb",
+              "model_tag": "mcp1",
+              "generation": 1
+            },
+            "revision": 2,
+            "dirty": false,
+            "server_ownership": "shared",
+            "model_ownership": "user_owned",
+            "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+            "request_id": "00b20b8c-8be9-404c-990c-c54112afd54d",
+            "operation_id": "2c036baa-4736-4990-98e6-1b3cba7dcc8e",
+            "request_hash": "7c1e93dad87f8cea4d9510c2ad2bbe635750b83c663e50d2f849ddc9d4a0fba0",
+            "idempotency_key": "c824e482-5b8c-4c50-8616-27aff848a5ff",
+            "job_id": "420935c1-8de0-4334-9761-858fc202fe29"
+          }
+        },
+        "isError": false
+      },
+      "raw_jsonrpc": {
+        "jsonrpc": "2.0",
+        "id": 5,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"success\": true, \"data\": {\"status\": \"PASS\", \"execution_status\": \"PASS\", \"numerical_verification_status\": \"NOT_APPLICABLE\", \"physical_validation_status\": \"UNVERIFIED\", \"rules_evaluated\": [\"conflicting_temperature_boundaries\"], \"findings\": [{\"rule\": \"conflicting_temperature_boundaries\", \"status\": \"PASS\", \"features_checked\": [\"temp1\", \"temp2\"]}], \"domain_state\": \"succeeded\", \"verification_status\": \"NOT_APPLICABLE\", \"execution_state_unknown\": false, \"partial_change\": false, \"cleanup_failed\": false, \"dispatch_stage\": \"post_dispatch\", \"domain_outcome\": {\"operation\": \"validate.boundary_conditions\", \"state\": \"succeeded\", \"verification_status\": \"NOT_APPLICABLE\", \"cleanup_failed\": false, \"execution_state_unknown\": false, \"dispatch_stage\": \"post_dispatch\", \"status_token\": \"PASS\", \"execution_status\": \"PASS\", \"witness\": {\"engine_calls\": 81, \"mutation_method\": \"entities\", \"methods\": [\"entities\", \"feature\", \"get\", \"getIntArray\", \"getType\", \"physics\", \"selection\", \"tags\"], \"dispatches\": [{\"command\": \"call\", \"method\": \"physics\", \"args_count\": 0, \"receiver\": \"h-4e2a86eb-08f7-4eb5-8c3d-a0b55a670c77\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-d5405082-6be8-460c-98f9-589f7ee0a184\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"physics\", \"args_count\": 1, \"receiver\": \"h-4e2a86eb-08f7-4eb5-8c3d-a0b55a670c77\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"feature\", \"args_count\": 0, \"receiver\": \"h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-3308d18d-f604-467e-917f-b3f152643a6f\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"feature\", \"args_count\": 1, \"receiver\": \"h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-79e22a4b-b2e0-4228-8770-303443d99790\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"selection\", \"args_count\": 0, \"receiver\": \"h-79e22a4b-b2e0-4228-8770-303443d99790\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-652e1f1d-28d4-481b-aee6-c834beda3004\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-652e1f1d-28d4-481b-aee6-c834beda3004\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-652e1f1d-28d4-481b-aee6-c834beda3004\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 0, \"receiver\": \"h-652e1f1d-28d4-481b-aee6-c834beda3004\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"feature\", \"args_count\": 1, \"receiver\": \"h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-6edb8418-7885-482c-824e-3c7e39c73a96\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"selection\", \"args_count\": 0, \"receiver\": \"h-6edb8418-7885-482c-824e-3c7e39c73a96\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-b9635923-1783-41dc-aed7-662d49967fc0\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-b9635923-1783-41dc-aed7-662d49967fc0\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-b9635923-1783-41dc-aed7-662d49967fc0\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 0, \"receiver\": \"h-b9635923-1783-41dc-aed7-662d49967fc0\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"feature\", \"args_count\": 1, \"receiver\": \"h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-ca894787-d277-4f91-9de7-d155de945828\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"selection\", \"args_count\": 0, \"receiver\": \"h-ca894787-d277-4f91-9de7-d155de945828\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-2ec43ee3-27c3-4ca1-9b70-3db1b8c31495\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"feature\", \"args_count\": 1, \"receiver\": \"h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-fb07766e-3bc0-43a2-bc95-66225bee8682\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"selection\", \"args_count\": 0, \"receiver\": \"h-fb07766e-3bc0-43a2-bc95-66225bee8682\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-5877229c-6e11-484f-ad16-000546c46ea1\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-5877229c-6e11-484f-ad16-000546c46ea1\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-5877229c-6e11-484f-ad16-000546c46ea1\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 0, \"receiver\": \"h-5877229c-6e11-484f-ad16-000546c46ea1\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getIntArray\", \"args_count\": 1, \"receiver\": \"h-5877229c-6e11-484f-ad16-000546c46ea1\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getIntArray\", \"args_count\": 0, \"receiver\": \"h-5877229c-6e11-484f-ad16-000546c46ea1\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"get\", \"args_count\": 0, \"receiver\": \"h-5877229c-6e11-484f-ad16-000546c46ea1\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"feature\", \"args_count\": 1, \"receiver\": \"h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-64c4f408-8ee6-479c-b7ba-b7b4f7b86037\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"selection\", \"args_count\": 0, \"receiver\": \"h-64c4f408-8ee6-479c-b7ba-b7b4f7b86037\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-2072bf73-a3b9-428d-a2b6-462585a69bfd\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-2072bf73-a3b9-428d-a2b6-462585a69bfd\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-2072bf73-a3b9-428d-a2b6-462585a69bfd\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 0, \"receiver\": \"h-2072bf73-a3b9-428d-a2b6-462585a69bfd\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getIntArray\", \"args_count\": 1, \"receiver\": \"h-2072bf73-a3b9-428d-a2b6-462585a69bfd\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getIntArray\", \"args_count\": 0, \"receiver\": \"h-2072bf73-a3b9-428d-a2b6-462585a69bfd\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"get\", \"args_count\": 0, \"receiver\": \"h-2072bf73-a3b9-428d-a2b6-462585a69bfd\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"feature\", \"args_count\": 1, \"receiver\": \"h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-e871e353-23de-44e8-b136-4bac355c1c02\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"selection\", \"args_count\": 0, \"receiver\": \"h-e871e353-23de-44e8-b136-4bac355c1c02\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 0, \"receiver\": \"h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getIntArray\", \"args_count\": 1, \"receiver\": \"h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getIntArray\", \"args_count\": 0, \"receiver\": \"h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"get\", \"args_count\": 0, \"receiver\": \"h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"feature\", \"args_count\": 1, \"receiver\": \"h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-cd52d535-7546-4122-aefb-523a3b42dac9\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"selection\", \"args_count\": 0, \"receiver\": \"h-cd52d535-7546-4122-aefb-523a3b42dac9\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-2b11f225-3c43-48de-b4cc-366282674113\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-2b11f225-3c43-48de-b4cc-366282674113\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-2b11f225-3c43-48de-b4cc-366282674113\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 0, \"receiver\": \"h-2b11f225-3c43-48de-b4cc-366282674113\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getIntArray\", \"args_count\": 1, \"receiver\": \"h-2b11f225-3c43-48de-b4cc-366282674113\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getIntArray\", \"args_count\": 0, \"receiver\": \"h-2b11f225-3c43-48de-b4cc-366282674113\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"get\", \"args_count\": 0, \"receiver\": \"h-2b11f225-3c43-48de-b4cc-366282674113\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"feature\", \"args_count\": 1, \"receiver\": \"h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-211b5714-6967-445f-a90e-1601838b31b7\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"selection\", \"args_count\": 0, \"receiver\": \"h-211b5714-6967-445f-a90e-1601838b31b7\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 0, \"receiver\": \"h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getIntArray\", \"args_count\": 1, \"receiver\": \"h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getIntArray\", \"args_count\": 0, \"receiver\": \"h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"get\", \"args_count\": 0, \"receiver\": \"h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"feature\", \"args_count\": 1, \"receiver\": \"h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-2f86994e-4f33-45bf-9eb7-21bad1d871ee\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"selection\", \"args_count\": 0, \"receiver\": \"h-2f86994e-4f33-45bf-9eb7-21bad1d871ee\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-cdf58427-fbe6-46fb-8579-54fa69f12262\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"feature\", \"args_count\": 1, \"receiver\": \"h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-a93a94bb-dc00-40bd-b789-3ad592a43895\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"selection\", \"args_count\": 0, \"receiver\": \"h-a93a94bb-dc00-40bd-b789-3ad592a43895\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 1, \"receiver\": \"h-a2a8b743-e893-49eb-bbd8-62e42dd3d4d3\", \"is_mutation\": true}], \"mutation_issued\": true}, \"details\": {\"status_token\": \"PASS\"}}, \"effect\": \"evaluate\"}, \"error\": null, \"execution\": {\"session_id\": \"session-624a84a597ea7ac329589b39\", \"model_ref\": {\"schema_version\": 1, \"session_id\": \"session-624a84a597ea7ac329589b39\", \"server_instance_id\": \"8dffc11b1001edf6191cdcfb7702b8d592dcb701a713571ef778fa48ef6f3adb\", \"model_tag\": \"mcp1\", \"generation\": 1}, \"revision\": 2, \"dirty\": false, \"server_ownership\": \"shared\", \"model_ownership\": \"user_owned\", \"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"request_id\": \"00b20b8c-8be9-404c-990c-c54112afd54d\", \"operation_id\": \"2c036baa-4736-4990-98e6-1b3cba7dcc8e\", \"request_hash\": \"7c1e93dad87f8cea4d9510c2ad2bbe635750b83c663e50d2f849ddc9d4a0fba0\", \"idempotency_key\": \"c824e482-5b8c-4c50-8616-27aff848a5ff\", \"job_id\": \"420935c1-8de0-4334-9761-858fc202fe29\"}}"
+            }
+          ],
+          "structuredContent": {
+            "success": true,
+            "data": {
+              "status": "PASS",
+              "execution_status": "PASS",
+              "numerical_verification_status": "NOT_APPLICABLE",
+              "physical_validation_status": "UNVERIFIED",
+              "rules_evaluated": [
+                "conflicting_temperature_boundaries"
+              ],
+              "findings": [
+                {
+                  "rule": "conflicting_temperature_boundaries",
+                  "status": "PASS",
+                  "features_checked": [
+                    "temp1",
+                    "temp2"
+                  ]
+                }
+              ],
+              "domain_state": "succeeded",
+              "verification_status": "NOT_APPLICABLE",
+              "execution_state_unknown": false,
+              "partial_change": false,
+              "cleanup_failed": false,
+              "dispatch_stage": "post_dispatch",
+              "domain_outcome": {
+                "operation": "validate.boundary_conditions",
+                "state": "succeeded",
+                "verification_status": "NOT_APPLICABLE",
+                "cleanup_failed": false,
+                "execution_state_unknown": false,
+                "dispatch_stage": "post_dispatch",
+                "status_token": "PASS",
+                "execution_status": "PASS",
+                "witness": {
+                  "engine_calls": 81,
+                  "mutation_method": "entities",
+                  "methods": [
+                    "entities",
+                    "feature",
+                    "get",
+                    "getIntArray",
+                    "getType",
+                    "physics",
+                    "selection",
+                    "tags"
+                  ],
+                  "dispatches": [
+                    {
+                      "command": "call",
+                      "method": "physics",
+                      "args_count": 0,
+                      "receiver": "h-4e2a86eb-08f7-4eb5-8c3d-a0b55a670c77",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "tags",
+                      "args_count": 0,
+                      "receiver": "h-d5405082-6be8-460c-98f9-589f7ee0a184",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "physics",
+                      "args_count": 1,
+                      "receiver": "h-4e2a86eb-08f7-4eb5-8c3d-a0b55a670c77",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "feature",
+                      "args_count": 0,
+                      "receiver": "h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "tags",
+                      "args_count": 0,
+                      "receiver": "h-3308d18d-f604-467e-917f-b3f152643a6f",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "feature",
+                      "args_count": 1,
+                      "receiver": "h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "getType",
+                      "args_count": 0,
+                      "receiver": "h-79e22a4b-b2e0-4228-8770-303443d99790",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "selection",
+                      "args_count": 0,
+                      "receiver": "h-79e22a4b-b2e0-4228-8770-303443d99790",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 1,
+                      "receiver": "h-652e1f1d-28d4-481b-aee6-c834beda3004",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 1,
+                      "receiver": "h-652e1f1d-28d4-481b-aee6-c834beda3004",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 1,
+                      "receiver": "h-652e1f1d-28d4-481b-aee6-c834beda3004",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 0,
+                      "receiver": "h-652e1f1d-28d4-481b-aee6-c834beda3004",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "feature",
+                      "args_count": 1,
+                      "receiver": "h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "getType",
+                      "args_count": 0,
+                      "receiver": "h-6edb8418-7885-482c-824e-3c7e39c73a96",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "selection",
+                      "args_count": 0,
+                      "receiver": "h-6edb8418-7885-482c-824e-3c7e39c73a96",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 1,
+                      "receiver": "h-b9635923-1783-41dc-aed7-662d49967fc0",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 1,
+                      "receiver": "h-b9635923-1783-41dc-aed7-662d49967fc0",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 1,
+                      "receiver": "h-b9635923-1783-41dc-aed7-662d49967fc0",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 0,
+                      "receiver": "h-b9635923-1783-41dc-aed7-662d49967fc0",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "feature",
+                      "args_count": 1,
+                      "receiver": "h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "getType",
+                      "args_count": 0,
+                      "receiver": "h-ca894787-d277-4f91-9de7-d155de945828",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "selection",
+                      "args_count": 0,
+                      "receiver": "h-ca894787-d277-4f91-9de7-d155de945828",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 1,
+                      "receiver": "h-2ec43ee3-27c3-4ca1-9b70-3db1b8c31495",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "feature",
+                      "args_count": 1,
+                      "receiver": "h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "getType",
+                      "args_count": 0,
+                      "receiver": "h-fb07766e-3bc0-43a2-bc95-66225bee8682",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "selection",
+                      "args_count": 0,
+                      "receiver": "h-fb07766e-3bc0-43a2-bc95-66225bee8682",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 1,
+                      "receiver": "h-5877229c-6e11-484f-ad16-000546c46ea1",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 1,
+                      "receiver": "h-5877229c-6e11-484f-ad16-000546c46ea1",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 1,
+                      "receiver": "h-5877229c-6e11-484f-ad16-000546c46ea1",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 0,
+                      "receiver": "h-5877229c-6e11-484f-ad16-000546c46ea1",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "getIntArray",
+                      "args_count": 1,
+                      "receiver": "h-5877229c-6e11-484f-ad16-000546c46ea1",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "getIntArray",
+                      "args_count": 0,
+                      "receiver": "h-5877229c-6e11-484f-ad16-000546c46ea1",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "get",
+                      "args_count": 0,
+                      "receiver": "h-5877229c-6e11-484f-ad16-000546c46ea1",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "feature",
+                      "args_count": 1,
+                      "receiver": "h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "getType",
+                      "args_count": 0,
+                      "receiver": "h-64c4f408-8ee6-479c-b7ba-b7b4f7b86037",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "selection",
+                      "args_count": 0,
+                      "receiver": "h-64c4f408-8ee6-479c-b7ba-b7b4f7b86037",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 1,
+                      "receiver": "h-2072bf73-a3b9-428d-a2b6-462585a69bfd",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 1,
+                      "receiver": "h-2072bf73-a3b9-428d-a2b6-462585a69bfd",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 1,
+                      "receiver": "h-2072bf73-a3b9-428d-a2b6-462585a69bfd",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 0,
+                      "receiver": "h-2072bf73-a3b9-428d-a2b6-462585a69bfd",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "getIntArray",
+                      "args_count": 1,
+                      "receiver": "h-2072bf73-a3b9-428d-a2b6-462585a69bfd",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "getIntArray",
+                      "args_count": 0,
+                      "receiver": "h-2072bf73-a3b9-428d-a2b6-462585a69bfd",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "get",
+                      "args_count": 0,
+                      "receiver": "h-2072bf73-a3b9-428d-a2b6-462585a69bfd",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "feature",
+                      "args_count": 1,
+                      "receiver": "h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "getType",
+                      "args_count": 0,
+                      "receiver": "h-e871e353-23de-44e8-b136-4bac355c1c02",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "selection",
+                      "args_count": 0,
+                      "receiver": "h-e871e353-23de-44e8-b136-4bac355c1c02",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 1,
+                      "receiver": "h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 1,
+                      "receiver": "h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 1,
+                      "receiver": "h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 0,
+                      "receiver": "h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "getIntArray",
+                      "args_count": 1,
+                      "receiver": "h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "getIntArray",
+                      "args_count": 0,
+                      "receiver": "h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "get",
+                      "args_count": 0,
+                      "receiver": "h-73241a4d-9cf8-43a1-9fbe-65459efd4d8d",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "feature",
+                      "args_count": 1,
+                      "receiver": "h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "getType",
+                      "args_count": 0,
+                      "receiver": "h-cd52d535-7546-4122-aefb-523a3b42dac9",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "selection",
+                      "args_count": 0,
+                      "receiver": "h-cd52d535-7546-4122-aefb-523a3b42dac9",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 1,
+                      "receiver": "h-2b11f225-3c43-48de-b4cc-366282674113",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 1,
+                      "receiver": "h-2b11f225-3c43-48de-b4cc-366282674113",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 1,
+                      "receiver": "h-2b11f225-3c43-48de-b4cc-366282674113",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 0,
+                      "receiver": "h-2b11f225-3c43-48de-b4cc-366282674113",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "getIntArray",
+                      "args_count": 1,
+                      "receiver": "h-2b11f225-3c43-48de-b4cc-366282674113",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "getIntArray",
+                      "args_count": 0,
+                      "receiver": "h-2b11f225-3c43-48de-b4cc-366282674113",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "get",
+                      "args_count": 0,
+                      "receiver": "h-2b11f225-3c43-48de-b4cc-366282674113",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "feature",
+                      "args_count": 1,
+                      "receiver": "h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "getType",
+                      "args_count": 0,
+                      "receiver": "h-211b5714-6967-445f-a90e-1601838b31b7",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "selection",
+                      "args_count": 0,
+                      "receiver": "h-211b5714-6967-445f-a90e-1601838b31b7",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 1,
+                      "receiver": "h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 1,
+                      "receiver": "h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 1,
+                      "receiver": "h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 0,
+                      "receiver": "h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "getIntArray",
+                      "args_count": 1,
+                      "receiver": "h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "getIntArray",
+                      "args_count": 0,
+                      "receiver": "h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "get",
+                      "args_count": 0,
+                      "receiver": "h-a6d6577c-32cf-4ba3-a9a2-2b144c859a60",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "feature",
+                      "args_count": 1,
+                      "receiver": "h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "getType",
+                      "args_count": 0,
+                      "receiver": "h-2f86994e-4f33-45bf-9eb7-21bad1d871ee",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "selection",
+                      "args_count": 0,
+                      "receiver": "h-2f86994e-4f33-45bf-9eb7-21bad1d871ee",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 1,
+                      "receiver": "h-cdf58427-fbe6-46fb-8579-54fa69f12262",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "feature",
+                      "args_count": 1,
+                      "receiver": "h-2eb26ec4-d1ac-43fb-a4a8-cb9c984a3eed",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "getType",
+                      "args_count": 0,
+                      "receiver": "h-a93a94bb-dc00-40bd-b789-3ad592a43895",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "selection",
+                      "args_count": 0,
+                      "receiver": "h-a93a94bb-dc00-40bd-b789-3ad592a43895",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "entities",
+                      "args_count": 1,
+                      "receiver": "h-a2a8b743-e893-49eb-bbd8-62e42dd3d4d3",
+                      "is_mutation": true
+                    }
+                  ],
+                  "mutation_issued": true
+                },
+                "details": {
+                  "status_token": "PASS"
+                }
+              },
+              "effect": "evaluate"
+            },
+            "error": null,
+            "execution": {
+              "session_id": "session-624a84a597ea7ac329589b39",
+              "model_ref": {
+                "schema_version": 1,
+                "session_id": "session-624a84a597ea7ac329589b39",
+                "server_instance_id": "8dffc11b1001edf6191cdcfb7702b8d592dcb701a713571ef778fa48ef6f3adb",
+                "model_tag": "mcp1",
+                "generation": 1
+              },
+              "revision": 2,
+              "dirty": false,
+              "server_ownership": "shared",
+              "model_ownership": "user_owned",
+              "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+              "request_id": "00b20b8c-8be9-404c-990c-c54112afd54d",
+              "operation_id": "2c036baa-4736-4990-98e6-1b3cba7dcc8e",
+              "request_hash": "7c1e93dad87f8cea4d9510c2ad2bbe635750b83c663e50d2f849ddc9d4a0fba0",
+              "idempotency_key": "c824e482-5b8c-4c50-8616-27aff848a5ff",
+              "job_id": "420935c1-8de0-4334-9761-858fc202fe29"
+            }
+          },
+          "isError": false
+        }
+      }
+    }
+  ]
+}

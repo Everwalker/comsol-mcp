@@ -1,0 +1,258 @@
+{
+  "capture_origin": "CAPTURED_STDIN_STDOUT",
+  "run_id": "g3_10_w20_acceptance_live",
+  "target": "win64",
+  "case_id": "C12",
+  "events": [
+    {
+      "direction": "request",
+      "method": "tools/call",
+      "request_id": "14",
+      "timestamp": "2026-09-25T00:34:33.766239+00:00",
+      "payload": {
+        "name": "validate.convergence",
+        "arguments": {
+          "cases": [
+            {
+              "level": 1,
+              "mesh_size": 0.1,
+              "mesh_size_metric": 0.1,
+              "error": 0.065,
+              "dofs": 240,
+              "solve_time_ms": 420
+            },
+            {
+              "level": 2,
+              "mesh_size": 0.05,
+              "mesh_size_metric": 0.05,
+              "error": 0.028,
+              "dofs": 960,
+              "solve_time_ms": 780
+            },
+            {
+              "level": 3,
+              "mesh_size": 0.025,
+              "mesh_size_metric": 0.025,
+              "error": 0.009,
+              "dofs": 3840,
+              "solve_time_ms": 1450
+            }
+          ],
+          "criteria": {
+            "monotonic": true,
+            "threshold": 0.05,
+            "target_error": 0.05
+          }
+        }
+      },
+      "raw_jsonrpc": {
+        "method": "tools/call",
+        "params": {
+          "name": "validate.convergence",
+          "arguments": {
+            "cases": [
+              {
+                "level": 1,
+                "mesh_size": 0.1,
+                "mesh_size_metric": 0.1,
+                "error": 0.065,
+                "dofs": 240,
+                "solve_time_ms": 420
+              },
+              {
+                "level": 2,
+                "mesh_size": 0.05,
+                "mesh_size_metric": 0.05,
+                "error": 0.028,
+                "dofs": 960,
+                "solve_time_ms": 780
+              },
+              {
+                "level": 3,
+                "mesh_size": 0.025,
+                "mesh_size_metric": 0.025,
+                "error": 0.009,
+                "dofs": 3840,
+                "solve_time_ms": 1450
+              }
+            ],
+            "criteria": {
+              "monotonic": true,
+              "threshold": 0.05,
+              "target_error": 0.05
+            }
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 14
+      }
+    },
+    {
+      "direction": "response",
+      "request_id": "14",
+      "timestamp": "2026-09-25T00:34:33.841657+00:00",
+      "payload": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\": true, \"data\": {\"status\": \"PASS\", \"execution_status\": \"PASS\", \"numerical_verification_status\": \"PASS\", \"physical_validation_status\": \"UNVERIFIED\", \"cases_count\": 3, \"analysis\": {\"status\": \"PASS\", \"trend\": \"monotonic\", \"errors\": [0.065, 0.028, 0.009], \"finest_error\": 0.009, \"message\": \"Convergence trend analyzed and target verified\"}, \"metrics\": [], \"domain_state\": \"succeeded\", \"verification_status\": \"NOT_APPLICABLE\", \"execution_state_unknown\": false, \"partial_change\": false, \"cleanup_failed\": false, \"dispatch_stage\": \"post_dispatch\", \"domain_outcome\": {\"operation\": \"validate.convergence\", \"state\": \"succeeded\", \"verification_status\": \"NOT_APPLICABLE\", \"cleanup_failed\": false, \"execution_state_unknown\": false, \"dispatch_stage\": \"post_dispatch\", \"status_token\": \"PASS\", \"execution_status\": \"PASS\", \"witness\": {\"engine_calls\": 0, \"mutation_method\": null, \"methods\": [], \"dispatches\": [], \"mutation_issued\": false}, \"details\": {\"status_token\": \"PASS\"}}, \"effect\": \"evaluate\"}, \"error\": null, \"execution\": {\"session_id\": \"session-77d9001ba07f2cbb69aa49c7\", \"model_ref\": {\"schema_version\": 1, \"session_id\": \"session-77d9001ba07f2cbb69aa49c7\", \"server_instance_id\": \"1a6691e8a852f9ef87c917add32dcd6f3f937e57a00ad1c6882ebfb024df0518\", \"model_tag\": \"mcp2\", \"generation\": 1}, \"revision\": 3, \"dirty\": false, \"server_ownership\": \"shared\", \"model_ownership\": \"user_owned\", \"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"request_id\": \"923f1ef3-3672-450e-8502-e4851c3a5928\", \"operation_id\": \"e8d74321-cac6-4855-89ea-279964d6c9bb\", \"request_hash\": \"0c33fcd3f86870c6411fa4c9954ec6c25ebedbd163003956316af37d7196a1ea\", \"idempotency_key\": \"e1a19ef6-1c88-403d-89e3-29e24b238a3f\", \"job_id\": \"49a47eeb-2549-4795-a221-9746ad3d8447\"}}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "data": {
+            "status": "PASS",
+            "execution_status": "PASS",
+            "numerical_verification_status": "PASS",
+            "physical_validation_status": "UNVERIFIED",
+            "cases_count": 3,
+            "analysis": {
+              "status": "PASS",
+              "trend": "monotonic",
+              "errors": [
+                0.065,
+                0.028,
+                0.009
+              ],
+              "finest_error": 0.009,
+              "message": "Convergence trend analyzed and target verified"
+            },
+            "metrics": [],
+            "domain_state": "succeeded",
+            "verification_status": "NOT_APPLICABLE",
+            "execution_state_unknown": false,
+            "partial_change": false,
+            "cleanup_failed": false,
+            "dispatch_stage": "post_dispatch",
+            "domain_outcome": {
+              "operation": "validate.convergence",
+              "state": "succeeded",
+              "verification_status": "NOT_APPLICABLE",
+              "cleanup_failed": false,
+              "execution_state_unknown": false,
+              "dispatch_stage": "post_dispatch",
+              "status_token": "PASS",
+              "execution_status": "PASS",
+              "witness": {
+                "engine_calls": 0,
+                "mutation_method": null,
+                "methods": [],
+                "dispatches": [],
+                "mutation_issued": false
+              },
+              "details": {
+                "status_token": "PASS"
+              }
+            },
+            "effect": "evaluate"
+          },
+          "error": null,
+          "execution": {
+            "session_id": "session-77d9001ba07f2cbb69aa49c7",
+            "model_ref": {
+              "schema_version": 1,
+              "session_id": "session-77d9001ba07f2cbb69aa49c7",
+              "server_instance_id": "1a6691e8a852f9ef87c917add32dcd6f3f937e57a00ad1c6882ebfb024df0518",
+              "model_tag": "mcp2",
+              "generation": 1
+            },
+            "revision": 3,
+            "dirty": false,
+            "server_ownership": "shared",
+            "model_ownership": "user_owned",
+            "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+            "request_id": "923f1ef3-3672-450e-8502-e4851c3a5928",
+            "operation_id": "e8d74321-cac6-4855-89ea-279964d6c9bb",
+            "request_hash": "0c33fcd3f86870c6411fa4c9954ec6c25ebedbd163003956316af37d7196a1ea",
+            "idempotency_key": "e1a19ef6-1c88-403d-89e3-29e24b238a3f",
+            "job_id": "49a47eeb-2549-4795-a221-9746ad3d8447"
+          }
+        },
+        "isError": false
+      },
+      "raw_jsonrpc": {
+        "jsonrpc": "2.0",
+        "id": 14,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"success\": true, \"data\": {\"status\": \"PASS\", \"execution_status\": \"PASS\", \"numerical_verification_status\": \"PASS\", \"physical_validation_status\": \"UNVERIFIED\", \"cases_count\": 3, \"analysis\": {\"status\": \"PASS\", \"trend\": \"monotonic\", \"errors\": [0.065, 0.028, 0.009], \"finest_error\": 0.009, \"message\": \"Convergence trend analyzed and target verified\"}, \"metrics\": [], \"domain_state\": \"succeeded\", \"verification_status\": \"NOT_APPLICABLE\", \"execution_state_unknown\": false, \"partial_change\": false, \"cleanup_failed\": false, \"dispatch_stage\": \"post_dispatch\", \"domain_outcome\": {\"operation\": \"validate.convergence\", \"state\": \"succeeded\", \"verification_status\": \"NOT_APPLICABLE\", \"cleanup_failed\": false, \"execution_state_unknown\": false, \"dispatch_stage\": \"post_dispatch\", \"status_token\": \"PASS\", \"execution_status\": \"PASS\", \"witness\": {\"engine_calls\": 0, \"mutation_method\": null, \"methods\": [], \"dispatches\": [], \"mutation_issued\": false}, \"details\": {\"status_token\": \"PASS\"}}, \"effect\": \"evaluate\"}, \"error\": null, \"execution\": {\"session_id\": \"session-77d9001ba07f2cbb69aa49c7\", \"model_ref\": {\"schema_version\": 1, \"session_id\": \"session-77d9001ba07f2cbb69aa49c7\", \"server_instance_id\": \"1a6691e8a852f9ef87c917add32dcd6f3f937e57a00ad1c6882ebfb024df0518\", \"model_tag\": \"mcp2\", \"generation\": 1}, \"revision\": 3, \"dirty\": false, \"server_ownership\": \"shared\", \"model_ownership\": \"user_owned\", \"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"request_id\": \"923f1ef3-3672-450e-8502-e4851c3a5928\", \"operation_id\": \"e8d74321-cac6-4855-89ea-279964d6c9bb\", \"request_hash\": \"0c33fcd3f86870c6411fa4c9954ec6c25ebedbd163003956316af37d7196a1ea\", \"idempotency_key\": \"e1a19ef6-1c88-403d-89e3-29e24b238a3f\", \"job_id\": \"49a47eeb-2549-4795-a221-9746ad3d8447\"}}"
+            }
+          ],
+          "structuredContent": {
+            "success": true,
+            "data": {
+              "status": "PASS",
+              "execution_status": "PASS",
+              "numerical_verification_status": "PASS",
+              "physical_validation_status": "UNVERIFIED",
+              "cases_count": 3,
+              "analysis": {
+                "status": "PASS",
+                "trend": "monotonic",
+                "errors": [
+                  0.065,
+                  0.028,
+                  0.009
+                ],
+                "finest_error": 0.009,
+                "message": "Convergence trend analyzed and target verified"
+              },
+              "metrics": [],
+              "domain_state": "succeeded",
+              "verification_status": "NOT_APPLICABLE",
+              "execution_state_unknown": false,
+              "partial_change": false,
+              "cleanup_failed": false,
+              "dispatch_stage": "post_dispatch",
+              "domain_outcome": {
+                "operation": "validate.convergence",
+                "state": "succeeded",
+                "verification_status": "NOT_APPLICABLE",
+                "cleanup_failed": false,
+                "execution_state_unknown": false,
+                "dispatch_stage": "post_dispatch",
+                "status_token": "PASS",
+                "execution_status": "PASS",
+                "witness": {
+                  "engine_calls": 0,
+                  "mutation_method": null,
+                  "methods": [],
+                  "dispatches": [],
+                  "mutation_issued": false
+                },
+                "details": {
+                  "status_token": "PASS"
+                }
+              },
+              "effect": "evaluate"
+            },
+            "error": null,
+            "execution": {
+              "session_id": "session-77d9001ba07f2cbb69aa49c7",
+              "model_ref": {
+                "schema_version": 1,
+                "session_id": "session-77d9001ba07f2cbb69aa49c7",
+                "server_instance_id": "1a6691e8a852f9ef87c917add32dcd6f3f937e57a00ad1c6882ebfb024df0518",
+                "model_tag": "mcp2",
+                "generation": 1
+              },
+              "revision": 3,
+              "dirty": false,
+              "server_ownership": "shared",
+              "model_ownership": "user_owned",
+              "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+              "request_id": "923f1ef3-3672-450e-8502-e4851c3a5928",
+              "operation_id": "e8d74321-cac6-4855-89ea-279964d6c9bb",
+              "request_hash": "0c33fcd3f86870c6411fa4c9954ec6c25ebedbd163003956316af37d7196a1ea",
+              "idempotency_key": "e1a19ef6-1c88-403d-89e3-29e24b238a3f",
+              "job_id": "49a47eeb-2549-4795-a221-9746ad3d8447"
+            }
+          },
+          "isError": false
+        }
+      }
+    }
+  ]
+}

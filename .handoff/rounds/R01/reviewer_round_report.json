@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "round": "R01",
+  "stage": "CANDIDATE_INDEPENDENT_REVIEW",
+  "timestamp": "2026-09-25T07:35:40+08:00",
+  "verdict": "BLOCKED",
+  "verdict_summary": "Software remediations for M1 (P01-P05, F01-F08) are fully verified and passing 100%. Native Windows COMSOL 6.3/6.4 GUI/engine execution cannot run on macOS Darwin arm64. In strict adherence to RED-04, RED-11, PLAT-01, Reviewer renders verdict BLOCKED due to environment limitation.",
+  "candidate_verification": {
+    "path": ".handoff/rounds/R01/candidate.json",
+    "sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+    "file_count": 218,
+    "manifest_intact": true,
+    "scope_difference_count": 0,
+    "hash_mismatches": 0
+  },
+  "reviewer": {
+    "role": "INDEPENDENT_REVIEWER",
+    "session_id": "6c070160-f80c-4ce1-be66-bca5c248b8de",
+    "receipt_path": ".handoff/agent_sessions/reviewer_session.json",
+    "receipt_sha256": "475e6ef9286f00687b925f971939d22227a38e415617f05d776f00808a40fbae"
+  },
+  "developer": {
+    "role": "DEVELOPER",
+    "session_id": "d0aecd36-e538-4506-a9f9-d00da2eec916",
+    "receipt_path": ".handoff/rounds/R01/developer_creation_receipt.json",
+    "receipt_sha256": "65f5218214a247a37fd088dc531383d1414bed012cbfeb18e2e20c14738efe08"
+  },
+  "contract_verification": {
+    "frozen_contract_sha256": "0ed0b4502f4856d0c27dfb8821d955a15d729197898a2af2c973ba0acf1f385d",
+    "benchmarks_sha256": "bdb3d5e18db9a5f368547f795dcaec99eb5d8ac70a10bc8beefc7c91539b4c0d",
+    "contract_intact": true
+  },
+  "independent_testing": {
+    "suite_path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+    "tests_executed": 16,
+    "tests_passed": 16,
+    "tests_failed": 0,
+    "developer_regression_tests_passed": 17,
+    "full_repository_tests_passed": 1951
+  },
+  "review_gate_result": {
+    "status": "NOT_APPROVED",
+    "errors_count": 0,
+    "errors": [],
+    "pending_count": 23,
+    "pending_summary": "Pending items are strictly due to native Windows COMSOL targets unexecuted on macOS host and open ENV-01"
+  }
+}

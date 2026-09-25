@@ -1,0 +1,2427 @@
+{
+  "schema": "g39/report/1",
+  "source_identity": {
+    "commit": "886affadc83477e940238c723edd569d00559985",
+    "tree": "b9861e5dc407f2aff934d9438fa33ef631df06a1"
+  },
+  "records": [
+    {
+      "id": "C00",
+      "target": "shared",
+      "test_status": "PASS",
+      "evidence_level": "STATIC",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "checks": [
+        {
+          "name": "pinned_commit_verified",
+          "passed": true,
+          "details": "Commit matches 886affadc83477e940238c723edd569d00559985"
+        },
+        {
+          "name": "pinned_tree_verified",
+          "passed": true,
+          "details": "Tree matches b9861e5dc407f2aff934d9438fa33ef631df06a1"
+        },
+        {
+          "name": "clean_recovery_verified",
+          "passed": true,
+          "details": "8,870 files recovered with 0 mismatches"
+        }
+      ],
+      "expected": {
+        "pinned_commit": "886affadc83477e940238c723edd569d00559985",
+        "pinned_tree": "b9861e5dc407f2aff934d9438fa33ef631df06a1"
+      },
+      "observed": {
+        "active_commit": "886affadc83477e940238c723edd569d00559985",
+        "active_tree": "b9861e5dc407f2aff934d9438fa33ef631df06a1",
+        "status": "VERIFIED"
+      },
+      "artifacts": [
+        {
+          "path": "docs/handoff_g3_9_windows_w20/PIN.json",
+          "sha256": "e594f5a681796bcd0b67618e45abc02654b1a1325e107d4c1ba442011a31f0ca",
+          "role": "pinned_source_identity"
+        },
+        {
+          "path": "docs/handoff_g3_9_windows_w20/SOURCE_AUDIT.json",
+          "sha256": "c2d1de56305fd53aa9babc7e36e0423a15cf239e50cad7d20270189f67057b3c",
+          "role": "source_audit"
+        },
+        {
+          "path": "docs/handoff_g3_9_windows_w20/RESTORE_RECEIPT.json",
+          "sha256": "d01269eb1a1751bb914c86392dde8d22182a207b5f7227f28c8fa62041b3f03c",
+          "role": "restore_receipt"
+        }
+      ]
+    },
+    {
+      "id": "C01",
+      "target": "shared",
+      "test_status": "PASS",
+      "evidence_level": "AUDIT",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "checks": [
+        {
+          "name": "synthetic_fixtures_demoted",
+          "passed": true,
+          "details": "Legacy constant 80W, V09, V10/V11 reclassified"
+        },
+        {
+          "name": "reconstructed_transcripts_identified",
+          "passed": true,
+          "details": "V01-V16 post-hoc transcripts documented"
+        },
+        {
+          "name": "original_bytes_preserved",
+          "passed": true,
+          "details": "Historical evidence kept untouched with audit documentation"
+        }
+      ],
+      "expected": {
+        "evidence_correction_present": true,
+        "audit_status": "CLASSIFIED"
+      },
+      "observed": {
+        "status": "CLASSIFIED_G3_8_AUDIT",
+        "file": "C:\\Users\\Everwalker\\COMSOL_G3_10\\repository\\docs\\handoff_g3_9_windows_w20\\EVIDENCE_CORRECTION.json"
+      },
+      "artifacts": [
+        {
+          "path": "docs/handoff_g3_9_windows_w20/EVIDENCE_CORRECTION.json",
+          "sha256": "a3fafffee7728e99fc816559446575b334a91db707d2e34b37f1edc9a1ae0bd1",
+          "role": "evidence_correction"
+        },
+        {
+          "path": "evidence/EVIDENCE_CORRECTION.json",
+          "sha256": "0ebffa417242b0d7af10134d7b9f92b924a4dbf8c1ce3a7399af1eca0747d292",
+          "role": "legacy_correction"
+        }
+      ]
+    },
+    {
+      "id": "C08",
+      "target": "shared",
+      "test_status": "PASS",
+      "evidence_level": "CONTROL",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "checks": [
+        {
+          "name": "power_source_term_mapped",
+          "passed": true,
+          "details": "Power parameter correctly mapped to source term"
+        },
+        {
+          "name": "unbalanced_conservation_fails",
+          "passed": true,
+          "details": "Zero flux with non-zero power fails closed"
+        },
+        {
+          "name": "strict_json_serialization",
+          "passed": true,
+          "details": "Strict JSON constants used without NaN/Infinity"
+        }
+      ],
+      "expected": {
+        "status": "FAIL",
+        "source_term": 100.0,
+        "residual_gt_zero": true
+      },
+      "observed": {
+        "status": "FAIL",
+        "source_term": 100.0,
+        "residual": 1.0
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/shared/c08_conservation_control.json",
+          "sha256": "9ab0cabf96322f959e754b262f7618a181452a96010b4bf6ec414476c9dc76d7",
+          "role": "control_result"
+        },
+        {
+          "path": "tests/test_g3_7_w20_validation.py",
+          "sha256": "28438c5333288b69539064b7eff52a9b0fa6e3e1877d38811019c74a0889f4b4",
+          "role": "validation_tests"
+        }
+      ]
+    },
+    {
+      "id": "C14",
+      "target": "shared",
+      "test_status": "PASS",
+      "evidence_level": "CONTROL",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "checks": [
+        {
+          "name": "zero_threshold_preserved",
+          "passed": true,
+          "details": "Target error 0.0 preserved"
+        },
+        {
+          "name": "negative_threshold_rejected",
+          "passed": true,
+          "details": "Negative threshold fails closed"
+        },
+        {
+          "name": "frozen_oracle_immutability",
+          "passed": true,
+          "details": "FrozenOracle snapshots cannot be mutated"
+        }
+      ],
+      "expected": {
+        "zero_threshold": 0.0,
+        "negative_threshold_passed": false
+      },
+      "observed": {
+        "zero_threshold": 0.0,
+        "negative_passed": false
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/shared/c14_threshold_control.json",
+          "sha256": "37a5828eaaedbd7230fd769c2ffbe6f5db5b29eb98f159ae0ec4fdf6108acb87",
+          "role": "threshold_result"
+        },
+        {
+          "path": "comsol_mcp/_g3_w20_validation.py",
+          "sha256": "04000357e59f6a794242ae52305d9a0df333f0f9d194af082e36ef549d6779e8",
+          "role": "validation_source"
+        }
+      ]
+    },
+    {
+      "id": "C15",
+      "target": "shared",
+      "test_status": "PASS",
+      "evidence_level": "CONTROL",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "checks": [
+        {
+          "name": "error_preserved_in_report",
+          "passed": true,
+          "details": "Child ERROR status not upgraded to PASS"
+        },
+        {
+          "name": "blocked_preserved_in_report",
+          "passed": true,
+          "details": "Child BLOCKED status not upgraded to PASS"
+        },
+        {
+          "name": "unsupported_preserved_in_report",
+          "passed": true,
+          "details": "Child UNSUPPORTED status not upgraded to PASS"
+        },
+        {
+          "name": "unverified_preserved_in_report",
+          "passed": true,
+          "details": "Child UNVERIFIED status not upgraded to PASS"
+        }
+      ],
+      "expected": {
+        "ERROR": "ERROR",
+        "BLOCKED": "BLOCKED",
+        "UNSUPPORTED": "UNSUPPORTED",
+        "UNVERIFIED": "UNVERIFIED"
+      },
+      "observed": {
+        "ERROR": "ERROR",
+        "BLOCKED": "BLOCKED",
+        "UNSUPPORTED": "UNSUPPORTED",
+        "UNVERIFIED": "UNVERIFIED"
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/shared/c15_state_lattice.json",
+          "sha256": "24c5fd45878a61397bc076c26ea7b62325de50f46ed83f11284f38d014d2f09c",
+          "role": "lattice_result"
+        },
+        {
+          "path": "comsol_mcp/_g3_w20_validation.py",
+          "sha256": "04000357e59f6a794242ae52305d9a0df333f0f9d194af082e36ef549d6779e8",
+          "role": "validation_source"
+        }
+      ]
+    },
+    {
+      "id": "C17",
+      "target": "shared",
+      "test_status": "PASS",
+      "evidence_level": "AUDIT",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "checks": [
+        {
+          "name": "stdio_capture_authentic",
+          "passed": true,
+          "details": "Raw stdin/stdout JSON-RPC events captured at execution time"
+        },
+        {
+          "name": "aggregator_decoupled_from_runner",
+          "passed": true,
+          "details": "Reporter reads persisted artifacts without fabricating results"
+        },
+        {
+          "name": "hash_tampering_refusal_audited",
+          "passed": true,
+          "details": "tools/check_acceptance rejects modified hashes or missing roles"
+        }
+      ],
+      "expected": {
+        "authentic_capture": true,
+        "decoupled_aggregator": true
+      },
+      "observed": {
+        "status": "AUDIT_VERIFIED"
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/shared/c17_audit_control.json",
+          "sha256": "f4d1df60e3934de79f3c3e05c1cd8edc2f8b7520464d9815c436d81f391ce0d6",
+          "role": "audit_summary"
+        },
+        {
+          "path": "tools/check_acceptance.py",
+          "sha256": "5becd0f701a3488930872eacb7dad88f949054ad931efb1500e4297c0a39308c",
+          "role": "acceptance_checker"
+        }
+      ]
+    },
+    {
+      "id": "C20",
+      "target": "shared",
+      "test_status": "PASS",
+      "evidence_level": "SOFTWARE",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "checks": [
+        {
+          "name": "pytest_exit_code_zero",
+          "passed": true,
+          "details": "Exit code 0"
+        },
+        {
+          "name": "no_regressions_observed",
+          "passed": true,
+          "details": "1918 passed, 43 skipped, 2 warnings in 57.25s"
+        }
+      ],
+      "expected": {
+        "returncode": 0,
+        "zero_failed": true
+      },
+      "observed": {
+        "returncode": 0,
+        "summary": "1918 passed, 43 skipped, 2 warnings in 57.25s"
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/shared/c20_pytest_output.txt",
+          "sha256": "9a4f8e6bff9851cf2760f30e9d5e69b52266521a86fe7a858197138c6984a70b",
+          "role": "pytest_log"
+        },
+        {
+          "path": "pyproject.toml",
+          "sha256": "aa35df9f296066601ef48b8818d045b4edbffa1af4df301305f6075cc44f669d",
+          "role": "pyproject_config"
+        }
+      ]
+    },
+    {
+      "id": "C21",
+      "target": "shared",
+      "test_status": "PASS",
+      "evidence_level": "DELIVERY",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "checks": [
+        {
+          "name": "source_audit_complete",
+          "passed": true,
+          "details": "8,870 files audited against tree"
+        },
+        {
+          "name": "no_credentials_leaked",
+          "passed": true,
+          "details": "Zero credentials or private tokens stored"
+        },
+        {
+          "name": "independent_clean_recovery",
+          "passed": true,
+          "details": "Repository recovers without old workpack dependencies"
+        }
+      ],
+      "expected": {
+        "source_audit_present": true,
+        "clean_recovery": true
+      },
+      "observed": {
+        "source_audit": "C:\\Users\\Everwalker\\COMSOL_G3_10\\repository\\docs\\handoff_g3_9_windows_w20\\SOURCE_AUDIT.json",
+        "status": "VERIFIED"
+      },
+      "artifacts": [
+        {
+          "path": "docs/handoff_g3_9_windows_w20/SOURCE_AUDIT.json",
+          "sha256": "c2d1de56305fd53aa9babc7e36e0423a15cf239e50cad7d20270189f67057b3c",
+          "role": "source_audit"
+        },
+        {
+          "path": "docs/handoff_g3_9_windows_w20/SOURCE_MAP.json",
+          "sha256": "c1b075090410df282d43323b30d2f731906fce15e69a20c9654bcdf6308ebaca",
+          "role": "source_map"
+        }
+      ]
+    },
+    {
+      "id": "C22",
+      "target": "shared",
+      "test_status": "PASS",
+      "evidence_level": "SOFTWARE",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "checks": [
+        {
+          "name": "platform_branching_isolated",
+          "passed": true,
+          "details": "Windows DACL and POSIX chmod 0700 separated in _security_os.py"
+        },
+        {
+          "name": "w20_boundary_respected",
+          "passed": true,
+          "details": "Execution strictly stopped before W21"
+        },
+        {
+          "name": "cross_platform_imports_functional",
+          "passed": true,
+          "details": "All modules import cleanly on both Windows and macOS"
+        }
+      ],
+      "expected": {
+        "platform_branching": true,
+        "stop_before_w21": true
+      },
+      "observed": {
+        "platform": "Windows-11-10.0.26200-SP0",
+        "system": "Windows"
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/shared/c22_platform_boundary.json",
+          "sha256": "9b5772cd08a6b343c117bf03724be3b7b2e2495681e916305a44e60211bdf0ba",
+          "role": "platform_summary"
+        },
+        {
+          "path": "comsol_mcp/_security_os.py",
+          "sha256": "34d3c47c3ac27de98ba74b36cf6f2bbf51ba2873514bdc22e4c60af00b1f373c",
+          "role": "security_module"
+        }
+      ]
+    },
+    {
+      "id": "C02",
+      "target": "win63",
+      "test_status": "PASS",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.3.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win63_g3_10_w20_acceptance_live",
+        "model_ref": "mcp1"
+      },
+      "checks": [
+        {
+          "name": "mcp_public_entrypoint_call",
+          "passed": true,
+          "details": "Called validate.expressions via stdio MCP"
+        },
+        {
+          "name": "unwrapped_schema_parameters",
+          "passed": true,
+          "details": "Arguments unwrapped at top level"
+        },
+        {
+          "name": "execution_identity_bound",
+          "passed": true,
+          "details": "Job and operation IDs present in response"
+        }
+      ],
+      "expected": {
+        "status": "PASS",
+        "unwrapped": true
+      },
+      "observed": {
+        "status": "PASS"
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C02.json",
+          "sha256": "e8efb81a576a84533d35bf55fd568cd8318df76a79a0ccf69ce7ec915ca9faad",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C02.json",
+          "sha256": "e8efb81a576a84533d35bf55fd568cd8318df76a79a0ccf69ce7ec915ca9faad",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/runtime_identity.json",
+          "sha256": "7a4470ab67fd3f9d76757c63870bffcbb60cb04ac7e8dc80a31c4655c06447d8",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/observations_C02.json",
+          "sha256": "214c60e109da66a5fd63e0a4b58abc0b2f80f53125f721cf30a617c4afd073fb",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/checks_C02.json",
+          "sha256": "db441da95e59551c619938fdde9cde57770d51c417f205e44010f072d83fb570",
+          "role": "checks"
+        }
+      ]
+    },
+    {
+      "id": "C03",
+      "target": "win63",
+      "test_status": "PASS",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.3.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win63_g3_10_w20_acceptance_live",
+        "model_ref": "mcp1"
+      },
+      "checks": [
+        {
+          "name": "boundary_getter_only_inspection",
+          "passed": true,
+          "details": "Non-mutating getter inspection"
+        },
+        {
+          "name": "no_selection_all_called",
+          "passed": true,
+          "details": "Model selection verified unmodified"
+        }
+      ],
+      "expected": {
+        "boundary_status": "PASS"
+      },
+      "observed": {
+        "boundary_status": "PASS"
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C03.json",
+          "sha256": "6058fe54485a604cb814fb94d6608b95534fe01a556cb80a1f62e496009ad8e9",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C03.json",
+          "sha256": "6058fe54485a604cb814fb94d6608b95534fe01a556cb80a1f62e496009ad8e9",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/runtime_identity.json",
+          "sha256": "7a4470ab67fd3f9d76757c63870bffcbb60cb04ac7e8dc80a31c4655c06447d8",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/observations_C03.json",
+          "sha256": "084907ff0fe318cdc6b289f266462a67f74833b5de72739cda7e38f5b2644812",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/checks_C03.json",
+          "sha256": "f510fbf13208ac38661ed83e3fb45f262ca3da78f36b7e9e47806a77ed642b4b",
+          "role": "checks"
+        }
+      ]
+    },
+    {
+      "id": "C04",
+      "target": "win63",
+      "test_status": "PASS",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.3.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win63_g3_10_w20_acceptance_live",
+        "model_ref": "mcp1"
+      },
+      "checks": [
+        {
+          "name": "unary_minus_and_powers_accepted",
+          "passed": true,
+          "details": "Valid syntax accepted"
+        },
+        {
+          "name": "engine_parameter_evaluated",
+          "passed": true,
+          "details": "k_val evaluated to finite number"
+        }
+      ],
+      "expected": {
+        "expressions_status": "PASS"
+      },
+      "observed": {
+        "expressions_status": "PASS"
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C04.json",
+          "sha256": "4f37ca021cb1f31055486dcee5047e856cdca82982d1c5cd8e78426a7c6a97d2",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C04.json",
+          "sha256": "4f37ca021cb1f31055486dcee5047e856cdca82982d1c5cd8e78426a7c6a97d2",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/runtime_identity.json",
+          "sha256": "7a4470ab67fd3f9d76757c63870bffcbb60cb04ac7e8dc80a31c4655c06447d8",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/observations_C04.json",
+          "sha256": "766e8d506cc6bb3c5c33f7467fe046cad9b31ef4fa42e317f71a8685a550216c",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/checks_C04.json",
+          "sha256": "50c34120ac14fd25e984de2ba89e3722b3154f7e79c0a14a559502c138225c7f",
+          "role": "checks"
+        }
+      ]
+    },
+    {
+      "id": "C05",
+      "target": "win63",
+      "test_status": "PASS",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.3.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win63_g3_10_w20_acceptance_live",
+        "model_ref": "mcp1"
+      },
+      "checks": [
+        {
+          "name": "preflight_ready_to_solve",
+          "passed": true,
+          "details": "Components, materials, physics inspected"
+        },
+        {
+          "name": "read_only_no_solve_performed",
+          "passed": true,
+          "details": "Preflight is purely read-only"
+        }
+      ],
+      "expected": {
+        "ready_to_solve": true
+      },
+      "observed": {
+        "ready_to_solve": true
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C05.json",
+          "sha256": "6175ec31e0f233f0a5d23bc6211e83d9c392402ed5721943050e49683fde4b0c",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C05.json",
+          "sha256": "6175ec31e0f233f0a5d23bc6211e83d9c392402ed5721943050e49683fde4b0c",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/runtime_identity.json",
+          "sha256": "7a4470ab67fd3f9d76757c63870bffcbb60cb04ac7e8dc80a31c4655c06447d8",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/observations_C05.json",
+          "sha256": "f633737f151fa056f62943e4310509112498a1f4f1e389a919cae9d07b400191",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/checks_C05.json",
+          "sha256": "9c527343e6a5be4831104da32b4031f404ab8ef28135da4492443c974f0c1825",
+          "role": "checks"
+        }
+      ]
+    },
+    {
+      "id": "C06",
+      "target": "win63",
+      "test_status": "PASS",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.3.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win63_g3_10_w20_acceptance_live",
+        "model_ref": "mcp1"
+      },
+      "checks": [
+        {
+          "name": "dataset_existence_verified",
+          "passed": true,
+          "details": "Dataset dset1 verified on model"
+        },
+        {
+          "name": "provenance_origin_caller_supplied",
+          "passed": true,
+          "details": "Caller values tagged CALLER_SUPPLIED"
+        }
+      ],
+      "expected": {
+        "dataset_exists": true,
+        "observation_origin": "CALLER_SUPPLIED"
+      },
+      "observed": {
+        "dataset_exists": true,
+        "observation_origin": "CALLER_SUPPLIED"
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C06.json",
+          "sha256": "101564e90fa7a469c147e9206c2b5a7d3d59df113edcac2fae6f24c650170414",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C06.json",
+          "sha256": "101564e90fa7a469c147e9206c2b5a7d3d59df113edcac2fae6f24c650170414",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/runtime_identity.json",
+          "sha256": "7a4470ab67fd3f9d76757c63870bffcbb60cb04ac7e8dc80a31c4655c06447d8",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/observations_C06.json",
+          "sha256": "3f09e5e7693a1c0af16c85b6de390ae0dce9ab72fa3622d01bfa9425adba5c17",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/checks_C06.json",
+          "sha256": "59351d4856c54724204dedba5f046e5d7447b45f7d063f62d6c2918a4d3e2f44",
+          "role": "checks"
+        }
+      ]
+    },
+    {
+      "id": "C07",
+      "target": "win63",
+      "test_status": "PASS",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.3.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win63_g3_10_w20_acceptance_live",
+        "model_ref": "mcp1"
+      },
+      "checks": [
+        {
+          "name": "required_finite_check_pass",
+          "passed": true,
+          "details": "All sampled points are finite real numbers"
+        },
+        {
+          "name": "coordinates_metrics_complete",
+          "passed": true,
+          "details": "Coordinates and space dimension valid"
+        }
+      ],
+      "expected": {
+        "finite": true
+      },
+      "observed": {
+        "finite": true
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C07.json",
+          "sha256": "6d5446892b2f75c516fb7bb133025ad788cd702f5e5b4b97e97afeb6a04afbf9",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C07.json",
+          "sha256": "6d5446892b2f75c516fb7bb133025ad788cd702f5e5b4b97e97afeb6a04afbf9",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/runtime_identity.json",
+          "sha256": "7a4470ab67fd3f9d76757c63870bffcbb60cb04ac7e8dc80a31c4655c06447d8",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/observations_C07.json",
+          "sha256": "634bd8a54239e0f578d1eb11935eec53e1481185c3008d6cf760b60dcb20d080",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/checks_C07.json",
+          "sha256": "c8f0fd01a0458e310aae0b935cc75437fe4c0e60493633bfccdcad15b4a49893",
+          "role": "checks"
+        }
+      ]
+    },
+    {
+      "id": "C09",
+      "target": "win63",
+      "test_status": "PASS",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.3.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win63_g3_10_w20_acceptance_live",
+        "model_ref": "mcp1"
+      },
+      "checks": [
+        {
+          "name": "temperature_profile_accuracy",
+          "passed": true,
+          "details": "Max temp error: 0.0000K <= 0.1K"
+        },
+        {
+          "name": "authentic_boundary_flux_integral",
+          "passed": true,
+          "details": "Authentic heat flux: 80.0000W, error: 0.00% <= 1%"
+        },
+        {
+          "name": "fe_integral_computed_from_solver",
+          "passed": true,
+          "details": "Computed via COMSOL IntSurface feature"
+        }
+      ],
+      "expected": {
+        "T_0.025": 325.0,
+        "HeatFlow_ref": 80.0
+      },
+      "observed": {
+        "T_0.025": 325.00000000000017,
+        "HeatFlow_measured": 80.00000000000085
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C09.json",
+          "sha256": "10af2f5b4ec2a981e49eb5666bc2bdf58fad1f81858460cdd841958cc826360b",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C09.json",
+          "sha256": "10af2f5b4ec2a981e49eb5666bc2bdf58fad1f81858460cdd841958cc826360b",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/runtime_identity.json",
+          "sha256": "7a4470ab67fd3f9d76757c63870bffcbb60cb04ac7e8dc80a31c4655c06447d8",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/observations_C09.json",
+          "sha256": "0bfe5f97eaa6cf2f7c55b7039c7d813d7c2f40e3ec28c6e07304893424036f47",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/checks_C09.json",
+          "sha256": "bbe28d03309751004a225f1aa1fe3db3195ef6735000b78889c8ec1f952ec0f3",
+          "role": "checks"
+        }
+      ]
+    },
+    {
+      "id": "C10",
+      "target": "win63",
+      "test_status": "PASS",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.3.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win63_g3_10_w20_acceptance_live",
+        "model_ref": "mcp2"
+      },
+      "checks": [
+        {
+          "name": "transient_T_0.25_0.01_accuracy",
+          "passed": true,
+          "details": "x=0.25m, t=0.01s: obs=306.418K, ref=306.407K, err=0.0117K <= 0.1K"
+        },
+        {
+          "name": "transient_T_0.5_0.01_accuracy",
+          "passed": true,
+          "details": "x=0.5m, t=0.01s: obs=309.077K, ref=309.060K, err=0.0165K <= 0.1K"
+        },
+        {
+          "name": "transient_T_0.75_0.01_accuracy",
+          "passed": true,
+          "details": "x=0.75m, t=0.01s: obs=306.418K, ref=306.407K, err=0.0117K <= 0.1K"
+        },
+        {
+          "name": "transient_T_0.25_0.03_accuracy",
+          "passed": true,
+          "details": "x=0.25m, t=0.03s: obs=305.306K, ref=305.259K, err=0.0473K <= 0.1K"
+        },
+        {
+          "name": "transient_T_0.5_0.03_accuracy",
+          "passed": true,
+          "details": "x=0.5m, t=0.03s: obs=307.504K, ref=307.437K, err=0.0669K <= 0.1K"
+        },
+        {
+          "name": "transient_T_0.75_0.03_accuracy",
+          "passed": true,
+          "details": "x=0.75m, t=0.03s: obs=305.306K, ref=305.259K, err=0.0473K <= 0.1K"
+        },
+        {
+          "name": "transient_T_0.25_0.1_accuracy",
+          "passed": true,
+          "details": "x=0.25m, t=0.1s: obs=302.671K, ref=302.635K, err=0.0359K <= 0.1K"
+        },
+        {
+          "name": "transient_T_0.5_0.1_accuracy",
+          "passed": true,
+          "details": "x=0.5m, t=0.1s: obs=303.778K, ref=303.727K, err=0.0507K <= 0.1K"
+        },
+        {
+          "name": "transient_T_0.75_0.1_accuracy",
+          "passed": true,
+          "details": "x=0.75m, t=0.1s: obs=302.671K, ref=302.635K, err=0.0359K <= 0.1K"
+        },
+        {
+          "name": "validator_product_status_pass",
+          "passed": true,
+          "details": "Validator assessed: {'passed': True, 'reasons': [], 'product_status': 'PASS'}"
+        }
+      ],
+      "expected": {
+        "max_error_K": 0.1,
+        "observations_count": 9,
+        "validator_status": "PASS"
+      },
+      "observed": {
+        "max_error_K": 0.06686475812244908,
+        "observations_count": 9,
+        "validator_status": "PASS"
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C10.json",
+          "sha256": "7f1da66833c93b746755d8d657444d3eb3278d81cc9e300eb1ed275db95882d6",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C10.json",
+          "sha256": "7f1da66833c93b746755d8d657444d3eb3278d81cc9e300eb1ed275db95882d6",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/runtime_identity.json",
+          "sha256": "7a4470ab67fd3f9d76757c63870bffcbb60cb04ac7e8dc80a31c4655c06447d8",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/observations_C10.json",
+          "sha256": "6e2d4cc0b340533eac17f3d573a2bb8621d8b30d740db7507b777b2a53f05ac4",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/checks_C10.json",
+          "sha256": "1d996818cff9335becd6c95d1ba5169d13df50fc804f5d3492882e96cd27a460",
+          "role": "checks"
+        }
+      ]
+    },
+    {
+      "id": "C11",
+      "target": "win63",
+      "test_status": "PASS",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.3.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win63_g3_10_w20_acceptance_live",
+        "model_ref": "mcp1"
+      },
+      "checks": [
+        {
+          "name": "steady_flux_balance_conserved",
+          "passed": true,
+          "details": "Inflow matches outflow within 2%"
+        },
+        {
+          "name": "physical_flux_residual_computed",
+          "passed": true,
+          "details": "Residual <= 2%"
+        }
+      ],
+      "expected": {
+        "residual": 0.0,
+        "tolerance": 0.02
+      },
+      "observed": {
+        "residual": 1.4299672557172068e-14
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C11.json",
+          "sha256": "566c6adebf370988c0043246dbc5d5040e661e3e3b61ebf381960ebb851e9ba1",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C11.json",
+          "sha256": "566c6adebf370988c0043246dbc5d5040e661e3e3b61ebf381960ebb851e9ba1",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/runtime_identity.json",
+          "sha256": "7a4470ab67fd3f9d76757c63870bffcbb60cb04ac7e8dc80a31c4655c06447d8",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/observations_C11.json",
+          "sha256": "b8b3aea2c73e3f41613b1fcfb15b6ffdb1b534b5de5ab9a0afc83c0f9ecf4c69",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/checks_C11.json",
+          "sha256": "6cabf23051f1e4a1b8fa92e488989510a8c1ef9623f592a03a8f269810e0d094",
+          "role": "checks"
+        }
+      ]
+    },
+    {
+      "id": "C12",
+      "target": "win63",
+      "test_status": "PASS",
+      "evidence_level": "NATIVE_CONVERGENCE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.3.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win63_g3_10_w20_acceptance_live",
+        "model_ref": "mcp2"
+      },
+      "checks": [
+        {
+          "name": "three_mesh_levels_evaluated",
+          "passed": true,
+          "details": "Coarse, normal, fine mesh levels"
+        },
+        {
+          "name": "monotonic_spatial_error_reduction",
+          "passed": true,
+          "details": "Errors monotonically decrease with mesh refinement"
+        }
+      ],
+      "expected": {
+        "monotonic": true,
+        "levels": 3
+      },
+      "observed": {
+        "monotonic": true,
+        "levels": 3
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C12.json",
+          "sha256": "974fa594dc43df2c2b9f6b7f3946af15a3da3d53c37e478e0e82aed11f182dfd",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C12.json",
+          "sha256": "974fa594dc43df2c2b9f6b7f3946af15a3da3d53c37e478e0e82aed11f182dfd",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/runtime_identity.json",
+          "sha256": "7a4470ab67fd3f9d76757c63870bffcbb60cb04ac7e8dc80a31c4655c06447d8",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/observations_C12.json",
+          "sha256": "35faf779e64efc2b0a5f1106b687f85a523d81ff7411e3a651ddb268a5c64741",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/checks_C12.json",
+          "sha256": "2b1770f044a361f2225fa2237f83e66ddb83fb2d559fec194af78fe644706c35",
+          "role": "checks"
+        }
+      ]
+    },
+    {
+      "id": "C13",
+      "target": "win63",
+      "test_status": "PASS",
+      "evidence_level": "NATIVE_CONVERGENCE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.3.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win63_g3_10_w20_acceptance_live",
+        "model_ref": "mcp2"
+      },
+      "checks": [
+        {
+          "name": "three_temporal_levels_evaluated",
+          "passed": true,
+          "details": "dt=0.02, 0.01, 0.005 levels"
+        },
+        {
+          "name": "temporal_convergence_trend_verified",
+          "passed": true,
+          "details": "Errors decrease with smaller timestep"
+        }
+      ],
+      "expected": {
+        "monotonic": true,
+        "levels": 3
+      },
+      "observed": {
+        "monotonic": true,
+        "levels": 3
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C13.json",
+          "sha256": "ded97c43795634ce071ea40ec8a5c1218dadafbf19d47f8f2e1256d8ce2ad547",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C13.json",
+          "sha256": "ded97c43795634ce071ea40ec8a5c1218dadafbf19d47f8f2e1256d8ce2ad547",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/runtime_identity.json",
+          "sha256": "7a4470ab67fd3f9d76757c63870bffcbb60cb04ac7e8dc80a31c4655c06447d8",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/observations_C13.json",
+          "sha256": "99a1b9ca06a2e1811106a27dc83f85418e6264fb701975af3fe9bd57bce4eb16",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/checks_C13.json",
+          "sha256": "40315b9f11a756b63461151852e15f181f175e0f336684273eeecf004ad4c53c",
+          "role": "checks"
+        }
+      ]
+    },
+    {
+      "id": "C16",
+      "target": "win63",
+      "test_status": "PASS",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.3.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win63_g3_10_w20_acceptance_live",
+        "model_ref": "mcp1"
+      },
+      "checks": [
+        {
+          "name": "report_dual_files_created",
+          "passed": true,
+          "details": "Both JSON and Markdown reports written"
+        },
+        {
+          "name": "content_bound_evidence_hash_present",
+          "passed": true,
+          "details": "SHA256 evidence hash in report"
+        }
+      ],
+      "expected": {
+        "json_created": true,
+        "md_created": true
+      },
+      "observed": {
+        "json_created": true,
+        "md_created": true
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C16.json",
+          "sha256": "4105f5f8b46c5c23989d03e66f351d9f374f03b453e29955f6292075b1b7e860",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C16.json",
+          "sha256": "4105f5f8b46c5c23989d03e66f351d9f374f03b453e29955f6292075b1b7e860",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/runtime_identity.json",
+          "sha256": "7a4470ab67fd3f9d76757c63870bffcbb60cb04ac7e8dc80a31c4655c06447d8",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/observations_C16.json",
+          "sha256": "a0de350f2c3f9c2fb06f932f6a2787d8813b58e217ec8e8f5507c285b7ea40c2",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/checks_C16.json",
+          "sha256": "6446362b2f60fde783a8a284aeb7f5f4fa3b96731c1fbb6b1ba1524116ea4a8e",
+          "role": "checks"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/validation_report_win63.json",
+          "sha256": "329bff0f3cac6aaf92c298397b1ff8f99d543ab165b5ef56e246cf38eda22fc9",
+          "role": "validation_report_json"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/validation_report_win63.md",
+          "sha256": "5e6db8b567d2c913c4959c49416cf6ac1eba26b9308d287265547ff0a210e320",
+          "role": "validation_report_markdown"
+        }
+      ]
+    },
+    {
+      "id": "C18",
+      "target": "win63",
+      "test_status": "PASS",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.3.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win63_g3_10_w20_acceptance_live",
+        "model_ref": "mcp1"
+      },
+      "checks": [
+        {
+          "name": "session_health_authorized",
+          "passed": true,
+          "details": "Authorized session status READY"
+        },
+        {
+          "name": "execution_gateway_enforced",
+          "passed": true,
+          "details": "All public calls go through execution contract"
+        }
+      ],
+      "expected": {
+        "status": "READY"
+      },
+      "observed": {
+        "status": "READY"
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C18.json",
+          "sha256": "05e189b83430c32ac4b75eb82664a11aef325e553e9f8127433dc400436f0504",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C18.json",
+          "sha256": "05e189b83430c32ac4b75eb82664a11aef325e553e9f8127433dc400436f0504",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/runtime_identity.json",
+          "sha256": "7a4470ab67fd3f9d76757c63870bffcbb60cb04ac7e8dc80a31c4655c06447d8",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/observations_C18.json",
+          "sha256": "ec659f0ca96ae281f603b2e52e12bb7ac2af98800f200013d120b6416bd1f72b",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/checks_C18.json",
+          "sha256": "301f49a2b30b48cd464a375199e538288e6efb79609d7805b70f149b14f75495",
+          "role": "checks"
+        }
+      ]
+    },
+    {
+      "id": "C19",
+      "target": "win63",
+      "test_status": "PASS",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.3.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win63_g3_10_w20_acceptance_live",
+        "model_ref": "mcp1"
+      },
+      "checks": [
+        {
+          "name": "model_saved_successfully",
+          "passed": true,
+          "details": "Model saved to saved_6.3.mph"
+        },
+        {
+          "name": "solution_read_from_saved_model",
+          "passed": true,
+          "details": "Solution verified from saved model dataset"
+        },
+        {
+          "name": "reopened_model_verified",
+          "passed": true,
+          "details": "Reopened model saved_6.3.mph via model_load without recomputing"
+        }
+      ],
+      "expected": {
+        "saved_mph": true,
+        "solution_verified": true
+      },
+      "observed": {
+        "saved_mph": true,
+        "solution_verified": true
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C19.json",
+          "sha256": "d9526a311cbed1d7c2b6fb01387676230b5b056ee2b44d7e370d4a49711cb392",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/mcp_transcript_C19.json",
+          "sha256": "d9526a311cbed1d7c2b6fb01387676230b5b056ee2b44d7e370d4a49711cb392",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/runtime_identity.json",
+          "sha256": "7a4470ab67fd3f9d76757c63870bffcbb60cb04ac7e8dc80a31c4655c06447d8",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/observations_C19.json",
+          "sha256": "e572d40d1faf6e6daccfa5b1ac08104f74f6b0aac10d4c4a12502b9e857a43cd",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/checks_C19.json",
+          "sha256": "86cc715587b90df3794aaf91663b7d85804594b4bc5d34b4e2f003a2ae07f6d7",
+          "role": "checks"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win63/saved_6.3.mph",
+          "sha256": "ea96b8bb86979d704abca71a884be7e759a3e3ffaa8055b4b9de0576ce6c1c02",
+          "role": "saved_model_file"
+        }
+      ]
+    },
+    {
+      "id": "C02",
+      "target": "win64",
+      "test_status": "PASS",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.4.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win64_g3_10_w20_acceptance_live",
+        "model_ref": "mcp1"
+      },
+      "checks": [
+        {
+          "name": "mcp_public_entrypoint_call",
+          "passed": true,
+          "details": "Called validate.expressions via stdio MCP"
+        },
+        {
+          "name": "unwrapped_schema_parameters",
+          "passed": true,
+          "details": "Arguments unwrapped at top level"
+        },
+        {
+          "name": "execution_identity_bound",
+          "passed": true,
+          "details": "Job and operation IDs present in response"
+        }
+      ],
+      "expected": {
+        "status": "PASS",
+        "unwrapped": true
+      },
+      "observed": {
+        "status": "PASS"
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C02.json",
+          "sha256": "83b8dc18445be510991505b29664e2baa2295c6a80b3a348e2a73fb8c2ef196d",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C02.json",
+          "sha256": "83b8dc18445be510991505b29664e2baa2295c6a80b3a348e2a73fb8c2ef196d",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/runtime_identity.json",
+          "sha256": "2f9124192849a7b4e0759d48acecc51e4394acc796ce5be32fbd41ea1cd3b102",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/observations_C02.json",
+          "sha256": "39f365b94ee93661c69e48849b211d1e341a7e5c8f2bad42c7873ce9d5f56a2e",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/checks_C02.json",
+          "sha256": "4ed0c6c82a3d2b500a006c943b32736cf9efe94b40fdd49f6b189f13c7d18e79",
+          "role": "checks"
+        }
+      ]
+    },
+    {
+      "id": "C03",
+      "target": "win64",
+      "test_status": "PASS",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.4.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win64_g3_10_w20_acceptance_live",
+        "model_ref": "mcp1"
+      },
+      "checks": [
+        {
+          "name": "boundary_getter_only_inspection",
+          "passed": true,
+          "details": "Non-mutating getter inspection"
+        },
+        {
+          "name": "no_selection_all_called",
+          "passed": true,
+          "details": "Model selection verified unmodified"
+        }
+      ],
+      "expected": {
+        "boundary_status": "PASS"
+      },
+      "observed": {
+        "boundary_status": "PASS"
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C03.json",
+          "sha256": "13313328dc4f27a0c1ebeccb31c243e8f7fae7180f2d168bdeb672fb865be7d1",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C03.json",
+          "sha256": "13313328dc4f27a0c1ebeccb31c243e8f7fae7180f2d168bdeb672fb865be7d1",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/runtime_identity.json",
+          "sha256": "2f9124192849a7b4e0759d48acecc51e4394acc796ce5be32fbd41ea1cd3b102",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/observations_C03.json",
+          "sha256": "a982bf3e164b25ed66f1142221add71f332bcd218ccec285773b9e26023a839d",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/checks_C03.json",
+          "sha256": "b943cf5f2ec2b7e06fd47db823d240c67fbc88f1ffd1f165f8dd470fafdf8f10",
+          "role": "checks"
+        }
+      ]
+    },
+    {
+      "id": "C04",
+      "target": "win64",
+      "test_status": "PASS",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.4.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win64_g3_10_w20_acceptance_live",
+        "model_ref": "mcp1"
+      },
+      "checks": [
+        {
+          "name": "unary_minus_and_powers_accepted",
+          "passed": true,
+          "details": "Valid syntax accepted"
+        },
+        {
+          "name": "engine_parameter_evaluated",
+          "passed": true,
+          "details": "k_val evaluated to finite number"
+        }
+      ],
+      "expected": {
+        "expressions_status": "PASS"
+      },
+      "observed": {
+        "expressions_status": "PASS"
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C04.json",
+          "sha256": "4405473bcfd1bad12810c0113185d34d3fc72ec1cbd6aa0a440efec30d263282",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C04.json",
+          "sha256": "4405473bcfd1bad12810c0113185d34d3fc72ec1cbd6aa0a440efec30d263282",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/runtime_identity.json",
+          "sha256": "2f9124192849a7b4e0759d48acecc51e4394acc796ce5be32fbd41ea1cd3b102",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/observations_C04.json",
+          "sha256": "ce43546e2c0ec3af548ee9b3d4f27b67715951d7110cb7fc26156fee80c648eb",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/checks_C04.json",
+          "sha256": "8022b2d74053ceff5ed722d63c5d1b162a840aa06e9823570432b9264e35fc24",
+          "role": "checks"
+        }
+      ]
+    },
+    {
+      "id": "C05",
+      "target": "win64",
+      "test_status": "PASS",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.4.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win64_g3_10_w20_acceptance_live",
+        "model_ref": "mcp1"
+      },
+      "checks": [
+        {
+          "name": "preflight_ready_to_solve",
+          "passed": true,
+          "details": "Components, materials, physics inspected"
+        },
+        {
+          "name": "read_only_no_solve_performed",
+          "passed": true,
+          "details": "Preflight is purely read-only"
+        }
+      ],
+      "expected": {
+        "ready_to_solve": true
+      },
+      "observed": {
+        "ready_to_solve": true
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C05.json",
+          "sha256": "ac7c2a80e76a9105954bb3f21164988a16acdc9e02f381aa8cf2f070420556b4",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C05.json",
+          "sha256": "ac7c2a80e76a9105954bb3f21164988a16acdc9e02f381aa8cf2f070420556b4",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/runtime_identity.json",
+          "sha256": "2f9124192849a7b4e0759d48acecc51e4394acc796ce5be32fbd41ea1cd3b102",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/observations_C05.json",
+          "sha256": "32ef4c5f2c0edd0fbfb128b13ecd97582d53afe29d6e7e46e91eca7b2e907e71",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/checks_C05.json",
+          "sha256": "f6bafec914e57e57e5436a691cbf98dbfa4c75f95f769de2c3d8c372adb495ef",
+          "role": "checks"
+        }
+      ]
+    },
+    {
+      "id": "C06",
+      "target": "win64",
+      "test_status": "PASS",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.4.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win64_g3_10_w20_acceptance_live",
+        "model_ref": "mcp1"
+      },
+      "checks": [
+        {
+          "name": "dataset_existence_verified",
+          "passed": true,
+          "details": "Dataset dset1 verified on model"
+        },
+        {
+          "name": "provenance_origin_caller_supplied",
+          "passed": true,
+          "details": "Caller values tagged CALLER_SUPPLIED"
+        }
+      ],
+      "expected": {
+        "dataset_exists": true,
+        "observation_origin": "CALLER_SUPPLIED"
+      },
+      "observed": {
+        "dataset_exists": true,
+        "observation_origin": "CALLER_SUPPLIED"
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C06.json",
+          "sha256": "7d5b131c38d8f53b311fc29a5843007a9f1ca0736412a18b7436ae4c6026f7f0",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C06.json",
+          "sha256": "7d5b131c38d8f53b311fc29a5843007a9f1ca0736412a18b7436ae4c6026f7f0",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/runtime_identity.json",
+          "sha256": "2f9124192849a7b4e0759d48acecc51e4394acc796ce5be32fbd41ea1cd3b102",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/observations_C06.json",
+          "sha256": "33ab8b76033ec17c03ced5f8e656710a6128040fe1f34208f1f95d7573160a74",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/checks_C06.json",
+          "sha256": "9548827d9b2a5af9d09c04f7cd177cc9d24058878874e05cd1245c74aa07c1f4",
+          "role": "checks"
+        }
+      ]
+    },
+    {
+      "id": "C07",
+      "target": "win64",
+      "test_status": "PASS",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.4.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win64_g3_10_w20_acceptance_live",
+        "model_ref": "mcp1"
+      },
+      "checks": [
+        {
+          "name": "required_finite_check_pass",
+          "passed": true,
+          "details": "All sampled points are finite real numbers"
+        },
+        {
+          "name": "coordinates_metrics_complete",
+          "passed": true,
+          "details": "Coordinates and space dimension valid"
+        }
+      ],
+      "expected": {
+        "finite": true
+      },
+      "observed": {
+        "finite": true
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C07.json",
+          "sha256": "62b3d01e16265b7819d82d46df398b3141d3dd7b50b18046ad7aa2f1a50052c2",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C07.json",
+          "sha256": "62b3d01e16265b7819d82d46df398b3141d3dd7b50b18046ad7aa2f1a50052c2",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/runtime_identity.json",
+          "sha256": "2f9124192849a7b4e0759d48acecc51e4394acc796ce5be32fbd41ea1cd3b102",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/observations_C07.json",
+          "sha256": "a31a31801eaa258058b102034275637c920815871d045c1ca4642d77f587591c",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/checks_C07.json",
+          "sha256": "4ee2d15d2ed3592555cb550c15ad5070d55c745381f61b94f2d02a48afe71f41",
+          "role": "checks"
+        }
+      ]
+    },
+    {
+      "id": "C09",
+      "target": "win64",
+      "test_status": "PASS",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.4.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win64_g3_10_w20_acceptance_live",
+        "model_ref": "mcp1"
+      },
+      "checks": [
+        {
+          "name": "temperature_profile_accuracy",
+          "passed": true,
+          "details": "Max temp error: 0.0000K <= 0.1K"
+        },
+        {
+          "name": "authentic_boundary_flux_integral",
+          "passed": true,
+          "details": "Authentic heat flux: 80.0000W, error: 0.00% <= 1%"
+        },
+        {
+          "name": "fe_integral_computed_from_solver",
+          "passed": true,
+          "details": "Computed via COMSOL IntSurface feature"
+        }
+      ],
+      "expected": {
+        "T_0.025": 325.0,
+        "HeatFlow_ref": 80.0
+      },
+      "observed": {
+        "T_0.025": 324.9999999999999,
+        "HeatFlow_measured": 79.99999999999962
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C09.json",
+          "sha256": "d73309573d83fc3e892e0882a30566f1432fc328d9f199ff1b173172449d7c49",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C09.json",
+          "sha256": "d73309573d83fc3e892e0882a30566f1432fc328d9f199ff1b173172449d7c49",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/runtime_identity.json",
+          "sha256": "2f9124192849a7b4e0759d48acecc51e4394acc796ce5be32fbd41ea1cd3b102",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/observations_C09.json",
+          "sha256": "d65172b05f8ee0a05e51cc3231bd66f48412614e3678dcf1b28d5a7844f15118",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/checks_C09.json",
+          "sha256": "f229b2f6be37c98b6c0e6142ea639c6e8b600dd84d0b10649ebdb1a8ba84373b",
+          "role": "checks"
+        }
+      ]
+    },
+    {
+      "id": "C10",
+      "target": "win64",
+      "test_status": "PASS",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.4.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win64_g3_10_w20_acceptance_live",
+        "model_ref": "mcp2"
+      },
+      "checks": [
+        {
+          "name": "transient_T_0.25_0.01_accuracy",
+          "passed": true,
+          "details": "x=0.25m, t=0.01s: obs=306.418K, ref=306.407K, err=0.0117K <= 0.1K"
+        },
+        {
+          "name": "transient_T_0.5_0.01_accuracy",
+          "passed": true,
+          "details": "x=0.5m, t=0.01s: obs=309.077K, ref=309.060K, err=0.0165K <= 0.1K"
+        },
+        {
+          "name": "transient_T_0.75_0.01_accuracy",
+          "passed": true,
+          "details": "x=0.75m, t=0.01s: obs=306.418K, ref=306.407K, err=0.0117K <= 0.1K"
+        },
+        {
+          "name": "transient_T_0.25_0.03_accuracy",
+          "passed": true,
+          "details": "x=0.25m, t=0.03s: obs=305.306K, ref=305.259K, err=0.0473K <= 0.1K"
+        },
+        {
+          "name": "transient_T_0.5_0.03_accuracy",
+          "passed": true,
+          "details": "x=0.5m, t=0.03s: obs=307.504K, ref=307.437K, err=0.0669K <= 0.1K"
+        },
+        {
+          "name": "transient_T_0.75_0.03_accuracy",
+          "passed": true,
+          "details": "x=0.75m, t=0.03s: obs=305.306K, ref=305.259K, err=0.0473K <= 0.1K"
+        },
+        {
+          "name": "transient_T_0.25_0.1_accuracy",
+          "passed": true,
+          "details": "x=0.25m, t=0.1s: obs=302.671K, ref=302.635K, err=0.0359K <= 0.1K"
+        },
+        {
+          "name": "transient_T_0.5_0.1_accuracy",
+          "passed": true,
+          "details": "x=0.5m, t=0.1s: obs=303.778K, ref=303.727K, err=0.0507K <= 0.1K"
+        },
+        {
+          "name": "transient_T_0.75_0.1_accuracy",
+          "passed": true,
+          "details": "x=0.75m, t=0.1s: obs=302.671K, ref=302.635K, err=0.0359K <= 0.1K"
+        },
+        {
+          "name": "validator_product_status_pass",
+          "passed": true,
+          "details": "Validator assessed: {'passed': True, 'reasons': [], 'product_status': 'PASS'}"
+        }
+      ],
+      "expected": {
+        "max_error_K": 0.1,
+        "observations_count": 9,
+        "validator_status": "PASS"
+      },
+      "observed": {
+        "max_error_K": 0.06686475812279014,
+        "observations_count": 9,
+        "validator_status": "PASS"
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C10.json",
+          "sha256": "b110a1a5ad9a82a5aef176e3c3a328d2c56ac456cb50d518b245682160587d6a",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C10.json",
+          "sha256": "b110a1a5ad9a82a5aef176e3c3a328d2c56ac456cb50d518b245682160587d6a",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/runtime_identity.json",
+          "sha256": "2f9124192849a7b4e0759d48acecc51e4394acc796ce5be32fbd41ea1cd3b102",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/observations_C10.json",
+          "sha256": "45f3206caa742953d7aaaab228b288ee4133783c1e163d06bc2712f1299e2b2b",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/checks_C10.json",
+          "sha256": "73f0561dfc9627d59b2c0089179e5244a9e041e49f3bd04302dda5883a7d2bf8",
+          "role": "checks"
+        }
+      ]
+    },
+    {
+      "id": "C11",
+      "target": "win64",
+      "test_status": "PASS",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.4.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win64_g3_10_w20_acceptance_live",
+        "model_ref": "mcp1"
+      },
+      "checks": [
+        {
+          "name": "steady_flux_balance_conserved",
+          "passed": true,
+          "details": "Inflow matches outflow within 2%"
+        },
+        {
+          "name": "physical_flux_residual_computed",
+          "passed": true,
+          "details": "Residual <= 2%"
+        }
+      ],
+      "expected": {
+        "residual": 0.0,
+        "tolerance": 0.02
+      },
+      "observed": {
+        "residual": 2.0428103653102938e-15
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C11.json",
+          "sha256": "cfef3ceaa0c0fad7d9eb4adca9cbb898ac5548d664d5c21c01ae05b2db545146",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C11.json",
+          "sha256": "cfef3ceaa0c0fad7d9eb4adca9cbb898ac5548d664d5c21c01ae05b2db545146",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/runtime_identity.json",
+          "sha256": "2f9124192849a7b4e0759d48acecc51e4394acc796ce5be32fbd41ea1cd3b102",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/observations_C11.json",
+          "sha256": "b8f9e60b005f04b30ca11a53e91e4dfb222742386d6e28f54f80616f19dcf3b3",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/checks_C11.json",
+          "sha256": "43b0e42d64c9554f38f89f6bcd2768492d61a2d6cbb32205a0e3bf7c0ae434d8",
+          "role": "checks"
+        }
+      ]
+    },
+    {
+      "id": "C12",
+      "target": "win64",
+      "test_status": "PASS",
+      "evidence_level": "NATIVE_CONVERGENCE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.4.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win64_g3_10_w20_acceptance_live",
+        "model_ref": "mcp2"
+      },
+      "checks": [
+        {
+          "name": "three_mesh_levels_evaluated",
+          "passed": true,
+          "details": "Coarse, normal, fine mesh levels"
+        },
+        {
+          "name": "monotonic_spatial_error_reduction",
+          "passed": true,
+          "details": "Errors monotonically decrease with mesh refinement"
+        }
+      ],
+      "expected": {
+        "monotonic": true,
+        "levels": 3
+      },
+      "observed": {
+        "monotonic": true,
+        "levels": 3
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C12.json",
+          "sha256": "970f79693c6cbf87b7486ed6d706b9e3ad2841090bf56ec69bb19013525ee09f",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C12.json",
+          "sha256": "970f79693c6cbf87b7486ed6d706b9e3ad2841090bf56ec69bb19013525ee09f",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/runtime_identity.json",
+          "sha256": "2f9124192849a7b4e0759d48acecc51e4394acc796ce5be32fbd41ea1cd3b102",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/observations_C12.json",
+          "sha256": "7923fa336d7802347c4c403353e45d5c00288129d91117ba09c70ef16dbee03e",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/checks_C12.json",
+          "sha256": "8a7f488ea7918b9d5ed73c53ab2cf0fcb2a8d215dea906995f351eca978b5ec8",
+          "role": "checks"
+        }
+      ]
+    },
+    {
+      "id": "C13",
+      "target": "win64",
+      "test_status": "PASS",
+      "evidence_level": "NATIVE_CONVERGENCE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.4.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win64_g3_10_w20_acceptance_live",
+        "model_ref": "mcp2"
+      },
+      "checks": [
+        {
+          "name": "three_temporal_levels_evaluated",
+          "passed": true,
+          "details": "dt=0.02, 0.01, 0.005 levels"
+        },
+        {
+          "name": "temporal_convergence_trend_verified",
+          "passed": true,
+          "details": "Errors decrease with smaller timestep"
+        }
+      ],
+      "expected": {
+        "monotonic": true,
+        "levels": 3
+      },
+      "observed": {
+        "monotonic": true,
+        "levels": 3
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C13.json",
+          "sha256": "7bbeb869040a424fcfddeb9a0ca183993d0dfe81b0ea908d2c036e058fcfe619",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C13.json",
+          "sha256": "7bbeb869040a424fcfddeb9a0ca183993d0dfe81b0ea908d2c036e058fcfe619",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/runtime_identity.json",
+          "sha256": "2f9124192849a7b4e0759d48acecc51e4394acc796ce5be32fbd41ea1cd3b102",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/observations_C13.json",
+          "sha256": "d8da3ce17db8a261485139a11592e1aca29207a2b4c95c7773d22f6fcd6fa579",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/checks_C13.json",
+          "sha256": "a595bcf9ad06b3654a70d3f6fcaeaa114ae496c32e67fcddb37c498b540ec416",
+          "role": "checks"
+        }
+      ]
+    },
+    {
+      "id": "C16",
+      "target": "win64",
+      "test_status": "PASS",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.4.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win64_g3_10_w20_acceptance_live",
+        "model_ref": "mcp1"
+      },
+      "checks": [
+        {
+          "name": "report_dual_files_created",
+          "passed": true,
+          "details": "Both JSON and Markdown reports written"
+        },
+        {
+          "name": "content_bound_evidence_hash_present",
+          "passed": true,
+          "details": "SHA256 evidence hash in report"
+        }
+      ],
+      "expected": {
+        "json_created": true,
+        "md_created": true
+      },
+      "observed": {
+        "json_created": true,
+        "md_created": true
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C16.json",
+          "sha256": "3f5743552935dfc951e47d87b03b110b2b5e78fea267b96106fb603c9b38b6f6",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C16.json",
+          "sha256": "3f5743552935dfc951e47d87b03b110b2b5e78fea267b96106fb603c9b38b6f6",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/runtime_identity.json",
+          "sha256": "2f9124192849a7b4e0759d48acecc51e4394acc796ce5be32fbd41ea1cd3b102",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/observations_C16.json",
+          "sha256": "d9ff47c213551a042154aac280e2fc15b13eebbe0664cf510841dbcb67e0434c",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/checks_C16.json",
+          "sha256": "8f59b191dd44bf21b5af008cc1e67033723743edc2c6cc0c58e53615bd51a03d",
+          "role": "checks"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/validation_report_win64.json",
+          "sha256": "daee949dfcc2e150754f870a83db3bc1d36eb9afeaf862cac6a3551a58e6e064",
+          "role": "validation_report_json"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/validation_report_win64.md",
+          "sha256": "3edf408ea0f0503a2b026026cf5dccb1cc09e02cda38a6099816a1fbe56cd920",
+          "role": "validation_report_markdown"
+        }
+      ]
+    },
+    {
+      "id": "C18",
+      "target": "win64",
+      "test_status": "PASS",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.4.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win64_g3_10_w20_acceptance_live",
+        "model_ref": "mcp1"
+      },
+      "checks": [
+        {
+          "name": "session_health_authorized",
+          "passed": true,
+          "details": "Authorized session status READY"
+        },
+        {
+          "name": "execution_gateway_enforced",
+          "passed": true,
+          "details": "All public calls go through execution contract"
+        }
+      ],
+      "expected": {
+        "status": "READY"
+      },
+      "observed": {
+        "status": "READY"
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C18.json",
+          "sha256": "4dd4364c6aadab1410cb4f050865c1f257602488abcd640276b8b1baa4a6630f",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C18.json",
+          "sha256": "4dd4364c6aadab1410cb4f050865c1f257602488abcd640276b8b1baa4a6630f",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/runtime_identity.json",
+          "sha256": "2f9124192849a7b4e0759d48acecc51e4394acc796ce5be32fbd41ea1cd3b102",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/observations_C18.json",
+          "sha256": "c93826c35f6395409f4362b490685d8840a7052ebeb94181edfdfe55d29b299e",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/checks_C18.json",
+          "sha256": "af39d46d08186abab993b527c1128c3dd32016ed345d9050dfb7fdd1916fcc22",
+          "role": "checks"
+        }
+      ]
+    },
+    {
+      "id": "C19",
+      "target": "win64",
+      "test_status": "PASS",
+      "evidence_level": "PUBLIC_MCP_NATIVE",
+      "production_entrypoint": true,
+      "observation_origin": "ENGINE_EVALUATION",
+      "run_id": "g3_10_w20_acceptance_live",
+      "source_commit": "886affadc83477e940238c723edd569d00559985",
+      "native_context": {
+        "runtime_build": "COMSOL Multiphysics 6.4.0.290 (Windows x86_64)",
+        "worker_instance_id": "worker_win64_g3_10_w20_acceptance_live",
+        "model_ref": "mcp1"
+      },
+      "checks": [
+        {
+          "name": "model_saved_successfully",
+          "passed": true,
+          "details": "Model saved to saved_6.4.mph"
+        },
+        {
+          "name": "solution_read_from_saved_model",
+          "passed": true,
+          "details": "Solution verified from saved model dataset"
+        },
+        {
+          "name": "reopened_model_verified",
+          "passed": true,
+          "details": "Reopened model saved_6.4.mph via model_load without recomputing"
+        }
+      ],
+      "expected": {
+        "saved_mph": true,
+        "solution_verified": true
+      },
+      "observed": {
+        "saved_mph": true,
+        "solution_verified": true
+      },
+      "artifacts": [
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C19.json",
+          "sha256": "a3df06ee8ce754a9ef21892b2ae291daee430e6b368d24f0f294652c0ef4dd79",
+          "role": "mcp_transcript"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/mcp_transcript_C19.json",
+          "sha256": "a3df06ee8ce754a9ef21892b2ae291daee430e6b368d24f0f294652c0ef4dd79",
+          "role": "mcp_capture"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/runtime_identity.json",
+          "sha256": "2f9124192849a7b4e0759d48acecc51e4394acc796ce5be32fbd41ea1cd3b102",
+          "role": "runtime_identity"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/source_manifest.json",
+          "sha256": "974b56350aa7d5fe55100aa485dccd1e1b37746c63cae9c14d56f00cd2a1e635",
+          "role": "source_manifest"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/observations_C19.json",
+          "sha256": "2e54798fac9b0d770a99a70b0d170315fe4e3f5539811dc045f3f69ef043de0e",
+          "role": "observations"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/checks_C19.json",
+          "sha256": "c475e9664d59804a69401721382a0858036ca7981c2110a2bd90fbc65c7b35bd",
+          "role": "checks"
+        },
+        {
+          "path": "evidence/g3_10_windows_w20/win64/saved_6.4.mph",
+          "sha256": "07612b622aab130a393c0bfb7442df4324c8defab6c0c52be200acad2240994f",
+          "role": "saved_model_file"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "status": "PASS",
+    "total_records": 37,
+    "passing_records": 37,
+    "native_execution_certified": false
+  }
+}

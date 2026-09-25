@@ -1,0 +1,274 @@
+{
+  "capture_origin": "CAPTURED_STDIN_STDOUT",
+  "run_id": "g3_10_w20_acceptance_live",
+  "target": "win64",
+  "case_id": "C02",
+  "events": [
+    {
+      "direction": "request",
+      "method": "tools/call",
+      "request_id": "4",
+      "timestamp": "2026-09-25T00:34:31.710351+00:00",
+      "payload": {
+        "name": "validate.expressions",
+        "arguments": {
+          "expressions": [
+            "k_val",
+            "L"
+          ],
+          "context": {
+            "threshold": 0.05
+          }
+        }
+      },
+      "raw_jsonrpc": {
+        "method": "tools/call",
+        "params": {
+          "name": "validate.expressions",
+          "arguments": {
+            "expressions": [
+              "k_val",
+              "L"
+            ],
+            "context": {
+              "threshold": 0.05
+            }
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 4
+      }
+    },
+    {
+      "direction": "response",
+      "request_id": "4",
+      "timestamp": "2026-09-25T00:34:31.834619+00:00",
+      "payload": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\": true, \"data\": {\"status\": \"PASS\", \"execution_status\": \"PASS\", \"numerical_verification_status\": \"PASS\", \"physical_validation_status\": \"UNVERIFIED\", \"expressions_checked\": 2, \"findings\": [{\"name\": \"k_val\", \"expr\": \"k_val\", \"status\": \"PASS\"}, {\"name\": \"L\", \"expr\": \"L\", \"status\": \"PASS\"}], \"domain_state\": \"succeeded\", \"verification_status\": \"NOT_APPLICABLE\", \"execution_state_unknown\": false, \"partial_change\": false, \"cleanup_failed\": false, \"dispatch_stage\": \"post_dispatch\", \"domain_outcome\": {\"operation\": \"validate.expressions\", \"state\": \"succeeded\", \"verification_status\": \"NOT_APPLICABLE\", \"cleanup_failed\": false, \"execution_state_unknown\": false, \"dispatch_stage\": \"post_dispatch\", \"status_token\": \"PASS\", \"execution_status\": \"PASS\", \"witness\": {\"engine_calls\": 4, \"mutation_method\": \"evaluate\", \"methods\": [\"evaluate\", \"param\"], \"dispatches\": [{\"command\": \"call\", \"method\": \"param\", \"args_count\": 0, \"receiver\": \"h-d125b30d-fbd0-465f-99cb-e30e945ed386\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"evaluate\", \"args_count\": 1, \"receiver\": \"h-5aa7f202-da57-40e0-982b-cf47fdc8782a\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"param\", \"args_count\": 0, \"receiver\": \"h-d125b30d-fbd0-465f-99cb-e30e945ed386\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"evaluate\", \"args_count\": 1, \"receiver\": \"h-c451aac0-b2b3-4fd1-8ff7-79586f5d34e6\", \"is_mutation\": true}], \"mutation_issued\": true}, \"details\": {\"status_token\": \"PASS\"}}, \"effect\": \"evaluate\"}, \"error\": null, \"execution\": {\"session_id\": \"session-77d9001ba07f2cbb69aa49c7\", \"model_ref\": {\"schema_version\": 1, \"session_id\": \"session-77d9001ba07f2cbb69aa49c7\", \"server_instance_id\": \"1a6691e8a852f9ef87c917add32dcd6f3f937e57a00ad1c6882ebfb024df0518\", \"model_tag\": \"mcp1\", \"generation\": 1}, \"revision\": 1, \"dirty\": false, \"server_ownership\": \"shared\", \"model_ownership\": \"user_owned\", \"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"request_id\": \"4826f560-93ec-411e-ab54-4e9f357bc76a\", \"operation_id\": \"4e10477d-54bb-4fee-be2e-ce6f4dc81ad9\", \"request_hash\": \"ea4704f58b954f90ead9efaeebfd2030401b5a17748179f8e090bc63ce4b695a\", \"idempotency_key\": \"c6d21e21-2bbd-4dc4-860f-9b68e85690c0\", \"job_id\": \"dd10b94b-52be-4ee3-abc0-b30a8dbc309b\"}}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "data": {
+            "status": "PASS",
+            "execution_status": "PASS",
+            "numerical_verification_status": "PASS",
+            "physical_validation_status": "UNVERIFIED",
+            "expressions_checked": 2,
+            "findings": [
+              {
+                "name": "k_val",
+                "expr": "k_val",
+                "status": "PASS"
+              },
+              {
+                "name": "L",
+                "expr": "L",
+                "status": "PASS"
+              }
+            ],
+            "domain_state": "succeeded",
+            "verification_status": "NOT_APPLICABLE",
+            "execution_state_unknown": false,
+            "partial_change": false,
+            "cleanup_failed": false,
+            "dispatch_stage": "post_dispatch",
+            "domain_outcome": {
+              "operation": "validate.expressions",
+              "state": "succeeded",
+              "verification_status": "NOT_APPLICABLE",
+              "cleanup_failed": false,
+              "execution_state_unknown": false,
+              "dispatch_stage": "post_dispatch",
+              "status_token": "PASS",
+              "execution_status": "PASS",
+              "witness": {
+                "engine_calls": 4,
+                "mutation_method": "evaluate",
+                "methods": [
+                  "evaluate",
+                  "param"
+                ],
+                "dispatches": [
+                  {
+                    "command": "call",
+                    "method": "param",
+                    "args_count": 0,
+                    "receiver": "h-d125b30d-fbd0-465f-99cb-e30e945ed386",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "evaluate",
+                    "args_count": 1,
+                    "receiver": "h-5aa7f202-da57-40e0-982b-cf47fdc8782a",
+                    "is_mutation": true
+                  },
+                  {
+                    "command": "call",
+                    "method": "param",
+                    "args_count": 0,
+                    "receiver": "h-d125b30d-fbd0-465f-99cb-e30e945ed386",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "evaluate",
+                    "args_count": 1,
+                    "receiver": "h-c451aac0-b2b3-4fd1-8ff7-79586f5d34e6",
+                    "is_mutation": true
+                  }
+                ],
+                "mutation_issued": true
+              },
+              "details": {
+                "status_token": "PASS"
+              }
+            },
+            "effect": "evaluate"
+          },
+          "error": null,
+          "execution": {
+            "session_id": "session-77d9001ba07f2cbb69aa49c7",
+            "model_ref": {
+              "schema_version": 1,
+              "session_id": "session-77d9001ba07f2cbb69aa49c7",
+              "server_instance_id": "1a6691e8a852f9ef87c917add32dcd6f3f937e57a00ad1c6882ebfb024df0518",
+              "model_tag": "mcp1",
+              "generation": 1
+            },
+            "revision": 1,
+            "dirty": false,
+            "server_ownership": "shared",
+            "model_ownership": "user_owned",
+            "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+            "request_id": "4826f560-93ec-411e-ab54-4e9f357bc76a",
+            "operation_id": "4e10477d-54bb-4fee-be2e-ce6f4dc81ad9",
+            "request_hash": "ea4704f58b954f90ead9efaeebfd2030401b5a17748179f8e090bc63ce4b695a",
+            "idempotency_key": "c6d21e21-2bbd-4dc4-860f-9b68e85690c0",
+            "job_id": "dd10b94b-52be-4ee3-abc0-b30a8dbc309b"
+          }
+        },
+        "isError": false
+      },
+      "raw_jsonrpc": {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"success\": true, \"data\": {\"status\": \"PASS\", \"execution_status\": \"PASS\", \"numerical_verification_status\": \"PASS\", \"physical_validation_status\": \"UNVERIFIED\", \"expressions_checked\": 2, \"findings\": [{\"name\": \"k_val\", \"expr\": \"k_val\", \"status\": \"PASS\"}, {\"name\": \"L\", \"expr\": \"L\", \"status\": \"PASS\"}], \"domain_state\": \"succeeded\", \"verification_status\": \"NOT_APPLICABLE\", \"execution_state_unknown\": false, \"partial_change\": false, \"cleanup_failed\": false, \"dispatch_stage\": \"post_dispatch\", \"domain_outcome\": {\"operation\": \"validate.expressions\", \"state\": \"succeeded\", \"verification_status\": \"NOT_APPLICABLE\", \"cleanup_failed\": false, \"execution_state_unknown\": false, \"dispatch_stage\": \"post_dispatch\", \"status_token\": \"PASS\", \"execution_status\": \"PASS\", \"witness\": {\"engine_calls\": 4, \"mutation_method\": \"evaluate\", \"methods\": [\"evaluate\", \"param\"], \"dispatches\": [{\"command\": \"call\", \"method\": \"param\", \"args_count\": 0, \"receiver\": \"h-d125b30d-fbd0-465f-99cb-e30e945ed386\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"evaluate\", \"args_count\": 1, \"receiver\": \"h-5aa7f202-da57-40e0-982b-cf47fdc8782a\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"param\", \"args_count\": 0, \"receiver\": \"h-d125b30d-fbd0-465f-99cb-e30e945ed386\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"evaluate\", \"args_count\": 1, \"receiver\": \"h-c451aac0-b2b3-4fd1-8ff7-79586f5d34e6\", \"is_mutation\": true}], \"mutation_issued\": true}, \"details\": {\"status_token\": \"PASS\"}}, \"effect\": \"evaluate\"}, \"error\": null, \"execution\": {\"session_id\": \"session-77d9001ba07f2cbb69aa49c7\", \"model_ref\": {\"schema_version\": 1, \"session_id\": \"session-77d9001ba07f2cbb69aa49c7\", \"server_instance_id\": \"1a6691e8a852f9ef87c917add32dcd6f3f937e57a00ad1c6882ebfb024df0518\", \"model_tag\": \"mcp1\", \"generation\": 1}, \"revision\": 1, \"dirty\": false, \"server_ownership\": \"shared\", \"model_ownership\": \"user_owned\", \"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"request_id\": \"4826f560-93ec-411e-ab54-4e9f357bc76a\", \"operation_id\": \"4e10477d-54bb-4fee-be2e-ce6f4dc81ad9\", \"request_hash\": \"ea4704f58b954f90ead9efaeebfd2030401b5a17748179f8e090bc63ce4b695a\", \"idempotency_key\": \"c6d21e21-2bbd-4dc4-860f-9b68e85690c0\", \"job_id\": \"dd10b94b-52be-4ee3-abc0-b30a8dbc309b\"}}"
+            }
+          ],
+          "structuredContent": {
+            "success": true,
+            "data": {
+              "status": "PASS",
+              "execution_status": "PASS",
+              "numerical_verification_status": "PASS",
+              "physical_validation_status": "UNVERIFIED",
+              "expressions_checked": 2,
+              "findings": [
+                {
+                  "name": "k_val",
+                  "expr": "k_val",
+                  "status": "PASS"
+                },
+                {
+                  "name": "L",
+                  "expr": "L",
+                  "status": "PASS"
+                }
+              ],
+              "domain_state": "succeeded",
+              "verification_status": "NOT_APPLICABLE",
+              "execution_state_unknown": false,
+              "partial_change": false,
+              "cleanup_failed": false,
+              "dispatch_stage": "post_dispatch",
+              "domain_outcome": {
+                "operation": "validate.expressions",
+                "state": "succeeded",
+                "verification_status": "NOT_APPLICABLE",
+                "cleanup_failed": false,
+                "execution_state_unknown": false,
+                "dispatch_stage": "post_dispatch",
+                "status_token": "PASS",
+                "execution_status": "PASS",
+                "witness": {
+                  "engine_calls": 4,
+                  "mutation_method": "evaluate",
+                  "methods": [
+                    "evaluate",
+                    "param"
+                  ],
+                  "dispatches": [
+                    {
+                      "command": "call",
+                      "method": "param",
+                      "args_count": 0,
+                      "receiver": "h-d125b30d-fbd0-465f-99cb-e30e945ed386",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "evaluate",
+                      "args_count": 1,
+                      "receiver": "h-5aa7f202-da57-40e0-982b-cf47fdc8782a",
+                      "is_mutation": true
+                    },
+                    {
+                      "command": "call",
+                      "method": "param",
+                      "args_count": 0,
+                      "receiver": "h-d125b30d-fbd0-465f-99cb-e30e945ed386",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "evaluate",
+                      "args_count": 1,
+                      "receiver": "h-c451aac0-b2b3-4fd1-8ff7-79586f5d34e6",
+                      "is_mutation": true
+                    }
+                  ],
+                  "mutation_issued": true
+                },
+                "details": {
+                  "status_token": "PASS"
+                }
+              },
+              "effect": "evaluate"
+            },
+            "error": null,
+            "execution": {
+              "session_id": "session-77d9001ba07f2cbb69aa49c7",
+              "model_ref": {
+                "schema_version": 1,
+                "session_id": "session-77d9001ba07f2cbb69aa49c7",
+                "server_instance_id": "1a6691e8a852f9ef87c917add32dcd6f3f937e57a00ad1c6882ebfb024df0518",
+                "model_tag": "mcp1",
+                "generation": 1
+              },
+              "revision": 1,
+              "dirty": false,
+              "server_ownership": "shared",
+              "model_ownership": "user_owned",
+              "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+              "request_id": "4826f560-93ec-411e-ab54-4e9f357bc76a",
+              "operation_id": "4e10477d-54bb-4fee-be2e-ce6f4dc81ad9",
+              "request_hash": "ea4704f58b954f90ead9efaeebfd2030401b5a17748179f8e090bc63ce4b695a",
+              "idempotency_key": "c6d21e21-2bbd-4dc4-860f-9b68e85690c0",
+              "job_id": "dd10b94b-52be-4ee3-abc0-b30a8dbc309b"
+            }
+          },
+          "isError": false
+        }
+      }
+    }
+  ]
+}

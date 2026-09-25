@@ -18,6 +18,7 @@ from ._execution_contract import (
     SessionLedger,
     model_ref_from_mapping,
     canonical_project_path,
+    permission_for_legacy_tool,
 )
 from ._execution_service import ExecutionService
 from ._runtime_state import save_runtime_state, restore_runtime_state
@@ -370,7 +371,7 @@ class ManagedBackend:
                 # Legacy Python callables retain their historical signatures;
                 # the envelope identity belongs to the service ticket and
                 # must not be injected into ``fn(**args)``.
-                call_args = self._g2_body(call_args)
+                call_args = self._g2_body(call_args, entry.operation_id)
             return self.invoke(entry.operation_id, call_args, nested_execution, operation_id, event_callback)
         if operation in {"docs_index", "docs.index", "docs.search", "docs.get", "docs.examples", "docs.error_search",
                          "code_describe_java", "code.describe_java", "code_compile_java", "code.compile_java",
@@ -556,23 +557,25 @@ class ManagedBackend:
         return captured
 
     @staticmethod
-    def _g2_body(arguments: dict[str, Any]) -> dict[str, Any]:
+    def _g2_body(arguments: dict[str, Any], operation: str | None = None) -> dict[str, Any]:
         body = {key: value for key, value in arguments.items() if key not in {"project_id", "session_id", "model_ref", "expected_revision", "idempotency_key", "request_id"}}
-        if "arguments" in body and isinstance(body["arguments"], Mapping):
+        is_w20 = operation is not None and (operation.startswith("validate.") or operation.startswith("validate_"))
+        if is_w20 and "arguments" in body and isinstance(body["arguments"], Mapping):
             inner = dict(body.pop("arguments"))
             for k, v in inner.items():
                 if k in body and body[k] is not None and body[k] != v:
                     raise ExecutionContractError("INVALID_REQUEST", f"Conflicting values for argument '{k}'")
-                body.setdefault(k, v)
+                if k not in body or body[k] is None:
+                    body[k] = v
         return body
 
     def _invoke_g2_control(self, operation, arguments, execution, operation_id):
         if operation in {"docs_index", "docs.index"}:
-            body = self._g2_body(arguments)
+            body = self._g2_body(arguments, operation)
             result = self.docs_index.index(runtime_id=body.get("runtime_id", ""), sources=body.get("sources", []), version=body.get("version"), product=body.get("product", "COMSOL"))
             return {"success": True, "data": result, "execution": {"operation_id": operation_id}}
         if operation in {"docs.search", "docs.get", "docs.examples", "docs.error_search"}:
-            body = self._g2_body(arguments)
+            body = self._g2_body(arguments, operation)
             if operation in {"docs.search", "docs.examples", "docs.error_search"}:
                 # The declared input schemas decide the dimensions:
                 # docs.search carries ``product``, docs.error_search carries
@@ -731,24 +734,86 @@ class ManagedBackend:
         if not isinstance(ref_mapping, dict):
             import comsol_mcp._server as srv
             cur = getattr(srv, "_current_model", None)
-            cur_tag = getattr(cur, "tag", None)
-            if callable(cur_tag):
+            cur_tag = None
+            if cur is not None:
+                tag_attr = getattr(cur, "tag", None)
+                if isinstance(tag_attr, str):
+                    cur_tag = tag_attr
+                elif callable(tag_attr):
+                    try:
+                        cur_tag = tag_attr()
+                    except Exception:
+                        pass
+                if not cur_tag and hasattr(cur, "java"):
+                    j_tag = getattr(cur.java, "tag", None)
+                    if isinstance(j_tag, str):
+                        cur_tag = j_tag
+                    elif callable(j_tag):
+                        try:
+                            cur_tag = j_tag()
+                        except Exception:
+                            pass
+
+            active_models = [m for m in self.service.ledger._models.values() if not m.retired]
+            client_models = []
+            if self.worker is not None and hasattr(self.worker, "client"):
                 try:
-                    cur_tag = cur_tag()
+                    client_models = self.worker.client().models()
                 except Exception:
-                    cur_tag = None
-            if isinstance(cur_tag, str):
+                    client_models = []
+
+            # 1. Check cur_tag first! If cur_tag is a valid string corresponding to an active model, use it.
+            if isinstance(cur_tag, str) and cur_tag:
                 if cur_tag not in self.service.ledger._models:
                     self.service.ledger.bind_model(cur_tag)
                 ref_mapping = self.service.ledger._models[cur_tag].ref.as_dict()
-            elif self.service.ledger._models:
-                ref_mapping = next(iter(self.service.ledger._models.values())).ref.as_dict()
+            # 2. validate.report does not strictly require a model tag. Allow it to execute with ref_mapping=None.
+            elif operation in {"validate.report", "validate_report"}:
+                if len(active_models) == 1:
+                    ref_mapping = active_models[0].ref.as_dict()
+                elif len(client_models) == 1:
+                    tag = str(client_models[0].tag()) if callable(getattr(client_models[0], "tag", None)) else str(getattr(client_models[0], "name", lambda: "m1")())
+                    if tag not in self.service.ledger._models:
+                        self.service.ledger.bind_model(tag)
+                    ref_mapping = self.service.ledger._models[tag].ref.as_dict()
+                else:
+                    ref_mapping = None
+            # 3. Multiple models without binding or unambiguous cur_tag must fail with AMBIGUOUS_TARGET
+            elif len(active_models) > 1 or len(client_models) > 1:
+                raise ExecutionContractError(
+                    "AMBIGUOUS_TARGET",
+                    "Multiple models loaded on server without explicit model_ref; target is ambiguous"
+                )
+            # 4. Single model fallbacks
+            elif len(active_models) == 1:
+                ref_mapping = active_models[0].ref.as_dict()
+            elif len(client_models) == 1:
+                tag = str(client_models[0].tag()) if callable(getattr(client_models[0], "tag", None)) else str(getattr(client_models[0], "name", lambda: "m1")())
+                if tag not in self.service.ledger._models:
+                    self.service.ledger.bind_model(tag)
+                ref_mapping = self.service.ledger._models[tag].ref.as_dict()
             else:
                 raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "model_ref is required for this operation")
-        ref = model_ref_from_mapping(ref_mapping)
-        bound_revision = self.service.ledger._state_for(ref).revision
-        body = self._g2_body(arguments)
+        ref = model_ref_from_mapping(ref_mapping) if isinstance(ref_mapping, dict) else None
+        bound_revision = self.service.ledger._state_for(ref).revision if ref is not None else None
+        body = self._g2_body(arguments, operation)
         alias = self._g2_alias(operation)
+
+        if operation not in _g3_operations():
+            permission = permission_for_legacy_tool(alias)
+            if permission != "inspect" and ref is not None:
+                supplied_rev = execution.get("expected_revision")
+                if supplied_rev is None:
+                    supplied_rev = execution.get("revision")
+                if supplied_rev is None:
+                    supplied_rev = arguments.get("expected_revision")
+                if supplied_rev is None:
+                    supplied_rev = arguments.get("revision")
+                if supplied_rev is not None and supplied_rev != bound_revision:
+                    raise ExecutionContractError(
+                        "REVISION_CONFLICT",
+                        f"requested revision {supplied_rev} does not match managed revision {bound_revision}"
+                    )
         # Reject an untrusted Java mode before entering the write-ticket
         # service.  If this check were left inside the engine callback,
         # ExecutionService would conservatively classify the callback
@@ -935,23 +1000,46 @@ class ManagedBackend:
             raise ExecutionContractError("PERMISSION_DENIED", f"unclassified G3 effect for operation {operation}")
         isolation = (
             self._require_g2_isolation()
-            if (
-                operation in REQUIRES_ISOLATION
-                and not operation.startswith("validate.")
-                and operation not in {"plot.render", "plot.geometry_render", "plot_render", "plot_geometry_render"}
-            )
+            if (operation in REQUIRES_ISOLATION and effect in {"project_write", "compute", "state_write", "trusted_code"})
             else None
         )
         alias = self._g2_alias(operation)
 
+        model_tag = ref.model_tag if ref is not None else ""
         def callback(_args: dict[str, Any]) -> dict[str, Any]:
             return self._dispatch_with_witness(
-                operation, lambda: function(self.worker, ref.model_tag, dict(body)), effect=effect,
+                operation, lambda: function(self.worker, model_tag, dict(body)), effect=effect,
             )
 
-        expected_rev = execution.get("expected_revision", body.get("expected_revision"))
-        if expected_rev is None and operation.startswith("validate."):
-            expected_rev = self.service.ledger._state_for(ref).revision
+        supplied_rev = execution.get("expected_revision")
+        if supplied_rev is None:
+            supplied_rev = execution.get("revision")
+        if supplied_rev is None:
+            supplied_rev = body.get("expected_revision")
+        if supplied_rev is None:
+            supplied_rev = body.get("revision")
+
+        if ref is not None:
+            current_rev = self.service.ledger._state_for(ref).revision
+            if supplied_rev is not None:
+                if supplied_rev != current_rev:
+                    raise ExecutionContractError(
+                        "REVISION_CONFLICT",
+                        f"requested revision {supplied_rev} does not match managed revision {current_rev}"
+                    )
+                expected_rev = supplied_rev
+            else:
+                if effect == "inspect":
+                    expected_rev = None
+                else:
+                    state = self.service.ledger._state_for(ref)
+                    if state.dirty or state.external_event_counter != state.observed_external_event_counter:
+                        raise ExecutionContractError("REVISION_CONFLICT", "model has external changes or is dirty; reconcile before evaluating")
+                    expected_rev = current_rev
+        else:
+            if supplied_rev is not None:
+                raise ExecutionContractError("INVALID_REQUEST", "unbound operation cannot carry expected_revision")
+            expected_rev = None
         result = self.service.execute_legacy(alias, callback, body, model_ref=ref,
                 expected_revision=expected_rev,
                 request_id=execution.get("request_id"), session_id=session, effect=effect)

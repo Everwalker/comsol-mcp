@@ -14,13 +14,16 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import re
+import tempfile
 import time
 import types
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
+from ._artifact_store import ArtifactStore, trusted_project_root
 from ._execution_contract import ExecutionContractError
 from ._g2_engine import _call
 
@@ -33,6 +36,7 @@ STATUS_NOT_APPLICABLE = "NOT_APPLICABLE"
 STATUS_BLOCKED = "BLOCKED"
 STATUS_ERROR = "ERROR"
 STATUS_UNSUPPORTED = "UNSUPPORTED"
+STATUS_UNKNOWN = "UNKNOWN"
 
 
 @dataclass
@@ -218,19 +222,65 @@ def transient_analytical_solution(x: float, t: float) -> float:
     return 300.0 + 10.0 * math.sin(math.pi * x / L) * math.exp(- (math.pi**2) * alpha * t / (L**2))
 
 
-def create_transient_oracle() -> FrozenOracle:
+def create_transient_oracle(name: str = "transient_diffusion") -> FrozenOracle:
     """Creates the transient sine decay oracle with 9 required observations."""
     xs = [0.25, 0.5, 0.75]
     ts = [0.01, 0.03, 0.1]
     reqs = [f"T_{x}_{t}" for x in xs for t in ts]
-    oracle = FrozenOracle(name="transient_diffusion", required_observations=reqs)
+    oracle = FrozenOracle(name=name, required_observations=reqs)
     for x in xs:
         for t in ts:
-            name = f"T_{x}_{t}"
+            name_t = f"T_{x}_{t}"
             expected = transient_analytical_solution(x, t)
-            oracle.set_expectation(FrozenExpectation(name, expected, 0.1, False, unit="K", description=f"Temperature at x={x}m, t={t}s"))
+            oracle.set_expectation(FrozenExpectation(name_t, expected, 0.1, False, unit="K", description=f"Temperature at x={x}m, t={t}s"))
     oracle.freeze()
     return oracle
+
+
+@dataclass
+class ObservationRef:
+    """Authentic observation provenance and hash binding."""
+    observation_id: str
+    model_tag: str
+    dataset: str
+    observations: dict[str, Any]
+    producer_operation_id: str
+    source_identity: str = ""
+    runtime_version: str = ""
+    sha256: str = ""
+    model_ref: dict[str, Any] = field(default_factory=dict)
+    solution_ref: dict[str, Any] = field(default_factory=dict)
+    units: dict[str, str] = field(default_factory=dict)
+    scope: str = "MODEL_EVALUATED"
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "observation_id": self.observation_id,
+            "model_tag": self.model_tag,
+            "dataset": self.dataset,
+            "observations": dict(self.observations),
+            "producer_operation_id": self.producer_operation_id,
+            "source_identity": self.source_identity,
+            "runtime_version": self.runtime_version,
+            "sha256": self.sha256,
+            "model_ref": dict(self.model_ref),
+            "solution_ref": dict(self.solution_ref) if isinstance(self.solution_ref, Mapping) else self.solution_ref,
+            "units": dict(self.units),
+            "scope": self.scope,
+        }
+
+
+def _unpack_wrapped_arguments(arguments: Mapping[str, Any]) -> dict[str, Any]:
+    args = dict(arguments)
+    if "arguments" in args and isinstance(args["arguments"], Mapping):
+        inner = dict(args.pop("arguments"))
+        conflicts = [k for k in inner if k in args and args[k] is not None and args[k] != inner[k]]
+        if conflicts:
+            raise ValueError(f"Conflicting parameter values in wrapped arguments: {conflicts}")
+        for k, v in inner.items():
+            if k not in args or args[k] is None:
+                args[k] = v
+    return args
 
 
 # 5. Convergence Study (B05)
@@ -281,8 +331,11 @@ class ConvergenceStudy:
                 "message": "Non-finite errors encountered in convergence study",
             }
 
-        improvements = [errors[i] <= errors[i - 1] for i in range(1, len(errors))]
-        monotonic = all(improvements)
+        if all(errors[i] == errors[0] for i in range(len(errors))):
+            monotonic = False
+        else:
+            improvements = [errors[i] <= errors[i - 1] for i in range(1, len(errors))]
+            monotonic = all(improvements)
 
         max_allowed = self.criteria.get("absolute_error_max")
         if max_allowed is None:
@@ -388,15 +441,7 @@ def check_expression_syntax(expr_str: str) -> tuple[bool, str]:
 
 def validate_structure(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     """validate.structure: inspect model structure for components, geometries, selections, physics, mesh, study."""
-    args = dict(arguments)
-    if "arguments" in args and isinstance(args["arguments"], Mapping):
-        inner = dict(args.pop("arguments"))
-        conflicts = [k for k in inner if k in args and args[k] is not None and args[k] != inner[k]]
-        if conflicts:
-            raise ValueError(f"Conflicting parameter values in wrapped arguments: {conflicts}")
-        for k, v in inner.items():
-            args.setdefault(k, v)
-    arguments = args
+    arguments = _unpack_wrapped_arguments(arguments)
 
     findings: list[dict[str, Any]] = []
     rules_evaluated: list[str] = []
@@ -557,15 +602,7 @@ def validate_structure(worker: Any, model_tag: str, arguments: Mapping[str, Any]
 
 def validate_preflight(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     """validate.preflight: pre-solve check for structural completeness, materials, mesh, study."""
-    args = dict(arguments)
-    if "arguments" in args and isinstance(args["arguments"], Mapping):
-        inner = dict(args.pop("arguments"))
-        conflicts = [k for k in inner if k in args and args[k] is not None and args[k] != inner[k]]
-        if conflicts:
-            raise ValueError(f"Conflicting parameter values in wrapped arguments: {conflicts}")
-        for k, v in inner.items():
-            args.setdefault(k, v)
-    arguments = args
+    arguments = _unpack_wrapped_arguments(arguments)
 
     struct_res = validate_structure(worker, model_tag, arguments)
     findings = list(struct_res.get("findings", []))
@@ -605,15 +642,7 @@ def validate_preflight(worker: Any, model_tag: str, arguments: Mapping[str, Any]
 
 def validate_expressions(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     """validate.expressions: syntax, finite check, and known unit consistency."""
-    args = dict(arguments)
-    if "arguments" in args and isinstance(args["arguments"], Mapping):
-        inner = dict(args.pop("arguments"))
-        conflicts = [k for k in inner if k in args and args[k] is not None and args[k] != inner[k]]
-        if conflicts:
-            raise ValueError(f"Conflicting parameter values in wrapped arguments: {conflicts}")
-        for k, v in inner.items():
-            args.setdefault(k, v)
-    arguments = args
+    arguments = _unpack_wrapped_arguments(arguments)
 
     raw_expressions = arguments.get("expressions", [])
     if not raw_expressions:
@@ -702,15 +731,7 @@ def validate_expressions(worker: Any, model_tag: str, arguments: Mapping[str, An
 
 def validate_boundary_conditions(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     """validate.boundary_conditions: diagnose missing, conflicting, or unassigned boundary conditions."""
-    args = dict(arguments)
-    if "arguments" in args and isinstance(args["arguments"], Mapping):
-        inner = dict(args.pop("arguments"))
-        conflicts = [k for k in inner if k in args and args[k] is not None and args[k] != inner[k]]
-        if conflicts:
-            raise ValueError(f"Conflicting parameter values in wrapped arguments: {conflicts}")
-        for k, v in inner.items():
-            args.setdefault(k, v)
-    arguments = args
+    arguments = _unpack_wrapped_arguments(arguments)
 
     rules = arguments.get("rules", [])
     if not rules:
@@ -857,15 +878,7 @@ def validate_boundary_conditions(worker: Any, model_tag: str, arguments: Mapping
 
 def validate_solution(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     """validate.solution: verify solution existence, finite check, range, benchmark error."""
-    args = dict(arguments)
-    if "arguments" in args and isinstance(args["arguments"], Mapping):
-        inner = dict(args.pop("arguments"))
-        conflicts = [k for k in inner if k in args and args[k] is not None and args[k] != inner[k]]
-        if conflicts:
-            raise ValueError(f"Conflicting parameter values in wrapped arguments: {conflicts}")
-        for k, v in inner.items():
-            args.setdefault(k, v)
-    arguments = args
+    arguments = _unpack_wrapped_arguments(arguments)
 
     solution = dict(arguments.get("solution") or {})
     if not solution and ("dataset" in arguments or "tag" in arguments):
@@ -881,12 +894,99 @@ def validate_solution(worker: Any, model_tag: str, arguments: Mapping[str, Any])
     if "range" in arguments and "range" not in criteria:
         criteria["range"] = arguments["range"]
 
+    obs_ref = arguments.get("observation_ref") or criteria.get("observation_ref")
+    scope = "EXTERNAL_DATA_ONLY"
+    observation_origin = "CALLER_SUPPLIED"
+
+    dataset_name = solution.get("dataset") or solution.get("tag")
+    checks: dict[str, Any] = {}
+    metrics: dict[str, Any] = {}
+    oracle_results: dict[str, Any] = {}
+
+    if obs_ref is not None:
+        if isinstance(obs_ref, ObservationRef):
+            obs_ref_dict = obs_ref.as_dict()
+        elif isinstance(obs_ref, Mapping):
+            obs_ref_dict = dict(obs_ref)
+        else:
+            return {
+                "status": STATUS_FAIL,
+                "execution_status": STATUS_PASS,
+                "numerical_verification_status": STATUS_FAIL,
+                "physical_validation_status": STATUS_UNVERIFIED,
+                "scope": "INVALID_REF",
+                "model_validated": False,
+                "solution": solution,
+                "checks": {"observation_ref_valid": False},
+                "metrics": {},
+                "oracle_results": {},
+                "message": "Invalid observation_ref type; must be ObservationRef or dict",
+            }
+
+        ref_model = obs_ref_dict.get("model_tag") or (obs_ref_dict.get("model_ref", {}).get("model_tag") if isinstance(obs_ref_dict.get("model_ref"), Mapping) else None)
+        if ref_model and ref_model != model_tag:
+            return {
+                "status": STATUS_FAIL,
+                "execution_status": STATUS_PASS,
+                "numerical_verification_status": STATUS_FAIL,
+                "physical_validation_status": STATUS_UNVERIFIED,
+                "scope": "CROSS_MODEL_REFUSED",
+                "model_validated": False,
+                "solution": solution,
+                "checks": {"model_match": False},
+                "metrics": {},
+                "oracle_results": {},
+                "message": f"Cross-model ObservationRef rejected: reference model '{ref_model}' does not match target model '{model_tag}'",
+            }
+
+        ref_dataset = obs_ref_dict.get("dataset")
+        if ref_dataset and dataset_name and ref_dataset != dataset_name:
+            return {
+                "status": STATUS_FAIL,
+                "execution_status": STATUS_PASS,
+                "numerical_verification_status": STATUS_FAIL,
+                "physical_validation_status": STATUS_UNVERIFIED,
+                "scope": "DATASET_MISMATCH",
+                "model_validated": False,
+                "solution": solution,
+                "checks": {"dataset_match": False},
+                "metrics": {},
+                "oracle_results": {},
+                "message": f"ObservationRef dataset '{ref_dataset}' does not match solution dataset '{dataset_name}'",
+            }
+
+        ref_sha256 = obs_ref_dict.get("sha256")
+        ref_obs = obs_ref_dict.get("observations") or {}
+        if ref_sha256:
+            computed_sha = hashlib.sha256(json.dumps(ref_obs, sort_keys=True).encode("utf-8")).hexdigest()
+            if computed_sha != ref_sha256:
+                return {
+                    "status": STATUS_FAIL,
+                    "execution_status": STATUS_PASS,
+                    "numerical_verification_status": STATUS_FAIL,
+                    "physical_validation_status": STATUS_UNVERIFIED,
+                    "scope": "INTEGRITY_COMPROMISED",
+                    "model_validated": False,
+                    "solution": solution,
+                    "checks": {"sha256_integrity": False},
+                    "metrics": {},
+                    "oracle_results": {},
+                    "message": "ObservationRef sha256 mismatch (tampered or corrupted data)",
+                }
+
+        observation_origin = "OBSERVATION_REF"
+        scope = "MODEL_VALIDATED"
+        if "observations" not in criteria and ref_obs:
+            criteria["observations"] = ref_obs
+
     if not solution and not criteria:
         return {
             "status": STATUS_FAIL,
             "execution_status": STATUS_PASS,
             "numerical_verification_status": STATUS_FAIL,
             "physical_validation_status": STATUS_UNVERIFIED,
+            "scope": scope,
+            "model_validated": False,
             "solution": {},
             "checks": {},
             "metrics": {},
@@ -894,12 +994,7 @@ def validate_solution(worker: Any, model_tag: str, arguments: Mapping[str, Any])
             "message": "Empty solution specification and criteria",
         }
 
-    dataset_name = solution.get("dataset") or solution.get("tag")
-    checks: dict[str, Any] = {}
-    metrics: dict[str, Any] = {}
-    oracle_results: dict[str, Any] = {}
     passed = True
-    observation_origin = "CALLER_SUPPLIED"
 
     model = None
     try:
@@ -933,7 +1028,9 @@ def validate_solution(worker: Any, model_tag: str, arguments: Mapping[str, Any])
                         "execution_status": STATUS_PASS,
                         "numerical_verification_status": STATUS_FAIL,
                         "physical_validation_status": STATUS_UNVERIFIED,
-                        "observation_origin": "CALLER_SUPPLIED",
+                        "observation_origin": observation_origin,
+                        "scope": scope,
+                        "model_validated": False,
                         "solution": solution,
                         "checks": {"dataset_exists": False},
                         "metrics": {},
@@ -969,6 +1066,7 @@ def validate_solution(worker: Any, model_tag: str, arguments: Mapping[str, Any])
         registered_oracles = {
             "steady_state_copper_block": create_steady_state_oracle,
             "transient_diffusion": create_transient_oracle,
+            "transient_sine_diffusion": lambda: create_transient_oracle(name="transient_sine_diffusion"),
         }
         if oracle_name not in registered_oracles:
             passed = False
@@ -978,6 +1076,8 @@ def validate_solution(worker: Any, model_tag: str, arguments: Mapping[str, Any])
                 "execution_status": STATUS_PASS,
                 "numerical_verification_status": STATUS_FAIL,
                 "physical_validation_status": STATUS_UNVERIFIED,
+                "scope": scope,
+                "model_validated": False,
                 "solution": solution,
                 "checks": checks,
                 "metrics": metrics,
@@ -999,6 +1099,8 @@ def validate_solution(worker: Any, model_tag: str, arguments: Mapping[str, Any])
                 "execution_status": STATUS_PASS,
                 "numerical_verification_status": STATUS_FAIL,
                 "physical_validation_status": STATUS_UNVERIFIED,
+                "scope": scope,
+                "model_validated": False,
                 "solution": solution,
                 "checks": {"required_observations_complete": False, "missing": sorted(missing_keys)},
                 "metrics": metrics,
@@ -1016,12 +1118,16 @@ def validate_solution(worker: Any, model_tag: str, arguments: Mapping[str, Any])
     if not values and not oracle_name:
         passed = False
 
+    model_validated = (passed and scope == "MODEL_VALIDATED")
+
     return {
         "status": STATUS_PASS if passed else STATUS_FAIL,
         "execution_status": STATUS_PASS,
         "numerical_verification_status": STATUS_PASS if passed else STATUS_FAIL,
-        "physical_validation_status": STATUS_UNVERIFIED,
+        "physical_validation_status": STATUS_PASS if model_validated else STATUS_UNVERIFIED,
         "observation_origin": observation_origin,
+        "scope": scope,
+        "model_validated": model_validated,
         "solution": solution,
         "checks": checks,
         "metrics": metrics,
@@ -1031,15 +1137,7 @@ def validate_solution(worker: Any, model_tag: str, arguments: Mapping[str, Any])
 
 def validate_conservation(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     """validate.conservation: energy, mass, or flux conservation residual validation."""
-    args = dict(arguments)
-    if "arguments" in args and isinstance(args["arguments"], Mapping):
-        inner = dict(args.pop("arguments"))
-        conflicts = [k for k in inner if k in args and args[k] is not None and args[k] != inner[k]]
-        if conflicts:
-            raise ValueError(f"Conflicting parameter values in wrapped arguments: {conflicts}")
-        for k, v in inner.items():
-            args.setdefault(k, v)
-    arguments = args
+    arguments = _unpack_wrapped_arguments(arguments)
 
     definition = dict(arguments.get("definition") or {})
     if not definition:
@@ -1057,18 +1155,51 @@ def validate_conservation(worker: Any, model_tag: str, arguments: Mapping[str, A
             "message": "Empty or missing conservation definition; actual inflow/outflow/power measurements required",
         }
 
-    inflow = float(definition.get("inflow", 0.0))
-    outflow = float(definition.get("outflow", 0.0))
-    storage_rate = float(definition.get("storage_rate", 0.0))
+    try:
+        inflow = float(definition.get("inflow", 0.0))
+        outflow = float(definition.get("outflow", 0.0))
+        storage_rate = float(definition.get("storage_rate", 0.0))
 
-    if "source_term" in definition or "source_rate" in definition:
-        source_term = float(definition.get("source_term", definition.get("source_rate", 0.0)))
-    elif "power" in definition:
-        source_term = float(definition["power"])
-    else:
-        source_term = 0.0
+        if "source_term" in definition or "source_rate" in definition:
+            source_term = float(definition.get("source_term", definition.get("source_rate", 0.0)))
+        elif "power" in definition:
+            source_term = float(definition["power"])
+        else:
+            source_term = 0.0
 
-    tolerance = float(definition.get("tolerance", 0.01))
+        tolerance = float(definition.get("tolerance", 0.01))
+    except (ValueError, TypeError) as exc:
+        return {
+            "status": STATUS_FAIL,
+            "execution_status": STATUS_PASS,
+            "numerical_verification_status": STATUS_FAIL,
+            "physical_validation_status": STATUS_UNVERIFIED,
+            "residual": float("inf"),
+            "passed": False,
+            "message": f"Invalid numerical value in conservation definition: {exc}",
+        }
+
+    if any(not math.isfinite(x) for x in (inflow, outflow, storage_rate, source_term, tolerance)):
+        return {
+            "status": STATUS_FAIL,
+            "execution_status": STATUS_PASS,
+            "numerical_verification_status": STATUS_FAIL,
+            "physical_validation_status": STATUS_UNVERIFIED,
+            "residual": float("inf"),
+            "passed": False,
+            "message": "Non-finite term (NaN/Inf) encountered in conservation check",
+        }
+
+    if tolerance <= 0:
+        return {
+            "status": STATUS_FAIL,
+            "execution_status": STATUS_PASS,
+            "numerical_verification_status": STATUS_FAIL,
+            "physical_validation_status": STATUS_UNVERIFIED,
+            "residual": float("inf"),
+            "passed": False,
+            "message": f"Non-positive tolerance {tolerance} is invalid for conservation check",
+        }
 
     norm_candidate = definition.get("normalization")
     if norm_candidate is not None:
@@ -1110,6 +1241,7 @@ def validate_conservation(worker: Any, model_tag: str, arguments: Mapping[str, A
 
 def validate_convergence(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     """validate.convergence: mesh, time-step, or domain sensitivity convergence study."""
+    arguments = _unpack_wrapped_arguments(arguments)
     cases = arguments.get("cases") or []
     metrics = arguments.get("metrics") or []
     criteria = arguments.get("criteria") or {}
@@ -1143,18 +1275,25 @@ def validate_convergence(worker: Any, model_tag: str, arguments: Mapping[str, An
 
 def validate_report(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     """validate.report: aggregate validation results and generate JSON and Markdown reports."""
-    args = dict(arguments)
-    if "arguments" in args and isinstance(args["arguments"], Mapping):
-        inner = dict(args.pop("arguments"))
-        conflicts = [k for k in inner if k in args and args[k] is not None and args[k] != inner[k]]
-        if conflicts:
-            raise ValueError(f"Conflicting parameter values in wrapped arguments: {conflicts}")
-        for k, v in inner.items():
-            args.setdefault(k, v)
-    arguments = args
+    arguments = _unpack_wrapped_arguments(arguments)
 
     destination = arguments.get("destination")
-    overwrite = bool(arguments.get("overwrite", False))
+    raw_overwrite = arguments.get("overwrite", False)
+    if isinstance(raw_overwrite, str):
+        lowered = raw_overwrite.strip().lower()
+        if lowered in ("true", "1", "yes"):
+            overwrite = True
+        elif lowered in ("false", "0", "no"):
+            overwrite = False
+        else:
+            raise ValueError(f"Invalid boolean string for overwrite: {raw_overwrite!r}")
+    elif isinstance(raw_overwrite, bool):
+        overwrite = raw_overwrite
+    elif raw_overwrite is None:
+        overwrite = False
+    else:
+        raise ValueError(f"overwrite must be boolean, got {type(raw_overwrite).__name__}")
+
     data = arguments.get("data") or {}
     if not isinstance(data, dict) and isinstance(data, Mapping):
         data = dict(data)
@@ -1189,28 +1328,80 @@ def validate_report(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
             if "numerical_verification_status" in v:
                 child_statuses.append(v["numerical_verification_status"])
 
+    store: ArtifactStore | None = None
+    try:
+        root = trusted_project_root(worker)
+        store = ArtifactStore(project_root=root)
+    except Exception:
+        env_root = os.environ.get("COMSOL_PROJECT_ROOT")
+        if env_root and Path(env_root).is_dir():
+            try:
+                store = ArtifactStore(project_root=Path(env_root).resolve())
+            except Exception:
+                store = None
+        if store is None and destination:
+            try:
+                dest_p = Path(destination).expanduser().resolve()
+                store = ArtifactStore(project_root=dest_p.parent if dest_p.parent.exists() else Path("/"))
+            except Exception:
+                store = None
+
     write_ok = True
     write_error = None
-    dest_path = None
-    sibling_path = None
-    if destination:
-        dest_path = Path(destination)
-        if dest_path.is_dir():
-            write_ok = False
-            write_error = f"Destination path '{destination}' is an existing directory, not a file"
-        else:
-            if dest_path.suffix.lower() == ".json":
-                sibling_path = dest_path.with_suffix(".md")
-            elif dest_path.suffix.lower() == ".md":
-                sibling_path = dest_path.with_suffix(".json")
+    dest_path: Path | None = None
+    sibling_path: Path | None = None
 
-            if not overwrite:
-                if dest_path.exists():
-                    write_ok = False
-                    write_error = f"Destination file '{dest_path}' already exists and overwrite is False"
-                elif sibling_path and sibling_path.exists():
-                    write_ok = False
-                    write_error = f"Sibling report file '{sibling_path}' already exists and overwrite is False"
+    if destination:
+        try:
+            dest_cand = Path(destination).expanduser()
+            if dest_cand.is_dir():
+                write_ok = False
+                write_error = f"Destination path '{destination}' is an existing directory, not a file"
+            else:
+                env_root = os.environ.get("COMSOL_PROJECT_ROOT")
+                if env_root and Path(env_root).is_dir():
+                    try:
+                        resolved_env = Path(env_root).resolve()
+                        dest_cand.resolve().relative_to(resolved_env)
+                        if store is None or store.project_root != resolved_env:
+                            store = ArtifactStore(project_root=resolved_env)
+                    except ValueError:
+                        pass
+
+                if store is not None:
+                    try:
+                        dest_path = store.resolve_safe_path(destination, allow_overwrite=overwrite)
+                    except Exception:
+                        dest_path = store.resolve_safe_path(str(dest_cand.resolve()), allow_overwrite=overwrite)
+                else:
+                    dest_path = dest_cand.resolve()
+
+                if dest_path.suffix.lower() == ".json":
+                    sibling_candidate = dest_path.with_suffix(".md")
+                elif dest_path.suffix.lower() == ".md":
+                    sibling_candidate = dest_path.with_suffix(".json")
+                else:
+                    sibling_candidate = None
+
+                if sibling_candidate:
+                    if store is not None:
+                        try:
+                            sibling_path = store.resolve_safe_path(str(sibling_candidate), allow_overwrite=overwrite)
+                        except Exception:
+                            sibling_path = store.resolve_safe_path(str(sibling_candidate.resolve()), allow_overwrite=overwrite)
+                    else:
+                        sibling_path = sibling_candidate.resolve()
+
+                if not overwrite:
+                    if dest_path.exists():
+                        write_ok = False
+                        write_error = f"Destination file '{dest_path}' already exists and overwrite is False"
+                    elif sibling_path and sibling_path.exists():
+                        write_ok = False
+                        write_error = f"Sibling report file '{sibling_path}' already exists and overwrite is False"
+        except Exception as exc:
+            write_ok = False
+            write_error = str(exc)
 
     if not write_ok:
         overall_status = STATUS_FAIL
@@ -1232,14 +1423,18 @@ def validate_report(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
         overall_status = STATUS_UNSUPPORTED
         exec_status = STATUS_PASS
         num_status = STATUS_UNSUPPORTED
-    elif any(s == STATUS_UNVERIFIED for s in child_statuses) or not child_statuses:
+    elif any(s in (STATUS_UNVERIFIED, STATUS_UNKNOWN, "UNKNOWN") for s in child_statuses) or not child_statuses:
         overall_status = STATUS_UNVERIFIED
         exec_status = STATUS_PASS
         num_status = STATUS_UNVERIFIED
-    else:
+    elif all(s == STATUS_PASS for s in child_statuses):
         overall_status = STATUS_PASS
         exec_status = STATUS_PASS
         num_status = STATUS_PASS
+    else:
+        overall_status = STATUS_UNVERIFIED
+        exec_status = STATUS_PASS
+        num_status = STATUS_UNVERIFIED
 
     report = ValidationReport(
         source_identity=source_id,
@@ -1260,22 +1455,78 @@ def validate_report(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
     report_md = report.to_markdown()
 
     if destination and write_ok and dest_path:
+        tmp_dest_path: Path | None = None
+        tmp_sib_path: Path | None = None
         try:
             dest_path.parent.mkdir(parents=True, exist_ok=True)
+            fd, tmp_name = tempfile.mkstemp(
+                prefix=f".{dest_path.name}.tmp.", suffix=".partial", dir=str(dest_path.parent)
+            )
+            os.close(fd)
+            tmp_dest_path = Path(tmp_name)
+
             if dest_path.suffix.lower() == ".json":
-                dest_path.write_text(report_json, encoding="utf-8")
+                with tmp_dest_path.open("w", encoding="utf-8") as f:
+                    f.write(report_json)
+                    f.flush()
+                    os.fsync(f.fileno())
+
                 if sibling_path:
-                    sibling_path.write_text(report_md, encoding="utf-8")
+                    fd_s, tmp_s_name = tempfile.mkstemp(
+                        prefix=f".{sibling_path.name}.tmp.", suffix=".partial", dir=str(sibling_path.parent)
+                    )
+                    os.close(fd_s)
+                    tmp_sib_path = Path(tmp_s_name)
+                    with tmp_sib_path.open("w", encoding="utf-8") as f:
+                        f.write(report_md)
+                        f.flush()
+                        os.fsync(f.fileno())
             elif dest_path.suffix.lower() == ".md":
-                dest_path.write_text(report_md, encoding="utf-8")
+                with tmp_dest_path.open("w", encoding="utf-8") as f:
+                    f.write(report_md)
+                    f.flush()
+                    os.fsync(f.fileno())
+
                 if sibling_path:
-                    sibling_path.write_text(report_json, encoding="utf-8")
+                    fd_s, tmp_s_name = tempfile.mkstemp(
+                        prefix=f".{sibling_path.name}.tmp.", suffix=".partial", dir=str(sibling_path.parent)
+                    )
+                    os.close(fd_s)
+                    tmp_sib_path = Path(tmp_s_name)
+                    with tmp_sib_path.open("w", encoding="utf-8") as f:
+                        f.write(report_json)
+                        f.flush()
+                        os.fsync(f.fileno())
             else:
-                dest_path.write_text(report_md, encoding="utf-8")
+                with tmp_dest_path.open("w", encoding="utf-8") as f:
+                    f.write(report_md)
+                    f.flush()
+                    os.fsync(f.fileno())
+
+            os.replace(tmp_dest_path, dest_path)
+            tmp_dest_path = None
+            ArtifactStore.register_artifact(dest_path)
+
+            if sibling_path and tmp_sib_path:
+                os.replace(tmp_sib_path, sibling_path)
+                tmp_sib_path = None
+                ArtifactStore.register_artifact(sibling_path)
+
         except Exception as exc:
             overall_status = STATUS_FAIL
             exec_status = STATUS_FAIL
             write_error = str(exc)
+        finally:
+            if tmp_dest_path and tmp_dest_path.exists():
+                try:
+                    tmp_dest_path.unlink()
+                except Exception:
+                    pass
+            if tmp_sib_path and tmp_sib_path.exists():
+                try:
+                    tmp_sib_path.unlink()
+                except Exception:
+                    pass
 
     res = {
         "status": overall_status,

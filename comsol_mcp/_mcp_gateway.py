@@ -192,20 +192,55 @@ class GatewayRegistry:
 
         async def routed(**kwargs: Any) -> CallToolResult:
             execution = kwargs.pop("execution", None) or {}
+            is_w20_compat = operation.startswith("validate.") or operation.startswith("validate_")
             has_var_kw = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in original.parameters.values())
-            if has_var_kw:
-                bound = original.bind(**kwargs)
-            else:
-                accepted = {k: v for k, v in kwargs.items() if k in original.parameters}
+
+            # Validate unsupported parameters when function does not accept **kwargs
+            if not has_var_kw:
+                allowed_keys = set(original.parameters.keys())
+                if is_w20_compat:
+                    allowed_keys.add("arguments")
+                unsupported = [k for k in kwargs if k not in allowed_keys]
+                if unsupported:
+                    err_res = {
+                        "success": False,
+                        "error": {
+                            "code": "INVALID_REQUEST",
+                            "message": f"Unsupported parameter(s) for '{operation}': {sorted(unsupported)}",
+                            "safe_retry": False,
+                        },
+                        "data": {},
+                    }
+                    return mcp_result(err_res)
+
+            accepted = {k: v for k, v in kwargs.items() if k in original.parameters} if not has_var_kw else kwargs
+            try:
                 bound = original.bind(**accepted)
+            except TypeError as te:
+                err_res = {
+                    "success": False,
+                    "error": {
+                        "code": "INVALID_REQUEST",
+                        "message": str(te),
+                        "safe_retry": False,
+                    },
+                    "data": {},
+                }
+                return mcp_result(err_res)
+
             bound.apply_defaults()
             call_args = dict(bound.arguments)
             for k, v in kwargs.items():
-                call_args.setdefault(k, v)
-            if "arguments" in call_args and isinstance(call_args["arguments"], dict):
+                if k not in call_args:
+                    call_args[k] = v
+
+            # Only unpack arguments wrapper for declared W20 compatibility schemas
+            # Retain nested arguments for registry_call, operation_call, code.execute_java, etc.
+            if is_w20_compat and "arguments" in call_args and isinstance(call_args["arguments"], dict):
                 inner_args = call_args.pop("arguments")
                 for k, v in inner_args.items():
-                    if k in call_args and call_args[k] is not None and call_args[k] != v:
+                    # Reject conflicting values between top-level kwargs and arguments wrapper
+                    if k in kwargs and kwargs[k] is not None and kwargs[k] != v:
                         err_res = {
                             "success": False,
                             "error": {
@@ -216,7 +251,22 @@ class GatewayRegistry:
                             "data": {},
                         }
                         return mcp_result(err_res)
-                    call_args.setdefault(k, v)
+                    if not has_var_kw and k not in original.parameters:
+                        err_res = {
+                            "success": False,
+                            "error": {
+                                "code": "INVALID_REQUEST",
+                                "message": f"Unsupported parameter '{k}' in arguments wrapper for '{operation}'",
+                                "safe_retry": False,
+                            },
+                            "data": {},
+                        }
+                        return mcp_result(err_res)
+                    # Distinguish None default from missing: if missing or default None, unpack compatible value
+                    if k not in kwargs or call_args.get(k) is None:
+                        call_args[k] = v
+            elif is_w20_compat and "arguments" in call_args and call_args["arguments"] is None:
+                call_args.pop("arguments", None)
             try:
                 result = await asyncio.to_thread(self.dispatcher, operation, call_args, execution)
             except Exception as exc:

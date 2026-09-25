@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "round": "R01",
+  "stage": "DEVELOPER_REMEDIATION_AND_SUBMISSION",
+  "timestamp": "2026-09-25T07:15:30+08:00",
+  "developer": {
+    "role": "DEVELOPER",
+    "session_id": "d0aecd36-e538-4506-a9f9-d00da2eec916",
+    "orchestrator_caller_id": "a7d4450e-7cf2-4f3c-b63b-3d7771002ced"
+  },
+  "candidate_snapshot": {
+    "path": ".handoff/rounds/R01/candidate.json",
+    "sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+    "file_count": 218
+  },
+  "contract_context": {
+    "frozen_contract_sha256": "0ed0b4502f4856d0c27dfb8821d955a15d729197898a2af2c973ba0acf1f385d",
+    "benchmarks_sha256": "bdb3d5e18db9a5f368547f795dcaec99eb5d8ac70a10bc8beefc7c91539b4c0d"
+  },
+  "modified_files": [
+    "comsol_mcp/_mcp_gateway.py",
+    "comsol_mcp/_managed_backend.py",
+    "comsol_mcp/_g3_w20_validation.py",
+    "tools/run_g3_9_acceptance.py"
+  ],
+  "added_files": [
+    "tests/test_r01_fixes.py"
+  ],
+  "defects_addressed": {
+    "P01": {
+      "title": "Registry fallback loses nested argument payload",
+      "fix": "Scoped argument unwrapping strictly to W20 compat tools in comsol_mcp/_mcp_gateway.py and comsol_mcp/_managed_backend.py; preserved dict arguments for operation_call and registry calls."
+    },
+    "P02": {
+      "title": "Task argument Map flattened for code.execute_java",
+      "fix": "Preserved arguments dict/Map structure without flattening when invoking code.execute_java in gateway and backend."
+    },
+    "P03": {
+      "title": "setdefault does not replace an already-bound None default",
+      "fix": "Explicitly updated arguments when an outer default is None and inner wrapped dictionary supplies a non-None value; rejects conflicting arguments with INVALID_REQUEST."
+    },
+    "P04": {
+      "title": "C10 positive validator test falsely passed when validate.solution returned isError=True / FAIL",
+      "fix": "Registered both 'transient_diffusion' and 'transient_sine_diffusion' in validator oracles; asserted assess_validator_response(call_result, 'PASS') in runner."
+    },
+    "P05": {
+      "title": "Name-based exceptions suppress configured isolation proof",
+      "fix": "Deleted name-based exemptions (validate.*, plot.*) in _invoke_g3_model; strictly enforced isolation via REQUIRES_ISOLATION."
+    },
+    "F01": {
+      "title": "C10 oracle mismatch and validator failure ignored",
+      "fix": "Registered transient_sine_diffusion; added explicit validator status assertion."
+    },
+    "F02": {
+      "title": "Ambiguous model selection and expired revision auto-rewrite",
+      "fix": "Deleted ledger[0] fallback in _invoke_g2_model; raises AMBIGUOUS_TARGET on multiple models without explicit model_ref; raises REVISION_CONFLICT on expired revision instead of rewriting."
+    },
+    "F03": {
+      "title": "Global argument flattening across non-W20 endpoints",
+      "fix": "Restricted argument extraction to declared W20 tools; rejects conflicting nested and top-level arguments."
+    },
+    "F04": {
+      "title": "ObservationRef provenance and data integrity missing",
+      "fix": "Implemented ObservationRef dataclass with model_ref, dataset, solution_ref, timestamp, and SHA256 data digest; validated against bound model."
+    },
+    "F05": {
+      "title": "Caller-supplied numbers masquerade as model-validated",
+      "fix": "Set scope='EXTERNAL_DATA_ONLY' and model_validated=False when ObservationRef is absent; requires valid ObservationRef for scope='MODEL_VALIDATED'."
+    },
+    "F06": {
+      "title": "Convergence study accepts flat error trends",
+      "fix": "Rejected static/flat error sequences in ConvergenceStudy.analyze_trend."
+    },
+    "F07": {
+      "title": "validate.report non-atomic writes and loose boolean parsing",
+      "fix": "Implemented safe path resolution via ArtifactStore; atomic staging via temporary files; strict boolean parsing for overwrite; prevents STATUS_UNKNOWN from falling through to STATUS_PASS."
+    },
+    "F08": {
+      "title": "Energy conservation term verification lacks finite and tolerance validation",
+      "fix": "Added finite check (math.isfinite) on all conservation terms and requires tolerance > 0."
+    }
+  },
+  "test_execution": {
+    "command": ".venv/bin/pytest tests/",
+    "environment": {
+      "python": "3.13.14",
+      "os": "Darwin 24.3.0 (macOS Sequoia)",
+      "platform": "arm64"
+    },
+    "exit_code": 0,
+    "summary": "1951 passed, 8 skipped, 2 warnings in 19.25s",
+    "regression_suite": {
+      "path": "tests/test_r01_fixes.py",
+      "tests_count": 17,
+      "all_passed": true
+    }
+  },
+  "known_limitations": {
+    "native_execution": "Host is macOS (Darwin); native Windows COMSOL 6.3/6.4 GUI/engine execution cannot run natively on this machine. Software regression tests, gateway schemas, model selection isolation, and validation protocols pass 100%. Reviewer native verification must be conducted on Windows testbeds."
+  }
+}

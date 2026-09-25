@@ -1,0 +1,292 @@
+{
+  "capture_origin": "CAPTURED_STDIN_STDOUT",
+  "run_id": "g3_10_w20_acceptance_live",
+  "target": "win64",
+  "case_id": "C07",
+  "events": [
+    {
+      "direction": "request",
+      "method": "tools/call",
+      "request_id": "9",
+      "timestamp": "2026-09-25T00:34:33.229252+00:00",
+      "payload": {
+        "name": "validate.solution",
+        "arguments": {
+          "solution": {
+            "dataset": "dset1"
+          },
+          "criteria": {
+            "values": [
+              312.49999999999994,
+              324.9999999999999,
+              337.49999999999994
+            ],
+            "finite": true
+          }
+        }
+      },
+      "raw_jsonrpc": {
+        "method": "tools/call",
+        "params": {
+          "name": "validate.solution",
+          "arguments": {
+            "solution": {
+              "dataset": "dset1"
+            },
+            "criteria": {
+              "values": [
+                312.49999999999994,
+                324.9999999999999,
+                337.49999999999994
+              ],
+              "finite": true
+            }
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 9
+      }
+    },
+    {
+      "direction": "response",
+      "request_id": "9",
+      "timestamp": "2026-09-25T00:34:33.323322+00:00",
+      "payload": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\": true, \"data\": {\"status\": \"PASS\", \"execution_status\": \"PASS\", \"numerical_verification_status\": \"PASS\", \"physical_validation_status\": \"UNVERIFIED\", \"observation_origin\": \"CALLER_SUPPLIED\", \"scope\": \"EXTERNAL_DATA_ONLY\", \"model_validated\": false, \"solution\": {\"dataset\": \"dset1\"}, \"checks\": {\"dataset_exists\": true, \"finite\": true}, \"metrics\": {\"statistics\": {\"mean\": 324.99999999999994, \"std\": 10.206207261596576, \"rms\": 325.1602169187778}}, \"oracle_results\": {}, \"domain_state\": \"succeeded\", \"verification_status\": \"NOT_RUN\", \"execution_state_unknown\": false, \"partial_change\": false, \"cleanup_failed\": false, \"dispatch_stage\": \"post_dispatch\", \"domain_outcome\": {\"operation\": \"validate.solution\", \"state\": \"succeeded\", \"verification_status\": \"NOT_RUN\", \"cleanup_failed\": false, \"execution_state_unknown\": false, \"dispatch_stage\": \"post_dispatch\", \"status_token\": \"PASS\", \"execution_status\": \"PASS\", \"verification\": {\"declared_by\": [\"checks\"], \"reason\": \"the operation declared a verification axis but published no verdict\"}, \"witness\": {\"engine_calls\": 3, \"mutation_method\": null, \"methods\": [\"dataset\", \"result\", \"tags\"], \"dispatches\": [{\"command\": \"call\", \"method\": \"result\", \"args_count\": 0, \"receiver\": \"h-790f7e1a-b43a-4acb-a80f-8fd2f0eb9f70\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"dataset\", \"args_count\": 0, \"receiver\": \"h-23f23f0f-0ed0-46f1-b988-45517a5745fc\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-61079838-9740-463c-91be-acc5af1c3d9c\", \"is_mutation\": false}], \"mutation_issued\": false}, \"details\": {\"status_token\": \"PASS\"}}, \"effect\": \"evaluate\"}, \"error\": null, \"execution\": {\"session_id\": \"session-77d9001ba07f2cbb69aa49c7\", \"model_ref\": {\"schema_version\": 1, \"session_id\": \"session-77d9001ba07f2cbb69aa49c7\", \"server_instance_id\": \"1a6691e8a852f9ef87c917add32dcd6f3f937e57a00ad1c6882ebfb024df0518\", \"model_tag\": \"mcp1\", \"generation\": 1}, \"revision\": 6, \"dirty\": false, \"server_ownership\": \"shared\", \"model_ownership\": \"user_owned\", \"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"request_id\": \"00ccdc5d-8d69-45ca-a18a-adeb10edee60\", \"operation_id\": \"06aeaad6-e48d-4ff1-9c7c-81ea9494f620\", \"request_hash\": \"f9d17f51b935f0036fefd6e7a9fbda56af7a4cb9c75a85e2a5cec2be70808c32\", \"idempotency_key\": \"ce5196ef-9db9-4b2e-80e9-147312808229\", \"job_id\": \"f24555d3-f6d3-468b-a57f-b0adf7a12f52\"}}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "data": {
+            "status": "PASS",
+            "execution_status": "PASS",
+            "numerical_verification_status": "PASS",
+            "physical_validation_status": "UNVERIFIED",
+            "observation_origin": "CALLER_SUPPLIED",
+            "scope": "EXTERNAL_DATA_ONLY",
+            "model_validated": false,
+            "solution": {
+              "dataset": "dset1"
+            },
+            "checks": {
+              "dataset_exists": true,
+              "finite": true
+            },
+            "metrics": {
+              "statistics": {
+                "mean": 324.99999999999994,
+                "std": 10.206207261596576,
+                "rms": 325.1602169187778
+              }
+            },
+            "oracle_results": {},
+            "domain_state": "succeeded",
+            "verification_status": "NOT_RUN",
+            "execution_state_unknown": false,
+            "partial_change": false,
+            "cleanup_failed": false,
+            "dispatch_stage": "post_dispatch",
+            "domain_outcome": {
+              "operation": "validate.solution",
+              "state": "succeeded",
+              "verification_status": "NOT_RUN",
+              "cleanup_failed": false,
+              "execution_state_unknown": false,
+              "dispatch_stage": "post_dispatch",
+              "status_token": "PASS",
+              "execution_status": "PASS",
+              "verification": {
+                "declared_by": [
+                  "checks"
+                ],
+                "reason": "the operation declared a verification axis but published no verdict"
+              },
+              "witness": {
+                "engine_calls": 3,
+                "mutation_method": null,
+                "methods": [
+                  "dataset",
+                  "result",
+                  "tags"
+                ],
+                "dispatches": [
+                  {
+                    "command": "call",
+                    "method": "result",
+                    "args_count": 0,
+                    "receiver": "h-790f7e1a-b43a-4acb-a80f-8fd2f0eb9f70",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "dataset",
+                    "args_count": 0,
+                    "receiver": "h-23f23f0f-0ed0-46f1-b988-45517a5745fc",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "tags",
+                    "args_count": 0,
+                    "receiver": "h-61079838-9740-463c-91be-acc5af1c3d9c",
+                    "is_mutation": false
+                  }
+                ],
+                "mutation_issued": false
+              },
+              "details": {
+                "status_token": "PASS"
+              }
+            },
+            "effect": "evaluate"
+          },
+          "error": null,
+          "execution": {
+            "session_id": "session-77d9001ba07f2cbb69aa49c7",
+            "model_ref": {
+              "schema_version": 1,
+              "session_id": "session-77d9001ba07f2cbb69aa49c7",
+              "server_instance_id": "1a6691e8a852f9ef87c917add32dcd6f3f937e57a00ad1c6882ebfb024df0518",
+              "model_tag": "mcp1",
+              "generation": 1
+            },
+            "revision": 6,
+            "dirty": false,
+            "server_ownership": "shared",
+            "model_ownership": "user_owned",
+            "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+            "request_id": "00ccdc5d-8d69-45ca-a18a-adeb10edee60",
+            "operation_id": "06aeaad6-e48d-4ff1-9c7c-81ea9494f620",
+            "request_hash": "f9d17f51b935f0036fefd6e7a9fbda56af7a4cb9c75a85e2a5cec2be70808c32",
+            "idempotency_key": "ce5196ef-9db9-4b2e-80e9-147312808229",
+            "job_id": "f24555d3-f6d3-468b-a57f-b0adf7a12f52"
+          }
+        },
+        "isError": false
+      },
+      "raw_jsonrpc": {
+        "jsonrpc": "2.0",
+        "id": 9,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"success\": true, \"data\": {\"status\": \"PASS\", \"execution_status\": \"PASS\", \"numerical_verification_status\": \"PASS\", \"physical_validation_status\": \"UNVERIFIED\", \"observation_origin\": \"CALLER_SUPPLIED\", \"scope\": \"EXTERNAL_DATA_ONLY\", \"model_validated\": false, \"solution\": {\"dataset\": \"dset1\"}, \"checks\": {\"dataset_exists\": true, \"finite\": true}, \"metrics\": {\"statistics\": {\"mean\": 324.99999999999994, \"std\": 10.206207261596576, \"rms\": 325.1602169187778}}, \"oracle_results\": {}, \"domain_state\": \"succeeded\", \"verification_status\": \"NOT_RUN\", \"execution_state_unknown\": false, \"partial_change\": false, \"cleanup_failed\": false, \"dispatch_stage\": \"post_dispatch\", \"domain_outcome\": {\"operation\": \"validate.solution\", \"state\": \"succeeded\", \"verification_status\": \"NOT_RUN\", \"cleanup_failed\": false, \"execution_state_unknown\": false, \"dispatch_stage\": \"post_dispatch\", \"status_token\": \"PASS\", \"execution_status\": \"PASS\", \"verification\": {\"declared_by\": [\"checks\"], \"reason\": \"the operation declared a verification axis but published no verdict\"}, \"witness\": {\"engine_calls\": 3, \"mutation_method\": null, \"methods\": [\"dataset\", \"result\", \"tags\"], \"dispatches\": [{\"command\": \"call\", \"method\": \"result\", \"args_count\": 0, \"receiver\": \"h-790f7e1a-b43a-4acb-a80f-8fd2f0eb9f70\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"dataset\", \"args_count\": 0, \"receiver\": \"h-23f23f0f-0ed0-46f1-b988-45517a5745fc\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-61079838-9740-463c-91be-acc5af1c3d9c\", \"is_mutation\": false}], \"mutation_issued\": false}, \"details\": {\"status_token\": \"PASS\"}}, \"effect\": \"evaluate\"}, \"error\": null, \"execution\": {\"session_id\": \"session-77d9001ba07f2cbb69aa49c7\", \"model_ref\": {\"schema_version\": 1, \"session_id\": \"session-77d9001ba07f2cbb69aa49c7\", \"server_instance_id\": \"1a6691e8a852f9ef87c917add32dcd6f3f937e57a00ad1c6882ebfb024df0518\", \"model_tag\": \"mcp1\", \"generation\": 1}, \"revision\": 6, \"dirty\": false, \"server_ownership\": \"shared\", \"model_ownership\": \"user_owned\", \"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"request_id\": \"00ccdc5d-8d69-45ca-a18a-adeb10edee60\", \"operation_id\": \"06aeaad6-e48d-4ff1-9c7c-81ea9494f620\", \"request_hash\": \"f9d17f51b935f0036fefd6e7a9fbda56af7a4cb9c75a85e2a5cec2be70808c32\", \"idempotency_key\": \"ce5196ef-9db9-4b2e-80e9-147312808229\", \"job_id\": \"f24555d3-f6d3-468b-a57f-b0adf7a12f52\"}}"
+            }
+          ],
+          "structuredContent": {
+            "success": true,
+            "data": {
+              "status": "PASS",
+              "execution_status": "PASS",
+              "numerical_verification_status": "PASS",
+              "physical_validation_status": "UNVERIFIED",
+              "observation_origin": "CALLER_SUPPLIED",
+              "scope": "EXTERNAL_DATA_ONLY",
+              "model_validated": false,
+              "solution": {
+                "dataset": "dset1"
+              },
+              "checks": {
+                "dataset_exists": true,
+                "finite": true
+              },
+              "metrics": {
+                "statistics": {
+                  "mean": 324.99999999999994,
+                  "std": 10.206207261596576,
+                  "rms": 325.1602169187778
+                }
+              },
+              "oracle_results": {},
+              "domain_state": "succeeded",
+              "verification_status": "NOT_RUN",
+              "execution_state_unknown": false,
+              "partial_change": false,
+              "cleanup_failed": false,
+              "dispatch_stage": "post_dispatch",
+              "domain_outcome": {
+                "operation": "validate.solution",
+                "state": "succeeded",
+                "verification_status": "NOT_RUN",
+                "cleanup_failed": false,
+                "execution_state_unknown": false,
+                "dispatch_stage": "post_dispatch",
+                "status_token": "PASS",
+                "execution_status": "PASS",
+                "verification": {
+                  "declared_by": [
+                    "checks"
+                  ],
+                  "reason": "the operation declared a verification axis but published no verdict"
+                },
+                "witness": {
+                  "engine_calls": 3,
+                  "mutation_method": null,
+                  "methods": [
+                    "dataset",
+                    "result",
+                    "tags"
+                  ],
+                  "dispatches": [
+                    {
+                      "command": "call",
+                      "method": "result",
+                      "args_count": 0,
+                      "receiver": "h-790f7e1a-b43a-4acb-a80f-8fd2f0eb9f70",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "dataset",
+                      "args_count": 0,
+                      "receiver": "h-23f23f0f-0ed0-46f1-b988-45517a5745fc",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "tags",
+                      "args_count": 0,
+                      "receiver": "h-61079838-9740-463c-91be-acc5af1c3d9c",
+                      "is_mutation": false
+                    }
+                  ],
+                  "mutation_issued": false
+                },
+                "details": {
+                  "status_token": "PASS"
+                }
+              },
+              "effect": "evaluate"
+            },
+            "error": null,
+            "execution": {
+              "session_id": "session-77d9001ba07f2cbb69aa49c7",
+              "model_ref": {
+                "schema_version": 1,
+                "session_id": "session-77d9001ba07f2cbb69aa49c7",
+                "server_instance_id": "1a6691e8a852f9ef87c917add32dcd6f3f937e57a00ad1c6882ebfb024df0518",
+                "model_tag": "mcp1",
+                "generation": 1
+              },
+              "revision": 6,
+              "dirty": false,
+              "server_ownership": "shared",
+              "model_ownership": "user_owned",
+              "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+              "request_id": "00ccdc5d-8d69-45ca-a18a-adeb10edee60",
+              "operation_id": "06aeaad6-e48d-4ff1-9c7c-81ea9494f620",
+              "request_hash": "f9d17f51b935f0036fefd6e7a9fbda56af7a4cb9c75a85e2a5cec2be70808c32",
+              "idempotency_key": "ce5196ef-9db9-4b2e-80e9-147312808229",
+              "job_id": "f24555d3-f6d3-468b-a57f-b0adf7a12f52"
+            }
+          },
+          "isError": false
+        }
+      }
+    }
+  ]
+}

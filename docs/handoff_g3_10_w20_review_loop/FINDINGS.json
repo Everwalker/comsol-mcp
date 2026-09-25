@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "source_commit": "3a7c5feb09738ddcfaedd9c30f7db53b893ec3f9",
+  "source_tree": "f32b390fd71c5a084338d41aa377230ad8e26e9d",
+  "items": [
+    {
+      "id": "F01",
+      "priority": "P0",
+      "title": "瞬态验收把真实验证失败当通过",
+      "location": "tools/run_g3_9_acceptance.py: C10; evidence/g3_9_windows_w20/win64/mcp_transcript_C10.json",
+      "evidence_level": "CONFIRMED_SOURCE_AND_COMMITTED_RESPONSE",
+      "finding": "调用oracle=transient_sine_diffusion，但注册名是transient_diffusion。原始响应success=false/isError=true/oracle_registered=false；C10仅检查预先采样温度误差，仍计PASS。",
+      "change": "先修测试判据再修输入/产品；核对响应成功、被测科学状态和预期正负控。失败响应或缺关键字段不得靠默认值变为PASS。"
+    },
+    {
+      "id": "F02",
+      "priority": "P0",
+      "title": "隔离与模型绑定保护出现回退",
+      "location": "comsol_mcp/_managed_backend.py: _invoke_g2_model/_invoke_g3_model",
+      "evidence_level": "CONFIRMED_SOURCE_SECURITY_REGRESSION",
+      "finding": "没有明确model_ref时可选择ledger的第一个模型；验证和render按操作名称跳过原隔离证明；验证缺revision时自动补当前值。其他权限可能仍存在，因此不是“全系统无权限”，但破坏原合同。",
+      "change": "多模型不能任选；用显式或后端可信选中的绑定。按实际effect验证必要隔离，不按名字豁免。显式旧revision必须拒绝；便利缺省需先定合同并回读，不能掩盖调用者过期上下文。"
+    },
+    {
+      "id": "F03",
+      "priority": "P0",
+      "title": "W20修复扩大为全局arguments展开，破坏其它工具",
+      "location": "comsol_mcp/_mcp_gateway.py: add_tool.routed; _managed_backend.py: _g2_body/invoke; _g2_tools.py",
+      "evidence_level": "CONFIRMED_SOURCE_FLOW",
+      "finding": "所有工具遇到arguments字典都会展开。registry_call/operation_call本来合法使用该字段包裹内层body，后端仍读取arguments.get(\"arguments\",{}); Java任务参数也可能被拆散。setdefault对已填None默认值又不能用包装值覆盖。",
+      "change": "只对明确W20兼容schema规范化一次。保留registry_call、operation_call、code.execute_java中的合法嵌套参数。未知字段/冲突拒绝；三入口在相同实际body和execution下做正负控。"
+    },
+    {
+      "id": "F04",
+      "priority": "P0",
+      "title": "观测贴标变诚实，但仍未实现模型验证闭环",
+      "location": "comsol_mcp/_g3_w20_validation.py: validate_solution; runner C06/C07/C19",
+      "evidence_level": "CONFIRMED_SOURCE",
+      "finding": "数据仍来自caller criteria，已修正为CALLER_SUPPLIED；引擎只读dataset目录。C19重开后把旧t2再次传给validator，未重新取存储场。",
+      "change": "保留输入数组检查但标EXTERNAL_DATA_ONLY；模型验证必须由现有W17采样/积分或受管ObservationRef提供数据，并核对ModelRef/解/时间/单位/producer。重开必须新取实际场，不复用旧数字。"
+    },
+    {
+      "id": "F05",
+      "priority": "P0",
+      "title": "真实stdio传输的是固定收敛列表，不是精化实验",
+      "location": "tools/run_g3_9_acceptance.py: C11/C12/C13",
+      "evidence_level": "CONFIRMED_SOURCE_AND_REPORT",
+      "finding": "C12/C13继续使用固定误差/DOF/耗时列表。C11在当前瞬态模型上把铜块同一个热流同时填inflow/outflow，storage_rate=0；响应残差默认0。",
+      "change": "实际改网格/solver→求解→观测→计算误差；绑定每级模型/作业。守恒分别读真实有向边界、源项和储能，不能同数相减当独立能量证据。"
+    },
+    {
+      "id": "F06",
+      "priority": "P1",
+      "title": "回读缺失被成功常量、默认值掩盖",
+      "location": "tools/run_g3_9_acceptance.py: copper readback, C02–C07/C11/C18",
+      "evidence_level": "CONFIRMED_SOURCE",
+      "finding": "heat_flux回读缺失会回退到79.99999999999962；多处字段缺失默认True/PASS/0；有的case只看not isError。缺operation_id时随机造UUID。",
+      "change": "必需读数/身份缺失立刻失败。测试允许明确预期的negative response，禁止默认成功。observer和validator各自producer ID不可互换。"
+    },
+    {
+      "id": "F07",
+      "priority": "P0",
+      "title": "报告仍是直接双文件写入，非授权原子产物",
+      "location": "comsol_mcp/_g3_w20_validation.py: validate_report",
+      "evidence_level": "CONFIRMED_SOURCE",
+      "finding": "已加入同名副文件预检和错误状态优先级，但仍直接Path/write_text、检查与写入存在竞态，没有ArtifactStore登记/统一授权。bool(\"false\")=true；未知状态可落PASS。",
+      "change": "报告消费已登记ValidationRun，所有目标一起预检，使用现有ArtifactStore原子发布/覆盖策略，严格bool/枚举和非有限JSON处理；原数据/状态不因生成报告被升级。"
+    },
+    {
+      "id": "F08",
+      "priority": "P1",
+      "title": "结构和数值工具仍未覆盖其宣称范围",
+      "location": "_g3_w20_validation.py: validate_structure/preflight/ConvergenceStudy",
+      "evidence_level": "CONFIRMED_SOURCE_LIMITATION",
+      "finding": "材料、网格、Study主要检查tag存在；不能推出网格已build/物性足够/physics启用。收敛接受caller error，NaN/Inf阈值未全面拒绝，equal-errors trend可能PASS。",
+      "change": "只声明实际观察规则；为热传导profile补字段级检查、未知覆盖。可信收敛RunRef+有限输入/最终阈值/实际细化，避免用新的全能validator扩范围。"
+    },
+    {
+      "id": "F09",
+      "priority": "P1",
+      "title": "运行身份、源码、总结与审查过程尚未闭合",
+      "location": "PROGRESS.md; docs/handoff_g3_9_windows_w20/PROGRESS.md; runner make_case_record",
+      "evidence_level": "CONFIRMED_SOURCE_AND_SCOPE_LIMITATION",
+      "finding": "根进度仍G3.8；runtime_build/worker_id运行前拼接。新文档称瞬态最大误差0，原checks约0.0669K。部分shared检查直接True。本次未取得独立Reviewer会话证据，不从文件名推断其存在。",
+      "change": "保留旧记录加更正；build/Worker取实读身份；全源/driver/oracle/证据快照绑定；新阶段由真实独立Reviewer持有验收判据并出具同快照裁决。"
+    }
+  ]
+}

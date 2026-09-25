@@ -1,0 +1,73 @@
+{
+  "scope": "ISOLATED_REVIEW_NOT_PRODUCT_ACCEPTANCE",
+  "probe_count": 5,
+  "observations": [
+    {
+      "id": "P01",
+      "level": "SOURCE_METHOD_WITH_STUBS",
+      "issue": "Registry fallback loses the nested argument payload",
+      "dispatch_body": {
+        "operation_id": "node.inspect",
+        "path": {
+          "segments": []
+        }
+      },
+      "defect_observed": true
+    },
+    {
+      "id": "P02",
+      "level": "SOURCE_METHOD_WITH_STUBS",
+      "issue": "Legitimate task argument Map is flattened",
+      "dispatch_body": {
+        "source_artifact": "test.java",
+        "gain": 2.0
+      },
+      "defect_observed": true
+    },
+    {
+      "id": "P03",
+      "level": "SOURCE_METHOD_WITH_STUBS",
+      "issue": "setdefault does not replace an already-bound None",
+      "dispatch_body": {
+        "expressions": null
+      },
+      "defect_observed": true
+    },
+    {
+      "id": "P04",
+      "level": "REVIEWED_RAW_FACTS_REPLAY",
+      "issue": "C10 positive validator test must fail on this actual response",
+      "expected_product_status": "PASS",
+      "assessment": {
+        "passed": false,
+        "reasons": [
+          "unexpected numerical verdict",
+          "unexpected validator status",
+          "positive test has execution/tool failure"
+        ],
+        "product_status": "FAIL"
+      },
+      "defect_observed": true,
+      "note": "This flags the prior acceptance mismatch, not a newly executed COMSOL run."
+    },
+    {
+      "id": "P05",
+      "level": "SOURCE_PREDICATE_CONTROL",
+      "issue": "Name-based exceptions suppress configured isolation proof",
+      "would_require_isolation": {
+        "validate.report": false,
+        "node.property_set": true,
+        "plot.render": false
+      },
+      "defect_observed": true,
+      "note": "Other authorization gates are not simulated; this is not proof that all authorization is absent."
+    }
+  ],
+  "positive_controls": {
+    "conflicting_wrapper_refused": true
+  },
+  "native_comsol_run": false,
+  "production_mcp_run": false,
+  "actual_independent_subagents_created": false,
+  "full_repository_tests_run": false
+}

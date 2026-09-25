@@ -1,0 +1,202 @@
+{
+  "schema_version": 1,
+  "round": "R0",
+  "review_stage": "BASELINE_REVIEW_AND_CONTRACT_FREEZE",
+  "timestamp": "2026-09-25T06:25:45+08:00",
+  "verdict": "CHANGES_REQUIRED",
+  "verdict_summary": "R0 baseline review confirmed 5 defects via isolated probes (P01-P05) and verified the C10 validator failure / checks contradiction. The baseline cannot be approved. Acceptance contracts and benchmarks are frozen for Developer iteration starting with R01.",
+  "reviewer": {
+    "role": "INDEPENDENT_REVIEWER",
+    "session_id": "6c070160-f80c-4ce1-be66-bca5c248b8de",
+    "orchestrator_caller_id": "a7d4450e-7cf2-4f3c-b63b-3d7771002ced",
+    "subagent_independent_context": true
+  },
+  "source_context": {
+    "source_commit": "3a7c5feb09738ddcfaedd9c30f7db53b893ec3f9",
+    "branch": "handoff/g3_10_w20_review_loop",
+    "contract_sha256": "0ed0b4502f4856d0c27dfb8821d955a15d729197898a2af2c973ba0acf1f385d",
+    "benchmarks_sha256": "bdb3d5e18db9a5f368547f795dcaec99eb5d8ac70a10bc8beefc7c91539b4c0d"
+  },
+  "frozen_contracts": {
+    "acceptance_json": {
+      "path": "docs/handoff_g3_10_w20_review_loop/ACCEPTANCE.json",
+      "sha256": "0ed0b4502f4856d0c27dfb8821d955a15d729197898a2af2c973ba0acf1f385d",
+      "case_count": 16
+    },
+    "benchmarks_md": {
+      "path": "docs/handoff_g3_10_w20_review_loop/BENCHMARKS.md",
+      "sha256": "bdb3d5e18db9a5f368547f795dcaec99eb5d8ac70a10bc8beefc7c91539b4c0d",
+      "benchmarks": [
+        "B1",
+        "B2",
+        "B3"
+      ]
+    }
+  },
+  "c10_committed_response_audit": {
+    "transcript_path": "evidence/g3_9_windows_w20/win64/mcp_transcript_C10.json",
+    "checks_path": "evidence/g3_9_windows_w20/win64/checks_C10.json",
+    "review_facts_path": "review/C10_REVIEW_FACTS.json",
+    "mcp_request": {
+      "tool": "validate.solution",
+      "requested_oracle": "transient_sine_diffusion"
+    },
+    "mcp_response": {
+      "isError": true,
+      "success": false,
+      "status": "FAIL",
+      "numerical_verification_status": "FAIL",
+      "oracle_registered": false,
+      "message": "Unknown or unregistered oracle 'transient_sine_diffusion'"
+    },
+    "checks_record": {
+      "total_checks": 9,
+      "all_passed": true,
+      "checked_attributes": "9 caller pre-sampled temperature accuracy checks against analytical reference",
+      "validator_response_checked": false
+    },
+    "contradiction_finding": "The previous acceptance runner recorded case C10 as PASS based solely on caller pre-sampled temperature checks, completely disregarding the actual validate.solution tool response which returned isError=True, numerical_verification_status=FAIL, and status=FAIL. Numerical fixture accuracy was conflated with validator product success."
+  },
+  "probe_results_summary": {
+    "scope": "ISOLATED_REVIEW_NOT_PRODUCT_ACCEPTANCE",
+    "probe_count": 5,
+    "probes": [
+      {
+        "id": "P01",
+        "level": "SOURCE_METHOD_WITH_STUBS",
+        "target": "Registry fallback nested payload",
+        "defect_observed": true,
+        "detail": "Gateway add_tool indiscriminately flattens arguments dict, stripping the outer arguments wrapper required by registry_call/operation_call."
+      },
+      {
+        "id": "P02",
+        "level": "SOURCE_METHOD_WITH_STUBS",
+        "target": "Java task argument Map",
+        "defect_observed": true,
+        "detail": "Gateway flattens arguments dictionary for code.execute_java, corrupting Map parameters passed to Java tasks."
+      },
+      {
+        "id": "P03",
+        "level": "SOURCE_METHOD_WITH_STUBS",
+        "target": "setdefault with bound None",
+        "defect_observed": true,
+        "detail": "Gateway uses dict.setdefault on already bound None values, failing to replace them with wrapped arguments."
+      },
+      {
+        "id": "P04",
+        "level": "REVIEWED_RAW_FACTS_REPLAY",
+        "target": "C10 assess_validator_response PASS assertion",
+        "defect_observed": true,
+        "reasons": [
+          "unexpected numerical verdict",
+          "unexpected validator status",
+          "positive test has execution/tool failure"
+        ],
+        "detail": "Applying assess_validator_response to C10 actual response fails because numerical_verification_status is FAIL and isError is True."
+      },
+      {
+        "id": "P05",
+        "level": "SOURCE_PREDICATE_CONTROL",
+        "target": "Name-based isolation exemptions",
+        "defect_observed": true,
+        "detail": "Operations starting with validate.* or matching plot.* bypass configured isolation checks regardless of actual side effects."
+      }
+    ],
+    "positive_controls": {
+      "conflicting_wrapper_refused": true
+    }
+  },
+  "findings_baseline": [
+    {
+      "id": "F01",
+      "severity": "P0",
+      "title": "Transient acceptance marks validator failure as PASS (C10 contradiction)"
+    },
+    {
+      "id": "F02",
+      "severity": "P0",
+      "title": "Isolation and model binding regression (ledger[0] fallback, revision rewrite, name exemptions)"
+    },
+    {
+      "id": "F03",
+      "severity": "P0",
+      "title": "Global arguments flattening breaks registry_call, operation_call, code.execute_java"
+    },
+    {
+      "id": "F04",
+      "severity": "P0",
+      "title": "Observations caller-supplied without model validation loop; lack of ObservationRef verification"
+    },
+    {
+      "id": "F05",
+      "severity": "P0",
+      "title": "Convergence studies using fixed lists instead of actual mesh/time solves"
+    },
+    {
+      "id": "F06",
+      "severity": "P1",
+      "title": "Missing readback masked by defaults (79.999...W fallback, synthetic UUIDs)"
+    },
+    {
+      "id": "F07",
+      "severity": "P0",
+      "title": "Validate report non-atomic publishing, bool string parsing bug, lack of ArtifactStore"
+    },
+    {
+      "id": "F08",
+      "severity": "P1",
+      "title": "Structure and convergence validation checks incomplete (tag-only, caller errors accepted)"
+    },
+    {
+      "id": "F09",
+      "severity": "P1",
+      "title": "Run identity, raw evidence, and progress summaries non-converged"
+    }
+  ],
+  "acceptance_cases_initial_status": {
+    "T01": "NOT_RUN",
+    "T02": "NOT_RUN",
+    "T03": "NOT_RUN",
+    "T04": "NOT_RUN",
+    "T05": "NOT_RUN",
+    "T06": "NOT_RUN",
+    "T07": "NOT_RUN",
+    "T08": "NOT_RUN",
+    "T09": "NOT_RUN",
+    "T10": "NOT_RUN",
+    "T11": "NOT_RUN",
+    "T12": "NOT_RUN",
+    "T13": "NOT_RUN",
+    "T14": "NOT_RUN",
+    "T15": "NOT_RUN",
+    "T16": "NOT_RUN"
+  },
+  "criteria_for_developer_round_r01": {
+    "focus": "M1: Model, Revision, Isolation & Argument Normalization (Addressing F02, F03, T03, T04, T05)",
+    "required_fixes": [
+      {
+        "item": "Model Selection",
+        "rule": "Remove ledger[0] fallback. Must require explicit ModelRef or unambiguous, server-side authorized binding. Reject ambiguous models."
+      },
+      {
+        "item": "Revision Integrity",
+        "rule": "Never silently rewrite expired ModelRef/revision to current revision. Mutating and evaluation actions must strictly validate revision; read-only operations may have explicit unversioned contracts."
+      },
+      {
+        "item": "Isolation Gates",
+        "rule": "Eliminate name-based exemptions (validate.*, plot.*). Gate isolation by true operation effect (read vs evaluate vs mutate vs render)."
+      },
+      {
+        "item": "Gateway Arguments Normalization",
+        "rule": "Scope argument flattening strictly to declared W20 compatibility schemas. Retain nested arguments dict for registry_call and operation_call. Retain Map argument for code.execute_java. Distinguish None from missing fields. Refuse conflicting wrappers or unsupported arguments."
+      }
+    ],
+    "developer_deliverables_for_r01": [
+      "Production code fixes in repository/comsol_mcp/",
+      "Unit and integration tests covering P01-P03, P05, conflicting wrappers, and model isolation",
+      "Candidate source manifest frozen via tools/source_snapshot.py (.handoff/rounds/R01/candidate.json)",
+      "Completed developer packet (.handoff/rounds/R01/review_packet.json)"
+    ],
+    "reviewer_gate_r01": "Reviewer will independently verify snapshot SHA256, execute probes and independent adversarial negative controls in review/ workspace, and evaluate with review_gate.py before issuing verdict."
+  }
+}

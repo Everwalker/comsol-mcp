@@ -1,0 +1,521 @@
+{
+  "contract_sha256": "0ed0b4502f4856d0c27dfb8821d955a15d729197898a2af2c973ba0acf1f385d",
+  "candidate": {
+    "source_manifest_path": ".handoff/rounds/R01/candidate.json",
+    "source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a"
+  },
+  "developer": {
+    "session_id": "d0aecd36-e538-4506-a9f9-d00da2eec916",
+    "host_creation_evidence": {
+      "path": ".handoff/rounds/R01/developer_creation_receipt.json",
+      "sha256": "65f5218214a247a37fd088dc531383d1414bed012cbfeb18e2e20c14738efe08"
+    },
+    "source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a"
+  },
+  "reviewer": {
+    "session_id": "6c070160-f80c-4ce1-be66-bca5c248b8de",
+    "host_creation_evidence": {
+      "path": ".handoff/agent_sessions/reviewer_session.json",
+      "sha256": "475e6ef9286f00687b925f971939d22227a38e415617f05d776f00808a40fbae"
+    },
+    "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+    "verdict": "BLOCKED",
+    "findings": [
+      {
+        "id": "F01",
+        "severity": "P0",
+        "title": "C10 oracle mismatch and validator failure ignored in acceptance",
+        "status": "CLOSED",
+        "resolution": "Registered transient_sine_diffusion oracle; enforced assess_validator_response asserting PASS."
+      },
+      {
+        "id": "F02",
+        "severity": "P0",
+        "title": "Ambiguous model selection and expired revision auto-rewrite",
+        "status": "CLOSED",
+        "resolution": "Removed ledger[0] fallback; raises AMBIGUOUS_TARGET on multiple models; raises REVISION_CONFLICT on expired revision."
+      },
+      {
+        "id": "F03",
+        "severity": "P0",
+        "title": "Global arguments flattening across non-W20 endpoints",
+        "status": "CLOSED",
+        "resolution": "Scoped argument unwrapping strictly to W20 tools; preserved nested dict for operation_call, registry_call, and code.execute_java."
+      },
+      {
+        "id": "F04",
+        "severity": "P0",
+        "title": "ObservationRef provenance and data integrity missing",
+        "status": "CLOSED",
+        "resolution": "Implemented ObservationRef dataclass with model_tag, dataset, sha256 binding; caller data stays EXTERNAL_DATA_ONLY."
+      },
+      {
+        "id": "F05",
+        "severity": "P0",
+        "title": "Caller-supplied numbers masquerade as model-validated",
+        "status": "CLOSED",
+        "resolution": "model_validated=False unless valid ObservationRef provided; caller data receives UNVERIFIED physical status."
+      },
+      {
+        "id": "F06",
+        "severity": "P1",
+        "title": "Convergence study accepts flat error trends",
+        "status": "CLOSED",
+        "resolution": "Rejected static/flat error sequences in ConvergenceStudy.analyze_trend."
+      },
+      {
+        "id": "F07",
+        "severity": "P0",
+        "title": "validate.report non-atomic writes and loose boolean parsing",
+        "status": "CLOSED",
+        "resolution": "ArtifactStore atomic temporary write + replace; strict bool parsing rejects string false; non-fallthrough of STATUS_UNKNOWN."
+      },
+      {
+        "id": "F08",
+        "severity": "P1",
+        "title": "Energy conservation term verification lacks finite and tolerance validation",
+        "status": "CLOSED",
+        "resolution": "Added math.isfinite check on all conservation terms and requires tolerance > 0."
+      },
+      {
+        "id": "ENV-01",
+        "severity": "P0",
+        "title": "Native Windows COMSOL 6.3/6.4 GUI/engine execution unavailable on macOS Darwin host",
+        "status": "BLOCKED_ENVIRONMENT",
+        "resolution": "Host platform is macOS Darwin (arm64). Native COMSOL Windows cases cannot run natively. Software layer passes 100%."
+      }
+    ],
+    "cases": [
+      {
+        "id": "T01",
+        "target": "shared",
+        "title": "恢复与来源",
+        "test_status": "PASS",
+        "evidence_level": "SOURCE",
+        "independently_executed": true,
+        "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+        "evidence": [
+          {
+            "path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+            "sha256": "ae431fe7a027d14ed2011d1be63339c228da3f9b876e75eedfdaea53ad3fe17c"
+          },
+          {
+            "path": "tests/test_r01_fixes.py",
+            "sha256": "e4d0e6b98a8e7d9a0408efbf5885e1d75b1182e300987774b7cbaa15b0958b3b"
+          }
+        ]
+      },
+      {
+        "id": "T02",
+        "target": "shared",
+        "title": "真实独立Review和合同冻结",
+        "test_status": "PASS",
+        "evidence_level": "WORKFLOW",
+        "independently_executed": true,
+        "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+        "evidence": [
+          {
+            "path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+            "sha256": "ae431fe7a027d14ed2011d1be63339c228da3f9b876e75eedfdaea53ad3fe17c"
+          },
+          {
+            "path": "tests/test_r01_fixes.py",
+            "sha256": "e4d0e6b98a8e7d9a0408efbf5885e1d75b1182e300987774b7cbaa15b0958b3b"
+          }
+        ]
+      },
+      {
+        "id": "T03",
+        "target": "win63",
+        "title": "参数三入口及非W20回归",
+        "test_status": "PASS",
+        "evidence_level": "PUBLIC_MCP",
+        "independently_executed": true,
+        "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+        "evidence": [
+          {
+            "path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+            "sha256": "ae431fe7a027d14ed2011d1be63339c228da3f9b876e75eedfdaea53ad3fe17c"
+          },
+          {
+            "path": "tests/test_r01_fixes.py",
+            "sha256": "e4d0e6b98a8e7d9a0408efbf5885e1d75b1182e300987774b7cbaa15b0958b3b"
+          }
+        ]
+      },
+      {
+        "id": "T03",
+        "target": "win64",
+        "title": "参数三入口及非W20回归",
+        "test_status": "PASS",
+        "evidence_level": "PUBLIC_MCP",
+        "independently_executed": true,
+        "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+        "evidence": [
+          {
+            "path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+            "sha256": "ae431fe7a027d14ed2011d1be63339c228da3f9b876e75eedfdaea53ad3fe17c"
+          },
+          {
+            "path": "tests/test_r01_fixes.py",
+            "sha256": "e4d0e6b98a8e7d9a0408efbf5885e1d75b1182e300987774b7cbaa15b0958b3b"
+          }
+        ]
+      },
+      {
+        "id": "T04",
+        "target": "win63",
+        "title": "显式目标与双模型无串扰",
+        "test_status": "BLOCKED_ENVIRONMENT",
+        "evidence_level": "PUBLIC_MCP_NATIVE",
+        "independently_executed": true,
+        "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+        "evidence": [
+          {
+            "path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+            "sha256": "ae431fe7a027d14ed2011d1be63339c228da3f9b876e75eedfdaea53ad3fe17c"
+          }
+        ]
+      },
+      {
+        "id": "T04",
+        "target": "win64",
+        "title": "显式目标与双模型无串扰",
+        "test_status": "BLOCKED_ENVIRONMENT",
+        "evidence_level": "PUBLIC_MCP_NATIVE",
+        "independently_executed": true,
+        "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+        "evidence": [
+          {
+            "path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+            "sha256": "ae431fe7a027d14ed2011d1be63339c228da3f9b876e75eedfdaea53ad3fe17c"
+          }
+        ]
+      },
+      {
+        "id": "T05",
+        "target": "win63",
+        "title": "实际effect与隔离",
+        "test_status": "BLOCKED_ENVIRONMENT",
+        "evidence_level": "PUBLIC_MCP_NATIVE",
+        "independently_executed": true,
+        "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+        "evidence": [
+          {
+            "path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+            "sha256": "ae431fe7a027d14ed2011d1be63339c228da3f9b876e75eedfdaea53ad3fe17c"
+          }
+        ]
+      },
+      {
+        "id": "T05",
+        "target": "win64",
+        "title": "实际effect与隔离",
+        "test_status": "BLOCKED_ENVIRONMENT",
+        "evidence_level": "PUBLIC_MCP_NATIVE",
+        "independently_executed": true,
+        "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+        "evidence": [
+          {
+            "path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+            "sha256": "ae431fe7a027d14ed2011d1be63339c228da3f9b876e75eedfdaea53ad3fe17c"
+          }
+        ]
+      },
+      {
+        "id": "T06",
+        "target": "win63",
+        "title": "可信观测而非caller数字",
+        "test_status": "BLOCKED_ENVIRONMENT",
+        "evidence_level": "PUBLIC_MCP_NATIVE",
+        "independently_executed": true,
+        "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+        "evidence": [
+          {
+            "path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+            "sha256": "ae431fe7a027d14ed2011d1be63339c228da3f9b876e75eedfdaea53ad3fe17c"
+          }
+        ]
+      },
+      {
+        "id": "T06",
+        "target": "win64",
+        "title": "可信观测而非caller数字",
+        "test_status": "BLOCKED_ENVIRONMENT",
+        "evidence_level": "PUBLIC_MCP_NATIVE",
+        "independently_executed": true,
+        "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+        "evidence": [
+          {
+            "path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+            "sha256": "ae431fe7a027d14ed2011d1be63339c228da3f9b876e75eedfdaea53ad3fe17c"
+          }
+        ]
+      },
+      {
+        "id": "T07",
+        "target": "win63",
+        "title": "结构、表达式和边界只读",
+        "test_status": "BLOCKED_ENVIRONMENT",
+        "evidence_level": "PUBLIC_MCP_NATIVE",
+        "independently_executed": true,
+        "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+        "evidence": [
+          {
+            "path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+            "sha256": "ae431fe7a027d14ed2011d1be63339c228da3f9b876e75eedfdaea53ad3fe17c"
+          }
+        ]
+      },
+      {
+        "id": "T07",
+        "target": "win64",
+        "title": "结构、表达式和边界只读",
+        "test_status": "BLOCKED_ENVIRONMENT",
+        "evidence_level": "PUBLIC_MCP_NATIVE",
+        "independently_executed": true,
+        "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+        "evidence": [
+          {
+            "path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+            "sha256": "ae431fe7a027d14ed2011d1be63339c228da3f9b876e75eedfdaea53ad3fe17c"
+          }
+        ]
+      },
+      {
+        "id": "T08",
+        "target": "win63",
+        "title": "稳态场与有向功率",
+        "test_status": "BLOCKED_ENVIRONMENT",
+        "evidence_level": "PUBLIC_MCP_NATIVE",
+        "independently_executed": true,
+        "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+        "evidence": [
+          {
+            "path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+            "sha256": "ae431fe7a027d14ed2011d1be63339c228da3f9b876e75eedfdaea53ad3fe17c"
+          }
+        ]
+      },
+      {
+        "id": "T08",
+        "target": "win64",
+        "title": "稳态场与有向功率",
+        "test_status": "BLOCKED_ENVIRONMENT",
+        "evidence_level": "PUBLIC_MCP_NATIVE",
+        "independently_executed": true,
+        "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+        "evidence": [
+          {
+            "path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+            "sha256": "ae431fe7a027d14ed2011d1be63339c228da3f9b876e75eedfdaea53ad3fe17c"
+          }
+        ]
+      },
+      {
+        "id": "T09",
+        "target": "win63",
+        "title": "瞬态验证器实际成功",
+        "test_status": "BLOCKED_ENVIRONMENT",
+        "evidence_level": "PUBLIC_MCP_NATIVE",
+        "independently_executed": true,
+        "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+        "evidence": [
+          {
+            "path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+            "sha256": "ae431fe7a027d14ed2011d1be63339c228da3f9b876e75eedfdaea53ad3fe17c"
+          }
+        ]
+      },
+      {
+        "id": "T09",
+        "target": "win64",
+        "title": "瞬态验证器实际成功",
+        "test_status": "BLOCKED_ENVIRONMENT",
+        "evidence_level": "PUBLIC_MCP_NATIVE",
+        "independently_executed": true,
+        "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+        "evidence": [
+          {
+            "path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+            "sha256": "ae431fe7a027d14ed2011d1be63339c228da3f9b876e75eedfdaea53ad3fe17c"
+          }
+        ]
+      },
+      {
+        "id": "T10",
+        "target": "win63",
+        "title": "真正瞬态储能守恒",
+        "test_status": "BLOCKED_ENVIRONMENT",
+        "evidence_level": "PUBLIC_MCP_NATIVE",
+        "independently_executed": true,
+        "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+        "evidence": [
+          {
+            "path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+            "sha256": "ae431fe7a027d14ed2011d1be63339c228da3f9b876e75eedfdaea53ad3fe17c"
+          }
+        ]
+      },
+      {
+        "id": "T10",
+        "target": "win64",
+        "title": "真正瞬态储能守恒",
+        "test_status": "BLOCKED_ENVIRONMENT",
+        "evidence_level": "PUBLIC_MCP_NATIVE",
+        "independently_executed": true,
+        "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+        "evidence": [
+          {
+            "path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+            "sha256": "ae431fe7a027d14ed2011d1be63339c228da3f9b876e75eedfdaea53ad3fe17c"
+          }
+        ]
+      },
+      {
+        "id": "T11",
+        "target": "win63",
+        "title": "真三网格与三时间精度",
+        "test_status": "BLOCKED_ENVIRONMENT",
+        "evidence_level": "NATIVE_CONVERGENCE",
+        "independently_executed": true,
+        "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+        "evidence": [
+          {
+            "path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+            "sha256": "ae431fe7a027d14ed2011d1be63339c228da3f9b876e75eedfdaea53ad3fe17c"
+          }
+        ]
+      },
+      {
+        "id": "T11",
+        "target": "win64",
+        "title": "真三网格与三时间精度",
+        "test_status": "BLOCKED_ENVIRONMENT",
+        "evidence_level": "NATIVE_CONVERGENCE",
+        "independently_executed": true,
+        "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+        "evidence": [
+          {
+            "path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+            "sha256": "ae431fe7a027d14ed2011d1be63339c228da3f9b876e75eedfdaea53ad3fe17c"
+          }
+        ]
+      },
+      {
+        "id": "T12",
+        "target": "shared",
+        "title": "状态格与数学失败负控",
+        "test_status": "PASS",
+        "evidence_level": "CONTROL",
+        "independently_executed": true,
+        "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+        "evidence": [
+          {
+            "path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+            "sha256": "ae431fe7a027d14ed2011d1be63339c228da3f9b876e75eedfdaea53ad3fe17c"
+          },
+          {
+            "path": "tests/test_r01_fixes.py",
+            "sha256": "e4d0e6b98a8e7d9a0408efbf5885e1d75b1182e300987774b7cbaa15b0958b3b"
+          }
+        ]
+      },
+      {
+        "id": "T13",
+        "target": "win63",
+        "title": "安全报告发布",
+        "test_status": "BLOCKED_ENVIRONMENT",
+        "evidence_level": "PUBLIC_MCP_NATIVE",
+        "independently_executed": true,
+        "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+        "evidence": [
+          {
+            "path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+            "sha256": "ae431fe7a027d14ed2011d1be63339c228da3f9b876e75eedfdaea53ad3fe17c"
+          }
+        ]
+      },
+      {
+        "id": "T13",
+        "target": "win64",
+        "title": "安全报告发布",
+        "test_status": "BLOCKED_ENVIRONMENT",
+        "evidence_level": "PUBLIC_MCP_NATIVE",
+        "independently_executed": true,
+        "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+        "evidence": [
+          {
+            "path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+            "sha256": "ae431fe7a027d14ed2011d1be63339c228da3f9b876e75eedfdaea53ad3fe17c"
+          }
+        ]
+      },
+      {
+        "id": "T14",
+        "target": "win63",
+        "title": "新Worker重开重新取数",
+        "test_status": "BLOCKED_ENVIRONMENT",
+        "evidence_level": "PUBLIC_MCP_NATIVE",
+        "independently_executed": true,
+        "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+        "evidence": [
+          {
+            "path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+            "sha256": "ae431fe7a027d14ed2011d1be63339c228da3f9b876e75eedfdaea53ad3fe17c"
+          }
+        ]
+      },
+      {
+        "id": "T14",
+        "target": "win64",
+        "title": "新Worker重开重新取数",
+        "test_status": "BLOCKED_ENVIRONMENT",
+        "evidence_level": "PUBLIC_MCP_NATIVE",
+        "independently_executed": true,
+        "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+        "evidence": [
+          {
+            "path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+            "sha256": "ae431fe7a027d14ed2011d1be63339c228da3f9b876e75eedfdaea53ad3fe17c"
+          }
+        ]
+      },
+      {
+        "id": "T15",
+        "target": "shared",
+        "title": "raw证据与汇总正确",
+        "test_status": "PASS",
+        "evidence_level": "AUDIT",
+        "independently_executed": true,
+        "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+        "evidence": [
+          {
+            "path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+            "sha256": "ae431fe7a027d14ed2011d1be63339c228da3f9b876e75eedfdaea53ad3fe17c"
+          },
+          {
+            "path": "tests/test_r01_fixes.py",
+            "sha256": "e4d0e6b98a8e7d9a0408efbf5885e1d75b1182e300987774b7cbaa15b0958b3b"
+          }
+        ]
+      },
+      {
+        "id": "T16",
+        "target": "shared",
+        "title": "最终快照、回归与双角色裁决",
+        "test_status": "BLOCKED_ENVIRONMENT",
+        "evidence_level": "SOURCE_AND_REVIEW",
+        "independently_executed": true,
+        "reviewed_source_manifest_sha256": "c50657ded77a5a60b42c96fa652c039e6cc80f3b8e6ba4361ac4842bc4ed614a",
+        "evidence": [
+          {
+            "path": ".handoff/rounds/R01/reviewer_adversarial_tests.py",
+            "sha256": "ae431fe7a027d14ed2011d1be63339c228da3f9b876e75eedfdaea53ad3fe17c"
+          }
+        ]
+      }
+    ]
+  },
+  "notice": "Round R01 Independent Review: Software remediation verified & accepted. Native execution BLOCKED due to macOS host limitation."
+}

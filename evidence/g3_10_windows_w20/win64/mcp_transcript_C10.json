@@ -1,0 +1,362 @@
+{
+  "capture_origin": "CAPTURED_STDIN_STDOUT",
+  "run_id": "g3_10_w20_acceptance_live",
+  "target": "win64",
+  "case_id": "C10",
+  "events": [
+    {
+      "direction": "request",
+      "method": "tools/call",
+      "request_id": "12",
+      "timestamp": "2026-09-25T00:34:33.541979+00:00",
+      "payload": {
+        "name": "validate.solution",
+        "arguments": {
+          "solution": {
+            "dataset": "dset1"
+          },
+          "oracle": "transient_sine_diffusion",
+          "observations": {
+            "T_0.25_0.01": 306.4181981222561,
+            "T_0.5_0.01": 309.07669443598576,
+            "T_0.75_0.01": 306.41819639068166,
+            "T_0.25_0.03": 305.3061930050617,
+            "T_0.5_0.03": 307.50408355223055,
+            "T_0.75_0.03": 305.30619125214804,
+            "T_0.25_0.1": 302.6713174024731,
+            "T_0.5_0.1": 303.77781014930935,
+            "T_0.75_0.1": 302.6713164623091
+          }
+        }
+      },
+      "raw_jsonrpc": {
+        "method": "tools/call",
+        "params": {
+          "name": "validate.solution",
+          "arguments": {
+            "solution": {
+              "dataset": "dset1"
+            },
+            "oracle": "transient_sine_diffusion",
+            "observations": {
+              "T_0.25_0.01": 306.4181981222561,
+              "T_0.5_0.01": 309.07669443598576,
+              "T_0.75_0.01": 306.41819639068166,
+              "T_0.25_0.03": 305.3061930050617,
+              "T_0.5_0.03": 307.50408355223055,
+              "T_0.75_0.03": 305.30619125214804,
+              "T_0.25_0.1": 302.6713174024731,
+              "T_0.5_0.1": 303.77781014930935,
+              "T_0.75_0.1": 302.6713164623091
+            }
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 12
+      }
+    },
+    {
+      "direction": "response",
+      "request_id": "12",
+      "timestamp": "2026-09-25T00:34:33.663627+00:00",
+      "payload": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\": true, \"data\": {\"status\": \"PASS\", \"execution_status\": \"PASS\", \"numerical_verification_status\": \"PASS\", \"physical_validation_status\": \"UNVERIFIED\", \"observation_origin\": \"CALLER_SUPPLIED\", \"scope\": \"EXTERNAL_DATA_ONLY\", \"model_validated\": false, \"solution\": {\"dataset\": \"dset1\"}, \"checks\": {\"dataset_exists\": true, \"required_observations_complete\": true}, \"metrics\": {}, \"oracle_results\": {\"T_0.25_0.01\": {\"status\": \"PASS\", \"error\": 0.01168301099812652}, \"T_0.5_0.01\": {\"status\": \"PASS\", \"error\": 0.016513878096532153}, \"T_0.75_0.01\": {\"status\": \"PASS\", \"error\": 0.011681279423669366}, \"T_0.25_0.03\": {\"status\": \"PASS\", \"error\": 0.04728516258006721}, \"T_0.5_0.03\": {\"status\": \"PASS\", \"error\": 0.06686475812279014}, \"T_0.75_0.03\": {\"status\": \"PASS\", \"error\": 0.047283409666420084}, \"T_0.25_0.1\": {\"status\": \"PASS\", \"error\": 0.035874999926591045}, \"T_0.5_0.1\": {\"status\": \"PASS\", \"error\": 0.05073176077496555}, \"T_0.75_0.1\": {\"status\": \"PASS\", \"error\": 0.03587405976259106}}, \"domain_state\": \"succeeded\", \"verification_status\": \"NOT_RUN\", \"execution_state_unknown\": false, \"partial_change\": false, \"cleanup_failed\": false, \"dispatch_stage\": \"post_dispatch\", \"domain_outcome\": {\"operation\": \"validate.solution\", \"state\": \"succeeded\", \"verification_status\": \"NOT_RUN\", \"cleanup_failed\": false, \"execution_state_unknown\": false, \"dispatch_stage\": \"post_dispatch\", \"status_token\": \"PASS\", \"execution_status\": \"PASS\", \"verification\": {\"declared_by\": [\"checks\"], \"reason\": \"the operation declared a verification axis but published no verdict\"}, \"witness\": {\"engine_calls\": 3, \"mutation_method\": null, \"methods\": [\"dataset\", \"result\", \"tags\"], \"dispatches\": [{\"command\": \"call\", \"method\": \"result\", \"args_count\": 0, \"receiver\": \"h-ab8a143f-e726-4fb2-8a77-894f991cbe99\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"dataset\", \"args_count\": 0, \"receiver\": \"h-9e178dd0-2a3b-4f2d-929b-baae6a35e17c\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-621bc361-ff55-401a-8c68-a050685d365b\", \"is_mutation\": false}], \"mutation_issued\": false}, \"details\": {\"status_token\": \"PASS\"}}, \"effect\": \"evaluate\"}, \"error\": null, \"execution\": {\"session_id\": \"session-77d9001ba07f2cbb69aa49c7\", \"model_ref\": {\"schema_version\": 1, \"session_id\": \"session-77d9001ba07f2cbb69aa49c7\", \"server_instance_id\": \"1a6691e8a852f9ef87c917add32dcd6f3f937e57a00ad1c6882ebfb024df0518\", \"model_tag\": \"mcp2\", \"generation\": 1}, \"revision\": 1, \"dirty\": false, \"server_ownership\": \"shared\", \"model_ownership\": \"user_owned\", \"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"request_id\": \"9f0abfcb-0553-4ef7-a2ba-5a1c4cd3d4c1\", \"operation_id\": \"4b01eea7-dbdb-4801-b398-d92431cf90be\", \"request_hash\": \"d194b3861b21206bd109212e46676f660f00a610d28128e8c80c6fddf7c24e77\", \"idempotency_key\": \"81cc4872-781b-4740-abee-542fd9175455\", \"job_id\": \"3fa870c0-78bc-48d7-af95-6a148e0a3ff9\"}}"
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "data": {
+            "status": "PASS",
+            "execution_status": "PASS",
+            "numerical_verification_status": "PASS",
+            "physical_validation_status": "UNVERIFIED",
+            "observation_origin": "CALLER_SUPPLIED",
+            "scope": "EXTERNAL_DATA_ONLY",
+            "model_validated": false,
+            "solution": {
+              "dataset": "dset1"
+            },
+            "checks": {
+              "dataset_exists": true,
+              "required_observations_complete": true
+            },
+            "metrics": {},
+            "oracle_results": {
+              "T_0.25_0.01": {
+                "status": "PASS",
+                "error": 0.01168301099812652
+              },
+              "T_0.5_0.01": {
+                "status": "PASS",
+                "error": 0.016513878096532153
+              },
+              "T_0.75_0.01": {
+                "status": "PASS",
+                "error": 0.011681279423669366
+              },
+              "T_0.25_0.03": {
+                "status": "PASS",
+                "error": 0.04728516258006721
+              },
+              "T_0.5_0.03": {
+                "status": "PASS",
+                "error": 0.06686475812279014
+              },
+              "T_0.75_0.03": {
+                "status": "PASS",
+                "error": 0.047283409666420084
+              },
+              "T_0.25_0.1": {
+                "status": "PASS",
+                "error": 0.035874999926591045
+              },
+              "T_0.5_0.1": {
+                "status": "PASS",
+                "error": 0.05073176077496555
+              },
+              "T_0.75_0.1": {
+                "status": "PASS",
+                "error": 0.03587405976259106
+              }
+            },
+            "domain_state": "succeeded",
+            "verification_status": "NOT_RUN",
+            "execution_state_unknown": false,
+            "partial_change": false,
+            "cleanup_failed": false,
+            "dispatch_stage": "post_dispatch",
+            "domain_outcome": {
+              "operation": "validate.solution",
+              "state": "succeeded",
+              "verification_status": "NOT_RUN",
+              "cleanup_failed": false,
+              "execution_state_unknown": false,
+              "dispatch_stage": "post_dispatch",
+              "status_token": "PASS",
+              "execution_status": "PASS",
+              "verification": {
+                "declared_by": [
+                  "checks"
+                ],
+                "reason": "the operation declared a verification axis but published no verdict"
+              },
+              "witness": {
+                "engine_calls": 3,
+                "mutation_method": null,
+                "methods": [
+                  "dataset",
+                  "result",
+                  "tags"
+                ],
+                "dispatches": [
+                  {
+                    "command": "call",
+                    "method": "result",
+                    "args_count": 0,
+                    "receiver": "h-ab8a143f-e726-4fb2-8a77-894f991cbe99",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "dataset",
+                    "args_count": 0,
+                    "receiver": "h-9e178dd0-2a3b-4f2d-929b-baae6a35e17c",
+                    "is_mutation": false
+                  },
+                  {
+                    "command": "call",
+                    "method": "tags",
+                    "args_count": 0,
+                    "receiver": "h-621bc361-ff55-401a-8c68-a050685d365b",
+                    "is_mutation": false
+                  }
+                ],
+                "mutation_issued": false
+              },
+              "details": {
+                "status_token": "PASS"
+              }
+            },
+            "effect": "evaluate"
+          },
+          "error": null,
+          "execution": {
+            "session_id": "session-77d9001ba07f2cbb69aa49c7",
+            "model_ref": {
+              "schema_version": 1,
+              "session_id": "session-77d9001ba07f2cbb69aa49c7",
+              "server_instance_id": "1a6691e8a852f9ef87c917add32dcd6f3f937e57a00ad1c6882ebfb024df0518",
+              "model_tag": "mcp2",
+              "generation": 1
+            },
+            "revision": 1,
+            "dirty": false,
+            "server_ownership": "shared",
+            "model_ownership": "user_owned",
+            "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+            "request_id": "9f0abfcb-0553-4ef7-a2ba-5a1c4cd3d4c1",
+            "operation_id": "4b01eea7-dbdb-4801-b398-d92431cf90be",
+            "request_hash": "d194b3861b21206bd109212e46676f660f00a610d28128e8c80c6fddf7c24e77",
+            "idempotency_key": "81cc4872-781b-4740-abee-542fd9175455",
+            "job_id": "3fa870c0-78bc-48d7-af95-6a148e0a3ff9"
+          }
+        },
+        "isError": false
+      },
+      "raw_jsonrpc": {
+        "jsonrpc": "2.0",
+        "id": 12,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"success\": true, \"data\": {\"status\": \"PASS\", \"execution_status\": \"PASS\", \"numerical_verification_status\": \"PASS\", \"physical_validation_status\": \"UNVERIFIED\", \"observation_origin\": \"CALLER_SUPPLIED\", \"scope\": \"EXTERNAL_DATA_ONLY\", \"model_validated\": false, \"solution\": {\"dataset\": \"dset1\"}, \"checks\": {\"dataset_exists\": true, \"required_observations_complete\": true}, \"metrics\": {}, \"oracle_results\": {\"T_0.25_0.01\": {\"status\": \"PASS\", \"error\": 0.01168301099812652}, \"T_0.5_0.01\": {\"status\": \"PASS\", \"error\": 0.016513878096532153}, \"T_0.75_0.01\": {\"status\": \"PASS\", \"error\": 0.011681279423669366}, \"T_0.25_0.03\": {\"status\": \"PASS\", \"error\": 0.04728516258006721}, \"T_0.5_0.03\": {\"status\": \"PASS\", \"error\": 0.06686475812279014}, \"T_0.75_0.03\": {\"status\": \"PASS\", \"error\": 0.047283409666420084}, \"T_0.25_0.1\": {\"status\": \"PASS\", \"error\": 0.035874999926591045}, \"T_0.5_0.1\": {\"status\": \"PASS\", \"error\": 0.05073176077496555}, \"T_0.75_0.1\": {\"status\": \"PASS\", \"error\": 0.03587405976259106}}, \"domain_state\": \"succeeded\", \"verification_status\": \"NOT_RUN\", \"execution_state_unknown\": false, \"partial_change\": false, \"cleanup_failed\": false, \"dispatch_stage\": \"post_dispatch\", \"domain_outcome\": {\"operation\": \"validate.solution\", \"state\": \"succeeded\", \"verification_status\": \"NOT_RUN\", \"cleanup_failed\": false, \"execution_state_unknown\": false, \"dispatch_stage\": \"post_dispatch\", \"status_token\": \"PASS\", \"execution_status\": \"PASS\", \"verification\": {\"declared_by\": [\"checks\"], \"reason\": \"the operation declared a verification axis but published no verdict\"}, \"witness\": {\"engine_calls\": 3, \"mutation_method\": null, \"methods\": [\"dataset\", \"result\", \"tags\"], \"dispatches\": [{\"command\": \"call\", \"method\": \"result\", \"args_count\": 0, \"receiver\": \"h-ab8a143f-e726-4fb2-8a77-894f991cbe99\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"dataset\", \"args_count\": 0, \"receiver\": \"h-9e178dd0-2a3b-4f2d-929b-baae6a35e17c\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-621bc361-ff55-401a-8c68-a050685d365b\", \"is_mutation\": false}], \"mutation_issued\": false}, \"details\": {\"status_token\": \"PASS\"}}, \"effect\": \"evaluate\"}, \"error\": null, \"execution\": {\"session_id\": \"session-77d9001ba07f2cbb69aa49c7\", \"model_ref\": {\"schema_version\": 1, \"session_id\": \"session-77d9001ba07f2cbb69aa49c7\", \"server_instance_id\": \"1a6691e8a852f9ef87c917add32dcd6f3f937e57a00ad1c6882ebfb024df0518\", \"model_tag\": \"mcp2\", \"generation\": 1}, \"revision\": 1, \"dirty\": false, \"server_ownership\": \"shared\", \"model_ownership\": \"user_owned\", \"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"request_id\": \"9f0abfcb-0553-4ef7-a2ba-5a1c4cd3d4c1\", \"operation_id\": \"4b01eea7-dbdb-4801-b398-d92431cf90be\", \"request_hash\": \"d194b3861b21206bd109212e46676f660f00a610d28128e8c80c6fddf7c24e77\", \"idempotency_key\": \"81cc4872-781b-4740-abee-542fd9175455\", \"job_id\": \"3fa870c0-78bc-48d7-af95-6a148e0a3ff9\"}}"
+            }
+          ],
+          "structuredContent": {
+            "success": true,
+            "data": {
+              "status": "PASS",
+              "execution_status": "PASS",
+              "numerical_verification_status": "PASS",
+              "physical_validation_status": "UNVERIFIED",
+              "observation_origin": "CALLER_SUPPLIED",
+              "scope": "EXTERNAL_DATA_ONLY",
+              "model_validated": false,
+              "solution": {
+                "dataset": "dset1"
+              },
+              "checks": {
+                "dataset_exists": true,
+                "required_observations_complete": true
+              },
+              "metrics": {},
+              "oracle_results": {
+                "T_0.25_0.01": {
+                  "status": "PASS",
+                  "error": 0.01168301099812652
+                },
+                "T_0.5_0.01": {
+                  "status": "PASS",
+                  "error": 0.016513878096532153
+                },
+                "T_0.75_0.01": {
+                  "status": "PASS",
+                  "error": 0.011681279423669366
+                },
+                "T_0.25_0.03": {
+                  "status": "PASS",
+                  "error": 0.04728516258006721
+                },
+                "T_0.5_0.03": {
+                  "status": "PASS",
+                  "error": 0.06686475812279014
+                },
+                "T_0.75_0.03": {
+                  "status": "PASS",
+                  "error": 0.047283409666420084
+                },
+                "T_0.25_0.1": {
+                  "status": "PASS",
+                  "error": 0.035874999926591045
+                },
+                "T_0.5_0.1": {
+                  "status": "PASS",
+                  "error": 0.05073176077496555
+                },
+                "T_0.75_0.1": {
+                  "status": "PASS",
+                  "error": 0.03587405976259106
+                }
+              },
+              "domain_state": "succeeded",
+              "verification_status": "NOT_RUN",
+              "execution_state_unknown": false,
+              "partial_change": false,
+              "cleanup_failed": false,
+              "dispatch_stage": "post_dispatch",
+              "domain_outcome": {
+                "operation": "validate.solution",
+                "state": "succeeded",
+                "verification_status": "NOT_RUN",
+                "cleanup_failed": false,
+                "execution_state_unknown": false,
+                "dispatch_stage": "post_dispatch",
+                "status_token": "PASS",
+                "execution_status": "PASS",
+                "verification": {
+                  "declared_by": [
+                    "checks"
+                  ],
+                  "reason": "the operation declared a verification axis but published no verdict"
+                },
+                "witness": {
+                  "engine_calls": 3,
+                  "mutation_method": null,
+                  "methods": [
+                    "dataset",
+                    "result",
+                    "tags"
+                  ],
+                  "dispatches": [
+                    {
+                      "command": "call",
+                      "method": "result",
+                      "args_count": 0,
+                      "receiver": "h-ab8a143f-e726-4fb2-8a77-894f991cbe99",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "dataset",
+                      "args_count": 0,
+                      "receiver": "h-9e178dd0-2a3b-4f2d-929b-baae6a35e17c",
+                      "is_mutation": false
+                    },
+                    {
+                      "command": "call",
+                      "method": "tags",
+                      "args_count": 0,
+                      "receiver": "h-621bc361-ff55-401a-8c68-a050685d365b",
+                      "is_mutation": false
+                    }
+                  ],
+                  "mutation_issued": false
+                },
+                "details": {
+                  "status_token": "PASS"
+                }
+              },
+              "effect": "evaluate"
+            },
+            "error": null,
+            "execution": {
+              "session_id": "session-77d9001ba07f2cbb69aa49c7",
+              "model_ref": {
+                "schema_version": 1,
+                "session_id": "session-77d9001ba07f2cbb69aa49c7",
+                "server_instance_id": "1a6691e8a852f9ef87c917add32dcd6f3f937e57a00ad1c6882ebfb024df0518",
+                "model_tag": "mcp2",
+                "generation": 1
+              },
+              "revision": 1,
+              "dirty": false,
+              "server_ownership": "shared",
+              "model_ownership": "user_owned",
+              "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+              "request_id": "9f0abfcb-0553-4ef7-a2ba-5a1c4cd3d4c1",
+              "operation_id": "4b01eea7-dbdb-4801-b398-d92431cf90be",
+              "request_hash": "d194b3861b21206bd109212e46676f660f00a610d28128e8c80c6fddf7c24e77",
+              "idempotency_key": "81cc4872-781b-4740-abee-542fd9175455",
+              "job_id": "3fa870c0-78bc-48d7-af95-6a148e0a3ff9"
+            }
+          },
+          "isError": false
+        }
+      }
+    }
+  ]
+}

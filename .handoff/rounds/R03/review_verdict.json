@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "round": "R03",
+  "stage": "FINAL_INDEPENDENT_REVIEW_AND_VERDICT",
+  "timestamp": "2026-09-25T08:43:00+08:00",
+  "verdict": "APPROVED",
+  "verdict_summary": "Candidate snapshot R03 is fully APPROVED. All 5 baseline defects (P01-P05) and findings F01-F09/ENV-01 are verified CLOSED. Authentic live acceptance on dedicated Windows 11 host with COMSOL 6.3 and 6.4 completed with 37/37 records PASS. C10 validator failure contradiction is resolved with authentic validator PASS on both versions. All 16 acceptance cases (T01-T16) across 26 targets satisfy frozen contracts. review_gate.py passed with zero errors and zero pending items.",
+  "candidate_snapshot": {
+    "path": ".handoff/rounds/R03/candidate.json",
+    "sha256": "cb8b677d701f60b1b1a9439adb1ab40f73812f5aef5ae7de67d1e66ead4a5731",
+    "file_count": 218,
+    "manifest_verified": true
+  },
+  "contract_context": {
+    "frozen_contract_sha256": "0ed0b4502f4856d0c27dfb8821d955a15d729197898a2af2c973ba0acf1f385d",
+    "benchmarks_sha256": "bdb3d5e18db9a5f368547f795dcaec99eb5d8ac70a10bc8beefc7c91539b4c0d",
+    "acceptance_doc": "docs/handoff_g3_10_w20_review_loop/ACCEPTANCE.json",
+    "benchmarks_doc": "docs/handoff_g3_10_w20_review_loop/BENCHMARKS.md"
+  },
+  "reviewer": {
+    "role": "INDEPENDENT_REVIEWER",
+    "session_id": "6c070160-f80c-4ce1-be66-bca5c248b8de",
+    "receipt_path": ".handoff/agent_sessions/reviewer_session.json",
+    "receipt_sha256": "475e6ef9286f00687b925f971939d22227a38e415617f05d776f00808a40fbae"
+  },
+  "developer": {
+    "role": "DEVELOPER",
+    "session_id": "d0aecd36-e538-4506-a9f9-d00da2eec916",
+    "receipt_path": ".handoff/rounds/R03/developer_creation_receipt.json",
+    "receipt_sha256": "32e3d91fec8c2ae4c58116e9c54876d56459e09c2f705c807893ad24d65c2e7f"
+  },
+  "live_execution_summary": {
+    "host": "192.168.100.2 (Windows 11 Build 26200)",
+    "dual_versions": [
+      "COMSOL 6.3",
+      "COMSOL 6.4"
+    ],
+    "acceptance_report_path": "evidence/g3_10_windows_w20/acceptance_report.json",
+    "total_cases": 37,
+    "passed_cases": 37,
+    "failed_cases": 0,
+    "c10_audit": {
+      "status": "VERIFIED_PASS",
+      "win63": {
+        "isError": false,
+        "success": true,
+        "status": "PASS",
+        "numerical_verification_status": "PASS",
+        "assess_validator_response": true,
+        "max_temperature_error_K": 0.0669,
+        "all_9_points_valid": true
+      },
+      "win64": {
+        "isError": false,
+        "success": true,
+        "status": "PASS",
+        "numerical_verification_status": "PASS",
+        "assess_validator_response": true,
+        "max_temperature_error_K": 0.0669,
+        "all_9_points_valid": true
+      }
+    },
+    "c11_audit": {
+      "status": "VERIFIED_PASS",
+      "win63": {
+        "inflow_W": 80.0,
+        "outflow_W": 80.0,
+        "residual": 1.43e-14,
+        "tolerance": 0.02,
+        "status": "PASS"
+      },
+      "win64": {
+        "inflow_W": 80.0,
+        "outflow_W": 80.0,
+        "residual": 2.04e-15,
+        "tolerance": 0.02,
+        "status": "PASS"
+      }
+    },
+    "c16_audit": {
+      "status": "VERIFIED_PASS",
+      "win63": {
+        "json_report": true,
+        "md_report": true,
+        "evidence_hash_present": true,
+        "atomic_write": true
+      },
+      "win64": {
+        "json_report": true,
+        "md_report": true,
+        "evidence_hash_present": true,
+        "atomic_write": true
+      }
+    }
+  },
+  "findings_status": {
+    "F01": "CLOSED",
+    "F02": "CLOSED",
+    "F03": "CLOSED",
+    "F04": "CLOSED",
+    "F05": "CLOSED",
+    "F06": "CLOSED",
+    "F07": "CLOSED",
+    "F08": "CLOSED",
+    "F09": "CLOSED",
+    "ENV-01": "CLOSED"
+  },
+  "cases_audit": {
+    "total_cases": 16,
+    "total_case_targets": 26,
+    "passed_case_targets": 26,
+    "all_targets_pass": true
+  },
+  "review_gate_result": {
+    "status": "PACKET_CONSISTENT_NOT_NATIVE_CERTIFICATION",
+    "exit_code": 0,
+    "errors_count": 0,
+    "pending_count": 0
+  }
+}
