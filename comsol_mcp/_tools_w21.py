@@ -21,6 +21,7 @@ def parameter_case_manage(
     group: str = "default",
     case_tag: str = "case_01",
     values: dict[str, Any] | None = None,
+    units: dict[str, str] | None = None,
     arguments: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Manage parametric cases (create, list, inspect, apply)."""
@@ -30,6 +31,8 @@ def parameter_case_manage(
     merged["case_tag"] = case_tag
     if values is not None:
         merged["values"] = values
+    if units is not None:
+        merged["units"] = units
     return merged
 
 
@@ -38,6 +41,7 @@ def study_sweep_manage(
     study: str = "std1",
     definition: dict[str, Any] | None = None,
     max_cases: int = 30,
+    max_wall_time_s: float = 300,
     arguments: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Configure and execute parameter sweeps with inner/outer/time tracking."""
@@ -47,6 +51,7 @@ def study_sweep_manage(
     if definition is not None:
         merged["definition"] = definition
     merged["max_cases"] = max_cases
+    merged["max_wall_time_s"] = max_wall_time_s
     return merged
 
 
@@ -56,6 +61,10 @@ def optimization_bounded_run(
     parameter_bounds: dict[str, list[float]] | None = None,
     constraints: list[dict[str, Any]] | None = None,
     max_cases: int = 25,
+    study: str = "std1",
+    definition: dict[str, Any] | None = None,
+    grid_points_per_dim: int = 3,
+    max_wall_time_s: float = 300,
     arguments: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Execute bounded parameter optimization under computation budget and constraints."""
@@ -67,15 +76,17 @@ def optimization_bounded_run(
     if constraints is not None:
         merged["constraints"] = constraints
     merged["max_cases"] = max_cases
+    merged.update(study=study, definition=definition, grid_points_per_dim=grid_points_per_dim, max_wall_time_s=max_wall_time_s)
     return merged
 
 
 def stage_checkpoint_create(
     stage_id: str,
     timestamp_s: float,
-    variables: dict[str, Any],
-    units: dict[str, str],
+    variables: dict[str, Any] | None = None,
+    units: dict[str, str] | None = None,
     selection: dict[str, Any] | None = None,
+    sample: dict[str, Any] | None = None,
     arguments: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Capture terminal state of a physical stage as an immutable checkpoint."""
@@ -85,6 +96,8 @@ def stage_checkpoint_create(
     merged["timestamp_s"] = timestamp_s
     merged["variables"] = variables
     merged["units"] = units
+    if sample is not None:
+        merged["sample"] = sample
     if selection is not None:
         merged["selection"] = selection
     return merged
@@ -95,6 +108,9 @@ def stage_state_transfer(
     target_stage_id: str,
     variable_mapping: dict[str, str],
     reset_history: bool = False,
+    target_sample: dict[str, Any] | None = None,
+    target_step: str = "time",
+    initial_tolerance: float | None = None,
     arguments: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Transfer state from source checkpoint to target initial conditions preserving lineage."""
@@ -104,6 +120,7 @@ def stage_state_transfer(
     merged["target_stage_id"] = target_stage_id
     merged["variable_mapping"] = variable_mapping
     merged["reset_history"] = reset_history
+    merged.update(target_sample=target_sample, target_step=target_step, initial_tolerance=initial_tolerance)
     return merged
 
 

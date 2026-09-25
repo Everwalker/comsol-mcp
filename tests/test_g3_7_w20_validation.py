@@ -485,7 +485,9 @@ class TestG3ValidationOperations:
             "criteria": {"absolute_error_max": 0.05}
         })
         assert data["execution_status"] == STATUS_PASS
-        assert data["status"] == STATUS_PASS
+        assert data["status"] == STATUS_FAIL
+        assert data["scope"] == "EXTERNAL_DATA_ONLY"
+        assert data["numerical_verification_status"] == STATUS_UNVERIFIED
         assert data["analysis"]["trend"] == "monotonic"
 
     def test_dispatch_validate_report(self, tmp_path):

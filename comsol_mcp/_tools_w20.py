@@ -74,6 +74,8 @@ def validate_boundary_conditions(
 
 
 def validate_solution(
+    observation_ref: dict[str, Any] | None = None,
+    observation_selectors: dict[str, Any] | None = None,
     solution: dict[str, Any] | None = None,
     criteria: dict[str, Any] | None = None,
     dataset: str | None = None,
@@ -86,6 +88,10 @@ def validate_solution(
 ) -> dict[str, Any]:
     """Validate solution existence, observations, and benchmark errors."""
     merged = dict(arguments or {})
+    if observation_ref is not None:
+        merged["observation_ref"] = observation_ref
+    if observation_selectors is not None:
+        merged["observation_selectors"] = observation_selectors
     if solution is not None:
         merged["solution"] = solution
     if criteria is not None:

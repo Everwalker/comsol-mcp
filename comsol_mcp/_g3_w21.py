@@ -92,7 +92,7 @@ class ParameterIndexTable:
         key_idx = (case.outer_index, case.inner_index)
         if key_idx in self._by_indices:
             raise ExecutionContractError("INDEX_COLLISION", f"Index pair {key_idx} already assigned")
-        param_tuple = tuple(round(case.parameters.get(k, 0.0), 8) for k in self.parameter_names)
+        param_tuple = tuple(case.parameters[k] for k in self.parameter_names)
         self.cases.append(case)
         self._by_id[case.case_id] = case
         self._by_indices[key_idx] = case
@@ -105,7 +105,7 @@ class ParameterIndexTable:
         return self._by_indices.get((outer, inner))
 
     def get_by_params(self, params: Mapping[str, float]) -> ParameterCase | None:
-        key = tuple(round(params.get(k, 0.0), 8) for k in self.parameter_names)
+        key = tuple(params[k] for k in self.parameter_names)
         return self._by_param_values.get(key)
 
     def query_slice(self, expression: str, outer: int | None = None, inner: int | None = None, time_val: float | None = None) -> dict[str, Any]:
@@ -118,10 +118,12 @@ class ParameterIndexTable:
                 continue
             val = case.results.get(expression)
             if time_val is not None and expression in case.time_series:
-                # Find nearest time point
+                # Exact selection only: no nearest-time alias.
                 ts = case.time_points
                 if ts:
-                    idx = min(range(len(ts)), key=lambda i: abs(ts[i] - time_val))
+                    if time_val not in ts:
+                        raise ExecutionContractError("TIME_NOT_STORED", "Exact stored time required; no implicit nearest selection")
+                    idx = ts.index(time_val)
                     val = case.time_series[expression][idx]
             matched.append({
                 "case_id": case.case_id,
@@ -129,6 +131,7 @@ class ParameterIndexTable:
                 "inner": case.inner_index,
                 "parameters": case.parameters,
                 "value": val,
+                "actual_time": time_val,
             })
         return {
             "sweep_id": self.sweep_id,
@@ -160,6 +163,7 @@ class ComputationBudget:
     max_consecutive_failures: int = 5
     cases_evaluated: int = 0
     cases_failed: int = 0
+    total_failures: int = 0
     start_time_s: float = field(default_factory=time.time)
 
     def can_evaluate(self) -> bool:
@@ -177,6 +181,7 @@ class ComputationBudget:
             self.cases_failed = 0
         else:
             self.cases_failed += 1
+            self.total_failures += 1
 
     def status(self) -> dict[str, Any]:
         elapsed = time.time() - self.start_time_s
@@ -191,6 +196,8 @@ class ComputationBudget:
         return {
             "cases_evaluated": self.cases_evaluated,
             "max_cases": self.max_cases,
+            "consecutive_failures": self.cases_failed,
+            "total_failures": self.total_failures,
             "elapsed_s": round(elapsed, 4),
             "max_wall_time_s": self.max_wall_time_s,
             "exhausted": exhausted,
@@ -201,7 +208,8 @@ class ComputationBudget:
 class ResultCache:
     """Content-addressed result cache avoiding redundant dispatch and invalid reuse."""
 
-    def __init__(self) -> None:
+    def __init__(self, operation_store=None) -> None:
+        self._operation_store = operation_store
         self._entries: dict[str, dict[str, Any]] = {}
         self._stats = {"hits": 0, "misses": 0, "stores": 0}
 
@@ -214,7 +222,7 @@ class ResultCache:
     ) -> str:
         canonical = {
             "model_digest": str(model_digest),
-            "parameters": {k: round(float(v), 8) for k, v in sorted(parameters.items())},
+            "parameters": {k: float(v) for k, v in sorted(parameters.items())},
             "study_config": json.loads(json.dumps(study_config, sort_keys=True)),
             "runtime_version": str(runtime_version),
         }
@@ -222,8 +230,13 @@ class ResultCache:
         return hashlib.sha256(raw).hexdigest()
 
     def get(self, key: str) -> dict[str, Any] | None:
-        entry = self._entries.get(key)
+        entry = (self._operation_store.get_metadata('artifacts', 'w21cache:' + key)
+                 if self._operation_store is not None else self._entries.get(key))
         if entry is not None:
+            if self._operation_store is not None:
+                expected = hashlib.sha256(json.dumps({k:v for k,v in entry.items() if k != 'sha256'}, sort_keys=True, allow_nan=False).encode()).hexdigest()
+                if entry.get('sha256') != expected:
+                    raise ExecutionContractError('INTEGRITY_COMPROMISED', 'Cached envelope changed')
             self._stats["hits"] += 1
             return copy.deepcopy(entry["data"])
         self._stats["misses"] += 1
@@ -235,6 +248,9 @@ class ResultCache:
             "metadata": dict(metadata or {}),
             "timestamp": time.time(),
         }
+        if self._operation_store is not None:
+            self._entries[key]['sha256'] = hashlib.sha256(json.dumps(self._entries[key], sort_keys=True, allow_nan=False).encode()).hexdigest()
+            self._operation_store.persist_artifact('w21cache:' + key, self._entries[key])
         self._stats["stores"] += 1
 
     def stats(self) -> dict[str, Any]:
@@ -249,7 +265,7 @@ class ResultCache:
 class BoundedCandidate:
     candidate_id: str
     parameters: dict[str, float]
-    objective_value: float
+    objective_value: float | None
     constraint_residuals: dict[str, float]
     is_feasible: bool
     raw_results: dict[str, Any]
@@ -282,6 +298,15 @@ class BoundedOptimizer:
         self.minimize = minimize
         self.parameter_bounds = dict(parameter_bounds or {})
         self.constraints = list(constraints or [])
+        for name, bounds in self.parameter_bounds.items():
+            if len(bounds) != 2 or not all(math.isfinite(v) for v in bounds) or bounds[0] > bounds[1]:
+                raise ExecutionContractError("INVALID_BOUNDS", f"Invalid bounds for {name}")
+        for constraint in self.constraints:
+            if not constraint.get("expression") or not any(k in constraint for k in ("min_value", "max_value")):
+                raise ExecutionContractError("INVALID_CONSTRAINT", "Constraint needs expression and numeric bound")
+            for key in ("min_value", "max_value"):
+                if key in constraint and not math.isfinite(constraint[key]):
+                    raise ExecutionContractError("INVALID_CONSTRAINT", "Finite constraint bounds required")
         self.budget = budget or ComputationBudget(max_cases=30)
         self.history: list[BoundedCandidate] = []
         self.best_candidate: BoundedCandidate | None = None
@@ -296,7 +321,7 @@ class BoundedOptimizer:
             val = raw_results.get(expr)
             if val is None or not isinstance(val, (int, float)) or math.isnan(val) or math.isinf(val):
                 all_passed = False
-                residuals[str(expr)] = float("nan")
+                residuals[str(expr)] = None
                 continue
             res = 0.0
             if max_val is not None and val > max_val:
@@ -315,21 +340,39 @@ class BoundedOptimizer:
         eval_fn: Callable[[dict[str, float]], dict[str, Any]],
     ) -> BoundedCandidate:
         t0 = time.time()
-        # Bound enforcement
-        clamped_params = {}
-        for k, v in parameters.items():
-            if k in self.parameter_bounds:
-                lb, ub = self.parameter_bounds[k]
-                clamped_params[k] = min(max(v, lb), ub)
-            else:
-                clamped_params[k] = v
-
-        raw_results = eval_fn(clamped_params)
+        if not self.budget.can_evaluate():
+            raise ExecutionContractError("BUDGET_EXHAUSTED", "No new candidate may be dispatched")
+        if set(parameters) != set(self.parameter_bounds):
+            raise ExecutionContractError("INVALID_PARAMETERS", "Candidate must specify every bounded parameter")
+        for k, value in parameters.items():
+            low, high = self.parameter_bounds[k]
+            if not math.isfinite(value) or not low <= value <= high:
+                raise ExecutionContractError("OUT_OF_BOUNDS", f"{k} is outside registered bounds")
+        clamped_params = dict(parameters)
+        try:
+            raw_results = eval_fn(clamped_params)
+        except Exception as exc:
+            raw_results = {"status": "FAILED", "error": str(exc)}
         eval_time = time.time() - t0
-
-        obj_val = raw_results.get(self.objective_name, float("inf") if self.minimize else float("-inf"))
+        obj_val = raw_results.get(self.objective_name)
+        valid = (isinstance(obj_val, (int, float)) and not isinstance(obj_val, bool)
+                 and math.isfinite(obj_val)
+                 and raw_results.get("status", "COMPLETED") in {"COMPLETED", "CACHED"}
+                 and not raw_results.get("execution_state_unknown"))
+        if not valid:
+            obj_val = None
         feasible, residuals = self.check_constraints(raw_results)
-
+        feasible = feasible and valid
+        def json_safe(value):
+            if isinstance(value, float) and not math.isfinite(value):
+                return None
+            if isinstance(value, dict):
+                return {k: json_safe(v) for k, v in value.items()}
+            if isinstance(value, list):
+                return [json_safe(v) for v in value]
+            return value
+        if not valid:
+            raw_results = {**json_safe(raw_results), "candidate_error": "FAILED_UNKNOWN_OR_INVALID_OBJECTIVE"}
         cand = BoundedCandidate(
             candidate_id=candidate_id,
             parameters=clamped_params,
@@ -340,7 +383,7 @@ class BoundedOptimizer:
             eval_time_s=eval_time,
         )
         self.history.append(cand)
-        self.budget.record_case(success=True)
+        self.budget.record_case(success=valid)
 
         if feasible:
             if self.best_candidate is None:
@@ -506,6 +549,12 @@ class StageStateTransferManager:
         if reset_history:
             raise ExecutionContractError("HISTORY_RESET_PROHIBITED", "Stage transition must preserve historical state; reset_history=True rejected")
 
+        expected_hash = hashlib.sha256(json.dumps({
+            "stage_id": chk.stage_id, "model_tag": chk.model_tag,
+            "timestamp_s": chk.timestamp_s, "variables": chk.variables, "units": chk.units,
+        }, sort_keys=True).encode("utf-8")).hexdigest()
+        if expected_hash != chk.sha256:
+            raise ExecutionContractError("CHECKPOINT_CORRUPTED", "Checkpoint content changed")
         target_initial_state: dict[str, Any] = {}
         target_units: dict[str, str] = {}
         mapping_records: list[dict[str, Any]] = []
@@ -533,7 +582,8 @@ class StageStateTransferManager:
             "target_initial_state": target_initial_state,
             "target_units": target_units,
             "history_preserved": True,
-            "t047_generic_subitem_status": "PASS",
+            "t047_generic_subitem_status": "NOT_RUN",
+            "scope": "METADATA_PREVIEW_ONLY",
             "domain_physical_status": "DEFERRED_TO_W24",
             "verification": {
                 "source_hash_verified": True,
@@ -553,186 +603,27 @@ _GLOBAL_CACHE = ResultCache()
 _GLOBAL_STATE_XFER = StageStateTransferManager()
 
 
-def op_parameter_case_manage(worker: Any, model_tag: str, arguments: dict[str, Any]) -> dict[str, Any]:
-    """Execute parameter.case_manage operation."""
-    action = arguments.get("action", "list")
-    group = arguments.get("group", "default")
-    case_tag = arguments.get("case_tag", "case_01")
-    values = arguments.get("values")
+# Production operations share the managed case executor; these imports are
+# intentionally late so the reusable containers above remain import-light.
+from ._w21_execution import (
+    op_parameter_case_manage, op_study_sweep_manage,
+    op_stage_state_transfer, op_optimization_bounded_run, op_stage_checkpoint_create,
+)
 
-    if action == "create":
-        if not values or not isinstance(values, dict):
-            raise ExecutionContractError("INVALID_ARGUMENT", "values dictionary required for case creation")
-        return {
-            "action": "create",
-            "group": group,
-            "case_tag": case_tag,
-            "values": values,
-            "status": "REGISTERED",
-        }
-    elif action == "list":
-        return {
-            "action": "list",
-            "group": group,
-            "cases": [case_tag],
-            "status": "LISTED",
-        }
-    elif action == "apply":
-        return {
-            "action": "apply",
-            "group": group,
-            "case_tag": case_tag,
-            "status": "APPLIED",
-        }
-    raise ExecutionContractError("UNSUPPORTED_ACTION", f"Action {action} unsupported")
-
-
-def op_study_sweep_manage(worker: Any, model_tag: str, arguments: dict[str, Any]) -> dict[str, Any]:
-    """Execute study.sweep_manage operation for parametric and transient sweeps."""
-    action = arguments.get("action", "run")
-    definition = arguments.get("definition", {})
-    params_range = definition.get("parameters", {})
-    tlist = definition.get("tlist", [0.01, 0.03, 0.1])
-    budget_limit = arguments.get("max_cases", 30)
-
-    p_names = list(params_range.keys())
-    if not p_names:
-        # Default 2-parameter benchmark (k, Cp)
-        p_names = ["k", "Cp"]
-        params_range = {
-            "k": [350.0, 400.0],
-            "Cp": [380.0, 420.0],
-        }
-
-    index_table = ParameterIndexTable(sweep_id="sweep_01", parameter_names=p_names)
-    budget = ComputationBudget(max_cases=budget_limit)
-
-    import itertools
-    dim_vals = [params_range[k] for k in p_names]
-    outer_idx = 0
-
-    for comb in itertools.product(*dim_vals):
-        if not budget.can_evaluate():
-            break
-        outer_idx += 1
-        inner_idx = 1
-        p_dict = {p_names[i]: comb[i] for i in range(len(p_names))}
-        case_id = f"case_p{outer_idx}_{inner_idx}"
-
-        # Evaluate mock/analytical 2D diffusion temperature field
-        # T(x, t) = 300 + 10 * sin(pi*x/L) * exp(-pi^2 * alpha * t / L^2)
-        k_val = p_dict.get("k", 400.0)
-        cp_val = p_dict.get("Cp", 400.0)
-        alpha = k_val / (cp_val * 8960.0)  # Copper density approx
-
-        t_series = {}
-        for x in [0.25, 0.5, 0.75]:
-            t_series[f"T_x{x}"] = [300.0 + 10.0 * math.sin(math.pi * x / 0.05) * math.exp(- (math.pi**2) * alpha * t / (0.05**2)) for t in tlist]
-
-        res = {
-            "T_final_mid": t_series["T_x0.5"][-1],
-            "effective_diffusivity": alpha,
-            "status": "COMPLETED",
-        }
-
-        case = ParameterCase(
-            case_id=case_id,
-            parameters=p_dict,
-            units={k: "SI" for k in p_dict},
-            outer_index=outer_idx,
-            inner_index=inner_idx,
-            status="COMPLETED",
-            results=res,
-            time_series=t_series,
-            time_points=tlist,
-        )
-        index_table.add_case(case)
-        budget.record_case(success=True)
-
-    return {
-        "status": "COMPLETED",
-        "sweep_id": "sweep_01",
-        "index_table": index_table.to_dict(),
-        "budget": budget.status(),
-    }
-
-
-def op_stage_state_transfer(worker: Any, model_tag: str, arguments: dict[str, Any]) -> dict[str, Any]:
-    """Execute stage.state_transfer operation."""
-    action = arguments.get("action", "transfer")
-    if action == "create_checkpoint":
-        chk = _GLOBAL_STATE_XFER.create_checkpoint(
-            stage_id=arguments.get("stage_id", "stage_01"),
-            model_tag=model_tag,
-            timestamp_s=arguments.get("timestamp_s", 1.0),
-            variables=arguments.get("variables", {"T": 325.0}),
-            units=arguments.get("units", {"T": "K"}),
-            selection=arguments.get("selection"),
-        )
-        return {"status": "CHECKPOINT_CREATED", "checkpoint": chk.to_dict()}
-    elif action == "transfer":
-        chk_id = arguments.get("checkpoint_id")
-        target_stage = arguments.get("target_stage_id", "stage_02")
-        vmap = arguments.get("variable_mapping", {"T": "T_init"})
-        reset_hist = arguments.get("reset_history", False)
-        return _GLOBAL_STATE_XFER.transfer_stage_state(
-            source_checkpoint_id=chk_id,
-            target_stage_id=target_stage,
-            variable_mapping=vmap,
-            reset_history=reset_hist,
-        )
-    raise ExecutionContractError("UNSUPPORTED_ACTION", f"Action {action} unsupported")
-
-
-def op_optimization_bounded_run(worker: Any, model_tag: str, arguments: dict[str, Any]) -> dict[str, Any]:
-    """Execute optimization.bounded_run operation."""
-    obj_name = arguments.get("objective_name", "T_diff")
-    minimize = arguments.get("minimize", True)
-    bounds = arguments.get("parameter_bounds", {"k": (300.0, 500.0)})
-    constraints = arguments.get("constraints", [{"expression": "T_mid", "max_value": 360.0}])
-    max_cases = arguments.get("max_cases", 25)
-
-    budget = ComputationBudget(max_cases=max_cases)
-    opt = BoundedOptimizer(
-        objective_name=obj_name,
-        minimize=minimize,
-        parameter_bounds=bounds,
-        constraints=constraints,
-        budget=budget,
-    )
-
-    def default_eval(params: dict[str, float]) -> dict[str, Any]:
-        k_val = params.get("k", 400.0)
-        T_mid = 300.0 + 50.0 * 0.025 / 0.05
-        T_diff = abs(k_val - 400.0)
-        return {
-            "T_diff": T_diff,
-            "T_mid": T_mid,
-            "k": k_val,
-            "status": "COMPLETED",
-        }
-
-    return opt.run_bounded_search(grid_points_per_dim=3, eval_fn=default_eval)
-
-
-def op_stage_checkpoint_create(worker: Any, model_tag: str, arguments: dict[str, Any]) -> dict[str, Any]:
-    """Execute checkpoint.create operation."""
-    chk = _GLOBAL_STATE_XFER.create_checkpoint(
-        stage_id=arguments.get("stage_id", "stage_01"),
-        model_tag=model_tag,
-        timestamp_s=arguments.get("timestamp_s", 1.0),
-        variables=arguments.get("variables", {"T": 325.0}),
-        units=arguments.get("units", {"T": "K"}),
-        selection=arguments.get("selection"),
-    )
-    return {"status": "CHECKPOINT_CREATED", "checkpoint": chk.to_dict()}
-
-
-# Table of published operations for W21 (mapped to design catalog IDs)
-OPERATIONS: dict[str, Callable[[Any, str, dict[str, Any]], dict[str, Any]]] = {
+OPERATIONS = {
     "parameter.case_manage": op_parameter_case_manage,
     "study.sweep_manage": op_study_sweep_manage,
     "solver.solution_transfer": op_stage_state_transfer,
-    "checkpoint.create": op_stage_checkpoint_create,
+    "stage.checkpoint_create": op_stage_checkpoint_create,
     "experiment.run": op_optimization_bounded_run,
+}
+
+ALIASES = {
+    "parameter_case_manage": "parameter.case_manage",
+    "study_sweep_manage": "study.sweep_manage",
+    "optimization.bounded_run": "experiment.run",
+    "optimization_bounded_run": "experiment.run",
+    "stage.state_transfer": "solver.solution_transfer",
+    "stage_state_transfer": "solver.solution_transfer",
+    "stage_checkpoint_create": "stage.checkpoint_create",
 }

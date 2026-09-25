@@ -885,13 +885,13 @@ def validate_solution(worker: Any, model_tag: str, arguments: Mapping[str, Any])
         solution = {"dataset": arguments.get("dataset") or arguments.get("tag")}
 
     criteria = dict(arguments.get("criteria") or {})
-    if "oracle" in arguments and "oracle" not in criteria:
+    if arguments.get("oracle") is not None and "oracle" not in criteria:
         criteria["oracle"] = arguments["oracle"]
-    if "observations" in arguments and "observations" not in criteria:
+    if arguments.get("observations") is not None and "observations" not in criteria:
         criteria["observations"] = arguments["observations"]
-    if "values" in arguments and "values" not in criteria:
+    if arguments.get("values") is not None and "values" not in criteria:
         criteria["values"] = arguments["values"]
-    if "range" in arguments and "range" not in criteria:
+    if arguments.get("range") is not None and "range" not in criteria:
         criteria["range"] = arguments["range"]
 
     obs_ref = arguments.get("observation_ref") or criteria.get("observation_ref")
@@ -904,80 +904,36 @@ def validate_solution(worker: Any, model_tag: str, arguments: Mapping[str, Any])
     oracle_results: dict[str, Any] = {}
 
     if obs_ref is not None:
-        if isinstance(obs_ref, ObservationRef):
-            obs_ref_dict = obs_ref.as_dict()
-        elif isinstance(obs_ref, Mapping):
-            obs_ref_dict = dict(obs_ref)
-        else:
-            return {
-                "status": STATUS_FAIL,
-                "execution_status": STATUS_PASS,
-                "numerical_verification_status": STATUS_FAIL,
-                "physical_validation_status": STATUS_UNVERIFIED,
-                "scope": "INVALID_REF",
-                "model_validated": False,
-                "solution": solution,
-                "checks": {"observation_ref_valid": False},
-                "metrics": {},
-                "oracle_results": {},
-                "message": "Invalid observation_ref type; must be ObservationRef or dict",
-            }
-
-        ref_model = obs_ref_dict.get("model_tag") or (obs_ref_dict.get("model_ref", {}).get("model_tag") if isinstance(obs_ref_dict.get("model_ref"), Mapping) else None)
-        if ref_model and ref_model != model_tag:
-            return {
-                "status": STATUS_FAIL,
-                "execution_status": STATUS_PASS,
-                "numerical_verification_status": STATUS_FAIL,
-                "physical_validation_status": STATUS_UNVERIFIED,
-                "scope": "CROSS_MODEL_REFUSED",
-                "model_validated": False,
-                "solution": solution,
-                "checks": {"model_match": False},
-                "metrics": {},
-                "oracle_results": {},
-                "message": f"Cross-model ObservationRef rejected: reference model '{ref_model}' does not match target model '{model_tag}'",
-            }
-
-        ref_dataset = obs_ref_dict.get("dataset")
-        if ref_dataset and dataset_name and ref_dataset != dataset_name:
-            return {
-                "status": STATUS_FAIL,
-                "execution_status": STATUS_PASS,
-                "numerical_verification_status": STATUS_FAIL,
-                "physical_validation_status": STATUS_UNVERIFIED,
-                "scope": "DATASET_MISMATCH",
-                "model_validated": False,
-                "solution": solution,
-                "checks": {"dataset_match": False},
-                "metrics": {},
-                "oracle_results": {},
-                "message": f"ObservationRef dataset '{ref_dataset}' does not match solution dataset '{dataset_name}'",
-            }
-
-        ref_sha256 = obs_ref_dict.get("sha256")
-        ref_obs = obs_ref_dict.get("observations") or {}
-        if ref_sha256:
-            computed_sha = hashlib.sha256(json.dumps(ref_obs, sort_keys=True).encode("utf-8")).hexdigest()
-            if computed_sha != ref_sha256:
-                return {
-                    "status": STATUS_FAIL,
-                    "execution_status": STATUS_PASS,
+        from ._observation_store import resolve_observation, numeric_values
+        try:
+            record, sample = resolve_observation(worker, model_tag, obs_ref)
+            if any(k in criteria for k in ("values", "observations")):
+                raise ExecutionContractError("OBSERVATION_OVERRIDE_REFUSED", "Caller cannot replace registered values")
+            if dataset_name and dataset_name != record["dataset"]:
+                raise ExecutionContractError("DATASET_MISMATCH", "Observation dataset differs from requested solution")
+            criteria["values"] = numeric_values(sample["values"])
+            # Named oracle observations must identify exact registered array
+            # entries; their numeric values never come from the caller.
+            selectors = arguments.get("observation_selectors", {})
+            if selectors:
+                observations = {}
+                for name, path in selectors.items():
+                    value = sample["values"]
+                    for index in path:
+                        if type(index) is not int or index < 0:
+                            raise ValueError("invalid observation index")
+                        value = value[index]
+                    observations[name] = float(value)
+                criteria["observations"] = observations
+            observation_origin = "REGISTERED_W17"
+            scope = "MODEL_VALIDATED"
+        except (ExecutionContractError, ValueError, KeyError, TypeError, IndexError) as exc:
+            return {"status": STATUS_FAIL, "execution_status": STATUS_PASS,
                     "numerical_verification_status": STATUS_FAIL,
                     "physical_validation_status": STATUS_UNVERIFIED,
-                    "scope": "INTEGRITY_COMPROMISED",
-                    "model_validated": False,
-                    "solution": solution,
-                    "checks": {"sha256_integrity": False},
-                    "metrics": {},
-                    "oracle_results": {},
-                    "message": "ObservationRef sha256 mismatch (tampered or corrupted data)",
-                }
-
-        observation_origin = "OBSERVATION_REF"
-        scope = "MODEL_VALIDATED"
-        if "observations" not in criteria and ref_obs:
-            criteria["observations"] = ref_obs
+                    "scope": getattr(exc, "code", "INVALID_REF"), "model_validated": False,
+                    "solution": solution, "checks": {"observation_ref_valid": False},
+                    "metrics": {}, "oracle_results": {}, "message": str(exc)}
 
     if not solution and not criteria:
         return {
@@ -1120,11 +1076,11 @@ def validate_solution(worker: Any, model_tag: str, arguments: Mapping[str, Any])
 
     model_validated = (passed and scope == "MODEL_VALIDATED")
 
-    return {
+    result = {
         "status": STATUS_PASS if passed else STATUS_FAIL,
         "execution_status": STATUS_PASS,
         "numerical_verification_status": STATUS_PASS if passed else STATUS_FAIL,
-        "physical_validation_status": STATUS_PASS if model_validated else STATUS_UNVERIFIED,
+        "physical_validation_status": STATUS_UNVERIFIED,
         "observation_origin": observation_origin,
         "scope": scope,
         "model_validated": model_validated,
@@ -1133,6 +1089,15 @@ def validate_solution(worker: Any, model_tag: str, arguments: Mapping[str, Any])
         "metrics": metrics,
         "oracle_results": oracle_results,
     }
+
+    if scope == "MODEL_VALIDATED" and oracle_name in {"transient_diffusion", "transient_sine_diffusion"}:
+        from ._convergence_store import register_case
+        try:
+            result['convergence_ref'] = register_case(worker,model_tag,obs_ref,oracle_name,oracle_results)
+        except Exception as exc:
+            result['convergence_record_status'] = 'UNAVAILABLE'
+            result['convergence_record_error'] = str(exc)
+    return result
 
 
 def validate_conservation(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
@@ -1246,6 +1211,17 @@ def validate_convergence(worker: Any, model_tag: str, arguments: Mapping[str, An
     metrics = arguments.get("metrics") or []
     criteria = arguments.get("criteria") or {}
 
+    registered = bool(cases and any(isinstance(c,dict) and 'convergence_id' in c for c in cases))
+    if registered:
+        from ._convergence_store import resolve_cases
+        try:
+            records = resolve_cases(worker,cases)
+            cases = [dict(record,level=i+1) for i,record in enumerate(records)]
+        except ExecutionContractError as exc:
+            return {'status':STATUS_FAIL,'execution_status':STATUS_PASS,
+                    'numerical_verification_status':STATUS_FAIL,'physical_validation_status':STATUS_UNVERIFIED,
+                    'scope':exc.code,'message':str(exc),'model_validated':False}
+
     study = ConvergenceStudy(criteria=criteria)
     for c in cases:
         if isinstance(c, dict):
@@ -1263,12 +1239,15 @@ def validate_convergence(worker: Any, model_tag: str, arguments: Mapping[str, An
     trend_status = analysis.get("status", STATUS_UNVERIFIED)
 
     return {
-        "status": trend_status,
+        "status": trend_status if registered else STATUS_FAIL,
         "execution_status": STATUS_PASS,
-        "numerical_verification_status": trend_status,
+        "numerical_verification_status": trend_status if registered else STATUS_UNVERIFIED,
         "physical_validation_status": STATUS_UNVERIFIED,
+        "scope": "REGISTERED_NATIVE_REFINEMENT" if registered else "EXTERNAL_DATA_ONLY",
+        "model_validated": registered and trend_status == STATUS_PASS,
         "cases_count": len(cases),
         "analysis": analysis,
+        "registered_cases": cases if registered else [],
         "metrics": metrics,
     }
 

@@ -45,7 +45,7 @@ public final class PersistentComsolWorker {
       "comments", "create", "createAutoSequences", "dataset", "descr", "disableUpdates",
       "feature", "geom", "get", "getAllowedPropertyValues", "getComsolVersion",
       "getEntityFromModelPath", "getFilePath", "getLastComputationDate",
-      "getLastComputationTime", "getLastComputationVersion", "getPVals", "getReal",
+      "getLastComputationTime", "getLastComputationVersion", "getSize", "getPVals", "getReal",
       "getData", "getImag", "getBoolean", "getBooleanArray", "getBooleanMatrix",
       "getDouble", "getDoubleArray", "getDoubleMatrix", "getInt", "getIntArray", "getIntMatrix",
       "getString", "getStringArray", "getStringMatrix", "getType", "getValueType",
@@ -53,7 +53,7 @@ public final class PersistentComsolWorker {
       "isActive", "isComplex", "isGeometryMeshDependent", "isInheriting", "isInitialized",
       "label", "location", "locationUri", "mesh", "model", "modelNode", "name", "numerical",
       "param", "physics", "properties", "remove", "rename", "result", "run", "runAll",
-      "runNoGen", "save", "selection", "set", "setIndex", "setEntry", "sol", "study", "tag", "tags",
+      "runNoGen", "resetHist", "save", "selection", "set", "setIndex", "setEntry", "sol", "study", "tag", "tags",
       "timeModified", "title", "update", "varnames", "variable", "all", "entities", "inherit", "named", "material",
       // G3: accessors verified against the installed COMSOL 6.4.0.293 API
       // (javap of apiplugins/com.comsol.api_1.0.0.jar).

@@ -78,6 +78,8 @@ class ControlDaemon:
                 return self._control_read(operation, arguments)
             if operation == "runtime_poc_v64":
                 raise ExecutionContractError("UNSUPPORTED_OPERATION", "historical one-shot probe is disabled in the managed backend")
+            from ._g3_w21 import ALIASES
+            operation = ALIASES.get(operation, operation)
             if operation == "plot_render":
                 operation = "plot.render"
             if operation.startswith("validate_"):

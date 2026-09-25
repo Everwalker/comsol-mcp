@@ -559,7 +559,9 @@ class ManagedBackend:
     @staticmethod
     def _g2_body(arguments: dict[str, Any], operation: str | None = None) -> dict[str, Any]:
         body = {key: value for key, value in arguments.items() if key not in {"project_id", "session_id", "model_ref", "expected_revision", "idempotency_key", "request_id"}}
-        is_w20 = operation is not None and (operation.startswith("validate.") or operation.startswith("validate_"))
+        is_w20 = operation is not None and (operation.startswith("validate.") or operation.startswith("validate_")
+                    or operation in {"parameter.case_manage", "study.sweep_manage", "experiment.run",
+                                     "solver.solution_transfer", "stage.checkpoint_create"})
         if is_w20 and "arguments" in body and isinstance(body["arguments"], Mapping):
             inner = dict(body.pop("arguments"))
             for k, v in inner.items():
@@ -1007,9 +1009,17 @@ class ManagedBackend:
 
         model_tag = ref.model_tag if ref is not None else ""
         def callback(_args: dict[str, Any]) -> dict[str, Any]:
-            return self._dispatch_with_witness(
-                operation, lambda: function(self.worker, model_tag, dict(body)), effect=effect,
-            )
+            from ._observation_store import observation_context, register_observation
+            def invoke_domain():
+                data = function(self.worker, model_tag, dict(body))
+                if operation in {"result.at_points", "result.evaluate"} and data.get("field_array"):
+                    data["observation_ref"] = register_observation(self.worker, model_tag, data)
+                return data
+            # EVALUATE calls do not advance the model revision; mutations do.
+            revision = self.service.ledger._state_for(ref).revision if ref else None
+            with observation_context(self.store, ref.as_dict() if ref else None,
+                                     revision, operation_id):
+                return self._dispatch_with_witness(operation, invoke_domain, effect=effect)
 
         supplied_rev = execution.get("expected_revision")
         if supplied_rev is None:
@@ -1043,6 +1053,15 @@ class ManagedBackend:
         result = self.service.execute_legacy(alias, callback, body, model_ref=ref,
                 expected_revision=expected_rev,
                 request_id=execution.get("request_id"), session_id=session, effect=effect)
+        if result.get("success") and ref is not None:
+            # Bind observations minted inside this serial operation to its
+            # final revision, after the service has accounted for mutations.
+            final_revision = self.service.ledger._state_for(ref).revision
+            for record in self.store.list_metadata("artifacts"):
+                if record.get("kind") == "w17_observation" and record.get("producer") == operation_id:
+                    record["sample_revision"] = record["revision"]
+                    record["revision"] = final_revision
+                    self.store.persist_artifact(record["observation_id"], record)
         if isolation is not None:
             result.setdefault("data", {})["isolation_proof"] = isolation
         return result

@@ -241,7 +241,8 @@ class W21DeliverablesTests(unittest.TestCase):
             },
             reset_history=False,
         )
-        self.assertEqual(xfer["t047_generic_subitem_status"], "PASS")
+        self.assertEqual(xfer["t047_generic_subitem_status"], "NOT_RUN")
+        self.assertEqual(xfer["scope"], "METADATA_PREVIEW_ONLY")
         self.assertEqual(xfer["domain_physical_status"], "DEFERRED_TO_W24")
         self.assertTrue(xfer["history_preserved"])
         self.assertEqual(xfer["target_initial_state"]["T_init"], 350.0)
@@ -284,7 +285,7 @@ class W21DeliverablesTests(unittest.TestCase):
     # --------------------------------------------------------------------------
     def test_g3_ops_dispatch_w21_operations(self):
         """Verifies that all W21 operations are published in DISPATCH and EFFECTS."""
-        for op in ("parameter.case_manage", "study.sweep_manage", "solver.solution_transfer", "checkpoint.create", "experiment.run"):
+        for op in ("parameter.case_manage", "study.sweep_manage", "solver.solution_transfer", "stage.checkpoint_create", "experiment.run"):
             self.assertIn(op, DISPATCH)
             self.assertIn(op, EFFECTS)
             self.assertIn(op, REQUIRES_ISOLATION)

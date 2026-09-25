@@ -113,7 +113,7 @@ _FALLBACK_EFFECTS: dict[str, str] = {
     "validate.structure": "READ",
     "validate.expressions": "EVALUATE",
     "validate.boundary_conditions": "EVALUATE",
-    "validate.solution": "EVALUATE",
+    "validate.solution": "READ",
     "validate.conservation": "EVALUATE",
     "validate.convergence": "EVALUATE",
     "validate.report": "FILE_WRITE",
@@ -166,6 +166,16 @@ def _effect_sources() -> tuple[dict[str, str], dict[str, str]]:
     effects: dict[str, str] = {}
     sources: dict[str, str] = {}
     for operation_id in sorted(DISPATCH):
+        # W21 run/transfer now execute a real solve, whereas the historical
+        # design catalogue classified configuration-only placeholders WRITE.
+        if operation_id in {"study.sweep_manage", "solver.solution_transfer"}:
+            effects[operation_id] = "COMPUTE"
+            sources[operation_id] = "w21_native_execution"
+            continue
+        if operation_id == "validate.solution":
+            effects[operation_id] = "READ"
+            sources[operation_id] = "registered_observation_read_only_validation"
+            continue
         entry = BY_ID.get(operation_id)
         effect = getattr(entry, "effect", None) if entry is not None else None
         if isinstance(effect, str) and effect:
