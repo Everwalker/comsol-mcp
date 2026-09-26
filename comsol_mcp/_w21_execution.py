@@ -91,6 +91,34 @@ def op_parameter_case_manage(worker, model_tag, arguments):
     return record
 
 
+def exported_input_identity(source, model):
+    """Replace export-only interpolation paths with verified payload identities.
+
+    COMSOL extracts imported tables to a new temporary directory on every Java
+    export. Keep the live filename binding and hash those extracted bytes; never
+    remove arbitrary paths or assume declared input files equal imported data.
+    """
+    bindings = []
+    pattern = re.compile(r'(model\.func\(("(?:\\.|[^"\\])*")\)\s*\.set\("filename",\s*)("(?:\\.|[^"\\])*")(\);)')
+
+    def replace(match):
+        try:
+            function = _call(model, 'func', json.loads(match.group(2)))
+            if _call(function, 'getType') != 'Interpolation':
+                return match.group(0)
+            filename = _call(function, 'getString', 'filename')
+            payload = Path(json.loads(match.group(3))).read_bytes()
+            bindings.append({'function': json.loads(match.group(2)), 'filename': filename,
+                             'imported_sha256': hashlib.sha256(payload).hexdigest()})
+            return match.group(1) + json.dumps('sha256:' + hashlib.sha256(payload).hexdigest()) + match.group(4)
+        except Exception:
+            # An unreadable import cannot become a reusable cache identity.
+            bindings.append({'unresolved_import': uuid.uuid4().hex})
+            return match.group(0)
+
+    return pattern.sub(replace, source), bindings
+
+
 def model_identity(worker, tag, parameter_names, definition, study):
     """Hash engine-exported model configuration, actual build and input bytes.
 
@@ -113,7 +141,7 @@ def model_identity(worker, tag, parameter_names, definition, study):
         model._call('save', str(path), 'java')
     else:
         _call(model, 'save', str(path), 'java')
-    source = path.read_text(encoding='utf-8')
+    source, imported_inputs = exported_input_identity(path.read_text(encoding='utf-8'), model)
     # COMSOL Java export header carries wall-clock time and class filename.
     lines = []
     for line in source.splitlines():
@@ -146,7 +174,7 @@ def model_identity(worker, tag, parameter_names, definition, study):
         cache_policy = 'BYPASS_UNRESOLVED_INITIAL_DEPENDENCY: ' + str(exc)
         initial_sources = [{'non_reusable_request': uuid.uuid4().hex}]
     return dict(model_ref=current_context()['model_ref'], configuration_sha256=digest(lines),
-                engine=_engine_identity(worker), inputs=inputs, initial_sources=initial_sources,
+                engine=_engine_identity(worker), inputs=inputs, imported_inputs=imported_inputs, initial_sources=initial_sources,
                 cache_policy=cache_policy)
 
 
