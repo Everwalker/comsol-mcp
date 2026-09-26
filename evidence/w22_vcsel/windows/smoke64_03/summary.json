@@ -1,0 +1,163 @@
+{
+  "status": "FAILED",
+  "physical_validation": "UNVERIFIED",
+  "version_requested": "6.4",
+  "cases": [],
+  "engine": "COMSOL Multiphysics 6.4 (\u5f00\u53d1\u7248\u672c: 293)",
+  "build": {
+    "success": true,
+    "data": {
+      "source_sha256": "36a3c1af76982710f8c2af945529f2e348d64f5b4f2e32b6a4d288871cab2434",
+      "entrypoint": "W22Fixture",
+      "worker": {
+        "ok": true,
+        "request_id": "61266fd8-79ab-4984-976f-19f9405bcfae",
+        "type": "code_execute",
+        "status": "SUCCEEDED",
+        "queued_at_ms": "1790379401121",
+        "started_at_ms": "1790379401121",
+        "completed_at_ms": "1790379407529",
+        "result": {
+          "executed": true,
+          "model_tag": "mcp1",
+          "source_sha256": "36a3c1af76982710f8c2af945529f2e348d64f5b4f2e32b6a4d288871cab2434",
+          "entrypoint": "W22Fixture",
+          "readback": {
+            "status": "BUILT_NOT_SOLVED",
+            "top": [
+              4,
+              9
+            ],
+            "bottom": [
+              3,
+              8
+            ],
+            "roi": [
+              9
+            ],
+            "incident_expression": "if(abs(L-0.01[m])<1e-9[m],p0*b0g0(x,y),0[W/m^2])+if(abs(L-0.01[m])<1e-9[m],p1*b0g1(x,y),0[W/m^2])+if(abs(L-0.01[m])<1e-9[m],p2*b0g2(x,y),0[W/m^2])+if(abs(L-0.02[m])<1e-9[m],p0*b1g0(x,y),0[W/m^2])+if(abs(L-0.02[m])<1e-9[m],p1*b1g1(x,y),0[W/m^2])+if(abs(L-0.02[m])<1e-9[m],p2*b1g2(x,y),0[W/m^2])+if(abs(L-0.03[m])<1e-9[m],p0*b2g0(x,y),0[W/m^2])+if(abs(L-0.03[m])<1e-9[m],p1*b2g1(x,y),0[W/m^2])+if(abs(L-0.03[m])<1e-9[m],p2*b2g2(x,y),0[W/m^2])"
+          }
+        }
+      },
+      "before": {
+        "tag": "mcp1",
+        "model_tag": "mcp1",
+        "fingerprint": "1629cf55cd94ed4b0f1dc534468fbed8766fac3ac4d75b21b7c00a970d720b98",
+        "fingerprint_scope": [
+          "tag",
+          "label",
+          "file_path",
+          "time_modified",
+          "parameters"
+        ],
+        "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+        "external_event_counter": 0,
+        "changed_tags": [],
+        "server_instance_id": "127.0.0.1:38601",
+        "worker_instance_id": "7cb9f789-ef08-4acc-8314-414cb5e74630",
+        "instance_id": "7cb9f789-ef08-4acc-8314-414cb5e74630",
+        "generation": 2
+      },
+      "after": {
+        "tag": "mcp1",
+        "model_tag": "mcp1",
+        "fingerprint": "64c90982218cae70181210acb6ca568d684796b581b1a78140b54e419f69a6a6",
+        "fingerprint_scope": [
+          "tag",
+          "label",
+          "file_path",
+          "time_modified",
+          "parameters"
+        ],
+        "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+        "external_event_counter": 0,
+        "changed_tags": [],
+        "server_instance_id": "127.0.0.1:38601",
+        "worker_instance_id": "7cb9f789-ef08-4acc-8314-414cb5e74630",
+        "instance_id": "7cb9f789-ef08-4acc-8314-414cb5e74630",
+        "generation": 2
+      },
+      "readback": {
+        "executed": true,
+        "model_tag": "mcp1",
+        "source_sha256": "36a3c1af76982710f8c2af945529f2e348d64f5b4f2e32b6a4d288871cab2434",
+        "entrypoint": "W22Fixture",
+        "readback": {
+          "status": "BUILT_NOT_SOLVED",
+          "top": [
+            4,
+            9
+          ],
+          "bottom": [
+            3,
+            8
+          ],
+          "roi": [
+            9
+          ],
+          "incident_expression": "if(abs(L-0.01[m])<1e-9[m],p0*b0g0(x,y),0[W/m^2])+if(abs(L-0.01[m])<1e-9[m],p1*b0g1(x,y),0[W/m^2])+if(abs(L-0.01[m])<1e-9[m],p2*b0g2(x,y),0[W/m^2])+if(abs(L-0.02[m])<1e-9[m],p0*b1g0(x,y),0[W/m^2])+if(abs(L-0.02[m])<1e-9[m],p1*b1g1(x,y),0[W/m^2])+if(abs(L-0.02[m])<1e-9[m],p2*b1g2(x,y),0[W/m^2])+if(abs(L-0.03[m])<1e-9[m],p0*b2g0(x,y),0[W/m^2])+if(abs(L-0.03[m])<1e-9[m],p1*b2g1(x,y),0[W/m^2])+if(abs(L-0.03[m])<1e-9[m],p2*b2g2(x,y),0[W/m^2])"
+        }
+      },
+      "execution_success": true,
+      "domain_state": "succeeded",
+      "verification_status": "NOT_APPLICABLE",
+      "execution_state_unknown": false,
+      "partial_change": false,
+      "cleanup_failed": false,
+      "dispatch_stage": "post_dispatch",
+      "operation": "code.execute_java",
+      "effect": "project_write",
+      "domain_outcome": {
+        "operation": "",
+        "state": "succeeded",
+        "verification_status": "NOT_APPLICABLE",
+        "cleanup_failed": false,
+        "execution_state_unknown": false,
+        "dispatch_stage": "post_dispatch"
+      },
+      "isolation_proof": {
+        "verified": true,
+        "receipt": "C:\\Temp\\w22_20260926\\smoke64_03\\runtime\\isolation_receipt.json",
+        "pid": 9764,
+        "birth": "/Date(1790379386082)/",
+        "endpoint": "127.0.0.1:38601",
+        "listener": {
+          "pid": 9764,
+          "endpoint": "127.0.0.1:38601",
+          "local_endpoint": "127.0.0.1:38601",
+          "remote_endpoint": null,
+          "state": "LISTEN",
+          "raw": "TCP    127.0.0.1:38601        0.0.0.0:0              LISTENING       9764"
+        },
+        "worker_pid": 27256,
+        "established_client_pids": [
+          9764,
+          27256
+        ],
+        "proof_scope": "owned process identity + exact IPv4 loopback listener + connected-client observation"
+      }
+    },
+    "error": null,
+    "execution": {
+      "session_id": "session-f5724c98f2d33a11fbecb353",
+      "model_ref": {
+        "schema_version": 1,
+        "session_id": "session-f5724c98f2d33a11fbecb353",
+        "server_instance_id": "a9a61df0655c9a9c6a0d61019dbaa6bd2259c156d2f41266d577e12be5b44d65",
+        "model_tag": "mcp1",
+        "generation": 1
+      },
+      "revision": 1,
+      "dirty": false,
+      "server_ownership": "shared",
+      "model_ownership": "mcp_owned",
+      "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+      "request_id": "af133b18-f9a1-49f2-912b-92d26a792aaf",
+      "operation_id": "61266fd8-79ab-4984-976f-19f9405bcfae",
+      "request_hash": "a9539d7d5d362c05d1725d381cd862f8b141552a8b9e85048de1a653e4c59843",
+      "idempotency_key": "24a927c0-3d39-4648-93e2-c9c65b26215d",
+      "job_id": "805afd76-e3d7-46bc-855a-5415085f1d2f"
+    }
+  },
+  "error": "  + Exception Group Traceback (most recent call last):\n  |   File \"C:\\Temp\\w22_20260926\\run_w22_native.py\", line 43, in run\n  |     async with stdio_client(params) as (read,write):\n  |                ~~~~~~~~~~~~^^^^^^^^\n  |   File \"C:\\Users\\Everwalker\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\contextlib.py\", line 235, in __aexit__\n  |     await self.gen.athrow(value)\n  |   File \"C:\\Temp\\w22_20260926\\venv\\Lib\\site-packages\\mcp\\client\\stdio\\__init__.py\", line 183, in stdio_client\n  |     anyio.create_task_group() as tg,\n  |     ~~~~~~~~~~~~~~~~~~~~~~~^^\n  |   File \"C:\\Temp\\w22_20260926\\venv\\Lib\\site-packages\\anyio\\_backends\\_asyncio.py\", line 847, in __aexit__\n  |     raise BaseExceptionGroup(\n  |         \"unhandled errors in a TaskGroup\", self._exceptions\n  |     ) from None\n  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)\n  +-+---------------- 1 ----------------\n    | Exception Group Traceback (most recent call last):\n    |   File \"C:\\Temp\\w22_20260926\\venv\\Lib\\site-packages\\mcp\\client\\stdio\\__init__.py\", line 189, in stdio_client\n    |     yield read_stream, write_stream\n    |   File \"C:\\Temp\\w22_20260926\\run_w22_native.py\", line 44, in run\n    |     async with ClientSession(read,write) as session:\n    |                ~~~~~~~~~~~~~^^^^^^^^^^^^\n    |   File \"C:\\Temp\\w22_20260926\\venv\\Lib\\site-packages\\mcp\\shared\\session.py\", line 238, in __aexit__\n    |     return await self._task_group.__aexit__(exc_type, exc_val, exc_tb)\n    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    |   File \"C:\\Temp\\w22_20260926\\venv\\Lib\\site-packages\\anyio\\_backends\\_asyncio.py\", line 847, in __aexit__\n    |     raise BaseExceptionGroup(\n    |         \"unhandled errors in a TaskGroup\", self._exceptions\n    |     ) from None\n    | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)\n    +-+---------------- 1 ----------------\n      | Traceback (most recent call last):\n      |   File \"C:\\Temp\\w22_20260926\\run_w22_native.py\", line 64, in run\n      |     result=await call('study.sweep_manage',{'study':'std1','definition':d,'max_cases':27 if args.full else 1,'max_wall_time_s':10800})\n      |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n      |   File \"C:\\Temp\\w22_20260926\\run_w22_native.py\", line 56, in call\n      |     if not allow_error and (result.isError or not data.get('success')):raise RuntimeError(json.dumps(data,default=str)[:3000])\n      |                                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n      | RuntimeError: {\"success\": false, \"data\": {\"status\": \"FAILED\", \"completion_status\": \"CASE_FAILED\", \"cases\": [{\"case_id\": \"case-1\", \"parameters\": {\"L\": 0.02, \"p0\": 0.8, \"p1\": 0.75}, \"units\": {\"L\": \"m\", \"p0\": \"W\", \"p1\": \"W\"}, \"producer\": \"06290c78-e50f-435d-82dd-ffd06f55fcf3\", \"model_ref\": {\"schema_version\": 1, \"session_id\": \"session-f5724c98f2d33a11fbecb353\", \"server_instance_id\": \"a9a61df0655c9a9c6a0d61019dbaa6bd2259c156d2f41266d577e12be5b44d65\", \"model_tag\": \"mcp1\", \"generation\": 1}, \"cache_hit\": false, \"engine\": {\"comsol_version\": \"COMSOL Multiphysics 6.4 (\\u5f00\\u53d1\\u7248\\u672c: 293)\", \"source\": \"ModelUtil.getComsolVersion()\", \"channel\": \"modelutil command\", \"worker_generation\": 2}, \"cache_policy\": \"REUSE_VERIFIED_CONFIGURATION\", \"parameter_readback\": {\"scope\": \"model\", \"parameters\": [{\"name\": \"L\", \"group\": null, \"expression\": \"0.02[m]\", \"description\": \"\", \"description_error\": null, \"unit\": \"m\", \"unit_error\": null, \"evaluated\": {\"kind\": \"float64\", \"shape\": [], \"data\": 0.02}, \"evaluate_errors\": null}, {\"name\": \"p0\", \"group\": null, \"expression\": \"0.8[W]\", \"description\": \"\", \"description_error\": null, \"unit\": \"W\", \"unit_error\": null, \"evaluated\": {\"kind\": \"float64\", \"shape\": [], \"data\": 0.8}, \"evaluate_errors\": null}, {\"name\": \"p1\", \"group\": null, \"expression\": \"0.75[W]\", \"description\": \"\", \"description_error\": null, \"unit\": \"W\", \"unit_error\": null, \"evaluated\": {\"kind\": \"float64\", \"shape\": [], \"data\": 0.75}, \"evaluate_errors\": null}], \"count\": 3, \"unit_policy\": \"units are reported verbatim from evaluateUnit(); this layer never converts\"}, \"solve\": {\"study\": {\"segments\": [{\"collection\": \"study\", \"tag\": \"std1\"}]}, \"study_tag\": \"std1\", \"steps\": [\"time\"], \"duration_s\": 50.354, \"requested_resources\": null, \"requested_timeout_s\": null, \"computation_before\": {\"getLastComputationTime\": -1, \"getLastComputationDate\": -1, \"getLastComputationVersion\": \"\"}, \"computation_after\": {\"getLastComputationTime\": 48470, \"getLastComputationDate\": 1790379462575, \"getLastComputationVersion\": \"COMSOL 6.4.0.293\"}, \"computation_timestamp_changed\": true, \"solver_sequences\": [\"sol1\"], \"long_task_semantics\": {\"owner\": \"control_plane\", \"engine_call\": \"study(<tag>).run() is executed synchronously on the serial worker queue\", \"caller_deadline\": \"timeout_s/rpc deadlines limit caller waiting only; an expired wait does not prove that COMSOL stopped computing, so the original job must be inspected rather than resubmitted\", \"health\": \"the worker's health/status socket stays responsive during a solve\"}, \"notes\": [\"study.run() corresponds to Compute in the Desktop and regenerates the solver sequence for an unedited study\", \"the timestamps are the study's own record of the last computation and are the only verified post-run evidence this layer can read back\"], \"ok\": true, \"status\": \"APPLIED\", \"partial_change\": true, \"execution_state_unknown\": false, \"applied\": [{\"step\": \"run\", \"method\": \"study.run\", \"duration_s\": 50.354, \"timestamp_changed\": true}], \"failed\": [], \"not_executed\": [], \"readback\": {\"st\n      +------------------------------------\n"
+}

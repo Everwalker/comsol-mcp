@@ -1,15 +1,15 @@
 {
-  "status": "IN_PROGRESS",
+  "status": "W22_SCOPED_APPROVED",
   "scope": "W22 D1-D6; stop before W23",
   "benchmark_sha256": "d94322296feff1cd7678e345bf798616a704c638c8c108d3c8f78f4128f4b1fe",
   "inherited": "W21_SCOPED_APPROVED",
   "physical_validation": "UNVERIFIED",
-  "D1": "PARTIAL_NATIVE_SMOKE",
-  "D2": "PASS_LIMITED_SMOKE64_REVIEW",
-  "D3": "RUNNING_27_CASES_PER_VERSION",
-  "D4": "REVIEWER_FRESH_NOT_RUN",
-  "D5": "PARTIAL_63_IMAGES_AND_SAVE_REOPEN_IN_PROGRESS",
-  "D6": "NOT_YET_APPROVED",
+  "D1": "PASS_BOTH_VERSIONS_INDEPENDENTLY_APPROVED",
+  "D2": "PASS_BOTH_VERSIONS_INDEPENDENTLY_APPROVED",
+  "D3": "PASS_BOTH_VERSIONS_INDEPENDENTLY_APPROVED",
+  "D4": "PASS_BOTH_VERSIONS_INDEPENDENTLY_APPROVED",
+  "D5": "PASS_BOTH_VERSIONS_INDEPENDENTLY_APPROVED",
+  "D6": "PASS_BOTH_VERSIONS_INDEPENDENTLY_APPROVED",
   "reviewer": "/root/reviewer",
   "main_runs": [
     "full63_01",
@@ -21,5 +21,79 @@
     "cloud Host",
     "measured device calibration"
   ],
-  "stop_before": "W23"
+  "stop_before": "W23",
+  "candidate_source_commit": "44b8e1931b47da564edb600d2127b28859d07b36",
+  "candidate_wheel_sha256": "c1d82034e19e1f0fd897f3ec76911a3ccad229ed35f613148633bfb56f923ae6",
+  "scan_wheel_sha256": "673e3623c94780e92492401916e83d24484597bdf1ccf6c1ef63565ec3378571",
+  "live_run_paths": {
+    "6.3": "C:\\Temp\\w22_20260926\\full63_01",
+    "6.4": "C:\\Temp\\w22_20260926\\full64_01"
+  },
+  "last_verified_cases": {
+    "6.3": 27,
+    "6.4": 27
+  },
+  "native_scan_state": "COMPLETED_CASES_WITH_PRESERVED_FAILED_RUNS_AND_PASSED_APPEND_CONTROLS_DELIVERY",
+  "remaining": [],
+  "control_runs": [
+    "controls63_01",
+    "controls64_01"
+  ],
+  "delivery_runs": [
+    "delivery63_01",
+    "delivery64_01"
+  ],
+  "source_snapshot": "../delivery/W22_SOURCE_44b8e19.tar.gz",
+  "source_snapshot_sha256": "01c574b0482c7b6039c04f48ec0bce4a2110ef1f344269a0a7dce3c12164f96f",
+  "remote_sync": "BLOCKED_CONNECTION_RESET_NOT_PUSHED",
+  "independent_review": "review/W22_FINAL_REVIEW.md",
+  "unresolved_A1_A2": [],
+  "reviewer_fresh_runs": [
+    "reviewer63_02",
+    "reviewer64_02"
+  ],
+  "reviewer_reopen_runs": [
+    "reviewer_reopen63_01",
+    "reviewer_reopen64_01"
+  ],
+  "acceptance_by_version": {
+    "6.3": {
+      "D1": "PASS",
+      "D2": "PASS",
+      "D3": "PASS",
+      "D4": "PASS",
+      "D5": "PASS",
+      "D6": "PASS",
+      "combined_checks_passed": 886,
+      "independent_fresh_reopen_checks_passed": 122,
+      "main_post_scan_solves": 5,
+      "reviewer_fresh_solves": 1,
+      "reviewer_reopen_solves": 0
+    },
+    "6.4": {
+      "D1": "PASS",
+      "D2": "PASS",
+      "D3": "PASS",
+      "D4": "PASS",
+      "D5": "PASS",
+      "D6": "PASS",
+      "combined_checks_passed": 886,
+      "independent_fresh_reopen_checks_passed": 122,
+      "main_post_scan_solves": 5,
+      "reviewer_fresh_solves": 1,
+      "reviewer_reopen_solves": 0
+    }
+  },
+  "best_candidate": {
+    "L_m": 0.03,
+    "p_center_W": 0.6,
+    "p_inner_each_W": 0.65,
+    "p_outer_active_each_W": 0.7227272727272727,
+    "total_W": 12.45,
+    "CV_approx": 0.191178982,
+    "baseline_CV_reduction_fraction_approx": 0.151920125,
+    "optimality": "BEST_OF_FROZEN_27_NOT_GLOBAL"
+  },
+  "stopped_at": "W22",
+  "W23": "NOT_STARTED"
 }

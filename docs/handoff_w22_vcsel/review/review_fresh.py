@@ -6,8 +6,10 @@ ap=argparse.ArgumentParser()
 ap.add_argument('--fresh',type=Path,required=True);ap.add_argument('--reopen',type=Path,required=True)
 ap.add_argument('--full',type=Path,required=True);ap.add_argument('--out',type=Path,required=True)
 ap.add_argument('--wheel-sha256',required=True,help='Explicit final candidate wheel identity supplied before independent run.')
+ap.add_argument('--saved-run',type=Path,help='Main delivery whose MPH Reviewer independently reopened; defaults to Reviewer fresh output.')
 a=ap.parse_args();review=Path(__file__).parent
 fresh=json.loads((a.fresh/'summary.json').read_text());reopen=json.loads((a.reopen/'summary.json').read_text());full=json.loads((a.full/'summary.json').read_text())
+saved=json.loads((a.saved_run/'summary.json').read_text()) if a.saved_run else fresh
 spec=json.loads((review.parent/'benchmark_spec.json').read_text());tol=spec['tolerances'];checks=[]
 def flag(name,value,detail=None):checks.append(dict(name=name,passed=bool(value),detail=detail))
 def compare(name,x,y,rt,at):flag(name,math.isfinite(x) and abs(x-y)<=max(at,rt*abs(y)),dict(actual=x,reference=y,error=abs(x-y),limit=max(at,rt*abs(y))))
@@ -21,6 +23,33 @@ flag('one_fresh_solved_candidate',len(fresh['cases'])==1 and not fresh['cases'][
 c=fresh['cases'][0]
 best=min((r for r in full['cases'] if r['roi_mean']>=spec['search']['mean_deltaT_min_K']),key=lambda r:r['roi_std']/r['roi_mean'])
 flag('returned_best_parameters',c['parameters']==best['parameters'])
+flag('fresh_stored_times',c['solution_indices']['time_values']==spec['times_s'])
+flag('fresh_typed_units',c['sample']['field_array']['units']['expression']=={'T':'K','roi_mean':'K','roi_std':'K','roi_cv_guarded':'1','roi_max':'K','roi_min':'K','roi_area':'m^2','Pinc':'W','Pabs':'W','Proi':'W','Pout':'W','Pstore':'W','U':'J'})
+raw_responses=[]
+for run in [a.fresh,a.reopen]:
+    for line in (run/'transcript.jsonl').read_text().splitlines():
+        row=json.loads(line)
+        if row['direction']=='response':
+            raw_responses.append(row['result'].get('structuredContent') or json.loads(next(x['text'] for x in row['result']['content'] if x['type']=='text')))
+for field in ['final_sample','source_probes','source_probes_mm','outside_probes','save']:
+    flag('fresh_raw_response:'+field,any(payload==fresh[field] for payload in raw_responses))
+for field in ['stored_before_rebind','stored_after_rebind','settings','load']:
+    flag('reopen_raw_response:'+field,any(payload==reopen[field] for payload in raw_responses))
+sigma=.002+.05*c['parameters']['L'];powers=[c['parameters']['p0'],c['parameters']['p1'],(12.45-c['parameters']['p0']-6*c['parameters']['p1'])/11]
+for pi,(x,y) in enumerate(spec['source_probes_m']):
+    expected_incident=0.
+    for g,power in zip(spec['fixture']['rings'],powers):
+        for j in range(g['count']):
+            if j in g.get('disabled_indices',[]):continue
+            theta=2*math.pi*j/g['count']+g.get('phase_rad',0.)
+            dx=x-g['radius_m']*math.cos(theta);dy=y-g['radius_m']*math.sin(theta)
+            expected_incident+=power/(2*math.pi*sigma*sigma)*math.exp(-(dx*dx+dy*dy)/(2*sigma*sigma))
+    for key in ['source_probes','source_probes_mm']:
+        for expr,expected_value in enumerate([expected_incident,.6*expected_incident]):
+            compare(f'independent_angular:{key}:{pi}:{expr}',fresh[key]['data']['values'][expr][0][-1][pi],expected_value,tol['source_point_relative'],tol['source_point_absolute_W_m2'])
+flag('independent_zero_extrapolation',all(abs(v)<=1 for v in flatten(fresh['outside_probes']['data']['values'])))
+bound=.6*18*1
+flag('independent_impossible_power',fresh['impossible_control']['status']=='PROVEN_INFEASIBLE' and abs(fresh['impossible_control']['upper_bound_W']-bound)<1e-12 and fresh['impossible_control']['target_W']==20 and 20>bound)
 for field in ['roi_mean','roi_std','roi_max','roi_min']:
     compare('independent_fresh:'+field,c[field],best[field],tol['fresh_relative'],tol['fresh_absolute_K'])
 for kind in ['analytic','interpolated']:
@@ -29,8 +58,8 @@ for kind in ['analytic','interpolated']:
     for f,r,rt,at in [('roi_mean','roi_mean_deltaT_K','reference_mean_relative','reference_mean_absolute_K'),('roi_std','roi_std_deltaT_K','reference_std_relative','reference_std_absolute_K'),('Pabs','workpiece_absorbed_W','source_integral_relative','source_integral_absolute_W'),('Proi','roi_absorbed_W','source_integral_relative','source_integral_absolute_W')]:
         compare(kind+':'+f,c[f],ref[r],tol[rt],tol[at])
 compare('energy_balance',(c['Pabs']-c['Pout']-c['Pstore'])/c['Pabs'],0,0,tol['energy_balance_relative'])
-flag('stored_mph_hash',fresh['saved_sha256']==reopen['saved_sha256'])
-expected=fresh['final_sample']['data']
+flag('stored_mph_hash',saved['saved_sha256']==reopen['saved_sha256'])
+expected=saved['final_sample']['data']
 for which in ['stored_before_rebind','stored_after_rebind']:
     actual=reopen[which]['data'];flag(which+':binding',actual['dataset_binding']['binding_complete'] and actual['solution']=='sol1' and actual['dataset']=='dset1')
     flag(which+':expressions',actual['expressions']==expected['expressions'])
@@ -46,6 +75,7 @@ for key,value in expected_settings.items():flag('readback_setting:'+key,s.get(ke
 flag('readback_roi_selection',s['roi_integration_selection']==readback['roi_box'] and len(readback['roi_box'])>0)
 for key,value in dict(c['parameters'],p2=(12.45-c['parameters']['p0']-6*c['parameters']['p1'])/11,ptotal=12.45,alpha=.6,Tamb=300.).items():
     compare('readback_parameter:'+key,s['parameter_values'][key]['value'],value,0,1e-12)
+flag('readback_parameter_units',all(s['parameter_values'][key]['unit']==unit for key,unit in {'L':'m','p0':'W','p1':'W','p2':'W','ptotal':'W','Tamb':'K'}.items()) and s['parameter_values']['alpha']['unit'] in [None,'','1'])
 for f in s['input_functions']:
     flag('function:'+f['tag'],f['argument_units']==['m','m'] and f['function_units']==['1/m^2'] and f['interpolation']=='linear' and f['extrapolation']=='value' and f['extrapolation_value']==0,f)
     flag('rebound_new_path:'+f['tag'],a.reopen.name in f['filename'])
