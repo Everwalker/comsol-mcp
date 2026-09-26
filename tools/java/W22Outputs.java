@@ -42,11 +42,14 @@ public final class W22Outputs {
         settings.put("parameter_values",parameterValues);
         List<Object> inputs=new ArrayList<>();
         for(String tag:model.func().tags()) {
+            if(!"Interpolation".equals(model.func(tag).getType()))continue;
             Map<String,Object> item=new LinkedHashMap<>();
-            item.put("tag",tag);item.put("filename",model.func(tag).getString("filename"));
+            item.put("tag",tag);item.put("type",model.func(tag).getType());
+            item.put("filename",model.func(tag).getString("filename"));
             item.put("argument_units",model.func(tag).getStringArray("argunit"));item.put("function_units",model.func(tag).getStringArray("fununit"));
             item.put("interpolation",model.func(tag).getString("interp"));item.put("extrapolation",model.func(tag).getString("extrap"));
-            item.put("extrapolation_value",model.func(tag).getDouble("extrapvalue"));inputs.add(item);
+            item.put("extrapolation_value",model.func(tag).getDouble("extrapvalue"));
+            inputs.add(item);
         }
         settings.put("input_functions",inputs);
         result.put("settings",settings);
