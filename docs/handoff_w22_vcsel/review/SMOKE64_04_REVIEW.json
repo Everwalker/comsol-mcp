@@ -1,0 +1,339 @@
+{
+  "scope": "WINDOWS_BASELINE_SMOKE_EVIDENCE_REVIEW_ONLY",
+  "native_reexecuted_by_reviewer": false,
+  "w22_scoped_approval": false,
+  "review_result": "PASS_LIMITED_SCOPE",
+  "transcript_sha256": "e3c5b87528a6a6c6a0331a8f84a03fbb021995d9fe5930e9ecbb9ed9a98a2bd9",
+  "benchmark_sha256": "d94322296feff1cd7678e345bf798616a704c638c8c108d3c8f78f4128f4b1fe",
+  "engine": {
+    "comsol_version": "COMSOL Multiphysics 6.4 (\u5f00\u53d1\u7248\u672c: 293)",
+    "source": "ModelUtil.getComsolVersion()",
+    "channel": "modelutil command",
+    "worker_generation": 2
+  },
+  "model_ref": {
+    "schema_version": 1,
+    "session_id": "session-6df3fb57fcb4a99ac1a7431c",
+    "server_instance_id": "4bc15a03a70e273433a0765282fe1118fbb3f7960de886ce1e90993d32ea592a",
+    "model_tag": "mcp1",
+    "generation": 1
+  },
+  "producer": "c589b891-018c-4c80-bca5-16e5e08db43c",
+  "observation_ref": {
+    "observation_id": "obs_4d36ff3bb134413da9f1043cb1caef96",
+    "sha256": "fe2920cc8cc33450d6897d5b2dbbe9540ff443b03517351c9e249eac203c09ca"
+  },
+  "metadata": {
+    "success_responses": true,
+    "not_cache": true,
+    "fresh_computation_timestamp": true,
+    "bound_solution": true,
+    "actual_stored_times": true,
+    "array_axes": true,
+    "nonzero_heating": true
+  },
+  "checks": [
+    {
+      "name": "analytic:roi_mean",
+      "actual": 13.995437494741449,
+      "expected": 13.997347089049331,
+      "error": 0.0019095943078824007,
+      "limit": 0.1399734708904933,
+      "pass_": true
+    },
+    {
+      "name": "analytic:roi_std",
+      "actual": 3.154931014675859,
+      "expected": 3.156024700758183,
+      "error": 0.0010936860823238526,
+      "limit": 0.03156024700758183,
+      "pass_": true
+    },
+    {
+      "name": "analytic:Pabs",
+      "actual": 7.463255819471278,
+      "expected": 7.463386700193585,
+      "error": 0.0001308807223070474,
+      "limit": 0.07463386700193585,
+      "pass_": true
+    },
+    {
+      "name": "analytic:Proi",
+      "actual": 6.656933055617603,
+      "expected": 6.660033236439752,
+      "error": 0.0031001808221482463,
+      "limit": 0.06660033236439752,
+      "pass_": true
+    },
+    {
+      "name": "analytic:roi_max_sampled_reference",
+      "actual": 19.94260484420772,
+      "expected": 19.947443320313315,
+      "error": 0.004838476105593514,
+      "limit": 0.3989488664062663,
+      "pass_": true
+    },
+    {
+      "name": "analytic:roi_min_sampled_reference",
+      "actual": 7.162643330651804,
+      "expected": 7.163386041497092,
+      "error": 0.0007427108452882081,
+      "limit": 0.14326772082994185,
+      "pass_": true
+    },
+    {
+      "name": "interpolated:roi_mean",
+      "actual": 13.995437494741449,
+      "expected": 13.994458196647841,
+      "error": 0.000979298093607639,
+      "limit": 0.1399445819664784,
+      "pass_": true
+    },
+    {
+      "name": "interpolated:roi_std",
+      "actual": 3.154931014675859,
+      "expected": 3.1546085310174417,
+      "error": 0.00032248365841747173,
+      "limit": 0.031546085310174415,
+      "pass_": true
+    },
+    {
+      "name": "interpolated:Pabs",
+      "actual": 7.463255819471278,
+      "expected": 7.463256321180988,
+      "error": 5.01709710221121e-07,
+      "limit": 0.07463256321180987,
+      "pass_": true
+    },
+    {
+      "name": "interpolated:Proi",
+      "actual": 6.656933055617603,
+      "expected": 6.656968487819563,
+      "error": 3.543220196000618e-05,
+      "limit": 0.06656968487819563,
+      "pass_": true
+    },
+    {
+      "name": "interpolated:roi_max_sampled_reference",
+      "actual": 19.94260484420772,
+      "expected": 19.941641046287085,
+      "error": 0.000963797920636722,
+      "limit": 0.3988328209257417,
+      "pass_": true
+    },
+    {
+      "name": "interpolated:roi_min_sampled_reference",
+      "actual": 7.162643330651804,
+      "expected": 7.166585482583145,
+      "error": 0.00394215193134162,
+      "limit": 0.14333170965166292,
+      "pass_": true
+    },
+    {
+      "name": "roi_area",
+      "actual": 0.0007068583385082236,
+      "expected": 0.0007068583470577034,
+      "error": 8.549479809001614e-12,
+      "limit": 7.068583470577035e-08,
+      "pass_": true
+    },
+    {
+      "name": "absorption_once",
+      "actual": 7.463255819471278,
+      "expected": 7.463255819471302,
+      "error": 2.398081733190338e-14,
+      "limit": 1e-08,
+      "pass_": true
+    },
+    {
+      "name": "energy_balance_relative",
+      "actual": -1.615756028161983e-07,
+      "expected": 0,
+      "error": 1.615756028161983e-07,
+      "limit": 0.02,
+      "pass_": true
+    },
+    {
+      "name": "source:incident:0",
+      "actual": 4568.244015010882,
+      "expected": 4568.244015010881,
+      "error": 9.094947017729282e-13,
+      "limit": 91.36488030021764,
+      "pass_": true
+    },
+    {
+      "name": "source:incident:1",
+      "actual": 16062.76768275874,
+      "expected": 16062.767682758742,
+      "error": 1.8189894035458565e-12,
+      "limit": 321.2553536551749,
+      "pass_": true
+    },
+    {
+      "name": "source:incident:2",
+      "actual": 15432.407589064587,
+      "expected": 15432.407589064585,
+      "error": 1.8189894035458565e-12,
+      "limit": 308.6481517812917,
+      "pass_": true
+    },
+    {
+      "name": "source:incident:3",
+      "actual": 15432.40758906458,
+      "expected": 15432.407589064576,
+      "error": 3.637978807091713e-12,
+      "limit": 308.6481517812915,
+      "pass_": true
+    },
+    {
+      "name": "source:qabs:0",
+      "actual": 2740.9464090065294,
+      "expected": 2740.946409006529,
+      "error": 4.547473508864641e-13,
+      "limit": 54.81892818013058,
+      "pass_": true
+    },
+    {
+      "name": "source:qabs:1",
+      "actual": 9637.660609655244,
+      "expected": 9637.660609655244,
+      "error": 0.0,
+      "limit": 192.7532121931049,
+      "pass_": true
+    },
+    {
+      "name": "source:qabs:2",
+      "actual": 9259.444553438752,
+      "expected": 9259.44455343875,
+      "error": 1.8189894035458565e-12,
+      "limit": 185.188891068775,
+      "pass_": true
+    },
+    {
+      "name": "source:qabs:3",
+      "actual": 9259.444553438747,
+      "expected": 9259.444553438745,
+      "error": 1.8189894035458565e-12,
+      "limit": 185.1888910687749,
+      "pass_": true
+    },
+    {
+      "name": "scalar_matches_raw_array:T",
+      "actual": 319.9140385825694,
+      "expected": 319.9140385825694,
+      "error": 0.0,
+      "limit": 0,
+      "pass_": true
+    },
+    {
+      "name": "scalar_matches_raw_array:roi_mean",
+      "actual": 13.995437494741449,
+      "expected": 13.995437494741449,
+      "error": 0.0,
+      "limit": 0,
+      "pass_": true
+    },
+    {
+      "name": "scalar_matches_raw_array:roi_std",
+      "actual": 3.154931014675859,
+      "expected": 3.154931014675859,
+      "error": 0.0,
+      "limit": 0,
+      "pass_": true
+    },
+    {
+      "name": "scalar_matches_raw_array:roi_cv",
+      "actual": 0.22542568003760308,
+      "expected": 0.22542568003760308,
+      "error": 0.0,
+      "limit": 0,
+      "pass_": true
+    },
+    {
+      "name": "scalar_matches_raw_array:roi_max",
+      "actual": 19.94260484420772,
+      "expected": 19.94260484420772,
+      "error": 0.0,
+      "limit": 0,
+      "pass_": true
+    },
+    {
+      "name": "scalar_matches_raw_array:roi_min",
+      "actual": 7.162643330651804,
+      "expected": 7.162643330651804,
+      "error": 0.0,
+      "limit": 0,
+      "pass_": true
+    },
+    {
+      "name": "scalar_matches_raw_array:roi_area",
+      "actual": 0.0007068583385082236,
+      "expected": 0.0007068583385082236,
+      "error": 0.0,
+      "limit": 0,
+      "pass_": true
+    },
+    {
+      "name": "scalar_matches_raw_array:Pinc",
+      "actual": 12.438759699118837,
+      "expected": 12.438759699118837,
+      "error": 0.0,
+      "limit": 0,
+      "pass_": true
+    },
+    {
+      "name": "scalar_matches_raw_array:Pabs",
+      "actual": 7.463255819471278,
+      "expected": 7.463255819471278,
+      "error": 0.0,
+      "limit": 0,
+      "pass_": true
+    },
+    {
+      "name": "scalar_matches_raw_array:Proi",
+      "actual": 6.656933055617603,
+      "expected": 6.656933055617603,
+      "error": 0.0,
+      "limit": 0,
+      "pass_": true
+    },
+    {
+      "name": "scalar_matches_raw_array:Pout",
+      "actual": 7.463258431488744,
+      "expected": 7.463258431488744,
+      "error": 0.0,
+      "limit": 0,
+      "pass_": true
+    },
+    {
+      "name": "scalar_matches_raw_array:Pstore",
+      "actual": -1.4061374083165446e-06,
+      "expected": -1.4061374083165446e-06,
+      "error": 0.0,
+      "limit": 0,
+      "pass_": true
+    },
+    {
+      "name": "scalar_matches_raw_array:U",
+      "actual": 31.73750643434719,
+      "expected": 31.73750643434719,
+      "error": 0.0,
+      "limit": 0,
+      "pass_": true
+    }
+  ],
+  "remaining": [
+    "independent fresh dual-version solve",
+    "L scan and optimization",
+    "source cache negative control",
+    "outside source support and m/mm control",
+    "native image and clean-path reopen",
+    "final candidate code review"
+  ],
+  "notes": [
+    "Raw optional getPNames/getPvals/getUnits metadata calls failed for nonparametric solution; actual stored time and dataset binding are present. No broad old-stage re-audit implied.",
+    "At t=0 solver readback has small nonzero temperature rise; this review certifies only frozen t=60s comparison.",
+    "CV denominator guard must not expose zero-heating CV as a valid optimum.",
+    "Physical calibration remains UNVERIFIED."
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "schema": "W22_SYNTHETIC_REFERENCE_V1",
+  "origin": "SYNTHETIC_NOT_USER_DEVICE_DATA",
+  "rings": [
+    {
+      "id": "center",
+      "radius_m": 0.0,
+      "count": 1,
+      "power_W_each": 0.8
+    },
+    {
+      "id": "ring1",
+      "radius_m": 0.006,
+      "count": 6,
+      "power_W_each": 0.75
+    },
+    {
+      "id": "ring2",
+      "radius_m": 0.012,
+      "count": 12,
+      "power_W_each": 0.65,
+      "disabled_indices": [
+        0
+      ]
+    }
+  ],
+  "kernel": {
+    "name": "normalized_2D_Gaussian",
+    "sigma0_m": 0.002,
+    "slope": 0.05,
+    "notes": "synthetic sigma(L), not measured divergence/NA"
+  },
+  "L_candidates_m": [
+    0.01,
+    0.02,
+    0.03
+  ],
+  "absorption_fraction": 0.6,
+  "grid": {
+    "half_width_m": 0.025,
+    "points_per_axis": 101
+  },
+  "workpiece_radius_m": 0.02,
+  "roi_radius_m": 0.015,
+  "calibration_status": "UNVERIFIED",
+  "guard": "No automatic source renormalization on finite workpiece/ROI"
+}

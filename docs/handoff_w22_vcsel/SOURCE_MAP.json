@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "commit": "2839e17738838441985ccb7a08a835bd654fe3e1",
+  "tree": "f93b4046b8556f10f003cbdc10c17bbcdead6fab",
+  "source_commit_of_tested_production": "07a44329e96d922a0955e944a8a65ba732894278",
+  "scope": "targeted milestone review, not full repository semantic audit",
+  "sources": [
+    {
+      "id": "S01",
+      "path": "docs/handoff_w21_execution_closure/CLOSURE_RESULT.md",
+      "review_scope": "read full",
+      "git_blob": "05357019a0f9a0c494f97108871274b05cfa9420",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/2839e17738838441985ccb7a08a835bd654fe3e1/docs/handoff_w21_execution_closure/CLOSURE_RESULT.md"
+    },
+    {
+      "id": "S02",
+      "path": "docs/handoff_w21_execution_closure/review/REVIEWER_FINAL_W21_SCOPED.md",
+      "review_scope": "read full; this is repository reviewer evidence, not this author native rerun",
+      "git_blob": "79a670365f8467305071fc08f7ce3a5669596a89",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/2839e17738838441985ccb7a08a835bd654fe3e1/docs/handoff_w21_execution_closure/review/REVIEWER_FINAL_W21_SCOPED.md"
+    },
+    {
+      "id": "S03",
+      "path": "docs/handoff_w21_execution_closure/MAIN_NATIVE_FACTS.json",
+      "review_scope": "read full machine-readable scoped facts",
+      "git_blob": "658c953f55d0a118cc174eb28e0b2f2171169e22",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/2839e17738838441985ccb7a08a835bd654fe3e1/docs/handoff_w21_execution_closure/MAIN_NATIVE_FACTS.json"
+    },
+    {
+      "id": "S04",
+      "path": "comsol_mcp/_g3_w21.py",
+      "review_scope": "lines 1–205,400–end; exact indexing and production dispatch",
+      "git_blob": "98ba6fea0e0c52c47081ef13c951853a38b1b68c",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/2839e17738838441985ccb7a08a835bd654fe3e1/comsol_mcp/_g3_w21.py"
+    },
+    {
+      "id": "S05",
+      "path": "comsol_mcp/_w21_execution.py",
+      "review_scope": "lines 1–445; managed parameter/solve/sample/cache/stage paths",
+      "git_blob": "7996e4c84d43f07a6d49ed753de80ed68087b5f3",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/2839e17738838441985ccb7a08a835bd654fe3e1/comsol_mcp/_w21_execution.py"
+    },
+    {
+      "id": "S06",
+      "path": "evidence/w21_closure/windows/closure_w21_64_final/runner_source.py",
+      "review_scope": "lines 1–130 and 220–320; normal runtime launch, public calls and actual refinement/negative paths",
+      "git_blob": "04d115892533292e9b5d52bc602461aa5df29408",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/2839e17738838441985ccb7a08a835bd654fe3e1/evidence/w21_closure/windows/closure_w21_64_final/runner_source.py"
+    },
+    {
+      "id": "S07",
+      "path": "docs/comsol_mcp_design_v1/04_IMPLEMENTATION_PLAN.md",
+      "review_scope": "read full W22 dependencies and original delivery map",
+      "git_blob": "91cd820953b6af5f7d8c20cc9ec8bebc5115bb9c",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/2839e17738838441985ccb7a08a835bd654fe3e1/docs/comsol_mcp_design_v1/04_IMPLEMENTATION_PLAN.md"
+    },
+    {
+      "id": "S08",
+      "path": "docs/comsol_mcp_design_v1/03_ACCEPTANCE.md",
+      "review_scope": "T016 and T045 plus surrounding original definitions; not entire source",
+      "git_blob": "4c68c68487ca75f083661d70c5bf24774f9ce4a3",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/2839e17738838441985ccb7a08a835bd654fe3e1/docs/comsol_mcp_design_v1/03_ACCEPTANCE.md"
+    },
+    {
+      "id": "S09",
+      "path": "docs/handoff_w21_execution_closure/RESTORE_CURRENT.md",
+      "review_scope": "read full; historical c2ca+patch route must not be reapplied on new source",
+      "git_blob": "988deeb37a4a1141c790c20022ef4e34baad7061",
+      "url": "https://github.com/Everwalker/comsol-mcp/blob/2839e17738838441985ccb7a08a835bd654fe3e1/docs/handoff_w21_execution_closure/RESTORE_CURRENT.md"
+    }
+  ],
+  "official_sources": [
+    {
+      "url": "https://doc.comsol.com/6.4/doc/com.comsol.help.comsol/comsol_api_general.47.34.html",
+      "use": "Interpolation file importData/discardData/refresh semantics; exact calls must be verified in installed versions"
+    },
+    {
+      "url": "https://doc.comsol.com/6.4/doc/com.comsol.help.heat/heat_ug_ht_features.09.065.html",
+      "use": "positive inward boundary heat flux, convective heat flux"
+    },
+    {
+      "url": "https://doc.comsol.com/6.4/doc/com.comsol.help.heat/heat_ug_notations.05.2.html",
+      "use": "W/m² flux vs W/m³ volumetric source"
+    }
+  ],
+  "author_did_not_execute": [
+    "remote full source restore",
+    "full repository pytest",
+    "Windows PowerShell",
+    "COMSOL6.3",
+    "COMSOL6.4",
+    "independent Reviewer native session"
+  ]
+}

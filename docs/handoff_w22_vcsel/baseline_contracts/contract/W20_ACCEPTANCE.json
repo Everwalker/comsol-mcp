@@ -1,0 +1,196 @@
+{
+  "schema_version": 1,
+  "stage": "G3.11-W20",
+  "stop_before": "W21",
+  "definitions_not_execution_results": true,
+  "cases": [
+    {
+      "id": "T01",
+      "title": "干净恢复、来源与角色入口",
+      "targets": [
+        "shared"
+      ],
+      "required": true,
+      "minimum_evidence": "SOURCE",
+      "initial_status": "NOT_RUN",
+      "criteria": "固定PIN/blob/tree恢复；独立目录/源外安装；主Agent可以直接开发，不能依赖旧资料。"
+    },
+    {
+      "id": "T02",
+      "title": "主开发与独立Reviewer",
+      "targets": [
+        "shared"
+      ],
+      "required": true,
+      "minimum_evidence": "WORKFLOW",
+      "initial_status": "NOT_RUN",
+      "criteria": "主Agent与Reviewer为不同实际Host会话；冻结要求与候选；Reviewer至少自己构造一个未登记ref反例；角色ID和hash不当作实际审查证明。"
+    },
+    {
+      "id": "T03",
+      "title": "参数三入口及非W20回归",
+      "targets": [
+        "win63",
+        "win64"
+      ],
+      "required": true,
+      "minimum_evidence": "PUBLIC_MCP",
+      "initial_status": "NOT_RUN",
+      "criteria": "点号/下划线/operation_call逻辑body一致；registry arguments与Java任务Map保留；None缺省包装和冲突/未知字段正确。"
+    },
+    {
+      "id": "T04",
+      "title": "显式目标与双模型无串扰",
+      "targets": [
+        "win63",
+        "win64"
+      ],
+      "required": true,
+      "minimum_evidence": "PUBLIC_MCP_NATIVE",
+      "initial_status": "NOT_RUN",
+      "criteria": "同Server两模型同dataset名，缺绑定/歧义拒绝而非取第一个；显式旧ref/revision拒绝；返回值来自指定模型。"
+    },
+    {
+      "id": "T05",
+      "title": "实际effect与隔离",
+      "targets": [
+        "win63",
+        "win64"
+      ],
+      "required": true,
+      "minimum_evidence": "PUBLIC_MCP_NATIVE",
+      "initial_status": "NOT_RUN",
+      "criteria": "纯读可以按读合同工作；有临时节点/文件副作用必须通过真正effect门禁；validate/plot名字不豁免；无有效凭据不写入。"
+    },
+    {
+      "id": "T06",
+      "title": "后端观测来源与完整绑定",
+      "targets": [
+        "win63",
+        "win64"
+      ],
+      "required": true,
+      "minimum_evidence": "PUBLIC_MCP_NATIVE",
+      "initial_status": "NOT_RUN",
+      "criteria": "未登记ref、缺hash、自算hash、caller values替换、跨runtime/session/generation/revision/solution、producer不存在全部拒绝；正常登记值与W17采样一致。"
+    },
+    {
+      "id": "T07",
+      "title": "结构、表达式和边界只读",
+      "targets": [
+        "win63",
+        "win64"
+      ],
+      "required": true,
+      "minimum_evidence": "PUBLIC_MCP_NATIVE",
+      "initial_status": "NOT_RUN",
+      "criteria": "真实built mesh、物性/手动配置、有效Study及热边界规则；读失败不PASS；getter失败不all/set；合法例外准确NOT_COVERED。"
+    },
+    {
+      "id": "T08",
+      "title": "稳态场与有向功率",
+      "targets": [
+        "win63",
+        "win64"
+      ],
+      "required": true,
+      "minimum_evidence": "PUBLIC_MCP_NATIVE",
+      "initial_status": "NOT_RUN",
+      "criteria": "B1实际采样3点及两独立端面积分；0.1K/1%阈值预冻；缺readback不回退80；每个producer响应可追溯。"
+    },
+    {
+      "id": "T09",
+      "title": "瞬态9点及三层状态",
+      "targets": [
+        "win63",
+        "win64"
+      ],
+      "required": true,
+      "minimum_evidence": "PUBLIC_MCP_NATIVE",
+      "initial_status": "NOT_RUN",
+      "criteria": "B2真实9点存储解与oracle正确；isError/业务status/数值正控一致；无独立物理依据physical仍UNVERIFIED；故意错误Cp/初值负控被同一检查器抓住。"
+    },
+    {
+      "id": "T10",
+      "title": "真正瞬态储能守恒",
+      "targets": [
+        "win63",
+        "win64"
+      ],
+      "required": true,
+      "minimum_evidence": "PUBLIC_MCP_NATIVE",
+      "initial_status": "NOT_RUN",
+      "criteria": "B2同一时刻独立能量及端面通量/体热源采集；储能率含时间/差分误差；不以两边复制同值过关；normalization=字符串1e309拒绝。"
+    },
+    {
+      "id": "T11",
+      "title": "真实三网格和三时间研究",
+      "targets": [
+        "win63",
+        "win64"
+      ],
+      "required": true,
+      "minimum_evidence": "NATIVE_CONVERGENCE",
+      "initial_status": "NOT_RUN",
+      "criteria": "每版至少3档实际网格与3档时间精度，回读设置、element/DOF及实际解；producer和case refs可追溯；固定列表、重复网格、伪造error拒绝。"
+    },
+    {
+      "id": "T12",
+      "title": "科学状态、数学和strict JSON",
+      "targets": [
+        "shared"
+      ],
+      "required": true,
+      "minimum_evidence": "CONTROL",
+      "initial_status": "NOT_RUN",
+      "criteria": "数值PASS不提升physical；bool/NaN/Inf、无效误差阈值/权重、零尺度拒绝；报告/错误输出strict JSON；负控测试PASS不等于模型PASS。"
+    },
+    {
+      "id": "T13",
+      "title": "可信输出根与报告组提交",
+      "targets": [
+        "win63",
+        "win64"
+      ],
+      "required": true,
+      "minimum_evidence": "PUBLIC_MCP_NATIVE",
+      "initial_status": "NOT_RUN",
+      "criteria": "root仅取后端配置，读失败不从dest.parent或/建权限；拒绝后不resolve重试；JSON/MD整组预检、partial发布/登记准确，原文件不损。"
+    },
+    {
+      "id": "T14",
+      "title": "新Worker实际重开采样",
+      "targets": [
+        "win63",
+        "win64"
+      ],
+      "required": true,
+      "minimum_evidence": "PUBLIC_MCP_NATIVE",
+      "initial_status": "NOT_RUN",
+      "criteria": "保存后新Worker同版本加载同一SHA且不重算；重新采样新ObservationRef，对比原解；不能传入旧t2缓存；缺存储解/错文件负控有效。"
+    },
+    {
+      "id": "T15",
+      "title": "原始证据与合同覆盖",
+      "targets": [
+        "shared"
+      ],
+      "required": true,
+      "minimum_evidence": "AUDIT",
+      "initial_status": "NOT_RUN",
+      "criteria": "原始消息从实际stdio收集，所有required按原T合同而非旧C计数覆盖；主Agent摘要和Reviewer签字不得压过源码及测量；旧R03结论保留并追加纠正。"
+    },
+    {
+      "id": "T16",
+      "title": "最终候选与独立验收",
+      "targets": [
+        "shared"
+      ],
+      "required": true,
+      "minimum_evidence": "SOURCE_AND_REVIEW",
+      "initial_status": "NOT_RUN",
+      "criteria": "主Agent完成开发回归；Reviewer逐项审计并每版独立复测关键来源/安全/原生反例；当前snapshot匹配，无本轮开放P0/P1。审批后改代码必须再审。"
+    }
+  ],
+  "team": "MAIN_DEVELOPER + INDEPENDENT_REVIEWER"
+}

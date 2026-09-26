@@ -1,0 +1,14 @@
+# W22 当前进度
+初始包状态：NOT_STARTED。本包作者仅审查现有源与证据、生成本轮任务及合成参考输入，没有执行W22 COMSOL。
+继承：W21_SCOPED_APPROVED（公开2839e177；生产07a44329，Windows6.3/6.4限定范围）。
+主Agent实际填写：恢复源/实际环境、D1–D6进度、候选、独立Reviewer会话与结论、真实命令/日志、阻断、延期和最终交付。不要用本模板替代测试。
+
+2026-09-26 M0: Package integrity PASS (45 files), 26 package tests PASS. PIN 2839e177 restored, tree f93b4046 matched, 10019 tracked files. W21 scoped approval read and inherited. Actual independent Reviewer /root/reviewer created. Windows SSH hostname Everwalker, COMSOL63/64 and JDK11 found; no current java/comsol process in inventory. Pre-run benchmark selected square slab for independent full-3D spectral reference. Native NOT_RUN.
+
+2026-09-26 M1/M2: benchmark_spec SHA d94322296feff1cd7678e345bf798616a704c638c8c108d3c8f78f4128f4b1fe frozen by actual Reviewer before native science. 6.4 smoke64_04 completed public installed MCP chain (build293), mean rise13.9954374947K, std3.1549310147K, absorbed7.46325581947W; independent limited-scope review36 checks PASS. 6.3 smoke63_02 completed solve, original source/temperature PNG exports and MPH save (build290). Prior failed RPC timeout, JSON numeric parameter name and component-scope attempts retained. They are not accepted runs.
+
+2026-09-26 M3 active: full63_01 and full64_01 launched independently using wheel673e3623c94780e92492401916e83d24484597bdf1ccf6c1ef63565ec3378571, fixed27 candidates each, nonzero heating>=3K. Existing native processes observed alive; never restarted due to wait. CV guarded native helper explicitly labeled; public near-zero mean CV=None and infeasible. Pure kernel-name refusal added after launch has no change to the frozen Gaussian calculation; pending final candidate packaging and Reviewer delta audit. 28 software checks passed (source, affected W21 and W18); not native certification.
+
+2026-09-26 M4 early reopen: first6.3 newWorker reopened saved fields; T identical, integration rounding <=3.56e-15 caused the runner's overly strict bit-equality check. Corrected to explicit roundoff comparison with raw differences retained, well within frozen fresh bounds. Reopen63_02 in progress for external rebind/settings. Full D1-D6 approval remains pending; no W23 work.
+
+2026-09-26 clean delivery check: final candidate wheel46ef438a94791b7e96f20cd71fb1d895035b43eb44de931718a92795416cd512 built from normal source files only, every packaged module SHA matched canonical source, no AppleDouble. Fresh neutral-path ordinary wheel installation and public stdio initialize/list_tools passed (96tools), pip check passed. PyPI TLS failure was bypassed only by using already locally cached genuine wheel bytes with pip --no-index; TLS verification was not disabled. This is software installation evidence, not native/physical approval. Reopen63_02 completed0solves, actual settings and local input rebind preserved fields with max roundoff3.56e-15. Full63/full64 observed13/14 cases complete and live owned processes; acceptance pending.
