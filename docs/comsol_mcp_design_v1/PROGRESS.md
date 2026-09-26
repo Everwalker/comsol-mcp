@@ -1440,3 +1440,13 @@ The confirmed W20 observation/physical-status defects were corrected, and T11 no
 Software regression scope: selected affected Python modules 84 passed, Java Worker 30 passed/1 skipped; Reviewer independently ran 66 affected checks. This is not a claim that the full repository suite or every platform was re-certified. Physical validation remains UNVERIFIED; only generic T047 transfer is covered and its gel/UV/stress domain acceptance remains for W24.
 
 See `docs/handoff_w21_execution_closure/CLOSURE_RESULT.md`, `review/REVIEWER_FINAL_W21_SCOPED.md`, `W20_CORRECTION.md`, `RESTORE_CURRENT.md`, and `evidence/w21_closure/windows/`. Earlier failed runs and historical signoffs remain intact. Frozen 16-case/27-target bytes are unchanged. Nonblocking items are in DEFERRED_BACKLOG. **No W22 execution.**
+
+## 2026-09-26 — W22 VCSEL closure (current scoped result)
+
+**W22_SCOPED_APPROVED; stopped at W22.** Independent decision: `docs/handoff_w22_vcsel/review/W22_FINAL_REVIEW.md`. Approved implementation source `44b8e1931b47da564edb600d2127b28859d07b36`; complete native evidence delivery `a6a5031c00a1fe40c6fe1a773b846559043df7b1`.
+
+Windows COMSOL6.3 build290 and6.4 build293 each pass frozen D1-D6:27 real non-axisymmetric VCSEL source/thermal candidates, content-bound cache reuse and changed-source recomputation, native plots/MPH, independent fresh best-candidate solve and new-path/new-Worker stored-result reopen. Reviewer passed886 combined and122 fresh/reopen checks per version;31 affected software regressions passed. Failed attempts remain unchanged and separate from the successful appended evidence. W21 scoped approval is inherited outside the targeted cache change.
+
+Best of the frozen27: L=30mm, center0.6W, inner-ring0.65W per emitter, outer active-ring0.7227272727W per emitter, total12.45W. ROI temperature-rise CV≈0.191178982, about15.19% lower than the frozen20mm baseline. No global-optimum claim. Physical calibration, Mac native W22, GUI and cloud remain UNVERIFIED.
+
+See `docs/handoff_w22_vcsel/W22_REPORT.md`, `W22_RESULT.json`, `REPRODUCE.md`, independent review, and `evidence/w22_vcsel/`. The source and native-evidence archives were hash-verified locally. GitHub synchronization is being retried under the user's explicit request; historical connection-failure records remain historical. **W23 NOT_STARTED.**
