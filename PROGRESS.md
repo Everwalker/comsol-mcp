@@ -4,13 +4,13 @@ Updated 2026-09-27 UTC. **Overall PARTIAL; execution continues through W26.** Th
 
 ## Current stage
 
-**W23 Port/BMA configuration provenance: PASS for scoped software; W23 overall PARTIAL.** The handler reads actual Numeric Port settings, boundary selection, SolutionInfo solver sequence and contained BMA configuration. Basis eigensolution ordinals remain separate from PortModeNumber. Unknown execution outcomes stop subsequent reads; aggregation rejects contradictory configuration and duplicate solution indices.
+**F04 disconnect/reconnect and recovery readback: PASS for scoped software; full lifecycle PARTIAL.** Disconnect preserves the exact Worker and retires its old context. Reconnect reuses that Worker, re-resolves credential references before detach, checks endpoint/runtime identity and advances the epoch. Uncertain bindings stop future admission while retaining already accepted task ownership. Recovery only appends observations of original requests; it does not resolve UNKNOWN or replay them.
 
-**Actually executed:** isolated published `661b872` plus six-file overlay, **117 PASS / 0 FAIL / 0 ERROR / 0 SKIP**, using Python 3.12.13 with editable hooks disabled. Main review verified all six candidate hashes,87 unchanged runtime files, archive and JUnit hashes, and repaired containment checks. [Compact evidence and replay](docs/full_project_execution/w23_overlap/PORT_PROVENANCE_CHECKPOINT.json).
+**Actually executed:** isolated published `80b5fd5` plus six-file overlay: lifecycle **120 PASS / 0 FAIL / 0 ERROR / 0 SKIP**; actual Java Worker loopback **31 PASS / 1 SKIP / 0 FAIL / 0 ERROR** (Windows ownership test). A Git-history-dependent test excluded from the archive passed in the live121-test suite. Main review verified six overlay hashes,85 unchanged runtime files, three JUnit reports, manifest and the published fixture blob. [Compact evidence and replay](docs/full_project_execution/project_session/SESSION_LIFECYCLE_CHECKPOINT.json).
 
-**Native COMSOL NOT_RUN.** Configuration containment does not identify which StudyStep produced the selected stored solution. That producer link and actual field-to-eigensolution mapping remain **UNVERIFIED**. No new native solve or budget reset occurred.
+**Native COMSOL NOT_RUN.** Owned server start/stop and complete recovery remain unfinished. Earlier sandbox loopback failures and the omitted-fixture failure are preserved and superseded by the exact isolated replay.
 
-F04 lifecycle and W24 sensitivity remain in active implementation/review. Previously accepted checkpoints: [Darwin process birth,13 tests plus a real harmless child](docs/full_project_execution/project_session/DARWIN_PROCESS_BIRTH_CHECKPOINT.json), [session.connect,108 tests](docs/full_project_execution/project_session/SESSION_CONNECT_CHECKPOINT.json), [W24 admission,78 tests](docs/full_project_execution/w24/SCIENCE_ADMISSION_CHECKPOINT.json).
+W23 has [117 isolated software tests](docs/full_project_execution/w23_overlap/PORT_PROVENANCE_CHECKPOINT.json); selected-solution producer and field mapping remain UNVERIFIED. W24 sensitivity remains in implementation/review, with [78-test admission baseline](docs/full_project_execution/w24/SCIENCE_ADMISSION_CHECKPOINT.json).
 
 ## Latest accepted software baseline
 
@@ -26,7 +26,7 @@ Earlier source checkpoints and failures remain in the existing state and linked 
 
 ## In progress and real limitations
 
-- **F04:** session.connect software stage accepted above. Next implement reconnect/disconnect/recover and exact owned process lifecycle, then run managed native validation.
+- **F04:** connect/disconnect/reconnect software and recovery readback accepted. Next implement exact owned process lifecycle and full evidence-backed recovery, then managed native validation.
 - **W24:** preliminary 52-test result remains historically rejected; the repaired scoped software now passes78 isolated tests above. Variant-aware sensitivity execution and full native science remain incomplete; no old solve budget is borrowed.
 - **W23:** Port/BMA metadata software is accepted above; actual selected-solution producer and field mapping remain next. Two basis vectors are distinct eigensolutions of one receiver BMA, not two physical Ports. Managed native optics and tolerance/convergence acceptance remain open.
 - **W24 historical attempts:** 0841Z freeze failed before engine birth (0 Workers/solves). Earlier ExternalStrain failure remains FAIL/UNKNOWN with safe_retry=false. Preserve these records; do not replay old freezes or reset budgets.
@@ -37,4 +37,4 @@ Earlier source checkpoints and failures remain in the existing state and linked 
 
 Continue the three Luna Max work streams: implement remaining session lifecycle routes; implement W23 actual mode provenance; implement W24 sensitivity variants and complete science orchestration. Publish each accepted software stage immediately. Then freeze isolated managed native candidates, execute their reviewed scope, complete all remaining W01–W26 work, and run a fresh independent overall review with repair/retest until accepted.
 
-The latest focused replay is in [PORT_PROVENANCE_CHECKPOINT.json](docs/full_project_execution/w23_overlap/PORT_PROVENANCE_CHECKPOINT.json). Recover from the GitHub checkout and existing state; raw local paths are supporting artifacts, not prerequisite hidden source. Usage interruption was resolved and three replacement executors resumed without restarting native jobs. Last previously verified GitHub sync: `661b872dc08b14595f114c3e5068126bcdbbe397`; current-stage synchronization is recorded only after post-push fetch and HEAD/origin-main equality verification.
+The latest focused replay is in [SESSION_LIFECYCLE_CHECKPOINT.json](docs/full_project_execution/project_session/SESSION_LIFECYCLE_CHECKPOINT.json). Recover from the GitHub checkout and existing state; raw local paths are supporting artifacts, not prerequisite hidden source. Usage interruption was resolved and three replacement executors resumed without restarting native jobs. Last previously verified GitHub sync: `80b5fd57dbffbb64599c0fed9eb737c45364b244`; current-stage synchronization is recorded only after post-push fetch and HEAD/origin-main equality verification.

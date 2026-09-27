@@ -86,6 +86,7 @@ CONTROL_IMPLEMENTED_OPERATIONS = frozenset({
     # lifecycle. Owned server start/stop and other mutations remain unavailable
     # until their exact process-birth adapters land.
     "session.list", "session.inspect", "session.health", "session.connect",
+    "session.disconnect", "session.reconnect", "session.recover",
 })
 
 # The durable coordinator owns admission, authorization, idempotency, and

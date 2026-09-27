@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import argparse
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
@@ -34,6 +34,7 @@ from ._session_context import (
     SessionRuntimeContext,
     session_state_directory,
     SessionEndpointScheduler,
+    SessionBindingBusy,
     SessionRuntimeRegistry,
     SessionSchedulerClosed,
     active_session_context,
@@ -165,6 +166,11 @@ class ControlDaemon:
         self._session_connect_lock = threading.RLock()
         self._session_worker_handles: dict[tuple[str, str], Any] = {}
         self._session_backends: dict[tuple[str, str], ManagedBackend] = {}
+        self._session_runtime_configs: dict[tuple[str, str], SessionRuntimeConfig] = {}
+        # Only the opaque local credential reference is retained in memory.
+        # Resolved user/password values are request-local and never persisted.
+        self._session_credentials_refs: dict[tuple[str, str], str | None] = {}
+        self._session_process_identities: dict[tuple[str, str], Any] = {}
         self.desktop = DesktopCoordinator(
             store=self.store,
             adapter=desktop_adapter if desktop_adapter is not None else create_native_metadata_adapter(),
@@ -731,6 +737,37 @@ class ControlDaemon:
             session_state_root=state_root.resolve(),
         )
 
+    def _resolve_session_credentials(self, credentials_ref: str | None) -> dict[str, str]:
+        """Resolve an opaque trusted reference into request-local credentials."""
+        if credentials_ref is None:
+            return {}
+        if not isinstance(credentials_ref, str) or not credentials_ref.strip():
+            raise ExecutionContractError("AUTHORIZATION_REQUIRED", "session credential reference is unavailable")
+        if self.session_credentials_resolver is None:
+            raise ExecutionContractError("AUTHORIZATION_REQUIRED", "credentials_ref has no trusted local resolver")
+        try:
+            credentials = self.session_credentials_resolver(credentials_ref)
+        except Exception as exc:
+            raise ExecutionContractError("AUTHORIZATION_REQUIRED", "trusted credentials reference could not be resolved") from exc
+        if (not isinstance(credentials, Mapping)
+                or set(credentials) - {"user", "password"}
+                or any(not isinstance(credentials.get(name, ""), str) for name in ("user", "password"))):
+            raise ExecutionContractError("AUTHORIZATION_REQUIRED", "trusted credentials resolver returned an invalid secret record")
+        return {name: credentials.get(name, "") for name in ("user", "password")}
+
+    def _quarantine_session_context(self, project_id: str, session_id: str,
+                                    context: SessionRuntimeContext | None) -> None:
+        """Block future admission and remove one context without canceling accepted work."""
+        if context is None:
+            return
+        try:
+            self.session_scheduler.close_session_binding_admission(context)
+        except SessionSchedulerClosed:
+            # A closed scheduler already rejects every new task. Accepted work
+            # remains owned by its Futures and is allowed to drain.
+            pass
+        self._remove_session_context(project_id, session_id, expected=context)
+
     @staticmethod
     def _redact_session_worker_event(value):
         secret_names = {"password", "user", "credentials_ref", "authorization_ref", "token"}
@@ -822,16 +859,9 @@ class ControlDaemon:
             try:
                 self.project_authority.authorize_operation(project_id, "project_write")
                 runtime = self._resolve_session_runtime(routed["runtime_id"], project_id, session_id, project_root)
-                credentials = {}
-                if credentials_ref is not None:
-                    if self.session_credentials_resolver is None:
-                        raise ExecutionContractError("AUTHORIZATION_REQUIRED", "credentials_ref has no trusted local resolver")
-                    try:
-                        credentials = self.session_credentials_resolver(credentials_ref)
-                    except Exception as exc:
-                        raise ExecutionContractError("AUTHORIZATION_REQUIRED", "trusted credentials reference could not be resolved") from exc
-                    if not isinstance(credentials, Mapping) or set(credentials) - {"user", "password"}:
-                        raise ExecutionContractError("AUTHORIZATION_REQUIRED", "trusted credentials resolver returned an invalid secret record")
+                self._session_runtime_configs[(project_id, session_id)] = runtime
+                credentials = self._resolve_session_credentials(credentials_ref)
+                self._session_credentials_refs[(project_id, session_id)] = credentials_ref
                 private_home = session_state_directory(runtime.session_state_root, project_id, session_id)
                 backend = ManagedBackend(
                     private_home / "backend", self.store,
@@ -901,6 +931,11 @@ class ControlDaemon:
                     self._session_worker_handles[(project_id, session_id)] = worker
                 runtime_meta = exc.runtime_metadata or {}
                 remote_reply = exc.reply or {}
+                self._bind_session_job_to_worker(
+                    record, project_id=project_id, session_id=session_id,
+                    worker_instance_id=remote_reply.get("instance_id") or runtime_meta.get("instance_id"),
+                    worker_epoch=remote_reply.get("generation") or runtime_meta.get("generation"),
+                )
                 uncertain = exc.uncertain
                 retirement_error = None
                 worker_retired = worker is None
@@ -968,6 +1003,11 @@ class ControlDaemon:
                     worker = attached["worker"]
                     self._session_worker_handles[(project_id, session_id)] = worker
                     reply = attached["reply"]
+                    self._bind_session_job_to_worker(
+                        record, project_id=project_id, session_id=session_id,
+                        worker_instance_id=reply.get("instance_id"),
+                        worker_epoch=reply.get("generation"),
+                    )
                     lifecycle = self.session_lifecycle.save(new_lifecycle_record(
                         project_id=project_id, session_id=session_id, state="UNKNOWN",
                         runtime_id=routed["runtime_id"], endpoint={"host": host, "port": port},
@@ -995,6 +1035,15 @@ class ControlDaemon:
                 if worker is not None:
                     self._session_worker_handles[(project_id, session_id)] = worker
                 if dispatched:
+                    try:
+                        runtime_meta = worker.runtime_metadata() if worker is not None else {}
+                    except Exception:
+                        runtime_meta = {}
+                    self._bind_session_job_to_worker(
+                        record, project_id=project_id, session_id=session_id,
+                        worker_instance_id=runtime_meta.get("instance_id"),
+                        worker_epoch=runtime_meta.get("generation"),
+                    )
                     lifecycle = self.session_lifecycle.save(new_lifecycle_record(
                         project_id=project_id, session_id=session_id, state="UNKNOWN",
                         runtime_id=routed["runtime_id"], endpoint={"host": host, "port": port},
@@ -1016,13 +1065,718 @@ class ControlDaemon:
                                      cause_type=type(exc).__name__, safe_retry=True)
                 return self._finish(record, result, "FAILED")
 
+    def _begin_session_mutation(self, operation: str, routed: dict[str, Any],
+                                execution: dict[str, Any]):
+        """Persist one project/session lifecycle mutation before Worker RPC."""
+        project_id, session_id = routed["project_id"], routed["session_id"]
+        idempotency_key = routed["idempotency_key"]
+        request_id = routed.get("request_id") or execution.get("request_id") or str(uuid4())
+        if not isinstance(request_id, str) or not request_id:
+            raise ExecutionContractError("INVALID_REQUEST", f"{operation} request_id must be a non-empty string")
+        persisted_arguments = {
+            key: value for key, value in routed.items()
+            if key not in {"idempotency_key", "request_id", "authorization_ref"}
+        }
+        semantic_arguments = dict(persisted_arguments)
+        if "authorization_ref" in routed:
+            reference = routed["authorization_ref"]
+            if not isinstance(reference, str) or not reference.strip() or len(reference) > 512:
+                raise ExecutionContractError("AUTHORIZATION_REQUIRED", "authorization_ref is malformed")
+            persisted_arguments["authorization_ref_sha256"] = hashlib.sha256(reference.encode("utf-8")).hexdigest()
+            semantic_arguments["authorization_ref_sha256"] = persisted_arguments["authorization_ref_sha256"]
+        request_hash = canonical_request_hash(
+            operation, semantic_arguments, None, None, project_id=project_id,
+        )
+        try:
+            record, reused = self.store.begin(
+                request_id=request_id,
+                idempotency_key=idempotency_key,
+                request_hash=request_hash,
+                operation=operation,
+                metadata={
+                    "operation": operation,
+                    "project_id": project_id,
+                    "session_id": session_id,
+                    "arguments": persisted_arguments,
+                    "execution": {"project_id": project_id, "session_id": session_id},
+                },
+                timeouts=self._timeouts(execution),
+            )
+        except IdempotencyConflict as exc:
+            raise ExecutionContractError("IDEMPOTENCY_CONFLICT", str(exc)) from exc
+        return record, reused
+
+    def _start_session_mutation_record(self, record, *, operation: str, session_id: str) -> None:
+        self.store.update_job(record["job_id"], "RUNNING", {
+            "control_plane": True,
+            "operation": operation,
+            "session_id": session_id,
+            "engine_dispatched": False,
+        })
+        self.store.add_event(record["job_id"], "RUNNING", {
+            "operation_id": record["operation_id"],
+            "session_id": session_id,
+            "engine_dispatched": False,
+        })
+
+    def _session_jobs_for_project(self, project_id: str) -> list[dict[str, Any]]:
+        jobs: list[dict[str, Any]] = []
+        offset = 0
+        while True:
+            page = self.store.list_jobs(offset=offset, limit=1000, project_id=project_id)
+            jobs.extend(page)
+            if len(page) < 1000:
+                return jobs
+            offset += len(page)
+
+    @staticmethod
+    def _job_belongs_to_session(job: Mapping[str, Any], project_id: str, session_id: str) -> bool:
+        metadata = job.get("metadata")
+        if not isinstance(metadata, Mapping):
+            return False
+        binding = metadata.get("runtime_binding")
+        if isinstance(binding, Mapping) and (
+            binding.get("project_id") == project_id and binding.get("session_id") == session_id
+        ):
+            return True
+        for value in (metadata, metadata.get("execution"), metadata.get("arguments")):
+            if isinstance(value, Mapping) and (
+                value.get("project_id") == project_id and value.get("session_id") == session_id
+            ):
+                return True
+        return False
+
+    def _session_has_unresolved_jobs(self, project_id: str, session_id: str,
+                                     *, excluding_operation_id: str | None = None) -> list[dict[str, Any]]:
+        return [
+            job for job in self._session_jobs_for_project(project_id)
+            if job.get("operation_id") != excluding_operation_id
+            and self._job_belongs_to_session(job, project_id, session_id)
+            and job.get("status") not in TERMINAL
+        ]
+
+    def _bind_session_job_to_worker(self, record, *, project_id: str, session_id: str,
+                                    worker_instance_id: Any, worker_epoch: Any) -> None:
+        if (not isinstance(worker_instance_id, str) or not worker_instance_id
+                or type(worker_epoch) is not int or worker_epoch < 1):
+            return
+        self.store.update_job(record["job_id"], "RUNNING", {
+            "runtime_binding": {
+                "kind": "registered_session",
+                "project_id": project_id,
+                "session_id": session_id,
+                "worker_instance_id": worker_instance_id,
+                "worker_epoch": worker_epoch,
+            },
+        })
+
+    @staticmethod
+    def _updated_session_lifecycle(prior: Mapping[str, Any], *, state: str,
+                                   client_state: str, worker_instance_id: str | None = None,
+                                   worker_epoch: int | None = None,
+                                   server_instance_id: str | None = None,
+                                   health: Mapping[str, Any] | None = None):
+        return new_lifecycle_record(
+            project_id=prior["project_id"],
+            session_id=prior["session_id"],
+            state=state,
+            runtime_id=prior["runtime_id"],
+            endpoint=prior["endpoint"],
+            client_state=client_state,
+            server_state=prior["server_state"],
+            server_ownership=prior["server_ownership"],
+            worker_instance_id=worker_instance_id if worker_instance_id is not None else prior["worker_instance_id"],
+            worker_epoch=worker_epoch,
+            server_instance_id=server_instance_id,
+            server_process_identity=prior["server_process_identity"],
+            health=health or {"status": "UNKNOWN", "observed_at": None, "source": None},
+        )
+
+    def _session_worker_event_callback(self, record):
+        return lambda event: self.store.add_event(
+            record["job_id"], "worker_request", self._redact_session_worker_event(event),
+        )
+
+    @staticmethod
+    def _session_server_state(record: Mapping[str, Any]) -> str:
+        return str(record.get("server_state") or "UNKNOWN")
+
+    def _remove_session_context(self, project_id: str, session_id: str,
+                                expected: SessionRuntimeContext | None = None) -> None:
+        try:
+            current = self.session_registry.get(project_id, session_id)
+        except SessionContextMissing:
+            return
+        if expected is None or current is expected:
+            self.session_registry.remove(project_id, session_id, expected=current)
+
+    def _dispatch_session_disconnect(self, routed: dict[str, Any], execution: dict[str, Any]) -> dict[str, Any]:
+        project_id, session_id = routed["project_id"], routed["session_id"]
+        self.project_authority.authorize_operation(project_id, "project_write")
+        record, reused = self._begin_session_mutation("session.disconnect", routed, execution)
+        if reused:
+            return record["result"] if record.get("result") is not None else self._pending(record, session_id=session_id)
+        self._start_session_mutation_record(record, operation="session.disconnect", session_id=session_id)
+        with self._session_connect_lock:
+            try:
+                lifecycle = self.session_lifecycle.get(project_id, session_id)
+            except SessionLifecycleProjectConflict as exc:
+                return self._finish(record, self._error("PROJECT_IDENTITY_MISMATCH", str(exc)), "FAILED")
+            if lifecycle is None:
+                return self._finish(record, self._error("SESSION_NOT_FOUND", "session lifecycle record not found"), "FAILED")
+            if lifecycle["state"] == "DISCONNECTED":
+                return self._finish(record, {"success": True, "data": {
+                    "project_id": project_id, "session_id": session_id,
+                    "state": "DISCONNECTED", "already_disconnected": True,
+                    "server_stopped": False,
+                }}, "SUCCEEDED")
+            if lifecycle["state"] == "UNKNOWN":
+                result = self._error("EXECUTION_STATE_UNKNOWN", "session is UNKNOWN; recover the original Worker before disconnecting",
+                                     data={"session_id": session_id, "state": "UNKNOWN", "safe_retry": False},
+                                     safe_retry=False, execution_state_unknown=True)
+                return self._finish(record, result, "UNKNOWN")
+            if lifecycle["state"] != "CONNECTED":
+                return self._finish(record, self._error(
+                    "INVALID_STATE_TRANSITION", f"cannot disconnect session in state {lifecycle['state']}",
+                    data={"session_id": session_id, "state": lifecycle["state"], "engine_dispatched": False},
+                    safe_retry=False,
+                ), "FAILED")
+            try:
+                context = self.session_registry.get(project_id, session_id)
+            except SessionContextMissing:
+                result = self._error("EXECUTION_STATE_UNKNOWN", "durable session is connected but its exact runtime context is missing",
+                                     data={"session_id": session_id, "state": "UNKNOWN", "safe_retry": False},
+                                     safe_retry=False, execution_state_unknown=True)
+                self.session_lifecycle.save(self._updated_session_lifecycle(
+                    lifecycle, state="UNKNOWN", client_state="UNKNOWN",
+                    worker_instance_id=lifecycle["worker_instance_id"], worker_epoch=lifecycle["worker_epoch"],
+                    server_instance_id=lifecycle["server_instance_id"],
+                ), expected_revision=lifecycle["revision"])
+                return self._finish(record, result, "UNKNOWN")
+            worker = self._session_worker_handles.get((project_id, session_id))
+            if worker is None or context.worker is not worker or context.worker_instance_id != lifecycle["worker_instance_id"]:
+                self._quarantine_session_context(project_id, session_id, context)
+                result = self._error("WORKER_BINDING_UNKNOWN", "disconnect requires the exact retained session Worker handle",
+                                     data={"session_id": session_id, "state": "UNKNOWN", "safe_retry": False},
+                                     safe_retry=False, execution_state_unknown=True)
+                self.session_lifecycle.save(self._updated_session_lifecycle(
+                    lifecycle, state="UNKNOWN", client_state="UNKNOWN",
+                    worker_instance_id=lifecycle["worker_instance_id"], worker_epoch=lifecycle["worker_epoch"],
+                    server_instance_id=lifecycle["server_instance_id"],
+                ), expected_revision=lifecycle["revision"])
+                return self._finish(record, result, "UNKNOWN")
+            self._bind_session_job_to_worker(
+                record, project_id=project_id, session_id=session_id,
+                worker_instance_id=lifecycle["worker_instance_id"],
+                worker_epoch=lifecycle["worker_epoch"],
+            )
+            unresolved = self._session_has_unresolved_jobs(
+                project_id, session_id, excluding_operation_id=record["operation_id"],
+            )
+            if unresolved:
+                return self._finish(record, self._error(
+                    "SESSION_BUSY", "active or UNKNOWN operations block client disconnect",
+                    data={"session_id": session_id, "engine_dispatched": False,
+                          "blocking_job_ids": [item["job_id"] for item in unresolved]},
+                    safe_retry=True,
+                ), "FAILED")
+            try:
+                self.session_scheduler.fence_session_binding(context)
+            except SessionBindingBusy as exc:
+                return self._finish(record, self._error(
+                    "SESSION_BUSY", str(exc), data={"session_id": session_id, "engine_dispatched": False},
+                    safe_retry=True,
+                ), "FAILED")
+            except Exception as exc:
+                return self._finish(record, self._error(
+                    "WORKER_BINDING_UNKNOWN", "session Worker admission could not be fenced",
+                    data={"session_id": session_id, "engine_dispatched": False,
+                          "cause_type": type(exc).__name__}, safe_retry=False,
+                ), "FAILED")
+
+            timeout = self._timeouts(execution)["rpc_timeout_s"]
+            worker_request_id = f"{record['operation_id']}:disconnect"
+            dispatched = False
+            preflight_confirmed = False
+            lifecycle_transition_started = False
+            try:
+                before = worker.runtime_metadata()
+                if (not isinstance(before, Mapping)
+                        or before.get("instance_id") != lifecycle["worker_instance_id"]
+                        or before.get("generation") != lifecycle["worker_epoch"]):
+                    raise RuntimeError("retained Worker metadata does not match the connected lifecycle epoch")
+                if before.get("connected") is True:
+                    preflight_confirmed = True
+                    operation_context = getattr(worker, "operation_context", None)
+                    scope = (operation_context(record["operation_id"], on_request_event=self._session_worker_event_callback(record))
+                             if callable(operation_context) else nullcontext())
+                    with scope:
+                        dispatched = True
+                        reply = worker.client().disconnect(request_id=worker_request_id, rpc_timeout_s=timeout)
+                    if not isinstance(reply, Mapping):
+                        raise RuntimeError("Worker disconnect reply is malformed")
+                    if (reply.get("connected") is not False
+                            or reply.get("instance_id") != lifecycle["worker_instance_id"]
+                            or type(reply.get("generation")) is not int
+                            or reply["generation"] <= lifecycle["worker_epoch"]):
+                        raise RuntimeError("Worker disconnect reply does not prove a new detached epoch")
+                    after = worker.runtime_metadata()
+                    if (not isinstance(after, Mapping)
+                            or after.get("instance_id") != lifecycle["worker_instance_id"]
+                            or after.get("generation") != reply["generation"]
+                            or after.get("connected") is not False):
+                        raise RuntimeError("Worker health does not confirm the disconnect reply")
+                else:
+                    raise RuntimeError("Worker connection state differs from the exact connected lifecycle epoch")
+
+                lifecycle_transition_started = True
+                context.client_connected = False
+                context.client_retired = True
+                self._remove_session_context(project_id, session_id, expected=context)
+                updated = self._updated_session_lifecycle(
+                    lifecycle, state="DISCONNECTED", client_state="DISCONNECTED",
+                    worker_instance_id=lifecycle["worker_instance_id"], worker_epoch=reply["generation"],
+                    server_instance_id=None,
+                    health={"status": "UNKNOWN", "observed_at": None, "source": None},
+                )
+                self.session_lifecycle.save(updated, expected_revision=lifecycle["revision"])
+                result = {"success": True, "data": {
+                    "project_id": project_id, "session_id": session_id,
+                    "state": "DISCONNECTED", "client_connected": False,
+                    "server_stopped": False, "server_ownership": lifecycle["server_ownership"],
+                    "worker_instance_id": reply["instance_id"], "worker_epoch": reply["generation"],
+                    "worker_handle_preserved": True,
+                    "engine_dispatched": dispatched,
+                }}
+                return self._finish(record, result, "SUCCEEDED")
+            except Exception as exc:
+                # Once a lifecycle fence is installed, retain it unless we can
+                # prove no Worker request was dispatched. An unknown disconnect
+                # never closes the Worker or drops its handle.
+                if not dispatched and preflight_confirmed and not lifecycle_transition_started:
+                    self.session_scheduler.release_session_binding(context)
+                    result = self._error("ENGINE_UNRESPONSIVE", "Worker refused disconnect before an RPC was dispatched",
+                                         data={"session_id": session_id, "engine_dispatched": False,
+                                               "cause_type": type(exc).__name__}, safe_retry=True)
+                    return self._finish(record, result, "FAILED")
+                self._remove_session_context(project_id, session_id, expected=context)
+                try:
+                    unknown_record = self._updated_session_lifecycle(
+                        lifecycle, state="UNKNOWN", client_state="UNKNOWN",
+                        worker_instance_id=lifecycle["worker_instance_id"], worker_epoch=lifecycle["worker_epoch"],
+                        server_instance_id=lifecycle["server_instance_id"],
+                    )
+                    self.session_lifecycle.save(unknown_record, expected_revision=lifecycle["revision"])
+                except Exception:
+                    pass
+                result = self._error("EXECUTION_STATE_UNKNOWN", "Worker disconnect outcome is unknown; original handle retained",
+                                     data={"project_id": project_id, "session_id": session_id,
+                                           "state": "UNKNOWN", "engine_dispatched": dispatched,
+                                           "worker_handle_preserved": True, "cause_type": type(exc).__name__},
+                                     safe_retry=False, execution_state_unknown=True)
+                return self._finish(record, result, "UNKNOWN")
+
+    def _dispatch_session_reconnect(self, routed: dict[str, Any], execution: dict[str, Any]) -> dict[str, Any]:
+        project_id, session_id = routed["project_id"], routed["session_id"]
+        self.project_authority.authorize_operation(project_id, "project_write")
+        record, reused = self._begin_session_mutation("session.reconnect", routed, execution)
+        if reused:
+            return record["result"] if record.get("result") is not None else self._pending(record, session_id=session_id)
+        self._start_session_mutation_record(record, operation="session.reconnect", session_id=session_id)
+        with self._session_connect_lock:
+            try:
+                lifecycle = self.session_lifecycle.get(project_id, session_id)
+            except SessionLifecycleProjectConflict as exc:
+                return self._finish(record, self._error("PROJECT_IDENTITY_MISMATCH", str(exc)), "FAILED")
+            if lifecycle is None:
+                return self._finish(record, self._error("SESSION_NOT_FOUND", "session lifecycle record not found"), "FAILED")
+            if lifecycle["state"] == "UNKNOWN":
+                result = self._error("EXECUTION_STATE_UNKNOWN", "session is UNKNOWN; reconcile its original Worker before reconnecting",
+                                     data={"session_id": session_id, "state": "UNKNOWN", "safe_retry": False},
+                                     safe_retry=False, execution_state_unknown=True)
+                return self._finish(record, result, "UNKNOWN")
+            if lifecycle["state"] not in {"CONNECTED", "DISCONNECTED"}:
+                return self._finish(record, self._error(
+                    "INVALID_STATE_TRANSITION", f"cannot reconnect session in state {lifecycle['state']}",
+                    data={"session_id": session_id, "state": lifecycle["state"], "engine_dispatched": False},
+                    safe_retry=False,
+                ), "FAILED")
+
+            key = (project_id, session_id)
+            worker = self._session_worker_handles.get(key)
+            runtime = self._session_runtime_configs.get(key)
+            backend = self._session_backends.get(key)
+            if worker is None or runtime is None or backend is None:
+                try:
+                    stale_context = self.session_registry.get(project_id, session_id)
+                except SessionContextMissing:
+                    stale_context = None
+                self._quarantine_session_context(project_id, session_id, stale_context)
+                result = self._error("WORKER_BINDING_UNKNOWN", "reconnect requires the exact retained Worker and trusted local runtime configuration",
+                                     data={"session_id": session_id, "state": "UNKNOWN",
+                                           "worker_handle_preserved": worker is not None},
+                                     safe_retry=False, execution_state_unknown=True)
+                self.session_lifecycle.save(self._updated_session_lifecycle(
+                    lifecycle, state="UNKNOWN", client_state="UNKNOWN",
+                    worker_instance_id=lifecycle["worker_instance_id"], worker_epoch=lifecycle["worker_epoch"],
+                    server_instance_id=lifecycle["server_instance_id"],
+                ), expected_revision=lifecycle["revision"])
+                return self._finish(record, result, "UNKNOWN")
+            self._bind_session_job_to_worker(
+                record, project_id=project_id, session_id=session_id,
+                worker_instance_id=lifecycle["worker_instance_id"],
+                worker_epoch=lifecycle["worker_epoch"],
+            )
+            context = None
+            try:
+                context = self.session_registry.get(project_id, session_id)
+            except SessionContextMissing:
+                if lifecycle["state"] == "CONNECTED":
+                    result = self._error("WORKER_BINDING_UNKNOWN", "connected lifecycle has no exact live session context",
+                                         data={"session_id": session_id, "state": "UNKNOWN"},
+                                         safe_retry=False, execution_state_unknown=True)
+                    self.session_lifecycle.save(self._updated_session_lifecycle(
+                        lifecycle, state="UNKNOWN", client_state="UNKNOWN",
+                        worker_instance_id=lifecycle["worker_instance_id"], worker_epoch=lifecycle["worker_epoch"],
+                        server_instance_id=lifecycle["server_instance_id"],
+                    ), expected_revision=lifecycle["revision"])
+                    return self._finish(record, result, "UNKNOWN")
+            if context is not None and (
+                context.worker is not worker or context.worker_epoch != lifecycle["worker_epoch"]
+                or context.worker_instance_id != lifecycle["worker_instance_id"]
+            ):
+                self._quarantine_session_context(project_id, session_id, context)
+                try:
+                    self.session_lifecycle.save(self._updated_session_lifecycle(
+                        lifecycle, state="UNKNOWN", client_state="UNKNOWN",
+                        worker_instance_id=lifecycle["worker_instance_id"], worker_epoch=lifecycle["worker_epoch"],
+                        server_instance_id=lifecycle["server_instance_id"],
+                    ), expected_revision=lifecycle["revision"])
+                except Exception:
+                    pass
+                return self._finish(record, self._error(
+                    "WORKER_BINDING_MISMATCH", "live context differs from the durable Worker epoch",
+                    data={"session_id": session_id, "state": "UNKNOWN", "worker_handle_preserved": True},
+                    safe_retry=False, execution_state_unknown=True,
+                ), "UNKNOWN")
+            unresolved = self._session_has_unresolved_jobs(
+                project_id, session_id, excluding_operation_id=record["operation_id"],
+            )
+            if unresolved:
+                return self._finish(record, self._error(
+                    "SESSION_BUSY", "active or UNKNOWN operations block reconnect",
+                    data={"session_id": session_id, "engine_dispatched": False,
+                          "blocking_job_ids": [item["job_id"] for item in unresolved]},
+                    safe_retry=True,
+                ), "FAILED")
+            credentials_ref = self._session_credentials_refs.get(key)
+            try:
+                # Resolve before installing a retirement fence or sending the
+                # old Worker a disconnect. A missing/expired local secret
+                # reference must leave the current binding intact.
+                credentials = self._resolve_session_credentials(credentials_ref)
+            except ExecutionContractError as exc:
+                return self._finish(record, self._error(
+                    exc.code, str(exc),
+                    data={"project_id": project_id, "session_id": session_id,
+                          "state": lifecycle["state"], "engine_dispatched": False,
+                          "worker_handle_preserved": True},
+                    safe_retry=True,
+                ), "FAILED")
+            if context is not None:
+                try:
+                    self.session_scheduler.fence_session_binding(context)
+                except SessionBindingBusy as exc:
+                    return self._finish(record, self._error(
+                        "SESSION_BUSY", str(exc), data={"session_id": session_id, "engine_dispatched": False},
+                        safe_retry=True,
+                    ), "FAILED")
+                except Exception as exc:
+                    return self._finish(record, self._error(
+                        "WORKER_BINDING_UNKNOWN", "session Worker admission could not be fenced",
+                        data={"session_id": session_id, "engine_dispatched": False,
+                              "cause_type": type(exc).__name__}, safe_retry=False,
+                    ), "FAILED")
+
+            project_record = self.project_authority.get_project(project_id)
+            project_root = Path(project_record["workspace"]).resolve(strict=True)
+            endpoint = lifecycle["endpoint"]
+            host, port = endpoint["host"], endpoint["port"]
+            old_backend_identity = dict(getattr(backend, "worker_identity", {}) or {})
+            old_cached = dict(getattr(backend, "cached", {}) or {})
+            detached = False
+            preflight_confirmed = False
+            attached = None
+            worker_request_id = f"{record['operation_id']}:disconnect"
+            try:
+                metadata = worker.runtime_metadata()
+                if (not isinstance(metadata, Mapping)
+                        or metadata.get("instance_id") != lifecycle["worker_instance_id"]):
+                    raise RuntimeError("retained Worker instance identity cannot be confirmed")
+                if context is not None:
+                    if metadata.get("generation") != lifecycle["worker_epoch"]:
+                        raise RuntimeError("retained Worker generation differs from the connected lifecycle")
+                    if metadata.get("connected") is not True:
+                        raise RuntimeError("connected lifecycle conflicts with retained Worker health")
+                    preflight_confirmed = True
+                    operation_context = getattr(worker, "operation_context", None)
+                    scope = (operation_context(record["operation_id"], on_request_event=self._session_worker_event_callback(record))
+                             if callable(operation_context) else nullcontext())
+                    with scope:
+                        detached = True
+                        detach_reply = worker.client().disconnect(request_id=worker_request_id,
+                                                                  rpc_timeout_s=self._timeouts(execution)["rpc_timeout_s"])
+                    if (not isinstance(detach_reply, Mapping)
+                            or detach_reply.get("connected") is not False
+                            or detach_reply.get("instance_id") != lifecycle["worker_instance_id"]
+                            or type(detach_reply.get("generation")) is not int
+                            or detach_reply["generation"] <= lifecycle["worker_epoch"]):
+                        raise RuntimeError("Worker disconnect reply is not an exact newer detached epoch")
+                    metadata = worker.runtime_metadata()
+                    if (not isinstance(metadata, Mapping)
+                            or metadata.get("instance_id") != lifecycle["worker_instance_id"]
+                            or metadata.get("generation") != detach_reply["generation"]
+                            or metadata.get("connected") is not False):
+                        raise RuntimeError("Worker health did not confirm detached state")
+                    context.client_connected = False
+                    context.client_retired = True
+                    self._remove_session_context(project_id, session_id, expected=context)
+                    detached = True
+                    lifecycle = self.session_lifecycle.save(self._updated_session_lifecycle(
+                        lifecycle, state="DISCONNECTED", client_state="DISCONNECTED",
+                        worker_instance_id=lifecycle["worker_instance_id"], worker_epoch=metadata["generation"],
+                        server_instance_id=None,
+                        health={"status": "UNKNOWN", "observed_at": None, "source": None},
+                    ), expected_revision=lifecycle["revision"])
+                else:
+                    if (metadata.get("connected") is not False
+                            or type(metadata.get("generation")) is not int
+                            or metadata.get("generation") != lifecycle["worker_epoch"]):
+                        raise RuntimeError("disconnected lifecycle conflicts with retained Worker epoch/health")
+                    preflight_confirmed = True
+
+                old_peer = (context.endpoint.observed_peer if context is not None else None)
+                if old_peer is None:
+                    raw_peer = old_cached.get("observed_peer")
+                    if isinstance(raw_peer, Mapping):
+                        old_peer = CanonicalSocket(raw_peer.get("address"), raw_peer.get("port"))
+                old_version = old_cached.get("remote_engine_version")
+                old_build = old_cached.get("remote_engine_build")
+                attached = backend.connect_session(
+                    runtime=runtime, project_id=project_id, session_id=session_id,
+                    host=host, port=port, operation_id=record["operation_id"],
+                    request_id=f"{record['operation_id']}:connect",
+                    event_callback=self._session_worker_event_callback(record),
+                    credentials=credentials, rpc_timeout_s=self._timeouts(execution)["rpc_timeout_s"],
+                    project_permissions=project_record.get("policy", {}).get("permissions", []),
+                    existing_worker=worker,
+                )
+                reply, peer = attached["reply"], attached["peer"]
+                if (reply["instance_id"] != lifecycle["worker_instance_id"]
+                        or reply["generation"] <= (lifecycle["worker_epoch"] or 0)
+                        or (old_peer is not None and peer != old_peer)
+                        or (isinstance(old_version, str) and reply.get("engine_version") != old_version)
+                        or attached["worker_identity"].get("remote_engine_build") != old_build):
+                    raise RuntimeError("reconnect attached to a different or unverified endpoint/runtime identity")
+                process_identity = self._session_process_identities.get(key)
+                ownership = lifecycle["server_ownership"]
+                if ownership == "mcp_managed" and process_identity is None:
+                    raise RuntimeError("MCP-owned reconnect lacks the exact retained server process/listener identity")
+                endpoint_identity = SessionEndpointIdentity(
+                    host, port, reply["generation"], observed_peer=peer,
+                    owned_process=process_identity,
+                )
+                context = SessionRuntimeContext(
+                    project_id=project_id, session_id=session_id, project_root=project_root,
+                    runtime=runtime, endpoint=endpoint_identity, backend=backend,
+                    worker_instance_id=reply["instance_id"], worker=worker,
+                    service=backend.service, client=worker.client(),
+                    remote_client_factory=worker.client,
+                    server_ownership=ownership, process_identity=process_identity,
+                    client_connected=True, connected_host=host, connected_port=port,
+                    server_started_by_mcp=ownership == "mcp_managed",
+                    health_snapshot={"status": "HEALTHY", "source": "worker-connect-reply+observed-peer"},
+                )
+                self.session_registry.register(context)
+                now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                connected_record = self._updated_session_lifecycle(
+                    lifecycle, state="CONNECTED", client_state="CONNECTED",
+                    worker_instance_id=reply["instance_id"], worker_epoch=reply["generation"],
+                    server_instance_id=attached["server_instance_id"],
+                    health={"status": "HEALTHY", "observed_at": now,
+                            "source": "worker-connect-reply+observed-peer"},
+                )
+                lifecycle = self.session_lifecycle.save(connected_record, expected_revision=lifecycle["revision"])
+                result = {"success": True, "data": {
+                    "project_id": project_id, "session_id": session_id,
+                    "state": "CONNECTED", "runtime_id": runtime.runtime_id,
+                    "endpoint": {"host": host, "port": port},
+                    "observed_peer": {"address": peer.address, "port": peer.port},
+                    "worker_instance_id": reply["instance_id"], "worker_epoch": reply["generation"],
+                    "server_instance_id": attached["server_instance_id"],
+                    "remote_engine_version": reply["engine_version"],
+                    "remote_engine_build": attached["worker_identity"]["remote_engine_build"],
+                    "remote_engine_build_source": attached["worker_identity"]["remote_engine_build_source"],
+                    "server_ownership": ownership, "old_handles_invalidated": True,
+                    "worker_reused": True,
+                }}
+                return self._finish(record, result, "SUCCEEDED")
+            except Exception as exc:
+                if context is not None:
+                    self._remove_session_context(project_id, session_id, expected=context)
+                if (isinstance(exc, SessionConnectFailure) and not exc.uncertain
+                        and not exc.dispatched and (detached or (preflight_confirmed and context is None))):
+                    try:
+                        disconnected = self._updated_session_lifecycle(
+                            lifecycle, state="DISCONNECTED", client_state="DISCONNECTED",
+                            worker_instance_id=lifecycle["worker_instance_id"], worker_epoch=lifecycle["worker_epoch"],
+                            server_instance_id=None,
+                            health={"status": "UNKNOWN", "observed_at": None, "source": None},
+                        )
+                        self.session_lifecycle.save(disconnected, expected_revision=lifecycle["revision"])
+                    except Exception:
+                        pass
+                    result = self._error(exc.code, str(exc), data={
+                        "project_id": project_id, "session_id": session_id,
+                        "state": "DISCONNECTED", "engine_dispatched": False,
+                        "worker_handle_preserved": True, "safe_retry": exc.safe_retry,
+                    }, safe_retry=exc.safe_retry)
+                    return self._finish(record, result, "FAILED")
+                if (context is not None or detached or attached is not None or not preflight_confirmed
+                        or (isinstance(exc, SessionConnectFailure) and exc.dispatched)):
+                    try:
+                        unknown = self._updated_session_lifecycle(
+                            lifecycle, state="UNKNOWN", client_state="UNKNOWN",
+                            worker_instance_id=lifecycle["worker_instance_id"],
+                            worker_epoch=lifecycle["worker_epoch"],
+                            server_instance_id=lifecycle["server_instance_id"],
+                        )
+                        self.session_lifecycle.save(unknown, expected_revision=lifecycle["revision"])
+                    except Exception:
+                        pass
+                    result = self._error("EXECUTION_STATE_UNKNOWN", "reconnect outcome is uncertain; original Worker retained and no replacement was created",
+                                         data={"project_id": project_id, "session_id": session_id,
+                                               "state": "UNKNOWN", "worker_handle_preserved": True,
+                                               "cause_type": type(exc).__name__},
+                                         safe_retry=False, execution_state_unknown=True)
+                    return self._finish(record, result, "UNKNOWN")
+                result = self._error("ENGINE_UNRESPONSIVE", "reconnect health preflight failed before any connect dispatch",
+                                     data={"project_id": project_id, "session_id": session_id,
+                                           "engine_dispatched": False, "cause_type": type(exc).__name__},
+                                     safe_retry=True)
+                return self._finish(record, result, "FAILED")
+
+    def _dispatch_session_recover(self, routed: dict[str, Any], execution: dict[str, Any]) -> dict[str, Any]:
+        project_id, session_id = routed["project_id"], routed["session_id"]
+        self.project_authority.authorize_operation(project_id, "project_write")
+        record, reused = self._begin_session_mutation("session.recover", routed, execution)
+        if reused:
+            return record["result"] if record.get("result") is not None else self._pending(record, session_id=session_id)
+        self._start_session_mutation_record(record, operation="session.recover", session_id=session_id)
+        try:
+            lifecycle = self.session_lifecycle.get(project_id, session_id)
+        except SessionLifecycleProjectConflict as exc:
+            return self._finish(record, self._error("PROJECT_IDENTITY_MISMATCH", str(exc)), "FAILED")
+        if lifecycle is None:
+            return self._finish(record, self._error("SESSION_NOT_FOUND", "session lifecycle record not found"), "FAILED")
+        worker = self._session_worker_handles.get((project_id, session_id))
+        if worker is None:
+            return self._finish(record, {"success": True, "data": {
+                "project_id": project_id, "session_id": session_id,
+                "lifecycle_state": lifecycle["state"], "worker_readback": "UNAVAILABLE",
+                "request_observations": [], "replayed_requests": 0,
+                "new_worker_created": False,
+                "recovery_status": "UNKNOWN_NO_ORIGINAL_WORKER_HANDLE",
+            }}, "SUCCEEDED")
+        timeout = self._timeouts(execution)["rpc_timeout_s"]
+        try:
+            runtime_metadata = worker.runtime_metadata()
+        except Exception as exc:
+            runtime_metadata = None
+            runtime_error = type(exc).__name__
+        else:
+            runtime_error = None
+        if (not isinstance(runtime_metadata, Mapping)
+                or (lifecycle["worker_instance_id"] is not None
+                    and runtime_metadata.get("instance_id") != lifecycle["worker_instance_id"])):
+            return self._finish(record, self._error(
+                "EXECUTION_STATE_UNKNOWN", "original Worker identity cannot be confirmed; no replacement was created",
+                data={"project_id": project_id, "session_id": session_id,
+                      "state": lifecycle["state"], "worker_handle_preserved": True,
+                      "runtime_readback_error": runtime_error},
+                safe_retry=False, execution_state_unknown=True,
+            ), "UNKNOWN")
+
+        observations = []
+        unresolved = self._session_has_unresolved_jobs(
+            project_id, session_id, excluding_operation_id=record["operation_id"],
+        )
+        for job in unresolved:
+            metadata = job.get("metadata") or {}
+            binding = metadata.get("runtime_binding") if isinstance(metadata, Mapping) else None
+            if not isinstance(binding, Mapping) or binding.get("worker_instance_id") != runtime_metadata.get("instance_id"):
+                observations.append({"job_id": job["job_id"], "status": job["status"],
+                                    "worker_status": "NOT_QUERIED_WORKER_BINDING_MISMATCH"})
+                continue
+            events = []
+            offset = 0
+            while True:
+                page = self.store.events(job["job_id"], offset=offset, limit=1000)
+                events.extend(page)
+                if len(page) < 1000:
+                    break
+                offset += len(page)
+            request_ids = sorted({
+                event.get("metadata", {}).get("request_id")
+                for event in events
+                if event.get("event") == "worker_request"
+                and event.get("metadata", {}).get("phase") == "submitted"
+                and isinstance(event.get("metadata", {}).get("request_id"), str)
+                and event.get("metadata", {}).get("request_id")
+            })
+            request_results = []
+            for worker_request_id in request_ids:
+                try:
+                    worker_reply = worker.status(worker_request_id, timeout_s=timeout)
+                    status = worker_reply.get("status") if isinstance(worker_reply, Mapping) else None
+                    request_results.append({
+                        "request_id": worker_request_id,
+                        "status": status if isinstance(status, str) else "UNKNOWN",
+                        "reply": self._redact_session_worker_event(worker_reply),
+                    })
+                except Exception as exc:
+                    request_results.append({"request_id": worker_request_id, "status": "UNKNOWN",
+                                            "error_type": type(exc).__name__})
+            observation = {"job_id": job["job_id"], "status": job["status"],
+                           "worker_requests": request_results,
+                           "request_ids_queried": len(request_results)}
+            observations.append(observation)
+            # Store readback as append-only evidence without changing the
+            # original operation's UNKNOWN/RECONCILING status or request body.
+            self.store.add_event(job["job_id"], "SessionRecoveryReadback", {
+                "session_recovery_operation_id": record["operation_id"],
+                "worker_instance_id": runtime_metadata.get("instance_id"),
+                "worker_epoch": runtime_metadata.get("generation"),
+                "worker_requests": request_results,
+                "replayed": False,
+            })
+        data = {
+            "project_id": project_id, "session_id": session_id,
+            "lifecycle_state": lifecycle["state"],
+            "worker_readback": {key: runtime_metadata.get(key) for key in (
+                "instance_id", "generation", "connected", "server",
+            )},
+            "request_observations": observations,
+            "replayed_requests": 0, "new_worker_created": False,
+            "recovery_status": "READBACK_ONLY_UNKNOWN_RETAINED" if lifecycle["state"] == "UNKNOWN" else "READBACK_ONLY",
+        }
+        return self._finish(record, {"success": True, "data": data}, "SUCCEEDED")
+
     def _dispatch_session_control(self, operation: str, arguments: dict[str, Any], execution: dict[str, Any]) -> dict[str, Any]:
-        """Handle the implemented durable session snapshots without Worker RPC.
+        """Handle session lifecycle routes and cached snapshots.
 
         Lifecycle reads are deliberately control-plane only: they cannot wait
-        behind a solve or turn cached evidence into a live-health claim. The
-        mutating lifecycle routes stay unadvertised until their runtime and
-        exact process adapters are installed.
+        behind a solve or turn cached evidence into a live-health claim.
         """
         from . import _g2_registry
 
@@ -1046,6 +1800,12 @@ class ControlDaemon:
             raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "session project_id differs from the execution envelope")
         if operation == "session.connect":
             return self._dispatch_session_connect(routed, execution)
+        if operation == "session.disconnect":
+            return self._dispatch_session_disconnect(routed, execution)
+        if operation == "session.reconnect":
+            return self._dispatch_session_reconnect(routed, execution)
+        if operation == "session.recover":
+            return self._dispatch_session_recover(routed, execution)
         if operation not in {"session.list", "session.inspect", "session.health"}:
             # validate_call above gives a truthful UNSUPPORTED_OPERATION for
             # cataloged lifecycle mutations that do not yet have process-safe

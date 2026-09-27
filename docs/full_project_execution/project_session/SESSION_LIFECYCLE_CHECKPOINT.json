@@ -1,0 +1,144 @@
+{
+  "schema_version": 1,
+  "stage": "F04 disconnect/reconnect and recovery readback software",
+  "at_utc": "2026-09-27T14:59:47.472409+00:00",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "overall_lifecycle_status": "PARTIAL",
+  "base_commit": "80b5fd57dbffbb64599c0fed9eb737c45364b244",
+  "source_manifest": {
+    "comsol_mcp/_control_daemon.py": {
+      "base_sha256": "89c18c2da0abbfe940eb42d5101d92b98b1b10c6a1fb09ce7ea1343f4f9de394",
+      "changed_from_base": true,
+      "sha256": "cd05966ee59a2b022960780a3faf220cce8cb23faaa0db843c0b9f5e20f9bcc3"
+    },
+    "comsol_mcp/_g2_registry.py": {
+      "base_sha256": "d2a873123059e9f1bf3697dbed06fe0832d0c2bfb303462d9ad9f3754c362133",
+      "changed_from_base": true,
+      "sha256": "b7f37b25530401484a5fbd28ebc398de19e6a9672bce787ef6b069537be82006"
+    },
+    "comsol_mcp/_managed_backend.py": {
+      "base_sha256": "d40169709ad09599a6f45f7609f9c214dc4aa77ba5ce8f39dc191c95397c630f",
+      "changed_from_base": true,
+      "sha256": "1067c1967f9d9371c8091e95663fd9aaef29966cfccad04432cc36ab6267c516"
+    },
+    "comsol_mcp/_session_context.py": {
+      "base_sha256": "a79c6b9c49fceeeefd027628fa3df8baa68c75b0a6f8b44009826c883c0f948a",
+      "changed_from_base": true,
+      "sha256": "061c8538244ae9999cb82080d98c946d07a6e2df81d317843da2242fa04745c2"
+    },
+    "tests/test_control_daemon_sessions.py": {
+      "base_sha256": "036d5515dbf925acd0a6fe7b60017b52950a405b0a9032b904b5211754c6f4aa",
+      "changed_from_base": true,
+      "sha256": "51bd38a2eaaed182f183754ddcf2b24c21d30506faea7cf6b30dce4436868f15"
+    },
+    "tests/test_session_context.py": {
+      "base_sha256": "9815a3196ea6c4ab27fe3d2c7b2b87496c1eadaa9bc12eb1e3c3f9e2a625b531",
+      "changed_from_base": true,
+      "sha256": "49ee89f923f2135cf40fecbc19487c02fdd4ac32c42707bff42d3cf5169908c5"
+    }
+  },
+  "implemented": [
+    "Disconnect preserves the exact Worker handle, retires the old epoch context and never stops a shared server.",
+    "Reconnect reuses the original Worker without birth, verifies endpoint/version/build, advances epoch and invalidates old handles.",
+    "Lifecycle retirement atomically refuses accepted work; uncertain binding quarantine rejects future submissions while preserving already accepted task ownership.",
+    "Credentials are re-resolved from an in-memory opaque reference before any reconnect detach; secrets are not persisted.",
+    "Recovery queries original recorded Worker request IDs and appends observations without replaying requests or resolving original UNKNOWN history."
+  ],
+  "validation": {
+    "isolated_lifecycle": {
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "tests": 120
+    },
+    "isolated_java_worker": {
+      "errors": 0,
+      "failures": 0,
+      "skipped": 1,
+      "tests": 32,
+      "passed": 31,
+      "skip_reason": "Windows owner semantics only"
+    },
+    "live_checkout_lifecycle": {
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "tests": 121
+    },
+    "isolated_git_history_exclusion": "One historical Git blob lookup test excluded from archive; passed in live 121-test run.",
+    "main_verified_unchanged_runtime_files": 85,
+    "isolation": {
+      "PYTHONNOUSERSITE": "1",
+      "PYTHONPATH": "unset",
+      "comsol_mcp": "/private/tmp/luna_session_lifecycle_review3_20260927T1455Z/comsol_mcp/__init__.py",
+      "editable_fallback_disabled": true,
+      "modules": {
+        "_control_daemon.py": "/private/tmp/luna_session_lifecycle_review3_20260927T1455Z/comsol_mcp/_control_daemon.py",
+        "_managed_backend.py": "/private/tmp/luna_session_lifecycle_review3_20260927T1455Z/comsol_mcp/_managed_backend.py",
+        "_session_context.py": "/private/tmp/luna_session_lifecycle_review3_20260927T1455Z/comsol_mcp/_session_context.py"
+      },
+      "observed_command_output": "/private/tmp/luna_session_lifecycle_review3_20260927T1455Z/comsol_mcp/_control_daemon.py\n/private/tmp/luna_session_lifecycle_review3_20260927T1455Z/comsol_mcp/_managed_backend.py\n/private/tmp/luna_session_lifecycle_review3_20260927T1455Z/comsol_mcp/_session_context.py"
+    },
+    "runtime_manifest": {
+      "path": "/private/tmp/luna_session_lifecycle_review3_20260927T1455Z/runtime_python_sha256.txt",
+      "sha256": "ac790af3dd24416c8d5d7423b832f18b972ca6f3bcaf56bce49977493050da52"
+    },
+    "lifecycle_junit": {
+      "path": "/private/tmp/luna_session_lifecycle_review3_20260927T1455Z/lifecycle_junit.xml",
+      "sha256": "a6465cfb2c46fa4b25dcd740ffb283c46e6d3c64789fe041e943541687835d83"
+    },
+    "java_worker_junit": {
+      "path": "/private/tmp/luna_session_lifecycle_review3_20260927T1455Z/java_worker_junit.xml",
+      "sha256": "c336f8a23a58eba6201a74c95d536cf38740360861d3da8832497b6f1b8f8ab0"
+    },
+    "receipt": {
+      "path": "/private/tmp/luna_session_lifecycle_review3_20260927T1455Z/receipt.json",
+      "sha256": "cdb91d66d73bfa3e4915957d3cf440409a87c1029ac525991bfa90efbe40d2ea"
+    },
+    "published_fixture": {
+      "git_blob_at_base": "a083d58b02e952ff64f9502452ca9954816411f7",
+      "path": "evidence/phase4_3/runs/independent_acceptance_20260922T004753Z/api_probe_table.javap.txt",
+      "sha256": "7f927140407a04e463055a553bbe339ec469a4ced3308fa475fcad0aaeda74f8"
+    }
+  },
+  "historical_failures": {
+    "first_escalated_archive_replay": {
+      "cause": "one test fixture was omitted from the selective archive: published-base API javap evidence file; supplied below by exact Git blob in this replay",
+      "junit": "/private/tmp/luna_session_lifecycle_stage_20260927T1442Z/java_worker_junit.xml",
+      "junit_sha256": "18d42e60287dd798694d51babe9d7b204e18619ae45097101cbeff1d7794ceba",
+      "result": {
+        "errors": 0,
+        "failures": 1,
+        "skipped": 1,
+        "tests": 32
+      }
+    },
+    "sandbox_local_broad_run": {
+      "cause": "private Java Worker loopback bind was denied by sandbox with Operation not permitted; no COMSOL process launched",
+      "junit": "/private/tmp/luna_session_lifecycle_broad_junit_round2.xml",
+      "junit_sha256": "e5f661cd8b411dd5e668435bc783f52f6d38805239306eed0c4264d24ef7f6ab",
+      "result": {
+        "errors": 7,
+        "failures": 2,
+        "skipped": 1,
+        "tests": 135
+      }
+    }
+  },
+  "acceptance_boundaries": {
+    "archive_exclusion": "The single migration test requiring live Git object lookup was deselected in archive and passed in the live-checkout broad run.",
+    "macos_comsol_6_3_both_architectures": "USER_REQUESTED_SKIP",
+    "macos_comsol_6_4": "NOT_RUN",
+    "native_comsol": "NOT_RUN",
+    "owned_server_start_stop": "NOT_IMPLEMENTED_IN_THIS_STAGE",
+    "session_recover": "PARTIAL_READBACK_ONLY; original UNKNOWN history remains; no job/lifecycle resolution, no request replay, no Worker birth",
+    "windows_comsol_6_3_6_4": "NOT_RUN"
+  },
+  "replay": {
+    "requirements": "Python 3.12, project test dependencies and JDK11; permit local Worker loopback sockets. No COMSOL required for these tests.",
+    "lifecycle_command": "env -u PYTHONPATH PYTHONNOUSERSITE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q tests/test_control_daemon_sessions.py tests/test_session_context.py tests/test_session_lifecycle.py tests/test_managed_backend.py tests/test_execution_contract.py tests/test_registry_job_control_fallback.py tests/test_operation_store.py tests/test_operation_store_migrations.py tests/test_platform_process.py -k 'not historical_fixture_commit_and_blob_identity_resolve' --junitxml=lifecycle_junit.xml",
+    "worker_command": "env -u PYTHONPATH PYTHONNOUSERSITE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q tests/test_java_worker.py --junitxml=java_worker_junit.xml (sandbox require_escalated; only local Worker tests; no COMSOL)",
+    "source": "Fresh checkout of this stage; both commands run from repository root. Tests use injectable COMSOL substitutes; actual Java Worker loopback is separate. Temporary evidence directories are not required."
+  },
+  "next_action": "Implement exact owned-server Popen/birth/listener start-stop and full evidence-backed recovery; perform managed COMSOL platform validation. Continue all remaining W01-W26 and final fresh independent overall review."
+}

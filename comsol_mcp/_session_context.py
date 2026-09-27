@@ -38,6 +38,10 @@ class SessionSchedulerClosed(SessionContextError):
     """A closed scheduler cannot accept new work."""
 
 
+class SessionBindingBusy(SessionContextError):
+    """A session binding cannot retire while its accepted work is pending."""
+
+
 class SessionRegistryConflict(SessionContextError):
     """A live runtime handle conflicts with the registered project/session key."""
 
@@ -460,6 +464,8 @@ class SessionEndpointScheduler:
         self._unknown_lane: ThreadPoolExecutor | None = None
         self._socket_process_identity: dict[str, str] = {}
         self._closed_lane_keys: set[str] = set()
+        self._closed_session_bindings: set[str] = set()
+        self._releasable_session_bindings: set[str] = set()
         self._global_gate = _ReadWriteGate()
         self._next_task_id = 0
         self._scheduled_tasks: dict[int, dict[str, Any]] = {}
@@ -474,6 +480,7 @@ class SessionEndpointScheduler:
         # requested host/port.
         peer = context.endpoint.observed_peer if context is not None else None
         process = context.endpoint.owned_process if context is not None else None
+        binding_key = context.worker_binding_key if context is not None else None
         proven_owned = context is not None and (
             peer is not None
             and context.server_ownership == "mcp_managed"
@@ -485,6 +492,8 @@ class SessionEndpointScheduler:
         with self._lock:
             if self._closed:
                 raise SessionSchedulerClosed("session scheduler is closed")
+            if binding_key is not None and binding_key in self._closed_session_bindings:
+                raise SessionSchedulerClosed("session Worker binding is fenced for retirement")
             if lane_key is not None:
                 if lane_key in self._closed_lane_keys:
                     raise SessionSchedulerClosed("owned server lane is fenced for retirement")
@@ -525,10 +534,11 @@ class SessionEndpointScheduler:
 
                     def admit_and_invoke():
                         # The global lease can block after the initial queue
-                        # check.  Recheck and mark callback admission under
-                        # the same lock used by fence_owned_server_lane so a
-                        # retirement fence that wins while this task waits
-                        # prevents the callback from reaching the Worker.
+                        # check.  An owned-server retirement fence may reject
+                        # an accepted callback while the lane is being retired.
+                        # Session binding fences require quiescence, while the
+                        # separate soft close deliberately lets already
+                        # accepted session work drain.
                         with self._lock:
                             if lane_key is not None and lane_key in self._closed_lane_keys:
                                 raise SessionSchedulerClosed("owned server lane was fenced before callback admission")
@@ -667,6 +677,63 @@ class SessionEndpointScheduler:
                 raise SessionIdentityConflict("socket is mapped to a different process birth")
             self._closed_lane_keys.add(lane_key)
         return lane_key
+
+    def fence_session_binding(self, context: SessionRuntimeContext) -> str:
+        """Atomically stop admission for one Worker epoch after it is quiescent.
+
+        This fence applies to shared and unknown endpoints as well as owned
+        lanes.  The check and fence share the scheduler lock with submission,
+        so no new request can slip between a quiescence readback and client
+        disconnect/reconnect.  Already accepted work makes retirement refuse.
+        """
+        if not isinstance(context, SessionRuntimeContext):
+            raise TypeError("session binding fence requires an exact session context")
+        binding_key = context.worker_binding_key
+        with self._lock:
+            if self._closed:
+                raise SessionSchedulerClosed("session scheduler is closed")
+            if binding_key in self._closed_session_bindings:
+                return binding_key
+            selected = [
+                task for task in self._scheduled_tasks.values()
+                if task.get("worker_binding_key") == binding_key
+            ]
+            if selected:
+                queued = sum(task.get("state") == "QUEUED" for task in selected)
+                running = sum(task.get("state") == "RUNNING" for task in selected)
+                raise SessionBindingBusy(
+                    f"session Worker binding has accepted work (queued={queued}, running={running})"
+                )
+            self._closed_session_bindings.add(binding_key)
+            self._releasable_session_bindings.add(binding_key)
+        return binding_key
+
+    def close_session_binding_admission(self, context: SessionRuntimeContext) -> str:
+        """Close future submissions while allowing already accepted work to drain.
+
+        This is used when the durable identity itself becomes uncertain. It is
+        not a quiescent retirement proof and cannot be released as a safe
+        pre-dispatch abort.
+        """
+        if not isinstance(context, SessionRuntimeContext):
+            raise TypeError("session admission close requires an exact session context")
+        binding_key = context.worker_binding_key
+        with self._lock:
+            if self._closed:
+                raise SessionSchedulerClosed("session scheduler is closed")
+            self._closed_session_bindings.add(binding_key)
+            self._releasable_session_bindings.discard(binding_key)
+        return binding_key
+
+    def release_session_binding(self, context: SessionRuntimeContext) -> None:
+        """Reopen an exact binding only when retirement is proven not dispatched."""
+        if not isinstance(context, SessionRuntimeContext):
+            raise TypeError("session binding release requires an exact session context")
+        with self._lock:
+            binding_key = context.worker_binding_key
+            if binding_key in self._releasable_session_bindings:
+                self._releasable_session_bindings.discard(binding_key)
+                self._closed_session_bindings.discard(binding_key)
 
     @property
     def closed(self) -> bool:

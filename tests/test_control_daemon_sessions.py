@@ -20,6 +20,7 @@ from comsol_mcp._session_context import (
     SessionEndpointIdentity,
     SessionRuntimeConfig,
     SessionRuntimeContext,
+    SessionSchedulerClosed,
     current_session_context,
     session_state_directory,
 )
@@ -151,13 +152,20 @@ def test_session_inspect_rejects_foreign_project_and_unknown_fields(tmp_path):
 
 
 class _InjectedConnectWorker:
-    def __init__(self, *, block=None, timeout=False, start_timeout=False):
+    def __init__(self, *, block=None, timeout=False, start_timeout=False,
+                 disconnect_timeout=False, disconnect_block=None):
         self.block = block
         self.timeout = timeout
         self.start_timeout = start_timeout
+        self.disconnect_timeout = disconnect_timeout
+        self.disconnect_block = disconnect_block
         self.start_calls = 0
         self.connect_calls = 0
+        self.connect_credentials = []
+        self.disconnect_calls = 0
         self.close_calls = 0
+        self.status_calls = []
+        self.request_status = {}
         self.event_callback = None
         self.metadata = {
             "pid": 7401, "instance_id": "worker-fixture-1", "generation": 1,
@@ -184,8 +192,11 @@ class _InjectedConnectWorker:
 
     def connect(self, port, host, **kwargs):
         self.connect_calls += 1
+        self.connect_credentials.append({
+            "user": kwargs.get("user", ""), "password": kwargs.get("password", ""),
+        })
         if self.event_callback:
-            self.event_callback({"phase": "submitted", "metadata": {
+            self.event_callback({"phase": "submitted", "request_id": kwargs.get("request_id"), "metadata": {
                 "user": kwargs.get("user", ""), "password": kwargs.get("password", ""),
             }})
         if self.block is not None:
@@ -196,11 +207,40 @@ class _InjectedConnectWorker:
             from comsol_mcp._java_worker import JavaWorkerTimeout
             raise JavaWorkerTimeout("fixture timeout")
         server = f"{host}:{port}"
-        self.metadata.update(generation=2, connected=True, server=server)
+        generation = self.metadata["generation"] + 1
+        self.metadata.update(generation=generation, connected=True, server=server)
         return {
-            "connected": True, "server": server, "generation": 2,
+            "connected": True, "server": server, "generation": generation,
             "instance_id": self.metadata["instance_id"], "engine_version": "6.4.0.293",
         }
+
+    def disconnect(self, **kwargs):
+        self.disconnect_calls += 1
+        request_id = kwargs.get("request_id")
+        if self.event_callback:
+            self.event_callback({"phase": "submitted", "request_id": request_id,
+                                 "kind": "disconnect", "metadata": {}})
+        if self.disconnect_block is not None:
+            entered, release = self.disconnect_block
+            entered.set()
+            release.wait(timeout=5)
+        if self.disconnect_timeout:
+            from comsol_mcp._java_worker import JavaWorkerTimeout
+            raise JavaWorkerTimeout("fixture disconnect timeout")
+        generation = self.metadata["generation"] + 1
+        self.metadata.update(generation=generation, connected=False, server="")
+        reply = {"connected": False, "generation": generation,
+                 "instance_id": self.metadata["instance_id"]}
+        self.request_status[request_id] = {"ok": True, "request_id": request_id,
+                                           "status": "SUCCEEDED", "result": reply}
+        return reply
+
+    def status(self, request_id, *, timeout_s=1.0):
+        self.status_calls.append(request_id)
+        return dict(self.request_status.get(request_id, {
+            "ok": False, "request_id": request_id, "status": "UNKNOWN",
+            "failure": {"code": "REQUEST_NOT_FOUND"},
+        }))
 
     def close(self):
         self.close_calls += 1
@@ -226,6 +266,15 @@ def _connect_request(project_id: str, key: str, *, credentials_ref=None):
     if credentials_ref is not None:
         arguments["credentials_ref"] = credentials_ref
     return {"operation": "session.connect", "arguments": arguments, "execution": {}}
+
+
+def _session_mutation_request(operation: str, project_id: str, session_id: str, key: str):
+    return {
+        "operation": operation,
+        "arguments": {"project_id": project_id, "session_id": session_id,
+                      "idempotency_key": key},
+        "execution": {},
+    }
 
 
 def _connect_daemon(tmp_path, worker, *, peer=CanonicalSocket("127.0.0.1", 2046), credentials_resolver=None):
@@ -289,6 +338,375 @@ def test_session_connect_uses_injected_worker_and_observed_shared_peer_without_g
         assert lifecycle["state"] == "CONNECTED"
         assert lifecycle["server_ownership"] == "shared"
     finally:
+        daemon.close()
+
+
+def test_session_disconnect_detaches_only_client_and_preserves_exact_worker_for_reconnect(tmp_path):
+    worker = _InjectedConnectWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+    try:
+        connected = daemon.dispatch(_connect_request(project_id, "connect-disconnect-reconnect"))
+        assert connected["success"] is True, connected
+        session_id = connected["data"]["session_id"]
+        original_context = daemon.session_registry.get(project_id, session_id)
+        original_worker_epoch = original_context.worker_epoch
+
+        disconnected = daemon.dispatch(_session_mutation_request(
+            "session.disconnect", project_id, session_id, "disconnect-once",
+        ))
+        assert disconnected["success"] is True, disconnected
+        assert disconnected["data"]["server_stopped"] is False
+        assert disconnected["data"]["worker_handle_preserved"] is True
+        assert daemon.session_lifecycle.get(project_id, session_id)["state"] == "DISCONNECTED"
+        assert daemon._session_worker_handles[(project_id, session_id)] is worker
+        assert worker.metadata["connected"] is False
+        assert worker.disconnect_calls == 1
+        assert worker.close_calls == 0
+        with pytest.raises(SessionContextMissing):
+            daemon.session_registry.get(project_id, session_id)
+
+        # An idempotent duplicate returns the original result and does not
+        # submit a second Worker disconnect.
+        replay = daemon.dispatch(_session_mutation_request(
+            "session.disconnect", project_id, session_id, "disconnect-once",
+        ))
+        assert replay == disconnected
+        assert worker.disconnect_calls == 1
+
+        reconnected = daemon.dispatch(_session_mutation_request(
+            "session.reconnect", project_id, session_id, "reconnect-once",
+        ))
+        assert reconnected["success"] is True, reconnected
+        assert reconnected["data"]["worker_reused"] is True
+        assert reconnected["data"]["old_handles_invalidated"] is True
+        assert reconnected["data"]["worker_epoch"] > original_worker_epoch
+        assert worker.start_calls == 1  # the original private Worker was reused
+        assert worker.connect_calls == 2
+        assert worker.disconnect_calls == 1
+        assert daemon._session_worker_handles[(project_id, session_id)] is worker
+        new_context = daemon.session_registry.get(project_id, session_id)
+        assert new_context.worker is worker
+        assert new_context.worker_epoch == reconnected["data"]["worker_epoch"]
+        assert daemon.session_lifecycle.get(project_id, session_id)["state"] == "CONNECTED"
+    finally:
+        daemon.close()
+
+
+def test_session_disconnect_unknown_retains_handle_and_recover_only_queries_original_request(tmp_path):
+    worker = _InjectedConnectWorker(disconnect_timeout=True)
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+    try:
+        connected = daemon.dispatch(_connect_request(project_id, "connect-disconnect-unknown"))
+        assert connected["success"] is True, connected
+        session_id = connected["data"]["session_id"]
+        failed = daemon.dispatch(_session_mutation_request(
+            "session.disconnect", project_id, session_id, "disconnect-timeout",
+        ))
+        assert failed["success"] is False
+        assert failed["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        assert failed["data"]["engine_dispatched"] is True
+        assert daemon.session_lifecycle.get(project_id, session_id)["state"] == "UNKNOWN"
+        assert daemon._session_worker_handles[(project_id, session_id)] is worker
+        assert worker.close_calls == 0
+        with pytest.raises(SessionContextMissing):
+            daemon.session_registry.get(project_id, session_id)
+
+        duplicate = daemon.dispatch(_session_mutation_request(
+            "session.disconnect", project_id, session_id, "disconnect-timeout",
+        ))
+        assert duplicate == failed
+        assert worker.disconnect_calls == 1
+
+        recovered = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-disconnect-timeout",
+        ))
+        assert recovered["success"] is True, recovered
+        assert recovered["data"]["replayed_requests"] == 0
+        assert recovered["data"]["new_worker_created"] is False
+        assert recovered["data"]["lifecycle_state"] == "UNKNOWN"
+        assert worker.disconnect_calls == 1
+        assert worker.connect_calls == 1
+        assert worker.start_calls == 1
+        assert len(worker.status_calls) == 1
+        assert worker.status_calls[0].endswith(":disconnect")
+
+        retry = daemon.dispatch(_session_mutation_request(
+            "session.reconnect", project_id, session_id, "reconnect-after-unknown",
+        ))
+        assert retry["success"] is False
+        assert retry["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        assert worker.connect_calls == 1
+        assert worker.start_calls == 1
+    finally:
+        daemon.close()
+
+
+def test_session_reconnect_from_connected_binding_retires_old_epoch_before_reattach(tmp_path):
+    worker = _InjectedConnectWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+    try:
+        connected = daemon.dispatch(_connect_request(project_id, "connect-reconnect-live"))
+        assert connected["success"] is True, connected
+        session_id = connected["data"]["session_id"]
+        old_context = daemon.session_registry.get(project_id, session_id)
+        old_epoch = old_context.worker_epoch
+
+        reconnected = daemon.dispatch(_session_mutation_request(
+            "session.reconnect", project_id, session_id, "reconnect-live",
+        ))
+        assert reconnected["success"] is True, reconnected
+        assert worker.disconnect_calls == 1
+        assert worker.connect_calls == 2
+        assert worker.start_calls == 1
+        assert reconnected["data"]["worker_reused"] is True
+        assert reconnected["data"]["worker_epoch"] > old_epoch
+        new_context = daemon.session_registry.get(project_id, session_id)
+        assert new_context is not old_context
+        assert new_context.worker is worker
+        assert new_context.worker_epoch == reconnected["data"]["worker_epoch"]
+        with pytest.raises(SessionSchedulerClosed, match="binding is fenced"):
+            daemon.session_scheduler.submit(old_context, lambda: None)
+        assert daemon.session_scheduler.submit(
+            new_context, lambda: "new epoch admission open",
+        ).result(timeout=2) == "new epoch admission open"
+    finally:
+        daemon.close()
+
+
+def test_session_disconnect_refuses_binding_with_accepted_worker_task(tmp_path):
+    worker = _InjectedConnectWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+    entered, release = threading.Event(), threading.Event()
+    try:
+        connected = daemon.dispatch(_connect_request(project_id, "connect-disconnect-busy"))
+        assert connected["success"] is True, connected
+        session_id = connected["data"]["session_id"]
+        context = daemon.session_registry.get(project_id, session_id)
+
+        def block():
+            entered.set()
+            assert release.wait(3)
+
+        future = daemon.session_scheduler.submit(context, block)
+        assert entered.wait(1)
+        refused = daemon.dispatch(_session_mutation_request(
+            "session.disconnect", project_id, session_id, "disconnect-busy",
+        ))
+        assert refused["success"] is False
+        assert refused["error"]["code"] == "SESSION_BUSY"
+        assert refused["data"]["engine_dispatched"] is False
+        assert worker.disconnect_calls == 0
+        release.set()
+        future.result(timeout=2)
+
+        succeeded = daemon.dispatch(_session_mutation_request(
+            "session.disconnect", project_id, session_id, "disconnect-after-drain",
+        ))
+        assert succeeded["success"] is True, succeeded
+        assert worker.disconnect_calls == 1
+    finally:
+        release.set()
+        daemon.close()
+
+
+def test_session_disconnect_preflight_identity_mismatch_fences_context_and_records_unknown(tmp_path):
+    worker = _InjectedConnectWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+    try:
+        connected = daemon.dispatch(_connect_request(project_id, "connect-disconnect-preflight-mismatch"))
+        assert connected["success"] is True, connected
+        session_id = connected["data"]["session_id"]
+        context = daemon.session_registry.get(project_id, session_id)
+        worker.metadata["instance_id"] = "different-worker-instance"
+
+        result = daemon.dispatch(_session_mutation_request(
+            "session.disconnect", project_id, session_id, "disconnect-preflight-mismatch",
+        ))
+
+        assert result["success"] is False
+        assert result["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        assert result["error"]["execution_state_unknown"] is True
+        assert result["error"]["safe_retry"] is False
+        assert result["data"]["engine_dispatched"] is False
+        assert daemon.session_lifecycle.get(project_id, session_id)["state"] == "UNKNOWN"
+        assert daemon._session_worker_handles[(project_id, session_id)] is worker
+        assert worker.disconnect_calls == 0
+        assert worker.close_calls == 0
+        with pytest.raises(SessionContextMissing):
+            daemon.session_registry.get(project_id, session_id)
+        with pytest.raises(SessionSchedulerClosed, match="binding is fenced"):
+            daemon.session_scheduler.submit(context, lambda: None)
+    finally:
+        daemon.close()
+
+
+def test_session_reconnect_disconnected_health_conflict_is_unknown_without_worker_birth(tmp_path):
+    worker = _InjectedConnectWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+    try:
+        connected = daemon.dispatch(_connect_request(project_id, "connect-reconnect-preflight-conflict"))
+        assert connected["success"] is True, connected
+        session_id = connected["data"]["session_id"]
+        disconnected = daemon.dispatch(_session_mutation_request(
+            "session.disconnect", project_id, session_id, "disconnect-before-preflight-conflict",
+        ))
+        assert disconnected["success"] is True, disconnected
+        expected_epoch = daemon.session_lifecycle.get(project_id, session_id)["worker_epoch"]
+
+        # The durable lifecycle says detached, but the retained exact Worker
+        # reports a live connection. Reconnect must not reinterpret this as a
+        # safe detached baseline or issue another attach.
+        worker.metadata.update(connected=True, generation=expected_epoch, server="127.0.0.1:2046")
+        disconnect_calls = worker.disconnect_calls
+        connect_calls = worker.connect_calls
+
+        result = daemon.dispatch(_session_mutation_request(
+            "session.reconnect", project_id, session_id, "reconnect-preflight-conflict",
+        ))
+
+        assert result["success"] is False
+        assert result["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        assert result["error"]["execution_state_unknown"] is True
+        assert result["error"]["safe_retry"] is False
+        assert result["data"]["state"] == "UNKNOWN"
+        assert daemon.session_lifecycle.get(project_id, session_id)["state"] == "UNKNOWN"
+        assert daemon._session_worker_handles[(project_id, session_id)] is worker
+        assert worker.disconnect_calls == disconnect_calls
+        assert worker.connect_calls == connect_calls
+        assert worker.start_calls == 1
+        assert worker.close_calls == 0
+        with pytest.raises(SessionContextMissing):
+            daemon.session_registry.get(project_id, session_id)
+    finally:
+        daemon.close()
+
+
+def test_session_lifecycle_mutations_are_idempotent_during_a_concurrent_unknown_wait(tmp_path):
+    entered, release = threading.Event(), threading.Event()
+    worker = _InjectedConnectWorker(disconnect_block=(entered, release))
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+    request = None
+    try:
+        connected = daemon.dispatch(_connect_request(project_id, "connect-concurrent-disconnect"))
+        assert connected["success"] is True, connected
+        session_id = connected["data"]["session_id"]
+        request = _session_mutation_request(
+            "session.disconnect", project_id, session_id, "disconnect-concurrent-idempotency",
+        )
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            first_future = pool.submit(daemon.dispatch, request)
+            assert entered.wait(2)
+            duplicate = daemon.dispatch(request)
+            assert duplicate["success"] is True
+            assert duplicate["data"]["status"] == "RUNNING"
+            assert worker.disconnect_calls == 1
+            release.set()
+            first = first_future.result(timeout=3)
+        assert first["success"] is True, first
+        assert worker.disconnect_calls == 1
+        assert daemon.session_lifecycle.get(project_id, session_id)["state"] == "DISCONNECTED"
+    finally:
+        release.set()
+        daemon.close()
+
+
+def test_unresolved_worker_job_blocks_disconnect_and_reconnect(tmp_path):
+    worker = _InjectedConnectWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+    try:
+        connected = daemon.dispatch(_connect_request(project_id, "connect-unresolved-worker-job"))
+        assert connected["success"] is True, connected
+        session_id = connected["data"]["session_id"]
+        pending, _ = daemon.store.begin(
+            request_id="unresolved-session-work-request",
+            idempotency_key="unresolved-session-work-key",
+            request_hash="unresolved-session-work-hash",
+            operation="study.run",
+            metadata={"operation": "study.run", "arguments": {},
+                      "execution": {"project_id": project_id, "session_id": session_id}},
+        )
+        daemon.store.update_job(pending["job_id"], "UNKNOWN")
+
+        for operation, key in (("session.disconnect", "disconnect-with-unknown-job"),
+                               ("session.reconnect", "reconnect-with-unknown-job")):
+            refused = daemon.dispatch(_session_mutation_request(operation, project_id, session_id, key))
+            assert refused["success"] is False
+            assert refused["error"]["code"] == "SESSION_BUSY"
+            assert refused["data"]["engine_dispatched"] is False
+            assert refused["data"]["blocking_job_ids"] == [pending["job_id"]]
+
+        assert daemon.session_lifecycle.get(project_id, session_id)["state"] == "CONNECTED"
+        assert worker.disconnect_calls == 0
+        assert worker.connect_calls == 1
+        assert worker.close_calls == 0
+    finally:
+        daemon.close()
+
+
+@pytest.mark.parametrize("missing_binding", [
+    "disconnect_worker", "disconnect_context_worker_mismatch",
+    "reconnect_worker", "reconnect_runtime", "reconnect_backend",
+])
+def test_unknown_lifecycle_binding_quarantines_new_admission_and_drains_accepted_work(tmp_path, missing_binding):
+    worker = _InjectedConnectWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+    first_entered, release_first = threading.Event(), threading.Event()
+    queued_ran = threading.Event()
+    try:
+        connected = daemon.dispatch(_connect_request(project_id, f"connect-quarantine-{missing_binding}"))
+        assert connected["success"] is True, connected
+        session_id = connected["data"]["session_id"]
+        context = daemon.session_registry.get(project_id, session_id)
+
+        def first_accepted_task():
+            first_entered.set()
+            assert release_first.wait(3)
+            return "first-drained"
+
+        first = daemon.session_scheduler.submit(context, first_accepted_task)
+        assert first_entered.wait(1)
+        queued = daemon.session_scheduler.submit(context, lambda: queued_ran.set() or "queued-drained")
+
+        if missing_binding == "disconnect_worker":
+            daemon._session_worker_handles.pop((project_id, session_id))
+            operation = "session.disconnect"
+        elif missing_binding == "disconnect_context_worker_mismatch":
+            daemon._session_worker_handles[(project_id, session_id)] = _InjectedConnectWorker()
+            operation = "session.disconnect"
+        else:
+            operation = "session.reconnect"
+            if missing_binding == "reconnect_worker":
+                daemon._session_worker_handles.pop((project_id, session_id))
+            elif missing_binding == "reconnect_runtime":
+                daemon._session_runtime_configs.pop((project_id, session_id))
+            elif missing_binding == "reconnect_backend":
+                daemon._session_backends.pop((project_id, session_id))
+
+        refused = daemon.dispatch(_session_mutation_request(
+            operation, project_id, session_id, f"quarantine-{missing_binding}",
+        ))
+        assert refused["success"] is False
+        assert refused["error"]["code"] == "WORKER_BINDING_UNKNOWN"
+        assert refused["error"]["execution_state_unknown"] is True
+        assert daemon.session_lifecycle.get(project_id, session_id)["state"] == "UNKNOWN"
+        with pytest.raises(SessionContextMissing):
+            daemon.session_registry.get(project_id, session_id)
+        with pytest.raises(SessionSchedulerClosed, match="binding is fenced"):
+            daemon.session_scheduler.submit(context, lambda: pytest.fail("new work reached unknown binding"))
+        assert not first.done()
+        assert not queued.done()
+
+        # Existing accepted work, including queued work, drains normally after
+        # the uncertain binding closes admission.
+        release_first.set()
+        assert first.result(timeout=2) == "first-drained"
+        assert queued.result(timeout=2) == "queued-drained"
+        assert queued_ran.is_set()
+        assert worker.connect_calls == 1
+        assert worker.disconnect_calls == 0
+        assert worker.close_calls == 0
+    finally:
+        release_first.set()
         daemon.close()
 
 
@@ -526,6 +944,93 @@ def test_session_connect_secrets_are_resolved_locally_and_never_persisted(tmp_pa
         worker_event = next(event for event in events if event["event"] == "worker_request")
         assert worker_event["metadata"]["metadata"]["password"] == "[REDACTED]"
         assert worker_event["metadata"]["metadata"]["user"] == "[REDACTED]"
+    finally:
+        daemon.close()
+
+
+def test_session_reconnect_reresolves_opaque_credentials_reference_before_detach(tmp_path):
+    worker = _InjectedConnectWorker()
+    secret_ref = "credential-ref-for-reconnect"
+    expected = {"user": "reconnect-user", "password": "reconnect-password"}
+    resolved_refs = []
+
+    def resolver(reference):
+        resolved_refs.append(reference)
+        return dict(expected)
+
+    daemon, project_id = _connect_daemon(tmp_path, worker, credentials_resolver=resolver)
+    try:
+        connected = daemon.dispatch(_connect_request(
+            project_id, "connect-authenticated-reconnect", credentials_ref=secret_ref,
+        ))
+        assert connected["success"] is True, connected
+        session_id = connected["data"]["session_id"]
+        assert resolved_refs == [secret_ref]
+        assert daemon._session_credentials_refs[(project_id, session_id)] == secret_ref
+
+        reconnected = daemon.dispatch(_session_mutation_request(
+            "session.reconnect", project_id, session_id, "reconnect-authenticated",
+        ))
+
+        assert reconnected["success"] is True, reconnected
+        assert resolved_refs == [secret_ref, secret_ref]
+        assert worker.connect_credentials == [expected, expected]
+        assert worker.disconnect_calls == 1
+        assert worker.connect_calls == 2
+        assert daemon.session_lifecycle.get(project_id, session_id)["state"] == "CONNECTED"
+        operation = daemon.store.get_operation(reconnected["execution"]["operation_id"])
+        job = daemon.store.operation_job(reconnected["execution"]["operation_id"])
+        events = daemon.store.events(job["job_id"])
+        persisted = str(operation) + str(job) + str(events)
+        for secret in (secret_ref, expected["user"], expected["password"]):
+            assert secret not in persisted
+            assert secret not in str(reconnected)
+    finally:
+        daemon.close()
+
+
+@pytest.mark.parametrize("resolver_mode", ["missing", "raises"])
+def test_session_reconnect_credentials_failure_happens_before_any_worker_rpc(tmp_path, resolver_mode):
+    worker = _InjectedConnectWorker()
+    secret_ref = "credential-ref-unavailable-after-connect"
+    daemon, project_id = _connect_daemon(
+        tmp_path, worker,
+        credentials_resolver=lambda reference: {"user": "u", "password": "p"}
+        if reference == secret_ref else {},
+    )
+    try:
+        connected = daemon.dispatch(_connect_request(
+            project_id, f"connect-auth-preflight-{resolver_mode}", credentials_ref=secret_ref,
+        ))
+        assert connected["success"] is True, connected
+        session_id = connected["data"]["session_id"]
+        original_context = daemon.session_registry.get(project_id, session_id)
+        if resolver_mode == "missing":
+            daemon.session_credentials_resolver = None
+        else:
+            def unavailable(_reference):
+                raise RuntimeError("fixture credential backend offline")
+            daemon.session_credentials_resolver = unavailable
+        disconnect_calls = worker.disconnect_calls
+        connect_calls = worker.connect_calls
+
+        refused = daemon.dispatch(_session_mutation_request(
+            "session.reconnect", project_id, session_id, f"reconnect-auth-preflight-{resolver_mode}",
+        ))
+
+        assert refused["success"] is False
+        assert refused["error"]["code"] == "AUTHORIZATION_REQUIRED"
+        assert refused["error"]["safe_retry"] is True
+        assert refused["data"]["engine_dispatched"] is False
+        assert refused["data"]["worker_handle_preserved"] is True
+        assert daemon.session_lifecycle.get(project_id, session_id)["state"] == "CONNECTED"
+        assert daemon.session_registry.get(project_id, session_id) is original_context
+        assert worker.disconnect_calls == disconnect_calls
+        assert worker.connect_calls == connect_calls
+        assert worker.start_calls == 1
+        assert worker.close_calls == 0
+        assert secret_ref not in str(refused)
+        assert "fixture credential backend offline" not in str(refused)
     finally:
         daemon.close()
 

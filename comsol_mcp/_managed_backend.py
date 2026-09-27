@@ -400,7 +400,8 @@ class ManagedBackend:
     def connect_session(self, *, runtime: SessionRuntimeConfig, project_id: str, session_id: str,
                         host: str, port: int, operation_id: str, request_id: str,
                         event_callback, credentials: Mapping[str, Any] | None = None,
-                        rpc_timeout_s: float = 30.0, project_permissions=None):
+                        rpc_timeout_s: float = 30.0, project_permissions=None,
+                        existing_worker=None):
         """Attach one private Worker to an already-listening endpoint.
 
         This route never touches ``_server`` globals, mutates process
@@ -423,7 +424,13 @@ class ManagedBackend:
             preferences.mkdir(mode=0o700, parents=True, exist_ok=True)
             if not isinstance(host, str) or not host.strip() or type(port) is not int or not 1 <= port <= 65535:
                 raise ValueError("endpoint is invalid")
-            if self.session_worker_factory is not None:
+            if existing_worker is not None:
+                # Lifecycle reconnect must use the exact retained Worker and
+                # prove it is already alive before issuing another connect.
+                # Never call start() here: it may create a replacement child
+                # after the original handle has become unreachable.
+                worker = existing_worker
+            elif self.session_worker_factory is not None:
                 # This injection is reserved for deterministic tests/host
                 # adapters. The default production path below always validates
                 # the inspected installation, JDK and exact classpath.
@@ -450,8 +457,14 @@ class ManagedBackend:
         dispatched = False
         worker_started = False
         try:
-            worker.start()
-            worker_started = True
+            if existing_worker is None:
+                worker.start()
+                worker_started = True
+            else:
+                # The handle is known to have existed already.  A health
+                # failure leaves its process/request state unknown and must
+                # not trigger a Worker replacement.
+                worker_started = True
             runtime_metadata = worker.runtime_metadata()
             if not isinstance(runtime_metadata, Mapping):
                 raise SessionConnectFailure("EXECUTION_STATE_UNKNOWN", "Worker identity is unavailable",

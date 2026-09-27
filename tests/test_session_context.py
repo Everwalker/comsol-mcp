@@ -22,6 +22,7 @@ from comsol_mcp._session_context import (
     SessionRuntimeConfig,
     SessionRuntimeContext,
     SessionRuntimeRegistry,
+    SessionBindingBusy,
     SessionSchedulerClosed,
     capture_session_callback,
     current_session_context,
@@ -500,6 +501,67 @@ def test_scheduler_quiescence_is_exact_to_the_worker_session_binding():
         assert scheduler.quiescence_snapshot(second)["status"] == "QUIESCENT"
     finally:
         release.set()
+        scheduler.close()
+
+
+def test_session_binding_retirement_is_atomic_quiescence_fence_and_can_release_before_dispatch():
+    context = _context("binding-retirement", peer=None)
+    scheduler = SessionEndpointScheduler()
+    started = threading.Event()
+    release = threading.Event()
+
+    def block():
+        started.set()
+        assert release.wait(2)
+
+    try:
+        future = scheduler.submit(context, block)
+        assert started.wait(1)
+        with pytest.raises(SessionBindingBusy, match="accepted work"):
+            scheduler.fence_session_binding(context)
+        release.set()
+        future.result(timeout=2)
+
+        key = scheduler.fence_session_binding(context)
+        assert key == context.worker_binding_key
+        with pytest.raises(SessionSchedulerClosed, match="binding is fenced"):
+            scheduler.submit(context, lambda: None)
+
+        scheduler.release_session_binding(context)
+        assert scheduler.submit(context, lambda: "reopened").result(timeout=2) == "reopened"
+    finally:
+        release.set()
+        scheduler.close()
+
+
+def test_uncertain_binding_soft_close_blocks_new_submits_but_drains_accepted_work():
+    scheduler = SessionEndpointScheduler()
+    context = _context("uncertain-soft-close")
+    first_entered, release_first = threading.Event(), threading.Event()
+    second_ran = threading.Event()
+    try:
+        def first_task():
+            first_entered.set()
+            assert release_first.wait(3)
+            return "first-finished"
+
+        first = scheduler.submit(context, first_task)
+        assert first_entered.wait(1)
+        second = scheduler.submit(context, lambda: second_ran.set() or "second-finished")
+        scheduler.close_session_binding_admission(context)
+
+        with pytest.raises(SessionSchedulerClosed, match="binding is fenced"):
+            scheduler.submit(context, lambda: pytest.fail("new work reached an uncertain Worker"))
+
+        release_first.set()
+        assert first.result(timeout=2) == "first-finished"
+        assert second.result(timeout=2) == "second-finished"
+        assert second_ran.is_set()
+        scheduler.release_session_binding(context)
+        with pytest.raises(SessionSchedulerClosed, match="binding is fenced"):
+            scheduler.submit(context, lambda: None)
+    finally:
+        release_first.set()
         scheduler.close()
 
 
