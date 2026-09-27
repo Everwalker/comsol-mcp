@@ -640,7 +640,7 @@
       ],
       "original_delivery": "稳定胶形及全流程独立路线，质量/参考态/应力历史。",
       "source_row": "| W24 胶形/固化领域验收包 | G5 | W20, W21, W18 | T047, T058 | 稳定胶形及全流程独立路线，质量/参考态/应力历史。 |",
-      "status": "IN_PROGRESS_SCIENCE_ADMISSION_REPAIR",
+      "status": "IN_PROGRESS",
       "implementation_paths": [
         "docs/full_project_execution/W24_MAIN_MODEL_PLAN.md",
         "docs/full_project_execution/w24/W24_CURE_FIXTURE_PROPOSAL.md",
@@ -662,7 +662,14 @@
         "tests/test_w24_static_shape_managed.py",
         "tools/java/W24StaticShapeHistoryCapture.java",
         "tools/w24_static_shape_capture.py",
-        "tests/test_w24_static_shape_capture.py"
+        "tests/test_w24_static_shape_capture.py",
+        "tools/java/W24StaticShapeStudyRun.java",
+        "tools/run_native_w24_static_shape_science.py",
+        "tools/w24_static_shape_pair_comparison.py",
+        "tools/w24_static_shape_sensitivity.py",
+        "tests/test_run_native_w24_static_shape_science.py",
+        "tests/test_w24_static_shape_pair_comparison.py",
+        "tests/test_w24_static_shape_sensitivity.py"
       ],
       "evidence": [
         "docs/full_project_execution/w24/evidence/setup_only_candidate_20260927T0117Z/offline_checks.json",
@@ -686,7 +693,8 @@
         "docs/full_project_execution/w24/STATIC_SHAPE_OFFLINE_CHECKPOINT.json",
         "docs/full_project_execution/w24/SHAPE_METRICS_CHECKPOINT.json",
         "docs/full_project_execution/w24/MANAGED_SHAPE_CHECKPOINT.json",
-        "docs/full_project_execution/w24/HISTORY_CAPTURE_CHECKPOINT.json"
+        "docs/full_project_execution/w24/HISTORY_CAPTURE_CHECKPOINT.json",
+        "docs/full_project_execution/w24/SCIENCE_ADMISSION_CHECKPOINT.json"
       ],
       "blockers": [
         "The W24 0841Z setup-only attempt failed before engine/Worker birth at project.inspect; preserve its FAIL_OR_INCOMPLETE result and do not replay the stale candidate.",
@@ -696,7 +704,7 @@
         "Windows COMSOL 6.3 remains required and unassessed; only macOS COMSOL 6.3 arm64/x86_64 are USER_REQUESTED_SKIP.",
         "Stress component identity still requires complete native Equation View descriptions/units and both mechanics benchmarks; values or names alone are insufficient."
       ],
-      "note": "W24 PARTIAL. Full-Rbox history capture 12 synthetic tests/Java compile PASS; managed setup 20 software tests PASS. Native stable shape, sensitivity and cure/scientific acceptance remain NOT_RUN. Next managed solve/capture orchestration and sensitivity parameterization with separately reviewed native candidate.",
+      "note": "W24 PARTIAL: baseline admission/revision software78 isolated PASS, native/science NOT_RUN. Sensitivity14-solve matrix is plan-only; implement variants and retain full gel/UV/reference-state/viscoelastic scope.",
       "execution_notes": [
         "0330Z native attempt: COMSOL 6.4.0.293 server PID 90771/port 63979 and one Worker PID 90848/port 63988; Python 3.14 lacked mcp during production ControlDaemon registry construction, before model setup. 0 solve submissions; exact cleanup and global quiescence verified.",
         "0346Z offline candidate adds exact Python interpreter/distribution inventory and a pre-birth production no-engine gate. Actual pip check passed; collect_legacy_registry and ControlDaemon construction/close passed; JDK11 compile and 37 focused tests passed. Software-only; no native result.",

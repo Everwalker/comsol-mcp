@@ -401,6 +401,21 @@ def analyze_native_capture(
                         "profile_point_count": raw.profile_point_count,
                         "wall_point_count": raw.wall_point_count},
         "time_grid": time_grid,
+        # Carry the native parameter values/units through the analysis
+        # boundary. The v1 capture decoder is explicitly baseline-only; this
+        # metadata prevents later sensitivity captures from being silently
+        # interpreted with the 8 um grid/resolution contract.
+        "parameters_and_units": {
+            name: {"value_si": float(parameters[name]),
+                  "unit": str(capture_result["parameters_and_units"][name]["unit"])}
+            for name in parameters
+        },
+        "capture_grid_protocol": {
+            "schema": "W24SHAP1/v1",
+            "epsilon_m": parameters["epsPF"],
+            "maximum_spacing_m": parameters["epsPF"] / 4.0,
+            "grid_policy": "baseline-only fixed spacing; sensitivity variants require a versioned variable-grid decoder",
+        },
         "analytic_initial_glue_volume_m3": capture_result.get("analytic_initial_glue_volume_m3"),
         "paired_flat_analytic_volume_m3": capture_result.get("paired_flat_analytic_volume_m3"),
         "shape_history_gate": shape_gate,

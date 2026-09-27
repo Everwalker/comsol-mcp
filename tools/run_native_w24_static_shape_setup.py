@@ -508,6 +508,11 @@ class StaticShapeManagedRunner:
             raise CampaignError("managed shape model_load returned a different Worker session")
         persisted = self._verify_persisted_binding(loaded)
         loaded, reopened_identity = self._inspect(loaded)
+        # The trusted Java readback returns a new managed revision even when
+        # its Java body only inspects the model. Preserve the revision to which
+        # the full configuration/getSize evidence actually applied instead of
+        # later pretending that evidence was produced at the returned revision.
+        reopened_readback_binding = loaded.as_record()
         loaded, reopened_response, reopened_raw = self._java_action(
             loaded, source_role="readback", entrypoint="W24StaticShapeReadback#run",
             arguments={"action": "readback"})
@@ -527,6 +532,10 @@ class StaticShapeManagedRunner:
             "project_id": self.project_id,
             "project_workspace": str(self.workspace),
             "case_id": case_id,
+            "source_sha256": {
+                "fixture": _sha256(self.source_paths["fixture"]),
+                "readback": _sha256(self.source_paths["readback"]),
+            },
             "parent_model_binding": parent.as_record(),
             "new_model_binding": binding.as_record(),
             "native_build_readback": dict(build),
@@ -535,6 +544,7 @@ class StaticShapeManagedRunner:
             "save_readback": dict(save),
             "project_artifact": {"path": str(target), "size_bytes": target.stat().st_size,
                                  "sha256": artifact_hash},
+            "reopened_configuration_readback_binding": reopened_readback_binding,
             "reopened_model_binding": loaded.as_record(),
             "persisted_reopened_project_binding": dict(persisted),
             "reopened_model_identity": reopened_identity,
