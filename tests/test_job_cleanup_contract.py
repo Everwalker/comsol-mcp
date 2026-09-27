@@ -11,6 +11,32 @@ class Adapter:
         return {"model_tag": tag, "server_instance_id": "server", "fingerprint": "fp", "external_event_counter": 0}
 
 
+class Model:
+    class java:
+        @staticmethod
+        def tag():
+            return "model-a"
+
+        @staticmethod
+        def getFilePath():
+            return ""
+
+
+class WorkerClient:
+    def model(self, tag):
+        assert tag == "model-a"
+        return Model()
+
+
+class Worker:
+    def client(self):
+        return WorkerClient()
+
+    def operation_context(self, *_args, **_kwargs):
+        from contextlib import nullcontext
+        return nullcontext()
+
+
 def _cleanup_request(operation, job_ids, *, project_id="project-a", policy=None):
     payload = {"job_ids": job_ids}
     if policy is not None:
@@ -24,19 +50,43 @@ def _cleanup_request(operation, job_ids, *, project_id="project-a", policy=None)
 
 def test_cleanup_compacts_only_selected_terminal_job_view_and_preserves_audit_and_results(tmp_path):
     callback_calls = []
-    service = ExecutionService(SessionLedger("session", "server"), Adapter(), project_root=tmp_path)
-    model_ref = service.bind_model("m")["execution"]["model_ref"]
+    project_container = tmp_path / "projects"
+    project_container.mkdir()
+    service = ExecutionService(SessionLedger("session", "server"), Adapter(), project_root=project_container)
 
     def fail_once(args):
         callback_calls.append(dict(args))
         return {"success": False, "data": {"artifact_id": "official-output"},
                 "error": {"code": "SYNTHETIC_FAILURE", "message": "retained failure evidence", "safe_retry": False}}
 
-    daemon = ControlDaemon(tmp_path, service=service, registry={"set_parameters": fail_once})
+    daemon = ControlDaemon(tmp_path / "control", service=service, registry={"set_parameters": fail_once},
+                           worker=Worker(), project_root=project_container)
+    daemon.backend.worker_identity = {
+        "runtime_id": "cleanup-test-runtime", "worker_instance_id": "cleanup-test-worker",
+        "connection_epoch": 1, "server_instance_id": "server", "endpoint": "127.0.0.1:2036",
+    }
+    project = daemon.dispatch({
+        "operation": "project.create",
+        "arguments": {
+            "label": "cleanup-project", "workspace": "cleanup-project",
+            "policy": {"permissions": ["inspect", "project_write", "compute"]},
+        },
+        "execution": {"request_id": "create-cleanup-project", "idempotency_key": "create-cleanup-project"},
+    })["data"]["project"]
+    project_id = project["project_id"]
+    adopted = daemon.dispatch({
+        "operation": "model.adopt", "arguments": {"server_model_tag": "model-a"},
+        "execution": {"project_id": project_id, "session_id": "session",
+                      "request_id": "adopt-cleanup-model", "idempotency_key": "adopt-cleanup-model"},
+    })
+    assert adopted["success"] is True
+    model_execution = adopted["execution"]
     request = {
         "operation": "set_parameters",
         "arguments": {"x": 1},
-        "execution": {"model_ref": model_ref, "expected_revision": 0, "idempotency_key": "same-operation", "request_id": "request-1", "project_id": "project-a"},
+        "execution": {"model_ref": model_execution["model_ref"], "expected_revision": model_execution["revision"],
+                      "session_id": model_execution["session_id"], "idempotency_key": "same-operation",
+                      "request_id": "request-1", "project_id": project_id},
     }
     try:
         failed = daemon.dispatch(request)
@@ -46,15 +96,17 @@ def test_cleanup_compacts_only_selected_terminal_job_view_and_preserves_audit_an
         daemon.store.add_event(job_id, "OriginalFailureEvidence", {"detail": "preserve this audit record"})
         daemon.store.persist_artifact("official-output", {"sha256": "artifact-hash", "path": "results/final.mph"})
         daemon.store.persist_checkpoint("checkpoint-output", {"sha256": "checkpoint-hash", "path": "checkpoints/model.mph"})
+        job_count_before_cleanup = len(daemon.store.list_jobs(offset=0, limit=100))
 
-        cleanup = daemon.dispatch(_cleanup_request("registry_call", [job_id], policy={"metadata_only": True}))
+        cleanup = daemon.dispatch(_cleanup_request("registry_call", [job_id], project_id=project_id,
+                                                   policy={"metadata_only": True}))
         assert cleanup["success"] is True
         assert cleanup["data"]["cleaned_job_ids"] == [job_id]
         assert cleanup["data"]["cleaned_count"] == 1
 
         job = daemon.store.job(job_id)
         assert job["status"] == "FAILED"
-        assert job["metadata"]["project_id"] == "project-a"
+        assert job["metadata"]["project_id"] == project_id
         assert job["metadata"]["cleanup"]["metadata_compacted"] is True
         assert job["result"] == failed
         events = daemon.store.events(job_id, offset=0, limit=100)
@@ -68,18 +120,18 @@ def test_cleanup_compacts_only_selected_terminal_job_view_and_preserves_audit_an
         retried = daemon.dispatch(request)
         assert retried == failed
         assert callback_calls == [{"x": 1}]
-        assert len(daemon.store.list_jobs(offset=0, limit=100)) == 1
+        assert len(daemon.store.list_jobs(offset=0, limit=100)) == job_count_before_cleanup
 
         # Cleanup is itself idempotent; it does not add a second audit event.
         event_count = len(events)
-        again = daemon.dispatch(_cleanup_request("operation_call", [job_id]))
+        again = daemon.dispatch(_cleanup_request("operation_call", [job_id], project_id=project_id))
         assert again["success"] is True
         assert again["data"]["cleaned_job_ids"] == []
         assert again["data"]["cleaned_count"] == 0
         assert len(daemon.store.events(job_id, offset=0, limit=100)) == event_count
         direct_again = daemon.dispatch({
             "operation": "job.cleanup", "arguments": {"job_ids": [job_id]},
-            "execution": {"project_id": "project-a"},
+            "execution": {"project_id": project_id},
         })
         assert direct_again["success"] is True
         assert direct_again["data"]["cleaned_count"] == 0

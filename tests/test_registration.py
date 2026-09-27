@@ -97,6 +97,20 @@ EXPECTED_TOOLS = [
     "stage_checkpoint_create",
     "stage.state_transfer",
     "stage_state_transfer",
+    # Current desktop and experiment gateway surface (added after the original
+    # 96-tool baseline); registration is kept exact so accidental removals are
+    # still detected.
+    "desktop_action",
+    "desktop_bind",
+    "desktop_capture",
+    "desktop_migrate_standalone",
+    "desktop_select_node",
+    "desktop_shell_execute",
+    "desktop_show_model",
+    "desktop_status",
+    "experiment_design",
+    "experiment_run",
+    "solver_solution_transfer",
 ]
 
 

@@ -410,6 +410,13 @@ def test_unknown_command_is_rejected_and_parallel_control_queries_remain_respons
     reflection = worker._request({"type": "reflection_selftest"}, timeout_s=1)
     assert reflection["result"]["duplicate_interface_tag"] == "resolved"
     assert reflection["result"]["numerical_allowed"] is True
+    assert reflection["result"]["selection_init_dimension"] == {
+        "valid_2": True,
+        "valid_3": True,
+        "oversized_rejected": True,
+        "negative_rejected": True,
+        "fractional_rejected": True,
+    }
     with ThreadPoolExecutor(max_workers=8) as executor:
         replies = list(executor.map(lambda _: worker.health(timeout_s=1), range(16)))
     assert all(reply["status"] == "HEALTHY" for reply in replies)
@@ -619,6 +626,19 @@ class TestWorkerAllowlist:
         assert "MeshSequence.stat() -> com.comsol.model.MeshStatistics" in source
         assert "9bdc47a9e320be57" in source
         assert "MeshSequence.isGeometry() -> boolean" in source
+
+    def test_w14_selection_init_is_javap_verified_and_allowlisted(self):
+        """The W14 selection initializer reaches the reviewed COMSOL API."""
+        methods = _allowlist_block("METHODS")
+        assert "init" in methods
+        source = WORKER_SOURCE.read_text(encoding="utf-8")
+        assert "GeomObjectSelection.init(int)" in source
+        assert "9bdc47a9e320be5721956336f44f5afa4cb06a20cfa887bc7d32d1a837483a67" in source
+        assert '"init".equals(method)' in source
+        assert "target instanceof GeomObjectSelection" in source
+        assert "long dimension = ((Number) value).longValue()" in source
+        assert "dimension != 2L && dimension != 3L" in source
+        assert "requireSelectionDimension(args.get(0))" in source
 
     def test_the_withheld_selection_accessors_stay_coupled_to_the_w14_table(self):
         """``objects``/``object`` are now allow-listed and removed from W14 unavailable.

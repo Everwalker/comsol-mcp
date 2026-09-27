@@ -631,7 +631,12 @@ class TestOpsAggregator:
         assert ops.effect_of("function.evaluate") == "EVALUATE"
         assert ops.effect_of("selection.query_spatial") == "EVALUATE"
         assert ops.effect_of("no.such") is None
-        assert set(ops.EFFECT_SOURCES.values()) == {"catalog"}
+        assert set(ops.EFFECT_SOURCES.values()) == {
+            "catalog", "explicit_fallback_table", "fail_closed_default",
+            "registered_observation_read_only_validation", "w21_native_execution",
+        }
+        assert ops.EFFECT_SOURCES["study.sweep_manage"] == "w21_native_execution"
+        assert ops.EFFECT_SOURCES["validate.solution"] == "registered_observation_read_only_validation"
 
     def test_isolation_requirement_is_all_non_read_operations(self):
         # Each published operation is isolated exactly when its effect is not a

@@ -13,10 +13,9 @@ Covers:
 """
 from __future__ import annotations
 
-import hashlib
-import json
 from pathlib import Path
 from typing import Any
+from types import SimpleNamespace
 import pytest
 
 from mcp.server.fastmcp import FastMCP
@@ -36,6 +35,8 @@ from comsol_mcp._g3_w20_validation import (
     ConvergenceStep,
 )
 from comsol_mcp._artifact_store import ArtifactStore
+from comsol_mcp._operation_store import OperationStore
+from comsol_mcp._observation_store import observation_context, register_observation
 
 
 class TestGatewayArgumentNormalization:
@@ -319,6 +320,35 @@ class TestModelSelectionAndRevision:
 class TestObservationRefValidation:
     """Tests ObservationRef verification, hash integrity, and scope tagging."""
 
+    @staticmethod
+    def _registered_observation(tmp_path, monkeypatch, model_tag="m1"):
+        worker = SimpleNamespace(project_root=tmp_path, client=lambda: None)
+        store = OperationStore(tmp_path / "operations.sqlite3")
+        producer, reused = store.begin(
+            request_id="sample-request", idempotency_key="sample-key", request_hash="sample-hash",
+            operation="result.evaluate",
+            metadata={"operation": "result.evaluate", "arguments": {}, "execution": {}},
+        )
+        assert reused is False
+        store.finish(producer["operation_id"], status="SUCCEEDED", result={"success": True, "data": {}})
+        model_ref = {
+            "schema_version": 1, "session_id": "session-test", "server_instance_id": "worker-test",
+            "model_tag": model_tag, "generation": 1,
+        }
+        monkeypatch.setattr(
+            "comsol_mcp._observation_store.solution_identity",
+            lambda _worker, tag, solution: {"model_tag": tag, "solution": solution, "version": "fixture"},
+        )
+        field_sample = {
+            "status": {"ok": True}, "solution": "sol1", "dataset": "dset1",
+            "values": [312.505, 325.01, 337.495, 80.05],
+            "field_array": {"axes": ["expression", "outer", "inner", "point"]},
+            "expressions": ["T", "HeatFlow"],
+        }
+        with observation_context(store, model_ref, 3, producer["operation_id"]):
+            observation_ref = register_observation(worker, model_tag, field_sample)
+        return worker, store, model_ref, observation_ref
+
     def test_caller_data_alone_yields_external_data_only(self):
         """Caller-supplied observations cannot claim model verification."""
         worker = type("MockWorker", (), {"client": lambda self: None})()
@@ -340,75 +370,84 @@ class TestObservationRefValidation:
         assert res["model_validated"] is False
         assert res["observation_origin"] == "CALLER_SUPPLIED"
 
-    def test_valid_observation_ref_yields_model_validated(self):
-        """Legitimate ObservationRef with matching model and hash yields MODEL_VALIDATED."""
-        worker = type("MockWorker", (), {"client": lambda self: None})()
-        obs = {
-            "T_0.0125": 312.505,
-            "T_0.025": 325.01,
-            "T_0.0375": 337.495,
-            "HeatFlow": 80.05,
-        }
-        obs_hash = hashlib.sha256(json.dumps(obs, sort_keys=True).encode("utf-8")).hexdigest()
+    def test_registered_observation_yields_model_validated(self, tmp_path, monkeypatch):
+        """Only a completed producer and backend-registered hash yields MODEL_VALIDATED."""
+        worker, store, model_ref, observation_ref = self._registered_observation(tmp_path, monkeypatch)
+        try:
+            with observation_context(store, model_ref, 3, "validation-request"):
+                res = validate_solution(worker, "m1", {
+                    "solution": {"dataset": "dset1"},
+                    "criteria": {"range": [0.0, 400.0]},
+                    "observation_ref": observation_ref,
+                })
+            assert res["status"] == STATUS_PASS, (res.get("scope"), res.get("checks"), res.get("message"))
+            assert res["numerical_verification_status"] == STATUS_PASS
+            assert res["scope"] == "MODEL_VALIDATED"
+            assert res["model_validated"] is True
+            assert res["observation_origin"] == "REGISTERED_W17"
+        finally:
+            store.close()
+
+    def test_caller_constructed_observation_ref_cannot_claim_model_validated(self, tmp_path):
+        """Legacy caller-built objects are not substitutes for registered refs."""
+        worker = SimpleNamespace(project_root=tmp_path, client=lambda: None)
+        store = OperationStore(tmp_path / "operations.sqlite3")
+        model_ref = {"schema_version": 1, "session_id": "s", "server_instance_id": "w", "model_tag": "m1", "generation": 1}
         obs_ref = ObservationRef(
             observation_id="obs-1",
             model_tag="m1",
             dataset="dset1",
-            observations=obs,
-            producer_operation_id="op-sample-1",
-            sha256=obs_hash,
+            observations={"T_0.0125": 312.505},
+            producer_operation_id="caller-invented-producer",
+            sha256="caller-invented-hash",
             scope="MODEL_VALIDATED",
         )
+        try:
+            with observation_context(store, model_ref, 3, "validation-request"):
+                res = validate_solution(worker, "m1", {
+                    "solution": {"dataset": "dset1"},
+                    "criteria": {"range": [0.0, 400.0]},
+                    "observation_ref": obs_ref,
+                })
+            assert res["status"] == STATUS_FAIL
+            assert res["model_validated"] is False
+            assert res["scope"] == "UNREGISTERED_OBSERVATION"
+        finally:
+            store.close()
 
-        res = validate_solution(worker, "m1", {
-            "solution": {"dataset": "dset1"},
-            "criteria": {"oracle": "steady_state_copper_block"},
-            "observation_ref": obs_ref,
-        })
-        assert res["status"] == STATUS_PASS
-        assert res["numerical_verification_status"] == STATUS_PASS
-        assert res["scope"] == "MODEL_VALIDATED"
-        assert res["model_validated"] is True
-        assert res["observation_origin"] == "OBSERVATION_REF"
+    def test_cross_model_registered_observation_ref_rejected(self, tmp_path, monkeypatch):
+        """Persisted observation binding cannot be reused for another model."""
+        worker, store, model_ref, observation_ref = self._registered_observation(tmp_path, monkeypatch)
+        other_ref = {**model_ref, "model_tag": "other-model", "generation": 1}
+        try:
+            with observation_context(store, other_ref, 3, "other-model-validation"):
+                res = validate_solution(worker, "other-model", {
+                    "solution": {"dataset": "dset1"},
+                    "criteria": {"range": [0.0, 400.0]},
+                    "observation_ref": observation_ref,
+                })
+            assert res["status"] == STATUS_FAIL
+            assert res["model_validated"] is False
+            assert res["scope"] == "CROSS_MODEL_REFUSED"
+        finally:
+            store.close()
 
-    def test_cross_model_observation_ref_rejected(self):
-        """ObservationRef belonging to a different model is rejected."""
-        worker = type("MockWorker", (), {"client": lambda self: None})()
-        obs = {"T_0.025": 325.0}
-        obs_ref = ObservationRef(
-            observation_id="obs-1",
-            model_tag="other_model",
-            dataset="dset1",
-            observations=obs,
-            producer_operation_id="op-1",
-        )
-        res = validate_solution(worker, "m1", {
-            "solution": {"dataset": "dset1"},
-            "criteria": {"oracle": "steady_state_copper_block"},
-            "observation_ref": obs_ref,
-        })
-        assert res["status"] == STATUS_FAIL
-        assert "Cross-model ObservationRef rejected" in res["message"]
-
-    def test_tampered_observation_ref_hash_rejected(self):
-        """ObservationRef with altered observations failing sha256 check is rejected."""
-        worker = type("MockWorker", (), {"client": lambda self: None})()
-        obs = {"T_0.025": 325.0}
-        obs_ref = ObservationRef(
-            observation_id="obs-1",
-            model_tag="m1",
-            dataset="dset1",
-            observations=obs,
-            producer_operation_id="op-1",
-            sha256="fake_corrupted_hash",
-        )
-        res = validate_solution(worker, "m1", {
-            "solution": {"dataset": "dset1"},
-            "criteria": {"oracle": "steady_state_copper_block"},
-            "observation_ref": obs_ref,
-        })
-        assert res["status"] == STATUS_FAIL
-        assert "sha256 mismatch" in res["message"]
+    def test_tampered_registered_observation_hash_rejected(self, tmp_path, monkeypatch):
+        """A caller cannot change the digest in the backend-issued reference."""
+        worker, store, model_ref, observation_ref = self._registered_observation(tmp_path, monkeypatch)
+        try:
+            altered_ref = {**observation_ref, "sha256": "0" * 64}
+            with observation_context(store, model_ref, 3, "validation-request"):
+                res = validate_solution(worker, "m1", {
+                    "solution": {"dataset": "dset1"},
+                    "criteria": {"range": [300.0, 350.0]},
+                    "observation_ref": altered_ref,
+                })
+            assert res["status"] == STATUS_FAIL
+            assert res["model_validated"] is False
+            assert res["scope"] == "INTEGRITY_COMPROMISED"
+        finally:
+            store.close()
 
     def test_transient_sine_diffusion_oracle_registered(self):
         """C10: transient_sine_diffusion oracle is properly registered and assesses PASS."""

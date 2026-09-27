@@ -4,6 +4,7 @@ from contextlib import nullcontext
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
+from pathlib import Path
 from threading import Barrier
 
 import pytest
@@ -37,27 +38,79 @@ class _SnapshotAdapter:
 class _Worker:
     generation = 1
 
+    class _Model:
+        class java:
+            @staticmethod
+            def tag():
+                return "m1"
+
+            @staticmethod
+            def getFilePath():
+                return ""
+
+    class _Client:
+        def model(self, tag):
+            assert tag == "m1"
+            return _Worker._Model()
+
+    def client(self):
+        return self._Client()
+
     def operation_context(self, *_args, **_kwargs):
         return nullcontext()
 
 
 def _make_daemon(tmp_path, *, with_model=False):
-    project_root = tmp_path / "project"
-    (project_root / "inputs").mkdir(parents=True)
+    project_container = tmp_path / "projects"
+    project_container.mkdir(parents=True)
     ledger = SessionLedger("session-test", "server-test")
-    service = ExecutionService(ledger, _SnapshotAdapter(), project_root=project_root)
+    service = ExecutionService(ledger, _SnapshotAdapter(), project_root=project_container)
     worker = _Worker() if with_model else None
     daemon = ControlDaemon(
         tmp_path / "control",
         service=service,
         registry={},
         worker=worker,
-        project_root=project_root,
+        project_root=project_container,
     )
     daemon.backend.endpoint_key = "127.0.0.1:2036"
+    if with_model:
+        daemon.backend.worker_identity = {
+            "runtime_id": "artifact-test-runtime",
+            "worker_instance_id": "artifact-test-worker",
+            "connection_epoch": 1,
+            "server_instance_id": "server-test",
+            "endpoint": "127.0.0.1:2036",
+        }
+    created = daemon.dispatch({
+        "operation": "project.create",
+        "arguments": {
+            "label": "artifact-test-project",
+            "workspace": "artifact-test-project",
+            "policy": {"permissions": ["inspect", "project_write", "compute"]},
+        },
+        "execution": {"request_id": "create-artifact-test-project", "idempotency_key": "create-artifact-test-project"},
+    })
+    assert created["success"] is True
+    project = created["data"]["project"]
+    project_root = Path(project["workspace"])
+    (project_root / "inputs").mkdir(parents=True)
+    daemon._test_project_id = project["project_id"]
+    daemon._test_project_container = project_container
     execution = None
     if with_model:
-        execution = service.bind_model("m1")["execution"]
+        adopted = daemon.dispatch({
+            "operation": "model.adopt",
+            "arguments": {"server_model_tag": "m1"},
+            "execution": {
+                "project_id": daemon._test_project_id,
+                "session_id": "session-test",
+                "request_id": "adopt-artifact-test-model",
+                "idempotency_key": "adopt-artifact-test-model",
+            },
+        })
+        assert adopted["success"] is True
+        execution = adopted["execution"]
     return daemon, project_root, execution
 
 
@@ -65,14 +118,14 @@ def _register(daemon, *, path="inputs/shape.step", key="artifact-register-1", re
     return daemon.dispatch({
         "operation": "artifact.register",
         "arguments": {
-            "project_id": "project-test",
+            "project_id": daemon._test_project_id,
             "idempotency_key": key,
             "request_id": request_id,
             "path": path,
             "role": "geometry_source",
             "classification": "internal",
         },
-        "execution": {"project_id": "project-test", "idempotency_key": key, "request_id": request_id},
+        "execution": {"project_id": daemon._test_project_id, "idempotency_key": key, "request_id": request_id},
     })
 
 
@@ -112,14 +165,14 @@ def test_artifact_register_is_durable_and_idempotent_across_store_reopen(tmp_pat
     try:
         record = reopened.get_metadata("artifacts", artifact_id)
         assert record["schema_version"] == 2
-        assert record["project_id"] == "project-test"
+        assert record["project_id"] == daemon._test_project_id
         assert record["path"] == f"g2_artifacts/registered/{artifact_id}.step"
         assert record["provenance"]["source_project_relative_path"] == "inputs/shape.step"
         resolved = resolve_registered_artifact(
             project_root,
             reopened,
             artifact_id,
-            project_id="project-test",
+            project_id=daemon._test_project_id,
             current_host_identity=local_artifact_host_identity(),
             current_engine_host_identity=local_engine_host_identity("127.0.0.1:2036"),
             current_server_instance_id="worker-restarted-server-instance",
@@ -192,11 +245,11 @@ def test_artifact_register_uses_canonical_nested_schema_and_outer_idempotency(tm
                     "classification": "internal",
                 },
             },
-            "execution": {"project_id": "project-test", "idempotency_key": key, "request_id": request_id},
+            "execution": {"project_id": daemon._test_project_id, "idempotency_key": key, "request_id": request_id},
         })
         assert response["success"] is True
         assert response["data"]["artifact_id"] == hashlib.sha256(source.read_bytes()).hexdigest()
-        assert daemon.store.get_metadata("artifacts", response["data"]["artifact_id"])["project_id"] == "project-test"
+        assert daemon.store.get_metadata("artifacts", response["data"]["artifact_id"])["project_id"] == daemon._test_project_id
 
         malformed = daemon.dispatch({
             "operation": outer_operation,
@@ -204,7 +257,7 @@ def test_artifact_register_uses_canonical_nested_schema_and_outer_idempotency(tm
                 "operation_id": "artifact.register",
                 "arguments": {"path": "inputs/nested.step", "classification": "internal"},
             },
-            "execution": {"project_id": "project-test", "idempotency_key": key + "-invalid",
+            "execution": {"project_id": daemon._test_project_id, "idempotency_key": key + "-invalid",
                           "request_id": request_id + "-invalid"},
         })
         assert malformed["success"] is False
@@ -342,7 +395,7 @@ def test_artifact_resolver_rejects_project_host_path_and_content_tampering(tmp_p
         with pytest.raises(ExecutionContractError) as wrong_host:
             resolve_registered_artifact(**{
                 **base,
-                "project_id": "project-test",
+                "project_id": daemon._test_project_id,
                 "current_engine_host_identity": "another-engine-host",
             })
         assert wrong_host.value.code == "ARTIFACT_SCOPE_MISMATCH"
@@ -352,13 +405,13 @@ def test_artifact_resolver_rejects_project_host_path_and_content_tampering(tmp_p
         tampered["path"] = "inputs/shape.step"
         _inject_artifact_metadata_for_test(daemon.store, artifact_id, tampered)
         with pytest.raises(ExecutionContractError):
-            resolve_registered_artifact(**base, project_id="project-test")
+            resolve_registered_artifact(**base, project_id=daemon._test_project_id)
 
         _inject_artifact_metadata_for_test(daemon.store, artifact_id, record)
         managed = project_root / record["path"]
         managed.write_bytes(b"changed content")
         with pytest.raises(ExecutionContractError) as changed:
-            resolve_registered_artifact(**base, project_id="project-test")
+            resolve_registered_artifact(**base, project_id=daemon._test_project_id)
         assert changed.value.code in {"ARTIFACT_HASH_MISMATCH", "ARTIFACT_IDENTITY_MISMATCH"}
     finally:
         daemon.close()
@@ -381,7 +434,7 @@ def test_artifact_resolver_rejects_managed_path_symlink_escape(tmp_path):
                 project_root,
                 daemon.store,
                 record["artifact_id"],
-                project_id="project-test",
+                project_id=daemon._test_project_id,
                 current_host_identity=local_artifact_host_identity(),
                 current_engine_host_identity=local_engine_host_identity("127.0.0.1:2036"),
                 current_server_instance_id="new-worker-epoch",
@@ -402,6 +455,8 @@ def test_geometry_import_receives_only_resolved_managed_path_and_returns_digest(
         assert registered["success"] is True
         artifact_id = registered["data"]["artifact_id"]
         home = daemon.home
+        project_id = daemon._test_project_id
+        project_container = daemon._test_project_container
         daemon.close()
         daemon = None
 
@@ -409,10 +464,30 @@ def test_geometry_import_receives_only_resolved_managed_path_and_returns_digest(
         # artifact registration is project/host scoped, so it survives this
         # process restart without inheriting the previous server_instance_id.
         service = ExecutionService(SessionLedger("session-restarted", "server-restarted"),
-                                   _SnapshotAdapter("server-restarted"), project_root=project_root)
-        daemon = ControlDaemon(home, service=service, registry={}, worker=_Worker(), project_root=project_root)
+                                   _SnapshotAdapter("server-restarted"), project_root=project_container)
+        daemon = ControlDaemon(home, service=service, registry={}, worker=_Worker(), project_root=project_container)
+        daemon._test_project_id = project_id
+        daemon._test_project_container = project_container
         daemon.backend.endpoint_key = "127.0.0.1:2036"
-        model_execution = service.bind_model("m1")["execution"]
+        daemon.backend.worker_identity = {
+            "runtime_id": "artifact-test-runtime-restarted",
+            "worker_instance_id": "artifact-test-worker-restarted",
+            "connection_epoch": 2,
+            "server_instance_id": "server-restarted",
+            "endpoint": "127.0.0.1:2036",
+        }
+        adopted = daemon.dispatch({
+            "operation": "model.adopt",
+            "arguments": {"server_model_tag": "m1"},
+            "execution": {
+                "project_id": project_id,
+                "session_id": "session-restarted",
+                "request_id": "adopt-restarted-artifact-model",
+                "idempotency_key": "adopt-restarted-artifact-model",
+            },
+        })
+        assert adopted["success"] is True
+        model_execution = adopted["execution"]
         observed = []
 
         def fake_geometry_import(_worker, _model_tag, args):
@@ -430,7 +505,7 @@ def test_geometry_import_receives_only_resolved_managed_path_and_returns_digest(
         monkeypatch.setattr(_g3_ops, "REQUIRES_ISOLATION", frozenset())
         bound = model_execution["model_ref"]
         nested_execution = {
-            "project_id": "project-test",
+            "project_id": daemon._test_project_id,
             "session_id": model_execution["session_id"],
             "model_ref": bound,
             "expected_revision": model_execution["revision"],
@@ -467,7 +542,7 @@ def test_geometry_import_receives_only_resolved_managed_path_and_returns_digest(
                             "request_id": "geometry-import-direct-request"}
         direct_arguments = {
             **operation_args,
-            "project_id": "project-test",
+            "project_id": daemon._test_project_id,
             "session_id": direct_execution["session_id"],
             "model_ref": direct_execution["model_ref"],
             "expected_revision": current_revision,
@@ -500,7 +575,7 @@ def test_geometry_import_refuses_nonlocal_engine_before_domain_dispatch(tmp_path
                 "tag": "import1", "artifact_id": registered["data"]["artifact_id"],
             }},
             "execution": {
-                "project_id": "project-test",
+                "project_id": daemon._test_project_id,
                 "session_id": model_execution["session_id"],
                 "model_ref": model_execution["model_ref"],
                 "expected_revision": model_execution["revision"],

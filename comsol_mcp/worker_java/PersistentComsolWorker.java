@@ -2,6 +2,7 @@ package comsol_mcp.worker_java;
 
 import com.sun.security.auth.module.NTSystem;
 import com.comsol.model.Model;
+import com.comsol.model.GeomObjectSelection;
 import com.comsol.model.ModelParam;
 import com.comsol.model.NumericalFeature;
 import com.comsol.model.ResultParam;
@@ -94,6 +95,10 @@ public final class PersistentComsolWorker {
       //   GeomObjectSelection.object(int) -> int  (single entity index)
       //   ModelNode.func() -> com.comsol.model.FunctionFeatureList
       "stat", "isGeometry", "objects", "object", "func", "table", "export",
+      // G3 W14 selection initialization: GeomObjectSelection.init(int) is
+      // declared by the installed COMSOL 6.4 API; verified with javap against
+      // com.comsol.api_1.0.0.jar (sha256 9bdc47a9e320be5721956336f44f5afa4cb06a20cfa887bc7d32d1a837483a67).
+      "init",
       // G3 sampling: minimal API methods for Interp result extraction
       // (NumericalFeature.setInterpolationCoordinates, getCoordinates, getNData).
       // getCoordinatesShape is a Worker adapter: it calls the native getter but
@@ -609,6 +614,16 @@ public final class PersistentComsolWorker {
       if (!args.isEmpty()) throw new IllegalArgumentException("getFileResourceTags takes no arguments");
       return getFileResourceTags(target);
     }
+    if ("init".equals(method)) {
+      // This narrowly enables the exact W14 API call. Do not expose another
+      // object's unrelated init overload through the name-based dispatcher.
+      if (!(target instanceof GeomObjectSelection)) throw new SecurityException("METHOD_REJECTED");
+      if (args.size() != 1) {
+        throw new IllegalArgumentException("GeomObjectSelection.init requires one integer dimension");
+      }
+      ((GeomObjectSelection) target).init(requireSelectionDimension(args.get(0)));
+      return null;
+    }
     // Only the model's typed ModelParam.evaluateComplex(String) path may
     // classify the one observed interpolation-range error as a completed
     // sample failure. ResultParam, overloaded calls, other tags, transport,
@@ -949,9 +964,35 @@ public final class PersistentComsolWorker {
     for (Class<?> parameter : method.getParameterTypes()) signature.append(parameter.getName()).append(';');
     return signature.append(')').toString();
   }
+  private static int requireSelectionDimension(Object value) {
+    if (!(value instanceof Long || value instanceof Integer)) {
+      throw new IllegalArgumentException("GeomObjectSelection.init requires one integer dimension");
+    }
+    long dimension = ((Number) value).longValue();
+    if (dimension != 2L && dimension != 3L) {
+      throw new IllegalArgumentException("GeomObjectSelection.init dimension must be 2 or 3");
+    }
+    return (int) dimension;
+  }
+  private Map<String, Object> selectionInitDimensionSelftest() {
+    return map("valid_2", requireSelectionDimension(Long.valueOf(2L)) == 2,
+        "valid_3", requireSelectionDimension(Integer.valueOf(3)) == 3,
+        "oversized_rejected", rejectsSelectionDimension(Long.valueOf(4294967298L)),
+        "negative_rejected", rejectsSelectionDimension(Long.valueOf(-1L)),
+        "fractional_rejected", rejectsSelectionDimension(Double.valueOf(2.0)));
+  }
+  private static boolean rejectsSelectionDimension(Object value) {
+    try {
+      requireSelectionDimension(value);
+      return false;
+    } catch (IllegalArgumentException expected) {
+      return true;
+    }
+  }
   private Object reflectionSelftest() throws Exception {
     return map("duplicate_interface_tag", invoke(new DuplicateTagFixture(), DuplicateTagFixture.class, "tag", Collections.emptyList()),
-        "numerical_allowed", METHODS.contains("numerical"));
+        "numerical_allowed", METHODS.contains("numerical"),
+        "selection_init_dimension", selectionInitDimensionSelftest());
   }
   /**
    * C05: prove the argument-marshalling path for a varargs licence query without

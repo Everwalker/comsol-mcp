@@ -1,0 +1,110 @@
+{
+  "environment": {
+    "javac": "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home/bin/javac",
+    "jdk": "Amazon Corretto 11.0.31",
+    "pytest_version": "9.1.1",
+    "python": "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python",
+    "python_version": "3.12.13"
+  },
+  "files": {
+    "comsol_mcp/worker_java/PersistentComsolWorker.java": "82061282ba9413f1f32f2645a9407c12729ab3e84c4e77c989b88169c132d681",
+    "tests/test_artifact_registration_import.py": "a97d3df4320386b1c81bf345662387dc5792e37399198580ca926a4073d35911",
+    "tests/test_g3_common.py": "50449983ebd98991080f5d174ef7ffc3e91644f2e413703b24da14fb7b7ecd71",
+    "tests/test_java_worker.py": "0dff762075aa1731a765a6a979cb955a78185115851f56f51bf4dabcbc03ca49",
+    "tests/test_job_cleanup_contract.py": "95cbf404912370355501ceb988bccebc9df0f3ed29059b0891bd79133a5794ef",
+    "tests/test_r01_fixes.py": "faf4d6244cb4ca1263817658edbdfbb905a0dc097af85f4a8c6639b463911653",
+    "tests/test_registration.py": "93ce5b2b85b56df3f9ace7ea373a8144b8fbddb3bd1706504435e305abd93944"
+  },
+  "full_suite_before_dimension_guard_review_fix": {
+    "classification": [
+      "11 errors were sandbox loopback-bind denials; an authorized focused run below passed.",
+      "2 failures are in an untracked W23 v2 in-progress plan test file and are not part of this seven-file repair.",
+      "Other remaining failures require fixture migration or AppleDouble evidence-path handling; no acceptance is inferred."
+    ],
+    "command": "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q -p no:cacheprovider --junitxml=/private/tmp/f04_full_offline_20260927T0930Z.xml",
+    "counts": {
+      "errors": 11,
+      "failed": 19,
+      "passed": 2760,
+      "skipped": 9,
+      "tests": 2799
+    },
+    "duration_seconds": 327.14,
+    "exit_code": 1,
+    "junit": {
+      "path": "/private/tmp/f04_full_offline_20260927T0930Z.xml",
+      "sha256": "71b7f2a78711e9b3eae5233ebc7d51c65060cf8cb1179d6389a46b8fb63356b7"
+    },
+    "log": {
+      "path": "/private/tmp/f04_full_offline_20260927T0930Z.log",
+      "sha256": "4c255e269c617660d35e0b03029cc76617c5f75c33845d0a83b08efc9bd0bf77"
+    },
+    "skipped_scope": {
+      "windows_only": 3,
+      "opt_in_loopback_fixture": 1,
+      "missing_private_phase1_proposals": 5
+    }
+  },
+  "kind": "F04 offline regression repair checkpoint",
+  "known_remaining_full_suite_failures": "See linked full JUnit and log; this receipt preserves their actual failed status.",
+  "native_acceptance": "NOT_RUN",
+  "post_fix_compile": {
+    "class_output": "/private/tmp/f04-worker-dimension-compile-5tft5pai",
+    "classpath_sha256": "ef9ccdd4b236aa56465e155860ed88465c89f63f86982898cc7b15f188ad0574",
+    "jar_content_sha256": "c942b5e0fb93525bbd109028390bf15d27c1f702677149bca1b9f47aba7932b3",
+    "jar_count": 25,
+    "javac_returncode": 0,
+    "source_sha256": "82061282ba9413f1f32f2645a9407c12729ab3e84c4e77c989b88169c132d681"
+  },
+  "post_fix_loopback_subset": {
+    "command": "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q -p no:cacheprovider --junitxml=/private/tmp/offline-worker-loopback-20260927-v3.xml tests/test_g3_c05_license_marshalling.py tests/test_java_worker.py tests/test_g3_chain_c_fixture.py::test_chain_c_fixture_live_without_an_engine_is_blocked tests/test_g3_phase4_driver.py::test_phase4_offline_protocol_case_produces_evidence",
+    "counts": {
+      "errors": 0,
+      "failed": 0,
+      "passed": 56,
+      "skipped": 1,
+      "tests": 57
+    },
+    "exit_code": 0,
+    "junit": {
+      "path": "/private/tmp/offline-worker-loopback-20260927-v3.xml",
+      "sha256": "405190e62bcff261784dc7012e5def3a1f0dce1f153696cb2dbc1f4d05d78334"
+    },
+    "permission_scope": "require_escalated for task-owned loopback-only Java Worker tests; no COMSOL server or solver"
+  },
+  "status": "PARTIAL_SCOPED_REPAIRS_VALIDATED_FULL_SUITE_FAIL",
+  "raw_receipt": {
+    "path": "/private/tmp/f04_offline_regression_checkpoint_20260927T1020Z.json",
+    "sha256": "30bf7b06f20d1f5a74907f0ae71e4615f69654b50fd0cabc5dd6b5893eee44d2"
+  },
+  "main_review": {
+    "verified": "Seven source hashes, receipt, both JUnit hashes/counts and full log hash independently checked. Java exact-integer-before-narrowing and Worker behavioral assertions reviewed.",
+    "test_scope": "Loopback Java Worker controls only; no COMSOL Server/model/solver. Other five test fixtures passed within the pre-final-guard full attempt and their hashes are unchanged.",
+    "native_init_call": "NOT_RUN",
+    "final_independent_project_review": "NOT_RUN"
+  },
+  "retained_class_hashes": {
+    "/private/tmp/f04-worker-dimension-compile-5tft5pai/comsol_mcp/worker_java/PersistentComsolWorker$ChangeHandler.class": "58dbb58e5c9712731e55429efa7c6f52a167bc7eabd79f8cfe54151c72c27581",
+    "/private/tmp/f04-worker-dimension-compile-5tft5pai/comsol_mcp/worker_java/PersistentComsolWorker$CompiledArtifact.class": "ab1a8a7c62bdc25061d29606e9de0fcc758a6ba4a445801479dbb39b6e855fba",
+    "/private/tmp/f04-worker-dimension-compile-5tft5pai/comsol_mcp/worker_java/PersistentComsolWorker$Conversion.class": "b8e6ce0b178b7da2cbe8d4fac08d89a43da89b2e52bfaccea091ae11b56a7135",
+    "/private/tmp/f04-worker-dimension-compile-5tft5pai/comsol_mcp/worker_java/PersistentComsolWorker$DuplicateTagFixture.class": "a4b29fe0fc964b92ecc4c35bb8c872818573e40af9e86ca33c9b7176be2e6578",
+    "/private/tmp/f04-worker-dimension-compile-5tft5pai/comsol_mcp/worker_java/PersistentComsolWorker$HasProductFixture.class": "215c66ef22414e2b995ec4e36e02aa90b64339044f2c40ccef4825deeacc495d",
+    "/private/tmp/f04-worker-dimension-compile-5tft5pai/comsol_mcp/worker_java/PersistentComsolWorker$Json$NonFiniteJsonValue.class": "c820f48912e0c519557f75f6dcb381cfe1cc754f7562bf8d7d3415bba78aef09",
+    "/private/tmp/f04-worker-dimension-compile-5tft5pai/comsol_mcp/worker_java/PersistentComsolWorker$Json$Parser.class": "5dbcbfdb3f717725c9e00cb6be388ca60108808498fcbfb79313c6359d862c32",
+    "/private/tmp/f04-worker-dimension-compile-5tft5pai/comsol_mcp/worker_java/PersistentComsolWorker$Json.class": "740e5fe0d9445146f3475f11fe244318d6b1d509157c32f26879197d37011e5d",
+    "/private/tmp/f04-worker-dimension-compile-5tft5pai/comsol_mcp/worker_java/PersistentComsolWorker$RequestState.class": "0adc55a9d98b2544fc35216dd699ee17d234bdab757f743f726fe81ad5d411a0",
+    "/private/tmp/f04-worker-dimension-compile-5tft5pai/comsol_mcp/worker_java/PersistentComsolWorker$SourceSpec.class": "4f0178fa39f94830173de015845015ccf307f8ad0c09a874c6c91b36f5191da8",
+    "/private/tmp/f04-worker-dimension-compile-5tft5pai/comsol_mcp/worker_java/PersistentComsolWorker$TaggableA.class": "81c9390679654ddbac1ecd9dddfc37a4e4b0635a08ac5b3fa6fe6a60a8d53f22",
+    "/private/tmp/f04-worker-dimension-compile-5tft5pai/comsol_mcp/worker_java/PersistentComsolWorker$TaggableB.class": "5800641bbc38b6609c7b6d8ebb64f29ccffa05e30ebfcfdf0a3e1e5f02517c46",
+    "/private/tmp/f04-worker-dimension-compile-5tft5pai/comsol_mcp/worker_java/PersistentComsolWorker$WorkerFailure.class": "fe8403fe1f86bba2d3b8c3507f053de529a149e1ac4a310bbf38baef8e31ff82",
+    "/private/tmp/f04-worker-dimension-compile-5tft5pai/comsol_mcp/worker_java/PersistentComsolWorker.class": "12630c4f2bfa9f2a274c9f8ccd552d23e826486819be33589ea00b21f3f7219e"
+  },
+  "remaining_work": [
+    "Migrate exact project/session prerequisites in domain-outcome, model catalog and W23 native-route tests.",
+    "Retain force-stop authorization and shared/owned server controls under correctly registered contexts.",
+    "Ignore non-directory AppleDouble metadata in historical fixture enumeration without deleting evidence.",
+    "Run a stable exact test/source inventory with permitted task-owned loopback; exclude unrelated untracked WIP from the stable release claim.",
+    "Complete six session lifecycle mutations, W23/W24 native/scientific work, W25/W26 and final independent review."
+  ],
+  "replay_note": "Commands above ran in the repository. Full-suite command intentionally records the failed historical live-checkout attempt; it is not a stable final release replay. Next run must bind a frozen test/source inventory."
+}
