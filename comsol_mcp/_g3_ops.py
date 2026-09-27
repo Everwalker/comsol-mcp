@@ -50,6 +50,7 @@ _MODULES = (
     "_g3_w21",
     "_w23_results",
     "_w23_basis_v2_results",
+    "_g3_metrics",
 )
 
 #: Effects for operations the design catalogue does not (yet) describe.  Every

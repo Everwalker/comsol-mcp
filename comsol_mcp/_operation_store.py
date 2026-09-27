@@ -1184,6 +1184,13 @@ class OperationStore:
                 ).fetchone()
                 if row is not None:
                     existing = json.loads(row[0])
+                    metric_kinds = {
+                        "w17_metric_definition_head", "w17_metric_definition_version", "w17_metric_evaluation",
+                    }
+                    if existing.get("kind") in metric_kinds:
+                        if existing != metadata:
+                            raise ValueError("metric records are immutable outside their atomic store adapter")
+                        return
                     if existing.get("schema_version") == 2 and existing != metadata:
                         raise ValueError("registered artifact metadata is immutable")
                     if existing.get("schema_version") == 2:
@@ -1475,6 +1482,175 @@ class OperationStore:
                 self.db.execute("COMMIT")
                 return None
             except Exception:
+                if self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
+                raise
+
+    @staticmethod
+    def _metric_scope_digest(project_id: str, metric_id: str) -> str:
+        payload = f"{project_id}\0{metric_id}".encode("utf-8")
+        return hashlib.sha256(payload).hexdigest()
+
+    @staticmethod
+    def _metric_record_digest(record: dict[str, Any]) -> str:
+        payload = {key: value for key, value in record.items() if key != "sha256"}
+        return hashlib.sha256(json.dumps(
+            payload, sort_keys=True, separators=(",", ":"), allow_nan=False,
+        ).encode("utf-8")).hexdigest()
+
+    def append_metric_definition(self, project_id: str, metric_id: str, record: dict[str, Any]) -> dict[str, Any]:
+        """Atomically append one immutable project-scoped metric definition version.
+
+        The artifact table holds immutable version rows and one small head row.
+        Both are changed in one SQLite transaction so a failed write cannot
+        expose a half-published definition.  Repeating the current definition
+        or tombstone returns its existing version instead of appending noise.
+        """
+        if not isinstance(project_id, str) or not project_id or not isinstance(metric_id, str) or not metric_id:
+            raise ValueError("project_id and metric_id are required")
+        if not isinstance(record, dict) or record.get("project_id") != project_id or record.get("metric_id") != metric_id:
+            raise ValueError("metric definition record scope does not match its key")
+        record = dict(record)
+        expected_latest_version = record.pop("_expected_latest_version", None)
+        scope = self._metric_scope_digest(project_id, metric_id)
+        head_key = f"w17metric.head.{scope}"
+        version_prefix = f"w17metric.version.{scope}."
+        column = self._metadata_column("artifacts")
+        with self.lock:
+            self.db.execute("BEGIN IMMEDIATE")
+            try:
+                head_row = self.db.execute(
+                    f"SELECT metadata FROM artifacts WHERE {column}=?", (head_key,),
+                ).fetchone()
+                head = json.loads(head_row[0]) if head_row is not None else None
+                if head is not None:
+                    if (not isinstance(head, dict) or head.get("kind") != "w17_metric_definition_head"
+                            or head.get("project_id") != project_id or head.get("metric_id") != metric_id
+                            or head.get("sha256") != self._metric_record_digest(head)):
+                        raise RuntimeError("metric definition head is corrupt or misattributed")
+                    latest_key = head.get("latest_key")
+                    if not isinstance(latest_key, str) or not latest_key.startswith(version_prefix):
+                        raise RuntimeError("metric definition head has an invalid version pointer")
+                    latest_row = self.db.execute(
+                        f"SELECT metadata FROM artifacts WHERE {column}=?", (latest_key,),
+                    ).fetchone()
+                    if latest_row is None:
+                        raise RuntimeError("metric definition head points to a missing version")
+                    latest = json.loads(latest_row[0])
+                    if (not isinstance(latest, dict) or latest.get("project_id") != project_id
+                            or latest.get("metric_id") != metric_id
+                            or self._metric_record_digest(latest) != latest.get("sha256")):
+                        raise RuntimeError("metric definition version is corrupt or misattributed")
+                    if expected_latest_version is not None and latest.get("version") != expected_latest_version:
+                        raise ValueError("metric definition version advanced before the requested update")
+                    same_state = (
+                        latest.get("removed") is bool(record.get("removed"))
+                        and latest.get("definition_sha256") == record.get("definition_sha256")
+                    )
+                    if same_state and (bool(record.get("removed")) or latest.get("definition") == record.get("definition")):
+                        self.db.execute("COMMIT")
+                        return latest
+                    next_version = latest.get("version")
+                    if isinstance(next_version, bool) or not isinstance(next_version, int) or next_version < 1:
+                        raise RuntimeError("metric definition version counter is corrupt")
+                    version = next_version + 1
+                else:
+                    if expected_latest_version is not None:
+                        raise ValueError("metric definition version advanced before the requested update")
+                    version = 1
+                version_record = dict(record)
+                version_record["version"] = version
+                version_record["sha256"] = self._metric_record_digest(version_record)
+                version_key = f"{version_prefix}{version:08d}"
+                existing_version = self.db.execute(
+                    f"SELECT metadata FROM artifacts WHERE {column}=?", (version_key,),
+                ).fetchone()
+                if existing_version is not None:
+                    existing = json.loads(existing_version[0])
+                    if existing != version_record:
+                        raise RuntimeError("immutable metric definition version key collision")
+                else:
+                    self.db.execute(
+                        f"INSERT INTO artifacts({column},metadata) VALUES(?,?)",
+                        (version_key, json.dumps(version_record, sort_keys=True, separators=(",", ":"), allow_nan=False)),
+                    )
+                head_record = {
+                    "kind": "w17_metric_definition_head", "project_id": project_id,
+                    "metric_id": metric_id, "latest_version": version,
+                    "latest_key": version_key, "removed": bool(version_record.get("removed")),
+                    "definition_sha256": version_record.get("definition_sha256"),
+                }
+                head_record["sha256"] = self._metric_record_digest(head_record)
+                if head_row is None:
+                    self.db.execute(
+                        f"INSERT INTO artifacts({column},metadata) VALUES(?,?)",
+                        (head_key, json.dumps(head_record, sort_keys=True, separators=(",", ":"), allow_nan=False)),
+                    )
+                else:
+                    self.db.execute(
+                        f"UPDATE artifacts SET metadata=? WHERE {column}=?",
+                        (json.dumps(head_record, sort_keys=True, separators=(",", ":"), allow_nan=False), head_key),
+                    )
+                self.db.execute("COMMIT")
+                return version_record
+            except BaseException:
+                if self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
+                raise
+
+    def read_metric_definitions(
+        self, project_id: str, *, metric_id: str | None = None, include_removed: bool = False,
+    ) -> list[dict[str, Any]]:
+        """Read each current metric version from one SQLite snapshot."""
+        if not isinstance(project_id, str) or not project_id:
+            raise ValueError("project_id is required")
+        column = self._metadata_column("artifacts")
+        scope = self._metric_scope_digest(project_id, metric_id) if metric_id is not None else None
+        with self.lock:
+            self.db.execute("BEGIN")
+            try:
+                if scope is None:
+                    project_prefix = hashlib.sha256(f"{project_id}\0".encode("utf-8")).hexdigest()
+                    # Scope digests also include metric_id, so a broad listing
+                    # reads heads by record attribution rather than guessing an
+                    # ID encoding from the opaque key.
+                    rows = self.db.execute(
+                        f"SELECT metadata FROM artifacts WHERE {column} LIKE 'w17metric.head.%' ORDER BY {column}"
+                    ).fetchall()
+                else:
+                    rows = self.db.execute(
+                        f"SELECT metadata FROM artifacts WHERE {column}=?", (f"w17metric.head.{scope}",),
+                    ).fetchall()
+                output: list[dict[str, Any]] = []
+                for row in rows:
+                    head = json.loads(row[0])
+                    if not isinstance(head, dict) or head.get("kind") != "w17_metric_definition_head":
+                        raise RuntimeError("metric definition head is malformed")
+                    if head.get("sha256") != self._metric_record_digest(head):
+                        raise RuntimeError("metric definition head hash does not match its contents")
+                    if head.get("project_id") != project_id:
+                        continue
+                    if metric_id is not None and head.get("metric_id") != metric_id:
+                        continue
+                    key = head.get("latest_key")
+                    if not isinstance(key, str):
+                        raise RuntimeError("metric definition head has no version pointer")
+                    version_row = self.db.execute(
+                        f"SELECT metadata FROM artifacts WHERE {column}=?", (key,),
+                    ).fetchone()
+                    if version_row is None:
+                        raise RuntimeError("metric definition head points to a missing version")
+                    record = json.loads(version_row[0])
+                    if (not isinstance(record, dict) or record.get("project_id") != project_id
+                            or record.get("metric_id") != head.get("metric_id")
+                            or record.get("sha256") != self._metric_record_digest(record)
+                            or record.get("sha256") is None):
+                        raise RuntimeError("metric definition version is corrupt or misattributed")
+                    if include_removed or not record.get("removed"):
+                        output.append(record)
+                self.db.execute("COMMIT")
+                return output
+            except BaseException:
                 if self.db.in_transaction:
                     self.db.execute("ROLLBACK")
                 raise

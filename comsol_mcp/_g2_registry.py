@@ -499,6 +499,9 @@ COMPONENT_MANAGE_TAGGED_ACTIONS: tuple[str, ...] = tuple(
 
 def _effective_input_schema(catalog_schema: Mapping[str, Any], operation_id: str = "") -> dict[str, Any]:
     """Make the published schema describe the actual MCP compatibility wire."""
+    if operation_id in {"metric.define", "metric.list", "metric.evaluate", "metric.remove", "metric.compare"}:
+        from ._metric_contract import input_schema
+        return input_schema(operation_id)
     # The catalog contains JSON-compatible values.  A JSON round trip gives
     # callers a detached object without mutating the source catalog mapping.
     effective = json.loads(json.dumps(dict(catalog_schema), ensure_ascii=False))
@@ -928,6 +931,11 @@ def _validate_operation_shape(operation_id: str, arguments: Mapping[str, Any]) -
     malformed typed action before the no-model gate reports ENGINE_UNRESPONSIVE.
     """
     from ._g2_contract import NodePath, validate_property_set, validate_typed_value
+
+    if operation_id in {"metric.define", "metric.list", "metric.evaluate", "metric.remove", "metric.compare"}:
+        from ._metric_contract import normalize_arguments
+        normalize_arguments(operation_id, arguments)
+        return
 
     path_operations = {
         "node.inspect", "node.children", "node.property_schema", "node.property_get",

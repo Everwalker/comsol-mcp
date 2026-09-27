@@ -69,19 +69,40 @@ class FSelection:
     """Minimal native selection object used by explicit numerical selections."""
 
     def __init__(self) -> None:
-        self.entities: list[int] = []
+        self._entities: list[int] = []
         self.named_tag: str | None = None
+        self.geometry: str | None = None
+        self.dimension: int | None = None
+        self.inheriting = False
 
     def set(self, *entities: Any) -> None:
         if len(entities) == 1 and isinstance(entities[0], Sequence) and not isinstance(entities[0], (str, bytes)):
             entities = tuple(entities[0])
-        self.entities = [int(value) for value in entities]
+        self._entities = [int(value) for value in entities]
 
     def all(self) -> None:
-        self.entities = []
+        self._entities = []
 
-    def named(self, tag: str) -> None:
-        self.named_tag = str(tag)
+    def entities(self) -> list[int]:
+        return list(self._entities)
+
+    def geom(self, *args: Any) -> str | None:
+        if args:
+            self.geometry = str(args[0])
+            if len(args) > 1:
+                self.dimension = int(args[1])
+        return self.geometry
+
+    def dim(self) -> int | None:
+        return self.dimension
+
+    def named(self, *args: Any) -> str | None:
+        if args:
+            self.named_tag = str(args[0])
+        return self.named_tag
+
+    def isInheriting(self) -> bool:
+        return self.inheriting
 
 
 class FList(FEntity):
@@ -180,6 +201,23 @@ class FNumericalFeature(FNode):
 
     def run(self) -> None:
         self._guard("run", ())
+
+    def getStringArray(self, name: str) -> list[str]:
+        self._guard("getStringArray", (name,))
+        if name == "unit":
+            expressions = self.props.get("expr", [])
+            count = len(expressions) if isinstance(expressions, Sequence) and not isinstance(expressions, (str, bytes)) else 1
+            rows = list(expressions) if isinstance(expressions, Sequence) and not isinstance(expressions, (str, bytes)) else [expressions]
+            return [
+                "1" if str(expression).strip() == "1" or "arg(" in str(expression) else "K"
+                for expression in rows[:count]
+            ]
+        return []
+
+    def getString(self, name: str) -> str | None:
+        self._guard("getString", (name,))
+        value = self.props.get(name)
+        return str(value) if value is not None else None
 
     def isComplex(self, *args: Any) -> bool:
         self._guard("isComplex", args)
@@ -355,7 +393,7 @@ class FWiredTree:
                  numerical_real: Any = 42.0, numerical_imag: Any = None,
                  is_complex: bool = False, fail_numerical_remove: bool = False) -> None:
         self.fail_numerical_remove = fail_numerical_remove
-        
+
         # Geometry
         self.geom = FNode(tag="geom1", type_id="GeomSequence",
                           props={"lengthUnit": "m", "getSDim": sdim, "axisymmetric": is_axisymmetric})
@@ -445,7 +483,7 @@ class FWiredTree:
             )
 
         self.numerical_list = FList(factory=numerical_factory, node_type="Numerical")
-        
+
         # Override remove on numerical_list to test cleanup failure
         orig_num_remove = self.numerical_list.remove
         def num_remove(tag: str) -> None:
@@ -735,6 +773,50 @@ def test_result_evaluate_complex_field_modes() -> None:
     assert math.isclose(r00, a00 * math.cos(p00), rel_tol=1e-7)
     # imag == abs * sin(phase)
     assert math.isclose(i00, a00 * math.sin(p00), rel_tol=1e-7)
+
+
+def test_strict_metric_evaluate_reads_back_transient_selection_and_solution_binding(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Exercise the strict adapter path with the synthetic engine fixture only."""
+    tree = FWiredTree(numerical_real=42.0)
+    arguments = {
+        "spec": {
+            "expressions": ["T"],
+            "solution": {"dataset": "dset1", "solution": "sol1"},
+            "aggregate": "integral",
+            "complex_mode": "real",
+            "selection": {
+                "kind": "explicit", "component": "comp1", "geometry": "geom1",
+                "entity_dimension": 3, "entities": [1, 2],
+            },
+            "storage": "inline",
+        }
+    }
+
+    result = results.result_evaluate(
+        tree.worker, "Model", arguments, strict_metric_evidence=True
+    )
+    evidence = result["strict_metric_evidence"]
+    assert evidence["status"] == "VERIFIED"
+    assert evidence["selection_membership_identical"] is True
+    assert {row["role"] for row in evidence["selection_features"]} == {"primary", "selection_guard"}
+    assert all(row["entities"] == [1, 2] for row in evidence["selection_features"])
+    assert evidence["selected_solution_pairs"] == [
+        {"outer": 1, "inner": index, "solnum": index} for index in (1, 2, 3)
+    ]
+    assert evidence["expression_unit_readback"] == {"T": "K"}
+
+    # A native selection getter that reports different membership must fail
+    # closed even when the requested explicit list itself is well-formed.
+    monkeypatch.setattr(FSelection, "entities", lambda self: [1])
+    with pytest.raises(ExecutionContractError, match="selection geometry, dimension, or members"):
+        results.result_evaluate(
+            FWiredTree(numerical_real=42.0).worker,
+            "Model",
+            arguments,
+            strict_metric_evidence=True,
+        )
 
 
 def test_result_evaluate_does_not_dereference_null_binding_error(monkeypatch: pytest.MonkeyPatch) -> None:

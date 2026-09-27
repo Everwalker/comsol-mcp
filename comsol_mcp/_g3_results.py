@@ -293,7 +293,7 @@ UNVERIFIED_PATHS: tuple[dict[str, str], ...] = (
     {"path": "coordinate readback via getCoordinates()",
      "reason": "documented but not on the worker allow-list; the row coordinates are the requested path points"},
 )
- 
+
 SUPPORTED_DATASET_TYPES: frozenset[str] = frozenset({
     "Solution", "CutPoint3D", "CutPoint2D", "CutPoint1D",
     "CutLine3D", "CutLine2D", "CutLine1D", "CutPlane",
@@ -3915,7 +3915,13 @@ def verify_artifact_chunks(
 # W17 Result Evaluation (result.evaluate & result.at_points)
 # ---------------------------------------------------------------------------
 
-def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+def result_evaluate(
+    worker: Any,
+    model_tag: str,
+    arguments: Mapping[str, Any],
+    *,
+    strict_metric_evidence: bool = False,
+) -> dict[str, Any]:
     """Global, point, line, surface, and volume evaluation with complex modes and statistics."""
     spec = require_mapping(arguments.get("spec", {}), "spec")
     expressions = require_string_array(spec.get("expressions"), "spec.expressions")
@@ -4055,6 +4061,30 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
         or _string_or_none(dset_node, "data", [])
     )
     solution_binding = _result_solution_binding(model, solution_tag)
+    if strict_metric_evidence:
+        strict_selection = spec.get("selection")
+        if aggregate in {"none", "global"}:
+            raise ExecutionContractError(
+                "API_UNSUPPORTED",
+                "strict metric evaluation requires an explicit spatial aggregate; global/none has no declared ROI measure",
+            )
+        if weight_expression is not None:
+            raise ExecutionContractError(
+                "API_UNSUPPORTED",
+                "strict metric weight-unit and pointwise nonnegative readback is not implemented",
+            )
+        if (not isinstance(solution_binding, Mapping) or solution_binding.get("pair_mapping_complete") is not True
+                or not solution_binding.get("solnum_pairs")):
+            raise ExecutionContractError(
+                "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+                "strict metric evaluation requires exact native (outer, inner, solnum) metadata",
+            )
+        if (not isinstance(strict_selection, Mapping) or
+                not all(name in strict_selection for name in ("component", "geometry", "entity_dimension", "kind"))):
+            raise ExecutionContractError(
+                "INVALID_SELECTION",
+                "strict metric evaluation requires a component-, geometry-, and dimension-bound selection",
+            )
     if solution_spec.get("outer") is not None and not solution_binding:
         raise ExecutionContractError(
             "SOLUTION_AXIS_METADATA_UNAVAILABLE",
@@ -4070,6 +4100,14 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
 
     # Check spatial dimension & axisymmetry
     context = _coordinate_context(model, dset_node, [], dataset_binding=dataset_binding)
+    if strict_metric_evidence:
+        requested_selection = spec["selection"]
+        if (context.get("component") != requested_selection.get("component")
+                or context.get("geometry") != requested_selection.get("geometry")):
+            raise ExecutionContractError(
+                "INVALID_SELECTION",
+                "metric selection component/geometry must match the dataset's resolved native component/geometry",
+            )
     is_axisymmetric = bool(context.get("axisymmetric", False))
 
     # Resolve MeasureSpec and feature type (F02, F03)
@@ -4140,6 +4178,7 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
     result_budget_guard = None
     field_array_is_complex = False
     axisymmetric_measure_evidence: list[dict[str, Any]] = []
+    strict_selection_evidence: list[dict[str, Any]] = []
     # §3: reported in every outcome, including the failure path, so the response
     # never depends on how far the aggregate block got before an error.
     denominator_measure = None
@@ -4151,6 +4190,55 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
     selection_measure_source = None
     selection_measure_error = None
 
+    def _apply_feature_selection(target_feature: Any, role: str) -> None:
+        if not strict_metric_evidence:
+            ms.apply_selection(target_feature)
+            return
+        from ._g3_common import resolve_selection_entities, selection_state
+
+        requested = dict(spec["selection"])
+        expected = resolve_selection_entities(worker, model_tag, requested)
+        expected_entities = expected.get("entities") if isinstance(expected, Mapping) else None
+        if (not isinstance(expected_entities, list) or not expected_entities or
+                any(isinstance(item, bool) or not isinstance(item, int) or item < 1 for item in expected_entities)):
+            raise ExecutionContractError("INVALID_SELECTION", "selection membership could not be read as a non-empty entity list")
+        selection_node = _call(target_feature, "selection")
+        _call(selection_node, "geom", requested["geometry"], requested["entity_dimension"])
+        kind = requested["kind"]
+        if kind == "named":
+            _call(selection_node, "named", requested["tag"])
+        elif kind == "explicit":
+            _call(selection_node, "set", list(requested["entities"]))
+        else:
+            _call(selection_node, "all")
+        observed = selection_state(selection_node)
+        entities = observed.get("entities")
+        if not isinstance(entities, list) or any(isinstance(item, bool) or not isinstance(item, int) for item in entities):
+            raise ExecutionContractError("SELECTION_READBACK_UNAVAILABLE", "numerical feature selection entities could not be read back")
+        if (observed.get("geometry") != requested["geometry"]
+                or observed.get("dimension") != requested["entity_dimension"]
+                or sorted(entities) != sorted(expected_entities)):
+            raise ExecutionContractError("SELECTION_READBACK_MISMATCH", "numerical feature selection geometry, dimension, or members differ from the requested ROI")
+        if kind == "named" and observed.get("named") != requested["tag"]:
+            raise ExecutionContractError("SELECTION_READBACK_MISMATCH", "numerical feature named-selection readback differs from the requested tag")
+        if observed.get("is_inheriting") is True:
+            raise ExecutionContractError("SELECTION_READBACK_MISMATCH", "numerical feature unexpectedly reports an inherited selection")
+        normalized_entities = sorted(entities)
+        if strict_selection_evidence and strict_selection_evidence[0]["entities"] != normalized_entities:
+            raise ExecutionContractError("SELECTION_READBACK_MISMATCH", "numerical features used different ROI membership")
+        strict_selection_evidence.append({
+            "role": role,
+            "source": "actual_transient_numerical_feature",
+            "component": requested["component"],
+            "geometry": requested["geometry"],
+            "entity_dimension": requested["entity_dimension"],
+            "kind": kind,
+            "tag": requested.get("tag"),
+            "entities": normalized_entities,
+            "resolver_source": expected.get("source"),
+            "native_selection_readback": observed,
+        })
+
     try:
         feature = _call(numerical_list, "create", ephemeral_tag, feat_type)
         cleanup["created"] = True
@@ -4159,7 +4247,7 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
         _call(feature, "set", "expr", effective_expressions)
         if spec.get("units"):
             _call(feature, "set", "unit", spec["units"])
-        ms.apply_selection(feature)
+        _apply_feature_selection(feature, "primary")
 
         try:
             feat_props = list(_call(feature, "properties"))
@@ -4339,7 +4427,7 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
                 guard_cleanup["created"] = True
                 _call(guard_feat, "set", "data", dataset_tag)
                 _call(guard_feat, "set", "expr", ["1"])
-                ms.apply_selection(guard_feat)
+                _apply_feature_selection(guard_feat, "selection_guard")
                 if axisymmetric_measure_required:
                     axisymmetric_measure_evidence.append(
                         _axisymmetric_measure_readback(
@@ -4446,7 +4534,7 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
                 meas_cleanup["created"] = True
                 _call(meas_feat, "set", "data", dataset_tag)
                 _call(meas_feat, "set", "expr", measure_expr)
-                ms.apply_selection(meas_feat)
+                _apply_feature_selection(meas_feat, "denominator")
                 if axisymmetric_measure_required:
                     axisymmetric_measure_evidence.append(
                         _axisymmetric_measure_readback(
@@ -4568,7 +4656,7 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
                         "expr",
                         [f"({weight_expression})*({e})" for e in effective_expressions],
                     )
-                    ms.apply_selection(num_feat)
+                    _apply_feature_selection(num_feat, "numerator")
                     if axisymmetric_measure_required:
                         axisymmetric_measure_evidence.append(
                             _axisymmetric_measure_readback(
@@ -4927,6 +5015,66 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
             "storage": "inline",
         }
 
+    strict_metric_result = None
+    if strict_metric_evidence:
+        if field_array_payload is None or solution_binding is None:
+            raise ExecutionContractError(
+                "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+                "strict metric evaluation could not bind its result to a canonical FieldArray",
+                stage="post_dispatch",
+            )
+        if engine_error is not None or cleanup["cleanup_failed"]:
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                "strict metric evaluation did not complete with verified engine and cleanup status",
+                stage="post_dispatch",
+            )
+        if not strict_selection_evidence:
+            raise ExecutionContractError(
+                "SELECTION_READBACK_UNAVAILABLE",
+                "strict metric evaluation did not capture any transient-feature selection evidence",
+                stage="post_dispatch",
+            )
+        coords = field_array_payload.coords
+        selected_outer = coords.get("outer")
+        selected_inner = coords.get("inner")
+        if not isinstance(selected_outer, list) or not selected_outer or not isinstance(selected_inner, list) or not selected_inner:
+            raise ExecutionContractError(
+                "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+                "strict metric result has empty or unavailable selected outer/inner coordinates",
+                stage="post_dispatch",
+            )
+        pair_by_axis = {
+            (int(pair["outer"]), int(pair["inner"])): pair
+            for pair in solution_binding.get("solnum_pairs", [])
+            if isinstance(pair, Mapping) and isinstance(pair.get("outer"), int) and isinstance(pair.get("inner"), int)
+        }
+        selected_pairs = []
+        for outer in selected_outer:
+            for inner in selected_inner:
+                pair = pair_by_axis.get((int(outer), int(inner)))
+                if pair is None or isinstance(pair.get("solnum"), bool) or not isinstance(pair.get("solnum"), int):
+                    raise ExecutionContractError(
+                        "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+                        "strict metric result has no exact Solnum for a selected outer/inner tuple",
+                        stage="post_dispatch",
+                    )
+                selected_pairs.append({"outer": int(outer), "inner": int(inner), "solnum": int(pair["solnum"])})
+        strict_metric_result = {
+            "status": "VERIFIED",
+            "selection_source": "actual_transient_numerical_feature_readback",
+            "selection_features": strict_selection_evidence,
+            "selection_membership_identical": all(
+                record["entities"] == strict_selection_evidence[0]["entities"]
+                for record in strict_selection_evidence
+            ),
+            "selected_solution_pairs": selected_pairs,
+            "solution_pair_source": "SolutionInfo_outer_inner_solnum_mapping",
+            "expression_unit_readback": dict(expression_units),
+            "requested_solution": dict(solution_spec),
+            "dataset_binding": dict(dataset_binding) if isinstance(dataset_binding, Mapping) else None,
+        }
+
     return {
         **result_payload,
         "expressions": expressions,
@@ -4936,6 +5084,7 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
         "complex_mode": complex_mode,
         "complex_transform_order": requested_transform_order,
         "evaluated_expressions": list(effective_expressions),
+        "expression_units": dict(expression_units),
         "is_complex": is_complex,
         "field_array": (
             _field_array_summary(field_array_payload)
@@ -4986,6 +5135,7 @@ def result_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
             else None
         ),
         "cleanup": cleanup,
+        **({"strict_metric_evidence": strict_metric_result} if strict_metric_result is not None else {}),
         "status": {
             "ok": engine_error is None and not cleanup["cleanup_failed"],
             "engine_error": engine_error,

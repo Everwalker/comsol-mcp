@@ -66,6 +66,8 @@ def register_observation(worker, model_tag, data):
     record = dict(kind='w17_observation', observation_id=identity, model_tag=model_tag,
                   model_ref=ctx['model_ref'], revision=ctx['revision'], producer=ctx['producer'],
                   dataset=data['dataset'], solution=data['solution'], source_identity=source_identity, artifact=artifact)
+    if isinstance(ctx.get('project_id'), str) and ctx['project_id']:
+        record['project_id'] = ctx['project_id']
     record['sha256'] = artifact['sha256']
     ctx['store'].persist_artifact(identity, record)
     return dict(observation_id=identity, sha256=record['sha256'])

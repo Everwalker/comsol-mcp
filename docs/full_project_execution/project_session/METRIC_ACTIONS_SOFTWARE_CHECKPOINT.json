@@ -1,0 +1,190 @@
+{
+  "schema_version": 1,
+  "stage": "F16 five versioned metric actions",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "native_acceptance": "NOT_RUN",
+  "full_F16": "PARTIAL",
+  "candidate": {
+    "all_candidate_files_byte_match_live_source": true,
+    "base_archive": {
+      "path": "/private/tmp/f16-metrics-freeze.DaPfle/base-785c751.tar",
+      "sha256": "1f87c9d66be85330bc936dd20fe1f758c19825ef6b05af90dd373f55dc32fcb6"
+    },
+    "base_commit": "785c7513951ab08bc1312adfb1deda653a83710b",
+    "git_mutations_performed": false,
+    "isolated_source_path": "/private/tmp/f16-metrics-freeze.DaPfle/root",
+    "overlay_file_count": 11,
+    "overlay_files": [
+      {
+        "path": "comsol_mcp/_control_daemon.py",
+        "sha256": "6047898300e4af4787af4e2dd7355f9efe86d67e87209e171aaf3c788d4cf2d0"
+      },
+      {
+        "path": "comsol_mcp/_g2_registry.py",
+        "sha256": "cacb15efcc0c22df73bb55d98ba615492979f7a4ad9d9e40305b0f9dda7a03eb"
+      },
+      {
+        "path": "comsol_mcp/_g3_metrics.py",
+        "sha256": "b477d2dc4ccc8bc2aae7f55d9c672f7cf09b9385510e7ce9a4d36ac1ff79593f"
+      },
+      {
+        "path": "comsol_mcp/_g3_ops.py",
+        "sha256": "b5315c85d5a9d9f3a1e67fd13d48cf0767d15351196d365622ca722f95039405"
+      },
+      {
+        "path": "comsol_mcp/_g3_results.py",
+        "sha256": "6e9ea06dedfcb491c603de032435be24b3c7cf54a89a6802faf08b05815b0b83"
+      },
+      {
+        "path": "comsol_mcp/_managed_backend.py",
+        "sha256": "4d1856ddb85bb9b507f90105d43cae9f9be65d52e2065ae357e0a8a3bc8964e2"
+      },
+      {
+        "path": "comsol_mcp/_metric_contract.py",
+        "sha256": "98860f7c00cb1dafb10d3facfce8ee39c5389b0f0557369d198af150c187b8bb"
+      },
+      {
+        "path": "comsol_mcp/_observation_store.py",
+        "sha256": "fa1eec16402dce15c33e66423ecd6f8d227fa1abac63e76a47c6c288af4cdc3e"
+      },
+      {
+        "path": "comsol_mcp/_operation_store.py",
+        "sha256": "8988ec021e8c9ae574a906b92f4e020d28aefda468d2500a1fba48cbe6b1362d"
+      },
+      {
+        "path": "tests/test_g3_metrics.py",
+        "sha256": "312983925a4dd414d0839201cbac137ba207a5dcd306251e866fbbb5eec71428"
+      },
+      {
+        "path": "tests/test_g3_w17.py",
+        "sha256": "03f476b6699b055f91ffaf4a28a3ac155a479d55d76f49b61d9f05afb9febba6"
+      }
+    ],
+    "overlay_hash_algorithm": "SHA256 of UTF-8 lines `<relative_path> <file_sha256>\\n`, sorted by relative_path",
+    "overlay_manifest": {
+      "path": "/private/tmp/f16-metrics-freeze.DaPfle/overlay-manifest.json",
+      "sha256": "23be7d01d2f3b45e2bf09d1af0af074cf2c27d6f181e2c47088d5088e06387e7"
+    },
+    "overlay_sha256": "310961c27cd4e3f735470973be780e0665b5f4a0973e3a0879514c8e41ce043c",
+    "trailing_whitespace_lines": 0
+  },
+  "capabilities": [
+    "Strict canonical define/list/evaluate/remove/compare public routes",
+    "Project-scoped immutable definition versions and tombstones in atomic SQLite transactions",
+    "Exact ROI/solution tuple/unit production adapter with synthetic API verification",
+    "Historical comparison from project-authorized producer-bound hash-verified observation bytes",
+    "Explicit complex modulus comparison and overflow rejection"
+  ],
+  "tests": {
+    "historical_blob_identity_read_only": {
+      "command": "env -u PYTHONPATH GIT_DIR='/Users/everwalker/Library/Application Support/Comsol-MCP/git-store-20260926-01a0dbbd/repository.git' PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q --junitxml=/private/tmp/f16-metrics-freeze.DaPfle/f16_metrics_historical_blob_junit2.xml tests/test_operation_store_migrations.py::test_historical_fixture_commit_and_blob_identity_resolve",
+      "failed": 0,
+      "git_access_in_test": "single subprocess git rev-parse <historical-commit>:<path>; no Git write command",
+      "index_sha256_before_after": "e06c7666a24c6182de6c8cb145257587e4108dcee1250da2e38d0b6047f5fdb8",
+      "junit": {
+        "path": "/private/tmp/f16-metrics-freeze.DaPfle/f16_metrics_historical_blob_junit2.xml",
+        "sha256": "b8069440e34d021450ee2c0649862665777805b3b6d0436c385cbed831dc075a"
+      },
+      "passed": 1,
+      "refs_digest_before_after": "6b4de089456ad9aa08af232d8c8bb7b13fed063acba60d54cf34511dfe615b5a",
+      "skipped": 0,
+      "status": "PASS",
+      "test": "tests/test_operation_store_migrations.py::test_historical_fixture_commit_and_blob_identity_resolve"
+    },
+    "preserved_first_pure_archive_attempt": {
+      "final_resolution": "excluded only that history-dependent test from GIT_DIR-free archive suite, then ran the single read-only blob lookup with GIT_DIR; both final partitions pass",
+      "junit": {
+        "path": "/private/tmp/f16-metrics-freeze.DaPfle/f16_metrics_selected_junit.xml",
+        "sha256": "510d5502cd7405563586825832adc29b0ff99e4ba76b701d2c58801a6767bf8d"
+      },
+      "result": "280 passed, 1 failed; only failure was the historical blob identity test because a standalone git archive has no historical commit object",
+      "status": "ENVIRONMENTAL_FAILURE_REPRODUCED_AND_ISOLATED"
+    },
+    "py_compile": {
+      "command": "env -u GIT_DIR -u PYTHONPATH /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m py_compile comsol_mcp/_g3_metrics.py comsol_mcp/_metric_contract.py comsol_mcp/_g3_ops.py comsol_mcp/_g3_results.py comsol_mcp/_g2_registry.py comsol_mcp/_operation_store.py comsol_mcp/_observation_store.py comsol_mcp/_managed_backend.py comsol_mcp/_control_daemon.py",
+      "status": "PASS"
+    },
+    "selected_closure": {
+      "command": "env -u GIT_DIR -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q --junitxml=/private/tmp/f16-metrics-freeze.DaPfle/f16_metrics_selected_281_junit.xml --deselect=tests/test_operation_store_migrations.py::test_historical_fixture_commit_and_blob_identity_resolve tests/test_g3_metrics.py tests/test_g3_w17.py tests/test_g3_results.py tests/test_operation_store.py tests/test_operation_store_migrations.py tests/test_control_daemon.py tests/test_control_daemon_projects.py tests/test_control_daemon_sessions.py tests/test_g2_registry_packaging.py tests/test_registration.py",
+      "deselected": 1,
+      "deselected_test": "tests/test_operation_store_migrations.py::test_historical_fixture_commit_and_blob_identity_resolve",
+      "failed": 0,
+      "junit": {
+        "path": "/private/tmp/f16-metrics-freeze.DaPfle/f16_metrics_selected_281_junit.xml",
+        "sha256": "8cab30c42ff58bd535f641455a78d243ddeb000f32e852a1a120121e298ccba3"
+      },
+      "passed": 281,
+      "skipped": 0,
+      "status": "PASS"
+    },
+    "whitespace": "tracked candidate paths pass git diff --check; all 11 overlay files were independently scanned with zero trailing whitespace"
+  },
+  "main_review": {
+    "unchanged_archive_files_verified": 11049,
+    "overlay_files_verified": 11,
+    "import_origins_verified": 10,
+    "root_tests_passed": 8,
+    "root_junit": {
+      "path": "/private/tmp/f16_metrics_root_retests.xml",
+      "sha256": "a260466352e95306de51cae8ab1ffbd75491c8ec1281ea2a33b5c1c443423ba6"
+    },
+    "overflow_finding": "Fixed and independently retested via persisted-artifact public route; nonfinite derived arithmetic refuses COMPARISON_OVERFLOW.",
+    "original_arithmetic_reproducer": {
+      "path": "/private/tmp/f16_metric_derived_overflow_review.json",
+      "sha256": "57872241f59f82190c68c9d5785879a525bf489c744e0c5202df604cf94a82b5"
+    }
+  },
+  "strict_adapter": {
+    "coverage": [
+      "primary numerical feature selection readback",
+      "selection guard readback",
+      "exact entity membership",
+      "geometry and dimension readback",
+      "native SolutionInfo outer/inner/solnum mapping",
+      "expression unit readback",
+      "mismatched selection membership negative control"
+    ],
+    "fixture_level": "synthetic injected API objects; not COMSOL execution",
+    "overflow_negative_control": {
+      "expected": "COMPARISON_OVERFLOW; no non-finite numeric response is published",
+      "inputs": {
+        "absolute_tolerance": 0.0,
+        "baseline": -1e+308,
+        "relative_tolerance": 2.0,
+        "value": 1e+308
+      },
+      "path": "public ControlDaemon -> registry_call/operation_call -> real SQLite OperationStore -> two persisted observation JSON artifacts -> compare",
+      "test": "tests/test_g3_metrics.py::test_metric_compare_rejects_overflow_from_finite_persisted_artifact_values"
+    },
+    "test": "tests/test_g3_w17.py::test_strict_metric_evaluate_reads_back_transient_selection_and_solution_binding"
+  },
+  "guard_T038": {
+    "base_commit": "785c7513951ab08bc1312adfb1deda653a83710b",
+    "base": {
+      "path": "/private/tmp/f16-guard038-escalated-base-run/cases/GUARD_T038/results.json",
+      "sha256": "8821ac9550540ed6d752703d710248a66b7d2d43c096c50316a4090b2fa4aa8e"
+    },
+    "overlay": {
+      "path": "/private/tmp/f16-guard038-escalated-overlay-run/cases/GUARD_T038/results.json",
+      "sha256": "6ab48dddb1bbd370e6ed8fd0e2ceaa2c83aef644d80936b33c5f0c814a6d384d"
+    },
+    "overlay_manifest": {
+      "path": "/private/tmp/f16-metrics-freeze.DaPfle/guard038-overlay-manifest.json",
+      "sha256": "829b31773f610788eaa1a0b8e3f030b55517743ca2bc3ecbc385dac74e433f8c"
+    },
+    "result": "Both passed 1 case / 11 assertions / 7 subcases; sandbox bind EPERM occurred before registry handling.",
+    "scope": "These comparative GUARD runs predate the final comparison-overflow arithmetic-only change in _g3_metrics.py. Dispatch/registration paths were unchanged by that correction; the manifest records the exact earlier GUARD overlay rather than claiming the newer candidate hash."
+  },
+  "open_scope": [
+    "COMSOL native execution and scientific validity remain NOT_RUN/UNVERIFIED; all metric evaluation adapter tests use synthetic injected engine objects.",
+    "Weighted metric evaluation remains explicitly refused pending observed dimensionless and nonnegative-weight evidence.",
+    "Legacy W21 experiment cases remain UNVERIFIED_METRIC_ASSOCIATION and cannot be compared as metric evaluation artifacts.",
+    "This closes only the current five metric action software candidate; full F16, W25/W26 and remaining original 272-action scope remain open."
+  ],
+  "interrupted_broad_run": "Not a complete suite: 977 reported passes plus sandbox failures before interruption; excluded from stage acceptance.",
+  "full_local_receipt": {
+    "path": "/private/tmp/f16-metrics-freeze.DaPfle/f16_metrics_stage_receipt.json",
+    "sha256": "9fc70aa0b92e28e75710fcff73a2c73673e2ce446da1e7f8a8b5e78a3f1bc724"
+  },
+  "next_action": "Implement observed dimensionless/nonnegative weighted metrics and persisted experiment-case metric association; complete original inspect failure/cache/best-feasible and exact recoverable case-model scope. Then complete remaining native/platform/full-project gates."
+}

@@ -811,6 +811,14 @@ class ManagedBackend:
             supplied_args = arguments.get("arguments", {})
             if not isinstance(supplied_args, Mapping):
                 raise ExecutionContractError("INVALID_REQUEST", "registry call arguments must be an object")
+            if inner in {"metric.define", "metric.list", "metric.evaluate", "metric.remove", "metric.compare"}:
+                nested_identity = {"project_id", "session_id", "model_ref", "expected_revision", "idempotency_key", "request_id"}
+                present = sorted(nested_identity.intersection(supplied_args))
+                if present:
+                    raise ExecutionContractError(
+                        "INVALID_REQUEST",
+                        f"{inner} identity belongs in the outer execution envelope: {', '.join(present)}",
+                    )
             if inner in {"model.adopt", "model.inspect"}:
                 nested_identity = {"project_id", "session_id", "model_ref", "expected_revision", "idempotency_key", "request_id"}
                 present = sorted(nested_identity.intersection(supplied_args))

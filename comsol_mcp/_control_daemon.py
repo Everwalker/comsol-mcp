@@ -409,6 +409,26 @@ class ControlDaemon:
                     "idempotency_key": idempotency_key,
                     **({"request_id": body_request_id} if body_request_id is not None else {}),
                 }
+            if operation in {"metric.define", "metric.list", "metric.evaluate", "metric.remove", "metric.compare"}:
+                from ._g2_registry import validate_call
+                identity_fields = ("project_id", "session_id", "model_ref", "expected_revision", "idempotency_key", "request_id")
+                scoped = dict(arguments)
+                normalized_execution = dict(execution)
+                for field in identity_fields:
+                    body_value = scoped.get(field)
+                    outer_value = normalized_execution.get(field)
+                    if body_value is not None and outer_value is not None and body_value != outer_value:
+                        code = "IDEMPOTENCY_CONFLICT" if field == "idempotency_key" else "MODEL_IDENTITY_MISMATCH"
+                        raise ExecutionContractError(code, f"metric {field} differs between arguments and execution envelope")
+                    value = outer_value if outer_value is not None else body_value
+                    if value is not None:
+                        scoped[field] = value
+                        normalized_execution[field] = value
+                validate_call(operation, scoped)
+                if normalized_execution.get("project_id") != scoped.get("project_id"):
+                    raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "metric project_id must match the execution envelope")
+                arguments = {key: value for key, value in arguments.items() if key not in identity_fields}
+                execution = normalized_execution
             if operation == "geometry.import":
                 from ._g2_registry import validate_call
                 scoped = dict(arguments)
