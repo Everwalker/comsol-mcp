@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "status": "PASS_SCOPED_SOFTWARE",
+  "stage": "owned Server start/stop and daemon-close lifecycle with cross-project endpoint ownership fence",
+  "native_comsol": "NOT_RUN",
+  "full_lifecycle": "PARTIAL",
+  "base_commit": "3f921e2f4d13ce062bb6983989c81dc359d5e315",
+  "candidate_source_hashes": {
+    "comsol_mcp/_control_daemon.py": {
+      "isolated_archive_sha256": "8a6dd4bf53d744eb9a3c077c7bbd7d75451998fa95ee8b80175efdfccee72b64",
+      "shared_candidate_sha256": "8a6dd4bf53d744eb9a3c077c7bbd7d75451998fa95ee8b80175efdfccee72b64"
+    },
+    "comsol_mcp/_g2_registry.py": {
+      "isolated_archive_sha256": "620b56de21affcb11f92f556d593f81edb0b465715e4be048dae0cd697f6bb26",
+      "shared_candidate_sha256": "620b56de21affcb11f92f556d593f81edb0b465715e4be048dae0cd697f6bb26"
+    },
+    "comsol_mcp/_managed_backend.py": {
+      "isolated_archive_sha256": "8d65f6555bf7b24182c345cd8f181b66d9942db80ab71e84e2a3a768409e7cdb",
+      "shared_candidate_sha256": "8d65f6555bf7b24182c345cd8f181b66d9942db80ab71e84e2a3a768409e7cdb"
+    },
+    "comsol_mcp/_session_server.py": {
+      "isolated_archive_sha256": "50892a2b544c87fd8f1080f4ed63740b696e380bb0051d1f3564d9965426daad",
+      "shared_candidate_sha256": "50892a2b544c87fd8f1080f4ed63740b696e380bb0051d1f3564d9965426daad"
+    },
+    "comsol_mcp/data/g2/02_ACTION_CATALOG.json": {
+      "isolated_archive_sha256": "e353acd3e8aeedf0b77a225a802628da9180994f836af8eb729cf3eb741894a5",
+      "shared_candidate_sha256": "e353acd3e8aeedf0b77a225a802628da9180994f836af8eb729cf3eb741894a5"
+    },
+    "docs/comsol_mcp_design_v1/02_ACTION_CATALOG.json": {
+      "isolated_archive_sha256": "e353acd3e8aeedf0b77a225a802628da9180994f836af8eb729cf3eb741894a5",
+      "shared_candidate_sha256": "e353acd3e8aeedf0b77a225a802628da9180994f836af8eb729cf3eb741894a5"
+    },
+    "tests/test_session_server.py": {
+      "isolated_archive_sha256": "097a975b86d7d309c6ead3904e67243db62aab78693170d4b2ac1b15d807339f",
+      "shared_candidate_sha256": "097a975b86d7d309c6ead3904e67243db62aab78693170d4b2ac1b15d807339f"
+    },
+    "tests/test_session_server_control.py": {
+      "isolated_archive_sha256": "9b7454681cf42a68ece777b1e6995a3e669b50f4a6aba17e566a4d24cf892e5b",
+      "shared_candidate_sha256": "9b7454681cf42a68ece777b1e6995a3e669b50f4a6aba17e566a4d24cf892e5b"
+    }
+  },
+  "tests": {
+    "errors": 0,
+    "failed": 0,
+    "junit": "/private/tmp/comsol-mcp-owned-server-stage2.jCZ9ct/owned_server_junit.xml",
+    "junit_sha256": "4934ce78f6a2347cadb6d121f49579597e6b428e8aa97c7f902f4d81e5dccee2",
+    "passed": 212,
+    "skipped": 2,
+    "skips": [
+      {
+        "reason": "Windows owner semantics only",
+        "test": "test_windows_existing_foreign_lock_root_is_rejected_without_takeover"
+      },
+      {
+        "reason": "Phase 1 private proposal files not present in clean checkout",
+        "test": "test_reviewed_server_xml_is_exact_one_attribute_change"
+      }
+    ]
+  },
+  "test_modules": [
+    "tests/test_control_client.py",
+    "tests/test_control_daemon.py",
+    "tests/test_control_daemon_projects.py",
+    "tests/test_control_daemon_sessions.py",
+    "tests/test_session_context.py",
+    "tests/test_session_lifecycle.py",
+    "tests/test_session_server.py",
+    "tests/test_session_server_control.py",
+    "tests/test_platform_process.py",
+    "tests/test_java_worker.py",
+    "tests/test_runtime_installation.py",
+    "tests/test_runtime_state.py",
+    "tests/test_phase3_owned_runtime.py",
+    "tests/test_registry_job_control_fallback.py",
+    "tests/test_w24_worker_transition.py"
+  ],
+  "main_review": {
+    "at_utc": "2026-09-27T16:56:20.872256+00:00",
+    "candidate_files_verified": 8,
+    "unchanged_runtime_python_files_verified": 86,
+    "junit_and_child_proof_hashes_verified": true,
+    "cross_project_pre_fix_reproduced": true,
+    "post_fix": "Cross-project attach rejected before Worker birth without owner identity disclosure; stop/close preserve Server when known other session may use endpoint, including localhost alias."
+  },
+  "raw_receipt": {
+    "path": "/private/tmp/comsol-mcp-owned-server-stage2.jCZ9ct/owned_server_stage_receipt.json",
+    "sha256": "77a8b42bd91d143daf1f38e0ba3414ac59826ec47a5ac566dc9ab2e8b6c58946"
+  },
+  "harmless_child": {
+    "path": "/private/tmp/owned-server-child-proof-stage2-s40k7thw/owned_server_child_process_receipt.json",
+    "sha256": "fab9928d33842440e707b68aa53ee78210ed2c70a02c6a354a638bac08251aba",
+    "status": "PASS"
+  },
+  "pre_fix_reproduction": {
+    "path": "/private/tmp/comsol-mcp-owned-server-stage2.jCZ9ct/cross_project_ownership_pre_fix_reproduction.json",
+    "sha256": "9763dada483647a1981afdd821dc21690cc9d4f4e187764149ee4f3e2e10ec10",
+    "status": "CONFIRMED_PRE_FIX"
+  },
+  "replay": "Export published base 3f921e2, overlay exactly candidate_source_hashes from this checkpoint commit, use Python3.12 with explicit archive/dependency paths and run test_modules. Real harmless loopback child tests require local bind permission. No COMSOL required.",
+  "limitations": [
+    "Windows owner semantics skipped on Darwin",
+    "Old Phase1 private-proposal fixture unavailable in clean checkout",
+    "Native COMSOL 6.3/6.4 lifecycle remains NOT_RUN for this stage",
+    "Full evidence-backed session.recover remains incomplete"
+  ],
+  "next_action": "Implement evidence-backed session.recover, then native lifecycle/platform verification. Continue original W01-W26 scientific, Desktop, release matrix and final independent review.",
+  "post_test_format_only_change": {
+    "path": "tests/test_session_server.py",
+    "tested_sha256": "097a975b86d7d309c6ead3904e67243db62aab78693170d4b2ac1b15d807339f",
+    "committed_sha256": "4826247d0577eb1f550e73a63170ba1efad90783afb1447bb65f47a39c229fc0",
+    "change": "Removed one redundant blank line at EOF after staged diff check; no executable content change."
+  }
+}

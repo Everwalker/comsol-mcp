@@ -1,0 +1,570 @@
+from __future__ import annotations
+
+from contextlib import contextmanager
+import hashlib
+import json
+from pathlib import Path
+import subprocess
+import sys
+import textwrap
+
+import pytest
+
+from comsol_mcp._control_daemon import ControlDaemon
+from comsol_mcp._platform_process import process_identity
+from comsol_mcp._session_context import (
+    CanonicalSocket, SessionEndpointIdentity, SessionRuntimeConfig,
+    SessionRuntimeContext, session_state_directory,
+)
+from comsol_mcp._session_server import OwnedServerError, OwnedServerLauncher, listener_rows
+
+
+def _sleeping_child():
+    return subprocess.Popen(
+        [sys.executable, "-c", "import time; time.sleep(30)"],
+        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+
+
+class _AttachedWorker:
+    def __init__(self, process):
+        self._process = process
+        self.start_calls = 0
+        self.connect_calls = 0
+        self.disconnect_calls = 0
+        self.close_calls = 0
+        self._meta = {"pid": process.pid, "instance_id": "owned-server-test-worker",
+                      "generation": 1, "connected": False, "server": ""}
+        self.event_callback = None
+
+    def start(self):
+        self.start_calls += 1
+        return {"status": "HEALTHY", **self._meta}
+
+    def runtime_metadata(self):
+        return dict(self._meta)
+
+    @contextmanager
+    def operation_context(self, _operation_id, *, on_request_event=None):
+        self.event_callback = on_request_event
+        yield
+
+    def client(self):
+        return self
+
+    def connect(self, port, host, **kwargs):
+        self.connect_calls += 1
+        self._meta.update(generation=self._meta["generation"] + 1,
+                          connected=True, server=f"{host}:{port}")
+        return {"connected": True, "server": f"{host}:{port}",
+                "generation": self._meta["generation"],
+                "instance_id": self._meta["instance_id"],
+                "engine_version": "6.4.0.293"}
+
+    def disconnect(self, **_kwargs):
+        self.disconnect_calls += 1
+        self._meta.update(generation=self._meta["generation"] + 1,
+                          connected=False, server="")
+        return {"connected": False, "generation": self._meta["generation"],
+                "instance_id": self._meta["instance_id"]}
+
+    def close(self):
+        self.close_calls += 1
+        if self._process.poll() is None:
+            self._process.terminate()
+        self._process.wait(timeout=3)
+
+    def status(self, request_id, **_kwargs):
+        return {"ok": True, "request_id": request_id, "status": "SUCCEEDED"}
+
+
+class _LoopbackComsolCommand:
+    """Test-only launcher: substitutes a harmless Python loopback child for COMSOL."""
+
+    def __init__(self):
+        self.commands = []
+        self.processes = []
+
+    def __call__(self, command, **options):
+        self.commands.append(list(command))
+        port_file = command[command.index("-portfile") + 1]
+        child = textwrap.dedent(
+            """
+            import http.server, pathlib, sys
+            class Quiet(http.server.BaseHTTPRequestHandler):
+                def do_GET(self):
+                    self.send_response(200); self.end_headers(); self.wfile.write(b'ok')
+                def log_message(self, *args): pass
+            server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Quiet)
+            pathlib.Path(sys.argv[1]).write_text(str(server.server_port), encoding='ascii')
+            server.serve_forever()
+            """
+        )
+        process = subprocess.Popen(
+            [sys.executable, "-c", child, port_file], **options,
+        )
+        self.processes.append(process)
+        return process
+
+
+def _make_daemon(tmp_path, monkeypatch, *, server_launcher=None, worker=None,
+                 worker_factory=None, host_control=True):
+    if host_control:
+        monkeypatch.setenv("COMSOL_MCP_HOST_CONTROL", "1")
+    else:
+        monkeypatch.delenv("COMSOL_MCP_HOST_CONTROL", raising=False)
+    workspace_root = tmp_path / "workspaces"
+    workspace_root.mkdir(parents=True)
+    installation = tmp_path / "synthetic-installation"
+    (installation / "bin/servers/webbridge/conf").mkdir(parents=True)
+    (installation / "bin/servers/webbridge/conf/server.xml").write_text(
+        '<Server><Service><Connector port="2036" address="0.0.0.0" /></Service></Server>',
+        encoding="utf-8",
+    )
+    (installation / "bin/comsol").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    (installation / "bin/comsol").chmod(0o755)
+    source_xml = installation / "bin/servers/webbridge/conf/server.xml"
+    source_xml_hash = hashlib.sha256(source_xml.read_bytes()).hexdigest()
+    server_command = _LoopbackComsolCommand()
+    launcher = server_launcher or OwnedServerLauncher(
+        process_factory=server_command,
+        process_identity_reader=process_identity,
+        listener_reader=lambda port: listener_rows(port, platform_name=sys.platform),
+        platform_name=sys.platform,
+        ready_timeout_s=5,
+        poll_interval_s=0.02,
+    )
+    session_state_root = tmp_path / "runtime-state"
+
+    def runtime_resolver(runtime_id, project_id, session_id, _project_root, state_root):
+        assert runtime_id == "fixture-runtime"
+        session_root = session_state_directory(state_root, project_id, session_id)
+        return SessionRuntimeConfig(
+            runtime_id=runtime_id, comsol_version="6.4.0.293",
+            installation_root=installation,
+            java_executable=tmp_path / "jdk/bin/java",
+            classpath=(installation / "client.jar",),
+            preferences_dir=session_root / "preferences",
+            session_state_root=state_root,
+        )
+
+    daemon = ControlDaemon(
+        tmp_path / "control", project_root=workspace_root, registry={},
+        session_runtime_resolver=runtime_resolver,
+        session_worker_factory=(worker_factory if worker_factory is not None else
+                                (lambda _runtime, _state: worker) if worker is not None else None),
+        session_peer_observer=lambda _worker, port, _metadata: CanonicalSocket("127.0.0.1", port),
+        session_server_launcher=launcher,
+    )
+    permissions = ["inspect", "project_write", "compute"]
+    if host_control:
+        permissions.append("host_control")
+    project_response = daemon.dispatch({
+        "operation": "project.create",
+        "arguments": {
+            "label": "owned-server",
+            "workspace": "owned-server",
+            "policy": {"permissions": permissions},
+        },
+        "execution": {"request_id": "create-owned-server", "idempotency_key": "create-owned-server"},
+    })
+    assert project_response["success"] is True, project_response
+    return daemon, project_response["data"]["project"]["project_id"], server_command, source_xml, source_xml_hash
+
+
+def _start(daemon, project_id, key="server-start"):
+    return daemon.dispatch({
+        "operation": "session.start",
+        "arguments": {"project_id": project_id, "idempotency_key": key,
+                       "runtime_id": "fixture-runtime"},
+        "execution": {},
+    })
+
+
+def _stop(daemon, project_id, session_id, key="server-stop"):
+    return daemon.dispatch({
+        "operation": "session.stop",
+        "arguments": {"project_id": project_id, "session_id": session_id,
+                       "idempotency_key": key, "authorization_ref": "local-test-operator"},
+        "execution": {},
+    })
+
+
+@pytest.mark.skipif(sys.platform not in {"darwin", "win32"}, reason="exact process/listener proof adapter is supported on Darwin and Windows")
+def test_public_owned_server_start_attach_disconnect_retire_stop(tmp_path, monkeypatch):
+    worker_process = _sleeping_child()
+    worker = _AttachedWorker(worker_process)
+    daemon = None
+    server_process = None
+    try:
+        identity = process_identity(worker_process.pid)
+        if identity.get("alive") is not True or type(identity.get("start_epoch_ms")) is not int:
+            worker_process.terminate(); worker_process.wait(timeout=3)
+            pytest.skip("host cannot provide exact process birth identity")
+        daemon, project_id, server_command, installed_xml, installed_hash = _make_daemon(
+            tmp_path, monkeypatch, worker=worker,
+        )
+
+        started = _start(daemon, project_id)
+        assert started["success"] is True, started
+        data = started["data"]
+        session_id = data["session_id"]
+        endpoint = data["endpoint"]
+        assert data["server_ownership"] == "mcp_managed"
+        assert data["loopback_only_verified"] is True
+        assert endpoint["host"] == "127.0.0.1"
+        server_process = server_command.processes[0]
+        server_birth = int(data["server_process_identity"]["birth"].split(":", 1)[1])
+        assert process_identity(server_process.pid)["start_epoch_ms"] == server_birth
+        assert installed_xml.read_bytes() == (
+            b'<Server><Service><Connector port="2036" address="0.0.0.0" /></Service></Server>'
+        )
+        assert hashlib.sha256(installed_xml.read_bytes()).hexdigest() == installed_hash
+
+        implicit_attach = daemon.dispatch({
+            "operation": "session.connect",
+            "arguments": {"project_id": project_id, "idempotency_key": "implicit-owned-attach",
+                          "runtime_id": "fixture-runtime", "endpoint": endpoint},
+            "execution": {},
+        })
+        assert implicit_attach["success"] is False
+        assert implicit_attach["error"]["code"] == "SESSION_ID_REQUIRED"
+        assert worker.start_calls == 0 and worker.connect_calls == 0
+        assert server_process.poll() is None
+
+        connected = daemon.dispatch({
+            "operation": "session.connect",
+            "arguments": {"project_id": project_id, "idempotency_key": "explicit-owned-attach",
+                          "runtime_id": "fixture-runtime", "session_id": session_id,
+                          "endpoint": endpoint},
+            "execution": {},
+        })
+        assert connected["success"] is True, connected
+        assert connected["data"]["server_ownership"] == "mcp_managed"
+        lifecycle = daemon.session_lifecycle.get(project_id, session_id)
+        assert lifecycle["state"] == "CONNECTED"
+        assert lifecycle["server_ownership"] == "mcp_managed"
+        context = daemon.session_registry.get(project_id, session_id)
+        assert context.server_started_by_mcp is True
+        assert context.endpoint.owned_process.pid == server_process.pid
+        assert context.endpoint.owned_process.start_epoch_ms == server_birth
+
+        connected_stop = _stop(daemon, project_id, session_id, key="stop-before-disconnect")
+        assert connected_stop["success"] is False
+        assert connected_stop["error"]["code"] == "SESSION_CLIENT_NOT_RETIRED"
+        assert server_process.poll() is None
+
+        disconnected = daemon.dispatch({
+            "operation": "session.disconnect",
+            "arguments": {"project_id": project_id, "session_id": session_id,
+                          "idempotency_key": "retire-attached-worker", "retire_worker": True},
+            "execution": {},
+        })
+        assert disconnected["success"] is True, disconnected
+        assert disconnected["data"]["worker_retirement"]["child_reaped"] is True
+        assert worker_process.poll() is not None
+        assert worker.close_calls == 1
+
+        stopped = _stop(daemon, project_id, session_id)
+        assert stopped["success"] is True, stopped
+        assert stopped["data"]["state"] == "STOPPED"
+        assert stopped["data"]["stop_evidence"]["child_reaped"] is True
+        assert stopped["data"]["stop_evidence"]["listener_absent"] is True
+        assert server_process.poll() is not None
+        assert daemon._session_server_handles == {}
+        assert hashlib.sha256(installed_xml.read_bytes()).hexdigest() == installed_hash
+    finally:
+        if daemon is not None:
+            daemon.close()
+        if server_process is not None and server_process.poll() is None:
+            server_process.terminate(); server_process.wait(timeout=3)
+        if worker_process.poll() is None:
+            worker_process.terminate(); worker_process.wait(timeout=3)
+
+
+def test_session_start_requires_host_control_before_any_child_birth(tmp_path, monkeypatch):
+    daemon = None
+    try:
+        daemon, project_id, server_command, _xml, _hash = _make_daemon(
+            tmp_path, monkeypatch, host_control=False,
+        )
+        result = _start(daemon, project_id)
+        assert result["success"] is False
+        assert result["error"]["code"] == "PERMISSION_DENIED"
+        assert server_command.processes == []
+    finally:
+        if daemon is not None:
+            daemon.close()
+
+
+@pytest.mark.skipif(sys.platform not in {"darwin", "win32"}, reason="exact process/listener proof adapter is supported on Darwin and Windows")
+def test_owned_server_start_idempotency_reuses_original_process(tmp_path, monkeypatch):
+    daemon = None
+    try:
+        daemon, project_id, server_command, _xml, _hash = _make_daemon(tmp_path, monkeypatch)
+        first = _start(daemon, project_id, key="same-owned-server-start")
+        assert first["success"] is True, first
+        second = _start(daemon, project_id, key="same-owned-server-start")
+        assert second == first
+        assert len(server_command.processes) == 1
+        assert server_command.processes[0].poll() is None
+    finally:
+        if daemon is not None:
+            daemon.close()
+        if daemon is not None:
+            for process in daemon.session_server_launcher.process_factory.processes:
+                if process.poll() is None:
+                    process.terminate()
+                    process.wait(timeout=3)
+
+
+@pytest.mark.skipif(sys.platform not in {"darwin", "win32"}, reason="exact process/listener proof adapter is supported on Darwin and Windows")
+def test_owned_server_stop_unknown_retains_handle_and_close_never_blind_kills(tmp_path, monkeypatch):
+    daemon = None
+    process = None
+    try:
+        daemon, project_id, server_command, _xml, _hash = _make_daemon(tmp_path, monkeypatch)
+        started = _start(daemon, project_id, key="unknown-stop-start")
+        assert started["success"] is True, started
+        session_id = started["data"]["session_id"]
+        process = server_command.processes[0]
+        key = (project_id, session_id)
+        handle = daemon._session_server_handles[key]
+        calls = []
+
+        def uncertain_stop(candidate):
+            calls.append(candidate)
+            raise OwnedServerError("test injected uncertain stop", handle=candidate, uncertain=True)
+
+        monkeypatch.setattr(daemon.session_server_launcher, "stop", uncertain_stop)
+        first = _stop(daemon, project_id, session_id, key="unknown-stop-operation")
+        assert first["success"] is False
+        assert first["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        assert daemon.session_lifecycle.get(project_id, session_id)["state"] == "UNKNOWN"
+        assert daemon._session_server_handles[key] is handle
+        assert process.poll() is None
+
+        repeated = _stop(daemon, project_id, session_id, key="unknown-stop-operation")
+        assert repeated == first
+        refused = _stop(daemon, project_id, session_id, key="unknown-stop-new-key")
+        assert refused["success"] is False
+        assert refused["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        assert len(calls) == 1
+
+        daemon.close()
+        assert process.poll() is None
+        assert daemon._session_server_handles[key] is handle
+        assert len(calls) == 1
+    finally:
+        if daemon is not None:
+            daemon.close()
+        if process is not None and process.poll() is None:
+            process.terminate()
+            process.wait(timeout=3)
+
+
+@pytest.mark.skipif(sys.platform not in {"darwin", "win32"}, reason="exact process/listener proof adapter is supported on Darwin and Windows")
+def test_daemon_close_retires_attached_worker_before_owned_server(tmp_path, monkeypatch):
+    worker_process = _sleeping_child()
+    worker = _AttachedWorker(worker_process)
+    daemon = None
+    server_process = None
+    session_id = None
+    project_id = None
+    try:
+        identity = process_identity(worker_process.pid)
+        if identity.get("alive") is not True or type(identity.get("start_epoch_ms")) is not int:
+            worker_process.terminate()
+            worker_process.wait(timeout=3)
+            pytest.skip("host cannot provide exact process birth identity")
+        daemon, project_id, server_command, _xml, _hash = _make_daemon(
+            tmp_path, monkeypatch, worker=worker,
+        )
+        started = _start(daemon, project_id, key="close-owned-server-start")
+        assert started["success"] is True, started
+        session_id = started["data"]["session_id"]
+        server_process = server_command.processes[0]
+        connected = daemon.dispatch({
+            "operation": "session.connect",
+            "arguments": {"project_id": project_id, "session_id": session_id,
+                          "idempotency_key": "close-owned-server-connect",
+                          "runtime_id": "fixture-runtime", "endpoint": started["data"]["endpoint"]},
+            "execution": {},
+        })
+        assert connected["success"] is True, connected
+        assert worker_process.poll() is None and server_process.poll() is None
+
+        daemon.close()
+
+        assert worker.disconnect_calls == 1
+        assert worker.close_calls == 1
+        assert worker_process.poll() is not None
+        assert server_process.poll() is not None
+        from comsol_mcp._operation_store import OperationStore
+        from comsol_mcp._session_lifecycle import SessionLifecycleStore
+        reopened = OperationStore(daemon.home / "operations.sqlite3")
+        try:
+            lifecycle = SessionLifecycleStore(reopened).get(project_id, session_id)
+            assert lifecycle["state"] == "STOPPED"
+            assert lifecycle["server_state"] == "STOPPED"
+            assert lifecycle["client_state"] == "RETIRED"
+        finally:
+            reopened.close()
+        assert daemon._session_server_handles == {}
+        assert daemon._session_worker_handles == {}
+    finally:
+        if daemon is not None:
+            daemon.close()
+        for process in (server_process, worker_process):
+            if process is not None and process.poll() is None:
+                process.terminate()
+                process.wait(timeout=3)
+
+
+@pytest.mark.skipif(sys.platform not in {"darwin", "win32"}, reason="exact process/listener proof adapter is supported on Darwin and Windows")
+def test_daemon_close_preserves_owned_server_when_shutdown_stop_is_uncertain(tmp_path, monkeypatch):
+    daemon = None
+    process = None
+    try:
+        daemon, project_id, server_command, _xml, _hash = _make_daemon(tmp_path, monkeypatch)
+        started = _start(daemon, project_id, key="close-unknown-owned-server-start")
+        assert started["success"] is True, started
+        session_id = started["data"]["session_id"]
+        process = server_command.processes[0]
+        key = (project_id, session_id)
+        handle = daemon._session_server_handles[key]
+
+        def uncertain_stop(candidate):
+            assert candidate is handle
+            return {"server_stopped": True, "child_reaped": True}
+
+        monkeypatch.setattr(daemon.session_server_launcher, "stop", uncertain_stop)
+        daemon.close()
+
+        assert process.poll() is None
+        assert daemon._session_server_handles[key] is handle
+        from comsol_mcp._operation_store import OperationStore
+        from comsol_mcp._session_lifecycle import SessionLifecycleStore
+        reopened = OperationStore(daemon.home / "operations.sqlite3")
+        try:
+            lifecycle = SessionLifecycleStore(reopened).get(project_id, session_id)
+            assert lifecycle["state"] == "UNKNOWN"
+            assert lifecycle["server_state"] == "MCP_MANAGED"
+            assert lifecycle["server_ownership"] == "mcp_managed"
+            assert lifecycle["server_process_identity"] is not None
+        finally:
+            reopened.close()
+    finally:
+        if daemon is not None:
+            daemon.close()
+        if process is not None and process.poll() is None:
+            process.terminate()
+            process.wait(timeout=3)
+
+
+@pytest.mark.skipif(sys.platform not in {"darwin", "win32"}, reason="exact process/listener proof adapter is supported on Darwin and Windows")
+def test_cross_project_attach_and_stop_cannot_bypass_owned_endpoint_boundary(tmp_path, monkeypatch):
+    from comsol_mcp._session_lifecycle import new_lifecycle_record
+
+    worker_births = []
+
+    def worker_factory(_runtime, _state):
+        process = _sleeping_child()
+        worker = _AttachedWorker(process)
+        worker_births.append(worker)
+        return worker
+
+    daemon = None
+    server_process = None
+    try:
+        daemon, owner_project, server_command, _xml, _hash = _make_daemon(
+            tmp_path, monkeypatch, worker_factory=worker_factory,
+        )
+        other_project_result = daemon.dispatch({
+            "operation": "project.create",
+            "arguments": {"label": "other-project", "workspace": "other-project",
+                          "policy": {"permissions": ["inspect", "project_write", "compute"]}},
+            "execution": {"request_id": "create-other-project", "idempotency_key": "create-other-project"},
+        })
+        assert other_project_result["success"] is True, other_project_result
+        other_project = other_project_result["data"]["project"]["project_id"]
+
+        started = _start(daemon, owner_project, key="cross-project-owner-start")
+        assert started["success"] is True, started
+        owner_session = started["data"]["session_id"]
+        server_process = server_command.processes[0]
+        endpoint = started["data"]["endpoint"]
+
+        attempted = daemon.dispatch({
+            "operation": "session.connect",
+            "arguments": {"project_id": other_project, "idempotency_key": "cross-project-alias-attach",
+                          "runtime_id": "fixture-runtime", "endpoint": endpoint},
+            "execution": {},
+        })
+        assert attempted["success"] is False
+        assert attempted["error"]["code"] == "SERVER_ENDPOINT_OWNERSHIP_CONFLICT"
+        assert attempted["data"]["engine_dispatched"] is False
+        assert attempted["data"]["worker_birth_performed"] is False
+        assert owner_session not in json.dumps(attempted, sort_keys=True)
+        assert worker_births == []
+        assert server_process.poll() is None
+
+        # Model a pre-existing cross-project connection with an alias endpoint.
+        # This is the durable/runtime state a prior daemon could have left
+        # before the new global attach check was installed.
+        alias_session = "legacy-cross-project-alias"
+        alias_worker = object()
+        owner_runtime = daemon._session_runtime_configs[(owner_project, owner_session)]
+        other_project_record = daemon.project_authority.get_project(other_project)
+        alias_lifecycle = new_lifecycle_record(
+            project_id=other_project, session_id=alias_session, state="CONNECTED",
+            runtime_id="fixture-runtime", endpoint={"host": "localhost", "port": endpoint["port"]},
+            client_state="CONNECTED", server_state="SHARED", server_ownership="shared",
+            worker_instance_id="legacy-worker", worker_epoch=1,
+            server_instance_id="legacy-server-instance",
+        )
+        daemon.session_lifecycle.save(alias_lifecycle)
+        alias_context = SessionRuntimeContext(
+            project_id=other_project, session_id=alias_session,
+            project_root=Path(other_project_record["workspace"]), runtime=owner_runtime,
+            endpoint=SessionEndpointIdentity(
+                "localhost", endpoint["port"], worker_epoch=1,
+                observed_peer=CanonicalSocket("127.0.0.1", endpoint["port"]),
+            ),
+            worker=alias_worker, worker_instance_id="legacy-worker",
+            server_ownership="shared", client_connected=True,
+            connected_host="localhost", connected_port=endpoint["port"],
+        )
+        daemon.session_registry.register(alias_context)
+        daemon._session_worker_handles[(other_project, alias_session)] = alias_worker
+
+        blocked_stop = _stop(daemon, owner_project, owner_session, key="owner-stop-with-legacy-alias")
+        assert blocked_stop["success"] is False
+        assert blocked_stop["error"]["code"] == "SERVER_ENDPOINT_IN_USE"
+        assert blocked_stop["data"]["server_stopped"] is False
+        assert alias_session not in json.dumps(blocked_stop, sort_keys=True)
+        assert server_process.poll() is None
+
+        daemon.close()
+        assert server_process.poll() is None
+        from comsol_mcp._operation_store import OperationStore
+        from comsol_mcp._session_lifecycle import SessionLifecycleStore
+        reopened = OperationStore(daemon.home / "operations.sqlite3")
+        try:
+            owner_state = SessionLifecycleStore(reopened).get(owner_project, owner_session)
+            assert owner_state["state"] == "UNKNOWN"
+            assert owner_state["server_ownership"] == "mcp_managed"
+            assert owner_state["server_process_identity"] is not None
+        finally:
+            reopened.close()
+    finally:
+        if daemon is not None:
+            daemon.close()
+        for worker in worker_births:
+            if worker._process.poll() is None:
+                worker._process.terminate()
+                worker._process.wait(timeout=3)
+        if server_process is not None and server_process.poll() is None:
+            server_process.terminate()
+            server_process.wait(timeout=3)

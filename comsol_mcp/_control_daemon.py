@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 from contextlib import contextmanager, nullcontext
 import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import ipaddress
 import json
 import math
 import os
@@ -28,6 +29,7 @@ from ._desktop_service import DesktopCoordinator, DesktopOperationError
 from ._project_authority import ProjectAuthority, PROJECT_OPERATIONS
 from ._session_context import (
     CanonicalSocket,
+    OwnedServerProcessIdentity,
     SessionEndpointIdentity,
     SessionContextMissing,
     SessionRuntimeConfig,
@@ -40,6 +42,7 @@ from ._session_context import (
     active_session_context,
     use_session_context,
 )
+from ._session_server import ManagedServerHandle, OwnedServerError, OwnedServerLauncher
 from ._session_lifecycle import (
     SessionLifecycleStore,
     SessionLifecycleProjectConflict,
@@ -68,6 +71,8 @@ SESSION_OPERATIONS = frozenset({
     "session.reconnect", "session.disconnect", "session.stop", "session.health",
     "session.recover",
 })
+
+_PRESERVE_SERVER_PROCESS_IDENTITY = object()
 SESSION_ALIASES = {f"session_{name}": f"session.{name}" for name in (
     "list", "connect", "start", "inspect", "reconnect", "disconnect", "stop", "recover",
 )}
@@ -134,7 +139,8 @@ class ControlDaemon:
     def __init__(self, home, *, service=None, registry=None, worker=None, project_root=None,
                  desktop_adapter=None, project_authorization_verifier=None,
                  session_runtime_resolver=None, session_worker_factory=None,
-                 session_peer_observer=None, session_credentials_resolver=None):
+                 session_peer_observer=None, session_credentials_resolver=None,
+                 session_server_launcher=None):
         self.home = Path(home)
         self.home.mkdir(mode=0o700, parents=True, exist_ok=True)
         self.store = OperationStore(self.home / "operations.sqlite3")
@@ -163,6 +169,7 @@ class ControlDaemon:
         self.session_worker_factory = session_worker_factory
         self.session_peer_observer = session_peer_observer
         self.session_credentials_resolver = session_credentials_resolver
+        self.session_server_launcher = session_server_launcher or OwnedServerLauncher()
         self._session_connect_lock = threading.RLock()
         self._session_worker_handles: dict[tuple[str, str], Any] = {}
         self._session_backends: dict[tuple[str, str], ManagedBackend] = {}
@@ -175,6 +182,10 @@ class ControlDaemon:
         # platform-reported birth identity. This is ephemeral host evidence,
         # never caller supplied and never reconstructed from a PID alone.
         self._session_worker_child_identities: dict[tuple[str, str], dict[str, Any]] = {}
+        # A Server is controllable only while this daemon retains the exact
+        # launcher Popen handle and the host-observed process birth/listener.
+        # Durable lifecycle rows deliberately do not recreate this handle.
+        self._session_server_handles: dict[tuple[str, str], ManagedServerHandle] = {}
         self.desktop = DesktopCoordinator(
             store=self.store,
             adapter=desktop_adapter if desktop_adapter is not None else create_native_metadata_adapter(),
@@ -815,6 +826,498 @@ class ControlDaemon:
             return [ControlDaemon._redact_session_worker_event(item) for item in value]
         return value
 
+    @staticmethod
+    def _server_process_lifecycle_record(handle: ManagedServerHandle) -> dict[str, Any]:
+        identity = handle.process_identity
+        endpoint = handle.endpoint
+        if identity is None or endpoint is None:
+            raise OwnedServerError("owned Server has no complete process/listener identity", handle=handle, uncertain=True)
+        return {
+            "pid": identity.pid,
+            "birth": identity.birth,
+            "executable": identity.executable,
+            "runtime_id": handle.runtime_id,
+            "endpoint": {"host": endpoint.address, "port": endpoint.port},
+        }
+
+    def _owned_server_handle(self, project_id: str, session_id: str,
+                             lifecycle: Mapping[str, Any]) -> tuple[ManagedServerHandle, OwnedServerProcessIdentity]:
+        key = (project_id, session_id)
+        handle = self._session_server_handles.get(key)
+        if not isinstance(handle, ManagedServerHandle):
+            raise OwnedServerError("the daemon no longer retains the exact owned Server Popen handle", uncertain=True)
+        if (lifecycle.get("server_ownership") != "mcp_managed"
+                or lifecycle.get("server_state") != "MCP_MANAGED"
+                or not isinstance(lifecycle.get("server_process_identity"), Mapping)):
+            raise OwnedServerError("durable lifecycle does not prove MCP Server ownership", handle=handle, uncertain=True)
+        durable_identity = dict(lifecycle["server_process_identity"])
+        if durable_identity != self._server_process_lifecycle_record(handle):
+            raise OwnedServerError("durable Server identity differs from the retained process handle", handle=handle, uncertain=True)
+        try:
+            identity = self.session_server_launcher.verify(handle)
+        except OwnedServerError:
+            raise
+        except Exception as exc:
+            raise OwnedServerError("owned Server process/listener readback failed", handle=handle, uncertain=True) from exc
+        return handle, identity
+
+    @staticmethod
+    def _endpoint_may_alias_owned_listener(host: Any, port: Any,
+                                           listener: CanonicalSocket) -> bool:
+        """Conservatively match local aliases without resolving or probing DNS.
+
+        Owned COMSOL Servers bind only to loopback. When a caller supplies a
+        hostname for the same port, its local/remote resolution cannot be
+        established without a network lookup, so treat it as a possible local
+        alias and fail closed. Literal non-loopback addresses remain distinct.
+        """
+        if type(port) is not int or port != listener.port or not isinstance(host, str) or not host.strip():
+            return False
+        normalized = host.strip().strip("[]").rstrip(".").casefold()
+        try:
+            owned = ipaddress.ip_address(listener.address)
+        except ValueError:
+            return True
+        try:
+            requested = ipaddress.ip_address(normalized)
+        except ValueError:
+            return owned.is_loopback or owned.is_unspecified
+        if requested == owned:
+            return True
+        requested_local = requested.is_loopback or requested.is_unspecified
+        owned_local = owned.is_loopback or owned.is_unspecified
+        if requested.version == 6 and requested.ipv4_mapped is not None:
+            requested_local = requested_local or requested.ipv4_mapped.is_loopback
+        return requested_local and owned_local
+
+    def _owned_server_endpoint_conflict(self, project_id: str, session_id: str,
+                                         host: str, port: int) -> bool | None:
+        """Whether another live/durable MCP-owned endpoint may accept this attach.
+
+        The owner identity is intentionally not returned to the caller: projects
+        are independent authorization boundaries.
+        """
+        target_key = (project_id, session_id)
+        for key, handle in self._session_server_handles.items():
+            if key == target_key or not isinstance(handle, ManagedServerHandle) or handle.endpoint is None:
+                continue
+            if self._endpoint_may_alias_owned_listener(host, port, handle.endpoint):
+                return True
+        try:
+            rows = self.store.list_metadata("sessions")
+        except Exception:
+            return None
+        for metadata in rows:
+            if not isinstance(metadata, Mapping):
+                return None
+            lifecycle = metadata.get("lifecycle")
+            if not isinstance(lifecycle, Mapping):
+                continue
+            key = (lifecycle.get("project_id"), lifecycle.get("session_id"))
+            if (key == target_key or lifecycle.get("server_ownership") != "mcp_managed"
+                    or lifecycle.get("state") in {"STOPPED", "LOST"}):
+                continue
+            endpoint = lifecycle.get("endpoint")
+            if not isinstance(endpoint, Mapping) or endpoint.get("port") != port:
+                continue
+            owner_host = endpoint.get("host")
+            if not isinstance(owner_host, str):
+                return None
+            try:
+                owner_socket = CanonicalSocket(owner_host, port)
+            except (TypeError, ValueError):
+                # A hostname in a persisted owned endpoint is not
+                # independently trustworthy; the matching port is ambiguous.
+                return True
+            if self._endpoint_may_alias_owned_listener(host, port, owner_socket):
+                return True
+        return False
+
+    def _other_session_binding_uses_owned_server(self, owner_key: tuple[str, str],
+                                                  identity: OwnedServerProcessIdentity) -> bool | None:
+        """Check all durable session rows and retained handles before Server stop."""
+        try:
+            rows = self.store.list_metadata("sessions")
+        except Exception:
+            return None
+        lifecycle_rows: dict[tuple[str, str], Mapping[str, Any]] = {}
+        for metadata in rows:
+            if not isinstance(metadata, Mapping):
+                return None
+            raw = metadata.get("lifecycle")
+            if not isinstance(raw, Mapping):
+                continue
+            project_id, session_id = raw.get("project_id"), raw.get("session_id")
+            if isinstance(project_id, str) and isinstance(session_id, str):
+                lifecycle_rows[(project_id, session_id)] = raw
+        candidate_keys = set(lifecycle_rows) | set(self._session_worker_handles)
+        for key in candidate_keys:
+            if key == owner_key:
+                continue
+            raw = lifecycle_rows.get(key)
+            try:
+                lifecycle = self.session_lifecycle.get(*key)
+            except Exception:
+                endpoint = raw.get("endpoint") if isinstance(raw, Mapping) else None
+                if isinstance(endpoint, Mapping):
+                    host, port = endpoint.get("host"), endpoint.get("port")
+                    for listener in identity.listener_sockets:
+                        if self._endpoint_may_alias_owned_listener(host, port, listener):
+                            return True
+                return None
+            context = None
+            try:
+                context = self.session_registry.get(*key)
+            except SessionContextMissing:
+                pass
+            except Exception:
+                return None
+            if lifecycle is None:
+                if key in self._session_worker_handles or context is not None:
+                    return None
+                continue
+            matched = False
+            peer = context.endpoint.observed_peer if context is not None else None
+            if isinstance(peer, CanonicalSocket):
+                matched = identity.attests_peer(peer)
+            else:
+                endpoint = lifecycle.get("endpoint")
+                if isinstance(endpoint, Mapping):
+                    matched = any(
+                        self._endpoint_may_alias_owned_listener(
+                            endpoint.get("host"), endpoint.get("port"), listener,
+                        ) for listener in identity.listener_sockets
+                    )
+            if not matched:
+                continue
+            has_retained_handle = key in self._session_worker_handles
+            active_state = lifecycle.get("state") in {"CONNECTING", "CONNECTED", "UNKNOWN", "STOPPING"}
+            active_client = lifecycle.get("client_state") in {"CONNECTED", "UNKNOWN"}
+            another_owner = (lifecycle.get("server_ownership") == "mcp_managed"
+                             and lifecycle.get("state") not in {"STOPPED", "LOST"})
+            if has_retained_handle or context is not None or active_state or active_client or another_owner:
+                return True
+        return False
+
+    def _mark_owned_server_unknown_for_close(self, lifecycle: Mapping[str, Any]) -> None:
+        """Persist conservative state when close cannot prove the Server is retired."""
+        try:
+            unknown = self._updated_session_lifecycle(
+                lifecycle, state="UNKNOWN",
+                client_state=lifecycle.get("client_state", "UNKNOWN"),
+                worker_instance_id=lifecycle.get("worker_instance_id"),
+                worker_epoch=lifecycle.get("worker_epoch"),
+                server_instance_id=lifecycle.get("server_instance_id"),
+                server_state="MCP_MANAGED", server_ownership="mcp_managed",
+                server_process_identity=lifecycle.get("server_process_identity"),
+            )
+            self.session_lifecycle.save(unknown, expected_revision=lifecycle["revision"])
+        except Exception:
+            pass
+
+    def _authorize_server_control(self, project_id: str, authorization_ref: str | None = None) -> str | None:
+        self.project_authority.authorize_operation(project_id, "host_control")
+        if authorization_ref is None:
+            return None
+        if (not isinstance(authorization_ref, str) or not authorization_ref.strip()
+                or len(authorization_ref) > 512 or any(ord(char) < 32 for char in authorization_ref)):
+            raise ExecutionContractError("AUTHORIZATION_REQUIRED", "authorization_ref is malformed")
+        verifier = self.project_authority.authorization_verifier
+        if verifier is not None:
+            try:
+                accepted = verifier(project_id, authorization_ref)
+            except Exception as exc:
+                raise ExecutionContractError("AUTHORIZATION_STATE_UNKNOWN", "Server control authorization could not be verified") from exc
+            if accepted is not True:
+                raise ExecutionContractError("AUTHORIZATION_REQUIRED", "Server control authorization was not accepted")
+        return hashlib.sha256(authorization_ref.encode("utf-8")).hexdigest()
+
+    def _dispatch_session_start(self, routed: dict[str, Any], execution: dict[str, Any]) -> dict[str, Any]:
+        project_id, runtime_id = routed["project_id"], routed["runtime_id"]
+        self._authorize_server_control(project_id)
+        options, resources = routed.get("options", {}), routed.get("resources", {})
+        if not isinstance(options, Mapping) or not isinstance(resources, Mapping):
+            raise ExecutionContractError("INVALID_REQUEST", "session.start options and resources must be objects")
+        if options or resources:
+            raise ExecutionContractError(
+                "UNSUPPORTED_OPERATION",
+                "session.start currently accepts only empty options/resources until versioned launch semantics are defined",
+            )
+        request_id = routed.get("request_id") or execution.get("request_id") or str(uuid4())
+        idempotency_key = routed["idempotency_key"]
+        if not isinstance(request_id, str) or not request_id:
+            raise ExecutionContractError("INVALID_REQUEST", "session.start request_id must be a non-empty string")
+        session_id = "session-" + uuid4().hex
+        from ._execution_contract import canonical_request_hash
+        semantic_arguments = {"runtime_id": runtime_id, "options": {}, "resources": {}}
+        request_hash = canonical_request_hash(
+            "session.start", semantic_arguments, None, None, project_id=project_id,
+        )
+        try:
+            record, reused = self.store.begin(
+                request_id=request_id,
+                idempotency_key=idempotency_key,
+                request_hash=request_hash,
+                operation="session.start",
+                metadata={"project_id": project_id, "session_id": session_id,
+                          "runtime_id": runtime_id, "arguments": semantic_arguments},
+                timeouts=self._timeouts(execution),
+            )
+        except IdempotencyConflict as exc:
+            raise ExecutionContractError("IDEMPOTENCY_CONFLICT", str(exc)) from exc
+        if reused:
+            return record["result"] if record.get("result") is not None else self._pending(
+                record, session_id=record.get("metadata", {}).get("session_id"),
+            )
+        session_id = record["metadata"]["session_id"]
+        self._start_session_mutation_record(record, operation="session.start", session_id=session_id)
+        key = (project_id, session_id)
+        lifecycle = None
+        handle = None
+        with self._session_connect_lock:
+            if self._closing:
+                return self._finish(record, self._error(
+                    "CONTROL_DAEMON_CLOSING", "control daemon is closing before Server birth",
+                    data={"session_id": session_id, "server_birth_performed": False}, safe_retry=False,
+                ), "FAILED")
+            try:
+                unresolved = [row for row in self.session_lifecycle.list_for_project(project_id)
+                              if row.get("runtime_id") == runtime_id
+                              and row.get("endpoint") is None
+                              and row.get("state") in {"STARTING", "STOPPING", "UNKNOWN"}]
+                if unresolved:
+                    return self._finish(record, self._error(
+                        "SERVER_OWNERSHIP_UNKNOWN",
+                        "an earlier owned Server birth has no resolved endpoint; no replacement will be started",
+                        data={"session_id": session_id, "unresolved_session_id": unresolved[0]["session_id"],
+                              "server_birth_performed": False}, safe_retry=False,
+                    ), "FAILED")
+                project = self.project_authority.get_project(project_id)
+                project_root = Path(project["workspace"]).resolve(strict=True)
+                runtime = self._resolve_session_runtime(runtime_id, project_id, session_id, project_root)
+                self._session_runtime_configs[key] = runtime
+                lifecycle = self.session_lifecycle.save(new_lifecycle_record(
+                    project_id=project_id, session_id=session_id, state="STARTING",
+                    runtime_id=runtime.runtime_id, endpoint=None,
+                    client_state="DISCONNECTED", server_state="UNKNOWN", server_ownership="unknown",
+                ))
+            except ExecutionContractError as exc:
+                return self._finish(record, self._exception(exc), "FAILED")
+            except Exception as exc:
+                self._log_exception()
+                return self._finish(record, self._error(
+                    "RUNTIME_CONFIGURATION_REQUIRED", "local COMSOL Server runtime could not be resolved",
+                    data={"session_id": session_id, "server_birth_performed": False},
+                    cause_type=type(exc).__name__, safe_retry=True,
+                ), "FAILED")
+
+            try:
+                handle = self.session_server_launcher.start(runtime, project_id, session_id)
+                if not isinstance(handle, ManagedServerHandle):
+                    raise OwnedServerError("Server launcher returned an untrusted handle")
+                self._session_server_handles[key] = handle
+                identity = self.session_server_launcher.verify(handle)
+                if (handle.runtime_id != runtime.runtime_id or handle.endpoint is None
+                        or identity.pid != handle.process.pid):
+                    raise OwnedServerError("Server launcher identity differs from the inspected runtime", handle=handle, uncertain=True)
+                endpoint = {"host": handle.endpoint.address, "port": handle.endpoint.port}
+                self._session_process_identities[key] = identity
+                lifecycle = self.session_lifecycle.save(new_lifecycle_record(
+                    project_id=project_id, session_id=session_id, state="DISCONNECTED",
+                    runtime_id=runtime.runtime_id, endpoint=endpoint,
+                    client_state="DISCONNECTED", server_state="MCP_MANAGED", server_ownership="mcp_managed",
+                    server_process_identity=self._server_process_lifecycle_record(handle),
+                    health={"status": "HEALTHY", "observed_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                            "source": "exact-process-birth+loopback-listener"},
+                ), expected_revision=lifecycle["revision"])
+                return self._finish(record, {"success": True, "data": {
+                    "project_id": project_id, "session_id": session_id,
+                    "runtime_id": runtime.runtime_id, "comsol_version": runtime.comsol_version,
+                    "endpoint": endpoint, "server_ownership": "mcp_managed",
+                    "server_process_identity": lifecycle["server_process_identity"],
+                    "loopback_only_verified": True,
+                    "server_listener_sockets": [
+                        {"address": item.address, "port": item.port} for item in identity.listener_sockets
+                    ],
+                    "client_state": "DISCONNECTED",
+                }}, "SUCCEEDED")
+            except Exception as exc:
+                if isinstance(exc, OwnedServerError):
+                    handle = exc.handle or handle
+                if handle is not None:
+                    self._session_server_handles[key] = handle
+                    endpoint = ({"host": handle.endpoint.address, "port": handle.endpoint.port}
+                                if handle.endpoint is not None else None)
+                    durable_process = None
+                    owner, server_state = "unknown", "UNKNOWN"
+                    identity = handle.process_identity
+                    if identity is not None and endpoint is not None:
+                        try:
+                            durable_process = self._server_process_lifecycle_record(handle)
+                            owner, server_state = "mcp_managed", "MCP_MANAGED"
+                        except Exception:
+                            durable_process = None
+                    try:
+                        unknown = new_lifecycle_record(
+                            project_id=project_id, session_id=session_id, state="UNKNOWN",
+                            runtime_id=runtime.runtime_id, endpoint=endpoint,
+                            client_state="UNKNOWN", server_state=server_state, server_ownership=owner,
+                            server_process_identity=durable_process,
+                        )
+                        lifecycle = self.session_lifecycle.save(unknown, expected_revision=lifecycle["revision"])
+                    except Exception:
+                        pass
+                    return self._finish(record, self._error(
+                        "EXECUTION_STATE_UNKNOWN", "Server process was created but exact startup/registration proof is incomplete",
+                        data={"session_id": session_id, "state": "UNKNOWN", "server_handle_preserved": True,
+                              "server_pid": getattr(handle.process, "pid", None),
+                              "server_birth_performed": True},
+                        execution_state_unknown=True, safe_retry=False,
+                    ), "UNKNOWN")
+                try:
+                    failed = new_lifecycle_record(
+                        project_id=project_id, session_id=session_id, state="STOPPED",
+                        runtime_id=runtime.runtime_id, endpoint=None,
+                        client_state="DISCONNECTED", server_state="STOPPED", server_ownership="unknown",
+                    )
+                    self.session_lifecycle.save(failed, expected_revision=lifecycle["revision"])
+                except Exception:
+                    pass
+                self._log_exception()
+                return self._finish(record, self._error(
+                    "SERVER_START_FAILED", "owned COMSOL Server did not start before any child handle was created",
+                    data={"session_id": session_id, "server_birth_performed": False},
+                    cause_type=type(exc).__name__, safe_retry=True,
+                ), "FAILED")
+
+    def _dispatch_session_stop(self, routed: dict[str, Any], execution: dict[str, Any]) -> dict[str, Any]:
+        project_id, session_id = routed["project_id"], routed["session_id"]
+        authorization_digest = self._authorize_server_control(project_id, routed.get("authorization_ref"))
+        record, reused = self._begin_session_mutation("session.stop", routed, execution)
+        if reused:
+            return record["result"] if record.get("result") is not None else self._pending(record, session_id=session_id)
+        self._start_session_mutation_record(record, operation="session.stop", session_id=session_id)
+        with self._session_connect_lock:
+            try:
+                lifecycle = self.session_lifecycle.get(project_id, session_id)
+            except SessionLifecycleProjectConflict as exc:
+                return self._finish(record, self._error("PROJECT_IDENTITY_MISMATCH", str(exc)), "FAILED")
+            if lifecycle is None:
+                return self._finish(record, self._error("SESSION_NOT_FOUND", "session lifecycle record not found"), "FAILED")
+            if lifecycle["state"] == "STOPPED":
+                return self._finish(record, {"success": True, "data": {
+                    "project_id": project_id, "session_id": session_id,
+                    "state": "STOPPED", "already_stopped": True, "server_stopped": True,
+                }}, "SUCCEEDED")
+            if lifecycle.get("server_ownership") != "mcp_managed":
+                return self._finish(record, self._error(
+                    "SERVER_OWNERSHIP_MISMATCH", "session.stop never terminates a shared or user-owned Server",
+                    data={"session_id": session_id, "server_ownership": lifecycle.get("server_ownership"),
+                          "server_stopped": False}, safe_retry=False,
+                ), "FAILED")
+            key = (project_id, session_id)
+            if lifecycle["state"] in {"UNKNOWN", "STOPPING"}:
+                return self._finish(record, self._error(
+                    "EXECUTION_STATE_UNKNOWN", "session has an unresolved lifecycle state; Server remains running",
+                    data={"session_id": session_id, "state": lifecycle.get("state"),
+                          "client_state": lifecycle.get("client_state"),
+                          "server_stopped": False}, execution_state_unknown=True,
+                ), "UNKNOWN")
+            if (lifecycle["state"] != "DISCONNECTED"
+                    or lifecycle.get("client_state") not in {"DISCONNECTED", "RETIRED"}):
+                return self._finish(record, self._error(
+                    "SESSION_CLIENT_NOT_RETIRED", "disconnect and, when present, retire the Worker before session.stop",
+                    data={"session_id": session_id, "state": lifecycle.get("state"),
+                          "client_state": lifecycle.get("client_state"), "server_stopped": False},
+                    safe_retry=True,
+                ), "FAILED")
+            if key in self._session_worker_handles:
+                return self._finish(record, self._error(
+                    "WORKER_BINDING_UNKNOWN", "session.stop requires the retained Worker handle to be retired first",
+                    data={"session_id": session_id, "server_stopped": False,
+                          "worker_handle_preserved": True}, safe_retry=False,
+                ), "FAILED")
+            pending = [job for job in self._session_jobs_for_project(project_id)
+                       if job.get("operation_id") != record["operation_id"]
+                       and self._job_belongs_to_session(job, project_id, session_id)
+                       and job.get("status") not in TERMINAL]
+            if pending:
+                return self._finish(record, self._error(
+                    "SESSION_BINDING_BUSY", "owned Server has unresolved accepted work and remains running",
+                    data={"session_id": session_id, "unresolved_job_ids": [job["job_id"] for job in pending],
+                          "server_stopped": False}, safe_retry=False,
+                ), "FAILED")
+            try:
+                handle, identity = self._owned_server_handle(project_id, session_id, lifecycle)
+            except OwnedServerError as exc:
+                return self._finish(record, self._error(
+                    "SERVER_OWNERSHIP_UNKNOWN", str(exc),
+                    data={"session_id": session_id, "server_handle_preserved": True,
+                          "server_stopped": False}, execution_state_unknown=True,
+                ), "UNKNOWN")
+            other_binding = self._other_session_binding_uses_owned_server(key, identity)
+            if other_binding is not False:
+                unknown = other_binding is None
+                return self._finish(record, self._error(
+                    "SERVER_ENDPOINT_BINDING_UNKNOWN" if unknown else "SERVER_ENDPOINT_IN_USE",
+                    "other known session bindings could not be ruled out; owned Server remains running"
+                    if unknown else "another known session may still use this owned Server",
+                    data={"session_id": session_id, "server_stopped": False,
+                          "engine_dispatched": False},
+                    execution_state_unknown=unknown, safe_retry=not unknown,
+                ), "UNKNOWN" if unknown else "FAILED")
+            stopping = self._updated_session_lifecycle(
+                lifecycle, state="STOPPING", client_state=lifecycle["client_state"],
+                worker_instance_id=lifecycle["worker_instance_id"],
+                worker_epoch=lifecycle["worker_epoch"],
+                server_instance_id=lifecycle["server_instance_id"],
+            )
+            lifecycle = self.session_lifecycle.save(stopping, expected_revision=lifecycle["revision"])
+            try:
+                stop_evidence = self.session_server_launcher.stop(handle)
+                if (not isinstance(stop_evidence, Mapping) or stop_evidence.get("server_stopped") is not True
+                        or stop_evidence.get("child_reaped") is not True
+                        or stop_evidence.get("listener_absent") is not True
+                        or stop_evidence.get("pid") != identity.pid
+                        or stop_evidence.get("birth") != identity.birth):
+                    raise OwnedServerError("Server stop adapter returned incomplete exact-exit evidence",
+                                           handle=handle, uncertain=True)
+                stopped = self._updated_session_lifecycle(
+                    lifecycle, state="STOPPED", client_state=lifecycle["client_state"],
+                    worker_instance_id=lifecycle["worker_instance_id"], worker_epoch=lifecycle["worker_epoch"],
+                    server_instance_id=None, server_state="STOPPED", server_ownership="unknown",
+                    server_process_identity=None,
+                )
+                lifecycle = self.session_lifecycle.save(stopped, expected_revision=lifecycle["revision"])
+                self._session_server_handles.pop(key, None)
+                self._session_runtime_configs.pop(key, None)
+                self._session_process_identities.pop(key, None)
+            except Exception as exc:
+                try:
+                    unknown = self._updated_session_lifecycle(
+                        lifecycle, state="UNKNOWN", client_state=lifecycle["client_state"],
+                        worker_instance_id=lifecycle["worker_instance_id"],
+                        worker_epoch=lifecycle["worker_epoch"],
+                        server_instance_id=lifecycle["server_instance_id"],
+                    )
+                    self.session_lifecycle.save(unknown, expected_revision=lifecycle["revision"])
+                except Exception:
+                    pass
+                return self._finish(record, self._error(
+                    "EXECUTION_STATE_UNKNOWN", "owned Server stop/reap could not be fully confirmed; exact handle retained",
+                    data={"session_id": session_id, "server_handle_preserved": True,
+                          "server_stopped": False, "cause_type": type(exc).__name__},
+                    execution_state_unknown=True,
+                ), "UNKNOWN")
+            digest = authorization_digest
+            return self._finish(record, {"success": True, "data": {
+                "project_id": project_id, "session_id": session_id,
+                "state": "STOPPED", "server_stopped": True,
+                "stop_evidence": dict(stop_evidence),
+                "authorization_ref_sha256": digest,
+                "worker_client_state": lifecycle["client_state"],
+            }}, "SUCCEEDED")
+
     def _dispatch_session_connect(self, routed: dict[str, Any], execution: dict[str, Any]) -> dict[str, Any]:
         from ._execution_contract import canonical_request_hash
 
@@ -823,6 +1326,11 @@ class ControlDaemon:
         request_id = routed.get("request_id") or execution.get("request_id") or str(uuid4())
         if not isinstance(request_id, str) or not request_id:
             raise ExecutionContractError("INVALID_REQUEST", "session.connect request_id must be a non-empty string")
+        requested_session_id = routed.get("session_id")
+        if requested_session_id is not None and (
+            not isinstance(requested_session_id, str) or not requested_session_id.strip()
+        ):
+            raise ExecutionContractError("INVALID_REQUEST", "session.connect session_id must be a non-empty string")
         endpoint = routed["endpoint"]
         host, port = endpoint.get("host"), endpoint.get("port")
         if not isinstance(host, str) or not host.strip() or type(port) is not int or not 1 <= port <= 65535:
@@ -841,7 +1349,7 @@ class ControlDaemon:
             "session.connect", semantic_arguments, None, None,
             project_id=project_id,
         )
-        session_id = "session-" + uuid4().hex
+        session_id = requested_session_id or ("session-" + uuid4().hex)
         metadata = {
             "project_id": project_id,
             "session_id": session_id,
@@ -875,9 +1383,78 @@ class ControlDaemon:
                           "engine_dispatched": False, "worker_birth_performed": False},
                     safe_retry=False,
                 ), "FAILED")
+            key = (project_id, session_id)
+            existing_lifecycle = None
+            owned_server_handle = None
+            owned_process = None
+            server_ownership = "shared"
+            server_state = "SHARED"
+            server_process_record = None
+            if requested_session_id is not None:
+                try:
+                    existing_lifecycle = self.session_lifecycle.get(project_id, session_id)
+                except SessionLifecycleProjectConflict as exc:
+                    return self._finish(record, self._error("PROJECT_IDENTITY_MISMATCH", str(exc)), "FAILED")
+                if existing_lifecycle is None:
+                    return self._finish(record, self._error(
+                        "SESSION_NOT_FOUND", "explicit session_id must name a prior session.start lifecycle",
+                        data={"session_id": session_id, "engine_dispatched": False}, safe_retry=False,
+                    ), "FAILED")
+                if (existing_lifecycle.get("server_ownership") != "mcp_managed"
+                        or existing_lifecycle.get("server_state") != "MCP_MANAGED"
+                        or existing_lifecycle.get("runtime_id") != routed["runtime_id"]
+                        or existing_lifecycle.get("endpoint") != {"host": host, "port": port}
+                        or existing_lifecycle.get("state") != "DISCONNECTED"
+                        or existing_lifecycle.get("client_state") != "DISCONNECTED"):
+                    return self._finish(record, self._error(
+                        "SERVER_OWNERSHIP_MISMATCH",
+                        "explicit session_id does not identify a disconnected, matching MCP-managed endpoint",
+                        data={"session_id": session_id, "engine_dispatched": False}, safe_retry=False,
+                    ), "FAILED")
+                if key in self._session_worker_handles:
+                    return self._finish(record, self._error(
+                        "WORKER_BINDING_UNKNOWN", "prior Worker handle must be reconnected or retired before a new attach",
+                        data={"session_id": session_id, "engine_dispatched": False,
+                              "worker_handle_preserved": True}, safe_retry=False,
+                    ), "FAILED")
+                try:
+                    owned_server_handle, owned_process = self._owned_server_handle(
+                        project_id, session_id, existing_lifecycle,
+                    )
+                    server_ownership = "mcp_managed"
+                    server_state = "MCP_MANAGED"
+                    server_process_record = dict(existing_lifecycle["server_process_identity"])
+                except OwnedServerError as exc:
+                    return self._finish(record, self._error(
+                        "SERVER_OWNERSHIP_UNKNOWN", str(exc),
+                        data={"session_id": session_id, "engine_dispatched": False,
+                              "server_handle_preserved": True}, execution_state_unknown=True,
+                    ), "UNKNOWN")
             active = [row for row in self.session_lifecycle.list_for_project(project_id)
                       if row.get("endpoint") == {"host": host, "port": port}
+                      and row.get("session_id") != session_id
                       and row.get("state") in {"CONNECTING", "CONNECTED", "UNKNOWN", "STOPPING"}]
+            if requested_session_id is None:
+                owned_targets = [row for row in self.session_lifecycle.list_for_project(project_id)
+                                 if row.get("endpoint") == {"host": host, "port": port}
+                                 and row.get("server_ownership") == "mcp_managed"
+                                 and row.get("state") not in {"STOPPED", "LOST"}]
+                if owned_targets:
+                    return self._finish(record, self._error(
+                        "SESSION_ID_REQUIRED", "attach to a session.start Server with its exact session_id",
+                        data={"session_id": owned_targets[0]["session_id"], "engine_dispatched": False},
+                        safe_retry=False,
+                    ), "FAILED")
+            owned_conflict = self._owned_server_endpoint_conflict(project_id, session_id, host, port)
+            if owned_conflict is not False:
+                unknown = owned_conflict is None
+                return self._finish(record, self._error(
+                    "SERVER_ENDPOINT_OWNERSHIP_UNKNOWN" if unknown else "SERVER_ENDPOINT_OWNERSHIP_CONFLICT",
+                    "daemon could not prove that this endpoint is independent of an owned Server"
+                    if unknown else "endpoint is reserved by another daemon-owned session",
+                    data={"engine_dispatched": False, "worker_birth_performed": False},
+                    execution_state_unknown=unknown, safe_retry=False,
+                ), "UNKNOWN" if unknown else "FAILED")
             if active:
                 result = self._error("SESSION_ALREADY_ACTIVE", "an active or uncertain session already targets this endpoint",
                                      data={"session_id": session_id, "existing_session_id": active[0]["session_id"],
@@ -887,18 +1464,45 @@ class ControlDaemon:
 
             self.store.update_job(record["job_id"], "RUNNING", {"session_id": session_id, "engine_dispatched": False})
             self.store.add_event(record["job_id"], "RUNNING", {"operation_id": record["operation_id"], "session_id": session_id})
-            lifecycle = self.session_lifecycle.save(new_lifecycle_record(
-                project_id=project_id, session_id=session_id, state="CONNECTING",
-                runtime_id=routed["runtime_id"], endpoint={"host": host, "port": port},
-                client_state="DISCONNECTED", server_state="SHARED", server_ownership="shared",
-            ))
+            if existing_lifecycle is None:
+                lifecycle = self.session_lifecycle.save(new_lifecycle_record(
+                    project_id=project_id, session_id=session_id, state="CONNECTING",
+                    runtime_id=routed["runtime_id"], endpoint={"host": host, "port": port},
+                    client_state="DISCONNECTED", server_state="SHARED", server_ownership="shared",
+                ))
+            else:
+                lifecycle = self.session_lifecycle.save(self._updated_session_lifecycle(
+                    existing_lifecycle, state="CONNECTING", client_state="DISCONNECTED",
+                    worker_instance_id=existing_lifecycle.get("worker_instance_id"),
+                    worker_epoch=None, server_instance_id=None,
+                ), expected_revision=existing_lifecycle["revision"])
+
+            def connection_lifecycle(state: str, client_state: str, *, worker_id=None,
+                                     epoch=None, server_id=None, health=None):
+                return new_lifecycle_record(
+                    project_id=project_id, session_id=session_id, state=state,
+                    runtime_id=routed["runtime_id"], endpoint={"host": host, "port": port},
+                    client_state=client_state, server_state=server_state,
+                    server_ownership=server_ownership,
+                    worker_instance_id=worker_id, worker_epoch=epoch,
+                    server_instance_id=server_id,
+                    server_process_identity=server_process_record,
+                    health=health,
+                )
             backend = None
             worker = None
             attached = None
             dispatched = False
             try:
                 self.project_authority.authorize_operation(project_id, "project_write")
-                runtime = self._resolve_session_runtime(routed["runtime_id"], project_id, session_id, project_root)
+                runtime = self._session_runtime_configs.get(key) if owned_server_handle is not None else None
+                if runtime is None:
+                    if owned_server_handle is not None:
+                        raise ExecutionContractError(
+                            "RUNTIME_CONFIGURATION_REQUIRED",
+                            "daemon no longer retains the exact runtime configuration for this owned Server",
+                        )
+                    runtime = self._resolve_session_runtime(routed["runtime_id"], project_id, session_id, project_root)
                 self._session_runtime_configs[(project_id, session_id)] = runtime
                 credentials = self._resolve_session_credentials(credentials_ref)
                 self._session_credentials_refs[(project_id, session_id)] = credentials_ref
@@ -922,6 +1526,7 @@ class ControlDaemon:
                     request_id=request_id, event_callback=worker_event,
                     credentials=credentials, rpc_timeout_s=timeouts["rpc_timeout_s"],
                     project_permissions=project_record.get("policy", {}).get("permissions", []),
+                    server_ownership=server_ownership, owned_process=owned_process,
                 )
                 dispatched = True
                 worker = attached["worker"]
@@ -931,25 +1536,24 @@ class ControlDaemon:
                 reply = attached["reply"]
                 identity = attached["worker_identity"]
                 endpoint_identity = SessionEndpointIdentity(
-                    host, port, reply["generation"], observed_peer=peer, owned_process=None,
+                    host, port, reply["generation"], observed_peer=peer, owned_process=owned_process,
                 )
                 context = SessionRuntimeContext(
                     project_id=project_id, session_id=session_id, project_root=project_root,
                     runtime=runtime, endpoint=endpoint_identity, backend=backend,
                     worker_instance_id=reply["instance_id"], worker=worker,
                     service=backend.service, client=worker.client(),
-                    remote_client_factory=worker.client, server_ownership="shared",
+                    server_handle=owned_server_handle.process if owned_server_handle is not None else None,
+                    process_identity=owned_process,
+                    remote_client_factory=worker.client, server_ownership=server_ownership,
                     client_connected=True, connected_host=host, connected_port=port,
-                    server_started_by_mcp=False,
+                    server_started_by_mcp=(server_ownership == "mcp_managed"),
                     health_snapshot={"status": "HEALTHY", "source": "worker-connect-reply+observed-peer"},
                 )
                 self.session_registry.register(context)
-                lifecycle = self.session_lifecycle.save(new_lifecycle_record(
-                    project_id=project_id, session_id=session_id, state="CONNECTED",
-                    runtime_id=runtime.runtime_id, endpoint={"host": host, "port": port},
-                    client_state="CONNECTED", server_state="SHARED", server_ownership="shared",
-                    worker_instance_id=reply["instance_id"], worker_epoch=reply["generation"],
-                    server_instance_id=attached["server_instance_id"],
+                lifecycle = self.session_lifecycle.save(connection_lifecycle(
+                    "CONNECTED", "CONNECTED", worker_id=reply["instance_id"],
+                    epoch=reply["generation"], server_id=attached["server_instance_id"],
                     health={"status": "HEALTHY", "observed_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                             "source": "worker-connect-reply+observed-peer"},
                 ), expected_revision=lifecycle["revision"])
@@ -962,7 +1566,7 @@ class ControlDaemon:
                     "remote_engine_version": reply["engine_version"],
                     "remote_engine_build": identity["remote_engine_build"],
                     "remote_engine_build_source": identity["remote_engine_build_source"],
-                    "server_ownership": "shared", "credentials_configured": credentials_ref is not None,
+                    "server_ownership": server_ownership, "credentials_configured": credentials_ref is not None,
                 }}
                 return self._finish(record, result, "SUCCEEDED")
             except SessionConnectFailure as exc:
@@ -1005,13 +1609,11 @@ class ControlDaemon:
                                 )
                             except Exception:
                                 server_id = None
-                    lifecycle = self.session_lifecycle.save(new_lifecycle_record(
-                        project_id=project_id, session_id=session_id, state=state,
-                        runtime_id=routed["runtime_id"], endpoint={"host": host, "port": port},
-                        client_state=client_state, server_state="UNKNOWN", server_ownership="shared",
-                        worker_instance_id=worker_id if isinstance(worker_id, str) else None,
-                        worker_epoch=epoch if type(epoch) is int and epoch > 0 else None,
-                        server_instance_id=server_id,
+                    lifecycle = self.session_lifecycle.save(connection_lifecycle(
+                        state, client_state,
+                        worker_id=worker_id if isinstance(worker_id, str) else None,
+                        epoch=epoch if type(epoch) is int and epoch > 0 else None,
+                        server_id=server_id,
                     ), expected_revision=lifecycle["revision"])
                     failure_code = exc.code if exc.uncertain else "EXECUTION_STATE_UNKNOWN"
                     failure_message = (str(exc) if exc.uncertain else
@@ -1025,10 +1627,8 @@ class ControlDaemon:
                     }, safe_retry=False, execution_state_unknown=True)
                     return self._finish(record, result, "UNKNOWN")
 
-                lifecycle = self.session_lifecycle.save(new_lifecycle_record(
-                    project_id=project_id, session_id=session_id, state="DISCONNECTED",
-                    runtime_id=routed["runtime_id"], endpoint={"host": host, "port": port},
-                    client_state="DISCONNECTED", server_state="UNKNOWN", server_ownership="shared",
+                lifecycle = self.session_lifecycle.save(connection_lifecycle(
+                    "DISCONNECTED", "DISCONNECTED",
                 ), expected_revision=lifecycle["revision"])
                 if worker is not None:
                     if worker_retired:
@@ -1049,12 +1649,9 @@ class ControlDaemon:
                         worker_instance_id=reply.get("instance_id"),
                         worker_epoch=reply.get("generation"),
                     )
-                    lifecycle = self.session_lifecycle.save(new_lifecycle_record(
-                        project_id=project_id, session_id=session_id, state="UNKNOWN",
-                        runtime_id=routed["runtime_id"], endpoint={"host": host, "port": port},
-                        client_state="CONNECTED", server_state="UNKNOWN", server_ownership="shared",
-                        worker_instance_id=reply.get("instance_id"), worker_epoch=reply.get("generation"),
-                        server_instance_id=attached.get("server_instance_id"),
+                    lifecycle = self.session_lifecycle.save(connection_lifecycle(
+                        "UNKNOWN", "CONNECTED", worker_id=reply.get("instance_id"),
+                        epoch=reply.get("generation"), server_id=attached.get("server_instance_id"),
                     ), expected_revision=lifecycle["revision"])
                     result = self._error(
                         "EXECUTION_STATE_UNKNOWN",
@@ -1065,10 +1662,8 @@ class ControlDaemon:
                         execution_state_unknown=True,
                     )
                     return self._finish(record, result, "UNKNOWN")
-                lifecycle = self.session_lifecycle.save(new_lifecycle_record(
-                    project_id=project_id, session_id=session_id, state="DISCONNECTED",
-                    runtime_id=routed["runtime_id"], endpoint={"host": host, "port": port},
-                    client_state="DISCONNECTED", server_state="UNKNOWN", server_ownership="shared",
+                lifecycle = self.session_lifecycle.save(connection_lifecycle(
+                    "DISCONNECTED", "DISCONNECTED",
                 ), expected_revision=lifecycle["revision"])
                 result = self._exception(exc)
                 return self._finish(record, result, "FAILED")
@@ -1085,10 +1680,8 @@ class ControlDaemon:
                         worker_instance_id=runtime_meta.get("instance_id"),
                         worker_epoch=runtime_meta.get("generation"),
                     )
-                    lifecycle = self.session_lifecycle.save(new_lifecycle_record(
-                        project_id=project_id, session_id=session_id, state="UNKNOWN",
-                        runtime_id=routed["runtime_id"], endpoint={"host": host, "port": port},
-                        client_state="UNKNOWN", server_state="UNKNOWN", server_ownership="shared",
+                    lifecycle = self.session_lifecycle.save(connection_lifecycle(
+                        "UNKNOWN", "UNKNOWN",
                     ), expected_revision=lifecycle["revision"])
                     result = self._error("EXECUTION_STATE_UNKNOWN", "session connect completed without durable identity confirmation",
                                          data={"session_id": session_id, "engine_dispatched": True,
@@ -1096,10 +1689,8 @@ class ControlDaemon:
                                          execution_state_unknown=True)
                     return self._finish(record, result, "UNKNOWN")
                 self._log_exception()
-                lifecycle = self.session_lifecycle.save(new_lifecycle_record(
-                    project_id=project_id, session_id=session_id, state="DISCONNECTED",
-                    runtime_id=routed["runtime_id"], endpoint={"host": host, "port": port},
-                    client_state="DISCONNECTED", server_state="UNKNOWN", server_ownership="shared",
+                lifecycle = self.session_lifecycle.save(connection_lifecycle(
+                    "DISCONNECTED", "DISCONNECTED",
                 ), expected_revision=lifecycle["revision"])
                 result = self._error("RUNTIME_CONFIGURATION_REQUIRED", "session Worker configuration failed before connect dispatch",
                                      data={"session_id": session_id, "engine_dispatched": False},
@@ -1216,7 +1807,15 @@ class ControlDaemon:
                                    client_state: str, worker_instance_id: str | None = None,
                                    worker_epoch: int | None = None,
                                    server_instance_id: str | None = None,
-                                   health: Mapping[str, Any] | None = None):
+                                   health: Mapping[str, Any] | None = None,
+                                   server_state: str | None = None,
+                                   server_ownership: str | None = None,
+                                   server_process_identity: Any = _PRESERVE_SERVER_PROCESS_IDENTITY):
+        process_identity_value = (
+            prior["server_process_identity"]
+            if server_process_identity is _PRESERVE_SERVER_PROCESS_IDENTITY
+            else server_process_identity
+        )
         return new_lifecycle_record(
             project_id=prior["project_id"],
             session_id=prior["session_id"],
@@ -1224,12 +1823,12 @@ class ControlDaemon:
             runtime_id=prior["runtime_id"],
             endpoint=prior["endpoint"],
             client_state=client_state,
-            server_state=prior["server_state"],
-            server_ownership=prior["server_ownership"],
+            server_state=server_state if server_state is not None else prior["server_state"],
+            server_ownership=server_ownership if server_ownership is not None else prior["server_ownership"],
             worker_instance_id=worker_instance_id if worker_instance_id is not None else prior["worker_instance_id"],
             worker_epoch=worker_epoch,
             server_instance_id=server_instance_id,
-            server_process_identity=prior["server_process_identity"],
+            server_process_identity=process_identity_value,
             health=health or {"status": "UNKNOWN", "observed_at": None, "source": None},
         )
 
@@ -1721,6 +2320,30 @@ class ControlDaemon:
             worker = self._session_worker_handles.get(key)
             runtime = self._session_runtime_configs.get(key)
             backend = self._session_backends.get(key)
+            owned_server_handle = None
+            owned_process = None
+            if lifecycle.get("server_ownership") == "mcp_managed":
+                try:
+                    owned_server_handle, owned_process = self._owned_server_handle(
+                        project_id, session_id, lifecycle,
+                    )
+                except OwnedServerError as exc:
+                    try:
+                        unknown = self._updated_session_lifecycle(
+                            lifecycle, state="UNKNOWN", client_state="UNKNOWN",
+                            worker_instance_id=lifecycle.get("worker_instance_id"),
+                            worker_epoch=lifecycle.get("worker_epoch"),
+                            server_instance_id=lifecycle.get("server_instance_id"),
+                        )
+                        self.session_lifecycle.save(unknown, expected_revision=lifecycle["revision"])
+                    except Exception:
+                        pass
+                    return self._finish(record, self._error(
+                        "SERVER_OWNERSHIP_UNKNOWN", str(exc),
+                        data={"project_id": project_id, "session_id": session_id,
+                              "state": "UNKNOWN", "worker_handle_preserved": worker is not None,
+                              "engine_dispatched": False}, execution_state_unknown=True,
+                    ), "UNKNOWN")
             if lifecycle.get("client_state") == "RETIRED":
                 return self._finish(record, self._error(
                     "WORKER_RETIRED", "session Worker was explicitly retired; reconnect cannot create a replacement Worker",
@@ -1767,6 +2390,9 @@ class ControlDaemon:
             if context is not None and (
                 context.worker is not worker or context.worker_epoch != lifecycle["worker_epoch"]
                 or context.worker_instance_id != lifecycle["worker_instance_id"]
+                or context.server_ownership != lifecycle["server_ownership"]
+                or (lifecycle["server_ownership"] == "mcp_managed"
+                    and context.process_identity != owned_process)
             ):
                 self._quarantine_session_context(project_id, session_id, context)
                 try:
@@ -1892,7 +2518,8 @@ class ControlDaemon:
                     event_callback=self._session_worker_event_callback(record),
                     credentials=credentials, rpc_timeout_s=self._timeouts(execution)["rpc_timeout_s"],
                     project_permissions=project_record.get("policy", {}).get("permissions", []),
-                    existing_worker=worker,
+                    existing_worker=worker, server_ownership=lifecycle["server_ownership"],
+                    owned_process=owned_process,
                 )
                 reply, peer = attached["reply"], attached["peer"]
                 if (reply["instance_id"] != lifecycle["worker_instance_id"]
@@ -1901,7 +2528,7 @@ class ControlDaemon:
                         or (isinstance(old_version, str) and reply.get("engine_version") != old_version)
                         or attached["worker_identity"].get("remote_engine_build") != old_build):
                     raise RuntimeError("reconnect attached to a different or unverified endpoint/runtime identity")
-                process_identity = self._session_process_identities.get(key)
+                process_identity = owned_process
                 ownership = lifecycle["server_ownership"]
                 if ownership == "mcp_managed" and process_identity is None:
                     raise RuntimeError("MCP-owned reconnect lacks the exact retained server process/listener identity")
@@ -1914,6 +2541,7 @@ class ControlDaemon:
                     runtime=runtime, endpoint=endpoint_identity, backend=backend,
                     worker_instance_id=reply["instance_id"], worker=worker,
                     service=backend.service, client=worker.client(),
+                    server_handle=owned_server_handle.process if owned_server_handle is not None else None,
                     remote_client_factory=worker.client,
                     server_ownership=ownership, process_identity=process_identity,
                     client_connected=True, connected_host=host, connected_port=port,
@@ -2124,12 +2752,16 @@ class ControlDaemon:
             raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "session project_id differs from the execution envelope")
         if operation == "session.connect":
             return self._dispatch_session_connect(routed, execution)
+        if operation == "session.start":
+            return self._dispatch_session_start(routed, execution)
         if operation == "session.disconnect":
             return self._dispatch_session_disconnect(routed, execution)
         if operation == "session.reconnect":
             return self._dispatch_session_reconnect(routed, execution)
         if operation == "session.recover":
             return self._dispatch_session_recover(routed, execution)
+        if operation == "session.stop":
+            return self._dispatch_session_stop(routed, execution)
         if operation not in {"session.list", "session.inspect", "session.health"}:
             # validate_call above gives a truthful UNSUPPORTED_OPERATION for
             # cataloged lifecycle mutations that do not yet have process-safe
@@ -3509,6 +4141,62 @@ class ControlDaemon:
                     # falls back to PID signalling or drops an uncertain handle.
                     continue
 
+    def _stop_owned_servers_for_close(self) -> None:
+        """Stop only exact daemon-started Servers after Worker/scheduler drain."""
+        with self._session_connect_lock:
+            for key, handle in list(self._session_server_handles.items()):
+                project_id, session_id = key
+                if key in self._session_worker_handles:
+                    continue
+                lifecycle = None
+                close_resolution_started = False
+                try:
+                    lifecycle = self.session_lifecycle.get(project_id, session_id)
+                    if (lifecycle is None or lifecycle.get("state") != "DISCONNECTED"
+                            or lifecycle.get("client_state") not in {"DISCONNECTED", "RETIRED"}
+                            or lifecycle.get("server_ownership") != "mcp_managed"):
+                        continue
+                    if self._session_has_unresolved_jobs(project_id, session_id):
+                        continue
+                    close_resolution_started = True
+                    exact_handle, identity = self._owned_server_handle(project_id, session_id, lifecycle)
+                    if exact_handle is not handle:
+                        continue
+                    other_binding = self._other_session_binding_uses_owned_server(key, identity)
+                    if other_binding is not False:
+                        self._mark_owned_server_unknown_for_close(lifecycle)
+                        continue
+                    evidence = self.session_server_launcher.stop(handle)
+                    if (not isinstance(evidence, Mapping) or evidence.get("server_stopped") is not True
+                            or evidence.get("child_reaped") is not True
+                            or evidence.get("listener_absent") is not True
+                            or evidence.get("pid") != identity.pid
+                            or evidence.get("birth") != identity.birth):
+                        raise OwnedServerError(
+                            "owned Server stop adapter returned incomplete exact-exit evidence",
+                            handle=handle, uncertain=True,
+                        )
+                    stopped = self._updated_session_lifecycle(
+                        lifecycle, state="STOPPED", client_state=lifecycle["client_state"],
+                        worker_instance_id=lifecycle.get("worker_instance_id"),
+                        worker_epoch=lifecycle.get("worker_epoch"), server_instance_id=None,
+                        server_state="STOPPED", server_ownership="unknown",
+                        server_process_identity=None,
+                    )
+                    self.session_lifecycle.save(stopped, expected_revision=lifecycle["revision"])
+                    self._session_server_handles.pop(key, None)
+                    self._session_runtime_configs.pop(key, None)
+                    self._session_process_identities.pop(key, None)
+                except Exception:
+                    if lifecycle is not None and close_resolution_started:
+                        # close() cannot report an uncertain stop to a caller.
+                        # Persist UNKNOWN so a later daemon never reads the old
+                        # DISCONNECTED row as proof that the Server is healthy.
+                        self._mark_owned_server_unknown_for_close(lifecycle)
+                    # Unknown/busy/missing-birth processes are deliberately
+                    # retained. Daemon shutdown never falls back to PID kill.
+                    continue
+
     def close(self):
         with self._dispatch_condition:
             if self._close_complete:
@@ -3542,6 +4230,10 @@ class ControlDaemon:
             self._shutdown_tasks_drained = True
             try:
                 self._retire_owned_session_workers_for_close()
+            except Exception:
+                pass
+            try:
+                self._stop_owned_servers_for_close()
             except Exception:
                 pass
             self.monitor.join(timeout=2)

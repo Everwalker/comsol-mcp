@@ -38,6 +38,7 @@ from ._g2_isolation import configured_receipt, verify_owned_server
 from ._platform_paths import default_comsol_help_roots
 from ._session_context import (
     CanonicalSocket,
+    OwnedServerProcessIdentity,
     SessionEndpointIdentity,
     SessionRuntimeConfig,
     SessionRuntimeContext,
@@ -401,7 +402,8 @@ class ManagedBackend:
                         host: str, port: int, operation_id: str, request_id: str,
                         event_callback, credentials: Mapping[str, Any] | None = None,
                         rpc_timeout_s: float = 30.0, project_permissions=None,
-                        existing_worker=None):
+                        existing_worker=None, server_ownership: str = "shared",
+                        owned_process: OwnedServerProcessIdentity | None = None):
         """Attach one private Worker to an already-listening endpoint.
 
         This route never touches ``_server`` globals, mutates process
@@ -412,6 +414,15 @@ class ManagedBackend:
         if not isinstance(runtime, SessionRuntimeConfig):
             raise SessionConnectFailure("RUNTIME_CONFIGURATION_REQUIRED", "local runtime configuration is unavailable",
                                         safe_retry=True, uncertain=False, dispatched=False)
+        if server_ownership not in {"shared", "mcp_managed", "user_owned"}:
+            raise SessionConnectFailure("SERVER_OWNERSHIP_UNKNOWN", "Server ownership classification is invalid",
+                                        safe_retry=False, uncertain=False, dispatched=False)
+        if owned_process is not None and not isinstance(owned_process, OwnedServerProcessIdentity):
+            raise SessionConnectFailure("SERVER_OWNERSHIP_UNKNOWN", "Server process identity is malformed",
+                                        safe_retry=False, uncertain=False, dispatched=False)
+        if (server_ownership == "mcp_managed") != (owned_process is not None):
+            raise SessionConnectFailure("SERVER_OWNERSHIP_UNKNOWN", "MCP-managed Server requires its exact live process identity",
+                                        safe_retry=False, uncertain=False, dispatched=False)
         try:
             session_home = session_state_directory(runtime.session_state_root, project_id, session_id)
             session_home.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -525,6 +536,10 @@ class ManagedBackend:
                 raise SessionConnectFailure("EXECUTION_STATE_UNKNOWN", "connected remote peer could not be independently observed",
                                             safe_retry=False, uncertain=True, dispatched=True, worker=worker,
                                             reply=reply, runtime_metadata=runtime_metadata)
+            if owned_process is not None and not owned_process.attests_peer(peer):
+                raise SessionConnectFailure("SERVER_OWNERSHIP_UNKNOWN", "observed remote peer is not attested by the retained Server listener",
+                                            safe_retry=False, uncertain=True, dispatched=True, worker=worker,
+                                            reply=reply, runtime_metadata=runtime_metadata)
         except SessionConnectFailure:
             raise
         except JavaWorkerTimeout as exc:
@@ -574,6 +589,7 @@ class ManagedBackend:
                 "worker_instance_id": instance,
                 "connection_epoch": generation,
                 "server_instance_id": server_id,
+                "server_ownership": server_ownership,
                 "endpoint": reply["server"],
                 "observed_peer": {"address": peer.address, "port": peer.port},
                 "remote_engine_version": reply["engine_version"],
@@ -581,7 +597,7 @@ class ManagedBackend:
                 "remote_engine_build_source": "remote-connect-reply" if remote_build is not None else "NOT_REPORTED",
             }
             permissions = set(project_permissions or ()) & self.host_permission_ceiling
-            ledger = SessionLedger(session_id, server_id, server_ownership="shared", permissions=permissions)
+            ledger = SessionLedger(session_id, server_id, server_ownership=server_ownership, permissions=permissions)
             self.worker = worker
             self.worker_identity = worker_identity
             backend = self
@@ -601,7 +617,7 @@ class ManagedBackend:
                 "connected": True,
                 "session_id": session_id,
                 "runtime_id": runtime.runtime_id,
-                "server_ownership": "shared",
+                "server_ownership": server_ownership,
                 "endpoint": reply["server"],
                 "observed_peer": {"address": peer.address, "port": peer.port},
                 "worker": {k: v for k, v in runtime_metadata.items() if k != "token"},
@@ -611,7 +627,8 @@ class ManagedBackend:
             }
             self.persist()
             return {"worker": worker, "reply": reply_with_peer, "runtime_metadata": dict(runtime_metadata),
-                    "peer": peer, "worker_identity": dict(worker_identity), "server_instance_id": server_id}
+                    "peer": peer, "worker_identity": dict(worker_identity), "server_instance_id": server_id,
+                    "server_ownership": server_ownership, "owned_process": owned_process}
         except SessionConnectFailure:
             raise
         except Exception as exc:

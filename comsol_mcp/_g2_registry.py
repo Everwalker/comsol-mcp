@@ -82,11 +82,10 @@ CONTROL_IMPLEMENTED_OPERATIONS = frozenset({
     "job.wait", "job.cancel", "job.cleanup",
     "project.create", "project.inspect", "project.contract_set",
     "project.policy_set", "project.permissions", "project.state_export",
-    # Durable project-scoped lifecycle snapshots and attach-to-existing
-    # lifecycle. Owned server start/stop and other mutations remain unavailable
-    # until their exact process-birth adapters land.
+    # Durable project-scoped lifecycle snapshots and process-birth fenced
+    # owned Server lifecycle.
     "session.list", "session.inspect", "session.health", "session.connect",
-    "session.disconnect", "session.reconnect", "session.recover",
+    "session.start", "session.disconnect", "session.reconnect", "session.recover", "session.stop",
 })
 
 # The durable coordinator owns admission, authorization, idempotency, and

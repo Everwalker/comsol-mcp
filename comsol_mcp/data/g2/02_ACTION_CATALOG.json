@@ -850,11 +850,11 @@
       "mcp_tool_name": "session_connect",
       "domain": "session",
       "purpose": "连接已有 mphserver，核对版本与所有权",
-      "arguments_signature": "runtime_id:str,endpoint:Endpoint,credentials_ref:str?",
+      "arguments_signature": "runtime_id:str,endpoint:Endpoint,session_id:str?,credentials_ref:str?",
       "effect": "STATE_WRITE",
       "scope": "project",
       "gate": "G0",
-      "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+      "implementation_status": "IMPLEMENTED",
       "route": "control plane",
       "capability_requirements": "common target with version capability probe",
       "input_schema": {
@@ -872,6 +872,10 @@
           },
           "request_id": {
             "type": "string"
+          },
+          "session_id": {
+            "type": "string",
+            "minLength": 1
           },
           "runtime_id": {
             "type": "string"
@@ -897,7 +901,7 @@
         "normal_path",
         "failure_is_truthful"
       ],
-      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read."
+      "notes": "可选session_id仅用于附着本Daemon先前session.start创建且仍持有精确Server Popen/出生/loopback listener证据的session；普通连接自动分配新session_id。"
     },
     {
       "operation_id": "session.start",
@@ -908,7 +912,7 @@
       "effect": "HOST_CONTROL",
       "scope": "project",
       "gate": "G0",
-      "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+      "implementation_status": "IMPLEMENTED",
       "route": "control plane",
       "capability_requirements": "common target with version capability probe",
       "input_schema": {
@@ -950,7 +954,7 @@
         "normal_path",
         "failure_is_truthful"
       ],
-      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read."
+      "notes": "仅空options/resources当前可执行；要求project host_control。启动前验证本地runtime_id、私有安装影子、精确进程出生和单一127.0.0.1 listener；不修改安装树。"
     },
     {
       "operation_id": "session.inspect",
@@ -1003,7 +1007,7 @@
       "effect": "STATE_WRITE",
       "scope": "project",
       "gate": "G4",
-      "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+      "implementation_status": "IMPLEMENTED",
       "route": "control plane",
       "capability_requirements": "common target with version capability probe",
       "input_schema": {
@@ -1101,7 +1105,7 @@
       "effect": "HOST_CONTROL",
       "scope": "project",
       "gate": "G4",
-      "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
+      "implementation_status": "IMPLEMENTED",
       "route": "control plane",
       "capability_requirements": "common target with version capability probe",
       "input_schema": {
@@ -1141,7 +1145,7 @@
         "normal_path",
         "failure_is_truthful"
       ],
-      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read."
+      "notes": "要求project host_control与authorization_ref。仅在Worker已断开或精确退休、无未解决任务且保留精确Popen/出生/loopback listener时停止本Daemon自有Server；shared/user-owned永不由此路由停止。"
     },
     {
       "operation_id": "session.health",
