@@ -1,9 +1,13 @@
 """Software-only aggregation tests; fake Worker outputs never establish native acceptance."""
 from __future__ import annotations
 
+import copy
+
 import pytest
 
+from comsol_mcp._w23_basis_v2_provenance import read_native_mode_provenance
 from tests import test_w23_mode_basis_v2 as math_fixtures
+from tests import test_w23_mode_basis_v2_provenance as provenance_fixtures
 from tests import test_w23_mode_basis_v2_results as native_fixtures
 from tools.w23_mode_basis_v2 import (
     build_two_mode_basis_field_contracts,
@@ -11,6 +15,7 @@ from tools.w23_mode_basis_v2 import (
 )
 from tools.w23_mode_basis_v2_aggregate import (
     AggregationError,
+    _verify_native_mode_provenance,
     aggregate_two_mode_native_result,
 )
 
@@ -54,6 +59,56 @@ def _aligned_response(monkeypatch):
     return request, definition, response, independent
 
 
+def _contained_lineage_envelope():
+    request, roles, model, selection = provenance_fixtures._lineage_inputs()
+    provenance = read_native_mode_provenance(model, request, roles, selection)
+    source_readbacks = {
+        f"mode_{index}": {
+            "mode_axis_parameter": "lambda",
+            "solution_axes": {"parameters_by_pair": {
+                "lambda": (1.55e-6 + index * 1e-9, "m")}},
+        }
+        for index in range(2)
+    }
+    result = {
+        "native_mode_provenance": provenance,
+        "surface_readbacks": {"output": {"entity_ids": list(selection["entity_ids"])}},
+        "source_readbacks": source_readbacks,
+    }
+    assert provenance["configuration_containment_status"] == (
+        "SOLUTIONINFO_SEQUENCE_CONTAINS_OUTPUT_PORT_BMA_CONFIGURATION")
+    return request, result
+
+
+def test_aggregator_checks_port_readbacks_when_configuration_containment_is_claimed():
+    request, result = _contained_lineage_envelope()
+
+    assert _verify_native_mode_provenance(request, result) == "PRESENT_IN_ENVELOPE_UNVERIFIED"
+
+    tampered_port_name = copy.deepcopy(result)
+    tampered_port_name["native_mode_provenance"]["numeric_port"]["port_name"] = "3"
+    with pytest.raises(AggregationError, match="verified Port configuration"):
+        _verify_native_mode_provenance(request, tampered_port_name)
+
+    tampered_port_ids = copy.deepcopy(result)
+    tampered_port_ids["native_mode_provenance"]["numeric_port"]["selection"]["entity_ids"] = [17, 19]
+    with pytest.raises(AggregationError, match="boundary IDs differ"):
+        _verify_native_mode_provenance(request, tampered_port_ids)
+
+
+@pytest.mark.parametrize("axis", ["inner_index", "solnum"])
+def test_aggregator_rejects_duplicate_solutioninfo_basis_indices_under_containment(axis):
+    request, result = _contained_lineage_envelope()
+    first_index = request["basis_modes"][0]["source"][axis]
+    request["basis_modes"][1]["source"][axis] = first_index
+    mode_one = result["native_mode_provenance"]["mode_readbacks"]["mode_1"]
+    mode_one["native_source_binding"][axis] = first_index
+    mode_one["solution_info_readback"][axis] = first_index
+
+    with pytest.raises(AggregationError, match="distinct SolutionInfo inner and solnum indices"):
+        _verify_native_mode_provenance(request, result)
+
+
 def test_aggregator_compares_raw_registered_terms_to_independent_fields_but_keeps_acceptance_pending(monkeypatch):
     request, definition, response, independent = _aligned_response(monkeypatch)
 
@@ -76,11 +131,14 @@ def test_aggregator_preserves_legacy_raw_integral_results_without_normal_provena
     request, definition, response, independent = _aligned_response(monkeypatch)
     for key in ("output", "input"):
         response["surface_readbacks"][key].pop("normal_provenance")
+    response.pop("native_mode_provenance")
 
     result = aggregate_two_mode_native_result(definition, response, independent)
 
     assert result["status"] == "SOFTWARE_COMPARISON_PASS_PROVENANCE_PENDING"
     assert result["provenance_gates"]["native_surface_frame_normal_readback"] == (
+        "NOT_PRESENT_IN_LEGACY_RAW_RESULT")
+    assert result["provenance_gates"]["native_port_bma_solutioninfo_lineage"] == (
         "NOT_PRESENT_IN_LEGACY_RAW_RESULT")
     assert result["native_acceptance"] == "NOT_RUN"
     assert result["basis_request_id"] == request["request_id"]
@@ -111,13 +169,17 @@ def test_aggregator_rejects_matrix_slot_that_disagrees_with_term_table(monkeypat
         aggregate_two_mode_native_result(definition, response, independent)
 
 
-def test_aggregator_rejects_wrong_native_mode_index_readback(monkeypatch):
+def test_aggregator_keeps_legacy_port_mode_number_separate_from_basis_ordinal(monkeypatch):
     _request, definition, response, independent = _aligned_response(monkeypatch)
     response["source_readbacks"]["mode_0"]["numeric_port_mode_index"][
-        "native_port_mode_index_readback"] = 2
+        "native_port_mode_index_readback"] = 2  # Port property value, not basis ordinal.
 
-    with pytest.raises(AggregationError, match="mode-index readback differs"):
-        aggregate_two_mode_native_result(definition, response, independent)
+    result = aggregate_two_mode_native_result(definition, response, independent)
+
+    assert result["provenance_gates"]["numeric_port_mode_index_readbacks"]["mode_0"] == (
+        "READBACK_PRESENT_SEMANTICS_UNVERIFIED")
+    assert result["provenance_gates"]["native_port_bma_solutioninfo_lineage"] == (
+        "PRESENT_IN_ENVELOPE_UNVERIFIED")
 
 
 def test_aggregator_rejects_unverified_temporary_integral_cleanup(monkeypatch):

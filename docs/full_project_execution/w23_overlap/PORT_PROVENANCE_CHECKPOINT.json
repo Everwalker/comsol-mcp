@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "stage": "W23 Port/BMA configuration provenance software",
+  "at_utc": "2026-09-27T14:50:26.585753+00:00",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "overall_status": "PARTIAL",
+  "base_commit": "661b872dc08b14595f114c3e5068126bcdbbe397",
+  "source_manifest": [
+    {
+      "path": "comsol_mcp/_w23_basis_v2_provenance.py",
+      "sha256": "16feeb0fba3f2952616eb472bb3cdab391cf8240ea04a5edcc9d0f0c25e399c9",
+      "matches_live_tree": true
+    },
+    {
+      "path": "comsol_mcp/_w23_basis_v2_results.py",
+      "sha256": "ef06db7a645dc79ec6a9898d47952fbec75ea27b046221b026a5825135ea6eef",
+      "matches_live_tree": true
+    },
+    {
+      "path": "tools/w23_mode_basis_v2_aggregate.py",
+      "sha256": "0675a6a9d1cfc53265af72015c380925bd77cdb6c4a3c530d93277ca5182f571",
+      "matches_live_tree": true
+    },
+    {
+      "path": "tests/test_w23_mode_basis_v2_aggregate.py",
+      "sha256": "f2ff95ad91257afdc9d3b175937ee76c596b505cc09eb29b20a2a4a29c03a255",
+      "matches_live_tree": true
+    },
+    {
+      "path": "tests/test_w23_mode_basis_v2_results.py",
+      "sha256": "7aff1c31542a1068efbd690eda44cdaf55cf71dd51c4a720645abe5cb6066066",
+      "matches_live_tree": true
+    },
+    {
+      "path": "tests/test_w23_mode_basis_v2_provenance.py",
+      "sha256": "ced81bb4c3b0f7d2954efc7aa503bcf31d62ac205ed731a1f69c7cbc704de0e1",
+      "matches_live_tree": true
+    }
+  ],
+  "implemented": [
+    "Read actual Numeric Port configuration, boundary selection, SolutionInfo solver sequence and contained BMA configuration.",
+    "Keep PortModeNumber separate from basis eigensolution ordinal.",
+    "Propagate direct/wrapped/structured UNKNOWN transport outcomes immediately; do not continue subsequent native requests.",
+    "Reject inconsistent Port identity, boundary IDs, BMA configuration and duplicate eigensolution indices in complete containment claims."
+  ],
+  "validation": {
+    "isolated_python": "3.12.13",
+    "pytest": "9.1.1",
+    "counts": {
+      "tests": 117,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0
+    },
+    "isolation": "Published git archive plus six-file overlay; python -S, explicit archive/site-packages PYTHONPATH, no editable hooks.",
+    "main_verified_unchanged_runtime_python_files": 87,
+    "receipt": {
+      "path": "/private/tmp/comsol-mcp-w23-port-provenance-gate-uOdNYpE8/FROZEN_RECEIPT.json",
+      "sha256": "c76432ae867b1819d5c5b49417a8f558ed0e867e3adbdeb467bc0989f7de77a9"
+    },
+    "junit": {
+      "path": "/private/tmp/comsol-mcp-w23-port-provenance-gate-uOdNYpE8/junit-no-editable.xml",
+      "sha256": "d75513db638208122eec8153165a6b9cbbd15f58feb24286841aba694f227d9a"
+    },
+    "base_archive_sha256": "ce09e6d2f45cdf362a47dad59a72ac64078416bf92e5a1f2efb79508e7010f40",
+    "test_modules": [
+      "tests/test_w23_full3d_science.py",
+      "tests/test_w23_mode_basis_v2.py",
+      "tests/test_w23_mode_basis_v2_native_plan.py",
+      "tests/test_w23_mode_basis_v2_results.py",
+      "tests/test_w23_mode_basis_v2_registry.py",
+      "tests/test_w23_mode_basis_v2_aggregate.py",
+      "tests/test_w23_mode_basis_v2_provenance.py"
+    ]
+  },
+  "acceptance_boundaries": {
+    "native_comsol": "NOT_RUN",
+    "selected_solution_producer_step": "UNVERIFIED",
+    "field_variable_to_eigensolution_mapping": "UNVERIFIED",
+    "supplied_envelope_authentication": "NOT_ESTABLISHED",
+    "final_independent_review": "NOT_STARTED"
+  },
+  "history": [
+    "Initial isolated closure required three archive dependency corrections; final required source is in Git.",
+    "114-test candidate preserved; receipt top-level JUnit parser reported zero and was corrected from nested testsuite without rerunning.",
+    "Main review rejected unreachable lineage branches that bypassed containment consistency checks; current 117-test candidate repairs them."
+  ],
+  "replay": {
+    "requirements": "Python 3.12 with project development dependencies; no COMSOL needed for this scoped software suite.",
+    "command": "python -m pytest -q tests/test_w23_full3d_science.py tests/test_w23_mode_basis_v2.py tests/test_w23_mode_basis_v2_native_plan.py tests/test_w23_mode_basis_v2_results.py tests/test_w23_mode_basis_v2_registry.py tests/test_w23_mode_basis_v2_aggregate.py tests/test_w23_mode_basis_v2_provenance.py",
+    "source": "Fresh checkout of the commit containing this checkpoint; raw temporary directories are not required."
+  },
+  "next_action": "Prepare fresh managed setup-only candidate with exact owned Popen/birth/listener/cleanup and preserved budgets; establish selected-solution producer and actual field mapping, then native optics/convergence. Continue original W01-W26 scope."
+}

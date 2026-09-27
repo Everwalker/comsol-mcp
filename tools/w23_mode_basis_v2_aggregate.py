@@ -23,6 +23,7 @@ from comsol_mcp._w23_basis_v2_results import (
     RESULT_SCHEMA_ID,
     validate_request_shape,
 )
+from comsol_mcp._w23_basis_v2_provenance import PROVENANCE_SCHEMA_ID, PROVENANCE_SCHEMA_VERSION
 from tools.w23_mode_basis_v2 import (
     BASIS_SCHEMA_ID,
     TwoModeBasisError,
@@ -206,13 +207,192 @@ def _verify_source_readbacks(request: Mapping[str, Any], definition: Mapping[str
             mode_readback = selector.get("native_port_mode_index_readback")
             if mode_readback == "NOT_PROVIDED":
                 mode_readback_status[role] = "UNVERIFIED"
-            elif type(mode_readback) is int and mode_readback == mode_row["mode_index"]:
-                mode_readback_status[role] = "READBACK_PRESENT_PENDING_MANAGED_ATTESTATION"
+            elif type(mode_readback) is int and mode_readback > 0:
+                # Compatibility for legacy envelopes that put the actual Port
+                # ModeNumber under the old, conflated field. It is a Port
+                # configuration value, not the two-mode basis ordinal, so
+                # never compare it with mode_index or allow it to attest mode
+                # identity.
+                mode_readback_status[role] = "READBACK_PRESENT_SEMANTICS_UNVERIFIED"
             else:
-                _fail(f"{role} native Numeric Port mode-index readback differs from the requested basis identity")
+                _fail(f"{role} legacy Numeric Port mode-index field is malformed")
         elif item.get("mode_axis_parameter") is not None:
             _fail(f"{role} non-mode source must not carry a mode-axis selector")
     return mode_readback_status
+
+
+def _verify_native_mode_provenance(request: Mapping[str, Any], result: Mapping[str, Any]) -> str:
+    """Validate the versioned lineage envelope without authenticating its sender."""
+    provenance = result.get("native_mode_provenance")
+    if provenance is None:
+        return "NOT_PRESENT_IN_LEGACY_RAW_RESULT"
+    if not isinstance(provenance, Mapping):
+        _fail("native Numeric Port/BMA/SolutionInfo provenance is malformed")
+    if (provenance.get("schema_id") != PROVENANCE_SCHEMA_ID
+            or provenance.get("schema_version") != PROVENANCE_SCHEMA_VERSION
+            or provenance.get("basis_ordinal_semantics")
+            != "BASIS_EIGENSOLUTION_ORDINAL_NOT_NUMERIC_PORT_MODE_NUMBER"
+            or provenance.get("field_variable_to_eigensolution_mapping_status")
+            != "UNVERIFIED_NATIVE_FIELD_SAMPLE_REQUIRED"):
+        _fail("native mode provenance schema or field-mapping status is unsupported")
+    lineage = provenance.get("configuration_and_solution_lineage_status")
+    if lineage not in {"VERIFIED", "UNVERIFIED"}:
+        _fail("native mode provenance lineage status is malformed")
+    if lineage == "VERIFIED":
+        _fail("native mode provenance claims solution-to-BMA lineage without a selected-solution producer-step readback")
+    expected_status = "UNVERIFIED"
+    if provenance.get("status") != expected_status:
+        _fail("native mode provenance summary status contradicts its lineage status")
+    containment = provenance.get("configuration_containment_status", "UNVERIFIED")
+    if containment not in {"UNVERIFIED", "SOLUTIONINFO_SEQUENCE_CONTAINS_OUTPUT_PORT_BMA_CONFIGURATION"}:
+        _fail("native mode provenance configuration-containment status is malformed")
+    containment_claimed = (
+        containment == "SOLUTIONINFO_SEQUENCE_CONTAINS_OUTPUT_PORT_BMA_CONFIGURATION")
+
+    port = provenance.get("numeric_port")
+    modes = provenance.get("mode_readbacks")
+    if not isinstance(port, Mapping) or not isinstance(modes, Mapping) or set(modes) != {"mode_0", "mode_1"}:
+        _fail("native mode provenance omits the actual Numeric Port or both basis source rows")
+    expected_port = request["output_surface"]["port_id"]
+    port_mode_number = port.get("port_mode_number")
+    if port_mode_number != "NOT_PROVIDED" and (type(port_mode_number) is not int or port_mode_number < 1):
+        _fail("native PortModeNumber configuration readback is malformed")
+    if port.get("port_mode_number_semantics") != "CONFIGURATION_VALUE_ONLY_NOT_BASIS_ORDINAL":
+        _fail("native PortModeNumber must remain separate from the basis eigensolution ordinal")
+    if containment_claimed:
+        port_selection = port.get("selection")
+        if (port.get("status") != "VERIFIED_NATIVE_NUMERIC_PORT_CONFIGURATION"
+                or port.get("port_type") != "Numeric" or port.get("port_name") != expected_port
+                or not isinstance(port.get("feature_tag"), str) or not port["feature_tag"]
+                or not isinstance(port.get("feature_name"), str) or not port["feature_name"]
+                or port.get("physics_interface_tag") != "ewfd"
+                or port.get("physics_interface_type") != "ElectromagneticWaves"
+                or type(port_mode_number) is not int or port_mode_number < 1
+                or not isinstance(port_selection, Mapping)
+                or port_selection.get("entity_dimension") != 2
+                or port_selection.get("requested_surface_relation")
+                != "VERIFIED_SAME_BOUNDARY_ENTITY_IDS"):
+            _fail("native mode provenance claims a verified Port configuration without its expected readbacks")
+        port_ids = port_selection.get("entity_ids") if isinstance(port_selection, Mapping) else None
+        surfaces = result.get("surface_readbacks")
+        surface = surfaces.get("output") if isinstance(surfaces, Mapping) else None
+        surface_ids = surface.get("entity_ids") if isinstance(surface, Mapping) else None
+        if (not isinstance(port_ids, list) or not port_ids
+                or any(type(item) is not int or item < 1 for item in port_ids)
+                or len(set(port_ids)) != len(port_ids)
+                or not isinstance(surface_ids, list)
+                or any(type(item) is not int or item < 1 for item in surface_ids)
+                or len(set(surface_ids)) != len(surface_ids)
+                or sorted(port_ids) != sorted(surface_ids)):
+            _fail("verified Numeric Port boundary IDs differ from the measured output surface")
+
+    source_roles = _source_roles(request)
+    actual_inner: list[int] = []
+    actual_solnums: list[int] = []
+    for index, mode in enumerate(request["basis_modes"]):
+        role = f"mode_{index}"
+        row = modes[role]
+        source = source_roles[role]
+        if not isinstance(row, Mapping):
+            _fail(f"{role} native provenance row is malformed")
+        expected_source_binding = {key: source[key] for key in
+                                   ("dataset_id", "solution_id", "outer_index", "inner_index", "solnum")}
+        if (row.get("mode_id") != mode["mode_id"]
+                or row.get("basis_mode_ordinal") != mode["mode_index"]
+                or row.get("basis_ordinal_origin") != "canonical_request_provenance_only"
+                or row.get("basis_ordinal_to_field_mapping_status")
+                != "UNVERIFIED_NATIVE_FIELD_SAMPLE_REQUIRED"
+                or row.get("native_source_binding") != expected_source_binding):
+            _fail(f"{role} native provenance relabels its basis ordinal or source binding")
+        if (row.get("numeric_port_mode_number") != port_mode_number
+                and not (row.get("numeric_port_mode_number") == "NOT_PROVIDED"
+                         and port_mode_number == "NOT_PROVIDED")):
+            _fail(f"{role} PortModeNumber readback differs from the shared output Port configuration")
+
+        info = row.get("solution_info_readback")
+        if containment_claimed and not isinstance(info, Mapping):
+            _fail(f"{role} configuration containment omits its actual SolutionInfo source readback")
+        if isinstance(info, Mapping):
+            dataset_binding = info.get("dataset_binding")
+            if (not isinstance(dataset_binding, Mapping)
+                    or dataset_binding.get("binding_complete") is not True
+                    or dataset_binding.get("dataset") != source["dataset_id"]
+                    or dataset_binding.get("solution") != source["solution_id"]):
+                _fail(f"{role} native SolutionInfo row is not attached to its exact dataset/solution")
+            for key in ("outer_index", "inner_index", "solnum"):
+                if type(info.get(key)) is not int or info[key] != source[key]:
+                    _fail(f"{role} native SolutionInfo {key} differs from the requested source")
+            mode_axis = info.get("mode_axis_parameter")
+            source_readbacks = result.get("source_readbacks")
+            source_readback = (source_readbacks.get(role)
+                               if isinstance(source_readbacks, Mapping) else None)
+            solution_axes = (source_readback.get("solution_axes")
+                             if isinstance(source_readback, Mapping) else None)
+            axis_parameter = (source_readback.get("mode_axis_parameter")
+                              if isinstance(source_readback, Mapping) else None)
+            parameter_pairs = solution_axes.get("parameters_by_pair") if isinstance(solution_axes, Mapping) else None
+            expected_pair = parameter_pairs.get(axis_parameter) if isinstance(parameter_pairs, Mapping) else None
+            if (not isinstance(mode_axis, Mapping)
+                    or mode_axis.get("parameter") != axis_parameter
+                    or mode_axis.get("semantics") != "SOLUTIONINFO_PARAMETER_VALUE_NOT_BASIS_ORDINAL"
+                    or type(mode_axis.get("value")) not in (int, float)
+                    or not math.isfinite(float(mode_axis["value"]))
+                    or not isinstance(mode_axis.get("unit"), str)
+                    or not isinstance(expected_pair, (list, tuple)) or len(expected_pair) != 2
+                    or mode_axis.get("value") != expected_pair[0]
+                    or mode_axis.get("unit") != expected_pair[1]):
+                _fail(f"{role} SolutionInfo eigenmode parameter readback is missing or differs from its source axis")
+            actual_inner.append(info["inner_index"])
+            actual_solnums.append(info["solnum"])
+
+        sequence = row.get("solution_to_solver_sequence")
+        bma = row.get("solver_to_bma_step")
+        if not isinstance(sequence, Mapping) or not isinstance(bma, Mapping):
+            _fail(f"{role} native SolutionInfo-to-solver/BMA chain is malformed")
+        if bma.get("status") == "UNVERIFIED_SELECTED_SOLUTION_PRODUCER_STEP":
+            if (sequence.get("status") != "VERIFIED_SOLUTIONINFO_OUTER_TO_SOLVER_SEQUENCE"
+                    or not isinstance(sequence.get("solver_sequence_tag"), str)
+                    or not sequence["solver_sequence_tag"]
+                    or sequence.get("inner_index_membership") != "VERIFIED"
+                    or source["inner_index"] not in (sequence.get("inner_indices_for_outer") or [])):
+                _fail(f"{role} output-BMA containment lacks its exact SolutionInfo sequence/inner readback")
+            if (bma.get("configuration_containment_status")
+                    != "SOLUTIONINFO_SEQUENCE_CONTAINS_OUTPUT_PORT_BMA_CONFIGURATION"
+                    or bma.get("producer_step_binding_status")
+                    != "UNVERIFIED_SELECTED_SOLUTION_PRODUCER_STEP_API_UNAVAILABLE"
+                    or not isinstance(bma.get("study_tag"), str) or not bma["study_tag"]
+                    or not isinstance(bma.get("step_tag"), str) or not bma["step_tag"]
+                    or bma.get("feature_type") != "BoundaryModeAnalysis"
+                    or bma.get("port_name") != expected_port
+                    or not isinstance(bma.get("mode_frequency_expression"), str)
+                    or not bma["mode_frequency_expression"]
+                    or type(bma.get("neigs")) is not int or bma["neigs"] != 2):
+                _fail(f"{role} output-BMA configuration containment readback is malformed")
+            evaluated = _finite(bma.get("mode_frequency_evaluated_hz"), f"{role} BMA modeFreq frequency")
+            if not math.isclose(evaluated, _finite(request["frequency_hz"], "requested frequency"),
+                                rel_tol=1e-12, abs_tol=0.0):
+                _fail(f"{role} contained BMA modeFreq differs from the requested frequency")
+            bindings = bma.get("study_step_bindings")
+            if (not isinstance(bindings, list)
+                    or not any(isinstance(item, Mapping)
+                               and item.get("study") == bma["study_tag"]
+                               and item.get("studystep") == bma["step_tag"]
+                               and item.get("feature_type") == "StudyStep" for item in bindings)):
+                _fail(f"{role} output-BMA is absent from the SolutionInfo solver-sequence StudyStep bindings")
+        elif bma.get("status") != "UNVERIFIED":
+            _fail(f"{role} unverified lineage has an unsupported BMA status")
+
+    if (containment == "SOLUTIONINFO_SEQUENCE_CONTAINS_OUTPUT_PORT_BMA_CONFIGURATION"
+            and any(modes[f"mode_{index}"].get("solver_to_bma_step", {}).get("status")
+                    != "UNVERIFIED_SELECTED_SOLUTION_PRODUCER_STEP" for index in range(2))):
+        _fail("top-level BMA containment status lacks matching per-mode configuration readbacks")
+
+    if containment_claimed:
+        if (len(actual_inner) != 2 or len(actual_solnums) != 2
+                or actual_inner[0] == actual_inner[1]
+                or actual_solnums[0] == actual_solnums[1]):
+            _fail("contained basis sources must resolve to distinct SolutionInfo inner and solnum indices")
+    return "PRESENT_IN_ENVELOPE_UNVERIFIED"
 
 
 def _verify_surfaces_and_terms(request: Mapping[str, Any], result: Mapping[str, Any]) -> str:
@@ -432,6 +612,7 @@ def aggregate_two_mode_native_result(
         _fail("native result must be a mapping")
     _verify_result_identity(request, definition, native_result)
     mode_readback = _verify_source_readbacks(request, definition, native_result)
+    mode_lineage = _verify_native_mode_provenance(request, native_result)
     normal_status = _verify_surfaces_and_terms(request, native_result)
 
     if (not isinstance(independent_reference, Mapping)
@@ -511,6 +692,7 @@ def aggregate_two_mode_native_result(
         "provenance_gates": {
             "native_dispatch_authentication": "NOT_PROVIDED_TO_OFFLINE_AGGREGATOR",
             "numeric_port_mode_index_readbacks": mode_readback,
+            "native_port_bma_solutioninfo_lineage": mode_lineage,
             "native_surface_frame_normal_readback": normal_status,
             "overall_scientific_acceptance": "NOT_RUN",
         },

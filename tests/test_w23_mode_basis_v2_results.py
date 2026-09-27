@@ -18,6 +18,7 @@ import pytest
 
 from comsol_mcp import _g3_common, _w23_results
 from comsol_mcp._g2_contract import ExecutionContractError
+from comsol_mcp._java_worker import JavaWorkerTimeout
 from comsol_mcp._w23_basis_v2_results import (
     NATIVE_RESULT_SCHEMA,
     OPERATION_ID,
@@ -227,6 +228,35 @@ def test_handler_integrates_exact_gram_couplings_and_powers_on_bound_named_surfa
     assert output_normal["schema_id"] == "urn:comsol-mcp:result.mode_overlap_basis_v2:surface-normal-readback:1.0.0"
 
 
+def test_wrapped_native_read_timeout_stops_before_any_w_valued_integral(monkeypatch):
+    request, definition = _definition()
+    native_calls = _install_native_test_doubles(monkeypatch, request)
+
+    class TimedOutModel:
+        def __init__(self):
+            self.rpc_calls = []
+
+        def component(self, tag):
+            self.rpc_calls.append(("component", tag))
+            try:
+                raise JavaWorkerTimeout("RPC timeout; native worker request may still be executing")
+            except JavaWorkerTimeout as cause:
+                raise ExecutionContractError("ENGINE_CALL_FAILED", "wrapped worker timeout") from cause
+
+    model = TimedOutModel()
+    monkeypatch.setattr(_g3_common, "bound_model", lambda _worker, _tag: model)
+
+    with pytest.raises(ExecutionContractError) as caught:
+        _invoke(request, definition)
+
+    assert caught.value.code == "ENGINE_CALL_FAILED"
+    assert model.rpc_calls == [("component", "comp3d")]
+    # The four-component normals are complete before the provenance read. The
+    # uncertain Port read must prevent every subsequent W-valued term RPC.
+    assert len(native_calls) == 8
+    assert all(call["term_id"].startswith("normal ") for call in native_calls)
+
+
 def test_handler_rejects_nonuniform_native_outward_normal_before_power_terms(monkeypatch):
     request, definition = _definition()
 
@@ -397,7 +427,8 @@ def test_installed_package_contract_has_no_dependency_on_development_tools_tree(
     repo_root = Path(__file__).resolve().parents[1]
     for name in (
         "__init__.py", "_execution_contract.py", "_g2_contract.py",
-        "_w23_basis_v2_contract.py", "_w23_basis_v2_results.py",
+        "_w23_basis_v2_contract.py", "_w23_basis_v2_provenance.py",
+        "_w23_basis_v2_results.py",
     ):
         shutil.copy2(repo_root / "comsol_mcp" / name, package_dir / name)
     request_path = tmp_path / "basis_request.json"

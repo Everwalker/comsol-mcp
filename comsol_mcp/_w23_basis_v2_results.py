@@ -1,15 +1,12 @@
 """Dedicated native two-mode-subspace overlap adapter (W23 v2).
 
-The versioned v2 request is intentionally separate from the scalar
-``result.mode_overlap`` contract.  It binds two independently solved Numeric
-Port modes, a signal, and an incident reference, then asks COMSOL IntSurface
-features for all four Gram entries, both coupling entries, and both reference
-powers.  It never accepts caller-supplied fields or quadrature arrays.
-
-This module is not registered in the public operation table yet.  Its focused
-tests use synthetic Worker/readback substitutions and therefore establish
-software behavior only; native status remains NOT_RUN until the handler is
-integrated and invoked through an approved managed route.
+The versioned v2 request is separate from the scalar ``result.mode_overlap``
+contract. It binds two independently selected eigensolution rows, a signal and
+an incident reference; it reads the actual Numeric Port/BMA/solver/SolutionInfo
+metadata before requesting COMSOL IntSurface integrals. It never accepts
+caller-supplied fields or quadrature arrays. Metadata links do not establish
+which values the ``Emode*_2`` variables return for each eigensolution; that
+field association remains UNVERIFIED until separately sampled natively.
 """
 from __future__ import annotations
 
@@ -142,6 +139,8 @@ _NORMAL_READBACK_SCHEMA = {
     "additionalProperties": False,
 }
 
+from ._w23_basis_v2_provenance import NATIVE_MODE_PROVENANCE_SCHEMA, read_native_mode_provenance
+
 NATIVE_RESULT_SCHEMA: dict[str, Any] = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": RESULT_SCHEMA_ID,
@@ -164,6 +163,7 @@ NATIVE_RESULT_SCHEMA: dict[str, Any] = {
             "model_revision", "geometry_revision", "frequency_hz", "coordinate_frame", "mode_ids", "mode_indices"]},
         "managed_execution_binding": {"type": "object", "required": ["project_id", "model_ref", "model_revision", "source"]},
         "source_readbacks": {"type": "object", "required": ["signal", "mode_0", "mode_1", "incident"]},
+        "native_mode_provenance": NATIVE_MODE_PROVENANCE_SCHEMA,
         "surface_readbacks": {
             "type": "object", "required": ["output", "input"],
             "properties": {
@@ -750,6 +750,9 @@ def result_mode_overlap_basis_v2(worker: Any, model_tag: str,
             worker, model_tag, source, selection, selection_readbacks[role], surface,
             label=key)
 
+    mode_provenance = read_native_mode_provenance(
+        model, request, roles, selection_readbacks["mode_0"])
+
     # Mapping from the immutable canonical request's eight terms to one
     # current dataset plus, when needed, an exact withsol expression. The
     # source on the left side is the current result dataset; the right-side
@@ -859,6 +862,7 @@ def result_mode_overlap_basis_v2(worker: Any, model_tag: str,
         },
         "managed_execution_binding": managed_binding,
         "source_readbacks": native_source_bindings,
+        "native_mode_provenance": mode_provenance,
         "surface_readbacks": surface_readbacks,
         "native_integrals": {"gram_matrix": gram, "coupling_vector": couplings,
                              **powers, "terms": integrals},
