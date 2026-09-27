@@ -22,7 +22,10 @@ from uuid import uuid4
 
 from ._execution_contract import ExecutionContractError, canonical_request_hash
 from ._managed_backend import ManagedBackend, ProcessLock, SessionConnectFailure, collect_legacy_registry, _g3_operations
-from ._operation_store import IdempotencyConflict, JobCleanupError, OperationStore
+from ._operation_store import (
+    IdempotencyConflict, JobCleanupError, OperationStore,
+    session_recovery_evidence_sha256,
+)
 from ._platform_process import process_identity, terminate_process_tree
 from ._desktop_platforms import create_native_metadata_adapter
 from ._desktop_service import DesktopCoordinator, DesktopOperationError
@@ -1785,7 +1788,401 @@ class ControlDaemon:
             if job.get("operation_id") != excluding_operation_id
             and self._job_belongs_to_session(job, project_id, session_id)
             and job.get("status") not in TERMINAL
+            and not self._job_quiescence_proven(job)
         ]
+
+    def _session_recovery_resolution_is_valid(self, job: Mapping[str, Any]) -> bool:
+        """Verify the append-only proof used to release one session job gate."""
+        job_id = job.get("job_id")
+        operation_id = job.get("operation_id")
+        metadata = job.get("metadata")
+        if (not isinstance(job_id, str) or not isinstance(operation_id, str)
+                or not isinstance(metadata, Mapping)
+                or metadata.get("reconciled_quiescent") is not True):
+            return False
+        binding = metadata.get("runtime_binding")
+        execution = metadata.get("execution")
+        if not isinstance(binding, Mapping) or binding.get("kind") != "registered_session" or not isinstance(execution, Mapping):
+            return False
+        operation = job.get("operation")
+        if (job.get("status") not in {"UNKNOWN", "RECONCILING"}
+                or not isinstance(operation, Mapping)
+                or operation.get("status") not in {"UNKNOWN", "RECONCILING"}):
+            return False
+        result = job.get("result")
+        if not isinstance(result, Mapping):
+            return False
+        try:
+            current_result_digest = session_recovery_evidence_sha256({
+                "source_result": self._redact_session_worker_event(dict(result)),
+            })
+        except Exception:
+            return False
+        try:
+            event = self.store.session_recovery_resolution(job_id)
+        except Exception:
+            return False
+        if not isinstance(event, Mapping) or not isinstance(event.get("metadata"), Mapping):
+            return False
+        proof = dict(event["metadata"])
+        supplied_digest = proof.pop("evidence_sha256", None)
+        if (not isinstance(supplied_digest, str) or len(supplied_digest) != 64
+                or session_recovery_evidence_sha256(proof) != supplied_digest):
+            return False
+        pointer = metadata.get("session_recovery_resolution")
+        proof_binding = proof.get("worker_binding")
+        source_ref = execution.get("model_ref")
+        return bool(
+            isinstance(pointer, Mapping)
+            and pointer.get("event_id") == event.get("id")
+            and pointer.get("evidence_sha256") == supplied_digest
+            and proof.get("schema_version") == 1
+            and proof.get("source_job_id") == job_id
+            and proof.get("source_operation_id") == operation_id
+            and proof.get("source_status") == job.get("status")
+            and proof.get("source_operation_status") == operation.get("status")
+            and proof.get("source_result_sha256") == current_result_digest
+            and proof.get("source_status") in {"UNKNOWN", "RECONCILING"}
+            and proof.get("resolution_scope") == "WORKER_REQUEST_QUIESCENCE_ONLY"
+            and proof.get("replay_performed") is False
+            and proof.get("new_worker_created") is False
+            and proof.get("outcome_resolution") == "UNVERIFIED_HISTORICAL_UNKNOWN"
+            and isinstance(proof_binding, Mapping)
+            and all(proof_binding.get(key) == binding.get(key) for key in (
+                "kind", "project_id", "session_id", "worker_instance_id", "worker_epoch",
+            ))
+            and proof.get("model_ref") == source_ref
+            and isinstance(proof.get("model_revision"), Mapping)
+            and proof.get("model_revision", {}).get("observed_revision") == pointer.get("model_revision")
+            and pointer.get("worker_binding") == proof_binding
+        )
+
+    def _job_quiescence_proven(self, job: Mapping[str, Any]) -> bool:
+        metadata = job.get("metadata") if isinstance(job, Mapping) else None
+        binding = metadata.get("runtime_binding") if isinstance(metadata, Mapping) else None
+        if isinstance(binding, Mapping) and binding.get("kind") == "registered_session":
+            # `job.reconcile` readback alone does not prove model revision or
+            # original Worker epoch. Session-bound UNKNOWN jobs require the
+            # stronger append-only `session.recover` event.
+            return self._session_recovery_resolution_is_valid(job)
+        return isinstance(metadata, Mapping) and metadata.get("reconciled_quiescent") is True
+
+    def _session_job_events(self, job_id: str) -> list[dict[str, Any]]:
+        events: list[dict[str, Any]] = []
+        offset = 0
+        while True:
+            page = self.store.events(job_id, offset=offset, limit=1000)
+            events.extend(page)
+            if len(page) < 1000:
+                return events
+            offset += len(page)
+
+    def _session_job_worker_submissions(self, job: Mapping[str, Any]) -> tuple[list[dict[str, Any]], str | None]:
+        job_id, operation_id = job.get("job_id"), job.get("operation_id")
+        if not isinstance(job_id, str) or not isinstance(operation_id, str):
+            return [], "SOURCE_JOB_IDENTITY_MALFORMED"
+        requests: dict[str, dict[str, Any]] = {}
+        for event in self._session_job_events(job_id):
+            if event.get("event") != "worker_request":
+                continue
+            metadata = event.get("metadata")
+            if not isinstance(metadata, Mapping) or metadata.get("phase") != "submitted":
+                continue
+            event_operation_id = metadata.get("operation_id")
+            # A request id without its original daemon operation binding is
+            # insufficient: otherwise a reused/corrupt event could make a
+            # terminal status from another job look like this job's result.
+            if event_operation_id != operation_id:
+                return [], "WORKER_REQUEST_OPERATION_MISMATCH"
+            request_id = metadata.get("request_id")
+            if not isinstance(request_id, str) or not request_id:
+                return [], "WORKER_REQUEST_ID_MISSING"
+            kind = metadata.get("kind")
+            request_hash = metadata.get("request_hash")
+            candidate = {"request_id": request_id, "kind": kind,
+                         "request_hash": request_hash,
+                         "source_operation_id": operation_id,
+                         "operation_id_source": "source_job_event"}
+            previous = requests.get(request_id)
+            if previous is not None and previous != candidate:
+                return [], "WORKER_REQUEST_DUPLICATE_CONFLICT"
+            requests[request_id] = candidate
+        if not requests:
+            return [], "ORIGINAL_WORKER_REQUESTS_UNAVAILABLE"
+        return list(requests.values()), None
+
+    def _read_session_job_requests(self, worker: Any, job: Mapping[str, Any],
+                                   recovery_record: Mapping[str, Any], *, timeout: float) -> dict[str, Any]:
+        submissions, reason = self._session_job_worker_submissions(job)
+        if reason is not None:
+            return {"requests": [], "terminal": False, "reason": reason}
+        operation_context = getattr(worker, "operation_context", None)
+        scope = (operation_context(recovery_record["operation_id"],
+                                  on_request_event=self._session_worker_event_callback(recovery_record))
+                 if callable(operation_context) else nullcontext())
+        observations = []
+        with scope:
+            for submitted in submissions:
+                request_id = submitted["request_id"]
+                try:
+                    reply = worker.status(request_id, timeout_s=timeout)
+                except Exception as exc:
+                    observations.append({"request_id": request_id, "kind": submitted.get("kind"),
+                                         "status": "UNKNOWN", "terminal": False,
+                                         "error_type": type(exc).__name__})
+                    continue
+                if not isinstance(reply, Mapping):
+                    observations.append({"request_id": request_id, "kind": submitted.get("kind"),
+                                         "status": "UNKNOWN", "terminal": False,
+                                         "error_type": "MALFORMED_REPLY"})
+                    continue
+                status = reply.get("status")
+                exact_id = reply.get("request_id") == request_id
+                exact_kind = submitted.get("kind") in (None, "") or reply.get("type") == submitted.get("kind")
+                terminal = status in {"SUCCEEDED", "FAILED"} and exact_id and exact_kind
+                terminal = terminal and (
+                    (status == "SUCCEEDED" and "result" in reply)
+                    or (status == "FAILED" and isinstance(reply.get("failure"), Mapping))
+                )
+                safe_reply = self._redact_session_worker_event(dict(reply))
+                observations.append({
+                    "request_id": request_id,
+                    "kind": submitted.get("kind"),
+                    "source_operation_id": submitted.get("source_operation_id"),
+                    "status": status if isinstance(status, str) else "UNKNOWN",
+                    "terminal": bool(terminal),
+                    "request_id_match": exact_id,
+                    "request_type_match": exact_kind,
+                    "reply_sha256": session_recovery_evidence_sha256({"worker_reply": safe_reply}),
+                    "operation_id_source": "source_job_event",
+                })
+        return {"requests": observations,
+                "terminal": bool(observations) and all(item.get("terminal") is True for item in observations),
+                "reason": None}
+
+    def _session_recovery_model_evidence(
+        self, job: Mapping[str, Any], context: SessionRuntimeContext,
+        lifecycle: Mapping[str, Any], worker: Any, worker_metadata: Mapping[str, Any],
+        request_observations: Mapping[str, Any], recovery_record: Mapping[str, Any],
+    ) -> tuple[dict[str, Any] | None, str | None]:
+        """Build a quiescence-only proof for one exact ModelRef-bound UNKNOWN job."""
+        from ._execution_contract import model_ref_from_mapping
+
+        job_id, source_operation_id = job.get("job_id"), job.get("operation_id")
+        metadata = job.get("metadata")
+        binding = metadata.get("runtime_binding") if isinstance(metadata, Mapping) else None
+        execution = metadata.get("execution") if isinstance(metadata, Mapping) else None
+        if not isinstance(binding, Mapping) or binding.get("kind") != "registered_session":
+            return None, "WORKER_BINDING_UNKNOWN"
+        if not isinstance(execution, Mapping):
+            return None, "MODEL_REF_BINDING_MISSING"
+        if (binding.get("project_id") != context.project_id
+                or binding.get("session_id") != context.session_id
+                or binding.get("worker_instance_id") != context.worker_instance_id
+                or binding.get("worker_epoch") != context.worker_epoch
+                or lifecycle.get("worker_instance_id") != binding.get("worker_instance_id")
+                or lifecycle.get("worker_epoch") != binding.get("worker_epoch")
+                or worker_metadata.get("instance_id") != binding.get("worker_instance_id")
+                or worker_metadata.get("generation") != binding.get("worker_epoch")):
+            return None, "ORIGINAL_WORKER_EPOCH_MISMATCH"
+        if (context.worker is not worker or context.backend is None
+                or context.service is None or context.backend.worker is not worker
+                or context.backend.service is not context.service):
+            return None, "LIVE_SESSION_RUNTIME_CONTEXT_MISMATCH"
+        if lifecycle.get("state") != "CONNECTED" or lifecycle.get("client_state") != "CONNECTED":
+            return None, "SESSION_LIFECYCLE_NOT_CONFIRMED_CONNECTED"
+        if request_observations.get("terminal") is not True:
+            return None, str(request_observations.get("reason") or "ORIGINAL_WORKER_REQUEST_NOT_TERMINAL")
+        if not isinstance(job_id, str) or not isinstance(source_operation_id, str):
+            return None, "SOURCE_JOB_IDENTITY_MALFORMED"
+        if job.get("status") not in {"UNKNOWN", "RECONCILING"}:
+            return None, "SOURCE_JOB_NO_LONGER_UNRESOLVED"
+        source_operation = job.get("operation")
+        if (not isinstance(source_operation, Mapping)
+                or source_operation.get("operation_id") != source_operation_id
+                or source_operation.get("status") not in {"UNKNOWN", "RECONCILING"}):
+            return None, "SOURCE_OPERATION_NO_LONGER_UNRESOLVED"
+        raw_ref = execution.get("model_ref")
+        expected_revision = execution.get("expected_revision")
+        if not isinstance(raw_ref, Mapping):
+            return None, "MODEL_REF_BINDING_MISSING"
+        if isinstance(expected_revision, bool) or not isinstance(expected_revision, int) or expected_revision < 0:
+            return None, "EXPECTED_MODEL_REVISION_MISSING"
+        try:
+            model_ref = model_ref_from_mapping(dict(raw_ref))
+        except Exception:
+            return None, "MODEL_REF_BINDING_MALFORMED"
+        if (model_ref.session_id != context.session_id
+                or model_ref.server_instance_id != context.service.ledger.server_instance_id):
+            return None, "MODEL_REF_SESSION_OR_SERVER_MISMATCH"
+
+        original_result = job.get("result")
+        original_execution = original_result.get("execution") if isinstance(original_result, Mapping) else None
+        if (not isinstance(original_result, Mapping) or not isinstance(original_execution, Mapping)
+                or original_execution.get("model_ref") != model_ref.as_dict()):
+            return None, "ORIGINAL_MODEL_EXECUTION_EVIDENCE_MISSING"
+        recorded_revision = original_execution.get("revision")
+        recorded_dirty = original_execution.get("dirty")
+        if (isinstance(recorded_revision, bool) or not isinstance(recorded_revision, int)
+                or type(recorded_dirty) is not bool):
+            return None, "ORIGINAL_MODEL_REVISION_EVIDENCE_MALFORMED"
+        revision_delta = recorded_revision - expected_revision
+        if not ((revision_delta == 0 and recorded_dirty is False)
+                or (revision_delta == 1 and recorded_dirty is True)):
+            return None, "MODEL_REVISION_TRANSITION_NOT_PROVEN"
+
+        service = context.service
+        try:
+            state = service.ledger._state_for(model_ref)
+        except Exception:
+            return None, "LIVE_MODEL_REF_NOT_BOUND"
+        if state.active_operation_id is not None or state.retired:
+            return None, "MODEL_HAS_ACTIVE_OR_RETIRED_OPERATION"
+        try:
+            saved_session = self.store.get_metadata("sessions", context.session_id)
+        except Exception:
+            saved_session = None
+        saved_identity = saved_session.get("worker_identity") if isinstance(saved_session, Mapping) else None
+        saved_models = saved_session.get("models") if isinstance(saved_session, Mapping) else None
+        saved_model = saved_models.get(model_ref.model_tag) if isinstance(saved_models, Mapping) else None
+        if (not isinstance(saved_identity, Mapping)
+                or saved_identity.get("worker_instance_id") != binding.get("worker_instance_id")
+                or saved_identity.get("connection_epoch") != binding.get("worker_epoch")
+                or not isinstance(saved_model, Mapping)
+                or saved_model.get("ref") != model_ref.as_dict()
+                or saved_model.get("revision") != recorded_revision
+                or saved_model.get("dirty") is not recorded_dirty
+                or saved_model.get("active_operation_id") is not None
+                or saved_model.get("fingerprint") is None
+                or isinstance(saved_model.get("external_event_counter"), bool)
+                or not isinstance(saved_model.get("external_event_counter"), int)):
+            return None, "DURABLE_MODEL_REVISION_BINDING_MISSING_OR_STALE"
+        if (state.ref.as_dict() != saved_model.get("ref")
+                or state.revision != saved_model.get("revision")
+                or state.dirty is not saved_model.get("dirty")
+                or state.active_operation_id != saved_model.get("active_operation_id")
+                or state.fingerprint != saved_model.get("fingerprint")
+                or state.external_event_counter != saved_model.get("external_event_counter")
+                or state.observed_external_event_counter != saved_model.get("observed_external_event_counter")):
+            return None, "LIVE_AND_DURABLE_MODEL_REVISION_STATE_DISAGREE"
+
+        operation_context = getattr(worker, "operation_context", None)
+        scope = (operation_context(recovery_record["operation_id"],
+                                  on_request_event=self._session_worker_event_callback(recovery_record))
+                 if callable(operation_context) else nullcontext())
+        try:
+            with scope:
+                observed = service.inspect_evidence(model_ref)
+        except Exception as exc:
+            return None, f"MODEL_SNAPSHOT_READBACK_FAILED:{type(exc).__name__}"
+        current_execution = observed.get("execution") if isinstance(observed, Mapping) else None
+        snapshot = observed.get("model_snapshot") if isinstance(observed, Mapping) else None
+        try:
+            state_after = service.ledger._state_for(model_ref)
+        except Exception:
+            return None, "MODEL_REF_RETIRED_DURING_READBACK"
+        if (not isinstance(current_execution, Mapping)
+                or current_execution.get("model_ref") != model_ref.as_dict()
+                or current_execution.get("revision") != recorded_revision
+                or type(current_execution.get("dirty")) is not bool
+                or not isinstance(snapshot, Mapping)
+                or snapshot.get("model_tag") != model_ref.model_tag
+                or snapshot.get("server_instance_id") != model_ref.server_instance_id
+                or isinstance(snapshot.get("external_event_counter"), bool)
+                or not isinstance(snapshot.get("external_event_counter"), int)
+                or not isinstance(snapshot.get("fingerprint"), str)
+                or not snapshot.get("fingerprint")):
+            return None, "MODEL_SNAPSHOT_IDENTITY_OR_REVISION_MISMATCH"
+        if (snapshot.get("external_event_counter") != saved_model.get("external_event_counter")
+                or snapshot.get("fingerprint") != saved_model.get("fingerprint")
+                or state_after.revision != recorded_revision
+                or state_after.dirty is not recorded_dirty
+                or state_after.external_event_counter != saved_model.get("external_event_counter")
+                or state_after.fingerprint != saved_model.get("fingerprint")
+                or state_after.active_operation_id is not None):
+            return None, "MODEL_REVISION_OR_SNAPSHOT_CHANGED_AFTER_ORIGINAL_RESULT"
+
+        try:
+            worker_after = worker.runtime_metadata()
+        except Exception as exc:
+            return None, f"WORKER_IDENTITY_READBACK_FAILED:{type(exc).__name__}"
+        if (not isinstance(worker_after, Mapping)
+                or worker_after.get("instance_id") != binding.get("worker_instance_id")
+                or worker_after.get("generation") != binding.get("worker_epoch")):
+            return None, "WORKER_EPOCH_CHANGED_DURING_RECOVERY"
+        # Do not persist an observed drift over the durable baseline.  Only
+        # after the snapshot, local ledger and original revision all agree do
+        # we refresh the existing state row, then verify that exact writeback.
+        try:
+            context.backend.persist()
+        except Exception as exc:
+            return None, f"MODEL_SNAPSHOT_PERSIST_FAILED:{type(exc).__name__}"
+        try:
+            persisted_session = self.store.get_metadata("sessions", context.session_id)
+        except Exception:
+            persisted_session = None
+        persisted_identity = (persisted_session.get("worker_identity")
+                              if isinstance(persisted_session, Mapping) else None)
+        persisted_models = (persisted_session.get("models")
+                            if isinstance(persisted_session, Mapping) else None)
+        persisted_model = persisted_models.get(model_ref.model_tag) if isinstance(persisted_models, Mapping) else None
+        if (not isinstance(persisted_identity, Mapping)
+                or persisted_identity.get("worker_instance_id") != binding.get("worker_instance_id")
+                or persisted_identity.get("connection_epoch") != binding.get("worker_epoch")
+                or not isinstance(persisted_model, Mapping)
+                or persisted_model.get("ref") != model_ref.as_dict()
+                or persisted_model.get("revision") != recorded_revision
+                or persisted_model.get("dirty") is not recorded_dirty
+                or persisted_model.get("active_operation_id") is not None
+                or persisted_model.get("fingerprint") != snapshot.get("fingerprint")
+                or persisted_model.get("external_event_counter") != snapshot.get("external_event_counter")):
+            return None, "DURABLE_MODEL_REVISION_CHANGED_DURING_RECOVERY"
+        try:
+            result_digest = session_recovery_evidence_sha256({
+                "source_result": self._redact_session_worker_event(dict(original_result)),
+            })
+            snapshot_digest = session_recovery_evidence_sha256({
+                "fingerprint": snapshot["fingerprint"],
+                "external_event_counter": snapshot["external_event_counter"],
+            })
+        except Exception:
+            return None, "RECOVERY_EVIDENCE_HASH_FAILED"
+        error = original_result.get("error") if isinstance(original_result.get("error"), Mapping) else {}
+        evidence = {
+            "schema_version": 1,
+            "resolution_scope": "WORKER_REQUEST_QUIESCENCE_ONLY",
+            "session_recovery_operation_id": recovery_record["operation_id"],
+            "source_job_id": job_id,
+            "source_operation_id": source_operation_id,
+            "source_status": job.get("status"),
+            "source_operation_status": source_operation.get("status"),
+            "source_result_sha256": result_digest,
+            "original_unknown_reason": {
+                "code": error.get("code") if isinstance(error.get("code"), str) else "UNKNOWN",
+                "safe_retry": error.get("safe_retry") if type(error.get("safe_retry")) is bool else False,
+            },
+            "worker_binding": {key: binding.get(key) for key in (
+                "kind", "project_id", "session_id", "worker_instance_id", "worker_epoch",
+            )},
+            "request_observations": list(request_observations.get("requests", [])),
+            "model_ref": model_ref.as_dict(),
+            "model_revision": {
+                "expected_revision": expected_revision,
+                "recorded_result_revision": recorded_revision,
+                "observed_revision": current_execution.get("revision"),
+                "dirty": current_execution.get("dirty"),
+                "external_event_counter": snapshot.get("external_event_counter"),
+                "snapshot_sha256": snapshot_digest,
+                "snapshot_coverage": snapshot.get("coverage"),
+                "cas_guarantee": snapshot.get("cas_guarantee"),
+            },
+            "admission_fence": "HELD_WITH_ZERO_ACCEPTED_TASKS",
+            "worker_identity_rechecked_after_snapshot": True,
+            "replay_performed": False,
+            "new_worker_created": False,
+            "outcome_resolution": "UNVERIFIED_HISTORICAL_UNKNOWN",
+        }
+        return evidence, None
 
     def _bind_session_job_to_worker(self, record, *, project_id: str, session_id: str,
                                     worker_instance_id: Any, worker_epoch: Any) -> None:
@@ -2077,9 +2474,10 @@ class ControlDaemon:
                     worker_instance_id=lifecycle["worker_instance_id"],
                     worker_epoch=lifecycle["worker_epoch"],
                 )
-                unresolved = self._session_has_unresolved_jobs(
-                    project_id, session_id, excluding_operation_id=record["operation_id"],
-                )
+                unresolved = [job for job in self._session_jobs_for_project(project_id)
+                              if job.get("operation_id") != record["operation_id"]
+                              and self._job_belongs_to_session(job, project_id, session_id)
+                              and job.get("status") not in TERMINAL]
                 if unresolved:
                     return self._finish(record, self._error(
                         "SESSION_BUSY", "active or UNKNOWN operations block Worker retirement",
@@ -2626,103 +3024,305 @@ class ControlDaemon:
             return record["result"] if record.get("result") is not None else self._pending(record, session_id=session_id)
         self._start_session_mutation_record(record, operation="session.recover", session_id=session_id)
         try:
-            lifecycle = self.session_lifecycle.get(project_id, session_id)
+            with self._session_connect_lock:
+                lifecycle = self.session_lifecycle.get(project_id, session_id)
+                if lifecycle is None:
+                    return self._finish(record, self._error(
+                        "SESSION_NOT_FOUND", "session lifecycle record not found",
+                    ), "FAILED")
+                worker = self._session_worker_handles.get((project_id, session_id))
+                try:
+                    context = self.session_registry.get(project_id, session_id)
+                except SessionContextMissing:
+                    context = None
+                # Recovery must report prior proofs for still-historical UNKNOWN
+                # rows, even though the ordinary admission gate correctly treats
+                # those rows as quiescent.  Include unresolved rows plus UNKNOWN
+                # rows with an existing proof so repeated read-only recovery is
+                # observable and idempotent without querying the Worker again.
+                unresolved = [
+                    job for job in self._session_jobs_for_project(project_id)
+                    if job.get("operation_id") != record["operation_id"]
+                    and self._job_belongs_to_session(job, project_id, session_id)
+                    and (
+                        job.get("status") not in TERMINAL
+                        or (job.get("status") == "UNKNOWN"
+                            and self._session_recovery_resolution_is_valid(job))
+                    )
+                ]
+                unresolved_items: list[dict[str, Any]] = []
+                resolved_jobs: list[dict[str, Any]] = []
+                observations: list[dict[str, Any]] = []
+                runtime_metadata = None
+                runtime_error = None
+
+                if worker is not None:
+                    try:
+                        runtime_metadata = worker.runtime_metadata()
+                    except Exception as exc:
+                        runtime_error = type(exc).__name__
+
+                exact_instance = bool(
+                    worker is not None and isinstance(runtime_metadata, Mapping)
+                    and isinstance(lifecycle.get("worker_instance_id"), str)
+                    and runtime_metadata.get("instance_id") == lifecycle.get("worker_instance_id")
+                )
+                if worker is None:
+                    unresolved_items.append({
+                        "kind": "SESSION_WORKER", "status": "UNKNOWN",
+                        "reason": "ORIGINAL_WORKER_HANDLE_UNAVAILABLE",
+                    })
+                elif not exact_instance:
+                    unresolved_items.append({
+                        "kind": "SESSION_WORKER", "status": "UNKNOWN",
+                        "reason": "ORIGINAL_WORKER_IDENTITY_UNCONFIRMED",
+                        "runtime_readback_error": runtime_error,
+                    })
+
+                fence_epoch = None
+                if context is not None and context.worker is worker:
+                    fence_epoch = context.worker_epoch
+                elif type(lifecycle.get("worker_epoch")) is int and lifecycle["worker_epoch"] > 0:
+                    fence_epoch = lifecycle["worker_epoch"]
+
+                guard_context = (
+                    self.session_scheduler.worker_recovery_admission_guard(worker, fence_epoch)
+                    if worker is not None and exact_instance and type(fence_epoch) is int
+                    else nullcontext({"admission_fenced": False, "accepted_task_count": None})
+                )
+                admission_fenced = False
+                if worker is not None and exact_instance and type(fence_epoch) is not int:
+                    unresolved_items.append({
+                        "kind": "SESSION_WORKER", "status": "UNKNOWN",
+                        "reason": "ORIGINAL_WORKER_EPOCH_UNAVAILABLE",
+                    })
+
+                try:
+                    with guard_context as admission:
+                        admission_fenced = bool(
+                            worker is not None and exact_instance
+                            and isinstance(admission, Mapping)
+                            and admission.get("admission_fenced") is True
+                        )
+                        if admission_fenced:
+                            stable_generation = runtime_metadata.get("generation")
+                            for job in unresolved:
+                                job_id = job.get("job_id")
+                                job_meta = job.get("metadata")
+                                job_binding = job_meta.get("runtime_binding") if isinstance(job_meta, Mapping) else None
+                                job_execution = job_meta.get("execution") if isinstance(job_meta, Mapping) else None
+                                source_model_ref = job_execution.get("model_ref") if isinstance(job_execution, Mapping) else None
+                                if self._session_recovery_resolution_is_valid(job):
+                                    prior = self.store.session_recovery_resolution(job_id)
+                                    prior_meta = prior.get("metadata", {}) if isinstance(prior, Mapping) else {}
+                                    resolved_jobs.append({
+                                        "job_id": job_id,
+                                        "historical_status": job.get("status"),
+                                        "outcome_resolution": "UNVERIFIED_HISTORICAL_UNKNOWN",
+                                        "quiescence_resolution": "ALREADY_PROVEN",
+                                        "evidence_sha256": prior_meta.get("evidence_sha256"),
+                                        "replayed": False,
+                                    })
+                                    continue
+                                if self.store.session_recovery_resolution(job_id) is not None:
+                                    unresolved_items.append({
+                                        "kind": "UNKNOWN_JOB", "job_id": job_id,
+                                        "historical_status": job.get("status"),
+                                        "reason": "EXISTING_RECOVERY_PROOF_INVALID",
+                                    })
+                                    continue
+                                if not isinstance(job_binding, Mapping):
+                                    unresolved_items.append({
+                                        "kind": "UNKNOWN_JOB", "job_id": job_id,
+                                        "historical_status": job.get("status"),
+                                        "reason": "ORIGINAL_WORKER_BINDING_MISSING",
+                                    })
+                                    continue
+                                if (job_binding.get("project_id") != project_id
+                                        or job_binding.get("session_id") != session_id
+                                        or job_binding.get("worker_instance_id") != runtime_metadata.get("instance_id")):
+                                    unresolved_items.append({
+                                        "kind": "UNKNOWN_JOB", "job_id": job_id,
+                                        "historical_status": job.get("status"),
+                                        "reason": "ORIGINAL_WORKER_BINDING_MISMATCH",
+                                    })
+                                    continue
+                                if isinstance(source_model_ref, Mapping) and (
+                                    context is None or context.worker is not worker
+                                    or context.worker_epoch != stable_generation
+                                    or lifecycle.get("state") != "CONNECTED"
+                                    or lifecycle.get("client_state") != "CONNECTED"
+                                    or job_binding.get("worker_epoch") != stable_generation
+                                ):
+                                    unresolved_items.append({
+                                        "kind": "UNKNOWN_JOB", "job_id": job_id,
+                                        "historical_status": job.get("status"),
+                                        "reason": "EXACT_CONNECTED_SESSION_CONTEXT_AND_WORKER_EPOCH_REQUIRED",
+                                    })
+                                    continue
+                                readback = self._read_session_job_requests(
+                                    worker, job, record,
+                                    timeout=self._timeouts(execution)["rpc_timeout_s"],
+                                )
+                                after_requests = worker.runtime_metadata()
+                                if (not isinstance(after_requests, Mapping)
+                                        or after_requests.get("instance_id") != runtime_metadata.get("instance_id")
+                                        or after_requests.get("generation") != stable_generation):
+                                    readback["terminal"] = False
+                                    readback["reason"] = "WORKER_EPOCH_CHANGED_DURING_REQUEST_READBACK"
+                                observation = {
+                                    "job_id": job_id,
+                                    "operation_id": job.get("operation_id"),
+                                    "historical_status": job.get("status"),
+                                    "worker_binding": {
+                                        "instance_id": job_binding.get("worker_instance_id"),
+                                        "epoch": job_binding.get("worker_epoch"),
+                                        "current_epoch_matches": job_binding.get("worker_epoch") == stable_generation,
+                                    },
+                                    "worker_requests": readback.get("requests", []),
+                                    "terminal_requests": readback.get("terminal") is True,
+                                    "reason": readback.get("reason"),
+                                }
+                                observations.append(observation)
+
+                                if isinstance(source_model_ref, Mapping):
+                                    if (context is None or context.worker is not worker
+                                            or context.worker_epoch != stable_generation
+                                            or lifecycle.get("state") != "CONNECTED"
+                                            or lifecycle.get("client_state") != "CONNECTED"):
+                                        reason = "EXACT_CONNECTED_SESSION_CONTEXT_REQUIRED"
+                                    elif job_binding.get("worker_epoch") != stable_generation:
+                                        reason = "ORIGINAL_WORKER_EPOCH_MISMATCH"
+                                    else:
+                                        evidence, reason = self._session_recovery_model_evidence(
+                                            job, context, lifecycle, worker, runtime_metadata,
+                                            readback, record,
+                                        )
+                                        if evidence is not None:
+                                            recorded = self.store.record_session_recovery_resolution(
+                                                job_id, job["operation_id"], evidence,
+                                            )
+                                            if recorded.get("recorded") is True:
+                                                resolved_jobs.append({
+                                                    "job_id": job_id,
+                                                    "historical_status": job.get("status"),
+                                                    "outcome_resolution": "UNVERIFIED_HISTORICAL_UNKNOWN",
+                                                    "quiescence_resolution": "PROVEN_AND_AUDITED",
+                                                    "evidence_sha256": recorded["resolution"]["metadata"]["evidence_sha256"],
+                                                    "model_ref": dict(evidence["model_ref"]),
+                                                    "model_revision": dict(evidence["model_revision"]),
+                                                    "replayed": False,
+                                                })
+                                            elif recorded.get("reason") == "ALREADY_RESOLVED":
+                                                source_now = self.store.job(job_id)
+                                                if source_now and self._session_recovery_resolution_is_valid(source_now):
+                                                    prior = recorded.get("resolution") or {}
+                                                    prior_meta = prior.get("metadata", {}) if isinstance(prior, Mapping) else {}
+                                                    resolved_jobs.append({
+                                                        "job_id": job_id,
+                                                        "historical_status": job.get("status"),
+                                                        "outcome_resolution": "UNVERIFIED_HISTORICAL_UNKNOWN",
+                                                        "quiescence_resolution": "ALREADY_PROVEN",
+                                                        "evidence_sha256": prior_meta.get("evidence_sha256"),
+                                                        "replayed": False,
+                                                    })
+                                                else:
+                                                    reason = "EXISTING_RECOVERY_PROOF_INVALID"
+                                            else:
+                                                reason = recorded.get("reason") or "RECOVERY_RESOLUTION_NOT_RECORDED"
+                                else:
+                                    reason = (
+                                        "NO_MODELREF_REVISION_PROOF_FOR_LIFECYCLE_OPERATION"
+                                        if readback.get("terminal") is True
+                                        else readback.get("reason") or "ORIGINAL_LIFECYCLE_REQUEST_NOT_TERMINAL"
+                                    )
+                                    # This readback is diagnostic only. Lifecycle
+                                    # transitions without a bound ModelRef and
+                                    # revision remain explicitly PARTIAL here.
+                                    self.store.add_event(job_id, "SessionRecoveryReadback", {
+                                        "session_recovery_operation_id": record["operation_id"],
+                                        "worker_binding": observation["worker_binding"],
+                                        "request_observations": observation["worker_requests"],
+                                        "resolution": "UNRESOLVED_NO_MODELREV_SCOPE",
+                                        "replay_performed": False,
+                                    })
+                                if not any(item.get("job_id") == job_id for item in resolved_jobs):
+                                    unresolved_items.append({
+                                        "kind": "UNKNOWN_JOB", "job_id": job_id,
+                                        "historical_status": job.get("status"),
+                                        "reason": reason or "RECOVERY_EVIDENCE_INCOMPLETE",
+                                    })
+                        else:
+                            for job in unresolved:
+                                unresolved_items.append({
+                                    "kind": "UNKNOWN_JOB", "job_id": job.get("job_id"),
+                                    "historical_status": job.get("status"),
+                                    "reason": "SESSION_WORKER_ADMISSION_NOT_FENCED",
+                                })
+                except SessionBindingBusy as exc:
+                    unresolved_items.append({
+                        "kind": "SESSION_ADMISSION", "status": "BUSY",
+                        "reason": "ACCEPTED_WORK_BLOCKS_RECOVERY",
+                        "detail": str(exc),
+                    })
+                except (SessionSchedulerClosed, SessionContextMissing) as exc:
+                    unresolved_items.append({
+                        "kind": "SESSION_ADMISSION", "status": "UNKNOWN",
+                        "reason": "SESSION_ADMISSION_FENCE_UNAVAILABLE",
+                        "cause_type": type(exc).__name__,
+                    })
+
+                if lifecycle.get("state") == "UNKNOWN":
+                    unresolved_items.append({
+                        "kind": "SESSION_LIFECYCLE", "historical_status": "UNKNOWN",
+                        "reason": "NO_MODELREF_LIFECYCLE_RESOLUTION_PROOF",
+                    })
+                if (worker is not None and exact_instance
+                        and isinstance(runtime_metadata, Mapping)
+                        and runtime_metadata.get("generation") != lifecycle.get("worker_epoch")):
+                    unresolved_items.append({
+                        "kind": "SESSION_LIFECYCLE", "historical_status": lifecycle.get("state"),
+                        "reason": "CURRENT_WORKER_EPOCH_DIFFERS_FROM_LIFECYCLE_EPOCH",
+                    })
+
+                # A job may already have been resolved on a previous call; do
+                # not report it again as an unresolved blocker.
+                unresolved_items = [item for item in unresolved_items
+                                    if item.get("job_id") not in {row.get("job_id") for row in resolved_jobs}]
+                status = (
+                    "PARTIAL_HISTORICAL_UNKNOWN_RETAINED" if resolved_jobs
+                    else "PARTIAL_UNRESOLVED" if unresolved_items
+                    else "NO_UNRESOLVED_WORK"
+                )
+                data = {
+                    "project_id": project_id,
+                    "session_id": session_id,
+                    "lifecycle_state": lifecycle["state"],
+                    "worker_readback": ({key: runtime_metadata.get(key) for key in (
+                        "instance_id", "generation", "connected", "server",
+                    )} if isinstance(runtime_metadata, Mapping) else "UNAVAILABLE"),
+                    "admission_fence": ("HELD_DURING_READBACK" if admission_fenced else "UNAVAILABLE"),
+                    "request_observations": observations,
+                    "resolved_jobs": resolved_jobs,
+                    "unresolved_items": unresolved_items,
+                    "replayed_requests": 0,
+                    "new_worker_created": False,
+                    "historical_unknown_preserved": True,
+                    "recovery_status": status,
+                }
+                return self._finish(record, {"success": True, "data": data}, "SUCCEEDED")
         except SessionLifecycleProjectConflict as exc:
             return self._finish(record, self._error("PROJECT_IDENTITY_MISMATCH", str(exc)), "FAILED")
-        if lifecycle is None:
-            return self._finish(record, self._error("SESSION_NOT_FOUND", "session lifecycle record not found"), "FAILED")
-        worker = self._session_worker_handles.get((project_id, session_id))
-        if worker is None:
-            return self._finish(record, {"success": True, "data": {
-                "project_id": project_id, "session_id": session_id,
-                "lifecycle_state": lifecycle["state"], "worker_readback": "UNAVAILABLE",
-                "request_observations": [], "replayed_requests": 0,
-                "new_worker_created": False,
-                "recovery_status": "UNKNOWN_NO_ORIGINAL_WORKER_HANDLE",
-            }}, "SUCCEEDED")
-        timeout = self._timeouts(execution)["rpc_timeout_s"]
-        try:
-            runtime_metadata = worker.runtime_metadata()
         except Exception as exc:
-            runtime_metadata = None
-            runtime_error = type(exc).__name__
-        else:
-            runtime_error = None
-        if (not isinstance(runtime_metadata, Mapping)
-                or (lifecycle["worker_instance_id"] is not None
-                    and runtime_metadata.get("instance_id") != lifecycle["worker_instance_id"])):
             return self._finish(record, self._error(
-                "EXECUTION_STATE_UNKNOWN", "original Worker identity cannot be confirmed; no replacement was created",
+                "EXECUTION_STATE_UNKNOWN", "session recovery evidence could not be durably established",
                 data={"project_id": project_id, "session_id": session_id,
-                      "state": lifecycle["state"], "worker_handle_preserved": True,
-                      "runtime_readback_error": runtime_error},
+                      "recovery_status": "PARTIAL_UNRESOLVED",
+                      "cause_type": type(exc).__name__,
+                      "replayed_requests": 0, "new_worker_created": False,
+                      "historical_unknown_preserved": True},
                 safe_retry=False, execution_state_unknown=True,
             ), "UNKNOWN")
-
-        observations = []
-        unresolved = self._session_has_unresolved_jobs(
-            project_id, session_id, excluding_operation_id=record["operation_id"],
-        )
-        for job in unresolved:
-            metadata = job.get("metadata") or {}
-            binding = metadata.get("runtime_binding") if isinstance(metadata, Mapping) else None
-            if not isinstance(binding, Mapping) or binding.get("worker_instance_id") != runtime_metadata.get("instance_id"):
-                observations.append({"job_id": job["job_id"], "status": job["status"],
-                                    "worker_status": "NOT_QUERIED_WORKER_BINDING_MISMATCH"})
-                continue
-            events = []
-            offset = 0
-            while True:
-                page = self.store.events(job["job_id"], offset=offset, limit=1000)
-                events.extend(page)
-                if len(page) < 1000:
-                    break
-                offset += len(page)
-            request_ids = sorted({
-                event.get("metadata", {}).get("request_id")
-                for event in events
-                if event.get("event") == "worker_request"
-                and event.get("metadata", {}).get("phase") == "submitted"
-                and isinstance(event.get("metadata", {}).get("request_id"), str)
-                and event.get("metadata", {}).get("request_id")
-            })
-            request_results = []
-            for worker_request_id in request_ids:
-                try:
-                    worker_reply = worker.status(worker_request_id, timeout_s=timeout)
-                    status = worker_reply.get("status") if isinstance(worker_reply, Mapping) else None
-                    request_results.append({
-                        "request_id": worker_request_id,
-                        "status": status if isinstance(status, str) else "UNKNOWN",
-                        "reply": self._redact_session_worker_event(worker_reply),
-                    })
-                except Exception as exc:
-                    request_results.append({"request_id": worker_request_id, "status": "UNKNOWN",
-                                            "error_type": type(exc).__name__})
-            observation = {"job_id": job["job_id"], "status": job["status"],
-                           "worker_requests": request_results,
-                           "request_ids_queried": len(request_results)}
-            observations.append(observation)
-            # Store readback as append-only evidence without changing the
-            # original operation's UNKNOWN/RECONCILING status or request body.
-            self.store.add_event(job["job_id"], "SessionRecoveryReadback", {
-                "session_recovery_operation_id": record["operation_id"],
-                "worker_instance_id": runtime_metadata.get("instance_id"),
-                "worker_epoch": runtime_metadata.get("generation"),
-                "worker_requests": request_results,
-                "replayed": False,
-            })
-        data = {
-            "project_id": project_id, "session_id": session_id,
-            "lifecycle_state": lifecycle["state"],
-            "worker_readback": {key: runtime_metadata.get(key) for key in (
-                "instance_id", "generation", "connected", "server",
-            )},
-            "request_observations": observations,
-            "replayed_requests": 0, "new_worker_created": False,
-            "recovery_status": "READBACK_ONLY_UNKNOWN_RETAINED" if lifecycle["state"] == "UNKNOWN" else "READBACK_ONLY",
-        }
-        return self._finish(record, {"success": True, "data": data}, "SUCCEEDED")
 
     def _dispatch_session_control(self, operation: str, arguments: dict[str, Any], execution: dict[str, Any]) -> dict[str, Any]:
         """Handle session lifecycle routes and cached snapshots.
@@ -3489,7 +4089,10 @@ class ControlDaemon:
         now = time.monotonic()
         if timeouts["queue_timeout_s"] is not None and now - submitted > timeouts["queue_timeout_s"]:
             return self._finish(record, self._error("QUEUE_TIMEOUT", "request expired before engine dispatch", data={"status": "NOT_EXECUTED"}, safe_retry=True), "EXPIRED")
-        unresolved = [job for job in self.store.unresolved_jobs() if job["job_id"] != job_id and job["status"] in {"UNKNOWN", "RECONCILING"} and not job["metadata"].get("reconciled_quiescent")]
+        unresolved = [job for job in self.store.unresolved_jobs()
+                      if job["job_id"] != job_id
+                      and job["status"] in {"UNKNOWN", "RECONCILING"}
+                      and not self._job_quiescence_proven(job)]
         if unresolved and operation not in {"server_connect", "model_inspect"}:
             return self._finish(record, self._error("EXECUTION_STATE_UNKNOWN", "reconcile unfinished engine work before new operations"), "FAILED")
         self.store.update_job(job_id, "RUNNING", {"queue_wait_s": now - submitted, "engine_started_at": time.time()})

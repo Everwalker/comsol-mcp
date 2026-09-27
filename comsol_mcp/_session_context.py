@@ -466,6 +466,7 @@ class SessionEndpointScheduler:
         self._closed_lane_keys: set[str] = set()
         self._closed_session_bindings: set[str] = set()
         self._releasable_session_bindings: set[str] = set()
+        self._recovery_bindings: set[str] = set()
         self._global_gate = _ReadWriteGate()
         self._next_task_id = 0
         self._scheduled_tasks: dict[int, dict[str, Any]] = {}
@@ -707,6 +708,50 @@ class SessionEndpointScheduler:
             self._closed_session_bindings.add(binding_key)
             self._releasable_session_bindings.add(binding_key)
         return binding_key
+
+    @contextmanager
+    def worker_recovery_admission_guard(self, worker: Any, worker_epoch: int):
+        """Fence one exact Worker object/epoch while recovery reads its history.
+
+        Unlike retirement, this guard reopens only a fence it installed. A
+        binding already closed by an earlier uncertain lifecycle operation
+        stays closed. Submission and the initial quiescence check share the
+        scheduler lock, so no accepted task can slip into recovery.
+        """
+        if worker is None or type(worker_epoch) is not int or worker_epoch < 1:
+            raise SessionIdentityUnknown("recovery requires an exact Worker object and epoch")
+        binding_key = f"python-worker-object:{id(worker)}:epoch:{worker_epoch}"
+        with self._lock:
+            if self._closed:
+                raise SessionSchedulerClosed("session scheduler is closed")
+            if binding_key in self._recovery_bindings:
+                raise SessionBindingBusy("another recovery already holds this Worker epoch")
+            selected = [task for task in self._scheduled_tasks.values()
+                        if task.get("worker_binding_key") == binding_key]
+            if selected:
+                queued = sum(task.get("state") == "QUEUED" for task in selected)
+                running = sum(task.get("state") == "RUNNING" for task in selected)
+                raise SessionBindingBusy(
+                    f"Worker epoch has accepted work (queued={queued}, running={running})"
+                )
+            was_closed = binding_key in self._closed_session_bindings
+            if not was_closed:
+                self._closed_session_bindings.add(binding_key)
+                self._releasable_session_bindings.add(binding_key)
+            self._recovery_bindings.add(binding_key)
+        try:
+            yield {
+                "binding_key": binding_key,
+                "admission_fenced": True,
+                "accepted_task_count": 0,
+                "preexisting_fence_preserved": was_closed,
+            }
+        finally:
+            with self._lock:
+                self._recovery_bindings.discard(binding_key)
+                if not was_closed and binding_key in self._releasable_session_bindings:
+                    self._releasable_session_bindings.discard(binding_key)
+                    self._closed_session_bindings.discard(binding_key)
 
     def close_session_binding_admission(self, context: SessionRuntimeContext) -> str:
         """Close future submissions while allowing already accepted work to drain.

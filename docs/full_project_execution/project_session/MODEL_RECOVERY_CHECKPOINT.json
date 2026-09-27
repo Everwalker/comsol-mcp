@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "stage": "F04 ModelRef-bound UNKNOWN quiescence recovery",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "full_session_recovery": "PARTIAL",
+  "at_utc": "2026-09-27T17:51:12.680904+00:00",
+  "base_commit": "21ff75c63b140b04d2a999d4db580842fd28b4a5",
+  "overlay": {
+    "comsol_mcp/_control_daemon.py": "65009279654fdb2fc98e4179b6e17af205e7200c3e7126b34686cbd172b1af12",
+    "comsol_mcp/_execution_service.py": "157b1fb981549993584daeca1766cca5c8710c573f46b85479a4d865f201ba23",
+    "comsol_mcp/_operation_store.py": "aeafd35a87035d6294c97c5ca5cb96b71921070231b74aeb15056698f704111e",
+    "comsol_mcp/_session_context.py": "01e73f4cf60895372b9b26befc5dcce7c7975f4fe92d09a3fa4922f4e0eb99b5",
+    "tests/test_control_daemon_sessions.py": "4a040210bd66b9e3e9b414c861558f320c405c0f5f71c8ddb2d500a65bd278b4"
+  },
+  "runtime_source_count": 92,
+  "archive": {
+    "path": "/private/tmp/f04_session_recover_admissionfix_20260928T174817Z.tar.gz",
+    "sha256": "a639de232a141bd5fb90ecb4c551dd52e799956504f01a58c60b1130c884355d"
+  },
+  "junit": {
+    "path": "/private/tmp/f04_session_recover_admissionfix_20260928T174817Z.xml",
+    "sha256": "62c415b5bfe78dc38c2f87c85f9c7cf3793c1e596f384505245d04c1f052eea6",
+    "tests": 143,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "deselected": 1
+  },
+  "capabilities": [
+    "Fence exact Worker object/epoch with zero accepted work before querying all original request IDs.",
+    "Match original operation/job/Worker/ModelRef and durable revision/snapshot before appending a quiescence proof.",
+    "Preserve original UNKNOWN job/operation/result; proof validates hashes and source bindings whenever used for admission.",
+    "Repeated recovery reports ALREADY_PROVEN without extra Worker queries or replay; other unresolved jobs still block.",
+    "Busy/unavailable admission guard reports UNAVAILABLE and performs zero status/snapshot RPC."
+  ],
+  "tests": {
+    "scope": "Real ControlDaemon and SQLite with injected Worker protocol. No COMSOL server or solve.",
+    "negative_controls": [
+      "Wrong source operation/request ID, epoch, ModelRef or revision",
+      "Changed snapshot fingerprint or external counter",
+      "Mixed proven/unproven jobs",
+      "Concurrent accepted work and unavailable guard",
+      "Tampered original result/proof and repeated recovery"
+    ],
+    "deselected": "test_historical_fixture_commit_and_blob_identity_resolve requires Git objects; not executed in final no-.git archive. Earlier live checkout suite included it, but that is not certification of this candidate.",
+    "prior_candidate": "141-pass e520 archive preserved at /private/tmp/f04_session_recover_minimal_20260927T1744Z; rejected fence-reporting bug repaired in this143-pass candidate."
+  },
+  "native_acceptance": "NOT_RUN",
+  "domain_outcome": "UNVERIFIED_HISTORICAL_UNKNOWN",
+  "limitations": [
+    "Snapshot covers parameters and shallow tree identity; no full-model atomic CAS guarantee.",
+    "Quiescence is point-in-time original-request terminality, not model correctness or reuse permission for old ModelRefs.",
+    "No-ModelRef lifecycle UNKNOWN remains PARTIAL; missing Worker and unsupported outcome cannot be declared recovered.",
+    "Native/platform/F16 and whole-project independent review remain incomplete."
+  ],
+  "replay": {
+    "python": "3.12.13; project test dependencies",
+    "source": "git archive base_commit for comsol_mcp/tests/tools/pyproject.toml then overlay only five paths listed above from this checkpoint commit",
+    "command": "env -u PYTHONPATH PYTHONNOUSERSITE=1 python -m pytest -q tests/test_control_daemon.py tests/test_control_daemon_projects.py tests/test_control_daemon_sessions.py tests/test_control_queue.py tests/test_execution_service.py tests/test_operation_store.py tests/test_operation_store_migrations.py tests/test_session_context.py --deselect=tests/test_operation_store_migrations.py::test_historical_fixture_commit_and_blob_identity_resolve",
+    "import_scope": "Four executor-inspected project modules import from isolated snapshot; main verified92 runtime source files and5 overlay hashes."
+  },
+  "next_action": "Implement separately reviewed no-ModelRef lifecycle UNKNOWN classification, then remaining F16 and native/platform validation; continue W23/W24 concurrently."
+}

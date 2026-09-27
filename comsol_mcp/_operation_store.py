@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import sqlite3
 import threading
 import time
@@ -74,6 +75,11 @@ def _dumps_canonical(value: Any) -> str:
                 return [_sanitize(x) for x in item]
             return item
         return json.dumps(_sanitize(value), sort_keys=True)
+
+
+def session_recovery_evidence_sha256(value: dict[str, Any]) -> str:
+    """Hash the canonical, secret-free session recovery evidence payload."""
+    return hashlib.sha256(_dumps_canonical(value).encode("utf-8")).hexdigest()
 
 
 class OperationStore:
@@ -719,6 +725,107 @@ class OperationStore:
                 "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
                 (job_id, event, json.dumps(metadata or {}, sort_keys=True)),
             )
+
+    def session_recovery_resolution(self, job_id: str) -> dict[str, Any] | None:
+        """Return the first immutable recovery resolution event for one job."""
+        with self.lock:
+            row = self.db.execute(
+                "SELECT id,event,metadata,created_at FROM job_events "
+                "WHERE job_id=? AND event='SessionRecoveryResolution' ORDER BY id LIMIT 1",
+                (job_id,),
+            ).fetchone()
+            if row is None:
+                return None
+            return {**dict(row), "metadata": json.loads(row["metadata"] or "{}")}
+
+    def record_session_recovery_resolution(
+        self, job_id: str, source_operation_id: str, evidence: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Atomically append a proof and index its quiescence result.
+
+        The original job/operation status and result are left untouched. Only
+        UNKNOWN/RECONCILING pairs may receive a resolution event, and the
+        first event wins so later recovery calls cannot rewrite the proof.
+        """
+        if (not isinstance(job_id, str) or not job_id
+                or not isinstance(source_operation_id, str) or not source_operation_id
+                or not isinstance(evidence, dict)):
+            raise ValueError("session recovery resolution requires exact source identities and evidence")
+        required = {"schema_version", "source_job_id", "source_operation_id",
+                    "session_recovery_operation_id", "worker_binding", "model_ref",
+                    "model_revision", "request_observations", "original_unknown_reason",
+                    "source_result_sha256", "replay_performed", "new_worker_created"}
+        if (not required.issubset(evidence)
+                or evidence.get("schema_version") != 1
+                or evidence.get("source_job_id") != job_id
+                or evidence.get("source_operation_id") != source_operation_id
+                or evidence.get("replay_performed") is not False
+                or evidence.get("new_worker_created") is not False):
+            raise ValueError("session recovery evidence is incomplete or has mismatched source binding")
+        digest = session_recovery_evidence_sha256(evidence)
+        event_metadata = {**evidence, "evidence_sha256": digest}
+
+        with self.lock:
+            self.db.execute("BEGIN IMMEDIATE")
+            try:
+                row = self.db.execute(
+                    "SELECT j.status AS job_status,j.metadata AS job_metadata,j.operation_id,"
+                    "o.status AS operation_status FROM jobs j "
+                    "JOIN operations o ON o.operation_id=j.operation_id WHERE j.job_id=?",
+                    (job_id,),
+                ).fetchone()
+                if row is None:
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "SOURCE_JOB_NOT_FOUND", "resolution": None}
+                if row["operation_id"] != source_operation_id:
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "SOURCE_OPERATION_MISMATCH", "resolution": None}
+                existing = self.db.execute(
+                    "SELECT id,event,metadata,created_at FROM job_events "
+                    "WHERE job_id=? AND event='SessionRecoveryResolution' ORDER BY id LIMIT 1",
+                    (job_id,),
+                ).fetchone()
+                if existing is not None:
+                    self.db.execute("COMMIT")
+                    resolution = {**dict(existing), "metadata": json.loads(existing["metadata"] or "{}")}
+                    return {"recorded": False, "reason": "ALREADY_RESOLVED", "resolution": resolution}
+                unresolved = {"UNKNOWN", "RECONCILING"}
+                if row["job_status"] not in unresolved or row["operation_status"] not in unresolved:
+                    self.db.execute("ROLLBACK")
+                    return {
+                        "recorded": False, "reason": "SOURCE_NOT_UNRESOLVED",
+                        "source_job_status": row["job_status"],
+                        "source_operation_status": row["operation_status"],
+                        "resolution": None,
+                    }
+                cursor = self.db.execute(
+                    "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
+                    (job_id, "SessionRecoveryResolution", _dumps_canonical(event_metadata)),
+                )
+                indexed = {
+                    "event_id": int(cursor.lastrowid),
+                    "evidence_sha256": digest,
+                    "session_recovery_operation_id": evidence["session_recovery_operation_id"],
+                    "worker_binding": evidence["worker_binding"],
+                    "model_ref": evidence["model_ref"],
+                    "model_revision": evidence["model_revision"].get("observed_revision"),
+                }
+                metadata = json.loads(row["job_metadata"] or "{}")
+                metadata["reconciled_quiescent"] = True
+                metadata["session_recovery_resolution"] = indexed
+                self.db.execute(
+                    "UPDATE jobs SET metadata=? WHERE job_id=?",
+                    (_dumps_canonical(metadata), job_id),
+                )
+                self.db.execute("COMMIT")
+                return {
+                    "recorded": True, "reason": None,
+                    "resolution": {"id": int(cursor.lastrowid), "event": "SessionRecoveryResolution",
+                                   "metadata": event_metadata},
+                }
+            except Exception:
+                self.db.execute("ROLLBACK")
+                raise
 
     def events(self, job_id: str, offset: int = 0, limit: int = 100) -> list[dict[str, Any]]:
         with self.lock:

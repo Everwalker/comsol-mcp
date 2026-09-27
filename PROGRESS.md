@@ -4,13 +4,13 @@ Updated 2026-09-27 UTC. **Overall PARTIAL; execution continues through W26.** Th
 
 ## Current stage
 
-**W24 setup campaign: PASS for scoped software; W24 and project overall PARTIAL.** Fourteen unsolved model slots now have managed save/reopen, dependency preflight, bounded resource admission and conservative cleanup. Process identity failures cannot produce a false quiescent inventory.
+**F04 model-bound recovery: PASS for scoped software; full recovery and project overall PARTIAL.** Recovery fences the exact Worker, checks original requests plus ModelRef/revision evidence, then records an immutable quiescence proof. Original UNKNOWN status/result remains unchanged; domain outcome stays UNVERIFIED.
 
-**Actually executed:** isolated published `a365420` plus two-file overlay, **53 PASS / 0 FAIL / 0 ERROR / 0 SKIP**, Python compilation and four-class Java offline compilation PASS. Main review checked two overlays, 107 published sources and receipt/freeze/JUnit hashes. Integration uses real ControlDaemon/SQLite with stub Worker/Popen; **native and scientific acceptance NOT_RUN**. [Compact evidence and replay](docs/full_project_execution/w24/SETUP_CAMPAIGN_CHECKPOINT.json).
+**Actually executed:** isolated published `21ff75c` plus five-file overlay, **143 PASS / 0 FAIL / 0 ERROR / 0 SKIP**, with one Git-object-dependent history test explicitly deselected. Main review checked 92 runtime source files, five overlays and archive/JUnit hashes. Real ControlDaemon/SQLite, injected Worker only; **native NOT_RUN**. New negatives verify busy/unavailable guards emit no status/snapshot RPC and never falsely report a held fence. [Evidence and replay](docs/full_project_execution/project_session/MODEL_RECOVERY_CHECKPOINT.json).
 
-**Preserved W23 resources remain pending authorization.** Earlier setup failed before Worker/solver dispatch. Automatic approval rejected SIGTERM; cleanup has not run, and the explicit user question is still pending. No relaunch or workaround. Current process inventory has not been refreshed.
+W24 setup software (53 tests) was published as `21ff75c`; its next step is new-Worker artifact reload and full readback. W23 single-BMA producer software continues.
 
-F04 recovery candidate is under main review (141 isolated software tests passed); W23 independent single-BMA producer software is in progress. These do not establish native acceptance.
+**Preserved W23 resources remain pending authorization.** Earlier setup failed before Worker/solver dispatch. Automatic approval rejected SIGTERM; cleanup has not run and the explicit user question remains pending. No relaunch or workaround. Current process inventory has not been refreshed.
 
 ## Latest accepted software baseline
 
@@ -26,7 +26,7 @@ Earlier source checkpoints and failures remain in the existing state and linked 
 
 ## In progress and real limitations
 
-- **F04:** connect/disconnect/reconnect software and recovery readback accepted. Owned Server software is accepted; next review full evidence-backed recovery, then managed native validation.
+- **F04:** connect/disconnect/reconnect software and recovery readback accepted. Owned Server and model-bound quiescence recovery software are accepted; next implement no-ModelRef lifecycle recovery, then managed native validation.
 - **W24:** atomic admission (78 tests), sensitivity (96 tests), and setup campaign (53 tests) are scoped software checkpoints; full native science remains incomplete and no old solve budget is borrowed.
 - **W23:** Port/BMA metadata software is accepted above; actual selected-solution producer and field mapping remain next. Two basis vectors are distinct eigensolutions of one receiver BMA, not two physical Ports. Managed native optics and tolerance/convergence acceptance remain open.
 - **W24 historical attempts:** 0841Z freeze failed before engine birth (0 Workers/solves). Earlier ExternalStrain failure remains FAIL/UNKNOWN with safe_retry=false. Preserve these records; do not replay old freezes or reset budgets.
@@ -37,4 +37,4 @@ Earlier source checkpoints and failures remain in the existing state and linked 
 
 Continue the three Luna Max work streams: implement remaining session lifecycle routes; implement W23 actual mode provenance; implement W24 new-epoch model reload and complete science orchestration. Publish each accepted software stage immediately. Then freeze isolated managed native candidates, execute their reviewed scope, complete all remaining W01–W26 work, and run a fresh independent overall review with repair/retest until accepted.
 
-The latest focused replay is in [SETUP_CAMPAIGN_CHECKPOINT.json](docs/full_project_execution/w24/SETUP_CAMPAIGN_CHECKPOINT.json). Recover from the GitHub checkout and existing state. Last previously verified GitHub sync: `3a7622fd4f27b6f27441de9d3b368254038baa8a`; this stage is recorded as synchronized only after post-push fetch and HEAD/origin-main equality.
+The latest focused replay is in [MODEL_RECOVERY_CHECKPOINT.json](docs/full_project_execution/project_session/MODEL_RECOVERY_CHECKPOINT.json). Recover from GitHub and existing state. Last previously verified GitHub sync: `21ff75c63b140b04d2a999d4db580842fd28b4a5`; this stage is recorded as synchronized only after post-push fetch and HEAD/origin-main equality.

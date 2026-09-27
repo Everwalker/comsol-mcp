@@ -131,6 +131,17 @@ class ExecutionService:
         result = self.inspect(ref); self._emit("bound", ref); return result
 
     def inspect(self, model_ref: ModelRef) -> dict[str, Any]:
+        evidence = self.inspect_evidence(model_ref)
+        evidence.pop("model_snapshot", None)
+        return evidence
+
+    def inspect_evidence(self, model_ref: ModelRef) -> dict[str, Any]:
+        """Read the selected model and return its scoped snapshot witness.
+
+        The witness covers only the adapter's documented fingerprint and
+        external-change counter. It is useful for recovery audits, but it is
+        not a COMSOL-side atomic CAS or full-model coverage claim.
+        """
         self.ledger._state_for(model_ref)
         snapshot = self._snapshot(model_ref.model_tag)
         self.ledger.observe_engine_state(
@@ -138,7 +149,17 @@ class ExecutionService:
             external_event_counter=snapshot["external_event_counter"],
             fingerprint=snapshot["fingerprint"],
         )
-        return self._metadata(model_ref)
+        return {
+            **self._metadata(model_ref),
+            "model_snapshot": {
+                "model_tag": model_ref.model_tag,
+                "server_instance_id": self.ledger.server_instance_id,
+                "fingerprint": snapshot["fingerprint"],
+                "external_event_counter": snapshot["external_event_counter"],
+                "coverage": "parameters+shallow_tree_identity",
+                "cas_guarantee": "NONE",
+            },
+        }
 
     def reconcile(self, model_ref: ModelRef) -> dict[str, Any]:
         snapshot = self._snapshot(model_ref.model_tag)

@@ -169,6 +169,10 @@ class _InjectedConnectWorker:
         self.close_calls = 0
         self.status_calls = []
         self.request_status = {}
+        self.backend_snapshot_calls = 0
+        self.current_operation_id = None
+        self.model_fingerprint = "session-recovery-model-v1"
+        self.model_external_event_counter = 0
         self.event_callback = None
         self.metadata = {
             "pid": 7401, "instance_id": "worker-fixture-1", "generation": 1,
@@ -185,10 +189,28 @@ class _InjectedConnectWorker:
     def runtime_metadata(self):
         return dict(self.metadata)
 
+    def backend_snapshot(self, model_tag):
+        self.backend_snapshot_calls += 1
+        return {
+            "model_tag": model_tag,
+            "server_instance_id": self.metadata["server"],
+            "generation": self.metadata["generation"],
+            "instance_id": self.metadata["instance_id"],
+            "fingerprint": self.model_fingerprint,
+            "external_event_counter": self.model_external_event_counter,
+        }
+
     @contextmanager
-    def operation_context(self, _operation_id, *, on_request_event=None):
+    def operation_context(self, operation_id, *, on_request_event=None):
+        previous_operation_id = self.current_operation_id
+        previous_callback = self.event_callback
+        self.current_operation_id = operation_id
         self.event_callback = on_request_event
-        yield
+        try:
+            yield
+        finally:
+            self.current_operation_id = previous_operation_id
+            self.event_callback = previous_callback
 
     def client(self):
         return self
@@ -199,7 +221,8 @@ class _InjectedConnectWorker:
             "user": kwargs.get("user", ""), "password": kwargs.get("password", ""),
         })
         if self.event_callback:
-            self.event_callback({"phase": "submitted", "request_id": kwargs.get("request_id"), "metadata": {
+            self.event_callback({"phase": "submitted", "request_id": kwargs.get("request_id"),
+                                 "operation_id": self.current_operation_id, "kind": "connect", "metadata": {
                 "user": kwargs.get("user", ""), "password": kwargs.get("password", ""),
             }})
         if self.block is not None:
@@ -222,6 +245,7 @@ class _InjectedConnectWorker:
         request_id = kwargs.get("request_id")
         if self.event_callback:
             self.event_callback({"phase": "submitted", "request_id": request_id,
+                                 "operation_id": self.current_operation_id,
                                  "kind": "disconnect", "metadata": {}})
         if self.disconnect_block is not None:
             entered, release = self.disconnect_block
@@ -331,6 +355,68 @@ def _connect_daemon(tmp_path, worker, *, peer=CanonicalSocket("127.0.0.1", 2046)
     )
     project = _create_project(daemon, "session-connect")
     return daemon, project["project_id"]
+
+
+def _unknown_session_model_job(daemon, project_id, session_id, worker, suffix, *,
+                               binding_overrides=None, result_ref=None,
+                               result_revision=0, result_dirty=False,
+                               worker_request_id=None, worker_reply=None,
+                               event_operation_id=None):
+    context = daemon.session_registry.get(project_id, session_id)
+    bound = context.service.bind_model(f"recovery-model-{suffix}")
+    model_ref = bound["execution"]["model_ref"]
+    # Keep the daemon's outer project-identity guard aligned with the
+    # registered-session ledger entry used by the real backend.  bind_model()
+    # above creates the session-local model state; this row supplies the
+    # durable project attribution consumed before scheduler admission.
+    model_key = daemon.backend._model_project_key(model_ref)
+    revision_metadata = daemon.store.get_metadata("revisions", model_key) or {
+        "model_ref": model_ref,
+        "revision": 0,
+        "dirty": False,
+        "fingerprint": worker.model_fingerprint,
+        "active_operation_id": None,
+    }
+    revision_metadata.update(attribution="PROJECT_BOUND", project_id=project_id)
+    daemon.store.put_metadata("revisions", model_key, revision_metadata)
+    execution = {
+        "project_id": project_id,
+        "session_id": session_id,
+        "model_ref": model_ref,
+        "expected_revision": 0,
+    }
+    binding = daemon._runtime_binding_for_request(context, execution)
+    binding.update(binding_overrides or {})
+    record, reused = daemon.store.begin(
+        request_id=f"outer-recover-{suffix}",
+        idempotency_key=f"outer-recover-{suffix}",
+        request_hash=f"outer-hash-{suffix}",
+        operation="set_parameters",
+        metadata={"operation": "set_parameters", "arguments": {"value": suffix},
+                  "execution": execution, "runtime_binding": binding},
+    )
+    assert reused is False
+    reply_ref = model_ref if result_ref is None else result_ref
+    original_result = {
+        "success": False,
+        "data": {"execution_state_unknown": True},
+        "error": {"code": "EXECUTION_STATE_UNKNOWN", "safe_retry": False},
+        "execution": {"model_ref": reply_ref, "revision": result_revision,
+                       "dirty": result_dirty},
+    }
+    daemon.store.update_job(record["job_id"], "UNKNOWN", result=original_result)
+    worker_request_id = worker_request_id or f"java-recover-{suffix}"
+    daemon.store.add_event(record["job_id"], "worker_request", {
+        "phase": "submitted", "request_id": worker_request_id, "kind": "model",
+        "operation_id": (record["operation_id"] if event_operation_id is None else event_operation_id),
+        "request_hash": f"request-hash-{suffix}",
+        "metadata": {"model_tag": model_ref["model_tag"]},
+    })
+    worker.request_status[worker_request_id] = worker_reply or {
+        "ok": True, "request_id": worker_request_id, "type": "model",
+        "status": "SUCCEEDED", "result": {"ok": True, "model_tag": model_ref["model_tag"]},
+    }
+    return record["job_id"], record, original_result, model_ref, worker_request_id
 
 
 def test_session_connect_uses_injected_worker_and_observed_shared_peer_without_globals(tmp_path):
@@ -1093,6 +1179,288 @@ def test_session_disconnect_unknown_retains_handle_and_recover_only_queries_orig
         assert retry["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
         assert worker.connect_calls == 1
         assert worker.start_calls == 1
+    finally:
+        daemon.close()
+
+
+def test_session_recover_records_model_quiescence_proof_without_rewriting_unknown_history(tmp_path):
+    from comsol_mcp._operation_store import OperationStore
+
+    worker = _InjectedConnectWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+    try:
+        connected = daemon.dispatch(_connect_request(project_id, "connect-recover-model-proof"))
+        session_id = connected["data"]["session_id"]
+        job_id, source_record, original_result, model_ref, worker_request_id = _unknown_session_model_job(
+            daemon, project_id, session_id, worker, "positive",
+        )
+        source_before = daemon.store.job(job_id)
+        assert source_before["status"] == "UNKNOWN"
+        assert source_before["result"] == original_result
+        original_operation_result = source_before["operation"]["result"]
+
+        request = _session_mutation_request(
+            "session.recover", project_id, session_id, "recover-model-proof-once",
+        )
+        recovered = daemon.dispatch(request)
+        assert recovered["success"] is True, recovered
+        data = recovered["data"]
+        assert data["recovery_status"] == "PARTIAL_HISTORICAL_UNKNOWN_RETAINED"
+        assert data["historical_unknown_preserved"] is True
+        assert data["replayed_requests"] == 0
+        assert data["new_worker_created"] is False
+        assert len(data["resolved_jobs"]) == 1
+        assert data["resolved_jobs"][0]["job_id"] == job_id
+        assert data["resolved_jobs"][0]["outcome_resolution"] == "UNVERIFIED_HISTORICAL_UNKNOWN"
+        assert data["resolved_jobs"][0]["quiescence_resolution"] == "PROVEN_AND_AUDITED"
+        assert data["resolved_jobs"][0]["model_ref"] == model_ref
+        assert worker.status_calls == [worker_request_id]
+        assert worker.start_calls == 1
+        assert worker.connect_calls == 1
+
+        source_after = daemon.store.job(job_id)
+        assert source_after["status"] == "UNKNOWN"
+        assert source_after["operation"]["status"] == "UNKNOWN"
+        assert source_after["result"] == original_result
+        assert source_after["operation"]["result"] == original_operation_result
+        assert source_after["metadata"]["reconciled_quiescent"] is True
+        assert source_after["metadata"]["session_recovery_resolution"]["model_ref"] == model_ref
+        assert source_after["metadata"]["session_recovery_resolution"]["model_revision"] == 0
+        proof = daemon.store.session_recovery_resolution(job_id)
+        assert proof["event"] == "SessionRecoveryResolution"
+        proof_data = proof["metadata"]
+        assert proof_data["source_job_id"] == job_id
+        assert proof_data["source_operation_id"] == source_record["operation_id"]
+        assert proof_data["session_recovery_operation_id"] == recovered["execution"]["operation_id"]
+        assert proof_data["resolution_scope"] == "WORKER_REQUEST_QUIESCENCE_ONLY"
+        assert proof_data["outcome_resolution"] == "UNVERIFIED_HISTORICAL_UNKNOWN"
+        assert proof_data["replay_performed"] is False
+        assert proof_data["new_worker_created"] is False
+        assert daemon._job_quiescence_proven(source_after) is True
+        assert daemon._session_recovery_resolution_is_valid(source_after) is True
+
+        # Same request idempotency returns the same recovery operation. A new
+        # read-only recovery does not re-query or append a second proof.
+        assert daemon.dispatch(request) == recovered
+        assert worker.status_calls == [worker_request_id]
+        second = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-model-proof-again",
+        ))
+        assert second["success"] is True, second
+        assert second["data"]["resolved_jobs"][0]["quiescence_resolution"] == "ALREADY_PROVEN"
+        assert worker.status_calls == [worker_request_id]
+        assert len([item for item in daemon.store.events(job_id)
+                    if item["event"] == "SessionRecoveryResolution"]) == 1
+
+        reopened = OperationStore(daemon.home / "operations.sqlite3")
+        try:
+            durable = reopened.job(job_id)
+            assert durable["status"] == "UNKNOWN"
+            assert durable["result"] == original_result
+            assert durable["metadata"]["session_recovery_resolution"]["evidence_sha256"] == proof_data["evidence_sha256"]
+            assert reopened.session_recovery_resolution(job_id)["metadata"] == proof_data
+        finally:
+            reopened.close()
+
+        # An append-only proof is useful only while its exact historical result
+        # remains intact; a later result rewrite must fail the gate closed.
+        daemon.store.update_job(job_id, "UNKNOWN", result={"success": False, "tampered": True})
+        assert daemon._job_quiescence_proven(daemon.store.job(job_id)) is False
+    finally:
+        daemon.close()
+
+
+def test_session_recover_admission_fence_blocks_concurrent_model_dispatch(tmp_path):
+    worker = _InjectedConnectWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+    entered = threading.Event()
+    release = threading.Event()
+    original_status = worker.status
+
+    def blocked_status(request_id, *, timeout_s=1.0):
+        entered.set()
+        if not release.wait(timeout=3):
+            raise RuntimeError("recovery status barrier was not released")
+        return original_status(request_id, timeout_s=timeout_s)
+
+    worker.status = blocked_status
+    pool = ThreadPoolExecutor(max_workers=1)
+    try:
+        connected = daemon.dispatch(_connect_request(project_id, "connect-recover-fence"))
+        session_id = connected["data"]["session_id"]
+        _job_id, _source_record, _original_result, model_ref, _worker_request_id = _unknown_session_model_job(
+            daemon, project_id, session_id, worker, "barrier",
+        )
+        context = daemon.session_registry.get(project_id, session_id)
+        snapshots_before = worker.backend_snapshot_calls
+        recovery_future = pool.submit(daemon.dispatch, _session_mutation_request(
+            "session.recover", project_id, session_id, "recover-with-held-fence",
+        ))
+        assert entered.wait(timeout=2)
+
+        refused = daemon.dispatch({
+            "operation": "model.inspect", "arguments": {},
+            "execution": {
+                "project_id": project_id, "session_id": session_id,
+                "model_ref": model_ref, "expected_revision": 0,
+                "request_id": "model-inspect-during-recovery",
+                "idempotency_key": "model-inspect-during-recovery",
+            },
+        })
+        assert refused["success"] is False, refused
+        assert refused["error"]["code"] == "WORKER_RETIRED_OR_UNKNOWN"
+        assert refused["data"]["engine_dispatched"] is False
+        assert worker.backend_snapshot_calls == snapshots_before
+        assert context.worker is worker
+
+        release.set()
+        recovered = recovery_future.result(timeout=3)
+        assert recovered["success"] is True, recovered
+        assert recovered["data"]["resolved_jobs"]
+        assert daemon.session_scheduler.quiescence_snapshot(context)["worker_status"] == "QUIESCENT"
+    finally:
+        release.set()
+        pool.shutdown(wait=True)
+        daemon.close()
+
+
+@pytest.mark.parametrize("guard_mode", ["busy", "unavailable"])
+def test_session_recover_does_not_claim_fence_without_acquiring_it(tmp_path, guard_mode):
+    worker = _InjectedConnectWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+    entered, release = threading.Event(), threading.Event()
+    future = None
+    try:
+        connected = daemon.dispatch(_connect_request(project_id, f"connect-recover-no-fence-{guard_mode}"))
+        session_id = connected["data"]["session_id"]
+        _job_id, _source, _result, _model_ref, _worker_request_id = _unknown_session_model_job(
+            daemon, project_id, session_id, worker, f"no-fence-{guard_mode}",
+        )
+        context = daemon.session_registry.get(project_id, session_id)
+        status_calls_before = list(worker.status_calls)
+        snapshots_before = worker.backend_snapshot_calls
+
+        if guard_mode == "busy":
+            def block_accepted_work():
+                entered.set()
+                assert release.wait(timeout=3)
+
+            future = daemon.session_scheduler.submit(context, block_accepted_work)
+            assert entered.wait(timeout=2)
+        else:
+            @contextmanager
+            def unavailable_guard(_worker, _worker_epoch):
+                raise SessionSchedulerClosed("injected recovery fence unavailable")
+                yield
+
+            daemon.session_scheduler.worker_recovery_admission_guard = unavailable_guard
+
+        recovered = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, f"recover-no-fence-{guard_mode}",
+        ))
+        assert recovered["success"] is True, recovered
+        assert recovered["data"]["admission_fence"] == "UNAVAILABLE"
+        assert recovered["data"]["resolved_jobs"] == []
+        assert worker.status_calls == status_calls_before
+        assert worker.backend_snapshot_calls == snapshots_before
+
+        if future is not None:
+            release.set()
+            future.result(timeout=2)
+        # Neither a BUSY rejection nor a guard failure leaves a stale fence.
+        assert daemon.session_scheduler.submit(
+            context, lambda: "admission remains available",
+        ).result(timeout=2) == "admission remains available"
+    finally:
+        release.set()
+        daemon.close()
+
+
+@pytest.mark.parametrize("case", [
+    "reply_request_id", "reply_running", "worker_operation_id", "worker_epoch",
+    "model_ref", "model_revision", "snapshot_drift", "snapshot_counter_drift",
+])
+def test_session_recover_keeps_unknown_when_evidence_binding_is_incomplete(tmp_path, case):
+    worker = _InjectedConnectWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+    try:
+        connected = daemon.dispatch(_connect_request(project_id, f"connect-recover-negative-{case}"))
+        session_id = connected["data"]["session_id"]
+        overrides = {}
+        result_ref = None
+        result_revision = 0
+        result_dirty = False
+        worker_reply = None
+        event_operation_id = None
+        if case == "worker_epoch":
+            overrides["worker_epoch"] = connected["data"]["worker_epoch"] + 1
+        if case == "model_ref":
+            result_ref = {**daemon.session_registry.get(project_id, session_id).service.bind_model(
+                f"mismatch-ref-{case}"
+            )["execution"]["model_ref"], "generation": 99}
+        if case == "model_revision":
+            result_revision, result_dirty = 2, True
+        if case == "reply_request_id":
+            worker_reply = {"ok": True, "request_id": "wrong-request", "type": "model",
+                            "status": "SUCCEEDED", "result": {"ok": True}}
+        if case == "reply_running":
+            worker_reply = {"ok": True, "request_id": f"java-recover-{case}", "type": "model",
+                            "status": "RUNNING"}
+        if case == "worker_operation_id":
+            event_operation_id = "different-source-operation"
+        job_id, _source, original_result, _model_ref, _request_id = _unknown_session_model_job(
+            daemon, project_id, session_id, worker, case,
+            binding_overrides=overrides, result_ref=result_ref,
+            result_revision=result_revision, result_dirty=result_dirty,
+            worker_reply=worker_reply, event_operation_id=event_operation_id,
+        )
+        durable_model_before = daemon.store.get_metadata("sessions", session_id)["models"][_model_ref["model_tag"]]
+        if case == "snapshot_drift":
+            worker.model_fingerprint = "different-after-unknown"
+        if case == "snapshot_counter_drift":
+            worker.model_external_event_counter = 1
+        recovered = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, f"recover-negative-{case}",
+        ))
+        assert recovered["success"] is True, recovered
+        source = daemon.store.job(job_id)
+        assert source["status"] == "UNKNOWN"
+        assert source["operation"]["status"] == "UNKNOWN"
+        assert source["result"] == original_result
+        assert "session_recovery_resolution" not in source["metadata"]
+        assert daemon.store.session_recovery_resolution(job_id) is None
+        assert any(item.get("job_id") == job_id for item in recovered["data"]["unresolved_items"])
+        if case in {"snapshot_drift", "snapshot_counter_drift"}:
+            assert daemon.store.get_metadata("sessions", session_id)["models"][_model_ref["model_tag"]] == durable_model_before
+        if case in {"worker_epoch", "worker_operation_id"}:
+            assert worker.status_calls == []
+    finally:
+        daemon.close()
+
+
+def test_session_recover_mixed_jobs_resolves_only_the_fully_observed_source(tmp_path):
+    worker = _InjectedConnectWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+    try:
+        connected = daemon.dispatch(_connect_request(project_id, "connect-recover-mixed"))
+        session_id = connected["data"]["session_id"]
+        good, _good_record, _good_result, _good_ref, good_request = _unknown_session_model_job(
+            daemon, project_id, session_id, worker, "mixed-good",
+        )
+        running, _running_record, _running_result, _running_ref, running_request = _unknown_session_model_job(
+            daemon, project_id, session_id, worker, "mixed-running",
+            worker_reply={"ok": True, "request_id": "java-recover-mixed-running",
+                          "type": "model", "status": "RUNNING"},
+        )
+        recovered = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-mixed-jobs",
+        ))
+        assert recovered["success"] is True, recovered
+        assert [item["job_id"] for item in recovered["data"]["resolved_jobs"]] == [good]
+        assert any(item["job_id"] == running for item in recovered["data"]["unresolved_items"])
+        assert daemon._job_quiescence_proven(daemon.store.job(good)) is True
+        assert daemon._job_quiescence_proven(daemon.store.job(running)) is False
+        assert set(worker.status_calls) == {good_request, running_request}
     finally:
         daemon.close()
 
