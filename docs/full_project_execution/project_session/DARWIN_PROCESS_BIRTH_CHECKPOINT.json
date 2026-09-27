@@ -1,0 +1,82 @@
+{
+  "base_commit": "4f74e11c21cf73bcb0fa183842f67a9d6b712d8b",
+  "exact_python": "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python",
+  "imported_module_path": "/private/tmp/luna_darwin_birth_stage_20260927/source/comsol_mcp/_platform_process.py",
+  "isolated_source_root": "/private/tmp/luna_darwin_birth_stage_20260927/source",
+  "junit": {
+    "errors": 0,
+    "failures": 0,
+    "path": "/private/tmp/luna_darwin_birth_stage_20260927/junit.xml",
+    "sha256": "0721f9dc0c40874f8f191e1566519ffeec0a1a5ce399d46dd0f1f99ee10462d4",
+    "skipped": 0,
+    "tests": 13
+  },
+  "native_comsol": "NOT_RUN",
+  "overlay_allowlist": [
+    "comsol_mcp/_platform_process.py",
+    "tests/test_platform_process.py"
+  ],
+  "python_version": "3.12.13 (main, Mar  3 2026, 12:39:30) [Clang 21.0.0 (clang-2100.0.123.102)]",
+  "real_harmless_child": {
+    "after_exit": {
+      "alive": false,
+      "start_epoch_ms": null
+    },
+    "birth_consistent": true,
+    "birth_match_after_exit_rejected": true,
+    "child_returncode_after_terminate_wait": -15,
+    "exact_birth_matches": true,
+    "first_read": {
+      "alive": true,
+      "start_epoch_ms": 1790518625959
+    },
+    "one_millisecond_wrong_birth_rejected": true,
+    "pid": 41850,
+    "second_read": {
+      "alive": true,
+      "start_epoch_ms": 1790518625959
+    }
+  },
+  "schema_version": 1,
+  "sdk": {
+    "abi_probe_binary": "/private/tmp/luna_darwin_birth_stage_20260927/abi_probe",
+    "abi_probe_result": "PROC_PIDTBSDINFO=3 PROC_PIDTBSDINFO_SIZE=136 sizeof=136 pid_offset=12 status_offset=4 start_sec_offset=120 start_usec_offset=128 SZOMB=5",
+    "abi_probe_source": "/private/tmp/luna_darwin_birth_stage_20260927/abi_probe.c",
+    "abi_probe_source_sha256": "a7f33a87a419dc1cc1ab0704b0070e0f64b72c6dec003a469253da6ab0537a1e",
+    "binding": "libproc.dylib proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &proc_bsdinfo, sizeof(proc_bsdinfo)); exact positive size required; PID and SZOMB checked; only zero return with freshly cleared errno ESRCH means dead.",
+    "headers": {
+      "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libproc.h": "246d87709fc6b9157ce5cf3c475656ac48e0e1ae8bbdc46cf45acd34294448cd",
+      "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/proc.h": "593af71b2740ba6248995691280bcb15f8900d46b1d9868f7345084aa0692949",
+      "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/proc_info.h": "e427fa96b348537b21552b9de71e01039410bcad2cedee5584c5e5fddafd70fc"
+    },
+    "abi_probe_source_text": "#include <stdio.h>\n#include <stddef.h>\n#include <libproc.h>\n#include <sys/proc_info.h>\n#include <sys/proc.h>\nint main(void) {\n  printf(\"PROC_PIDTBSDINFO=%d PROC_PIDTBSDINFO_SIZE=%zu sizeof=%zu pid_offset=%zu status_offset=%zu start_sec_offset=%zu start_usec_offset=%zu SZOMB=%d\\n\",\n    PROC_PIDTBSDINFO, (size_t)PROC_PIDTBSDINFO_SIZE, sizeof(struct proc_bsdinfo),\n    offsetof(struct proc_bsdinfo, pbi_pid), offsetof(struct proc_bsdinfo, pbi_status),\n    offsetof(struct proc_bsdinfo, pbi_start_tvsec), offsetof(struct proc_bsdinfo, pbi_start_tvusec), SZOMB);\n  return 0;\n}\n"
+  },
+  "source_sha256": {
+    "comsol_mcp/_platform_process.py": "f201026c8ebc66ae22548917e1cc248b1397c61b4681df3134a59a9f83f2795d",
+    "tests/test_g3_6_defects_d01_d06.py": "795767707207a64063bd55653b85ae4868bf137e1dd77e4d557bb639cb1f82b7",
+    "tests/test_java_worker.py": "0dff762075aa1731a765a6a979cb955a78185115851f56f51bf4dabcbc03ca49",
+    "tests/test_platform_process.py": "c53d12f601a7bff76cda9f1bd875d3c7fe3545535f3aa908ed1902f0c529f6cc"
+  },
+  "stage": "darwin-libproc-exact-process-birth",
+  "status": "SOFTWARE_AND_LOCAL_PROCESS_IDENTITY_ONLY",
+  "test_command": "python -m pytest -q tests/test_platform_process.py tests/test_java_worker.py::test_reused_worker_pid_with_different_creation_time_is_stale tests/test_java_worker.py::test_windows_unverifiable_live_worker_never_starts_replacement tests/test_g3_6_defects_d01_d06.py::test_scoped_force_stop_refuses_missing_backend_owned_birth tests/test_g3_6_defects_d01_d06.py::test_scoped_force_stop_accepts_exact_backend_owned_birth_match --junitxml=/private/tmp/luna_darwin_birth_stage_20260927/junit.xml",
+  "review": {
+    "status": "PASS_SCOPED_SOFTWARE_AND_NATIVE_HARMLESS_CHILD",
+    "reviewer": "main Agent; not final independent Reviewer",
+    "at_utc": "2026-09-27T14:18:30.686565+00:00",
+    "source_and_JUnit_hashes_verified": true,
+    "unchanged_runtime_files_verified_against_published_base": 87,
+    "SDK_header_and_probe_source_hashes_verified": true,
+    "raw_receipt": {
+      "local_path": "/private/tmp/luna_darwin_birth_stage_20260927/darwin_birth_stage_receipt.json",
+      "sha256": "1c9cdca4b8327e005afa1ac2b3829c1f73c843230652d10f0adb3ae5044f232f"
+    },
+    "limitation": "Local macOS process identity only; not COMSOL lifecycle or Intel-Mac validation."
+  },
+  "reproduce": [
+    "Use this checkpoint commit with Python3.12 and declared test dependencies; run test_command from checkout or an isolated archive.",
+    "The harmless-child test creates one Python sleeper, verifies exact creation milliseconds and wrong-birth refusal, then terminates/reaps only its own child and verifies absence.",
+    "SDK ABI probe source is included below; compile with cc against the local macOS SDK. Native test skips on non-Darwin; do not report skipped targets as passed."
+  ],
+  "next_action": "Integrate exact birth with task-owned Popen and observed listener proof in owned lifecycle. Continue disconnect/reconnect/recover without replacing UNKNOWN Workers."
+}

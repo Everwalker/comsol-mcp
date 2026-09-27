@@ -8,6 +8,8 @@ reused PID from their original child.
 from __future__ import annotations
 
 import os
+import sys
+from functools import lru_cache
 from typing import TypedDict
 
 
@@ -59,12 +61,114 @@ def _windows_process_identity(pid: int) -> ProcessIdentity:
         kernel32.CloseHandle(handle)
 
 
+def _darwin_proc_bsdinfo_type():
+    """Mirror the public Darwin ``struct proc_bsdinfo`` ABI.
+
+    The field order and fixed-width types follow ``sys/proc_info.h``.  The
+    runtime checks the ABI size before querying a process, so a future SDK
+    layout change fails closed instead of manufacturing a birth identity.
+    """
+    import ctypes
+
+    class ProcBsdInfo(ctypes.Structure):
+        _fields_ = [
+            ("pbi_flags", ctypes.c_uint32),
+            ("pbi_status", ctypes.c_uint32),
+            ("pbi_xstatus", ctypes.c_uint32),
+            ("pbi_pid", ctypes.c_uint32),
+            ("pbi_ppid", ctypes.c_uint32),
+            ("pbi_uid", ctypes.c_uint32),
+            ("pbi_gid", ctypes.c_uint32),
+            ("pbi_ruid", ctypes.c_uint32),
+            ("pbi_rgid", ctypes.c_uint32),
+            ("pbi_svuid", ctypes.c_uint32),
+            ("pbi_svgid", ctypes.c_uint32),
+            ("rfu_1", ctypes.c_uint32),
+            ("pbi_comm", ctypes.c_char * 16),
+            ("pbi_name", ctypes.c_char * 32),
+            ("pbi_nfiles", ctypes.c_uint32),
+            ("pbi_pgid", ctypes.c_uint32),
+            ("pbi_pjobc", ctypes.c_uint32),
+            ("e_tdev", ctypes.c_uint32),
+            ("e_tpgid", ctypes.c_uint32),
+            ("pbi_nice", ctypes.c_int32),
+            ("pbi_start_tvsec", ctypes.c_uint64),
+            ("pbi_start_tvusec", ctypes.c_uint64),
+        ]
+
+    return ProcBsdInfo
+
+
+@lru_cache(maxsize=1)
+def _darwin_proc_pidinfo():
+    """Load libproc's documented read-only process inspection function."""
+    import ctypes
+
+    # libproc is a system library shipped by macOS, not a project dependency.
+    library = ctypes.CDLL("/usr/lib/libproc.dylib", use_errno=True)
+    function = library.proc_pidinfo
+    function.argtypes = (ctypes.c_int, ctypes.c_int, ctypes.c_uint64,
+                         ctypes.c_void_p, ctypes.c_int)
+    function.restype = ctypes.c_int
+    # Keep the CDLL alive for as long as the cached function pointer is used.
+    function._darwin_library = library
+    return function
+
+
+def _darwin_process_identity(pid: int) -> ProcessIdentity:
+    """Read PID, state, and exact process birth via PROC_PIDTBSDINFO.
+
+    A permission or ABI/query failure means the process may still be alive,
+    but its birth is unknown.  Callers that need ownership must fail closed.
+    """
+    import ctypes
+    import errno
+
+    try:
+        info_type = _darwin_proc_bsdinfo_type()
+        expected_size = ctypes.sizeof(info_type)
+        # proc_pidinfo(PROC_PIDTBSDINFO) is flavor 3; SZOMB is 5.  These are
+        # stable public constants in sys/proc_info.h and sys/proc.h.
+        if expected_size != 136:
+            return {"alive": True, "start_epoch_ms": None}
+        info = info_type()
+        # ctypes exposes thread-local errno and otherwise leaves stale values
+        # untouched when the foreign function succeeds without setting it.
+        # Clear it per call so only this proc_pidinfo invocation can establish
+        # ESRCH; a positive short read is never evidence of death.
+        ctypes.set_errno(0)
+        result = _darwin_proc_pidinfo()(pid, 3, 0, ctypes.byref(info), expected_size)
+        if result != expected_size:
+            error_number = ctypes.get_errno()
+            if result == 0 and error_number == errno.ESRCH:
+                return {"alive": False, "start_epoch_ms": None}
+            return {"alive": True, "start_epoch_ms": None}
+        if info.pbi_pid != pid:
+            # A returned row for another PID cannot be used as this child's
+            # identity, even when the kernel call itself succeeded.
+            return {"alive": True, "start_epoch_ms": None}
+        if info.pbi_status == 5:  # SZOMB: exited, awaiting collection.
+            return {"alive": False, "start_epoch_ms": None}
+        seconds, microseconds = int(info.pbi_start_tvsec), int(info.pbi_start_tvusec)
+        if seconds <= 0 or not 0 <= microseconds < 1_000_000:
+            return {"alive": True, "start_epoch_ms": None}
+        return {"alive": True, "start_epoch_ms": seconds * 1000 + microseconds // 1000}
+    except (AttributeError, OSError, TypeError, ValueError):
+        # Unsupported API, missing system library, or permission failure is
+        # uncertainty.  Do not infer ownership from argv, process names, or
+        # coarse timestamps.
+        return {"alive": True, "start_epoch_ms": None}
+
+
 def process_identity(pid: int, *, platform_name: str | None = None) -> ProcessIdentity:
     """Return a conservative private-child identity without terminating it."""
     if type(pid) is not int or pid <= 1:
         return {"alive": False, "start_epoch_ms": None}
-    if (platform_name or os.name) == "nt":
+    selected_platform = platform_name or ("darwin" if sys.platform == "darwin" else os.name)
+    if selected_platform == "nt":
         return _windows_process_identity(pid)
+    if selected_platform in {"darwin", "mac", "macos"}:
+        return _darwin_process_identity(pid)
     try:
         os.kill(pid, 0)
     except ProcessLookupError:
@@ -72,6 +176,16 @@ def process_identity(pid: int, *, platform_name: str | None = None) -> ProcessId
     except PermissionError:
         return {"alive": True, "start_epoch_ms": None}
     return {"alive": True, "start_epoch_ms": None}
+
+
+def process_identity_matches(pid: int, expected_start_epoch_ms: int, *,
+                             platform_name: str | None = None) -> bool:
+    """Require both a live PID and its exact observed creation millisecond."""
+    if type(expected_start_epoch_ms) is not int or expected_start_epoch_ms <= 0:
+        return False
+    observed = process_identity(pid, platform_name=platform_name)
+    return (observed["alive"] is True
+            and observed["start_epoch_ms"] == expected_start_epoch_ms)
 
 
 def terminate_process_tree(pid: int, *, timeout_s: float = 5.0, platform_name: str | None = None) -> bool:
@@ -229,4 +343,3 @@ def validate_windows_path_security(path_str: str) -> None:
         stem = part.split(".", 1)[0].upper()
         if stem in {"CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$"} or re.fullmatch(r"(?:COM|LPT)[1-9¹²³]", stem):
             raise ValueError(f"Windows reserved device name is rejected: {path_str}")
-
