@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import nullcontext
+from contextlib import contextmanager, nullcontext
 from dataclasses import replace
+import os
 from pathlib import Path
 from types import SimpleNamespace
 import threading
@@ -20,6 +21,7 @@ from comsol_mcp._session_context import (
     SessionRuntimeConfig,
     SessionRuntimeContext,
     current_session_context,
+    session_state_directory,
 )
 from comsol_mcp._session_lifecycle import SessionLifecycleProjectConflict, new_lifecycle_record
 
@@ -132,7 +134,7 @@ def test_session_inspect_rejects_foreign_project_and_unknown_fields(tmp_path):
         assert malformed["success"] is False
         assert malformed["error"]["code"] == "INVALID_REQUEST"
 
-        not_implemented = daemon.dispatch({
+        already_active = daemon.dispatch({
             "operation": "session.connect",
             "arguments": {
                 "project_id": owner["project_id"],
@@ -142,8 +144,388 @@ def test_session_inspect_rejects_foreign_project_and_unknown_fields(tmp_path):
             },
             "execution": {},
         })
-        assert not_implemented["success"] is False
-        assert not_implemented["error"]["code"] == "UNSUPPORTED_OPERATION"
+        assert already_active["success"] is False
+        assert already_active["error"]["code"] == "SESSION_ALREADY_ACTIVE"
+    finally:
+        daemon.close()
+
+
+class _InjectedConnectWorker:
+    def __init__(self, *, block=None, timeout=False, start_timeout=False):
+        self.block = block
+        self.timeout = timeout
+        self.start_timeout = start_timeout
+        self.start_calls = 0
+        self.connect_calls = 0
+        self.close_calls = 0
+        self.event_callback = None
+        self.metadata = {
+            "pid": 7401, "instance_id": "worker-fixture-1", "generation": 1,
+            "connected": False, "server": "",
+        }
+
+    def start(self):
+        self.start_calls += 1
+        if self.start_timeout:
+            from comsol_mcp._java_worker import JavaWorkerTimeout
+            raise JavaWorkerTimeout("fixture startup timeout")
+        return {"status": "HEALTHY", **self.metadata}
+
+    def runtime_metadata(self):
+        return dict(self.metadata)
+
+    @contextmanager
+    def operation_context(self, _operation_id, *, on_request_event=None):
+        self.event_callback = on_request_event
+        yield
+
+    def client(self):
+        return self
+
+    def connect(self, port, host, **kwargs):
+        self.connect_calls += 1
+        if self.event_callback:
+            self.event_callback({"phase": "submitted", "metadata": {
+                "user": kwargs.get("user", ""), "password": kwargs.get("password", ""),
+            }})
+        if self.block is not None:
+            entered, release = self.block
+            entered.set()
+            release.wait(timeout=5)
+        if self.timeout:
+            from comsol_mcp._java_worker import JavaWorkerTimeout
+            raise JavaWorkerTimeout("fixture timeout")
+        server = f"{host}:{port}"
+        self.metadata.update(generation=2, connected=True, server=server)
+        return {
+            "connected": True, "server": server, "generation": 2,
+            "instance_id": self.metadata["instance_id"], "engine_version": "6.4.0.293",
+        }
+
+    def close(self):
+        self.close_calls += 1
+
+
+class _StartAndRetirementFailureWorker(_InjectedConnectWorker):
+    def start(self):
+        self.start_calls += 1
+        raise RuntimeError("fixture worker start refused before dispatch")
+
+    def close(self):
+        self.close_calls += 1
+        raise RuntimeError("fixture worker retirement is not confirmed")
+
+
+def _connect_request(project_id: str, key: str, *, credentials_ref=None):
+    arguments = {
+        "project_id": project_id,
+        "idempotency_key": key,
+        "runtime_id": "fixture-runtime",
+        "endpoint": {"host": "127.0.0.1", "port": 2046},
+    }
+    if credentials_ref is not None:
+        arguments["credentials_ref"] = credentials_ref
+    return {"operation": "session.connect", "arguments": arguments, "execution": {}}
+
+
+def _connect_daemon(tmp_path, worker, *, peer=CanonicalSocket("127.0.0.1", 2046), credentials_resolver=None):
+    workspace_root = tmp_path / "workspaces"
+    workspace_root.mkdir(parents=True)
+    state_root = tmp_path / "test-session-state"
+
+    def runtime_resolver(runtime_id, project_id, session_id, _project_root, resolved_state_root):
+        assert runtime_id == "fixture-runtime"
+        session_home = session_state_directory(resolved_state_root, project_id, session_id)
+        return SessionRuntimeConfig(
+            runtime_id=runtime_id, comsol_version="6.4.0.293",
+            installation_root=tmp_path / "synthetic-comsol",
+            java_executable=tmp_path / "synthetic-jdk" / "bin" / "java",
+            classpath=(tmp_path / "synthetic-comsol" / "client.jar",),
+            preferences_dir=session_home / "preferences",
+            session_state_root=resolved_state_root,
+        )
+
+    daemon = ControlDaemon(
+        tmp_path / "control", project_root=workspace_root, registry={},
+        session_runtime_resolver=runtime_resolver,
+        session_worker_factory=lambda _runtime, _worker_state: worker,
+        session_peer_observer=lambda _worker, _port, _metadata: peer,
+        session_credentials_resolver=credentials_resolver,
+    )
+    project = _create_project(daemon, "session-connect")
+    return daemon, project["project_id"]
+
+
+def test_session_connect_uses_injected_worker_and_observed_shared_peer_without_globals(tmp_path):
+    import comsol_mcp._server as server
+
+    worker = _InjectedConnectWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+    global_before = {name: getattr(server, name) for name in (
+        "_client", "_remote_client_factory", "_client_connected", "_connected_host",
+        "_connected_port", "_server", "_server_started_by_mcp",
+    )}
+    env_before = {key: os.environ.get(key) for key in (
+        "COMSOL_ROOT", "COMSOL_JAVA_HOME", "JAVA_HOME", "COMSOL_PROJECT_ROOT",
+    )}
+    try:
+        result = daemon.dispatch(_connect_request(project_id, "connect-success"))
+        assert result["success"] is True, result
+        data = result["data"]
+        assert data["server_ownership"] == "shared"
+        assert data["observed_peer"] == {"address": "127.0.0.1", "port": 2046}
+        assert data["remote_engine_version"] == "6.4.0.293"
+        assert data["remote_engine_build"] is None
+        assert data["remote_engine_build_source"] == "NOT_REPORTED"
+        context = daemon.session_registry.get(project_id, data["session_id"])
+        assert context.worker is worker
+        assert context.endpoint.owned_process is None
+        assert context.endpoint.observed_peer == CanonicalSocket("127.0.0.1", 2046)
+        assert context.server_ownership == "shared"
+        assert worker.connect_calls == 1
+        assert {name: getattr(server, name) for name in global_before} == global_before
+        assert {key: os.environ.get(key) for key in env_before} == env_before
+        lifecycle = daemon.session_lifecycle.get(project_id, data["session_id"])
+        assert lifecycle["state"] == "CONNECTED"
+        assert lifecycle["server_ownership"] == "shared"
+    finally:
+        daemon.close()
+
+
+def test_session_runtime_jdk_executable_names_follow_java_worker_platform(tmp_path):
+    from comsol_mcp._control_daemon import ControlDaemon
+
+    java_home = tmp_path / "jdk"
+    bin_dir = java_home / "bin"
+    bin_dir.mkdir(parents=True)
+    (bin_dir / "java.exe").touch()
+    (bin_dir / "javac.exe").touch()
+    assert ControlDaemon._session_jdk_tools(java_home, platform_name="nt") == (
+        bin_dir / "java.exe", bin_dir / "javac.exe",
+    )
+
+
+def test_session_connect_keeps_unknown_handle_when_pre_dispatch_worker_close_fails(tmp_path):
+    worker = _StartAndRetirementFailureWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+    try:
+        result = daemon.dispatch(_connect_request(project_id, "connect-close-failure"))
+        assert result["success"] is False
+        assert result["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        assert result["error"]["execution_state_unknown"] is True
+        assert result["data"]["worker_handle_preserved"] is True
+        assert result["data"]["worker_close_failure_type"] == "RuntimeError"
+        session_id = result["data"]["session_id"]
+        assert daemon.session_lifecycle.get(project_id, session_id)["state"] == "UNKNOWN"
+        assert daemon._session_worker_handles[(project_id, session_id)] is worker
+        assert worker.connect_calls == 0
+        assert worker.close_calls == 1
+        blocked = daemon.dispatch(_connect_request(project_id, "connect-after-close-failure"))
+        assert blocked["error"]["code"] == "SESSION_ALREADY_ACTIVE"
+        assert worker.start_calls == 1
+    finally:
+        daemon.close()
+
+
+def test_session_connect_post_attach_service_initialization_failure_is_unknown(tmp_path, monkeypatch):
+    import comsol_mcp._managed_backend as managed_backend
+
+    worker = _InjectedConnectWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+
+    def fail_service(*_args, **_kwargs):
+        raise OSError("fixture durable service setup failure")
+
+    monkeypatch.setattr(managed_backend, "ExecutionService", fail_service)
+    try:
+        result = daemon.dispatch(_connect_request(project_id, "connect-init-failure"))
+        assert result["success"] is False
+        assert result["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        assert result["error"]["execution_state_unknown"] is True
+        assert result["data"]["engine_dispatched"] is True
+        assert result["data"]["worker_handle_preserved"] is True
+        session_id = result["data"]["session_id"]
+        assert daemon.session_lifecycle.get(project_id, session_id)["state"] == "UNKNOWN"
+        assert daemon._session_worker_handles[(project_id, session_id)] is worker
+        assert worker.connect_calls == 1
+        assert worker.close_calls == 0
+        blocked = daemon.dispatch(_connect_request(project_id, "connect-after-init-failure"))
+        assert blocked["error"]["code"] == "SESSION_ALREADY_ACTIVE"
+        assert worker.connect_calls == 1
+    finally:
+        daemon.close()
+
+
+def test_session_connect_contract_error_after_attach_is_unknown(tmp_path, monkeypatch):
+    worker = _InjectedConnectWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+
+    def reject_register(_context):
+        raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "fixture registry rejection")
+
+    monkeypatch.setattr(daemon.session_registry, "register", reject_register)
+    try:
+        result = daemon.dispatch(_connect_request(project_id, "connect-register-failure"))
+        assert result["success"] is False
+        assert result["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        assert result["error"]["execution_state_unknown"] is True
+        assert result["data"]["cause_code"] == "MODEL_IDENTITY_MISMATCH"
+        assert result["data"]["engine_dispatched"] is True
+        assert result["data"]["worker_handle_preserved"] is True
+        session_id = result["data"]["session_id"]
+        lifecycle = daemon.session_lifecycle.get(project_id, session_id)
+        assert lifecycle["state"] == "UNKNOWN"
+        assert lifecycle["worker_instance_id"] == "worker-fixture-1"
+        assert lifecycle["worker_epoch"] == 2
+        assert daemon._session_worker_handles[(project_id, session_id)] is worker
+        assert worker.close_calls == 0
+        blocked = daemon.dispatch(_connect_request(project_id, "connect-after-contract-error"))
+        assert blocked["error"]["code"] == "SESSION_ALREADY_ACTIVE"
+        assert worker.connect_calls == 1
+    finally:
+        daemon.close()
+
+
+def test_session_connect_duplicate_idempotency_waits_without_second_worker_birth(tmp_path):
+    entered, release = threading.Event(), threading.Event()
+    worker = _InjectedConnectWorker(block=(entered, release))
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+    request = _connect_request(project_id, "connect-concurrent")
+    factory_calls = 1
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            first = pool.submit(daemon.dispatch, request)
+            assert entered.wait(timeout=3)
+            duplicate = daemon.dispatch(request)
+            assert duplicate["success"] is True
+            assert duplicate["data"]["status"] == "RUNNING"
+            assert worker.connect_calls == factory_calls
+            release.set()
+            completed = first.result(timeout=5)
+        assert completed["success"] is True
+        assert worker.connect_calls == 1
+    finally:
+        release.set()
+        daemon.close()
+
+
+def test_session_connect_timeout_is_durable_unknown_and_never_replays_worker_birth(tmp_path):
+    entered, release = threading.Event(), threading.Event()
+    worker = _InjectedConnectWorker(timeout=True, block=(entered, release))
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+    request = _connect_request(project_id, "connect-unknown")
+    try:
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            pending = pool.submit(daemon.dispatch, request)
+            assert entered.wait(timeout=3)
+            duplicate = daemon.dispatch(request)
+            assert duplicate["success"] is True
+            assert duplicate["data"]["status"] == "RUNNING"
+            assert worker.connect_calls == 1
+            release.set()
+            first = pending.result(timeout=5)
+        assert first["success"] is False
+        assert first["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        assert first["data"]["worker_handle_preserved"] is True
+        session_id = first["data"]["session_id"]
+        assert daemon.session_lifecycle.get(project_id, session_id)["state"] == "UNKNOWN"
+        assert daemon._session_worker_handles[(project_id, session_id)] is worker
+        assert worker.close_calls == 0
+
+        replay = daemon.dispatch(request)
+        assert replay == first
+        assert worker.connect_calls == 1
+
+        new_key = daemon.dispatch(_connect_request(project_id, "connect-after-unknown"))
+        assert new_key["success"] is False
+        assert new_key["error"]["code"] == "SESSION_ALREADY_ACTIVE"
+        assert worker.connect_calls == 1
+    finally:
+        release.set()
+        daemon.close()
+
+
+def test_session_connect_without_os_observed_peer_stays_unknown_and_keeps_worker(tmp_path):
+    worker = _InjectedConnectWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker, peer=None)
+    try:
+        result = daemon.dispatch(_connect_request(project_id, "connect-no-peer"))
+        assert result["success"] is False
+        assert result["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        assert result["data"]["worker_handle_preserved"] is True
+        session_id = result["data"]["session_id"]
+        assert daemon.session_lifecycle.get(project_id, session_id)["state"] == "UNKNOWN"
+        assert daemon.session_registry.list_for_project(project_id) == ()
+        assert daemon._session_worker_handles[(project_id, session_id)] is worker
+        assert worker.close_calls == 0
+    finally:
+        daemon.close()
+
+
+def test_session_worker_start_timeout_is_unknown_without_claiming_remote_dispatch(tmp_path):
+    worker = _InjectedConnectWorker(start_timeout=True)
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+    try:
+        result = daemon.dispatch(_connect_request(project_id, "connect-start-timeout"))
+        assert result["success"] is False
+        assert result["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        assert result["data"]["engine_dispatched"] is False
+        assert result["data"]["worker_handle_preserved"] is True
+        session_id = result["data"]["session_id"]
+        assert daemon.session_lifecycle.get(project_id, session_id)["state"] == "UNKNOWN"
+        assert worker.connect_calls == 0
+        assert worker.close_calls == 0
+        assert daemon.dispatch(_connect_request(project_id, "connect-start-timeout-retry"))["error"]["code"] == "SESSION_ALREADY_ACTIVE"
+        assert worker.start_calls == 1
+    finally:
+        daemon.close()
+
+
+def test_session_connect_requires_project_write_before_worker_creation(tmp_path):
+    daemon = _daemon(tmp_path)
+    try:
+        project = daemon.dispatch({
+            "operation": "project.create",
+            "arguments": {"label": "inspect-only", "workspace": "inspect-only",
+                          "policy": {"permissions": ["inspect"]}},
+            "execution": {"request_id": "inspect-only-create", "idempotency_key": "inspect-only-create"},
+        })["data"]["project"]
+        result = daemon.dispatch(_connect_request(project["project_id"], "connect-denied"))
+        assert result["success"] is False
+        assert result["error"]["code"] == "PERMISSION_DENIED"
+        with daemon.store.lock:
+            row = daemon.store.db.execute(
+                "SELECT operation_id FROM operations WHERE idempotency_key=?", ("connect-denied",),
+            ).fetchone()
+        assert row is None
+    finally:
+        daemon.close()
+
+
+def test_session_connect_secrets_are_resolved_locally_and_never_persisted(tmp_path):
+    worker = _InjectedConnectWorker()
+    secret_ref = "private-ref-value"
+    username, password = "fixture-user", "fixture-password"
+    daemon, project_id = _connect_daemon(
+        tmp_path, worker,
+        credentials_resolver=lambda reference: {"user": username, "password": password}
+        if reference == secret_ref else {},
+    )
+    try:
+        result = daemon.dispatch(_connect_request(project_id, "connect-with-secret", credentials_ref=secret_ref))
+        assert result["success"] is True, result
+        assert result["data"]["credentials_configured"] is True
+        operation_id = result["execution"]["operation_id"]
+        operation = daemon.store.get_operation(operation_id)
+        job = daemon.store.operation_job(operation_id)
+        events = daemon.store.events(job["job_id"])
+        persisted = str(operation) + str(job) + str(events)
+        assert secret_ref not in persisted
+        assert password not in persisted
+        assert username not in persisted
+        worker_event = next(event for event in events if event["event"] == "worker_request")
+        assert worker_event["metadata"]["metadata"]["password"] == "[REDACTED]"
+        assert worker_event["metadata"]["metadata"]["user"] == "[REDACTED]"
     finally:
         daemon.close()
 

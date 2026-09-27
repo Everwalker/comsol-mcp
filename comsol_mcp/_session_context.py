@@ -184,6 +184,28 @@ class SessionPaths:
     server_log: Path
 
 
+def session_state_directory(state_root: Path, project_id: str, session_id: str) -> Path:
+    """Return the hash-scoped project/session directory after symlink checks."""
+    if not isinstance(state_root, Path):
+        raise SessionContextError("session state root must be a Path")
+    if not isinstance(project_id, str) or not project_id or not isinstance(session_id, str) or not session_id:
+        raise SessionContextError("project and session identities are required")
+    if state_root.is_symlink():
+        raise SessionContextError("configured session state root cannot be a symlink")
+    root = state_root.resolve()
+    sessions_root = root / "sessions"
+    if sessions_root.is_symlink():
+        raise SessionContextError("session state root cannot use a symlink directory")
+    digest = hashlib.sha256(f"{project_id}\0{session_id}".encode("utf-8")).hexdigest()
+    candidate = sessions_root / digest
+    if candidate.is_symlink():
+        raise SessionContextError("session directory cannot be a symlink")
+    home = candidate.resolve()
+    if not home.is_relative_to(root) or home.parent != sessions_root.resolve():
+        raise SessionContextError("derived session directory escapes its state root")
+    return home
+
+
 @dataclass
 class SessionRuntimeContext:
     """Mutable Worker/model/job state for one authoritative project session."""
@@ -288,21 +310,8 @@ class SessionRuntimeContext:
     def paths(self) -> SessionPaths:
         """Return per-project/session files without interpolating untrusted IDs."""
         configured_state_root = self.runtime.session_state_root
-        if configured_state_root.is_symlink():
-            raise SessionContextError("configured session state root cannot be a symlink")
         state_root = configured_state_root.resolve()
-        sessions_root = state_root / "sessions"
-        if sessions_root.is_symlink():
-            raise SessionContextError("session state root cannot use a symlink directory")
-        digest = hashlib.sha256(
-            f"{self.project_id}\0{self.session_id}".encode("utf-8")
-        ).hexdigest()
-        candidate = sessions_root / digest
-        if candidate.is_symlink():
-            raise SessionContextError("session directory cannot be a symlink")
-        home = candidate.resolve()
-        if not home.is_relative_to(state_root) or home.parent != sessions_root.resolve():
-            raise SessionContextError("derived session directory escapes its state root")
+        home = session_state_directory(configured_state_root, self.project_id, self.session_id)
         for child in (
             home / "logs", home / "outputs", home / "workflow_state.json",
             home / "status.json", home / "workflow_state.json.tmp",

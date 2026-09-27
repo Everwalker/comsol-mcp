@@ -10,6 +10,7 @@ import json
 import math
 import os
 from pathlib import Path
+import platform
 import re
 import secrets
 import threading
@@ -19,21 +20,30 @@ from typing import Any, Mapping
 from uuid import uuid4
 
 from ._execution_contract import ExecutionContractError, canonical_request_hash
-from ._managed_backend import ManagedBackend, ProcessLock, collect_legacy_registry, _g3_operations
+from ._managed_backend import ManagedBackend, ProcessLock, SessionConnectFailure, collect_legacy_registry, _g3_operations
 from ._operation_store import IdempotencyConflict, JobCleanupError, OperationStore
 from ._platform_process import process_identity, terminate_process_tree
 from ._desktop_platforms import create_native_metadata_adapter
 from ._desktop_service import DesktopCoordinator, DesktopOperationError
 from ._project_authority import ProjectAuthority, PROJECT_OPERATIONS
 from ._session_context import (
+    CanonicalSocket,
+    SessionEndpointIdentity,
     SessionContextMissing,
+    SessionRuntimeConfig,
+    SessionRuntimeContext,
+    session_state_directory,
     SessionEndpointScheduler,
     SessionRuntimeRegistry,
     SessionSchedulerClosed,
     active_session_context,
     use_session_context,
 )
-from ._session_lifecycle import SessionLifecycleStore, SessionLifecycleProjectConflict
+from ._session_lifecycle import (
+    SessionLifecycleStore,
+    SessionLifecycleProjectConflict,
+    new_lifecycle_record,
+)
 
 TERMINAL = {"SUCCEEDED", "FAILED", "EXPIRED", "LOST", "CANCELLED"}
 CONTROL_READS = {
@@ -121,7 +131,9 @@ def configure_remote_backend(worker):
 
 class ControlDaemon:
     def __init__(self, home, *, service=None, registry=None, worker=None, project_root=None,
-                 desktop_adapter=None, project_authorization_verifier=None):
+                 desktop_adapter=None, project_authorization_verifier=None,
+                 session_runtime_resolver=None, session_worker_factory=None,
+                 session_peer_observer=None, session_credentials_resolver=None):
         self.home = Path(home)
         self.home.mkdir(mode=0o700, parents=True, exist_ok=True)
         self.store = OperationStore(self.home / "operations.sqlite3")
@@ -132,6 +144,8 @@ class ControlDaemon:
             registry=registry,
             worker=worker,
             project_root=project_root,
+            session_worker_factory=session_worker_factory,
+            session_peer_observer=session_peer_observer,
         )
         self.project_authority = ProjectAuthority(
             self.store,
@@ -144,6 +158,13 @@ class ControlDaemon:
         self.session_registry = SessionRuntimeRegistry()
         self.session_scheduler = SessionEndpointScheduler()
         self.session_lifecycle = SessionLifecycleStore(self.store)
+        self.session_runtime_resolver = session_runtime_resolver
+        self.session_worker_factory = session_worker_factory
+        self.session_peer_observer = session_peer_observer
+        self.session_credentials_resolver = session_credentials_resolver
+        self._session_connect_lock = threading.RLock()
+        self._session_worker_handles: dict[tuple[str, str], Any] = {}
+        self._session_backends: dict[tuple[str, str], ManagedBackend] = {}
         self.desktop = DesktopCoordinator(
             store=self.store,
             adapter=desktop_adapter if desktop_adapter is not None else create_native_metadata_adapter(),
@@ -625,6 +646,376 @@ class ControlDaemon:
             inner_operation, inner_arguments, execution=execution,
         )
 
+    @staticmethod
+    def _session_jdk_tools(jdk_home: Path, *, platform_name: str | None = None) -> tuple[Path, Path]:
+        """Return platform-correct Java Worker tools from JavaWorkerPaths."""
+        from ._java_worker import JavaWorkerPaths
+        paths = JavaWorkerPaths(Path("."), Path(jdk_home), platform_name=platform_name)
+        return paths.executable("java"), paths.executable("javac")
+
+    def _resolve_session_runtime(self, runtime_id: str, project_id: str, session_id: str,
+                                 project_root: Path) -> SessionRuntimeConfig:
+        """Resolve only this host's exact, locally inspected COMSOL install."""
+        from ._java_worker import JavaWorkerPaths
+        from ._runtime_installation import inspect_installation
+
+        state_root = self.home / "session-runtime-state"
+        if state_root.is_symlink():
+            raise ExecutionContractError("PERMISSION_DENIED", "session runtime state root cannot be a symlink")
+        state_root.mkdir(mode=0o700, parents=True, exist_ok=True)
+        if self.session_runtime_resolver is not None:
+            try:
+                runtime = self.session_runtime_resolver(runtime_id, project_id, session_id, project_root, state_root)
+            except Exception as exc:
+                raise ExecutionContractError("RUNTIME_CONFIGURATION_REQUIRED", "trusted session runtime resolution failed") from exc
+            if not isinstance(runtime, SessionRuntimeConfig) or runtime.runtime_id != runtime_id:
+                raise ExecutionContractError("RUNTIME_CONFIGURATION_REQUIRED", "runtime resolver returned a mismatched local runtime")
+            return runtime
+
+        try:
+            installation = inspect_installation(runtime_id)["installation"]
+        except Exception as exc:
+            raise ExecutionContractError("RUNTIME_CONFIGURATION_REQUIRED", "runtime_id does not identify an inspected local COMSOL installation") from exc
+        if installation.get("runtime_id") != runtime_id or installation.get("metadata_only") is not True:
+            raise ExecutionContractError("RUNTIME_CONFIGURATION_REQUIRED", "local COMSOL installation identity is not exact")
+        version = installation.get("version")
+        if not isinstance(version, Mapping) or version.get("status") != "OBSERVED" or not isinstance(version.get("value"), str):
+            raise ExecutionContractError("RUNTIME_CONFIGURATION_REQUIRED", "local COMSOL version metadata is unavailable")
+
+        configured_java = os.environ.get("COMSOL_JAVA_HOME") or os.environ.get("JAVA_HOME")
+        candidates: list[Path] = []
+        if configured_java:
+            candidates.append(Path(configured_java).expanduser())
+        else:
+            target_arch = platform.machine().lower()
+            target_arch = {"amd64": "x86_64", "aarch64": "arm64"}.get(target_arch, target_arch)
+            for entry in installation.get("bundled_java", []):
+                if not isinstance(entry, Mapping):
+                    continue
+                arch = entry.get("architecture", {}).get("values", []) if isinstance(entry.get("architecture"), Mapping) else []
+                if target_arch in arch and isinstance(entry.get("home"), str):
+                    candidates.append(Path(entry["home"]))
+            if len(candidates) != 1:
+                raise ExecutionContractError("RUNTIME_CONFIGURATION_REQUIRED", "configure one trusted JDK with java and javac")
+        valid_jdks = []
+        for candidate in candidates:
+            try:
+                home = candidate.resolve(strict=True)
+                java_executable, javac_executable = self._session_jdk_tools(home)
+                if home.is_dir() and java_executable.is_file() and javac_executable.is_file():
+                    valid_jdks.append(home)
+            except OSError:
+                continue
+        if len(valid_jdks) != 1:
+            raise ExecutionContractError("RUNTIME_CONFIGURATION_REQUIRED", "trusted JDK home with java and javac is unavailable or ambiguous")
+
+        session_home = session_state_directory(state_root, project_id, session_id)
+        preferences = session_home / "preferences"
+        if preferences.is_symlink():
+            raise ExecutionContractError("PERMISSION_DENIED", "per-session preferences directory cannot be a symlink")
+        preferences.mkdir(mode=0o700, parents=True, exist_ok=True)
+        installation_root = Path(installation["root"]).resolve(strict=True)
+        paths = JavaWorkerPaths(installation_root, valid_jdks[0], preferences, project_root=project_root)
+        try:
+            paths.validate()
+            classpath, _manifest_hash, _jar_count, _jar_hash = paths.classpath()
+        except Exception as exc:
+            raise ExecutionContractError("RUNTIME_CONFIGURATION_REQUIRED", "COMSOL Worker classpath or JDK validation failed") from exc
+        return SessionRuntimeConfig(
+            runtime_id=runtime_id,
+            comsol_version=version["value"],
+            installation_root=installation_root,
+            java_executable=paths.executable("java").resolve(strict=True),
+            classpath=tuple(Path(item) for item in classpath.split(paths.classpath_separator) if item),
+            preferences_dir=preferences.resolve(),
+            session_state_root=state_root.resolve(),
+        )
+
+    @staticmethod
+    def _redact_session_worker_event(value):
+        secret_names = {"password", "user", "credentials_ref", "authorization_ref", "token"}
+        if isinstance(value, Mapping):
+            return {
+                str(key): ("[REDACTED]" if str(key).casefold() in secret_names
+                           else ControlDaemon._redact_session_worker_event(item))
+                for key, item in value.items()
+            }
+        if isinstance(value, list):
+            return [ControlDaemon._redact_session_worker_event(item) for item in value]
+        if isinstance(value, tuple):
+            return [ControlDaemon._redact_session_worker_event(item) for item in value]
+        return value
+
+    def _dispatch_session_connect(self, routed: dict[str, Any], execution: dict[str, Any]) -> dict[str, Any]:
+        from ._execution_contract import canonical_request_hash
+
+        project_id = routed["project_id"]
+        idempotency_key = routed["idempotency_key"]
+        request_id = routed.get("request_id") or execution.get("request_id") or str(uuid4())
+        if not isinstance(request_id, str) or not request_id:
+            raise ExecutionContractError("INVALID_REQUEST", "session.connect request_id must be a non-empty string")
+        endpoint = routed["endpoint"]
+        host, port = endpoint.get("host"), endpoint.get("port")
+        if not isinstance(host, str) or not host.strip() or type(port) is not int or not 1 <= port <= 65535:
+            raise ExecutionContractError("INVALID_REQUEST", "session.connect endpoint is malformed")
+        credentials_ref = routed.get("credentials_ref")
+        if credentials_ref is not None and (not isinstance(credentials_ref, str) or not credentials_ref.strip()):
+            raise ExecutionContractError("INVALID_REQUEST", "credentials_ref must be a non-empty trusted reference")
+
+        self.project_authority.authorize_operation(project_id, "project_write")
+        timeouts = self._timeouts(execution)
+        semantic_arguments = {key: value for key, value in routed.items()
+                              if key not in {"idempotency_key", "request_id", "credentials_ref"}}
+        if credentials_ref is not None:
+            semantic_arguments["credentials_ref_sha256"] = hashlib.sha256(credentials_ref.encode("utf-8")).hexdigest()
+        request_hash = canonical_request_hash(
+            "session.connect", semantic_arguments, None, None,
+            project_id=project_id,
+        )
+        session_id = "session-" + uuid4().hex
+        metadata = {
+            "project_id": project_id,
+            "session_id": session_id,
+            "runtime_id": routed["runtime_id"],
+            "endpoint": {"host": host, "port": port},
+            "credentials_configured": credentials_ref is not None,
+        }
+        try:
+            record, reused = self.store.begin(
+                request_id=request_id,
+                idempotency_key=idempotency_key,
+                request_hash=request_hash,
+                operation="session.connect",
+                metadata=metadata,
+                timeouts=timeouts,
+            )
+        except IdempotencyConflict as exc:
+            raise ExecutionContractError("IDEMPOTENCY_CONFLICT", str(exc)) from exc
+        if reused:
+            return record["result"] if record.get("result") is not None else self._pending(record, session_id=record.get("metadata", {}).get("session_id"))
+
+        session_id = record["metadata"]["session_id"]
+        project_record = self.project_authority.get_project(project_id)
+        project_root = Path(project_record["workspace"]).resolve(strict=True)
+        with self._session_connect_lock:
+            active = [row for row in self.session_lifecycle.list_for_project(project_id)
+                      if row.get("endpoint") == {"host": host, "port": port}
+                      and row.get("state") in {"CONNECTING", "CONNECTED", "UNKNOWN", "STOPPING"}]
+            if active:
+                result = self._error("SESSION_ALREADY_ACTIVE", "an active or uncertain session already targets this endpoint",
+                                     data={"session_id": session_id, "existing_session_id": active[0]["session_id"],
+                                           "engine_dispatched": False}, safe_retry=False)
+                self.store.update_job(record["job_id"], "RUNNING")
+                return self._finish(record, result, "FAILED")
+
+            self.store.update_job(record["job_id"], "RUNNING", {"session_id": session_id, "engine_dispatched": False})
+            self.store.add_event(record["job_id"], "RUNNING", {"operation_id": record["operation_id"], "session_id": session_id})
+            lifecycle = self.session_lifecycle.save(new_lifecycle_record(
+                project_id=project_id, session_id=session_id, state="CONNECTING",
+                runtime_id=routed["runtime_id"], endpoint={"host": host, "port": port},
+                client_state="DISCONNECTED", server_state="SHARED", server_ownership="shared",
+            ))
+            backend = None
+            worker = None
+            attached = None
+            dispatched = False
+            try:
+                self.project_authority.authorize_operation(project_id, "project_write")
+                runtime = self._resolve_session_runtime(routed["runtime_id"], project_id, session_id, project_root)
+                credentials = {}
+                if credentials_ref is not None:
+                    if self.session_credentials_resolver is None:
+                        raise ExecutionContractError("AUTHORIZATION_REQUIRED", "credentials_ref has no trusted local resolver")
+                    try:
+                        credentials = self.session_credentials_resolver(credentials_ref)
+                    except Exception as exc:
+                        raise ExecutionContractError("AUTHORIZATION_REQUIRED", "trusted credentials reference could not be resolved") from exc
+                    if not isinstance(credentials, Mapping) or set(credentials) - {"user", "password"}:
+                        raise ExecutionContractError("AUTHORIZATION_REQUIRED", "trusted credentials resolver returned an invalid secret record")
+                private_home = session_state_directory(runtime.session_state_root, project_id, session_id)
+                backend = ManagedBackend(
+                    private_home / "backend", self.store,
+                    registry=self._default_backend.registry,
+                    project_root=project_root,
+                    session_worker_factory=self.session_worker_factory,
+                    session_peer_observer=self.session_peer_observer,
+                    host_permission_ceiling=self._default_backend.host_permission_ceiling,
+                )
+                self._session_backends[(project_id, session_id)] = backend
+
+                def worker_event(event):
+                    self.store.add_event(record["job_id"], "worker_request", self._redact_session_worker_event(event))
+
+                attached = backend.connect_session(
+                    runtime=runtime, project_id=project_id, session_id=session_id,
+                    host=host, port=port, operation_id=record["operation_id"],
+                    request_id=request_id, event_callback=worker_event,
+                    credentials=credentials, rpc_timeout_s=timeouts["rpc_timeout_s"],
+                    project_permissions=project_record.get("policy", {}).get("permissions", []),
+                )
+                dispatched = True
+                worker = attached["worker"]
+                self._session_worker_handles[(project_id, session_id)] = worker
+                peer = attached["peer"]
+                reply = attached["reply"]
+                identity = attached["worker_identity"]
+                endpoint_identity = SessionEndpointIdentity(
+                    host, port, reply["generation"], observed_peer=peer, owned_process=None,
+                )
+                context = SessionRuntimeContext(
+                    project_id=project_id, session_id=session_id, project_root=project_root,
+                    runtime=runtime, endpoint=endpoint_identity, backend=backend,
+                    worker_instance_id=reply["instance_id"], worker=worker,
+                    service=backend.service, client=worker.client(),
+                    remote_client_factory=worker.client, server_ownership="shared",
+                    client_connected=True, connected_host=host, connected_port=port,
+                    server_started_by_mcp=False,
+                    health_snapshot={"status": "HEALTHY", "source": "worker-connect-reply+observed-peer"},
+                )
+                self.session_registry.register(context)
+                lifecycle = self.session_lifecycle.save(new_lifecycle_record(
+                    project_id=project_id, session_id=session_id, state="CONNECTED",
+                    runtime_id=runtime.runtime_id, endpoint={"host": host, "port": port},
+                    client_state="CONNECTED", server_state="SHARED", server_ownership="shared",
+                    worker_instance_id=reply["instance_id"], worker_epoch=reply["generation"],
+                    server_instance_id=attached["server_instance_id"],
+                    health={"status": "HEALTHY", "observed_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                            "source": "worker-connect-reply+observed-peer"},
+                ), expected_revision=lifecycle["revision"])
+                result = {"success": True, "data": {
+                    "project_id": project_id, "session_id": session_id,
+                    "runtime_id": runtime.runtime_id, "endpoint": {"host": host, "port": port},
+                    "observed_peer": {"address": peer.address, "port": peer.port},
+                    "worker_instance_id": reply["instance_id"], "worker_epoch": reply["generation"],
+                    "server_instance_id": attached["server_instance_id"],
+                    "remote_engine_version": reply["engine_version"],
+                    "remote_engine_build": identity["remote_engine_build"],
+                    "remote_engine_build_source": identity["remote_engine_build_source"],
+                    "server_ownership": "shared", "credentials_configured": credentials_ref is not None,
+                }}
+                return self._finish(record, result, "SUCCEEDED")
+            except SessionConnectFailure as exc:
+                worker = exc.worker or worker
+                dispatched = dispatched or exc.dispatched
+                if worker is not None:
+                    self._session_worker_handles[(project_id, session_id)] = worker
+                runtime_meta = exc.runtime_metadata or {}
+                remote_reply = exc.reply or {}
+                uncertain = exc.uncertain
+                retirement_error = None
+                worker_retired = worker is None
+                if not uncertain and worker is not None:
+                    try:
+                        # PersistentJavaWorker.close() returns only after its
+                        # exact child has exited. A raised close leaves the
+                        # handle live/unknown and must block any replacement.
+                        worker.close()
+                        worker_retired = True
+                    except Exception as close_exc:
+                        retirement_error = close_exc
+                        uncertain = True
+                if uncertain:
+                    state = "UNKNOWN"
+                    client_state = "CONNECTED" if remote_reply.get("connected") is True or runtime_meta.get("connected") is True else "UNKNOWN"
+                    worker_id = remote_reply.get("instance_id") or runtime_meta.get("instance_id")
+                    epoch = remote_reply.get("generation") or runtime_meta.get("generation")
+                    server_id = None
+                    if remote_reply.get("connected") is True and isinstance(remote_reply.get("engine_version"), str):
+                        peer = remote_reply.get("observed_peer")
+                        if isinstance(peer, Mapping):
+                            try:
+                                server_id = ManagedBackend._session_server_instance_id(
+                                    CanonicalSocket(peer["address"], peer["port"]), remote_reply,
+                                )
+                            except Exception:
+                                server_id = None
+                    lifecycle = self.session_lifecycle.save(new_lifecycle_record(
+                        project_id=project_id, session_id=session_id, state=state,
+                        runtime_id=routed["runtime_id"], endpoint={"host": host, "port": port},
+                        client_state=client_state, server_state="UNKNOWN", server_ownership="shared",
+                        worker_instance_id=worker_id if isinstance(worker_id, str) else None,
+                        worker_epoch=epoch if type(epoch) is int and epoch > 0 else None,
+                        server_instance_id=server_id,
+                    ), expected_revision=lifecycle["revision"])
+                    failure_code = exc.code if exc.uncertain else "EXECUTION_STATE_UNKNOWN"
+                    failure_message = (str(exc) if exc.uncertain else
+                                       "session Worker retirement could not be confirmed after a pre-connect failure")
+                    result = self._error(failure_code, failure_message, data={
+                        "project_id": project_id, "session_id": session_id,
+                        "state": "UNKNOWN", "engine_dispatched": dispatched,
+                        "safe_retry": False, "worker_handle_preserved": worker is not None,
+                        **({"worker_close_failure_type": type(retirement_error).__name__}
+                           if retirement_error is not None else {}),
+                    }, safe_retry=False, execution_state_unknown=True)
+                    return self._finish(record, result, "UNKNOWN")
+
+                lifecycle = self.session_lifecycle.save(new_lifecycle_record(
+                    project_id=project_id, session_id=session_id, state="DISCONNECTED",
+                    runtime_id=routed["runtime_id"], endpoint={"host": host, "port": port},
+                    client_state="DISCONNECTED", server_state="UNKNOWN", server_ownership="shared",
+                ), expected_revision=lifecycle["revision"])
+                if worker is not None:
+                    if worker_retired:
+                        self._session_worker_handles.pop((project_id, session_id), None)
+                result = self._error(exc.code, str(exc), data={
+                    "project_id": project_id, "session_id": session_id,
+                    "state": "DISCONNECTED", "engine_dispatched": dispatched,
+                    "safe_retry": exc.safe_retry,
+                }, safe_retry=exc.safe_retry)
+                return self._finish(record, result, "FAILED")
+            except ExecutionContractError as exc:
+                if dispatched and attached is not None:
+                    worker = attached["worker"]
+                    self._session_worker_handles[(project_id, session_id)] = worker
+                    reply = attached["reply"]
+                    lifecycle = self.session_lifecycle.save(new_lifecycle_record(
+                        project_id=project_id, session_id=session_id, state="UNKNOWN",
+                        runtime_id=routed["runtime_id"], endpoint={"host": host, "port": port},
+                        client_state="CONNECTED", server_state="UNKNOWN", server_ownership="shared",
+                        worker_instance_id=reply.get("instance_id"), worker_epoch=reply.get("generation"),
+                        server_instance_id=attached.get("server_instance_id"),
+                    ), expected_revision=lifecycle["revision"])
+                    result = self._error(
+                        "EXECUTION_STATE_UNKNOWN",
+                        "Worker attached, but durable session registration failed; preserve this Worker for reconciliation",
+                        data={"project_id": project_id, "session_id": session_id,
+                              "state": "UNKNOWN", "engine_dispatched": True,
+                              "worker_handle_preserved": True, "cause_code": exc.code},
+                        execution_state_unknown=True,
+                    )
+                    return self._finish(record, result, "UNKNOWN")
+                lifecycle = self.session_lifecycle.save(new_lifecycle_record(
+                    project_id=project_id, session_id=session_id, state="DISCONNECTED",
+                    runtime_id=routed["runtime_id"], endpoint={"host": host, "port": port},
+                    client_state="DISCONNECTED", server_state="UNKNOWN", server_ownership="shared",
+                ), expected_revision=lifecycle["revision"])
+                result = self._exception(exc)
+                return self._finish(record, result, "FAILED")
+            except Exception as exc:
+                if worker is not None:
+                    self._session_worker_handles[(project_id, session_id)] = worker
+                if dispatched:
+                    lifecycle = self.session_lifecycle.save(new_lifecycle_record(
+                        project_id=project_id, session_id=session_id, state="UNKNOWN",
+                        runtime_id=routed["runtime_id"], endpoint={"host": host, "port": port},
+                        client_state="UNKNOWN", server_state="UNKNOWN", server_ownership="shared",
+                    ), expected_revision=lifecycle["revision"])
+                    result = self._error("EXECUTION_STATE_UNKNOWN", "session connect completed without durable identity confirmation",
+                                         data={"session_id": session_id, "engine_dispatched": True,
+                                               "worker_handle_preserved": worker is not None},
+                                         execution_state_unknown=True)
+                    return self._finish(record, result, "UNKNOWN")
+                self._log_exception()
+                lifecycle = self.session_lifecycle.save(new_lifecycle_record(
+                    project_id=project_id, session_id=session_id, state="DISCONNECTED",
+                    runtime_id=routed["runtime_id"], endpoint={"host": host, "port": port},
+                    client_state="DISCONNECTED", server_state="UNKNOWN", server_ownership="shared",
+                ), expected_revision=lifecycle["revision"])
+                result = self._error("RUNTIME_CONFIGURATION_REQUIRED", "session Worker configuration failed before connect dispatch",
+                                     data={"session_id": session_id, "engine_dispatched": False},
+                                     cause_type=type(exc).__name__, safe_retry=True)
+                return self._finish(record, result, "FAILED")
+
     def _dispatch_session_control(self, operation: str, arguments: dict[str, Any], execution: dict[str, Any]) -> dict[str, Any]:
         """Handle the implemented durable session snapshots without Worker RPC.
 
@@ -653,6 +1044,8 @@ class ControlDaemon:
             raise ExecutionContractError("INVALID_REQUEST", "session action requires project_id")
         if execution.get("project_id") not in (None, project_id):
             raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "session project_id differs from the execution envelope")
+        if operation == "session.connect":
+            return self._dispatch_session_connect(routed, execution)
         if operation not in {"session.list", "session.inspect", "session.health"}:
             # validate_call above gives a truthful UNSUPPORTED_OPERATION for
             # cataloged lifecycle mutations that do not yet have process-safe

@@ -1,0 +1,121 @@
+{
+  "base": {
+    "additional_base_catalog_archive": "/private/tmp/luna_session_connect_2c1770a_overlay_20260927T1355Z/published_catalog.tar",
+    "additional_base_catalog_sha256": "19a8a1183d9158617c0135e4ddd2215bdb1b4474550624829419489bb40ea384",
+    "git_metadata_use": "read-only object lookup for historical-blob assertion only",
+    "published_ref": "2c1770a",
+    "resolved_commit": "2c1770a91250f7d1f4dcde0e6f4e9f177b45e50a",
+    "source_archive": "/private/tmp/luna_session_connect_2c1770a_overlay_20260927T1355Z/published2c1770a.tar",
+    "source_archive_sha256": "cf5ad84e3024b8ad8c65adf54d2ef55dfe2ad701bd42b2e41d7a265a21869431"
+  },
+  "isolated_import": {
+    "confirmed_outside_shared_checkout": true,
+    "cwd": "/private/tmp/luna_session_connect_2c1770a_overlay_20260927T1355Z/base",
+    "editable_import_fallback_used": false,
+    "observed_comsol_mcp_file": "/private/tmp/luna_session_connect_2c1770a_overlay_20260927T1355Z/base/comsol_mcp/__init__.py",
+    "pythonpath": "/private/tmp/luna_session_connect_2c1770a_overlay_20260927T1355Z/base"
+  },
+  "overlay_allowlist": [
+    "comsol_mcp/_control_daemon.py",
+    "comsol_mcp/_managed_backend.py",
+    "comsol_mcp/_session_context.py",
+    "comsol_mcp/_g2_registry.py",
+    "tests/test_control_daemon_sessions.py"
+  ],
+  "overlay_source": {
+    "comsol_mcp/_control_daemon.py": {
+      "matches_shared_checkout": true,
+      "sha256": "89c18c2da0abbfe940eb42d5101d92b98b1b10c6a1fb09ce7ea1343f4f9de394"
+    },
+    "comsol_mcp/_g2_registry.py": {
+      "matches_shared_checkout": true,
+      "sha256": "d2a873123059e9f1bf3697dbed06fe0832d0c2bfb303462d9ad9f3754c362133"
+    },
+    "comsol_mcp/_managed_backend.py": {
+      "matches_shared_checkout": true,
+      "sha256": "d40169709ad09599a6f45f7609f9c214dc4aa77ba5ce8f39dc191c95397c630f"
+    },
+    "comsol_mcp/_session_context.py": {
+      "matches_shared_checkout": true,
+      "sha256": "a79c6b9c49fceeeefd027628fa3df8baa68c75b0a6f8b44009826c883c0f948a"
+    },
+    "tests/test_control_daemon_sessions.py": {
+      "matches_shared_checkout": true,
+      "sha256": "036d5515dbf925acd0a6fe7b60017b52950a405b0a9032b904b5211754c6f4aa"
+    }
+  },
+  "schema_version": 1,
+  "scope_limitations": {
+    "comsol_process_started": false,
+    "native_acceptance": "NOT_RUN",
+    "windows_6_3_6_4_real_validation": "NOT_RUN",
+    "worker_mode": "synthetic/injected Worker only"
+  },
+  "stage": "session.connect attach and fail-closed lifecycle boundaries",
+  "test_command": [
+    "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "--junitxml=/private/tmp/luna_session_connect_2c1770a_overlay_20260927T1355Z/session_connect_junit.xml",
+    "tests/test_control_daemon_sessions.py",
+    "tests/test_session_context.py",
+    "tests/test_control_daemon_projects.py",
+    "tests/test_runtime_installation.py",
+    "tests/test_operation_store.py",
+    "tests/test_operation_store_migrations.py",
+    "tests/test_g2_registry_packaging.py",
+    "tests/test_control_daemon.py"
+  ],
+  "test_environment": {
+    "dependency_source_hashes": {
+      "pyproject.toml": "1355011f7551f62f3411e1ad0cc79f23dda42b3c90578c8669b3e685f0c1bd5c",
+      "uv.lock": "08b6b8fb1f6a7a110f45df7d9f3ac3dae3e343fddc1ce2ddae84e458c3130b3f"
+    },
+    "git_dir": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/.git",
+    "installed_package_inventory_count": 38,
+    "installed_package_inventory_sha256": "16c2eaf46a9b9e094007f53bf2070194927d3851b6c9be86896c243512e78b01",
+    "pip_freeze": "unavailable: exact interpreter has no pip module",
+    "python_sha256": "fe46716a94d8efa4514feb3c39ba3e270deee2187556986f6ddcff54aba7bb9a",
+    "python_version": "3.12.13 (main, Mar  3 2026, 12:39:30) [Clang 21.0.0 (clang-2100.0.123.102)]",
+    "pythonpath": "/private/tmp/luna_session_connect_2c1770a_overlay_20260927T1355Z/base"
+  },
+  "test_result": {
+    "errors": 0,
+    "failures": 0,
+    "junit_path": "/private/tmp/luna_session_connect_2c1770a_overlay_20260927T1355Z/session_connect_junit.xml",
+    "junit_sha256": "ba91d9cc09ab0c85c08e9758d9eb1b98a24742ac563d6b8cdb5ca86d1527077f",
+    "skipped": 0,
+    "status": "PASS",
+    "tests": 108
+  },
+  "review": {
+    "reviewer": "main Agent; not final independent Reviewer",
+    "status": "PASS_SCOPED_SOFTWARE",
+    "at_utc": "2026-09-27T14:00:12.075949+00:00",
+    "independently_verified_overlay_files": 5,
+    "independently_verified_unchanged_runtime_sources": 84,
+    "junit_counts_and_hash_verified": true,
+    "review_driven_repairs": [
+      "Use platform Java executable names including Windows .exe",
+      "Preserve Worker and UNKNOWN when exact child retirement fails",
+      "Post-connect ledger/service/persistence failures retain connected Worker and UNKNOWN",
+      "Post-attach registration ExecutionContractError cannot claim pre-dispatch DISCONNECTED"
+    ],
+    "raw_receipt": {
+      "local_path": "/private/tmp/luna_session_connect_2c1770a_overlay_20260927T1355Z/session_connect_stage_receipt.json",
+      "sha256": "a904d8c1087e7ff4999c6fafa777c7e8c299cb16d2095b07c2b330c031412e01"
+    }
+  },
+  "reproduce": [
+    "Use a clean checkout of this checkpoint commit with Python3.12 and the declared dependencies plus pytest9.1.1; avoid editable installation from another checkout.",
+    "Run the eight tests listed in test_command from the clean checkout. A local Git object database is required by historical-blob assertions.",
+    "Exact reviewed source is published2c1770a with only overlay_allowlist replaced by this commit versions; verify overlay_source hashes."
+  ],
+  "remaining": [
+    "session.reconnect/disconnect/recover and owned server start/stop still incomplete",
+    "Native COMSOL connect/peer observation and Windows6.3/6.4 tests NOT_RUN",
+    "Remote build is NOT_REPORTED when absent from actual connect reply, never inferred from installation metadata",
+    "Shared COMSOL server ownership remains shared; this attach route does not authorize server termination"
+  ]
+}

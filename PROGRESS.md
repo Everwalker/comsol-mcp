@@ -4,11 +4,13 @@ Updated 2026-09-27 UTC. **Overall PARTIAL; execution continues through W26.** Th
 
 ## Current stage
 
-**W23 surface-normal readback: PASS for scoped software; W23 remains PARTIAL.** Added measured outward-normal integral requests, a versioned provenance schema, unit/area/planarity checks and aggregation consistency checks. Native vectors are never flipped to match a requested direction. Request-frame and Port-propagation relationships remain UNVERIFIED.
+**F04 session.connect: PASS for scoped software; lifecycle remains PARTIAL.** The public route attaches a private, project-scoped Worker to an already-listening endpoint using trusted local runtime configuration, independently observed peer and actual connect reply. Concurrent duplicate requests share durable admission. Startup/connect uncertainty, failed child cleanup and post-connect persistence/registration errors retain the original Worker as UNKNOWN and prevent replacement. No process-global runtime/environment mutation is used.
 
-**Actually executed:** 99 tests PASS / 0 FAIL / 0 ERROR / 0 SKIP, on an isolated archive of published `25c22c5` with exactly five changed files overlaid. Main review verified the five overlay hashes, all 87 unchanged runtime sources, 57 project imports confined to the archive and JUnit. Editable import hooks were removed. Earlier failed attempts are preserved. [Compact evidence and reproduction recipe](docs/full_project_execution/w23_overlap/NORMAL_READBACK_CHECKPOINT.json).
+**Actually executed:** 108 tests PASS / 0 FAIL / 0 ERROR / 0 SKIP in an isolated archive of published `2c1770a` plus exactly five changed files. Main review verified all five overlay hashes, 84 unchanged runtime sources, archive hashes and JUnit. [Compact evidence and reproduction recipe](docs/full_project_execution/project_session/SESSION_CONNECT_CHECKPOINT.json).
 
-Native COMSOL execution and scientific acceptance for this stage: **NOT_RUN**. No engine or Worker was launched. This checkpoint does not refresh the earlier wheel or full-suite claims.
+Only synthetic/injected Workers were used: **native COMSOL and Windows 6.3/6.4 validation NOT_RUN**. A missing remote engine build is reported as NOT_REPORTED. Reconnect/disconnect/recover and owned start/stop are still incomplete.
+
+W23 surface-normal stage remains software PASS: [99 isolated tests](docs/full_project_execution/w23_overlap/NORMAL_READBACK_CHECKPOINT.json). Frame/Port propagation and optical acceptance remain UNVERIFIED/NOT_RUN.
 
 ## Latest accepted software baseline
 
@@ -24,7 +26,7 @@ Earlier source checkpoints and failures remain in the existing state and linked 
 
 ## In progress and real limitations
 
-- **F04 session.connect:** implementation and synthetic tests in progress; main review requires Windows executable-name handling and fail-closed post-connect/persistence/cleanup failures before accepting this stage. Native status NOT_RUN.
+- **F04:** session.connect software stage accepted above. Next implement reconnect/disconnect/recover and exact owned process lifecycle, then run managed native validation.
 - **W24 science admission:** preliminary 52-test result was **not accepted**. Cross-process atomic dispatch, UNKNOWN re-entry and original-revision receipt binding are being repaired and retested. A 14-solve sensitivity plan has no current native authorization; do not borrow the old ten-solve budget.
 - **W23:** actual Port → BMA → solver/dataset → SolutionInfo provenance is next. Two basis vectors are distinct eigensolutions of one receiver BMA, not two physical Ports. Managed native optics and tolerance/convergence acceptance remain open.
 - **W24 historical attempts:** 0841Z freeze failed before engine birth (0 Workers/solves). Earlier ExternalStrain failure remains FAIL/UNKNOWN with safe_retry=false. Preserve these records; do not replay old freezes or reset budgets.
@@ -33,6 +35,6 @@ Earlier source checkpoints and failures remain in the existing state and linked 
 
 ## Next action and recovery
 
-Continue the three Luna Max work streams: finish session connection failure handling and remaining lifecycle routes; implement W23 actual mode provenance; finish W24 atomic admission and original-revision validation. Publish each accepted software stage immediately. Then freeze isolated managed native candidates, execute their reviewed scope, complete all remaining W01–W26 work, and run a fresh independent overall review with repair/retest until accepted.
+Continue the three Luna Max work streams: implement remaining session lifecycle routes; implement W23 actual mode provenance; finish W24 atomic admission and original-revision validation. Publish each accepted software stage immediately. Then freeze isolated managed native candidates, execute their reviewed scope, complete all remaining W01–W26 work, and run a fresh independent overall review with repair/retest until accepted.
 
-The latest focused replay is in [NORMAL_READBACK_CHECKPOINT.json](docs/full_project_execution/w23_overlap/NORMAL_READBACK_CHECKPOINT.json). Recover from the GitHub checkout and existing state; raw local paths are supporting artifacts, not prerequisite hidden source. Usage interruption was resolved and three replacement executors resumed without restarting native jobs. Last previously verified GitHub sync: `25c22c5a9adb7ee3baca6a83f8a8cf24c5b75154`; current-stage synchronization is recorded only after post-push fetch and HEAD/origin-main equality verification.
+The latest focused replay is in [NORMAL_READBACK_CHECKPOINT.json](docs/full_project_execution/w23_overlap/NORMAL_READBACK_CHECKPOINT.json). Recover from the GitHub checkout and existing state; raw local paths are supporting artifacts, not prerequisite hidden source. Usage interruption was resolved and three replacement executors resumed without restarting native jobs. Last previously verified GitHub sync: `2c1770a91250f7d1f4dcde0e6f4e9f177b45e50a`; current-stage synchronization is recorded only after post-push fetch and HEAD/origin-main equality verification.

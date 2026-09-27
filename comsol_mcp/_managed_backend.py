@@ -4,6 +4,7 @@ from __future__ import annotations
 from contextlib import contextmanager, nullcontext
 from contextvars import ContextVar
 import hashlib
+import ipaddress
 import json
 import os
 from pathlib import Path
@@ -35,6 +36,28 @@ from ._g2_code import compile_result, describe_source, execution_result, read_so
 from ._g2_transactions import TransactionStore, preview_transaction, validate_invariants
 from ._g2_isolation import configured_receipt, verify_owned_server
 from ._platform_paths import default_comsol_help_roots
+from ._session_context import (
+    CanonicalSocket,
+    SessionEndpointIdentity,
+    SessionRuntimeConfig,
+    SessionRuntimeContext,
+    session_state_directory,
+)
+
+
+class SessionConnectFailure(RuntimeError):
+    """A scoped attach attempt with an explicit retry/uncertainty boundary."""
+
+    def __init__(self, code: str, message: str, *, safe_retry: bool, uncertain: bool,
+                 dispatched: bool, worker=None, reply=None, runtime_metadata=None):
+        super().__init__(message)
+        self.code = code
+        self.safe_retry = bool(safe_retry)
+        self.uncertain = bool(uncertain)
+        self.dispatched = bool(dispatched)
+        self.worker = worker
+        self.reply = dict(reply) if isinstance(reply, Mapping) else None
+        self.runtime_metadata = dict(runtime_metadata) if isinstance(runtime_metadata, Mapping) else None
 
 #: G3 (W13-W16) catalogue effect -> write-ticket effect classification.  The
 #: catalogue remains the single source of truth (``_g3_ops.EFFECTS``); this
@@ -168,7 +191,9 @@ def collect_legacy_registry():
 
 
 class ManagedBackend:
-    def __init__(self, home, store, *, service=None, registry=None, worker=None, project_root=None):
+    def __init__(self, home, store, *, service=None, registry=None, worker=None, project_root=None,
+                 session_worker_factory=None, session_peer_observer=None,
+                 host_permission_ceiling=None):
         self.home, self.store = Path(home), store
         self.home.mkdir(mode=0o700, parents=True, exist_ok=True)
         self.package_resource_root = Path(__file__).resolve().parent
@@ -195,11 +220,17 @@ class ManagedBackend:
         # Deployment grants are captured once, before the first COMSOL
         # connection. A later Worker/session can narrow these grants but the
         # environment or persisted session cannot expand the startup ceiling.
-        self.host_permission_ceiling = {"inspect", "project_write", "compute"}
-        if os.environ.get("COMSOL_MCP_TRUSTED_CODE", "").strip().lower() in {"1", "true", "yes"}:
-            self.host_permission_ceiling.add("trusted_code")
-        if os.environ.get("COMSOL_MCP_HOST_CONTROL", "").strip().lower() in {"1", "true", "yes"}:
-            self.host_permission_ceiling.add("host_control")
+        if host_permission_ceiling is None:
+            self.host_permission_ceiling = {"inspect", "project_write", "compute"}
+            if os.environ.get("COMSOL_MCP_TRUSTED_CODE", "").strip().lower() in {"1", "true", "yes"}:
+                self.host_permission_ceiling.add("trusted_code")
+            if os.environ.get("COMSOL_MCP_HOST_CONTROL", "").strip().lower() in {"1", "true", "yes"}:
+                self.host_permission_ceiling.add("host_control")
+        else:
+            allowed = {"inspect", "project_write", "compute", "trusted_code", "host_control"}
+            if not isinstance(host_permission_ceiling, (set, frozenset)) or not set(host_permission_ceiling) <= allowed:
+                raise ValueError("host_permission_ceiling must be a trusted permission set")
+            self.host_permission_ceiling = set(host_permission_ceiling)
         self._project_root_context = ContextVar(f"comsol_project_root_{id(self)}", default=None)
         self._model_project_bindings: dict[str, str | None] = {}
 
@@ -207,6 +238,8 @@ class ManagedBackend:
         self.docs_index = OfflineDocsIndex(self.home / "docs_index.sqlite3", allowed_roots=help_roots)
         self.transactions = TransactionStore(self.home / "transactions.json")
         self.service, self.worker = service, worker
+        self.session_worker_factory = session_worker_factory
+        self.session_peer_observer = session_peer_observer
         self.registry = dict(registry) if registry is not None else collect_legacy_registry()
         self.server_lock = None
         self.worker_identity = None
@@ -312,6 +345,270 @@ class ManagedBackend:
             )
         self.endpoint_key = endpoint
         return verified
+
+    @staticmethod
+    def _parse_socket_endpoint(value: Any) -> tuple[str, int] | None:
+        if not isinstance(value, str) or not value:
+            return None
+        text = value.strip()
+        if text.startswith("[") and "]" in text:
+            end = text.find("]")
+            host, suffix = text[1:end], text[end + 1:]
+            if not suffix.startswith(":"):
+                return None
+            port_text = suffix[1:]
+        else:
+            if ":" not in text:
+                return None
+            host, port_text = text.rsplit(":", 1)
+        try:
+            address = ipaddress.ip_address(host.strip("[]")).compressed
+            port = int(port_text)
+        except (TypeError, ValueError):
+            return None
+        if not 1 <= port <= 65535:
+            return None
+        return address, port
+
+    @classmethod
+    def _observe_session_peer(cls, worker, port: int, runtime_metadata: Mapping[str, Any]) -> CanonicalSocket | None:
+        """Return one OS-observed remote peer for this exact Worker process."""
+        pid = runtime_metadata.get("pid")
+        if type(pid) is not int or pid <= 1:
+            return None
+        try:
+            from ._g2_isolation import _row_connection, _socket_rows
+            rows = _socket_rows(port)
+        except Exception:
+            return None
+        peers: set[CanonicalSocket] = set()
+        for row in rows:
+            if not isinstance(row, Mapping) or row.get("pid") != pid or row.get("state") != "ESTABLISHED":
+                continue
+            _local, remote = _row_connection(row)
+            parsed = cls._parse_socket_endpoint(remote)
+            if parsed is not None and parsed[1] == port:
+                peers.add(CanonicalSocket(*parsed))
+        return next(iter(peers)) if len(peers) == 1 else None
+
+    @staticmethod
+    def _session_server_instance_id(peer: CanonicalSocket, reply: Mapping[str, Any]) -> str:
+        material = "\0".join((peer.address, str(peer.port), str(reply["instance_id"]),
+                              str(reply["generation"]), str(reply["engine_version"])))
+        return hashlib.sha256(material.encode("utf-8")).hexdigest()
+
+    def connect_session(self, *, runtime: SessionRuntimeConfig, project_id: str, session_id: str,
+                        host: str, port: int, operation_id: str, request_id: str,
+                        event_callback, credentials: Mapping[str, Any] | None = None,
+                        rpc_timeout_s: float = 30.0, project_permissions=None):
+        """Attach one private Worker to an already-listening endpoint.
+
+        This route never touches ``_server`` globals, mutates process
+        environment, or assumes ownership of the COMSOL server.
+        """
+        from ._java_worker import JavaWorkerError, JavaWorkerPaths, JavaWorkerTimeout, PersistentJavaWorker
+
+        if not isinstance(runtime, SessionRuntimeConfig):
+            raise SessionConnectFailure("RUNTIME_CONFIGURATION_REQUIRED", "local runtime configuration is unavailable",
+                                        safe_retry=True, uncertain=False, dispatched=False)
+        try:
+            session_home = session_state_directory(runtime.session_state_root, project_id, session_id)
+            session_home.mkdir(mode=0o700, parents=True, exist_ok=True)
+            if session_home.is_symlink() or not session_home.resolve().is_relative_to(runtime.session_state_root.resolve()):
+                raise ValueError("session state directory is not private")
+            worker_state = session_home / "worker"
+            preferences = runtime.preferences_dir
+            if preferences.is_symlink():
+                raise ValueError("COMSOL preferences directory cannot be a symlink")
+            preferences.mkdir(mode=0o700, parents=True, exist_ok=True)
+            if not isinstance(host, str) or not host.strip() or type(port) is not int or not 1 <= port <= 65535:
+                raise ValueError("endpoint is invalid")
+            if self.session_worker_factory is not None:
+                # This injection is reserved for deterministic tests/host
+                # adapters. The default production path below always validates
+                # the inspected installation, JDK and exact classpath.
+                worker = self.session_worker_factory(runtime, worker_state)
+            else:
+                paths = JavaWorkerPaths(
+                    runtime.installation_root, runtime.java_executable.parent.parent, preferences,
+                    project_root=self.project_root,
+                )
+                paths.validate()
+                classpath, _manifest_hash, _jar_count, _jar_hash = paths.classpath()
+                observed_classpath = tuple(Path(item) for item in classpath.split(paths.classpath_separator) if item)
+                if observed_classpath != runtime.classpath:
+                    raise ValueError("runtime classpath changed after trusted inspection")
+                worker = PersistentJavaWorker(paths, state_dir=worker_state)
+        except Exception as exc:
+            raise SessionConnectFailure(
+                "RUNTIME_CONFIGURATION_REQUIRED", "local Worker runtime configuration failed validation",
+                safe_retry=True, uncertain=False, dispatched=False,
+            ) from exc
+
+        runtime_metadata = None
+        reply = None
+        dispatched = False
+        worker_started = False
+        try:
+            worker.start()
+            worker_started = True
+            runtime_metadata = worker.runtime_metadata()
+            if not isinstance(runtime_metadata, Mapping):
+                raise SessionConnectFailure("EXECUTION_STATE_UNKNOWN", "Worker identity is unavailable",
+                                            safe_retry=False, uncertain=True, dispatched=False, worker=worker)
+            if runtime_metadata.get("connected") is True:
+                raise SessionConnectFailure("EXECUTION_STATE_UNKNOWN", "private Worker already has a server binding",
+                                            safe_retry=False, uncertain=True, dispatched=False, worker=worker,
+                                            runtime_metadata=runtime_metadata)
+            resolved = dict(credentials or {})
+            user, password = resolved.get("user", ""), resolved.get("password", "")
+            if not isinstance(user, str) or not isinstance(password, str):
+                raise SessionConnectFailure("AUTHORIZATION_REQUIRED", "resolved connection credentials are malformed",
+                                            safe_retry=True, uncertain=False, dispatched=False, worker=worker,
+                                            runtime_metadata=runtime_metadata)
+            operation_context = getattr(worker, "operation_context", None)
+            scope = operation_context(operation_id, on_request_event=event_callback) if callable(operation_context) else nullcontext()
+            with scope:
+                dispatched = True
+                reply = worker.client().connect(
+                    port, host, request_id=request_id, rpc_timeout_s=rpc_timeout_s,
+                    user=user, password=password,
+                )
+            if not isinstance(reply, Mapping):
+                raise SessionConnectFailure("EXECUTION_STATE_UNKNOWN", "Worker connect reply is malformed",
+                                            safe_retry=False, uncertain=True, dispatched=True, worker=worker,
+                                            reply=reply, runtime_metadata=runtime_metadata)
+            reply = dict(reply)
+            generation, instance = reply.get("generation"), reply.get("instance_id")
+            if (reply.get("connected") is not True or not isinstance(reply.get("server"), str)
+                    or type(generation) is not int or generation < 1
+                    or not isinstance(instance, str) or not instance
+                    or not isinstance(reply.get("engine_version"), str) or not reply["engine_version"]):
+                raise SessionConnectFailure("EXECUTION_STATE_UNKNOWN", "Worker did not return an exact remote connect identity",
+                                            safe_retry=False, uncertain=True, dispatched=True, worker=worker,
+                                            reply=reply, runtime_metadata=runtime_metadata)
+            if reply["server"] != f"{host}:{port}":
+                raise SessionConnectFailure("MODEL_IDENTITY_MISMATCH", "remote connect reply differs from the requested endpoint",
+                                            safe_retry=False, uncertain=True, dispatched=True, worker=worker,
+                                            reply=reply, runtime_metadata=runtime_metadata)
+            try:
+                runtime_metadata = worker.runtime_metadata()
+            except Exception:
+                pass
+            if (not isinstance(runtime_metadata, Mapping)
+                    or runtime_metadata.get("instance_id") != instance
+                    or runtime_metadata.get("generation") != generation
+                    or runtime_metadata.get("connected") is not True
+                    or runtime_metadata.get("server") != reply["server"]):
+                raise SessionConnectFailure("EXECUTION_STATE_UNKNOWN", "Worker health does not agree with its connect reply",
+                                            safe_retry=False, uncertain=True, dispatched=True, worker=worker,
+                                            reply=reply, runtime_metadata=runtime_metadata)
+            observer = self.session_peer_observer or self._observe_session_peer
+            try:
+                peer = observer(worker, port, runtime_metadata)
+            except Exception:
+                peer = None
+            if not isinstance(peer, CanonicalSocket) or peer.port != port:
+                raise SessionConnectFailure("EXECUTION_STATE_UNKNOWN", "connected remote peer could not be independently observed",
+                                            safe_retry=False, uncertain=True, dispatched=True, worker=worker,
+                                            reply=reply, runtime_metadata=runtime_metadata)
+        except SessionConnectFailure:
+            raise
+        except JavaWorkerTimeout as exc:
+            try:
+                runtime_metadata = worker.runtime_metadata()
+            except Exception:
+                pass
+            message = ("Worker connect timed out; preserve the original Worker handle" if dispatched
+                       else "Worker startup timed out; preserve the original Worker handle")
+            raise SessionConnectFailure("EXECUTION_STATE_UNKNOWN", message,
+                                        safe_retry=False, uncertain=True, dispatched=dispatched, worker=worker,
+                                        runtime_metadata=runtime_metadata) from exc
+        except JavaWorkerError as exc:
+            try:
+                runtime_metadata = worker.runtime_metadata()
+            except Exception:
+                pass
+            detail = str(exc).casefold()
+            unsafe_start = not worker_started and any(token in detail for token in (
+                "alive but unreachable", "do not start a replacement", "identity cannot be verified",
+                "manual reconciliation is required",
+            ))
+            unknown = bool(getattr(exc, "execution_state_unknown", False)) or unsafe_start
+            raise SessionConnectFailure(
+                "EXECUTION_STATE_UNKNOWN" if unknown else "ENGINE_UNRESPONSIVE",
+                "Worker connect failed; inspect the original Worker before retrying" if unknown else "Worker refused the connection before an uncertain remote state",
+                safe_retry=not unknown, uncertain=unknown, dispatched=dispatched, worker=worker,
+                reply=getattr(exc, "reply", None), runtime_metadata=runtime_metadata,
+            ) from exc
+        except Exception as exc:
+            raise SessionConnectFailure("EXECUTION_STATE_UNKNOWN", "Worker connect ended without a verified result",
+                                        safe_retry=False, uncertain=dispatched or worker_started, dispatched=dispatched,
+                                        worker=worker, reply=reply, runtime_metadata=runtime_metadata) from exc
+
+        # Once the Worker has attached, even local ledger/service/cache writes
+        # are part of the uncertain lifecycle.  A disk or constructor failure
+        # here must return the exact live handle to the daemon for UNKNOWN
+        # reconciliation; it must never look like a pre-dispatch refusal.
+        reply_with_peer = {**reply, "observed_peer": {"address": peer.address, "port": peer.port}}
+        try:
+            server_id = self._session_server_instance_id(peer, reply)
+            remote_build = reply.get("engine_build")
+            if not isinstance(remote_build, str) or not remote_build.strip():
+                remote_build = None
+            worker_identity = {
+                "runtime_id": runtime.runtime_id,
+                "worker_instance_id": instance,
+                "connection_epoch": generation,
+                "server_instance_id": server_id,
+                "endpoint": reply["server"],
+                "observed_peer": {"address": peer.address, "port": peer.port},
+                "remote_engine_version": reply["engine_version"],
+                "remote_engine_build": remote_build,
+                "remote_engine_build_source": "remote-connect-reply" if remote_build is not None else "NOT_REPORTED",
+            }
+            permissions = set(project_permissions or ()) & self.host_permission_ceiling
+            ledger = SessionLedger(session_id, server_id, server_ownership="shared", permissions=permissions)
+            self.worker = worker
+            self.worker_identity = worker_identity
+            backend = self
+
+            class Adapter:
+                def model_snapshot(self, tag):
+                    raw = backend.worker.backend_snapshot(tag)
+                    if (raw.get("generation") != generation or raw.get("instance_id") != instance
+                            or raw.get("server_instance_id") != reply["server"]):
+                        raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "Worker connection epoch changed")
+                    return {**raw, "server_instance_id": server_id}
+
+            self.service = ExecutionService(ledger, Adapter(), project_root=self.project_root,
+                                            on_state_change=lambda event: self.persist())
+            self.endpoint_key = reply["server"]
+            self.cached = {
+                "connected": True,
+                "session_id": session_id,
+                "runtime_id": runtime.runtime_id,
+                "server_ownership": "shared",
+                "endpoint": reply["server"],
+                "observed_peer": {"address": peer.address, "port": peer.port},
+                "worker": {k: v for k, v in runtime_metadata.items() if k != "token"},
+                "remote_engine_version": reply["engine_version"],
+                "remote_engine_build": worker_identity["remote_engine_build"],
+                "remote_engine_build_source": worker_identity["remote_engine_build_source"],
+            }
+            self.persist()
+            return {"worker": worker, "reply": reply_with_peer, "runtime_metadata": dict(runtime_metadata),
+                    "peer": peer, "worker_identity": dict(worker_identity), "server_instance_id": server_id}
+        except SessionConnectFailure:
+            raise
+        except Exception as exc:
+            self.worker = worker
+            raise SessionConnectFailure(
+                "EXECUTION_STATE_UNKNOWN",
+                "Worker attached, but managed session initialization or durable persistence failed",
+                safe_retry=False, uncertain=True, dispatched=True, worker=worker,
+                reply=reply_with_peer, runtime_metadata=runtime_metadata,
+            ) from exc
 
     def connect(self, arguments, operation_id, event_callback, *, project_id=None):
         from ._java_worker import PersistentJavaWorker, JavaWorkerPaths
